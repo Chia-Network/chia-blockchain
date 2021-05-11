@@ -100,6 +100,7 @@ class RpcServer:
     async def get_connections(self, request: Dict) -> Dict:
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
+
         if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
             # TODO add peaks for peers
             connections = self.rpc_api.service.server.get_connections()
@@ -169,9 +170,11 @@ class RpcServer:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
+
         connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
+
         for connection in connections_to_close:
             await connection.close()
 
@@ -210,7 +213,6 @@ class RpcServer:
             return await f(data)
 
         raise ValueError(f"unknown_command {command}")
-        return None
 
     async def safe_handle(self, websocket, payload):
         message = None

@@ -184,7 +184,8 @@ class WalletRpcApi:
 
             return response
 
-        return {"success": False, "error": "Unknown Error"} # ??? to the response values have blanks?
+        return {"success": False, "error": "Unknown Error"}
+        # ??? to the response values have blanks?
 
     async def get_public_keys(self, request: Dict):
         fingerprints = [sk.get_g1().get_fingerprint() for (sk, seed) in self.service.keychain.get_all_private_keys()]
@@ -251,7 +252,6 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
 
         raise ValueError("Failed to start")
-        return None
 
     async def delete_key(self, request):
         await self._stop_wallet()
@@ -668,7 +668,6 @@ class WalletRpcApi:
             return {}
 
         raise ValueError(error)
-        return None
 
     async def get_discrepancies_for_offer(self, request):
         assert self.service.wallet_state_manager is not None
@@ -685,7 +684,6 @@ class WalletRpcApi:
             return {"discrepancies": discrepancies}
 
         raise ValueError(error)
-        return None
 
     async def respond_to_offer(self, request):
         assert self.service.wallet_state_manager is not None
@@ -804,7 +802,7 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             coins = await wallet.select_coins(1)
 
-        ## ??? success==True either way here?
+        # ??? success==True either way here?
         res = {"success": True, "wallet_id": wallet_id, "my_did": my_did}
         if coins not in [None, set()]:
             coin = coins.pop()
@@ -904,7 +902,8 @@ class WalletRpcApi:
 
     async def did_create_backup_file(self, request):
         try:
-            wallet_id = int(request["wallet_id"]) # ??? can be move out? seperate exception handling?
+            wallet_id = int(request["wallet_id"])
+            # ??? can be move out? seperate exception handling?
             did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
             did_wallet.create_backup(request["filename"])
             return {"wallet_id": wallet_id, "success": True}
