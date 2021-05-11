@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:11\n"
+"PO-Revision-Date: 2021-05-11 15:12\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -62,7 +62,7 @@ msgstr "کنش‌ها"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr "اضافه کردن"
+msgstr "افزودن"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
@@ -292,7 +292,7 @@ msgstr "مقدار فضای پلات را انتخاب کنید"
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "Close"
-msgstr "بسته"
+msgstr "بستن"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -321,7 +321,7 @@ msgstr "رنگ:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr "سکه رنگی"
+msgstr "سکه رنگ شده"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
@@ -1069,7 +1069,8 @@ msgstr "پیشنهادات ایجاد شده"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "به طور متوسط بین هر بلوک تراکنش یک دقیقه فاصله است\n"
+"تا زمانی که ازدحام وجود نداشته باشد ، انتظار دارید معامله شما در کمتر از یک دقیقه انجام شود."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
