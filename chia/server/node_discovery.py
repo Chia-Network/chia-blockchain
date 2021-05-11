@@ -5,11 +5,12 @@ import traceback
 from pathlib import Path
 from random import Random
 from secrets import randbits
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import aiosqlite
 
 import chia.server.ws_connection as ws
+import dns
 from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
@@ -171,7 +172,7 @@ class FullNodeDiscovery:
     async def _query_dns(self, dns_address):
         try:
             peers: List[TimestampedPeerInfo] = []
-            result = dns.resolver.query(dns_address, 'A')
+            result = dns.resolver.query(dns_address, "A")
             for ip in result:
                 peers.append(
                     TimestampedPeerInfo(
