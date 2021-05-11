@@ -1845,7 +1845,7 @@ class FullNode:
                         break
                     stop_height = min(h + 99, max_height)
                     assert min_height is not None
-                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height, True)
+                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height, tx_filter=True)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
                         records = await self.blockchain.get_block_records_in_range(min_height, stop_height)
