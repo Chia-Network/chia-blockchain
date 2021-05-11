@@ -8,7 +8,7 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-upnp = None
+upnp: miniupnpc.UPnP = None
 
 
 def setup_upnp():
