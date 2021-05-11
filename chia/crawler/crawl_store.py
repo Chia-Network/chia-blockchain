@@ -6,8 +6,6 @@ import time
 import aiosqlite
 from typing import List, Dict
 from chia.crawler.peer_record import PeerRecord, PeerReliability
-from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
 
 log = logging.getLogger(__name__)
 
@@ -185,7 +183,6 @@ class CrawlStore:
         return self.reliable_peers
 
     async def load_to_db(self):
-        counter = 0
         for peer_id in list(self.host_to_reliability.keys()):
             if peer_id in self.host_to_reliability and peer_id in self.host_to_records:
                 reliability = self.host_to_reliability[peer_id]

@@ -21,6 +21,7 @@ class DomainName(str):
     def __getattr__(self, item):
         return DomainName(item + "." + self)
 
+
 D = DomainName("seeder.example.com.")
 ns = DomainName("example.com.")
 IP = "127.0.0.1"
@@ -195,6 +196,7 @@ async def serve_dns():
 async def kill_processes():
     # TODO: implement.
     pass
+
 
 def main():
     root_path = DEFAULT_ROOT_PATH
