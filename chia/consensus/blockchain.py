@@ -638,7 +638,7 @@ class Blockchain(BlockchainInterface):
         return await self.block_store.get_block_records_in_range(start, stop)
 
     async def get_header_blocks_in_range(
-        self, start: int, stop: int, no_tx_filter: bool = False
+        self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
@@ -659,7 +659,7 @@ class Blockchain(BlockchainInterface):
         for block in blocks:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
-            if no_tx_filter:
+            if tx_filter is False:
                 header = get_block_header(block, [], [])
             else:
                 tx_additions: List[CoinRecord] = [
@@ -674,9 +674,9 @@ class Blockchain(BlockchainInterface):
         return header_blocks
 
     async def get_header_block_by_height(
-        self, height: int, header_hash: bytes32, no_tx_filter: bool = False
+        self, height: int, header_hash: bytes32, tx_filter: bool = True
     ) -> Optional[HeaderBlock]:
-        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height)
+        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height, tx_filter)
         if len(header_dict) == 0:
             return None
         if header_hash not in header_dict:
