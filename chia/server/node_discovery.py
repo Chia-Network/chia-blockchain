@@ -10,7 +10,7 @@ from typing import Dict, Optional, List
 import aiosqlite
 
 import chia.server.ws_connection as ws
-import dns
+import dns.resolver
 from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
@@ -181,7 +181,7 @@ class FullNodeDiscovery:
                         0,
                     )
                 )
-            self.log.info(f"Received peers from DNS server: {peers}.")
+            self.log.info(f"Received {len(peers)} peers from DNS seeder.")
             await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
             self.log.error(f"Exception while querying DNS server: {e}")
@@ -443,6 +443,7 @@ class FullNodePeers(FullNodeDiscovery):
         target_outbound_count,
         peer_db_path,
         introducer_info,
+        dns_servers,
         peer_connect_interval,
         log,
     ):
@@ -452,6 +453,7 @@ class FullNodePeers(FullNodeDiscovery):
             target_outbound_count,
             peer_db_path,
             introducer_info,
+            dns_servers,
             peer_connect_interval,
             log,
         )
@@ -610,6 +612,7 @@ class WalletPeers(FullNodeDiscovery):
         target_outbound_count,
         peer_db_path,
         introducer_info,
+        dns_servers,
         peer_connect_interval,
         log,
     ) -> None:
@@ -619,6 +622,7 @@ class WalletPeers(FullNodeDiscovery):
             target_outbound_count,
             peer_db_path,
             introducer_info,
+            dns_servers,
             peer_connect_interval,
             log,
         )
