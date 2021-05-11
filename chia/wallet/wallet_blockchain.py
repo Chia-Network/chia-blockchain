@@ -65,6 +65,7 @@ class WalletBlockchain(BlockchainInterface):
 
     coins_of_interest_received: Any
     reorg_rollback: Any
+    wallet_state_manager_lock: asyncio.Lock
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -79,6 +80,7 @@ class WalletBlockchain(BlockchainInterface):
         consensus_constants: ConsensusConstants,
         coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
         reorg_rollback: Callable,
+        lock: asyncio.Lock,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -100,6 +102,7 @@ class WalletBlockchain(BlockchainInterface):
         self.coins_of_interest_received = coins_of_interest_received
         self.reorg_rollback = reorg_rollback
         self.log = logging.getLogger(__name__)
+        self.wallet_state_manager_lock = lock
         await self._load_chain_from_store()
         return self
 
@@ -123,7 +126,7 @@ class WalletBlockchain(BlockchainInterface):
         if len(blocks) == 0:
             assert peak is None
             self._peak_height = None
-            return
+            return None
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
@@ -211,24 +214,27 @@ class WalletBlockchain(BlockchainInterface):
         )
 
         # Always add the block to the database
-        async with self.block_store.db_wrapper.lock:
-            try:
-                await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_block_record(header_block_record, block_record)
-                self.add_block_record(block_record)
-                self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
+        async with self.wallet_state_manager_lock:
+            async with self.block_store.db_wrapper.lock:
+                try:
+                    await self.block_store.db_wrapper.begin_transaction()
+                    await self.block_store.add_block_record(header_block_record, block_record)
+                    self.add_block_record(block_record)
+                    self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
 
-                fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
-                await self.block_store.db_wrapper.commit_transaction()
-            except BaseException as e:
-                self.log.error(f"Error during db transaction: {e}")
-                await self.block_store.db_wrapper.rollback_transaction()
-                raise
-        if fork_height is not None:
-            self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
-            return ReceiveBlockResult.NEW_PEAK, None, fork_height
-        else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+                    fork_height: Optional[uint32] = await self._reconsider_peak(
+                        block_record, genesis, fork_point_with_peak
+                    )
+                    await self.block_store.db_wrapper.commit_transaction()
+                except BaseException as e:
+                    self.log.error(f"Error during db transaction: {e}")
+                    await self.block_store.db_wrapper.rollback_transaction()
+                    raise
+            if fork_height is not None:
+                self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
+                return ReceiveBlockResult.NEW_PEAK, None, fork_height
+            else:
+                return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
     async def _reconsider_peak(
         self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
@@ -371,7 +377,7 @@ class WalletBlockchain(BlockchainInterface):
         """
 
         if self._peak_height is None:
-            return
+            return None
         blocks = await self.block_store.get_block_records_in_range(
             fork_point - self.constants.BLOCKS_CACHE_SIZE, self._peak_height
         )
@@ -386,7 +392,7 @@ class WalletBlockchain(BlockchainInterface):
         """
 
         if height < 0:
-            return
+            return None
         blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
         while blocks_to_remove is not None and height >= 0:
             for header_hash in blocks_to_remove:
@@ -404,12 +410,12 @@ class WalletBlockchain(BlockchainInterface):
         """
 
         if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:
-            return
+            return None
 
         peak = self.get_peak()
         assert peak is not None
         if peak.height - self.constants.BLOCKS_CACHE_SIZE < 0:
-            return
+            return None
         self.clean_block_record(peak.height - self.constants.BLOCKS_CACHE_SIZE)
 
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:

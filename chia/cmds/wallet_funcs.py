@@ -58,12 +58,12 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
                 break
             print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name)
         if i + num_per_screen >= len(txs):
-            return
+            return None
         print("Press q to quit, or c to continue")
         while True:
             entered_key = sys.stdin.read(1)
             if entered_key == "q":
-                return
+                return None
             elif entered_key == "c":
                 break
 
@@ -86,7 +86,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
             print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
-            return
+            return None
 
     print("Transaction not yet submitted to nodes")
     print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
@@ -104,6 +104,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
     print(f"Wallet height: {await wallet_client.get_height_info()}")
+    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
     print(f"Balances, fingerprint: {fingerprint}")
     for summary in summaries_response:
         wallet_id = summary["id"]
@@ -111,39 +112,33 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         typ = WalletType(int(summary["type"])).name
         if typ != "STANDARD_WALLET":
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(f"   -Confirmed: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Confirmed - Pending Outgoing: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}")
-            print(f"   -Pending change: {balances['pending_change']/units['colouredcoin']}")
+            print(f"   -Total Balance: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
+            print(f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
+            print(f"   -Spendable Balance: {balances['spendable_balance']/units['colouredcoin']}")
         else:
             print(f"Wallet ID {wallet_id} type {typ}")
             print(
-                f"   -Confirmed: {balances['confirmed_wallet_balance']} mojo "
-                f"({balances['confirmed_wallet_balance']/units['chia']} {address_prefix})"
+                f"   -Total Balance: {balances['confirmed_wallet_balance']/units['chia']} {address_prefix} "
+                f"({balances['confirmed_wallet_balance']} mojo)"
             )
             print(
-                f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']} mojo "
-                f"({balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix})"
+                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix} "
+                f"({balances['unconfirmed_wallet_balance']} mojo)"
             )
             print(
-                f"   -Spendable: {balances['spendable_balance']} mojo "
-                f"({balances['spendable_balance']/units['chia']} {address_prefix})"
-            )
-            print(
-                f"   -Pending change: {balances['pending_change']} mojo "
-                f"({balances['pending_change']/units['chia']} {address_prefix})"
+                f"   -Spendable: {balances['spendable_balance']/units['chia']} {address_prefix} "
+                f"({balances['spendable_balance']} mojo)"
             )
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
-    fingerprints = await wallet_client.get_public_keys()
+    if fingerprint is not None:
+        fingerprints = [fingerprint]
+    else:
+        fingerprints = await wallet_client.get_public_keys()
     if len(fingerprints) == 0:
         print("No keys loaded. Run 'chia keys generate' or import a key")
         return None
-    if fingerprint is not None:
-        if fingerprint not in fingerprints:
-            print(f"Fingerprint {fingerprint} does not exist")
-            return None
     if len(fingerprints) == 1:
         fingerprint = fingerprints[0]
     if fingerprint is not None:
@@ -219,7 +214,7 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
         if wallet_client_f is None:
             wallet_client.close()
             await wallet_client.await_closed()
-            return
+            return None
         wallet_client, fingerprint = wallet_client_f
         await function(extra_params, wallet_client, fingerprint)
     except KeyboardInterrupt:

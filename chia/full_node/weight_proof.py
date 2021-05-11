@@ -211,7 +211,7 @@ class WeightProofHandler:
         log.debug("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
-            return
+            return None
         count = len(heights) - 2
         ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
         prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
@@ -220,7 +220,7 @@ class WeightProofHandler:
         assert segments is not None
         await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.header_hash, segments)
         log.debug("sub_epoch_segments done")
-        return
+        return None
 
     async def create_sub_epoch_segments(self):
         log.debug("check segments in db")
@@ -254,7 +254,7 @@ class WeightProofHandler:
             prev_ses_block = ses_block
             await asyncio.sleep(2)
         log.debug("done checking segments")
-        return
+        return None
 
     async def __create_persist_segment(self, prev_ses_block, ses_block, ses_height, sub_epoch_n):
         segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
@@ -262,7 +262,7 @@ class WeightProofHandler:
             segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
             if segments is None:
                 log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
-                return
+                return None
             await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
 
     async def __create_sub_epoch_segments(
@@ -618,6 +618,9 @@ class WeightProofHandler:
         for idx, summary_height in enumerate(ses_heights):
             log.debug(f"check summary {idx} height {summary_height}")
             local_ses = self.blockchain.get_ses(summary_height)
+            if idx == len(received_summaries) - 1:
+                # end of wp summaries, local chain is longer or equal to wp chain
+                break
             if local_ses is None or local_ses.get_hash() != received_summaries[idx].get_hash():
                 break
             fork_point_index = idx

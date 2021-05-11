@@ -147,7 +147,7 @@ class ChiaServer:
         self.api_exception_ban_seconds = 10
 
     def my_id(self) -> bytes32:
-        """ If node has public cert use that one for id, if not use private."""
+        """If node has public cert use that one for id, if not use private."""
         if self.p2p_crt_path is not None:
             pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
         else:
@@ -185,7 +185,7 @@ class ChiaServer:
 
     async def start_server(self, on_connect: Callable = None):
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
-            return
+            return None
 
         self.app = web.Application()
         self.on_connect = on_connect
@@ -463,7 +463,7 @@ class ChiaServer:
 
     def cancel_tasks_from_peer(self, peer_id: bytes32):
         if peer_id not in self.tasks_from_peer:
-            return
+            return None
 
         task_ids = self.tasks_from_peer[peer_id]
         for task_id in task_ids:
@@ -505,8 +505,11 @@ class ChiaServer:
                         if self.api.api_ready is False:
                             return None
 
+                    timeout: Optional[int] = 600
                     if hasattr(f, "execute_task"):
+                        # Don't timeout on methods with execute_task decorator, these need to run fully
                         self.execute_tasks.add(task_id)
+                        timeout = None
 
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
@@ -525,7 +528,7 @@ class ChiaServer:
                             raise e
                         return None
 
-                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=600)
+                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
                     connection.log.debug(
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"

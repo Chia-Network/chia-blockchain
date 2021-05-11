@@ -115,7 +115,7 @@ class Service:
         # and should be fixed at some point.
         # TODO: move those parameters to `__init__`
         if self._did_start:
-            return
+            return None
 
         assert self.self_hostname is not None
         assert self.daemon_port is not None

@@ -54,7 +54,7 @@ def add_private_key_seed(mnemonic: str):
 
     except ValueError as e:
         print(e)
-        return
+        return None
 
 
 def show_all_keys(show_mnemonic: bool):
@@ -68,7 +68,7 @@ def show_all_keys(show_mnemonic: bool):
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     if len(private_keys) == 0:
         print("There are no saved private keys")
-        return
+        return None
     msg = "Showing all public keys derived from your private keys:"
     if show_mnemonic:
         msg = "Showing all public and private keys"
@@ -83,16 +83,16 @@ def show_all_keys(show_mnemonic: bool):
         )
         print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
         print(
-            "First wallet key (m/12381/8444/2/0):",
-            master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
-        )
-        print(
             "First wallet address:",
             encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
         )
         assert seed is not None
         if show_mnemonic:
             print("Master private key (m):", bytes(sk).hex())
+            print(
+                "First wallet secret key (m/12381/8444/2/0):",
+                master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+            )
             mnemonic = bytes_to_mnemonic(seed)
             print("  Mnemonic seed (24 secret words):")
             print(mnemonic)
@@ -117,7 +117,7 @@ def sign(message: str, fingerprint: int, hd_path: str):
                 sk = AugSchemeMPL.derive_child_sk(sk, c)
             print("Public key:", sk.get_g1())
             print("Signature:", AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
-            return
+            return None
     print(f"Fingerprint {fingerprint} not found in keychain")
 
 
