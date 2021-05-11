@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:12\n"
+"PO-Revision-Date: 2021-05-11 09:12\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -1066,7 +1066,7 @@ msgstr "عروض تم إنشاؤها"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "في المتوسط هناك دقيقة واحدة بين كل كتلة معاملة. ما لم يكن هناك اكتظاظ يمكنك أن تتوقع إدراج معاملتك في أقل من دقيقة."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1187,7 +1187,7 @@ msgstr "رقم القطعة"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr ""
+msgstr "مفتاح الكتابة"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1195,7 +1195,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
-msgstr ""
+msgstr "مفتاح الكتابة العمومي"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1203,15 +1203,15 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
-msgstr ""
+msgstr "حجم الكتابة"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
-msgstr ""
+msgstr "الكتابة بالتوازي"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "رسم مكرر من {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
