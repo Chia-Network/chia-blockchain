@@ -1,4 +1,5 @@
 import logging
+import threading
 
 try:
     import miniupnpc
@@ -7,14 +8,22 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-try:
-    upnp = miniupnpc.UPnP()
-    upnp.discoverdelay = 30
-    upnp.discover()
-    upnp.selectigd()
-except Exception as e:
-    log.info("UPnP failed. This is not required to run chia, but it allows incoming connections from other peers.")
-    log.info(e)
+upnp = None
+
+
+def setup_upnp():
+    try:
+        global upnp
+        upnp = miniupnpc.UPnP()
+        upnp.discoverdelay = 30
+        upnp.discover()
+        upnp.selectigd()
+    except Exception as e:
+        log.info("UPnP failed. This is not required to run chia, but it allows incoming connections from other peers.")
+        log.info(e)
+
+
+threading.Thread(target=setup_upnp)
 
 
 def upnp_remap_port(port) -> None:
