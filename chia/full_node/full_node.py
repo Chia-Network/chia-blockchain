@@ -27,6 +27,7 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
+from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import (
     RejectBlocks,
@@ -36,6 +37,7 @@ from chia.protocols.full_node_protocol import (
     RespondSignagePoint,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -53,7 +55,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -79,6 +81,7 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
+    weight_proof_handler_v2: Optional[WeightProofHandlerV2]
 
     def __init__(
         self,
@@ -93,7 +96,7 @@ class FullNode:
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
-        self.pow_creation: Dict[uint32, asyncio.Event] = {}
+        self.pow_creation: Dict[Tuple[uint32, bool], asyncio.Event] = {}
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers = None
         self.sync_store = None
@@ -127,6 +130,7 @@ class FullNode:
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
+        self.weight_proof_handler_v2 = None
         asyncio.create_task(self.initialize_weight_proof())
 
         if self.config.get("enable_profiler", False):
@@ -169,9 +173,10 @@ class FullNode:
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
+        self.weight_proof_handler_v2 = WeightProofHandlerV2(self.constants, self.blockchain)
         peak = self.blockchain.get_peak()
         if peak is not None:
-            await self.weight_proof_handler.create_sub_epoch_segments()
+            await self.weight_proof_handler_v2.create_sub_epoch_segments()
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -631,11 +636,24 @@ class FullNode:
             if "weight_proof_timeout" in self.config:
                 wp_timeout = self.config["weight_proof_timeout"]
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-            request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
-            response = await weight_proof_peer.request_proof_of_weight(request, timeout=wp_timeout)
+            capabilities = peer.capabilities
+            self.log.debug(f"capabilities {capabilities} ")
+            weight_proof_v2 = False
+            if (uint16(Capability.WP.value), "1") in capabilities:
+                weight_proof_v2 = True
+                self.log.info("using new weight proof format")
+            if weight_proof_v2:
+                request = full_node_protocol.RequestProofOfWeightV2(heaviest_peak_height, heaviest_peak_hash)
+                response = await weight_proof_peer.request_proof_of_weight_v2(request, timeout=wp_timeout)
+            else:
+                request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
+                response = await weight_proof_peer.request_proof_of_weight(request, timeout=wp_timeout)
 
             # Disconnect from this peer, because they have not behaved properly
-            if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
+            if response is None or not (
+                isinstance(response, full_node_protocol.RespondProofOfWeight)
+                or isinstance(response, full_node_protocol.RespondProofOfWeightV2)
+            ):
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.height != heaviest_peak_height:
@@ -653,7 +671,14 @@ class FullNode:
                     raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
 
             try:
-                validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
+                if weight_proof_v2:
+                    validated, fork_point, summaries = await self.weight_proof_handler_v2.validate_weight_proof(
+                        response.wp
+                    )
+                else:
+                    validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(
+                        response.wp
+                    )
             except Exception as e:
                 await weight_proof_peer.close(600)
                 raise ValueError(f"Weight proof validation threw an error {e}")

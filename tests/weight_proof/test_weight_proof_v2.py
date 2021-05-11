@@ -198,8 +198,8 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_edge_cases(self, default_400_blocks):
-        blocks: List[FullBlock] = default_400_blocks
+    async def test_weight_proof_edge_cases(self, default_1000_blocks):
+        blocks: List[FullBlock] = default_1000_blocks
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
