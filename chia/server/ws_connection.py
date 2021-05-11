@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -91,6 +91,7 @@ class WSChiaConnection:
         self.request_results: Dict[bytes32, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
+        self.capabilities: Optional[List[Tuple[uint16, str]]] = None
         if is_outbound:
             self.request_nonce: uint16 = uint16(0)
         else:
@@ -113,7 +114,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    [(uint16(Capability.BASE.value), "1"), (uint16(Capability.WP.value), "1")],
                 ),
             )
             assert outbound_handshake is not None
@@ -129,7 +130,8 @@ class WSChiaConnection:
 
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-
+            self.capabilities = inbound_handshake.capabilities
+            self.log.info(f"heandshake {inbound_handshake.capabilities}")
         else:
             try:
                 message = await self._read_one_message()
@@ -151,12 +153,14 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    [(uint16(Capability.BASE.value), "1"), (uint16(Capability.WP), "1")],
                 ),
             )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
+            self.capabilities = inbound_handshake.capabilities
+            self.log.info(f"heandshake {inbound_handshake.capabilities}")
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())

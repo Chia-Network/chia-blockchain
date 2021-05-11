@@ -48,10 +48,10 @@ class TestFullSync:
             yield _
 
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks):
+    async def test_long_sync_from_zero(self, five_nodes, default_10000_blocks):
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_400_blocks)
-        blocks: List[FullBlock] = default_400_blocks
+        num_blocks = len(default_10000_blocks)
+        blocks: List[FullBlock] = default_10000_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
@@ -60,7 +60,7 @@ class TestFullSync:
         server_5 = full_node_5.full_node.server
 
         # If this constant is changed, update the tests to use more blocks
-        assert test_constants.WEIGHT_PROOF_RECENT_BLOCKS < 400
+        assert test_constants.WEIGHT_PROOF_RECENT_BLOCKS < 1001
 
         # Syncs up less than recent blocks
         for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5]:
