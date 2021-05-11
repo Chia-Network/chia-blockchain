@@ -673,7 +673,9 @@ class Blockchain(BlockchainInterface):
 
         return header_blocks
 
-    async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
+    async def get_header_block_by_height(
+        self, height: int, header_hash: bytes32, no_tx_filter: bool = False
+    ) -> Optional[HeaderBlock]:
         header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height)
         if len(header_dict) == 0:
             return None

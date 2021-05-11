@@ -54,7 +54,9 @@ class BlockchainInterface:
     ) -> Dict[bytes32, HeaderBlock]:
         pass
 
-    async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
+    async def get_header_block_by_height(
+        self, height: int, header_hash: bytes32, no_tx_filter: bool = False
+    ) -> Optional[HeaderBlock]:
         pass
 
     async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:

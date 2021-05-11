@@ -1664,7 +1664,7 @@ class FullNode:
         if not vdf_proof.is_valid(self.constants, ClassgroupElement.get_default_element(), vdf_info):
             self.log.error(f"Received compact vdf proof is not valid: {vdf_proof}.")
             return False
-        header_block = await self.blockchain.get_header_block_by_height(height, header_hash)
+        header_block = await self.blockchain.get_header_block_by_height(height, header_hash, True)
         if header_block is None:
             self.log.error(f"Can't find block for given compact vdf. Height: {height} Header hash: {header_hash}")
             return False
@@ -1737,7 +1737,7 @@ class FullNode:
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return False
-        header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
+        header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash, True)
         if header_block is None:
             return None
         field_vdf = CompressibleVDFField(int(request.field_vdf))
@@ -1750,7 +1750,7 @@ class FullNode:
                 await self.respond_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
-        header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
+        header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash, True)
         if header_block is None:
             return None
         vdf_proof: Optional[VDFProof] = None
