@@ -43,7 +43,6 @@ class HarvesterRpcApi:
         filename = request["filename"]
         if not self.service.delete_plot(filename):
             raise ValueError(f"Not able to delete file {filename}")
-            return None
 
         return {}
 
@@ -51,7 +50,6 @@ class HarvesterRpcApi:
         directory_name = request["dirname"]
         if not await self.service.add_plot_directory(directory_name):
             raise ValueError(f"Did not add plot directory {directory_name}")
-            return None
 
         return {}
 
@@ -63,6 +61,5 @@ class HarvesterRpcApi:
         directory_name = request["dirname"]
         if not await self.service.remove_plot_directory(directory_name):
             raise ValueError(f"Did not remove plot directory {directory_name}")
-            return None
 
         return {}
