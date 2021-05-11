@@ -142,7 +142,7 @@ class WalletRpcClient(RpcClient):
             coins_json = [c.to_json_dict() for c in coins]
             return await self.fetch(
                 "create_signed_transaction", {"additions": additions_hex, "coins": coins_json, "fee": fee}
-                ## ??? does the order of this dict matter here in any way
+                # ??? does the order of this dict matter here in any way
             )
         else:
             return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
