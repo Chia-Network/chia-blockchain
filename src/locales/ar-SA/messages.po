@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-11 09:12\n"
+"PO-Revision-Date: 2021-05-11 15:12\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -1219,23 +1219,23 @@ msgstr "قطعة"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr ""
+msgstr "اجتاز تصفية المؤامرات"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "يتم تخصيص مساحة قطع الأراضي على محرك الأقراص الثابتة الخاص بك لاستخدامها في الزراعة وكسب Chia. <0> معرفة المزيد </0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
-msgstr ""
+msgstr "التخطيط"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr ""
+msgstr "يمكن أن يوفر التخطيط المتوازي الوقت. خلاف ذلك ، أضف قطعة (قطع) الأرض إلى قائمة الانتظار."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "التآمر مع تمكين حقل البت لديه حوالي 30٪ أقل من عمليات الكتابة الإجمالية وهو الآن أسرع دائمًا. قد ترى متطلبات ذاكرة مخفضة مع تعطيل رسم حقل البت. إذا كان تصميم وحدة المعالجة المركزية الخاصة بك من قبل عام 2010 ، فقد تضطر إلى تعطيل رسم حقل البت."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1247,11 +1247,11 @@ msgstr "مفتاح التجميع"
 
 #: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
-msgstr ""
+msgstr "المفتاح العام للتجمع"
 
 #: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "تجمع لغز تجزئة"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
@@ -1278,7 +1278,7 @@ msgstr "السابق"
 
 #: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "تجزئة العنوان السابق"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1286,7 +1286,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "مفتاح خاص ببصمة إصبع عامة {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
@@ -1322,7 +1322,7 @@ msgstr "نوع قائمة الانتظار"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
-msgstr ""
+msgstr "في قائمة الانتظار"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
@@ -1334,7 +1334,7 @@ msgstr "الحد الاقصى من استعمال الذاكرة العشوائ�
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr ""
+msgstr "محفظة RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1347,24 +1347,24 @@ msgstr "معدل محدود"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "معدل معلومات محدودة"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "قيم خيارات محدودة"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "معدل إعداد محفظة المستخدم المحدود"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "Receive Address"
-msgstr ""
+msgstr "تلقي العنوان"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "استرداد المحفظة"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
