@@ -312,7 +312,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         try:
             if "testing" in self.service.config and self.service.config["testing"] is True:
-                return
+                return None
             now = time.time()
             file_name = f"backup_{now}"
             path = path_from_root(self.service.root_path, file_name)

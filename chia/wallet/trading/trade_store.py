@@ -86,7 +86,7 @@ class TradeStore:
         """
         current: Optional[TradeRecord] = await self.get_trade_record(trade_id)
         if current is None:
-            return
+            return None
         confirmed_at_index = current.confirmed_at_index
         if index != 0:
             confirmed_at_index = index
@@ -157,7 +157,7 @@ class TradeStore:
 
         current: Optional[TradeRecord] = await self.get_trade_record(id)
         if current is None:
-            return
+            return None
 
         tx: TradeRecord = TradeRecord(
             confirmed_at_index=current.confirmed_at_index,

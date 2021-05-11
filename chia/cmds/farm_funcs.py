@@ -166,7 +166,7 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
 async def challenges(farmer_rpc_port: int, limit: int) -> None:
     signage_points = await get_challenges(farmer_rpc_port)
     if signage_points is None:
-        return
+        return None
 
     signage_points.reverse()
     if limit != 0:

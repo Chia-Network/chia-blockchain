@@ -40,7 +40,7 @@ async def show_async(
             blockchain_state = await client.get_blockchain_state()
             if blockchain_state is None:
                 print("There is no blockchain found yet. Try again shortly")
-                return
+                return None
             peak: Optional[BlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]

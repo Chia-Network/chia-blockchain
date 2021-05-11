@@ -247,7 +247,7 @@ class AddressManager:
 
     def swap_random_(self, rand_pos_1: int, rand_pos_2: int) -> None:
         if rand_pos_1 == rand_pos_2:
-            return
+            return None
         assert rand_pos_1 < len(self.random_pos) and rand_pos_2 < len(self.random_pos)
         node_id_1 = self.random_pos[rand_pos_1]
         node_id_2 = self.random_pos[rand_pos_2]
@@ -299,14 +299,14 @@ class AddressManager:
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
         if not addr.is_valid(self.allow_private_subnets):
-            return
+            return None
         if info is None:
-            return
+            return None
         if node_id is None:
-            return
+            return None
 
         if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
-            return
+            return None
 
         # update info
         info.last_success = timestamp
@@ -317,7 +317,7 @@ class AddressManager:
 
         # if it is already in the tried set, don't do anything else
         if info.is_tried:
-            return
+            return None
 
         # find a bucket it is in now
         bucket_rand = randrange(NEW_BUCKET_COUNT)
@@ -331,7 +331,7 @@ class AddressManager:
 
         # if no bucket is found, something bad happened;
         if new_bucket == -1:
-            return
+            return None
 
         # NOTE(Florin): Double check this. It's not used anywhere else.
 
@@ -350,7 +350,7 @@ class AddressManager:
     def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
         if info is None or info.random_pos is None:
-            return
+            return None
         self.swap_random_(info.random_pos, len(self.random_pos) - 1)
         self.random_pos = self.random_pos[:-1]
         del self.map_addr[info.peer_info.host]
@@ -422,10 +422,10 @@ class AddressManager:
     def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
         info, _ = self.find_(addr)
         if info is None:
-            return
+            return None
 
         if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
-            return
+            return None
 
         info.last_try = timestamp
         if count_failures and info.last_count_attempt < self.last_good:
@@ -578,11 +578,11 @@ class AddressManager:
     def connect_(self, addr: PeerInfo, timestamp: int):
         info, _ = self.find_(addr)
         if info is None:
-            return
+            return None
 
         # check whether we are talking about the exact same peer
         if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
-            return
+            return None
 
         update_interval = 20 * 60
         if timestamp - info.timestamp > update_interval:

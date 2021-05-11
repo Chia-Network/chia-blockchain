@@ -337,12 +337,12 @@ class WebSocketServer:
     async def _state_changed(self, service: str, message: Dict[str, Any]):
         """If id is None, send the whole state queue"""
         if service not in self.connections:
-            return
+            return None
 
         websockets = self.connections[service]
 
         if message is None:
-            return
+            return None
 
         response = create_payload("state_changed", message, service, "wallet_ui")
 
@@ -366,7 +366,7 @@ class WebSocketServer:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
 
             if config["state"] is not PlotState.RUNNING:
-                return
+                return None
 
             if new_data not in (None, ""):
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
@@ -376,7 +376,7 @@ class WebSocketServer:
             if new_data:
                 for word in final_words:
                     if word in new_data:
-                        return
+                        return None
             else:
                 time.sleep(0.5)
 
@@ -443,7 +443,7 @@ class WebSocketServer:
         next_plot_id = None
 
         if self._is_serial_plotting_running(queue) is True:
-            return
+            return None
 
         for item in self.plots_queue:
             if item["queue"] == queue and item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
@@ -470,7 +470,7 @@ class WebSocketServer:
             await asyncio.sleep(delay)
 
             if config["state"] is not PlotState.SUBMITTED:
-                return
+                return None
 
             service_name = config["service_name"]
             command_args = config["command_args"]
