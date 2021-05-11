@@ -175,6 +175,12 @@ class FullNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
+        dns_servers = []
+        if "dns_servers" in self.config:
+            dns_servers = self.config["dns_servers"]
+        elif self.config["port"] == 8444:
+            # If `dns_servers` misses from the `config`, hardcode it if we're running mainnet.
+            dns_servers.append("seeder.fchirica.com") 
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
@@ -183,6 +189,7 @@ class FullNode:
                 self.config["target_outbound_peer_count"],
                 self.config["peer_db_path"],
                 self.config["introducer_peer"],
+                dns_servers,
                 self.config["peer_connect_interval"],
                 self.log,
             )

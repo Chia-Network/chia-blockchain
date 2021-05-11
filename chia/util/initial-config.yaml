@@ -294,6 +294,10 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  # List of trusted DNS seeders to bootstrap from.
+  # If you modify this, please change the hardcode as well from FullNode.set_server()
+  dns_servers:
+    - "seeder.fchirica.com"
   farmer_peer:
       host: *self_hostname
       port: 8447
