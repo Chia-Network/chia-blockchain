@@ -66,17 +66,12 @@ class BlockStore:
         self.ses_challenge_cache = LRUCache(50)
         return self
 
-    async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
-        block_header_hash = block.header_hash
-        cached = self.block_cache.get(block_header_hash)
-        if cached is not None:
-            # Since write to db can fail, we remove from cache here to avoid potential inconsistency
-            # Adding to cache only from reading
-            self.block_cache.remove(block_header_hash)
+    async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
+        self.block_cache.put(header_hash, block)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
-                block_header_hash.hex(),
+                header_hash.hex(),
                 block.height,
                 int(block.is_transaction_block()),
                 int(block.is_fully_compactified()),
@@ -89,7 +84,7 @@ class BlockStore:
         cursor_2 = await self.db.execute(
             "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
             (
-                block_header_hash.hex(),
+                header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.height,
                 bytes(block_record),
@@ -131,13 +126,15 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def cache_block(self, block: FullBlock):
-        self.block_cache.put(block.header_hash, block)
+    def rollback_cache_block(self, header_hash: bytes32):
+        self.block_cache.remove(header_hash)
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
+        log.debug(f"cache miss for block {header_hash.hex()}")
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
@@ -150,7 +147,9 @@ class BlockStore:
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
+        log.debug(f"cache miss for block {header_hash.hex()}")
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
@@ -203,17 +202,18 @@ class BlockStore:
             return []
 
         header_hashes_db = tuple([hh.hex() for hh in header_hashes])
-        formatted_str = f'SELECT block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        formatted_str = (
+            f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        )
         cursor = await self.db.execute(formatted_str, header_hashes_db)
         rows = await cursor.fetchall()
         await cursor.close()
         all_blocks: Dict[bytes32, FullBlock] = {}
         for row in rows:
-            full_block: FullBlock = FullBlock.from_bytes(row[0])
-            # only compute the header hash once
-            full_block_header_hash = full_block.header_hash
-            all_blocks[full_block_header_hash] = full_block
-            self.block_cache.put(full_block_header_hash, full_block)
+            header_hash = bytes.fromhex(row[0])
+            full_block: FullBlock = FullBlock.from_bytes(row[1])
+            all_blocks[header_hash] = full_block
+            self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
             if hh not in all_blocks:
