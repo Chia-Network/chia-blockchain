@@ -159,7 +159,7 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-    def change_config(self, new_config):
+    def change_config(self, new_config: Dict):
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = self.constants.replace_str_to_bytes(**overrides)
@@ -1162,11 +1162,11 @@ def get_challenges(
     blocks: Dict[uint32, BlockRecord],
     finished_sub_slots: List[EndOfSubSlotBundle],
     prev_header_hash: Optional[bytes32],
-):
+) -> Tuple[bytes32, bytes32]:
     if len(finished_sub_slots) == 0:
         if prev_header_hash is None:
             return constants.GENESIS_CHALLENGE, constants.GENESIS_CHALLENGE
-        curr = blocks[prev_header_hash]
+        curr: BlockRecord = blocks[prev_header_hash]
         while not curr.first_in_sub_slot:
             curr = blocks[curr.prev_hash]
         assert curr.finished_challenge_slot_hashes is not None
