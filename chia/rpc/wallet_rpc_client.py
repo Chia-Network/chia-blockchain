@@ -114,8 +114,15 @@ class WalletRpcClient(RpcClient):
             reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
         return reverted_tx
 
-    async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
-        return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
+    async def get_next_address(self, wallet_id: str, new_address: bool, number_addresses=1) -> str:
+        if number_addresses < 1:
+            while number_addresses <= 0:
+                addresses_list=[]
+                address_list.append(await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))
+                number_addresses -= 1;
+            return (addresses_list)["address"]
+        else:
+            return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
     async def send_transaction(
         self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)

@@ -99,7 +99,7 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
 
 
-@wallet_cmd.command("get_address", short_help="Get a wallet receive address")
+@wallet_cmd.command("get_address", short_help="Get the first public wallet receive address")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -107,10 +107,18 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
     type=int,
     default=None,
 )
+@click.option(
+    "-n",
+    "--number-addresses",
+    help="Set the number of new public wallet receive addresses."
+    type=int,
+    default=1,
+    show_default=True
+)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def get_address_cmd(wallet_rpc_port: int, id, fingerprint: int) -> None:
-    extra_params = {"id": id}
+    extra_params = {"id": id, "number_addresses": number_addresses}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_address
 
