@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-12 04:31\n"
+"PO-Revision-Date: 2021-05-12 22:39\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1101,7 +1101,7 @@ msgstr "Függőben lévő módosítások"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Függôben lévô egyenleg"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1406,7 +1406,7 @@ msgstr ""
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "Mentés"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -1464,7 +1464,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "Kiválasztva"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
@@ -1488,7 +1488,7 @@ msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Speciális beállítások megjelenítése"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -1501,7 +1501,7 @@ msgstr "Oldal"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "Bejelentkezés"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
@@ -1517,7 +1517,7 @@ msgstr ""
 
 #: src/electron/main.tsx:409
 msgid "Speech"
-msgstr ""
+msgstr "Beszéd"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1531,7 +1531,7 @@ msgstr "Idôszakonként elérhetô összeg"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Elérhető egyenleg"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
@@ -1561,11 +1561,11 @@ msgstr "Állapot"
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
-msgstr ""
+msgstr "Állapot"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "Állapot:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1597,7 +1597,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
-msgstr ""
+msgstr "Küldés"
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
@@ -1656,7 +1656,7 @@ msgstr "A mainnet legkisebb megengedett mérete k=32"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr ""
+msgstr "A csomópont nincs szinkronizálva"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -1764,7 +1764,7 @@ msgstr "Címzett"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
-msgstr ""
+msgstr "Teljes egyenleg"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -1857,12 +1857,12 @@ msgstr ""
 
 #: src/electron/main.tsx:251
 msgid "View"
-msgstr ""
+msgstr "Nézet"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
-msgstr ""
+msgstr "Napló megtekintése"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
@@ -1923,7 +1923,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
-msgstr ""
+msgstr "Tárcák"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
