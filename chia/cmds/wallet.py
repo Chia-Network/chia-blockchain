@@ -110,7 +110,7 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
 @click.option(
     "-n",
     "--number-addresses",
-    help="Set the number of new public wallet receive addresses."
+    help="Set the number of new public wallet receive addresses.",
     type=int,
     default=1,
     show_default=True
