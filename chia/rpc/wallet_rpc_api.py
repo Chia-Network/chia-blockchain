@@ -802,7 +802,7 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             coins = await wallet.select_coins(1)
 
-        # ??? success==True either way here?
+        # ?? success==True either way here?
         res = {"success": True, "wallet_id": wallet_id, "my_did": my_did}
         if coins not in [None, set()]:
             coin = coins.pop()

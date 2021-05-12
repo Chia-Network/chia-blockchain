@@ -138,11 +138,11 @@ class WalletRpcClient(RpcClient):
     ) -> Dict:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        # ?? does the order of this dict matter here in any way
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             return await self.fetch(
                 "create_signed_transaction", {"additions": additions_hex, "coins": coins_json, "fee": fee}
-                # ??? does the order of this dict matter here in any way
             )
         else:
             return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
