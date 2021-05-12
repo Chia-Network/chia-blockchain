@@ -15,11 +15,12 @@ class PoolInfo(Streamable):
     name: str
     logo_url: str
     minimum_difficulty: uint64
-    escape_time_seconds: uint64
+    maximum_difficulty: uint64
+    relative_lock_height: uint32
     protocol_version: str
     fee: str
     description: str
-    pool_public_key: G1Element
+    pool_puzzle_hash: bytes32
 
 
 @dataclass(frozen=True)
@@ -29,10 +30,10 @@ class PartialPayload(Streamable):
     sp_hash: bytes32
     end_of_sub_slot: bool
     difficulty: uint64  # This is the difficulty threshold for this account, assuming SSI = 1024*5
-    singleton_genesis: bytes32
-    singleton_farmer_public_key: G1Element
+    singleton_genesis: bytes32  # This is what identifies the farmer's account for the pool
+    owner_public_key: G1Element  # Current public key specified in the singleton
     singleton_coin_id_hint: bytes32  # Some incarnation of the singleton, the later the better
-    rewards_target: bytes
+    rewards_target: bytes  # The farmer can choose where to send the rewards. This can take a few minutes
 
 
 @dataclass(frozen=True)
@@ -48,4 +49,4 @@ class RespondSubmitPartial(Streamable):
     error_code: uint16
     error_message: Optional[str]
     points_balance: uint64
-    difficulty: uint64
+    difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer
