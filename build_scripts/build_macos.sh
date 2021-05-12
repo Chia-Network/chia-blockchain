@@ -1,8 +1,8 @@
 #!/bin/bash
 pip install setuptools_scm
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined
+# The environment variable CHIA_INSTALLER_VERSION needs to be defined.
 # If the env variable NOTARIZE and the username and password variables are
-# set, this will attempt to Notarize the signed DMG
+# set, this will attempt to Notarize the signed DMG.
 CHIA_INSTALLER_VERSION=$(python installer-version.py)
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
@@ -91,17 +91,17 @@ fi
 
 # Notes on how to manually notarize
 #
-# Ask for username and password - password should be an app specific password
+# Ask for username and password. password should be an app specific password.
 # Generate app specific password https://support.apple.com/en-us/HT204397
 # xcrun altool --notarize-app -f Chia-0.1.X.dmg --primary-bundle-id net.chia.blockchain -u username -p password
 # xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command
 #
-# Wait until following command return a success message"
-# watch -n 20 'xcrun altool --notarization-info  {REQUEST-ID} -u username -p password'
-# It can take a while, run it every few minutes
+# Wait until following command return a success message".
+# watch -n 20 'xcrun altool --notarization-info  {REQUEST-ID} -u username -p password'.
+# It can take a while, run it every few minutes.
 #
-# Once that is successful, execute the following command"
+# Once that is successful, execute the following command":
 # xcrun stapler staple Chia-0.1.X.dmg
 #
-# Validate DMG
+# Validate DMG:
 # xcrun stapler validate Chia-0.1.X.dmg

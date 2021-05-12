@@ -28,6 +28,7 @@ dependencies = [
 upnp_dependencies = [
     "miniupnpc==2.1",  # Allows users to open ports on their router
 ]
+
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",
