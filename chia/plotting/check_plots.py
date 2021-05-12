@@ -37,10 +37,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         num_end = num
     challenges = num_end - num_start
 
-    if grep_string is not None:
-        match_str = grep_string
-    else:
-        match_str = None
     if list_duplicates:
         log.warning("Checking for duplicate Plot IDs")
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
@@ -55,7 +51,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         find_duplicate_plot_IDs(all_filenames)
 
     if num == 0:
-        return
+        return None
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
@@ -67,7 +63,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         {},
         pks,
         pool_public_keys,
-        match_str,
+        grep_string,
         show_memo,
         root_path,
         open_no_key_filenames=True,
@@ -113,10 +109,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                         caught_exception = True
             except KeyboardInterrupt:
                 log.warning("Interrupted, closing")
-                return
+                return None
             except SystemExit:
                 log.warning("System is shutting down.")
-                return
+                return None
             except Exception as e:
                 log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                 caught_exception = True

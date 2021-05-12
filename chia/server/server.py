@@ -185,7 +185,7 @@ class ChiaServer:
 
     async def start_server(self, on_connect: Callable = None):
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
-            return
+            return None
 
         self.app = web.Application()
         self.on_connect = on_connect
@@ -463,7 +463,7 @@ class ChiaServer:
 
     def cancel_tasks_from_peer(self, peer_id: bytes32):
         if peer_id not in self.tasks_from_peer:
-            return
+            return None
 
         task_ids = self.tasks_from_peer[peer_id]
         for task_id in task_ids:

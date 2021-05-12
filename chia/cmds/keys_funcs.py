@@ -32,7 +32,7 @@ def generate_and_print():
         "First wallet address:",
         address,
     )
-    print('Note that this key has not been added to the keychain. Run chia keys add_seed -m "[MNEMONICS]" to add')
+    print("Note that this key has not been added to the keychain. Run chia keys add")
     return mnemonic
 
 
@@ -65,7 +65,7 @@ def add_private_key_seed(mnemonic: str):
 
     except ValueError as e:
         print(e)
-        return
+        return None
 
 
 def show_all_keys(show_mnemonic: bool):
@@ -79,7 +79,7 @@ def show_all_keys(show_mnemonic: bool):
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     if len(private_keys) == 0:
         print("There are no saved private keys")
-        return
+        return None
     msg = "Showing all public keys derived from your private keys:"
     if show_mnemonic:
         msg = "Showing all public and private keys"
@@ -128,7 +128,7 @@ def sign(message: str, fingerprint: int, hd_path: str):
                 sk = AugSchemeMPL.derive_child_sk(sk, c)
             print("Public key:", sk.get_g1())
             print("Signature:", AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
-            return
+            return None
     print(f"Fingerprint {fingerprint} not found in keychain")
 
 

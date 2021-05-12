@@ -469,7 +469,7 @@ class MempoolManager:
         This is later used to retry to add them.
         """
         if item.spend_bundle_name in self.potential_txs:
-            return
+            return None
 
         self.potential_txs[item.spend_bundle_name] = item
         self.potential_cache_cost += item.cost

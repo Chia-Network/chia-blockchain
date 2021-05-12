@@ -402,7 +402,7 @@ class WalletStateManager:
     async def puzzle_hash_created(self, coin: Coin):
         callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
         if callback is None:
-            return
+            return None
         await callback(coin)
 
     def state_changed(self, state: str, wallet_id: int = None, data_object=None):
@@ -412,7 +412,7 @@ class WalletStateManager:
         if data_object is None:
             data_object = {}
         if self.state_changed_callback is None:
-            return
+            return None
         self.state_changed_callback(state, wallet_id, data_object)
 
     def tx_pending_changed(self) -> None:
@@ -420,7 +420,7 @@ class WalletStateManager:
         Notifies the wallet node that there's new tx pending
         """
         if self.pending_tx_callback is None:
-            return
+            return None
 
         self.pending_tx_callback()
 
@@ -925,7 +925,7 @@ class WalletStateManager:
         get's excluded from chain because of the reorg.
         """
         if len(records) == 0:
-            return
+            return None
 
         for record in records:
             if record.type in [
@@ -1103,7 +1103,7 @@ class WalletStateManager:
                 stored_height = uint32(action_data["height"])
                 if stored_header_hash == header_hash and stored_height == height:
                     if action.done:
-                        return
+                        return None
                     wallet = self.wallets[uint32(action.wallet_id)]
                     callback_str = action.wallet_callback
                     if callback_str is not None:
@@ -1121,7 +1121,7 @@ class WalletStateManager:
                 height = uint32(action_data["height"])
                 if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
                     if action.done:
-                        return
+                        return None
                     wallet = self.wallets[uint32(action.wallet_id)]
                     callback_str = action.wallet_callback
                     if callback_str is not None:
