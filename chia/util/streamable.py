@@ -7,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional
+from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -270,9 +270,9 @@ class Streamable:
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj = object.__new__(cls)
-        fields = iter(getattr(cls, "__annotations__", {}).keys())
-        values = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        obj: Streamable = object.__new__(cls)
+        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
 
