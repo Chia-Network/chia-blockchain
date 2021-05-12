@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:12\n"
+"PO-Revision-Date: 2021-05-12 10:32\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -65,7 +65,7 @@ msgstr "Ajouter"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Ajouter un dossier de plot"
+msgstr "Ajouter un dossier de parcelles"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
@@ -88,7 +88,7 @@ msgstr "Ajouter une parcelle"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "Ajouter un répertoire de plot"
+msgstr "Ajouter un dossier de parcelles"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -129,7 +129,7 @@ msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Êtes-vous sûr de vouloir quitter ? Le traçage et la culture réalisés depuis cette application vont se stopper."
+msgstr "Êtes-vous sûr de vouloir quitter ? Le traçage et la culture vont s'arrêter."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -146,7 +146,7 @@ msgstr "Retour"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "Le fichier de sauvegarde est utilisé pour restaurer le smart wallet."
+msgstr "Le fichier de sauvegarde est utilisé pour restaurer des portefeuilles intelligents."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -156,7 +156,7 @@ msgstr "Solde"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Montant de récompense de base du fermier"
+msgstr "Montant de récompense de base du farmer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -228,7 +228,7 @@ msgstr "Acheter"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr "Porte-monnaie CC"
+msgstr "Portefeuille CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -357,7 +357,7 @@ msgstr "Connecté"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr "En cours de connexion au porte-monnaie"
+msgstr "En cours de connexion au portefeuille"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
@@ -406,7 +406,7 @@ msgstr "Créer"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "Créer un porte-monnaie à Identité décentralisée"
+msgstr "Créer un portefeuille à identité décentralisée"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -448,7 +448,7 @@ msgstr "Créer une nouvelle clé privée"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr "Créer un porte-monnaie administrateur"
+msgstr "Créer un portefeuille administrateur"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
@@ -464,7 +464,7 @@ msgstr "Créer un porte-monnaie pour un coloris"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr "Créer un porte-monnaie pour un coloris existant"
+msgstr "Créer un portefeuille pour un coloris existant"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -488,7 +488,7 @@ msgstr "DANGER: Suppression permanente de la clé privée"
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr "Portefeuille DID"
+msgstr "Portefeuille à identité décentralisée"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -592,7 +592,7 @@ msgstr "Éditer"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "Entrer les 24 mnemonic mots que vous avez sauvegardé afin de restaurer votre porte-monnaie Chia."
+msgstr "Entrez les 24 mots mnémotechniques que vous avez sauvegardé afin de restaurer votre portefeuille Chia."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -846,7 +846,7 @@ msgstr "Montant initial"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr "Initialiser un porte-monnaie à vitesse limitée:"
+msgstr "Initialiser un portefeuille utilisateur à débit limité :"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -972,7 +972,7 @@ msgstr "Nouvelle Adresse"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr "Nouveau porte-monnaie"
+msgstr "Nouveau portefeuille"
 
 #: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
@@ -1480,11 +1480,11 @@ msgstr "Envoyer"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr "Envoyer ce paquet informatif à vos utilisateurs de porte-monnaie à débit limité qui doivent l'utiliser pour initialiser leur porte-monnaie:"
+msgstr "Envoyer ce paquet informatif à vos utilisateurs de portefeuille à débit limité qui doivent l'utiliser pour initialiser leur portefeuille :"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "Envoyer votre clé publique à vos administrateur de porte-monnaie à débit limité:"
+msgstr "Envoyer votre clé publique à vos administrateur de portefeuille à débit limité :"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
