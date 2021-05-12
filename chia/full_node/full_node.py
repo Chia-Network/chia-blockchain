@@ -1265,7 +1265,7 @@ class FullNode:
             if validate_result.error is not None:
                 if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
                     # TODO: remove in the future, hotfix for 1.1.5 peers to not disconnect older peers
-                    self.log.error(f"Consensus error {validate_result.error}, not disconnecting")
+                    self.log.info(f"Consensus error {validate_result.error}, not disconnecting")
                     return
                 raise ConsensusError(Err(validate_result.error))
 
