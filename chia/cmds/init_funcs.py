@@ -321,6 +321,6 @@ def chia_init(root_path: Path):
     create_all_ssl(root_path)
     check_keys(root_path)
     print("")
-    print("To see your keys, run 'chia keys show'")
+    print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
 
     return 0
