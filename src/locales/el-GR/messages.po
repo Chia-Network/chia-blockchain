@@ -8,7 +8,7 @@ msgstr ""
 "Language: el_GR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:12\n"
+"PO-Revision-Date: 2021-05-12 21:59\n"
 "Last-Translator: \n"
 "Language-Team: Greek\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1066,7 +1066,7 @@ msgstr "Δημιουργήθηκαν Προσφορές"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "Κατά μέσο όρο υπάρχει ένα λεπτό μεταξύ κάθε μπλοκ συναλλαγών. Αν δεν υπάρχει συμφόρηση, μπορείτε να περιμένετε ότι η συναλλαγή σας θα συμπεριληφθεί σε λιγότερο από ένα λεπτό."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1376,7 +1376,7 @@ msgstr "Τι νέο υπάρχει"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "Αφαιρείται"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1414,7 +1414,7 @@ msgstr "Αποθήκευση"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Αναζήτηση μπλοκ βάσει κατακερματισμού κεφαλίδας"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1844,7 +1844,7 @@ msgstr "Μοναδικό αναγνωριστικό"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "Άγνωστο"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -2013,11 +2013,11 @@ msgstr "Το Δικό σας Δίκτυο Harvester"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Σφάλμα 13] Άρνηση άδειας. Προσπαθείτε να αποκτήσετε πρόσβαση σε ένα αρχείο/κατάλογο χωρίς να έχετε τα απαραίτητα δικαιώματα. Πιθανότατα ένας από τους φακέλους σχεδίασης στο config.yaml έχει πρόβλημα."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Σφάλμα 22] Το αρχείο δεν βρέθηκε. Πιθανότατα ένας από τους φακέλους σχεδίασης στο config.yaml έχει πρόβλημα."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
