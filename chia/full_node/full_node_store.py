@@ -175,6 +175,17 @@ class FullNodeStore:
             self.future_ip_cache[ch] = []
         self.future_ip_cache[ch].append(infusion_point)
 
+    def in_future_sp_cache(self, signage_point: SignagePoint, index: uint8) -> bool:
+        if signage_point.rc_vdf is None:
+            return False
+
+        if signage_point.rc_vdf.challenge not in self.future_sp_cache:
+            return False
+        for cache_index, cache_sp in self.future_sp_cache[signage_point.rc_vdf.challenge]:
+            if cache_index == index and cache_sp.rc_vdf == signage_point.rc_vdf:
+                return True
+        return False
+
     def add_to_future_sp(self, signage_point: SignagePoint, index: uint8):
         # We are missing a block here
         if (
@@ -186,9 +197,11 @@ class FullNodeStore:
             return None
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             self.future_sp_cache[signage_point.rc_vdf.challenge] = []
-        if (index, signage_point) not in self.future_sp_cache[signage_point.rc_vdf.challenge]:
-            self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
+        if self.in_future_sp_cache(signage_point, index):
+            return None
+
         self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
+        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
         log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge}. caching signage point {index}.")
 
     def get_future_ip(self, rc_challenge_hash: bytes32) -> List[timelord_protocol.NewInfusionPointVDF]:
@@ -659,16 +672,22 @@ class FullNodeStore:
                         continue
 
                     if fork_block is None:
-                        replaced_sps: List[Optional[SignagePoint]] = sps
-                    else:
-                        replaced_sps = [None]  # index 0 is the end of sub slot
-                        for i, sp in enumerate(sps):
-                            if (total_iters + i * interval_iters) < fork_block.total_iters:
-                                # Sps before the fork point as still valid
-                                replaced_sps.append(sp)
-                            else:
-                                # Sps after the fork point should be removed
-                                replaced_sps.append(None)
+                        # If this is not a reorg, we still want to remove signage points after the new peak
+                        fork_block = peak
+                    replaced_sps: List[Optional[SignagePoint]] = []  # index 0 is the end of sub slot
+                    for i, sp in enumerate(sps):
+                        if (total_iters + i * interval_iters) < fork_block.total_iters:
+                            # Sps before the fork point as still valid
+                            # log.warning(f"Not Reverting sp: {i}")
+                            replaced_sps.append(sp)
+                        else:
+                            if sp is not None:
+                                log.warning(
+                                    f"Reverting {i} {(total_iters + i * interval_iters)} {fork_block.total_iters}"
+                                )
+                            # Sps after the fork point should be removed
+                            replaced_sps.append(None)
+                    assert len(sps) == len(replaced_sps)
 
                     if sub_slot == sp_sub_slot:
                         sp_sub_slot_sps = replaced_sps

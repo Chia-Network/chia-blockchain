@@ -2,12 +2,13 @@
 import asyncio
 import logging
 from secrets import token_bytes
-from typing import List
+from typing import List, Optional
 
 import pytest
 from pytest import raises
 
 from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_store import FullNodeStore
@@ -575,6 +576,110 @@ class TestFullNodeStore:
 
         # If flaky, increase the number of blocks created
         assert case_0 and case_1
+
+        # Try to get two blocks in the same slot, such that we have
+        # SP, B2 SP .... SP B1
+        #     i2 .........  i1
+        # Then do a reorg up to B2, removing all signage points after B2, but not before
+        for block in blocks:
+            await blockchain.receive_block(block)
+
+        while True:
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            assert (await blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+            peak = blockchain.get_peak()
+            sub_slots = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            store.new_peak(peak, blocks[-1], sub_slots[0], sub_slots[1], None, blockchain)
+
+            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+
+            i3 = blocks[-3].reward_chain_block.signage_point_index
+            i2 = blocks[-2].reward_chain_block.signage_point_index
+            i1 = blocks[-1].reward_chain_block.signage_point_index
+            log.warning(f"{(len(blocks[-2].finished_sub_slots), len(blocks[-1].finished_sub_slots),i2, i1)}")
+            if (
+                len(blocks[-2].finished_sub_slots) == len(blocks[-1].finished_sub_slots) == 0
+                and not is_overflow_block(test_constants, signage_point_index=i2)
+                and not is_overflow_block(test_constants, signage_point_index=i1)
+                and i2 > i3 + 4
+                and i1 > (i2 + 3)
+            ):
+                log.warning("Made it!!")
+                # We hit all the conditions that we want
+                all_sps: List[Optional[SignagePoint]] = [None] * test_constants.NUM_SPS_SUB_SLOT
+                for i in range(i2 - 1, i2):
+                    finished_sub_slots = []
+                    sp = get_signage_point(
+                        test_constants,
+                        blockchain,
+                        peak,
+                        uint128(peak.ip_sub_slot_total_iters(bt.constants)),
+                        uint8(i),
+                        finished_sub_slots,
+                        peak.sub_slot_iters,
+                    )
+                    all_sps[i] = sp
+                    assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+
+                assert (await blockchain.receive_block(blocks[-2]))[0] == ReceiveBlockResult.NEW_PEAK
+                peak = blockchain.get_peak()
+                sub_slots = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+                store.new_peak(peak, blocks[-2], sub_slots[0], sub_slots[1], None, blockchain)
+
+                for i in range(i2, test_constants.NUM_SPS_SUB_SLOT):
+                    if is_overflow_block(test_constants, uint8(i)):
+                        blocks_alt = bt.get_consecutive_blocks(1, block_list_input=blocks[:-1], skip_slots=1)
+                        finished_sub_slots = blocks_alt[-1].finished_sub_slots
+                    else:
+                        finished_sub_slots = []
+                    sp = get_signage_point(
+                        test_constants,
+                        blockchain,
+                        peak,
+                        uint128(peak.ip_sub_slot_total_iters(bt.constants)),
+                        uint8(i),
+                        finished_sub_slots,
+                        peak.sub_slot_iters,
+                    )
+                    all_sps[i] = sp
+                    assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
+
+                def assert_sp_none(sp_index: int, is_none: bool):
+                    sp_to_check: Optional[SignagePoint] = all_sps[i2]
+                    assert sp_to_check is not None
+                    assert sp_to_check.cc_vdf is not None
+                    fetched = store.get_signage_point(sp_to_check.cc_vdf.output.get_hash())
+                    assert (fetched is None) == is_none
+
+                assert_sp_none(i2, False)
+                assert_sp_none(i2 + 1, False)
+                assert_sp_none(i1, False)
+                assert_sp_none(i1 + 1, False)
+                assert_sp_none(i1 + 4, False)
+
+                assert (await blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+                peak = blockchain.get_peak()
+                sub_slots = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+
+                # Do a reorg, which should remove everything after i2
+                store.new_peak(
+                    peak,
+                    blocks[-1],
+                    sub_slots[0],
+                    sub_slots[1],
+                    (await blockchain.get_block_records_at([blocks[-2].height]))[0],
+                    blockchain,
+                )
+
+                assert_sp_none(i2, False)
+                assert_sp_none(i2 + 1, False)
+                assert_sp_none(i1, False)
+                assert_sp_none(i1 + 1, True)
+                assert_sp_none(i1 + 4, True)
+                break
+            else:
+                for block in blocks[-2:]:
+                    assert (await blockchain.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_basic_store_compact_blockchain(self, empty_blockchain):
