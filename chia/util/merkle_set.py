@@ -42,7 +42,7 @@ TRUNCATED = bytes([3])
 
 BLANK = bytes([0] * 32)
 
-prehashed: Dict = {}
+prehashed: Dict[bytes, Any] = {}
 
 
 def init_prehashed():
@@ -54,14 +54,14 @@ def init_prehashed():
 init_prehashed()
 
 
-def hashdown(mystr: bytes):
+def hashdown(mystr: bytes) -> bytes:
     assert len(mystr) == 66
     h = prehashed[bytes(mystr[0:1] + mystr[33:34])].copy()
     h.update(mystr[1:33] + mystr[34:])
     return h.digest()[:32]
 
 
-def compress_root(mystr: bytes):
+def compress_root(mystr: bytes) -> bytes:
     assert len(mystr) == 33
     if mystr[0:1] == MIDDLE:
         return mystr[1:]
@@ -71,7 +71,7 @@ def compress_root(mystr: bytes):
     return sha256(mystr).digest()[:32]
 
 
-def get_bit(mybytes: bytes, pos: int):
+def get_bit(mybytes: bytes, pos: int) -> int:
     assert len(mybytes) == 32
     return (mybytes[pos // 8] >> (7 - (pos % 8))) & 1
 
@@ -104,7 +104,7 @@ class Node(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def is_included(self, tocheck: bytes, depth: int, p: List[bytes]):
+    def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         pass
 
     @abstractmethod
@@ -125,7 +125,7 @@ class MerkleSet:
         else:
             self.root = root
 
-    def get_root(self) -> Node:
+    def get_root(self) -> bytes:
         return compress_root(self.root.get_hash())
 
     def add_already_hashed(self, toadd: bytes):

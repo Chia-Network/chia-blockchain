@@ -211,7 +211,7 @@ class WeightProofHandler:
         log.debug("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
-            return
+            return None
         count = len(heights) - 2
         ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
         prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
@@ -220,7 +220,7 @@ class WeightProofHandler:
         assert segments is not None
         await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.header_hash, segments)
         log.debug("sub_epoch_segments done")
-        return
+        return None
 
     async def create_sub_epoch_segments(self):
         log.debug("check segments in db")
@@ -254,7 +254,7 @@ class WeightProofHandler:
             prev_ses_block = ses_block
             await asyncio.sleep(2)
         log.debug("done checking segments")
-        return
+        return None
 
     async def __create_persist_segment(self, prev_ses_block, ses_block, ses_height, sub_epoch_n):
         segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
@@ -262,7 +262,7 @@ class WeightProofHandler:
             segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
             if segments is None:
                 log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
-                return
+                return None
             await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
 
     async def __create_sub_epoch_segments(
@@ -395,7 +395,6 @@ class WeightProofHandler:
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots_data: List[SubSlotData] = []
-        curr = header_blocks[curr.header_hash]
         while curr.height < header_block.height:
             if curr is None:
                 log.error("failed fetching block")
@@ -457,14 +456,17 @@ class WeightProofHandler:
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
         curr = header_blocks[self.blockchain.height_to_hash(start_height)]
+        curr_header_hash = curr.header_hash
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots_data: List[SubSlotData] = []
-        while not blocks[curr.header_hash].is_challenge_block(self.constants):
+        while not blocks[curr_header_hash].is_challenge_block(self.constants):
             if curr.first_in_sub_slot:
                 sub_slots_data.extend(tmp_sub_slots_data)
+
+                curr_prev_header_hash = curr.prev_header_hash
                 # add collected vdfs
                 for idx, sub_slot in enumerate(curr.finished_sub_slots):
-                    prev_rec = blocks[curr.prev_header_hash]
+                    prev_rec = blocks[curr_prev_header_hash]
                     eos_vdf_iters = prev_rec.sub_slot_iters
                     if idx == 0:
                         eos_vdf_iters = uint64(prev_rec.sub_slot_iters - prev_rec.ip_iters(self.constants))
@@ -473,6 +475,8 @@ class WeightProofHandler:
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+            curr_header_hash = curr.header_hash
+
         if len(tmp_sub_slots_data) > 0:
             sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")

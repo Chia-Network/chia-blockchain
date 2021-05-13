@@ -169,7 +169,7 @@ class WSChiaConnection:
         """
 
         if self.closed:
-            return
+            return None
         self.closed = True
 
         if error is None:
@@ -240,7 +240,7 @@ class WSChiaConnection:
     async def send_message(self, message: Message):
         """Send message sends a message with no tracking / callback."""
         if self.closed:
-            return
+            return None
         await self.outgoing_queue.put(message)
 
     def __getattr__(self, attr_name: str):
@@ -326,12 +326,12 @@ class WSChiaConnection:
 
     async def reply_to_request(self, response: Message):
         if self.closed:
-            return
+            return None
         await self.outgoing_queue.put(response)
 
     async def send_messages(self, messages: List[Message]):
         if self.closed:
-            return
+            return None
         for message in messages:
             await self.outgoing_queue.put(message)
 
@@ -341,7 +341,7 @@ class WSChiaConnection:
             await queue.put(msg)
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
-            return
+            return None
 
     async def _send_message(self, message: Message):
         encoded: bytes = bytes(message)
@@ -358,7 +358,7 @@ class WSChiaConnection:
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
                     asyncio.create_task(self._wait_and_retry(message, self.outgoing_queue))
 
-                return
+                return None
             else:
                 self.log.debug(
                     f"Not rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "

@@ -166,7 +166,7 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
 async def challenges(farmer_rpc_port: int, limit: int) -> None:
     signage_points = await get_challenges(farmer_rpc_port)
     if signage_points is None:
-        return
+        return None
 
     signage_points.reverse()
     if limit != 0:
@@ -175,7 +175,7 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
     for signage_point in signage_points:
         print(
             (
-                f"Hash: {signage_point['signage_point']['challenge_hash']}"
+                f"Hash: {signage_point['signage_point']['challenge_hash']} "
                 f"Index: {signage_point['signage_point']['signage_point_index']}"
             )
         )

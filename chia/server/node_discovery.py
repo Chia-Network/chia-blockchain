@@ -131,7 +131,7 @@ class FullNodeDiscovery:
         ):
             peer_info = peer.get_peer_info()
             if peer_info is None:
-                return
+                return None
             if peer_info.host not in self.connection_time_pretest:
                 self.connection_time_pretest[peer_info.host] = time.time()
             if time.time() - self.connection_time_pretest[peer_info.host] > 600:
@@ -158,7 +158,7 @@ class FullNodeDiscovery:
 
     async def _introducer_client(self):
         if self.introducer_info is None:
-            return
+            return None
 
         async def on_connect(peer: ws.WSChiaConnection):
             msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
@@ -187,7 +187,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
-                        return
+                        return None
                     await self._introducer_client()
                     # there's some delay between receiving the peers from the
                     # introducer until they get incorporated to prevent this
@@ -196,7 +196,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(5)
                     except asyncio.CancelledError:
-                        return
+                        return None
                     empty_tables = False
                     # keep doubling the introducer delay until we reach 5
                     # minutes
@@ -254,7 +254,7 @@ class FullNodeDiscovery:
                     try:
                         await asyncio.sleep(sleep_interval)
                     except asyncio.CancelledError:
-                        return
+                        return None
                     tries += 1
                     if tries > max_tries:
                         addr = None
@@ -364,7 +364,7 @@ class FullNodeDiscovery:
             is_misbehaving = True
         if is_full_node:
             if peer_src is None:
-                return
+                return None
             async with self.lock:
                 if peer_src.host not in self.received_count_from_peers:
                     self.received_count_from_peers[peer_src.host] = 0
@@ -372,7 +372,7 @@ class FullNodeDiscovery:
                 if self.received_count_from_peers[peer_src.host] > MAX_TOTAL_PEERS_RECEIVED:
                     is_misbehaving = True
         if is_misbehaving:
-            return
+            return None
         for peer in request.peer_list:
             if peer.timestamp < 100000000 or peer.timestamp > time.time() + 10 * 60:
                 # Invalid timestamp, predefine a bad one.
@@ -441,7 +441,7 @@ class FullNodePeers(FullNodeDiscovery):
                 try:
                     await asyncio.sleep(24 * 3600)
                 except asyncio.CancelledError:
-                    return
+                    return None
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
                     for neighbour in list(self.neighbour_known_peers.keys()):
@@ -520,7 +520,7 @@ class FullNodePeers(FullNodeDiscovery):
                 try:
                     relay_peer, num_peers = await self.relay_queue.get()
                 except asyncio.CancelledError:
-                    return
+                    return None
                 relay_peer_info = PeerInfo(relay_peer.host, relay_peer.port)
                 if not relay_peer_info.is_valid():
                     continue
@@ -595,7 +595,7 @@ class WalletPeers(FullNodeDiscovery):
 
     async def ensure_is_closed(self) -> None:
         if self.is_closed:
-            return
+            return None
         await self._close_common()
 
     async def respond_peers(self, request, peer_src, is_full_node) -> None:
