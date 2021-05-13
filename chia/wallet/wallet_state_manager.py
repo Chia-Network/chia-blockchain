@@ -483,13 +483,14 @@ class WalletStateManager:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
         """
-        if unspent_coin_records is None:
-            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        amount: uint128 = uint128(0)
-        for record in unspent_coin_records:
-            amount = uint128(amount + record.coin.amount)
-        self.log.info(f"Confirmed balance amount is {amount}")
-        return uint128(amount)
+        async with self.lock:
+            if unspent_coin_records is None:
+                unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            amount: uint128 = uint128(0)
+            for record in unspent_coin_records:
+                amount = uint128(amount + record.coin.amount)
+            self.log.info(f"Confirmed balance amount is {amount}")
+            return uint128(amount)
 
     async def get_unconfirmed_balance(
         self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
