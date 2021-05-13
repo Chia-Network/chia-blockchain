@@ -1,5 +1,5 @@
 from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, Union
+from typing import Iterable, Union, Any
 from chia.server.outbound_message import NodeType
 
 
@@ -15,7 +15,7 @@ def is_localhost(peer_host: str) -> bool:
     return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
 
 
-def class_for_type(type: NodeType):
+def class_for_type(type: NodeType) -> Any:
     if type is NodeType.FULL_NODE:
         from chia.full_node.full_node_api import FullNodeAPI
 

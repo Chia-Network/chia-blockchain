@@ -21,10 +21,10 @@ class TimelordAPI:
     @api_request
     async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord):
         if self.timelord.last_state is None:
-            return
+            return None
         async with self.timelord.lock:
             if self.timelord.sanitizer_mode:
-                return
+                return None
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(
@@ -37,7 +37,7 @@ class TimelordAPI:
                 and self.timelord.last_state.peak.reward_chain_block == new_peak.reward_chain_block
             ):
                 log.info("Skipping peak, already have.")
-                return
+                return None
             else:
                 log.warning("block that we don't have, changing to it.")
                 self.timelord.new_peak = new_peak
@@ -46,10 +46,10 @@ class TimelordAPI:
     @api_request
     async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
         if self.timelord.last_state is None:
-            return
+            return None
         async with self.timelord.lock:
             if self.timelord.sanitizer_mode:
-                return
+                return None
             try:
                 sp_iters, ip_iters = iters_from_block(
                     self.timelord.constants,
@@ -58,7 +58,7 @@ class TimelordAPI:
                     self.timelord.last_state.get_difficulty(),
                 )
             except Exception:
-                return
+                return None
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
                 self.timelord.overflow_blocks.append(new_unfinished_block)
@@ -79,6 +79,6 @@ class TimelordAPI:
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
         async with self.timelord.lock:
             if not self.timelord.sanitizer_mode:
-                return
+                return None
             if vdf_info not in self.timelord.pending_bluebox_info:
                 self.timelord.pending_bluebox_info.append(vdf_info)

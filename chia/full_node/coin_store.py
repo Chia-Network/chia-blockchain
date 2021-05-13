@@ -66,7 +66,7 @@ class CoinStore:
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
         if block.is_transaction_block() is False:
-            return
+            return None
         assert block.foliage_transaction_block is not None
 
         for coin in tx_additions:

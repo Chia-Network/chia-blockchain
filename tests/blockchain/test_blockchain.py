@@ -312,7 +312,7 @@ class TestBlockHeaderValidation:
                 )
                 validate_res = await blockchain.validate_unfinished_block(unf, skip_overflow_ss_validation=True)
                 assert validate_res.error is None
-                return
+                return None
 
             await blockchain.receive_block(blocks[-1])
 
@@ -955,7 +955,7 @@ class TestBlockHeaderValidation:
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
-                return
+                return None
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
@@ -1083,7 +1083,7 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), std_hash(b""), False),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
-                return
+                return None
             assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
@@ -1126,7 +1126,7 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), std_hash(b""), False),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SP_VDF
-                return
+                return None
             assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
@@ -1165,7 +1165,7 @@ class TestBlockHeaderValidation:
                     blocks[-1], "foliage.foliage_transaction_block_signature", G2Element.generator()
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PLOT_SIGNATURE
-                return
+                return None
             assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
@@ -1226,7 +1226,7 @@ class TestBlockHeaderValidation:
                 new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_SIGNATURE
-                return
+                return None
             attempts += 1
 
     @pytest.mark.asyncio
@@ -1250,7 +1250,7 @@ class TestBlockHeaderValidation:
                 new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_TARGET
-                return
+                return None
             attempts += 1
 
     @pytest.mark.asyncio
@@ -1290,7 +1290,7 @@ class TestBlockHeaderValidation:
                 new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_FOLIAGE_BLOCK_HASH
-                return
+                return None
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
@@ -1326,7 +1326,7 @@ class TestBlockHeaderValidation:
                 new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREV_BLOCK_HASH
-                return
+                return None
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
@@ -1347,7 +1347,7 @@ class TestBlockHeaderValidation:
                 new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_TRANSACTIONS_FILTER_HASH
-                return
+                return None
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
@@ -1396,7 +1396,7 @@ class TestBlockHeaderValidation:
                 new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.TIMESTAMP_TOO_FAR_IN_FUTURE
-                return
+                return None
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
@@ -1544,7 +1544,7 @@ class TestBlockHeaderValidation:
                     block_bad, "foliage.reward_block_hash", block_bad.reward_chain_block.get_hash()
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
-                return
+                return None
             assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
 
 
@@ -1643,7 +1643,7 @@ class TestBodyValidation:
         try:
             err = (await b.receive_block(block))[1]
         except AssertionError:
-            return
+            return None
         assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
     @pytest.mark.asyncio

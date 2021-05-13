@@ -260,6 +260,12 @@ class MempoolManager:
         addition_amount = uint64(0)
         # Check additions for max coin amount
         for coin in additions:
+            if coin.amount < 0:
+                return (
+                    None,
+                    MempoolInclusionStatus.FAILED,
+                    Err.COIN_AMOUNT_NEGATIVE,
+                )
             if coin.amount > self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
@@ -463,7 +469,7 @@ class MempoolManager:
         This is later used to retry to add them.
         """
         if item.spend_bundle_name in self.potential_txs:
-            return
+            return None
 
         self.potential_txs[item.spend_bundle_name] = item
         self.potential_cache_cost += item.cost

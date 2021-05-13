@@ -9,7 +9,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.types.peer_info import PeerInfo
 from chia.util.block_tools import test_constants
-from chia.util.config import load_config_cli
+from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
 from chia.wallet.wallet_node import WalletNode
@@ -32,7 +32,7 @@ def service_kwargs_for_wallet(
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
     if "trusted_peers" not in config:
-        full_node_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
+        full_node_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
         trusted_peer = full_node_config["ssl"]["public_crt"]
         config["trusted_peers"] = {}
         config["trusted_peers"]["local_node"] = trusted_peer
