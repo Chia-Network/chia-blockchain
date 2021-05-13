@@ -243,8 +243,12 @@ def init(create_certs: Optional[Path], root_path: Path):
             else:
                 print(f"** Directory {create_certs} does not exist **")
         else:
-            print(f"** {root_path} does not exist **")
-            print("** Please run `chia init` to migrate or create new config files **")
+            print(f"** {root_path} does not exist. Executing core init **")
+            chia_init(root_path)
+            if root_path.exists():
+                init(create_certs, root_path)
+            else:
+                print(f"** {root_path} was not created. Exiting **")
     else:
         return chia_init(root_path)
 
