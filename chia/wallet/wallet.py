@@ -289,6 +289,7 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
+        announcements_to_consume: Set[Announcement] = None,
     ) -> List[CoinSolution]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -344,7 +345,7 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                solution: Program = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message])
+                solution: Program = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message], coin_announcements_to_assert=announcements_to_consume)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
                 solution = self.make_solution(coin_announcements_to_assert=[primary_announcement_hash])
@@ -375,6 +376,7 @@ class Wallet:
         coins: Set[Coin] = None,
         primaries: Optional[List[Dict[str, bytes32]]] = None,
         ignore_max_send_amount: bool = False,
+        announcements_to_consume: Set[Announcement] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -386,7 +388,7 @@ class Wallet:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         transaction = await self._generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount
+            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, announcements_to_consume
         )
         assert len(transaction) > 0
 

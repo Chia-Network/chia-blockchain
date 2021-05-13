@@ -123,7 +123,7 @@ def test_pool_puzzles():
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
     escape_innerpuz = POOL_ESCAPING_MOD.curry(pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash)
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
-    committed_innerpuz = POOL_COMMITED_MOD.curry(pool_puzhash, relative_lock_height, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey)
+    committed_innerpuz = POOL_COMMITED_MOD.curry(pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey)
     singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
     singleton_amount = 3
 
