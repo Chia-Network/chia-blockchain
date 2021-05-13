@@ -113,6 +113,7 @@ class WalletRpcClient(RpcClient):
             del modified_tx["to_address"]
             reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
         return reverted_tx
+
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
