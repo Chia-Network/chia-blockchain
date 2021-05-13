@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:11\n"
+"PO-Revision-Date: 2021-05-13 23:19\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "*¿Quieres explorar más los bloques de Chia? Echa un vistazo a <0>Chia Explorer</0> creado por un desarrollador de código abierto."
+msgstr "*¿Quieres explorar más hacerca de los bloques de Chia? Echa un vistazo a Chia Explorer, creado por un desarrollador de código abierto."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -1066,7 +1066,7 @@ msgstr "Oferta Creada"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "En promedio hay un minuto de procesamiento entre cada transaccion de bloques, durante alta congestacion en la red la transaccion puede tomar mas de un minuto."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
