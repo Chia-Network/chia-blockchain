@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:11\n"
+"PO-Revision-Date: 2021-05-13 16:50\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1066,7 +1066,7 @@ msgstr "Tawaran dicipta"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "Rata rata ada jarak 1 menit antara masing masing blok transaksi. Kecuali ada kebanyakan transaksi, transaksi biasanya akan di ikutkan dalam waktu kurang dari 1 menit."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1356,7 +1356,7 @@ msgstr "Laju dari pilihan - pilihan yang terbatas"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Dompet Pengguna Hak Terbatas Setup"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
@@ -1377,7 +1377,7 @@ msgstr "Release Notes"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "Menghapus"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1455,11 +1455,11 @@ msgstr "Pilih Jenis Dompet elektronik"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Pilih tujuan akhir untuk folder dimana plot akan di simpan. Kami sarankan anda menggunakan hard drive besar dan pelan (seperti HDD external)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Pilih folder penyimpanan sementara untuk menyimpan plot. Kami sarankan anda menggunakan sebuah SSD yang cepat."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1481,11 +1481,11 @@ msgstr "Kirim"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Kirim info paket ke Dompet Pengguna Hak Terbatas yang harus digunakan untuk menyelesaikan setup dompet mereka:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Kirim pubkey anda ke admin Dompet Hak Terbatas:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1648,12 +1648,12 @@ msgstr "Aplikasi akan tamat kerja pada blok 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Node penuh yang terhubung ke farmer anda di bawah. <0>Pelajari lebih lanjut</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "Ukuran minimum yang di butuhkan untuk mainnet adalah k=32"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
@@ -1661,7 +1661,7 @@ msgstr "Node tidak sinkron"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "Node sedang melakukan sinkronisasi, yang berarti node sedang meng unduh blok dari node lainya, untuk mencapai blok terahir dalam rantai"
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1685,7 +1685,7 @@ msgstr "Plot - plot ini tidak valid, anda sebaiknya menghapus semuanya."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "Anda dapat menambah direktori yang berisikan plot. Apa bila belum membuat plot, silahkan ke halaman pembuatan plot."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
@@ -1695,15 +1695,15 @@ msgstr "Fitur ini hanya tersedia di GUI."
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Ini adalah jumlah Chia yang ada yang bisa anda gunakan untuk transaksi. Ini tidak berikut penghasilan farming yang masih tertahan, transaksi masuk yang masih tertahan, dan Chia yang sudah anda pakai tapi belum terdaftar di blockchain."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Ini adalah perubahan yang tertahan, perubahan koin yang anda kirim ke diri anda sendiri, tetapi belum ter konfirmasi."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Ini ada jumlah dari transaksi masuk dan keluar yang masih dalam antrian (belum terdaftar ke dalam blockchain). Tidak berikut penghasilan dari farming."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
@@ -1711,19 +1711,19 @@ msgstr "Ini adalah waktu dari ketinggian terakhir sub block."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Ini adalah waktu dimana blok di hasilkan oleh farmer, sebelum di finalisasi dengan bukti dari waktu"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Ini adalah jumlah total Chia di dalam blockchain di pucak terbaru sub blok yang di kontrol oleh kunci privat anda. Termasuk hadiah farming yang masi beku, tapi tidak termasuk transaksi masuk atau keluar yang masih tertahan."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Ini adalah total saldo + saldo tertahan: total saldo yang akan ada pegang apabila semua transaksi tertahan sudah di konfirmasi."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Node ini sudah mempunyai data terbaru dan sudah ikut men validasi dalam jaringan"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1731,7 +1731,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr ""
+msgstr "Tabel berikut menunjukan waktu terakhir farm anda mencoba untuk memenangkan sebuah blok tantangan. <0>Pelajari lebih lanjut</0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
@@ -1944,7 +1944,7 @@ msgstr "Berat"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Beban adalah jumlah total ke rumitan semua sub blok sampai dengan blok ini"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
@@ -1956,7 +1956,7 @@ msgstr "Selamat datang! kata-kata frasa ini akan diguna untuk simpanan dompet el
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "Ketika anda menerima paket informasi setup dari administrator, masukan di bawah untuk menyelesaikan setup dompet rate terbatas anda:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
@@ -1978,7 +1978,7 @@ msgstr "Ya"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Anda tidak perlu tersinkronisasi atau terhubung untuk membuat plot. File semetara di buat pada saat membuat plot yang melebihi ukuran akhir plot. Pastikan anda mempunyai ruangan yang cukup. <0>Pelajari lebih lanjut</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1986,7 +1986,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Anda memiliki {0}% dari total ruang di jaringan, maka farming 1 blok akan memakan waktu {expectedTimeToWin} menurut perkiraan. Hasil nyata bisa saja memakan waktu 3 sampai 4 kali lebih lama dari perkiraan ini."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2014,11 +2014,11 @@ msgstr "Jaringan Harvester Anda"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Error 13] Ijin di tolak. Anda mencoba untuk meng akses suatu file/direktori tanpa mempunyai ijin yang di perlukan. Kemungkinan besar salah satu folder plot di config.yaml mempunyai masalah."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Error 22] File tidak di temukan. Kemungkinan besar salah satu folder plot di config.yaml anda bermasalah."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
