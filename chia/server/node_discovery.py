@@ -10,7 +10,7 @@ from typing import Dict, Optional, List
 import aiosqlite
 
 import chia.server.ws_connection as ws
-import dns.resolver
+import dns.asyncresolver
 from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
@@ -62,6 +62,7 @@ class FullNodeDiscovery:
         self.serialize_task: Optional[asyncio.Task] = None
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
+        self.resolver = dns.asyncresolver.Resolver()
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -172,7 +173,7 @@ class FullNodeDiscovery:
     async def _query_dns(self, dns_address):
         try:
             peers: List[TimestampedPeerInfo] = []
-            result = dns.resolver.query(dns_address, "A")
+            result = await self.resolver.resolve(qname=dns_address, lifetime=30)
             for ip in result:
                 peers.append(
                     TimestampedPeerInfo(
@@ -182,6 +183,8 @@ class FullNodeDiscovery:
                     )
                 )
             self.log.info(f"Received {len(peers)} peers from DNS seeder.")
+            if len(peers) == 0:
+                return
             await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
             self.log.error(f"Exception while querying DNS server: {e}")
@@ -190,6 +193,7 @@ class FullNodeDiscovery:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         retry_introducers = False
         introducer_attempts: int = 0
+        dns_server_index: int = 0
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         if self.initial_wait > 0:
@@ -210,7 +214,8 @@ class FullNodeDiscovery:
                     # Run dual between DNS servers and introducers. One time query DNS server,
                     # next two times query the introducer.
                     if introducer_attempts % 3 == 0 and len(self.dns_servers) > 0:
-                        dns_address = random.choice(self.dns_servers)
+                        dns_address = self.dns_servers[dns_server_index]
+                        dns_server_index = (dns_server_index + 1) % len(self.dns_servers)
                         await self._query_dns(dns_address)
                     else:
                         await self._introducer_client()
