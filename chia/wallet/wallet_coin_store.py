@@ -1,4 +1,3 @@
-import asyncio
 from typing import Dict, List, Optional, Set
 
 import aiosqlite
