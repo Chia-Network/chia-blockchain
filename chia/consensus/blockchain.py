@@ -5,6 +5,7 @@ import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
+import time
 
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
@@ -230,6 +231,7 @@ class Blockchain(BlockchainInterface):
             required_iters = pre_validation_result.required_iters
             assert pre_validation_result.error is None
         assert required_iters is not None
+        start = time.time()
         error_code, _ = await validate_block_body(
             self.constants,
             self,
@@ -242,6 +244,8 @@ class Blockchain(BlockchainInterface):
             fork_point_with_peak,
             self.get_block_generator,
         )
+        done = time.time()
+        log.debug(f"validate_block_body (receive_block) took {done-start} seconds")
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
@@ -522,6 +526,7 @@ class Blockchain(BlockchainInterface):
             npc_result = get_name_puzzle_conditions(
                 block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
             )
+        start = time.time()
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
@@ -534,6 +539,8 @@ class Blockchain(BlockchainInterface):
             None,
             self.get_block_generator,
         )
+        done = time.time()
+        log.debug(f"validate_block_body (unfinished_block) took {done-start} seconds")
 
         if error_code is not None:
             return PreValidationResult(uint16(error_code.value), None, None)
