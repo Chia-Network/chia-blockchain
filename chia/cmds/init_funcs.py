@@ -244,11 +244,12 @@ def init(create_certs: Optional[Path], root_path: Path):
                 print(f"** Directory {create_certs} does not exist **")
         else:
             print(f"** {root_path} does not exist. Executing core init **")
-            chia_init(root_path)
-            if root_path.exists():
-                init(create_certs, root_path)
-            else:
-                print(f"** {root_path} was not created. Exiting **")
+            # sanity check here to prevent infinite recursion
+            if chia_init(root_path) == 0 and root_path.exists():
+                return init(create_certs, root_path)
+
+            print(f"** {root_path} was not created. Exiting **")
+            return -1
     else:
         return chia_init(root_path)
 
