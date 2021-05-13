@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 21:11\n"
+"PO-Revision-Date: 2021-05-13 10:51\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -45,7 +45,7 @@ msgstr "Aceptar"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Aceptado en el tiempo:"
+msgstr "Aceptado en el momento:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -129,7 +129,7 @@ msgstr "¿Estás seguro de que te quieres desconectar?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "¿Está seguro que quiere salir? Sembrar y Cultivar en el GUI se detendrán."
+msgstr "¿Está seguro que quiere salir? El Sembrado y Cultivado de las parcelas se detendrán."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -1038,7 +1038,7 @@ msgstr "No confirmado todavía"
 #: src/components/fullNode/FullNode.jsx:145
 #: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
-msgstr "No conectado"
+msgstr "Desconectado"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
