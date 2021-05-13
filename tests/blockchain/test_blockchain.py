@@ -2555,3 +2555,37 @@ class TestReorgs:
         for block in blocks_fork:
             result, error_code, _ = await b.receive_block(block)
             assert error_code is None
+
+    @pytest.mark.asyncio
+    async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            pool_reward_puzzle_hash=bt.pool_ph,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
+        )
+        err = (await b.receive_block(blocks[-1]))[1]
+        assert not err
+
+        blocks_with_filter = await b.get_header_blocks_in_range(0, 10, tx_filter=True)
+        blocks_without_filter = await b.get_header_blocks_in_range(0, 10, tx_filter=False)
+        header_hash = blocks[-1].header_hash
+        assert (
+            blocks_with_filter[header_hash].transactions_filter
+            != blocks_without_filter[header_hash].transactions_filter
+        )
+        assert blocks_with_filter[header_hash].header_hash == blocks_without_filter[header_hash].header_hash
