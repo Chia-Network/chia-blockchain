@@ -9,18 +9,20 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.condition_opcodes import ConditionOpcode
 
-DID_CORE_MOD = load_clvm("singleton_top_layer.clvm")
+
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
+SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
-    return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed)
+    return DID_INNERPUZ_MOD.curry(SINGLETON_TOP_LAYER_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed)
 
 
-def create_fullpuz(innerpuz, genesis_puzhash) -> Program:
-    mod_hash = DID_CORE_MOD.get_tree_hash()
-    return DID_CORE_MOD.curry(mod_hash, genesis_puzhash, innerpuz)
+def create_fullpuz(innerpuz, genesis_id) -> Program:
+    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
+    return SINGLETON_TOP_LAYER_MOD.curry(mod_hash, genesis_id, innerpuz)
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
@@ -41,7 +43,7 @@ def is_did_innerpuz(inner_f: Program):
 
 
 def is_did_core(inner_f: Program):
-    return inner_f == DID_CORE_MOD
+    return inner_f == SINGLETON_TOP_LAYER_MOD
 
 
 def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
