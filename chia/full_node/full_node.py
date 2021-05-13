@@ -953,7 +953,7 @@ class FullNode:
         fork_block: Optional[BlockRecord] = None
         if fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            fork_block = self.blockchain.height_to_hash(fork_height)
+            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))
 
         added_eos, new_sps, new_ips = self.full_node_store.new_peak(
             record,
