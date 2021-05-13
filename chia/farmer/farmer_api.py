@@ -249,6 +249,10 @@ class FarmerAPI:
         await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
+        if new_signage_point in self.farmer.sps[new_signage_point.challenge_chain_sp]:
+            self.farmer.log.debug(f"Duplicate signage point {new_signage_point.signage_point_index}")
+            return
+
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = uint64(int(time.time()))
         self.farmer.state_changed("new_signage_point", {"sp_hash": new_signage_point.challenge_chain_sp})

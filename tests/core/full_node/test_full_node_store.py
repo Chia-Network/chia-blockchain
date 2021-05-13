@@ -142,9 +142,9 @@ class TestFullNodeStore:
         peak = blockchain.get_peak()
         peak_full_block = await blockchain.get_full_peak()
         if peak.overflow:
-            store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], False, blockchain)
+            store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], None, blockchain)
         else:
-            store.new_peak(peak, peak_full_block, None, sub_slots[-1], False, blockchain)
+            store.new_peak(peak, peak_full_block, None, sub_slots[-1], None, blockchain)
 
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
@@ -190,7 +190,7 @@ class TestFullNodeStore:
             await blockchain.receive_block(block)
             sb = blockchain.block_record(block.header_hash)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, False, blockchain)
+            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
             assert res[0] is None
 
         # Add reorg blocks
@@ -202,11 +202,16 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for block in blocks_reorg:
-            res, _, _ = await blockchain.receive_block(block)
+            res, _, fork_height = await blockchain.receive_block(block)
+
             if res == ReceiveBlockResult.NEW_PEAK:
+                if fork_height is not None and fork_height != block.height - 1:
+                    fork_block = blockchain.height_to_hash(fork_height)
+                else:
+                    fork_block = None
                 sb = blockchain.block_record(block.header_hash)
                 sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-                res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, True, blockchain)
+                res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, fork_block, blockchain)
                 assert res[0] is None
 
         # Add slots to the end
@@ -250,12 +255,17 @@ class TestFullNodeStore:
                 normalized_to_identity_cc_ip=normalized_to_identity,
                 normalized_to_identity_cc_sp=normalized_to_identity,
             )
-            res, _, _ = await blockchain.receive_block(blocks[-1])
+            res, _, fork_height = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
+                if fork_height is not None and fork_height != blocks[-1].height - 1:
+                    fork_block = blockchain.height_to_hash(fork_height)
+                else:
+                    fork_block = None
+
                 sb = blockchain.block_record(blocks[-1].header_hash)
                 sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(blocks[-1].header_hash)
 
-                res = store.new_peak(sb, blocks[-1], sp_sub_slot, ip_sub_slot, True, blockchain)
+                res = store.new_peak(sb, blocks[-1], sp_sub_slot, ip_sub_slot, fork_block, blockchain)
                 assert res[0] is None
                 if sb.overflow and sp_sub_slot is not None:
                     assert sp_sub_slot != ip_sub_slot
@@ -449,7 +459,7 @@ class TestFullNodeStore:
         )
         await blockchain.receive_block(blocks_4[-1])
         sb = blockchain.block_record(blocks_4[-1].header_hash)
-        store.new_peak(sb, blocks_4[-1], None, None, False, blockchain)
+        store.new_peak(sb, blocks_4[-1], None, None, None, blockchain)
         for i in range(
             sb.signage_point_index + test_constants.NUM_SP_INTERVALS_EXTRA,
             test_constants.NUM_SPS_SUB_SLOT,
@@ -502,14 +512,14 @@ class TestFullNodeStore:
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             peak = sb
             peak_full_block = block
-            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, False, blockchain)
+            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
             assert res[0] is None
 
         assert store.new_finished_sub_slot(dependant_sub_slots[0], blockchain, peak, peak_full_block) is None
         block = blocks[-2]
         sb = blockchain.block_record(block.header_hash)
         sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-        res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, False, blockchain)
+        res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
         assert res[0] == dependant_sub_slots[0]
         assert res[1] == res[2] == []
 
@@ -528,7 +538,7 @@ class TestFullNodeStore:
             sb = blockchain.block_record(block.header_hash)
 
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, False, blockchain)
+            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
             assert res[0] is None
 
         case_0, case_1 = False, False
@@ -549,7 +559,7 @@ class TestFullNodeStore:
             await blockchain.receive_block(prev_block)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
             sb = blockchain.block_record(prev_block.header_hash)
-            res = store.new_peak(sb, prev_block, sp_sub_slot, ip_sub_slot, False, blockchain)
+            res = store.new_peak(sb, prev_block, sp_sub_slot, ip_sub_slot, None, blockchain)
             if len(block.finished_sub_slots) == 0:
                 case_0 = True
                 assert res[2] == [new_ip]
@@ -585,4 +595,4 @@ class TestFullNodeStore:
             peak = blockchain.get_peak()
             peak_full_block = await blockchain.get_full_peak()
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
-            store.new_peak(peak, peak_full_block, sp_sub_slot, ip_sub_slot, False, blockchain)
+            store.new_peak(peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain)
