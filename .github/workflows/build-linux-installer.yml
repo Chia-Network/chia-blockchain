@@ -140,7 +140,7 @@ jobs:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ls
-         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm.checksum
+         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm.checksum
          sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.checksum
 
     - name: Upload Release Files
@@ -148,6 +148,6 @@ jobs:
       run: |
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/test-installs/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/test-installs/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm.torrent s3://download-chia-net/test-installs/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm.torrent s3://download-chia-net/test-installs/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.torrent s3://download-chia-net/test-installs/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.checksum s3://download-chia-net/test-installs/
