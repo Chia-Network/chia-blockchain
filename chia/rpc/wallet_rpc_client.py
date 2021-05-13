@@ -9,7 +9,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 
 
-class WalletRpcClient(RpcClient):
+nclass WalletRpcClient(RpcClient):
     """
     Client to Chia RPC, connects to a local wallet. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
@@ -113,7 +113,6 @@ class WalletRpcClient(RpcClient):
             del modified_tx["to_address"]
             reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
         return reverted_tx
-
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
