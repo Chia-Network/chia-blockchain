@@ -23,9 +23,10 @@ class TesKeychain(unittest.TestCase):
         mnemonic_2 = generate_mnemonic()
 
         # misspelled words in the mnemonic
-        bad_mnemonic = mnemonic.split(" ");
-        bad_mnemonic[6] = "ZZZZZZ";
-        self.assertRaisesRegex(ValueError, "'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled", bytes_from_mnemonic, " ".join(bad_mnemonic))
+        bad_mnemonic = mnemonic.split(" ")
+        bad_mnemonic[6] = "ZZZZZZ"
+        self.assertRaisesRegex(ValueError, "'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled",
+                               bytes_from_mnemonic, " ".join(bad_mnemonic))
 
         kc.add_private_key(mnemonic, "")
         assert kc._get_free_private_key_index() == 1
