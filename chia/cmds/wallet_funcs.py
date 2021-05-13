@@ -94,13 +94,9 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
-    new_address = args["new_address"]
-    if new_address == True:
-        res = await wallet_client.get_next_address(wallet_id, True)
-        print(res)
-    else:
-        res = await wallet_client.get_next_address(wallet_id, False)
-        print(res)
+    get_new_address = args["get_new_address"]
+    res = await wallet_client.get_next_address(wallet_id, get_new_address)
+    print(res)
 
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()
