@@ -206,7 +206,7 @@ class TestFullNodeStore:
 
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != block.height - 1:
-                    fork_block = blockchain.height_to_hash(fork_height)
+                    fork_block = blockchain.block_record(blockchain.height_to_hash(fork_height))
                 else:
                     fork_block = None
                 sb = blockchain.block_record(block.header_hash)
@@ -258,7 +258,7 @@ class TestFullNodeStore:
             res, _, fork_height = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != blocks[-1].height - 1:
-                    fork_block = blockchain.height_to_hash(fork_height)
+                    fork_block = blockchain.block_record(blockchain.height_to_hash(fork_height))
                 else:
                     fork_block = None
 
