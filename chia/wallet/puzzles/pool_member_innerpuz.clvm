@@ -1,7 +1,6 @@
-(mod (POOL_PUZHASH RELATIVE_LOCK_HEIGHT ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY spend_type my_puzhash my_amount pool_reward_amount pool_reward_height)
+(mod (POOL_PUZHASH ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY spend_type my_puzhash my_amount pool_reward_amount pool_reward_height)
 
   ; POOL_PUZHASH is commitment to the pool's puzzle hash
-  ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
   ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
   ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
   ; PUBKEY is the farmer pubkey which authorises an escape attempt
@@ -13,8 +12,8 @@
   (include condition_codes.clvm)
   (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a)
 
-  (defun calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
-    (sha256 (concat (lsh GENESIS_CHALLENGE (- 128 (* (strlen pool_reward_height) 8))) pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
+  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
+    (sha256 (lsh GENESIS_CHALLENGE (- 128 (* (strlen pool_reward_height) 8))) pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
   )
 
   (defun absorb_pool_reward (POOL_PUZHASH my_puzhash my_amount pool_reward_amount pool_reward_id)

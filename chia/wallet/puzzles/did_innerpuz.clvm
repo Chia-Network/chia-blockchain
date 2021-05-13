@@ -6,19 +6,6 @@
 
   (include condition_codes.clvm)
 
-  (defmacro and ARGS
-      (if ARGS
-          (qq (if (unquote (f ARGS))
-              (unquote (c and (r ARGS)))
-              ()
-          ))
-      1)
-  )
-
-  (defmacro not (ARGS)
-      (qq (if (unquote ARGS) 0 1))
-  )
-
   (defun is-in-list (atom items)
     ;; returns 1 iff `atom` is in the list of `items`
     (if items
@@ -80,7 +67,8 @@
   )
 
   (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
-    (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
+    ; (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
+    (x coin_id (make_message_puzzle my_id new_innerpuz pubkey) (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey)))
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
