@@ -8,7 +8,7 @@ msgstr ""
 "Language: el_GR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-12 21:59\n"
+"PO-Revision-Date: 2021-05-13 23:19\n"
 "Last-Translator: \n"
 "Language-Team: Greek\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -161,7 +161,7 @@ msgstr "Βασικό Ποσό Ανταμοιβής Αγρότη"
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "Παρακάτω είναι τα τρέχοντα block challenges. Μπορεί να έχετε ή να μην έχετε μια αποδεικτικό χώρου για αυτά τα challenges. Αυτά τα μπλοκ δεν περιέχουν επί του παρόντος αποδεικτικό χρόνου."
+msgstr "Παρακάτω είναι οι τρέχουσες προκλήσεις block. Μπορεί να έχετε ή να μην έχετε αποδεικτικό χώρου για αυτές τις προκλήσεις. Αυτά τα μπλοκ δεν περιέχουν επί του παρόντος αποδεικτικό χρόνου."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
@@ -261,7 +261,7 @@ msgstr "Challenge"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr "Challenge Hash"
+msgstr "Πρόσκληση κατακερματισμού"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
@@ -571,7 +571,7 @@ msgstr "Επιλογές Διανεμημένης Ταυτότητας"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "Έχετε ήδη plots σε αυτό το μηχάνημα? <0>Προσθήκη καταλόγου σχεδίου</0>"
+msgstr "Έχετε ήδη plots σε αυτό το μηχάνημα? <0>Προσθήκη καταλόγου Plot</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -667,7 +667,7 @@ msgstr "Οι αγρότες κερδίζουν ανταμοιβές και τέ�
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr "Αγροτική"
+msgstr "Συγκομιδή"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -675,7 +675,7 @@ msgstr "Αγροτική"
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr "Κατάσταση Αγροτικής Ανάπτυξης"
+msgstr "Κατάσταση Συγκομιδής"
 
 #: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -871,7 +871,7 @@ msgstr "Τελευταία Προσπάθεια Απόδειξης"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr "Last Height Farmed"
+msgstr "Τελευταίο συκομιζόμενο ύψος"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
@@ -931,11 +931,11 @@ msgstr "Σύνδεση..."
 
 #: src/components/farm/overview/FarmOverview.tsx:34
 msgid "Manage Farming Rewards"
-msgstr "Διαχείριση Ανταμοιβών Farming"
+msgstr "Διαχείριση Ανταμοιβών Συγκομιδής"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr "Διαχειριστείτε Τις Διευθύνσεις των Επιβραβεύσρων του Farming σας"
+msgstr "Διαχείριση Διευθύνσεων Επιβραβεύσεων Συγκομιδής"
 
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
@@ -995,7 +995,7 @@ msgstr "Κανένα seed 24 λέξεων, καθώς αυτό το κλειδί
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "No blocks farmed yet"
-msgstr "No blocks farmed yet"
+msgstr "Κανένα block δεν έχει συγκομιστεί ακόμη"
 
 #: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
@@ -1694,7 +1694,7 @@ msgstr "Αυτή η δυνατότητα είναι διαθέσιμη μόνο 
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr "Αυτό είναι το ποσό Chia που μπορείτε να χρησιμοποιήσετε επί του παρόντος για να κάνετε συναλλαγές. Δεν περιλαμβάνει εκκρεμείς ανταμοιβές για το farming, τις αναμενόμενες εισερχόμενες συναλλαγές, και το Chia που έχετε μόλις ξοδέψει αλλά δεν είναι ακόμη στο blockchain."
+msgstr "Αυτό είναι το ποσό των Chia που μπορείτε να χρησιμοποιήσετε επί του παρόντος για να πραγματοποιήσετε συναλλαγές. Δεν περιλαμβάνει εκκρεμείς ανταμοιβές για τη συγκομιδή, εκκρεμείς εισερχόμενες συναλλαγές, και Chia που έχετε μόλις ξοδέψει αλλά δεν είναι ακόμη στο blockchain."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
