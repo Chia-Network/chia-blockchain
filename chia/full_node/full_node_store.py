@@ -10,6 +10,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.pot_iterations import calculate_sp_interval_iters
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.server.outbound_message import Message
@@ -625,7 +626,7 @@ class FullNodeStore:
         peak_full_block: FullBlock,
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
-        reorg: bool,
+        fork_block: Optional[BlockRecord],
         blocks: BlockchainInterface,
     ) -> Tuple[
         Optional[EndOfSubSlotBundle], List[Tuple[uint8, SignagePoint]], List[timelord_protocol.NewInfusionPointVDF]
@@ -645,16 +646,34 @@ class FullNodeStore:
             # This is not the first sub-slot in the chain
             sp_sub_slot_sps: List[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
             ip_sub_slot_sps: List[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
-            if not reorg:
-                # If it's not a reorg, we can keep signage points that we had before, in the cache
+
+            if fork_block is not None and fork_block.sub_slot_iters != peak.sub_slot_iters:
+                # If there was a reorg and a difficulty adjustment, just clear all the slots
+                self.clear_slots()
+            else:
+                interval_iters = calculate_sp_interval_iters(self.constants, peak.sub_slot_iters)
+                # If it's not a reorg, or there is a reorg on the same difficulty, we can keep signage points
+                # that we had before, in the cache
                 for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                     if sub_slot is None:
                         continue
 
+                    if fork_block is None:
+                        replaced_sps: List[Optional[SignagePoint]] = sps
+                    else:
+                        replaced_sps = [None]  # index 0 is the end of sub slot
+                        for i, sp in enumerate(sps):
+                            if (total_iters + i * interval_iters) < fork_block.total_iters:
+                                # Sps before the fork point as still valid
+                                replaced_sps.append(sp)
+                            else:
+                                # Sps after the fork point should be removed
+                                replaced_sps.append(None)
+
                     if sub_slot == sp_sub_slot:
-                        sp_sub_slot_sps = sps
+                        sp_sub_slot_sps = replaced_sps
                     if sub_slot == ip_sub_slot:
-                        ip_sub_slot_sps = sps
+                        ip_sub_slot_sps = replaced_sps
 
             self.clear_slots()
 

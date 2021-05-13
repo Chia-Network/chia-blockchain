@@ -950,12 +950,17 @@ class FullNode:
         if not self.sync_store.get_sync_mode():
             self.blockchain.clean_block_records()
 
+        fork_block: Optional[BlockRecord] = None
+        if fork_height != block.height - 1 and block.height != 0:
+            # This is a reorg
+            fork_block = self.blockchain.height_to_hash(fork_height)
+
         added_eos, new_sps, new_ips = self.full_node_store.new_peak(
             record,
             block,
             sub_slots[0],
             sub_slots[1],
-            fork_height != block.height - 1 and block.height != 0,
+            fork_block,
             self.blockchain,
         )
         if sub_slots[1] is None:
