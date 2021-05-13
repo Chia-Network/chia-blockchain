@@ -1,5 +1,14 @@
-from typing import Any
+from ipaddress import ip_address, IPv4Network, IPv6Network
+from typing import Iterable, Union, Any
 from chia.server.outbound_message import NodeType
+
+
+def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
+    try:
+        peer_host_ip = ip_address(peer_host)
+        return any(peer_host_ip in network for network in networks)
+    except ValueError:
+        return False
 
 
 def is_localhost(peer_host: str) -> bool:
