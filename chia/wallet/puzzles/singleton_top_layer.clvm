@@ -1,7 +1,6 @@
-(mod (mod_hash genesis_id innerpuz parent_info my_amount inner_solution)
+(mod (MOD_HASH GENESIS_ID INNERPUZ parent_info my_amount inner_solution)
 
-; mod_hash, innerpuz are curried in by the wallet
-; genesis_id is curried in by the launcher
+; MOD_HASH, GENESIS_ID, INNERPUZ are curried in by the wallet
 
 ; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
@@ -64,25 +63,25 @@
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
-    (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
-                    mod_hash
-                    mod_hash_hash
+  (defun-inline create_fullpuzhash (MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
+    (sha256tree_esc (curry MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
+                    MOD_HASH
+                    MOD_HASH_HASH
                     inner_puzzle_hash)
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
-  (defun-inline create_my_ID (mod_hash mod_hash_hash genesis_id innerpuzhash parent_parent parent_innerpuz parent_amount my_amount)
-    (sha256 (sha256 parent_parent (create_fullpuzhash mod_hash mod_hash_hash genesis_id parent_innerpuz) parent_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount)
+  (defun-inline create_my_ID (MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_parent parent_INNERPUZ parent_amount my_amount)
+    (sha256 (sha256 parent_parent (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID parent_INNERPUZ) parent_amount) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash) my_amount)
   )
 
   (defconstant launcher_puzhash 0x879d46938cfe331fb3cb1ea7ac5abde72e17041a0a2208549dfac1cb18d2e073)
 
   ; if we are the child of genesis check that the genesis puzzle only creates me
-  (defun check_launcher (genesis_parent genesis_id genesis_amount my_fullpuzhash my_amount)
-    (if (= genesis_id (sha256 genesis_parent launcher_puzhash genesis_amount))
-      (list ASSERT_MY_COIN_ID (sha256 genesis_id my_fullpuzhash my_amount))
-      (x genesis_id (sha256 genesis_parent launcher_puzhash genesis_amount))
+  (defun check_launcher (genesis_parent GENESIS_ID genesis_amount my_fullpuzhash my_amount)
+    (if (= GENESIS_ID (sha256 genesis_parent launcher_puzhash genesis_amount))
+      (list ASSERT_MY_COIN_ID (sha256 GENESIS_ID my_fullpuzhash my_amount))
+      (x GENESIS_ID (sha256 genesis_parent launcher_puzhash genesis_amount))
     )
   )
 
@@ -91,11 +90,11 @@
   ; if we are eve, then check the genesis was a launcher puzzle
   ; if we are a child of lineage, do the standard singleton lineage check
 
-  (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_id my_innerpuzhash parent_info my_amount)
+  (defun check_my_amount_and_ID (MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash parent_info my_amount)
     (if (logand my_amount 1)
       (if (r (r parent_info))
-        (list ASSERT_MY_COIN_ID (create_my_ID mod_hash mod_hash_hash genesis_id my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
-        (check_launcher (f parent_info) genesis_id (f (r parent_info)) (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount)
+        (list ASSERT_MY_COIN_ID (create_my_ID MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
+        (check_launcher (f parent_info) GENESIS_ID (f (r parent_info)) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash) my_amount)
       )
       (x)
     )
@@ -118,14 +117,14 @@
     )
   )
 
-  (defun check_id_and_check_outputs (mod_hash mod_hash_hash genesis_id parent_info innerpuzhash my_amount outputs)
+  (defun check_id_and_check_outputs (MOD_HASH MOD_HASH_HASH GENESIS_ID parent_info innerpuzhash my_amount outputs)
     (if (check_outputs_value outputs 0)
-      (c (check_my_amount_and_ID mod_hash mod_hash_hash genesis_id innerpuzhash parent_info my_amount) outputs)
+      (c (check_my_amount_and_ID MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_info my_amount) outputs)
       (x)
     )
   )
 
   ;main
-  (check_id_and_check_outputs mod_hash (sha256 1 mod_hash) genesis_id parent_info (sha256tree1 innerpuz) my_amount (a innerpuz inner_solution))
+  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount (a INNERPUZ inner_solution))
 
 )
