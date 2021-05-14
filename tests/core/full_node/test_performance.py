@@ -7,6 +7,7 @@ import time
 from typing import Dict
 
 import pytest
+import cProfile
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.full_node_api import FullNodeAPI
@@ -136,6 +137,9 @@ class TestPerformance:
             spend_bundles.append(spend_bundle)
             spend_bundle_ids.append(spend_bundle.get_hash())
 
+        pr = cProfile.Profile()
+        pr.enable()
+
         start = time.time()
         num_tx: int = 0
         for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
@@ -151,6 +155,8 @@ class TestPerformance:
             if req is None:
                 break
         log.warning(f"Time for mempool: {time.time() - start}")
+        pr.create_stats()
+        pr.dump_stats("./mempool-benchmark.pstats")
 
         # Create an unfinished block
         peak = full_node_1.full_node.blockchain.get_peak()
@@ -184,10 +190,19 @@ class TestPerformance:
             [],
         )
 
+        pr = cProfile.Profile()
+        pr.enable()
+
         start = time.time()
         res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
         log.warning(f"Res: {res}")
         log.warning(f"Time for unfinished: {time.time() - start}")
+
+        pr.create_stats()
+        pr.dump_stats("./unfinished-benchmark.pstats")
+
+        pr = cProfile.Profile()
+        pr.enable()
 
         start = time.time()
         # No transactions generator, the full node already cached it from the unfinished block
@@ -195,3 +210,6 @@ class TestPerformance:
         res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
         log.warning(f"Res: {res}")
         log.warning(f"Time for full block: {time.time() - start}")
+
+        pr.create_stats()
+        pr.dump_stats("./full-block-benchmark.pstats")
