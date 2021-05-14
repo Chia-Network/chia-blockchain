@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-13 23:19\n"
+"PO-Revision-Date: 2021-05-14 11:35\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -660,7 +660,7 @@ msgstr "ผู้ฟาร์มไม่ทำงาน"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "ผู้ฟาร์มจะได้รับค่าตอบแทนโดยการให้พื้นที่ที่เก็บข้อมูลกับเครือข่าย เพื่อช่วยเรื่องความปลอดภัยในการทำธุรกรรมในเครือข่าย และนี่จะเป็นฟาร์มของคุณเมื่อคุณเพิ่มพล็อต <0>เรียนรู้เพิ่มเติม</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
@@ -883,7 +883,7 @@ msgstr "กำลังโหลด..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "พล็อตของ Local Harvester"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -1003,7 +1003,7 @@ msgstr "ไม่มีธุรกรรมก่อนหน้า"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "ไม่พบ private keys ในบัญชีที่กรอก แต่ไม่ต้องกังวลหากคุณกำลังจะส่ง rewards ไปให้กระเป๋าอื่น"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1013,7 +1013,7 @@ msgstr "โหนดไอดี"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "พล็อตที่มีของคุณยังไม่เคยผ่านขั้นตอน plot filter"
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
@@ -1109,11 +1109,11 @@ msgstr "กรุณาเพิ่มคู่การแลกเปลี่
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "กรุณากรอกค่าธรรมเนียมเป็น 0 เนื่องจาก RL ยังไม่รองรับการใช้ค่าธรรมเนียม"
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "กรุณากรอกจำนวนเหรียญเริ่มต้นให้ถูกต้อง"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
@@ -1334,7 +1334,7 @@ msgstr "การใช้ RAM สูงสุด"
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr ""
+msgstr "กระเป๋า RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1647,7 +1647,7 @@ msgstr "แอปพลิเคชันจะหยุดการทำงา
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "โนดที่ผู้ฟาร์มจะเชื่อมต่อนั้นไม่เสถียรมากพอ <0>เรียนรู้เพิ่มเติม<0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1985,7 +1985,7 @@ msgstr "คุณไม่จำเป็นที่ต้องซิงค์
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "คุณมีพื้นที่ {0}% ในเครือข่าย ดังนั้นการฟาร์มจะใช้เวลา {expectedTimeToWin} เผื่อให้ได้ผลลัพธ์ที่ตรง โดยปกติแล้ว ผลลัพธ์ที่จะออกมานั้น จะใช้ประมาณ 3-4 รอบ"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
