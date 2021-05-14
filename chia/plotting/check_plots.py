@@ -37,10 +37,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         num_end = num
     challenges = num_end - num_start
 
-    if grep_string is not None:
-        match_str = grep_string
-    else:
-        match_str = None
     if list_duplicates:
         log.warning("Checking for duplicate Plot IDs")
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
@@ -67,7 +63,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         {},
         pks,
         pool_public_keys,
-        match_str,
+        grep_string,
         show_memo,
         root_path,
         open_no_key_filenames=True,

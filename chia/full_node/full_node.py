@@ -56,6 +56,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.util.profiler import profile_task
 
 
 class FullNode:
@@ -127,6 +128,10 @@ class FullNode:
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
         asyncio.create_task(self.initialize_weight_proof())
+
+        if self.config.get("enable_profiler", False):
+            asyncio.create_task(profile_task(self.root_path, self.log))
+
         self._sync_task = None
         self._segment_task = None
         time_taken = time.time() - start_time
@@ -1265,7 +1270,7 @@ class FullNode:
             if validate_result.error is not None:
                 if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
                     # TODO: remove in the future, hotfix for 1.1.5 peers to not disconnect older peers
-                    self.log.error(f"Consensus error {validate_result.error}, not disconnecting")
+                    self.log.info(f"Consensus error {validate_result.error}, not disconnecting")
                     return
                 raise ConsensusError(Err(validate_result.error))
 
@@ -1664,7 +1669,7 @@ class FullNode:
         if not vdf_proof.is_valid(self.constants, ClassgroupElement.get_default_element(), vdf_info):
             self.log.error(f"Received compact vdf proof is not valid: {vdf_proof}.")
             return False
-        header_block = await self.blockchain.get_header_block_by_height(height, header_hash)
+        header_block = await self.blockchain.get_header_block_by_height(height, header_hash, tx_filter=False)
         if header_block is None:
             self.log.error(f"Can't find block for given compact vdf. Height: {height} Header hash: {header_hash}")
             return False
@@ -1737,7 +1742,9 @@ class FullNode:
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return False
-        header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
+        header_block = await self.blockchain.get_header_block_by_height(
+            request.height, request.header_hash, tx_filter=False
+        )
         if header_block is None:
             return None
         field_vdf = CompressibleVDFField(int(request.field_vdf))
@@ -1750,7 +1757,9 @@ class FullNode:
                 await self.respond_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
-        header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
+        header_block = await self.blockchain.get_header_block_by_height(
+            request.height, request.header_hash, tx_filter=False
+        )
         if header_block is None:
             return None
         vdf_proof: Optional[VDFProof] = None
@@ -1841,7 +1850,7 @@ class FullNode:
                         break
                     stop_height = min(h + 99, max_height)
                     assert min_height is not None
-                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
+                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height, tx_filter=False)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
                         records = await self.blockchain.get_block_records_in_range(min_height, stop_height)

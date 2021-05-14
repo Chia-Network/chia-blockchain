@@ -177,7 +177,7 @@ class WeightProofHandler:
                 min_height = ses_height - 1
                 break
         log.debug(f"start {min_height} end {tip_height}")
-        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
+        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0
         curr_height = tip_height
@@ -275,7 +275,7 @@ class WeightProofHandler:
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
         header_blocks = await self.blockchain.get_header_blocks_in_range(
-            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
+            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS, tx_filter=False
         )
         curr: Optional[HeaderBlock] = header_blocks[se_start.header_hash]
         height = se_start.height
@@ -395,7 +395,6 @@ class WeightProofHandler:
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots_data: List[SubSlotData] = []
-        curr = header_blocks[curr.header_hash]
         while curr.height < header_block.height:
             if curr is None:
                 log.error("failed fetching block")
@@ -457,14 +456,17 @@ class WeightProofHandler:
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
         curr = header_blocks[self.blockchain.height_to_hash(start_height)]
+        curr_header_hash = curr.header_hash
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots_data: List[SubSlotData] = []
-        while not blocks[curr.header_hash].is_challenge_block(self.constants):
+        while not blocks[curr_header_hash].is_challenge_block(self.constants):
             if curr.first_in_sub_slot:
                 sub_slots_data.extend(tmp_sub_slots_data)
+
+                curr_prev_header_hash = curr.prev_header_hash
                 # add collected vdfs
                 for idx, sub_slot in enumerate(curr.finished_sub_slots):
-                    prev_rec = blocks[curr.prev_header_hash]
+                    prev_rec = blocks[curr_prev_header_hash]
                     eos_vdf_iters = prev_rec.sub_slot_iters
                     if idx == 0:
                         eos_vdf_iters = uint64(prev_rec.sub_slot_iters - prev_rec.ip_iters(self.constants))
@@ -473,6 +475,8 @@ class WeightProofHandler:
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+            curr_header_hash = curr.header_hash
+
         if len(tmp_sub_slots_data) > 0:
             sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
