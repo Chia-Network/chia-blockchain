@@ -331,24 +331,8 @@ class WalletTransactionStore:
         """
         if wallet_id in self.unconfirmed_for_wallet:
             return list(self.unconfirmed_for_wallet[wallet_id].values())
-        cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?",
-            (
-                0,
-                wallet_id,
-            ),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        records = []
-        dict = {}
-        for row in rows:
-            record = TransactionRecord.from_bytes(row[0])
-            records.append(record)
-            dict[record.name] = record
-
-        self.unconfirmed_for_wallet[wallet_id] = dict
-        return records
+        else:
+            return []
 
     async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
