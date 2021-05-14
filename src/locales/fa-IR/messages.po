@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-11 15:12\n"
+"PO-Revision-Date: 2021-05-14 11:35\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -58,7 +58,7 @@ msgstr "عملیات"
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr "کنش‌ها"
+msgstr "عملیات"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -416,7 +416,7 @@ msgstr "ایجاد پیشنهاد"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
-msgstr "ایجاد مزرعه"
+msgstr "ساخت پلات"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -654,7 +654,7 @@ msgstr "آدرس پاداش مزرعه دار"
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "مزرعه دار وصل نیست"
+msgstr "مزرعه‌دار متصل نیست"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
@@ -1611,11 +1611,11 @@ msgstr "همگام سازی شده"
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr "در حال همگام سازی"
+msgstr "در حال همگام‌سازی"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
-msgstr "همگام سازی {progress}/{tip}"
+msgstr "همگام‌سازی {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1664,7 +1664,7 @@ msgstr "گره همگام سازی نشده"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "گره در حال همگام سازی است ، به این معنی که بلوک ها را از گره های دیگر بارگیری می کند تا به آخرین بلوک در زنجیره برسد"
+msgstr "گره در حال همگام‌سازی است، به این معنی که بلاک‌ها را از گره‌های دیگر بارگیری می‌کند تا به آخرین بلاک در زنجیره برسد"
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1684,11 +1684,11 @@ msgstr "کل کارمزد های تراکنش ها در این بلوک. به م
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr "این پلات ها نامعتبر هستند ، ممکن است بخواهید آنها را حذف کنید."
+msgstr "این پلات‌ها نامعتبر هستند، ممکن است بخواهید آنها را حذف کنید."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr "به شما این امکان را می دهد تا پوشه ای را که در آن پلات ها قرار دارند اضافه کنید. اگر هیچ پلاتی را ایجاد نکرده اید ، به صفحه پلات ها بروید."
+msgstr "به شما این امکان را می‌دهد تا پوشه‌ای را که در آن پلات‌ها قرار دارند اضافه کنید. اگر هیچ پلاتی را ایجاد نکرده‌اید، به صفحه پلات‌ها بروید."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
@@ -1702,16 +1702,16 @@ msgstr "این مقدار چیـایی است که در حال حاضر می‌�
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "این‌ تغییر در انتظار انجام است، تغییر سکه هایی که برای خودتان ارسال کرده‌اید، اما هنوز تایید نشده اند."
+msgstr "این‌ تغییر در انتظار انجام است، تغییر سکه‌هایی که برای خودتان ارسال کرده‌اید، اما هنوز تایید نشده‌اند."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "این مجموع تراکنش های در حال ورود و در حال خروج شماست که هنوز در صف انجام هستند( هنوز وارد زنجیره بلوکی نشده‌اند).\n"
-"این شامل پاداش های مزرعه داری نمیشود."
+msgstr "این مجموع تراکنش‌های در حال واریز و در حال برداشت شما است (که هنوز وارد زنجیره بلاکی نشده‌اند).\n"
+"این شامل پاداش‌های مزرعه‌داری نمی‌شود."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr "این مدت زمان به حداکثر رسیدن آخرین زیر بلوک است."
+msgstr "این مدت زمان به حداکثر رسیدن آخرین زیربلاک است."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
@@ -1962,7 +1962,7 @@ msgstr "خوش آمدید! واژه هایی که در ادامه می‌بین�
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "هنگامی که بسته اطلاعات راه اندازی را از سرپرست خود دریافت می کنید ، آن را در زیر وارد کنید تا تنظیم کیف پول با نرخ محدود خود را انجام دهید:"
+msgstr "هنگامی که بسته اطلاعات راه‌اندازی را از ادمین خود دریافت می‌کنید، آن را در زیر وارد کنید تا تنظیمات «کیف پول با نرخ محدود» خود را تکمیل کنید:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
