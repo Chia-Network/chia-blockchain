@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-13 10:51\n"
+"PO-Revision-Date: 2021-05-14 11:35\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1046,7 +1046,7 @@ msgstr "Nem talált plot-ok"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "Vödrök száma"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
@@ -1062,11 +1062,11 @@ msgstr "Ajánlat"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Az ajánlatok elkészültek"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "Az egyes tranzakciós blokkok között átlagosan egy perc van. Hacsak nincs torlódás, akkor számíthat arra, hogy a tranzakciót kevesebb, mint egy perc alatt bekapcsolja."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1074,7 +1074,7 @@ msgstr "Kimenő"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr ""
+msgstr "Csúcsmagasság"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1105,7 +1105,7 @@ msgstr "Függôben lévô egyenleg"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Kérjük, adjon hozzá egy kereskedelmi párt"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
@@ -1131,7 +1131,7 @@ msgstr "Kérjük, adjon meg egy érvényes adózás előtti összeget"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Kérjük, érvényes számtartományt adjon meg"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
@@ -1144,7 +1144,7 @@ msgstr "Kérem adjon meg érvényes számot"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Kérjük, fejezze be a szinkronizálást mielőtt új tranzakciót indít"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1231,7 +1231,7 @@ msgstr "Mûvelés"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr ""
+msgstr "A párhuzamos parcellázással időt spórolhat. Egyébként, állítsa sorba őket."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
@@ -1278,7 +1278,7 @@ msgstr "Előző"
 
 #: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "Előző fejléc hash"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1286,7 +1286,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Privát kulcs nyilvános ujjlenyomattal {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
@@ -1302,7 +1302,7 @@ msgstr "Proof of Space méret"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "Bizonyítékokat találtunk"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
@@ -1360,7 +1360,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "Receive Address"
-msgstr ""
+msgstr "Fogadó cím"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
@@ -1368,7 +1368,7 @@ msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Parcellák frissítése"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
@@ -1414,11 +1414,11 @@ msgstr "Mentés"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Blokk keresése fejléc hash alapján"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Második átmeneti mappa helye"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
@@ -1442,7 +1442,7 @@ msgstr "Válasszon kulcsot"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Választható ajánlatok"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
@@ -1454,11 +1454,11 @@ msgstr "Válasz pénztárca típust"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Válassza ki a mappát, ahol a parcella végső tárolóhelye lesz. Javasoljuk egy nagy, lassú merevlemez használatát. (Pl. külső HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Válassza ki a mappát, ahol a parcella átmeneti tárolóhelye lesz. Javasoljuk egy gyors SSD merevlemez használatát."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1484,7 +1484,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Küldje el a publikus címét a Rate Limited Wallet rendszergazdájának:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1647,7 +1647,7 @@ msgstr "Az alkalmazás le fog állni 193536-os block magasságnál."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Alább látható az összes csomópont, amelyhez a bányász csatlakozik. <0>További információ</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1676,7 +1676,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "Az összes tranzakciós díjak ebben a blokkban. Bányászási jutalmak."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
@@ -1702,7 +1702,8 @@ msgstr ""
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
+"Nem tartalmazza a termesztési díjakat."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
@@ -1730,7 +1731,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr ""
+msgstr "Ez a táblázat megmutatja egy blokk kihívás elnyerésére tett kísérlet utolsó időpontját. <0>Részletek</0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
@@ -1840,7 +1841,7 @@ msgstr "Befejezetlen"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Egyedi azonosító"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
@@ -1931,7 +1932,7 @@ msgstr "Tárcák"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Szeretne többet keresni Chia-val? Adjon hozzá több telket a gazdaságához (farmoláshoz)."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
@@ -1951,7 +1952,7 @@ msgstr "Üdvözöljük a Chia-ban. Kérem jelentkezzen be egy létező kulccsal,
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Üdvözöljük! A pénztárca biztonsági mentéséhez a következő szavakat használják. Nélkülük elveszíti hozzáférését pénztárcájához, biztonságban tartsa őket! Írja le az egyes szavakat a mellettük lévő sorszámmal együtt. (A sorrend fontos)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
