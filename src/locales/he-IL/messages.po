@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-11 09:12\n"
+"PO-Revision-Date: 2021-05-14 11:35\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -710,35 +710,35 @@ msgstr ""
 #: src/electron/main.tsx:211
 #: src/electron/main.tsx:398
 msgid "File"
-msgstr ""
+msgstr "קובץ"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
-msgstr ""
+msgstr "שם הקובץ"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "מיקום סופי של החלקה"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
-msgstr ""
+msgstr "הסתיים"
 
 #: src/electron/main.tsx:351
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "עקוב בטוויטר"
 
 #: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "שאלות נפוצות"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
-msgstr ""
+msgstr "תחנת צ'יה"
 
 #: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
@@ -1020,11 +1020,11 @@ msgstr ""
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "לא זמין"
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
-msgstr ""
+msgstr "לא מסונכרן"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
@@ -1032,13 +1032,13 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "טרם אומת"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:145
 #: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
-msgstr ""
+msgstr "לא מחובר"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
@@ -1174,20 +1174,20 @@ msgstr ""
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
-msgstr ""
+msgstr "חלקה"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:7
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
-msgstr ""
+msgstr "מספר חלקות"
 
 #: src/components/block/Block.jsx:268
 msgid "Plot Id"
-msgstr ""
+msgstr "זיהוי החלקה"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr ""
+msgstr "מפתח של החלקה"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1195,7 +1195,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
-msgstr ""
+msgstr "מפתח ציבורי של החלקה"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1203,11 +1203,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
-msgstr ""
+msgstr "גודל החלקה"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
-msgstr ""
+msgstr "ייצור חלקות במקביל"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
