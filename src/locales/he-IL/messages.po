@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-14 11:35\n"
+"PO-Revision-Date: 2021-05-14 17:34\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -188,7 +188,7 @@ msgstr "בלוק VDF איטרציות"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "בלוק בגובה {0} בבלוקצ'יין צ'יה"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "בלוק אם גיבוב {headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgid "Block with hash {headerHash} does not exists."
+msgstr "בלוק אם גיבוב {headerHash} לא קיים."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
