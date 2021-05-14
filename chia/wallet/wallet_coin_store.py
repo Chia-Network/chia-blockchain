@@ -95,6 +95,10 @@ class WalletCoinStore:
                 self.unspent_coin_wallet_cache[record.wallet_id].pop(name)
             if not record.spent:
                 self.unspent_coin_wallet_cache[record.wallet_id][name] = record
+        else:
+            if not record.spent:
+                self.unspent_coin_wallet_cache[record.wallet_id] = {}
+                self.unspent_coin_wallet_cache[record.wallet_id][name] = record
 
         cursor = await self.db_connection.execute(
             "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -187,23 +191,8 @@ class WalletCoinStore:
         if wallet_id in self.unspent_coin_wallet_cache:
             wallet_coins: Dict[bytes32, WalletCoinRecord] = self.unspent_coin_wallet_cache[wallet_id]
             return set(wallet_coins.values())
-
-        coin_set = set()
-
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
-            (wallet_id,),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        cache_dict = {}
-        for row in rows:
-            coin_record = self.coin_record_from_row(row)
-            coin_set.add(coin_record)
-            cache_dict[coin_record.name()] = coin_record
-
-        self.unspent_coin_wallet_cache[wallet_id] = cache_dict
-        return coin_set
+        else:
+            return set()
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
         """ Returns set of all CoinRecords."""
@@ -242,9 +231,7 @@ class WalletCoinStore:
                     coin_record.wallet_id,
                 )
                 self.coin_record_cache[coin_record.coin.name()] = new_record
-                if coin_record.wallet_id in self.unspent_coin_wallet_cache:
-                    coin_cache = self.unspent_coin_wallet_cache[coin_record.wallet_id]
-                    coin_cache[coin_record.coin.name()] = new_record
+                self.unspent_coin_wallet_cache[coin_record.wallet_id][coin_record.coin.name()] = new_record
             if coin_record.confirmed_block_height > height:
                 delete_queue.append(coin_record)
 
