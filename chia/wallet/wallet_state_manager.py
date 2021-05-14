@@ -639,7 +639,7 @@ class WalletStateManager:
             if coin.name() in trade_removals:
                 trade_coin_removed.append(coin)
             if record is None:
-                self.log.warning(f"Record for removed coin {coin.name()} is None")
+                self.log.info(f"Record for removed coin {coin.name()} is None. (ephemeral)")
                 continue
             await self.coin_store.set_spent(coin.name(), height)
             for unconfirmed_record in all_unconfirmed:
