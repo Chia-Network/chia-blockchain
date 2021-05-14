@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-13 10:51\n"
+"PO-Revision-Date: 2021-05-14 17:34\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -754,7 +754,7 @@ msgstr "Generovat novou barvu"
 
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr "HD nebo Hierarchické Deterministické klíče jsou typy veřejného/soukromého klíče, kde jeden soukromý klíč může mít téměř nekonečný počet různých veřejných klíčů (a tedy i příchozích adres peněženky), které se nakonec vrátí k jedinému soukromému klíči a mohou tak být utraceny."
+msgstr "HD nebo Hierarchické Deterministické klíče jsou typy veřejného/soukromého klíče, kde jeden soukromý klíč může mít téměř nekonečný počet různých veřejných klíčů (a tedy i příchozích adres peněženky). Všechny adresy tedy končí v jedné a té samé peněžence."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -1223,7 +1223,7 @@ msgstr "Pole vyhovující filtru"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr "Pole jsou přiděleny na místo na vašem pevném disku, které slouží k farmě a naučení Chia. <0>Více informací</0>"
+msgstr "Pole jsou soubory, které můžete vytvořit na volném místě svého disku a pomocí kterých můžete farmařit Chia. <0>Zjistit více</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
@@ -1401,7 +1401,7 @@ msgstr "Obnovit data pro barevné mince a další Smart peněženky ze zálohy"
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr "Lze bezpečně přeskočit"
+msgstr "Přeskočit"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1680,7 +1680,7 @@ msgstr "Souhrnná výše transakčních poplatků v tomto bloku. Vyplaceno farm�
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr "Tato pole jsou neplatné, možná je chcete smazat."
+msgstr "Tato pole jsou neplatná, možná je chcete smazat."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
@@ -1758,7 +1758,7 @@ msgstr "Časová značka"
 
 #: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
-msgstr "Pro"
+msgstr "Komu"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
