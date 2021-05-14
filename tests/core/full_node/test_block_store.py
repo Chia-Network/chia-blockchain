@@ -64,7 +64,7 @@ class TestBlockStore:
             assert len(await store.get_full_blocks_at([100])) == 0
 
             # Get blocks
-            block_record_records = await store.get_block_records()
+            block_record_records = await store.get_block_records_in_range(0, 0xFFFFFFFF)
             assert len(block_record_records[0]) == len(blocks)
 
             # Peak is correct
