@@ -1600,7 +1600,7 @@ class FullNode:
                         await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 else:
                     self.mempool_manager.remove_seen(spend_name)
-                    self.log.warning(
+                    self.log.info(
                         f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
                     )
         return status, error
