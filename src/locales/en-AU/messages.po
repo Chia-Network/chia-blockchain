@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_AU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-12 10:32\n"
+"PO-Revision-Date: 2021-05-14 23:31\n"
 "Last-Translator: \n"
 "Language-Team: English, Australia\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,7 +28,7 @@ msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0>
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "128 buckets is recommended"
+msgstr "Use 128 buckets nitwit"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -37,7 +37,7 @@ msgstr "A harvester is a service running on a machine where plot(s) are actually
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "About Chia Blockchain"
+msgstr "Some stuff about Chia"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -784,7 +784,7 @@ msgstr "Help translate"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr "Hide Advanced Options"
+msgstr "Hide this from your wife"
 
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
@@ -809,19 +809,19 @@ msgstr "If none selected, then it will default to the temporary directory."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr "Import Wallet from Mnemonics"
+msgstr "Import Wallet from from your 24 words you wrote down"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr "Import from Mnemonics (24 words)"
+msgstr "Import Wallet from from your 24 words you wrote down"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
-msgstr "In Progress"
+msgstr "Be patient young grasshopper"
 
 #: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
-msgstr "Incoming"
+msgstr "Beer money into your wallet"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Index"
@@ -854,7 +854,7 @@ msgstr "Interval"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr "K-Size"
+msgstr "Plot size"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
