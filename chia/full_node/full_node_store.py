@@ -678,11 +678,10 @@ class FullNodeStore:
                     for i, sp in enumerate(sps):
                         if (total_iters + i * interval_iters) < fork_block.total_iters:
                             # Sps before the fork point as still valid
-                            # log.warning(f"Not Reverting sp: {i}")
                             replaced_sps.append(sp)
                         else:
                             if sp is not None:
-                                log.warning(
+                                log.debug(
                                     f"Reverting {i} {(total_iters + i * interval_iters)} {fork_block.total_iters}"
                                 )
                             # Sps after the fork point should be removed
