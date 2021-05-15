@@ -199,7 +199,7 @@ msgid "Block with hash {headerHash}"
 msgstr "Lohko tiivisteellä {headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
+msgid "Block with hash {headerHash} does not exist."
 msgstr "Lohkoa tunnistetiivisteellä {headerHash} ei ole olemassa."
 
 #: src/components/fullNode/FullNode.jsx:298

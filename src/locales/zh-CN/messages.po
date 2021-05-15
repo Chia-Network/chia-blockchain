@@ -199,7 +199,7 @@ msgid "Block with hash {headerHash}"
 msgstr "区块哈希{headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
+msgid "Block with hash {headerHash} does not exist."
 msgstr "哈希为 {headerHash} 的区块不存在。"
 
 #: src/components/fullNode/FullNode.jsx:298

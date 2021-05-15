@@ -199,7 +199,7 @@ msgid "Block with hash {headerHash}"
 msgstr "帶雜湊值 {headerHash} 的區塊"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
+msgid "Block with hash {headerHash} does not exist."
 msgstr "帶雜湊值 {headerHash} 的區塊不存在。"
 
 #: src/components/fullNode/FullNode.jsx:298

@@ -199,7 +199,7 @@ msgid "Block with hash {headerHash}"
 msgstr "Blok dengan hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
+msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok dengan hash {headerHash} tidak ada."
 
 #: src/components/fullNode/FullNode.jsx:298

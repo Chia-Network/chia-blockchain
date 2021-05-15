@@ -156,7 +156,7 @@ export default function Block() {
         >
           <Alert severity="warning">
             <Trans>
-              Block with hash {headerHash} does not exists.
+              Block with hash {headerHash} does not exist.
             </Trans>
           </Alert>
         </Card>

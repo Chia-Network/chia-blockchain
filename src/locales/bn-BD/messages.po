@@ -199,7 +199,7 @@ msgid "Block with hash {headerHash}"
 msgstr "হ্যাশ {headerHash} দিয়ে ব্লক করুন"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
+msgid "Block with hash {headerHash} does not exist."
 msgstr "ব্লক হ্যাশ {headerHash} বিদ্যমান নেই।"
 
 #: src/components/fullNode/FullNode.jsx:298
