@@ -504,7 +504,7 @@ class WalletNode:
                 break
             asyncio.create_task(self.check_new_peak())
             await self.sync_event.wait()
-            self.last_new_peak_messages = LRUCache(10)
+            self.last_new_peak_messages = LRUCache(5)
             self.sync_event.clear()
 
             if self._shut_down is True:
