@@ -175,6 +175,12 @@ class FullNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
+        dns_servers = []
+        if "dns_servers" in self.config:
+            dns_servers = self.config["dns_servers"]
+        elif self.config["port"] == 8444:
+            # If `dns_servers` misses from the `config`, hardcode it if we're running mainnet.
+            dns_servers.append("dns-introducer.chia.net")
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
@@ -183,6 +189,7 @@ class FullNode:
                 self.config["target_outbound_peer_count"],
                 self.config["peer_db_path"],
                 self.config["introducer_peer"],
+                dns_servers,
                 self.config["peer_connect_interval"],
                 self.log,
             )
@@ -1720,7 +1727,7 @@ class FullNode:
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             assert new_block is not None
             async with self.db_wrapper.lock:
-                await self.block_store.add_full_block(new_block, block_record)
+                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
