@@ -8,7 +8,7 @@ msgstr ""
 "Language: it_IT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:12\n"
+"PO-Revision-Date: 2021-05-15 17:28\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "*Vuoi esplorare ulteriormente i blocchi di Chia? Dai uno sguardo a <0>Chia Explorer</0> creato da uno sviluppatore open source."
+msgstr "*Vuoi esplorare ulteriormente i blocchi della rete Chia? Dai uno sguardo a <0>Chia Explorer</0> creato da uno sviluppatore open source."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,7 +32,7 @@ msgstr "Sono consigliati 128 bucket"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Un harvester è un servizio eseguito sulla macchina in cui i plot sono conservati. Un farmer e un harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
+msgstr "Un harvester (letteralmente mietitrice) è un servizio eseguito sulla macchina in cui i plot sono conservati. Un farmer (agricoltore) e la sua harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -41,11 +41,11 @@ msgstr "Informazioni sulla Blockchain di Chia"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr "Accettare"
+msgstr "Accetta"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Accettato al tempo:"
+msgstr "Accettato alle:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -65,11 +65,11 @@ msgstr "Aggiungi"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Aggiungi Cartella Plot"
+msgstr "Aggiungi Cartella dei Plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "Aggiungi Plot alla Coda"
+msgstr "Aggiungi uno o più Plot alla Coda"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
@@ -88,7 +88,7 @@ msgstr "Aggiungi un plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "Scegli la cartella per il plot"
+msgstr "Aggiungi una cartella per i plot (in farm)"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -129,7 +129,7 @@ msgstr "Sei sicuro di volerti disconnettere?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Sei sicuro di voler chiudere il programma? Eventuali creazioni di plot ed il farming verranno interrotti."
+msgstr "Sei sicuro di voler chiudere il programma? Plotting e farming effettuati tramite GUI (interfaccia grafica) verranno interrotti."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -156,7 +156,7 @@ msgstr "Bilancio"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Quantità minima come ricompensa per il farming"
+msgstr "Ricompensa minima per il farmer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -273,7 +273,7 @@ msgstr "Chia"
 
 #: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr "Wiki Blockchain Chia"
+msgstr "Wiki della Blockchain Chia"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
@@ -294,7 +294,7 @@ msgstr "Chiudi"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "Arresto del nodo e del server"
+msgstr "Arresto del nodo e del server in corso"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -331,7 +331,7 @@ msgstr "Conferma"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr "Confermare la Disconnessione"
+msgstr "Conferma la Disconnessione"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -436,7 +436,7 @@ msgstr "Crea una proposta commerciale"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
-msgstr "Crea un contratto"
+msgstr "Crea una transazione"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
@@ -464,7 +464,7 @@ msgstr "Crea un portafoglio per colore"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr "Crea un portafoglio per un colore esistente"
+msgstr "Crea un portafoglio per colore esistente"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -1066,7 +1066,7 @@ msgstr "Offerte Create"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "Il tempo medio che passa tra un blocco di transazioni e l'altro è di un minuto. Pertanto, salvo casi di congestione, è possibile aspettarsi che una transazione appena effettuata sarà inclusa nel primo blocco utile, quindi validata, in meno di un minuto."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
