@@ -4,7 +4,7 @@ dependencies = [
     "blspy==1.0.2",  # Signature library
     "chiavdf==1.0.1",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
-    "chiapos==1.0.1",  # proof of space
+    "chiapos==1.0.2",  # proof of space
     "clvm==0.9.6",
     "clvm_rs==0.1.7",
     "clvm_tools==0.4.3",
@@ -23,11 +23,13 @@ dependencies = [
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
+    "dnspython==2.1.0",  # Query DNS seeds
 ]
 
 upnp_dependencies = [
     "miniupnpc==2.1",  # Allows users to open ports on their router
 ]
+
 dev_dependencies = [
     "pytest",
     "pytest-asyncio",

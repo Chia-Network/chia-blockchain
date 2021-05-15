@@ -126,7 +126,7 @@ class WalletBlockchain(BlockchainInterface):
         if len(blocks) == 0:
             assert peak is None
             self._peak_height = None
-            return
+            return None
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
@@ -377,7 +377,7 @@ class WalletBlockchain(BlockchainInterface):
         """
 
         if self._peak_height is None:
-            return
+            return None
         blocks = await self.block_store.get_block_records_in_range(
             fork_point - self.constants.BLOCKS_CACHE_SIZE, self._peak_height
         )
@@ -392,7 +392,7 @@ class WalletBlockchain(BlockchainInterface):
         """
 
         if height < 0:
-            return
+            return None
         blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
         while blocks_to_remove is not None and height >= 0:
             for header_hash in blocks_to_remove:
@@ -410,18 +410,20 @@ class WalletBlockchain(BlockchainInterface):
         """
 
         if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:
-            return
+            return None
 
         peak = self.get_peak()
         assert peak is not None
         if peak.height - self.constants.BLOCKS_CACHE_SIZE < 0:
-            return
+            return None
         self.clean_block_record(peak.height - self.constants.BLOCKS_CACHE_SIZE)
 
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
         return await self.block_store.get_block_records_in_range(start, stop)
 
-    async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
+    async def get_header_blocks_in_range(
+        self, start: int, stop: int, tx_filter: bool = True
+    ) -> Dict[bytes32, HeaderBlock]:
         return await self.block_store.get_header_blocks_in_range(start, stop)
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:

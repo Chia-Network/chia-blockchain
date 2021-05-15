@@ -45,13 +45,13 @@ class FarmerAPI:
                 f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
                 f"{new_proof_of_space.sp_hash}"
             )
-            return
+            return None
 
         if new_proof_of_space.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
                 f"Received response for a signage point that we do not have {new_proof_of_space.sp_hash}"
             )
-            return
+            return None
 
         sps = self.farmer.sps[new_proof_of_space.sp_hash]
         for sp in sps:
@@ -62,7 +62,7 @@ class FarmerAPI:
             )
             if computed_quality_string is None:
                 self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
-                return
+                return None
 
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
@@ -116,7 +116,7 @@ class FarmerAPI:
         """
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
-            return
+            return None
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
         signage_point_index = sps[0].signage_point_index
@@ -140,7 +140,7 @@ class FarmerAPI:
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
-            return
+            return None
 
         if is_sp_signatures:
             (
@@ -169,7 +169,7 @@ class FarmerAPI:
                             self.farmer.log.error(
                                 f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
                             )
-                            return
+                            return None
 
                         pool_target: Optional[PoolTarget] = PoolTarget(self.farmer.pool_target, uint32(0))
                         assert pool_target is not None
@@ -196,7 +196,7 @@ class FarmerAPI:
                     self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
                     msg = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
                     await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
-                    return
+                    return None
 
         else:
             # This is a response with block signatures
@@ -257,7 +257,7 @@ class FarmerAPI:
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues):
         if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
-            return
+            return None
 
         (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
             full_node_request.quality_string

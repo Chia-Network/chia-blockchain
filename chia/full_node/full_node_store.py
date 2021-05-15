@@ -182,7 +182,7 @@ class FullNodeStore:
             or signage_point.cc_proof is None
             or signage_point.rc_proof is None
         ):
-            return
+            return None
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             self.future_sp_cache[signage_point.rc_vdf.challenge] = []
         if (index, signage_point) not in self.future_sp_cache[signage_point.rc_vdf.challenge]:

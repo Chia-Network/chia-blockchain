@@ -312,7 +312,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         try:
             if "testing" in self.service.config and self.service.config["testing"] is True:
-                return
+                return None
             now = time.time()
             file_name = f"backup_{now}"
             path = path_from_root(self.service.root_path, file_name)
@@ -449,6 +449,10 @@ class WalletRpcApi:
         pending_change = await wallet.get_pending_change_balance()
         max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
+        unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
+            wallet_id
+        )
+
         wallet_balance = {
             "wallet_id": wallet_id,
             "confirmed_wallet_balance": balance,
@@ -456,6 +460,8 @@ class WalletRpcApi:
             "spendable_balance": spendable_balance,
             "pending_change": pending_change,
             "max_send_amount": max_send_amount,
+            "unspent_coin_count": len(unspent_records),
+            "pending_coin_removal_count": len(unconfirmed_removals),
         }
 
         return {"wallet_balance": wallet_balance}
@@ -544,7 +550,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
+        if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])

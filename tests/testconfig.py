@@ -1,4 +1,4 @@
-# Github actions template config
+# Github actions template config.
 oses = ["ubuntu", "macos"]
 root_test_dirs = ["blockchain", "clvm", "core", "generator", "simulation", "wallet"]
 

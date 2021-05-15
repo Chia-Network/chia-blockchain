@@ -260,6 +260,12 @@ class MempoolManager:
         addition_amount = uint64(0)
         # Check additions for max coin amount
         for coin in additions:
+            if coin.amount < 0:
+                return (
+                    None,
+                    MempoolInclusionStatus.FAILED,
+                    Err.COIN_AMOUNT_NEGATIVE,
+                )
             if coin.amount > self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
@@ -283,13 +289,11 @@ class MempoolManager:
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_coin_dict: Dict[bytes32, Coin] = {}
-        unknown_unspent_error: bool = False
         removal_amount = uint64(0)
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
-                unknown_unspent_error = True
-                break
+                return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
                 # TODO(straya): what timestamp to use here?
@@ -309,9 +313,6 @@ class MempoolManager:
             removal_coin_dict[name] = removal_record.coin
 
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
-
-        if unknown_unspent_error:
-            return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
         if addition_amount > removal_amount:
             print(addition_amount, removal_amount)
@@ -463,7 +464,7 @@ class MempoolManager:
         This is later used to retry to add them.
         """
         if item.spend_bundle_name in self.potential_txs:
-            return
+            return None
 
         self.potential_txs[item.spend_bundle_name] = item
         self.potential_cache_cost += item.cost
