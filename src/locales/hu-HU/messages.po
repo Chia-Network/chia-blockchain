@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-14 23:31\n"
+"PO-Revision-Date: 2021-05-15 11:27\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1135,7 +1135,7 @@ msgstr "Kérjük, érvényes számtartományt adjon meg"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Kérjük, érvényes számformátumban adja meg a ráfordítható mennyiséget"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
@@ -1223,7 +1223,7 @@ msgstr "Szűrőn átjutott plot-ok"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "A cserepek a termesztéshez fenntartott helyek a merevlemezen, amikből Chia nyerhető. <0>Részletek</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
@@ -1231,7 +1231,7 @@ msgstr "Mûvelés"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr "A párhuzamos parcellázással időt spórolhat. Egyébként, állítsa sorba őket."
+msgstr "A párhuzamos cserép létrehozással időt spórolhat. Egyébként, állítsa sorba őket."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
@@ -1302,7 +1302,7 @@ msgstr "Proof of Space méret"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr "Bizonyítékokat találtunk"
+msgstr "Felfedezett igazolások"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
@@ -1368,7 +1368,7 @@ msgstr "DID pénztárca visszaállítása"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr "Parcellák frissítése"
+msgstr "Cserepek frissítése"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
@@ -1454,11 +1454,11 @@ msgstr "Válasz pénztárca típust"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr "Válassza ki a mappát, ahol a parcella végső tárolóhelye lesz. Javasoljuk egy nagy, lassú merevlemez használatát. (Pl. külső HDD)."
+msgstr "Válassza ki a mappát, ahol a cserepek végső tárolóhelye lesz. Javasoljuk egy nagy, lassú merevlemez használatát. (Pl. külső HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "Válassza ki a mappát, ahol a parcella átmeneti tárolóhelye lesz. Javasoljuk egy gyors SSD merevlemez használatát."
+msgstr "Válassza ki a mappát, ahol a cserepek átmeneti tárolóhelye lesz. Javasoljuk egy gyors SSD merevlemez használatát."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
