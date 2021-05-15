@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-14 17:34\n"
+"PO-Revision-Date: 2021-05-15 23:32\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -199,8 +199,8 @@ msgid "Block with hash {headerHash}"
 msgstr "בלוק אם גיבוב {headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
-msgstr "בלוק אם גיבוב {headerHash} לא קיים."
+msgid "Block with hash {headerHash} does not exist."
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
