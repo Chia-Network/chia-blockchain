@@ -303,12 +303,14 @@ class WalletNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
+        # TODO: perhaps use a different set of DNS seeders for wallets, to split the traffic.
         self.wallet_peers = WalletPeers(
             self.server,
             self.root_path,
             self.config["target_peer_count"],
             self.config["wallet_peers_path"],
             self.config["introducer_peer"],
+            [],
             self.config["peer_connect_interval"],
             self.log,
         )
