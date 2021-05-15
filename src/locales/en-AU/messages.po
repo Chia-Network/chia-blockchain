@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_AU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-14 23:31\n"
+"PO-Revision-Date: 2021-05-15 05:30\n"
 "Last-Translator: \n"
 "Language-Team: English, Australia\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -65,11 +65,11 @@ msgstr "Add"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Add Plot Directory"
+msgstr "Add Plot to your land"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "Add Plot to Queue"
+msgstr "Add Plot to Queue as the workers are being bludgers"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
@@ -80,11 +80,11 @@ msgstr "Add Wallet"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "Add a Plot"
+msgstr "Add a Plot to get more beer money"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr "Add a Plot"
+msgstr "Add a Plot to get more beer money"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
@@ -108,7 +108,7 @@ msgstr "Address / Puzzle hash"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Amount"
-msgstr "Amount"
+msgstr "How much beer money to do you want to spend"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
@@ -125,7 +125,7 @@ msgstr "Are you sure you want to delete the plot? The plot cannot be recovered, 
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr "Are you sure you want to disconnect?"
+msgstr "Are you sure you want to remove this peer?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
@@ -142,7 +142,7 @@ msgstr "Are you sure you want to use k={plotSize}?"
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr "Back"
+msgstr "Back 'er up"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
@@ -165,7 +165,7 @@ msgstr "Below are the current block challenges. You may or may not have a proof 
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr "Best estimate over last 24 hours"
+msgstr "Best guesstimate over last 24 hours"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -277,7 +277,7 @@ msgstr "Chia Blockchain Wiki"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr "Chia Wallet"
+msgstr "Chia Wallet with my future beer money"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -327,11 +327,11 @@ msgstr "Coloured Coin Options"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
-msgstr "Confirm"
+msgstr "You ripper"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr "Confirm Disconnect"
+msgstr "You ripper"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -602,7 +602,7 @@ msgstr "Enter the 24 word mnemonic that you have saved in order to restore your 
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
-msgstr "Error"
+msgstr "Error, she's knacked"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -611,7 +611,7 @@ msgstr "Error: Cannot send chia to coloured address. Please enter a chia address
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr "Estimated Time to Win"
+msgstr "You COULD win a block in this time"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -651,7 +651,7 @@ msgstr "Farmer Reward Address"
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "Farmer is not connected"
+msgstr "Farmer is not connected you drongo"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
@@ -733,7 +733,7 @@ msgstr "Follow on Twitter"
 
 #: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
-msgstr "Frequently Asked Questions"
+msgstr "Frequently Asked Questions because people can't read"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
@@ -776,7 +776,7 @@ msgstr "Height"
 
 #: src/electron/main.tsx:308
 msgid "Help"
-msgstr "Help"
+msgstr "Help me Jebus"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:39
 msgid "Help translate"
@@ -1521,7 +1521,7 @@ msgstr "Speech"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr "Spendable Amount"
+msgstr "Spendable Amount for beer money"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
