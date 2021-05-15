@@ -191,6 +191,8 @@ class FullNodeDiscovery:
 
     async def start_client_async(self, addr: PeerInfo, is_feeler: bool) -> None:
         try:
+            if self.address_manager is None:
+                return
             client_connected = await self.server.start_client(
                 addr,
                 on_connect=self.server.on_connect,
