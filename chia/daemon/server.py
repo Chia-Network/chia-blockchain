@@ -706,17 +706,11 @@ class WebSocketServer:
         self.log.info(f"Unregister service {request}")
         service = request["service"]
 
-        connection_removed = False
+        num_connections = len(self.connections.get(service, []))
         if service in self.connections:
-            after_removal = []
-            for connection in self.connections[service]:
-                if connection == websocket:
-                    connection_removed = True
-                    continue
-                else:
-                    after_removal.append(connection)
-            self.connections[service] = after_removal
+            self.connections[service] = list(filter(lambda conn: conn != websocket, self.connections[service]))
 
+        connection_removed = num_connections > len(self.connections.get(service, []))
         if connection_removed:
             self.log.info(f"unregistered service {service}")
 
