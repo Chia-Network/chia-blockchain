@@ -1,6 +1,7 @@
 import logging
 from collections import Counter
 from pathlib import Path
+from time import time
 from typing import Dict, List
 
 from blspy import G1Element
@@ -92,6 +93,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"\tFarmer public key: {farmer_public_key}")
         log.info(f"\tLocal sk: {local_sk}")
         total_proofs = 0
+        total_time = 0
         caught_exception: bool = False
         for i in range(num_start, num_end):
             challenge = std_hash(i.to_bytes(32, "big"))
@@ -100,7 +102,11 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
+                        start_time = int(round(time() * 1000))
                         proof = pr.get_full_proof(challenge, index)
+                        spent_time = int(round(time() * 1000)) - start_time
+                        total_time += spent_time
+                        log.info(f"\tTime for proof: {spent_time} ms")
                         total_proofs += 1
                         ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                         assert quality_str == ver_quality_str
@@ -119,7 +125,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             if caught_exception is True:
                 break
         if total_proofs > 0 and caught_exception is False:
-            log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            log.info(
+                f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}, "
+                f"avg proof time: {total_time/total_proofs} ms"
+            )
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
         else:
