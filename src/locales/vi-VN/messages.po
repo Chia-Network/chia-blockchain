@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:11\n"
+"PO-Revision-Date: 2021-05-15 23:31\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -200,7 +200,7 @@ msgstr "Khối với băm {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr "Khối có băm {headerHash} không tồn tại."
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
