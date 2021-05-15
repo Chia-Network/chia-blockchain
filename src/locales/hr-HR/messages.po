@@ -8,7 +8,7 @@ msgstr ""
 "Language: hr_HR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-12 16:34\n"
+"PO-Revision-Date: 2021-05-15 11:27\n"
 "Last-Translator: \n"
 "Language-Team: Croatian\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -32,7 +32,7 @@ msgstr "128 kanti je preporučeno"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Žetelac je servis pokrenut na računalu gdje su spremljena zemljišta. Farmer i žetelac razgovaraju sa Punim Čvorom radi provjere stanja lanca. Niže možeš vidjeti spojene žeteoce Saznaj više"
+msgstr "Sakupljač je servis pokrenut na računalu gdje su spremljena zemljišta. Farmer i sakupljač razgovaraju sa Punim Čvorom radi provjere stanja lanca. Niže možeš vidjeti spojene sakupljače Saznaj više"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
