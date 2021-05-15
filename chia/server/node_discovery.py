@@ -339,9 +339,9 @@ class FullNodeDiscovery:
                         addr = None
                         continue
                     # only consider very recently tried nodes after 30 failed attempts
-                    # attempt a node once per 2 hours if we lack connections to increase the chance
+                    # attempt a node once per 30 minutes if we lack connections to increase the chance
                     # to try all the peer table.
-                    if now - info.last_try < 2 * 3600 and tries < 30:
+                    if now - info.last_try < 1800 and tries < 30:
                         continue
                     if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
                         local_peerinfo = await self.server.get_peer_info()
