@@ -189,6 +189,26 @@ class FullNodeDiscovery:
         except Exception as e:
             self.log.error(f"Exception while querying DNS server: {e}")
 
+    async def start_client_async(self, addr: PeerInfo, is_feeler: bool) -> None:
+        try:
+            client_connected = await self.server.start_client(
+                addr,
+                is_feeler,
+                on_connect=self.server.on_connect,
+            )
+            if self.server.is_duplicate_or_self_connection(addr):
+                # Mark it as a softer attempt, without counting the failures.
+                await self.address_manager.attempt(addr, False)
+            else:
+                if client_connected is True:
+                    await self.address_manager.mark_good(addr)
+                    await self.address_manager.connect(addr)
+                else:
+                    await self.address_manager.attempt(addr, True)
+        except Exception as e:
+            self.log.error(f"Exception in create outbound connections: {e}")
+            self.log.error(f"Traceback: {traceback.format_exc()}")
+
     async def _connect_to_peers(self, random) -> None:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         retry_introducers = False
@@ -337,25 +357,7 @@ class FullNodeDiscovery:
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
                 client_connected = False
                 if addr is not None and initiate_connection:
-                    try:
-                        client_connected = await self.server.start_client(
-                            addr,
-                            is_feeler=disconnect_after_handshake,
-                            on_connect=self.server.on_connect,
-                        )
-                    except Exception as e:
-                        self.log.error(f"Exception in create outbound connections: {e}")
-                        self.log.error(f"Traceback: {traceback.format_exc()}")
-
-                    if self.server.is_duplicate_or_self_connection(addr):
-                        # Mark it as a softer attempt, without counting the failures.
-                        await self.address_manager.attempt(addr, False)
-                    else:
-                        if client_connected is True:
-                            await self.address_manager.mark_good(addr)
-                            await self.address_manager.connect(addr)
-                        else:
-                            await self.address_manager.attempt(addr, True)
+                    asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
 
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
