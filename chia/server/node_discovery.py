@@ -355,7 +355,6 @@ class FullNodeDiscovery:
                     disconnect_after_handshake = True
                     retry_introducers = False
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
-                client_connected = False
                 if addr is not None and initiate_connection:
                     asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
 
