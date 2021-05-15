@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-13 10:51\n"
+"PO-Revision-Date: 2021-05-15 17:28\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -73,7 +73,7 @@ msgstr "Añadir Parcela a la Cola"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "Añadir Cartera"
+msgstr "Añadir Monedero"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -146,7 +146,7 @@ msgstr "Atrás"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "El archivo de respaldo se usa para restaurar carteras inteligentes."
+msgstr "El archivo de respaldo se usa para restaurar monederos inteligentes."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -228,7 +228,7 @@ msgstr "Comprar"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr "Cartera CC"
+msgstr "Monedero CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -809,7 +809,7 @@ msgstr "Si no se selecciona ninguno, se establecerá de forma predeterminada en 
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr "Importar Cartera desde Mnemotécnica"
+msgstr "Importar Monedero desde Mnemotécnica"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
