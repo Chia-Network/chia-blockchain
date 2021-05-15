@@ -913,8 +913,6 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
-        request["wallet_id"] = 1
-        request["puzzle_hash"] = puzzle_hash
         async with self.service.wallet_state_manager.lock:
             await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}
