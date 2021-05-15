@@ -8,7 +8,7 @@ msgstr ""
 "Language: hr_HR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 11:27\n"
+"PO-Revision-Date: 2021-05-15 23:32\n"
 "Last-Translator: \n"
 "Language-Team: Croatian\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -199,8 +199,8 @@ msgid "Block with hash {headerHash}"
 msgstr "Blok sa hashom {headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exists."
-msgstr "Blok sa hashom {headerHash} ne postoji."
+msgid "Block with hash {headerHash} does not exist."
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
