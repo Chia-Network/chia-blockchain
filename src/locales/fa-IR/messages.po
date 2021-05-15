@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-14 11:35\n"
+"PO-Revision-Date: 2021-05-15 23:31\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -38,7 +38,7 @@ msgstr "دروگر (Harvester) یک سرویس در حال اجرا بر روی 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "درباره زنجیره بلوکی چیـا"
+msgstr "درباره بلاکچین چیـا"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -202,7 +202,7 @@ msgstr "بلوک با هش {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr "بلوکی با هش {headerHash} موجود نیست."
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
