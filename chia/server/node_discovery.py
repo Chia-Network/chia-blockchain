@@ -193,8 +193,8 @@ class FullNodeDiscovery:
         try:
             client_connected = await self.server.start_client(
                 addr,
-                is_feeler,
                 on_connect=self.server.on_connect,
+                is_feeler=is_feeler,
             )
             if self.server.is_duplicate_or_self_connection(addr):
                 # Mark it as a softer attempt, without counting the failures.
