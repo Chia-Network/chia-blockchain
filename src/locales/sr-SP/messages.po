@@ -8,7 +8,7 @@ msgstr ""
 "Language: sr_SP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 11:27\n"
+"PO-Revision-Date: 2021-05-15 17:28\n"
 "Last-Translator: \n"
 "Language-Team: Serbian (Cyrillic)\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "Желиш да сазнаш више о Chia блоковима? Провери <0>Chia претраживач</0> који је настао од стране програмера отвореног кода."
+msgstr "* Желиш да сазнаш више о Chia блоковима? Провери <0>Chia претраживач</0> који је настао од стране програмера отвореног кода."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,16 +28,16 @@ msgstr "Желиш да сазнаш више о Chia блоковима? Про
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "128 канти је препоручено"
+msgstr "Препоручује се 128 канти"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Сакупљач је услуга која ради на машини на којој се плот(ови) стварно складишти. Фармер и сакупљач разговарају са пуним чвором да би видели стање ланца. У наставку погледајте своју мрежу повезаних сакупљача. Сазнајте више"
+msgstr "Сакупљач је услуга која ради на машини на којој се плот(ови) заправо складишти. Фармер и сакупљач разговарају са пуним чвором да би видели стање ланца. У наставку погледај своју мрежу повезаних сакупљача Сазнај више"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "О Чија Блокчејну"
+msgstr "О Chia блокчејну"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -65,7 +65,7 @@ msgstr "Додај"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Направи фолдер за плот"
+msgstr "Додај фолдер за плот"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
@@ -99,7 +99,7 @@ msgstr "Адреса"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:323
 msgid "Address / Puzzle hash"
-msgstr "Адреса / Хеш слагалице"
+msgstr "Адреса / Хеш слагалица"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -125,11 +125,11 @@ msgstr "Да ли сте сигурни да желите да избришет�
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr "Да ли сте сигурни да желите да се искључите?"
+msgstr "Да ли сигурно желиш да прекинеш везу?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Да ли си сигуран да желиш да изађеш? Графички кориснички интерфејс и обрађивање ђе бити заустављено."
+msgstr "Да ли сигурно желиш да изађеш? Графички кориснички интерфејс и обрађивање биће заустављено."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -137,7 +137,7 @@ msgstr "Да ли си сигуран да желиш да изађеш? Гра�
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "Да ли си сигуран да желиш да користиш k={plotSize}?"
+msgstr "Да ли сигурно желиш да користиш k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -161,7 +161,7 @@ msgstr "Основни износ награде за фармера"
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "Испод су тренутни блок изазови. Можете имати или немати доказ о простору за ове изазове. Ови блокови тренутно не садрже доказ о времену."
+msgstr "Испод су тренутни блок изазови. Можеш имати или немати доказ о простору за ове изазове. Ови блокови тренутно не садрже доказ о времену."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
@@ -184,11 +184,11 @@ msgstr "Тестирање блока"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr "Блок ВДФ понављања"
+msgstr "Блок VDF понављања"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Блок на висини {0} у Чија блокчејну"
+msgstr "Блок на висини {0} у Chia блокчејну"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr "Блок на висини {0} у Чија блокчејну"
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr "Блок са мешавином {headerHash}"
+msgstr "Блок са хешом {headerHash}"
 
 #: src/components/block/Block.jsx:158
-msgid "Block with hash {headerHash} does not exist."
-msgstr "Блок са мешавином {headerHash} не постоји."
+msgid "Block with hash {headerHash} does not exists."
+msgstr "Блок са хешом {headerHash} не постоји."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -236,7 +236,7 @@ msgstr "CC новчаник"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr "Може се сачувати у мнемотехничко семе"
+msgstr "Може се сачувати у мнемоничко семе"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -245,11 +245,11 @@ msgstr "Може се сачувати у мнемотехничко семе"
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr "Одустани"
+msgstr "Откажи"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr "Одустани и Потроши"
+msgstr "Откажи и потроши"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -261,7 +261,7 @@ msgstr "Изазов"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr "Хеш изазова"
+msgstr "Хеш изазов"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
@@ -273,7 +273,7 @@ msgstr "Chia"
 
 #: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr "Chia Blockchain Wiki"
+msgstr "Вики за Chia блокчејн"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
@@ -281,11 +281,11 @@ msgstr "Чија Новчаник"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr "Изаберите број плотова"
+msgstr "Изабери број плотова"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr "Изаберите величину плота"
+msgstr "Изабери величину плота"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:55
@@ -331,7 +331,7 @@ msgstr "Потврди"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr "Потврдите Прекид везе"
+msgstr "Потврда прекида везе"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -343,17 +343,17 @@ msgstr "Потврђено на висини {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
-msgstr "Повежите се"
+msgstr "Повежи се"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
-msgstr "Повежите се са другим пировима"
+msgstr "Повежи се са другим пировима"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
-msgstr "Повезани сте"
+msgstr "Повезано"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
@@ -378,7 +378,7 @@ msgstr "Везе"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr "Допринесите на ГитХуб-у"
+msgstr "Допринеси на GitHub-у"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -394,7 +394,7 @@ msgstr "Копирај"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr "Копирај у привремену Меморију"
+msgstr "Копирај у привремену меморију"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -406,11 +406,11 @@ msgstr "Креирај"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "Креирај ДИД новчаник"
+msgstr "Креирај DID новчаник"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr "Креирај Понуду"
+msgstr "Креирај понуду"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
@@ -418,11 +418,11 @@ msgstr "Креирај плот"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Креирај Ограничен Администраторски Новчаник са Стопом"
+msgstr "Креирај ограничену стопу админ новчаника"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Креирај Ограничен Кориснички Новчаник са Стопом"
+msgstr "Креирај ограничену стопу корисничког новчаника"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -430,21 +430,21 @@ msgstr "Креирај Ограничен Кориснички Новчаник 
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr "Креирај Понуду за Трговину"
+msgstr "Креирај понуду за трговину"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
-msgstr "Креирај Трансакцију"
+msgstr "Креирај трансакцију"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr "Креирај Резервну копију"
+msgstr "Креирај резервну копију"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr "Креирај Нови приватни кључ"
+msgstr "Креирај нови приватни кључ"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
@@ -488,7 +488,7 @@ msgstr "ОПАСНОСТ: трајно брисање приватног кљу�
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr "DID Новчаник"
+msgstr "DID новчаник"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -529,11 +529,11 @@ msgstr "Обриши кључ"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Брисање свих кључева ће трајно уклонити све кључеве са Вашег рачунара, будите сигурни да имате резервне копије. Да ли сте сигурни да желите да наставите?"
+msgstr "Брисање свих кључева уклониће их трајно са твог рачунара, побрини се да имаш резервне копије. Да ли сигурно желиш да наставиш?"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Брисање кључа ће трајно уклонити кључ са Вашег рачунара, будите сигурни да имате резервну копију. Да ли сте сигурни да желите да наставите?"
+msgstr "Брисање ће трајно уклонити кључ са твог рачунара, побрини се да имаш резервне копије. Да ли сигурно желиш да наставиш?"
 
 #: src/electron/main.tsx:260
 msgid "Developer"
@@ -558,7 +558,7 @@ msgstr "Онемогући цртање битног поља"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr "Искључи"
+msgstr "Прекини везу"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
