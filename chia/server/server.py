@@ -345,7 +345,7 @@ class ChiaServer:
         session = None
         connection: Optional[WSChiaConnection] = None
         try:
-            timeout = ClientTimeout(total=10)
+            timeout = ClientTimeout(total=30)
             session = ClientSession(timeout=timeout)
 
             try:

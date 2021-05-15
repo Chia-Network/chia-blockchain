@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from random import Random
 from secrets import randbits
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Set
 
 import aiosqlite
 
@@ -24,7 +24,7 @@ from chia.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
-
+MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 100
 
 class FullNodeDiscovery:
     def __init__(
@@ -63,6 +63,7 @@ class FullNodeDiscovery:
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
         self.resolver = dns.asyncresolver.Resolver()
+        self.pending_outbound_connections: Set = set()
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -193,6 +194,9 @@ class FullNodeDiscovery:
         try:
             if self.address_manager is None:
                 return
+            if addr.host in self.pending_outbound_connections:
+                return
+            self.pending_outbound_connections.add(addr.host)
             client_connected = await self.server.start_client(
                 addr,
                 on_connect=self.server.on_connect,
@@ -207,7 +211,10 @@ class FullNodeDiscovery:
                     await self.address_manager.connect(addr)
                 else:
                     await self.address_manager.attempt(addr, True)
+            self.pending_outbound_connections.remove(addr.host)
         except Exception as e:
+            if addr.host in self.pending_outbound_connections:
+                self.pending_outbound_connections.remove(addr.host)
             self.log.error(f"Exception in create outbound connections: {e}")
             self.log.error(f"Traceback: {traceback.format_exc()}")
 
@@ -357,14 +364,16 @@ class FullNodeDiscovery:
                     disconnect_after_handshake = True
                     retry_introducers = False
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
-                if addr is not None and initiate_connection:
-                    asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
-
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
                 # Special case: try to find our first peer much quicker.
                 if len(groups) == 0:
                     sleep_interval = 0.1
+                if addr is not None and initiate_connection:
+                    while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
+                        self.log.debug(f"Max concurrent outbound connections reached. Retrying in {sleep_interval}s.")
+                        await asyncio.sleep(sleep_interval)
+                    asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
                 await asyncio.sleep(sleep_interval)
             except Exception as e:
                 self.log.error(f"Exception in create outbound connections: {e}")
