@@ -267,6 +267,7 @@ class WebSocketServer:
             "stop_service",
             "is_running",
             "register_service",
+            "unregister_service",
         ]
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
@@ -286,6 +287,8 @@ class WebSocketServer:
             response = await self.stop()
         elif command == "register_service":
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
+        elif command == "unregister_service":
+            response = await self.unregister_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
         else:
@@ -697,6 +700,27 @@ class WebSocketServer:
                 self.ping_job = asyncio.create_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
+        return response
+
+    async def unregister_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]) -> Dict[str, Any]:
+        self.log.info(f"Unregister service {request}")
+        service = request["service"]
+
+        connection_removed = False
+        if service in self.connections:
+            after_removal = []
+            for connection in self.connections[service]:
+                if connection == websocket:
+                    connection_removed = True
+                    continue
+                else:
+                    after_removal.append(connection)
+            self.connections[service] = after_removal
+
+        if connection_removed:
+            self.log.info(f"unregistered service {service}")
+
+        response = {"success": True, "service": service, "connection_removed": connection_removed}
         return response
 
 
