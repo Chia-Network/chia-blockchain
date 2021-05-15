@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 17:28\n"
+"PO-Revision-Date: 2021-05-15 23:32\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -200,7 +200,7 @@ msgstr "Blokk hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr "A {headerHash} hash-t tartalmazó blokk nem létezik."
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -1109,7 +1109,7 @@ msgstr "Kérjük, adjon hozzá egy kereskedelmi párt"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Kérlek ne adj meg fee-t, Pozitív fee nem támogatott egyelőre az RL-hez."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
@@ -1251,7 +1251,7 @@ msgstr "Parcella nyilvános kulcs"
 
 #: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "Véletlenszerű Pool Hash"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
@@ -1259,7 +1259,7 @@ msgstr "Farmer jutalom címe"
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "Pool jutalom"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
