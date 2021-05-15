@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-13 23:19\n"
+"PO-Revision-Date: 2021-05-15 17:28\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -146,7 +146,7 @@ msgstr "Volver"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "El archivo de respaldo se usa para restaurar carteras inteligentes."
+msgstr "El archivo de respaldo se usa para restaurar monederos inteligentes."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -236,7 +236,7 @@ msgstr "Monedero CC"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr "Se puede respaldar a la semilla mnemónica"
+msgstr "Puede respaldarse en una semilla mnemotécnica"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -809,11 +809,11 @@ msgstr "Si no se seleccionó ninguno, entonces se establecerá por defecto en el
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr "Importar cartera de Mnemonics"
+msgstr "Importar monedero desde Mnemotécnica"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr "Importar de Mnemonics (24 palabras)"
+msgstr "Importar de Mnemotécnia (24 palabras)"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
