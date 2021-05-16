@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-16 05:31\n"
+"PO-Revision-Date: 2021-05-16 17:30\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1347,15 +1347,15 @@ msgstr "Forgalomkorlátozás"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Forgalomkorlátozási információ"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Forgalomkorlátozási beállítások"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Forgalomkorlátozott felhasználói pénztárca beállítások"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
@@ -1388,7 +1388,7 @@ msgstr "Hibabejelentés..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "Állítsa vissza a színes érmék és más intelligens pénztárcák metaadatait a Biztonsági mentésből"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1480,7 +1480,7 @@ msgstr "Küldés"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Küldje el ezt az információs csomagot a \"Forgalomkorlátozott pénztárca\" felhasználójának, akinek a pénztárca beállításának befejezéséhez ezt kell felhasználnia:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
@@ -1513,7 +1513,7 @@ msgstr "Bejelentkezés"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Átugorja a végleges könyvtár hozzáadását a farmoláshoz"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
@@ -1536,11 +1536,11 @@ msgstr "Elérhető egyenleg"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Kiadási mennyiség (blokkok száma): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Kiadási mennyiség hossza (blokkok száma)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
@@ -1664,15 +1664,15 @@ msgstr "A csomópont szinkronizálás alatt van, ez azt jelenti, hogy más csom�
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "A cselekmény létrehozásához használt kód. Ez a \"pool\" pk-jától és a \"plot\" pk-jától függ."
 
 #: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "A VDF (ellenőrizhető késleltetési függvény) teljes száma vagy az időismétlések igazolása a teljes láncban ezen alblokkig."
 
 #: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "A VDF (ellenőrizhető késleltetési függvény) teljes száma vagy az időbeli ismétlések igazolása ebben a blokkban."
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
@@ -1694,11 +1694,11 @@ msgstr "Ez a funkció csak a grafikus felhasználói felületrôl érhetô el."
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Ez az összeg Chia, amelyet jelenleg felhasználhat tranzakciók lebonyolítására. Nem tartalmazza a függőben lévő gazdálkodási jutalmakat, a függőben lévő bejövő tranzakciókat és Chiát, amelyet most költött, de még nem tartozik a blokkláncba."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Ez a függőben lévő változás, amely olyan pénzérme, amelyet Ön küldött magának, de még nem erősítették meg."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
@@ -1707,23 +1707,23 @@ msgstr "Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Ez a legutóbbi csúcs alblokk ideje."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Ekkor hozta létre a blokkot a gazdálkodó, ami még az idő igazolásával véglegesítés előtt van"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Ez az összes Chia mennyiség a blokkláncban az aktuális csúcs alblokkban, amelyet a privát kulcsaid vezérelnek. Ez magában foglalja a befagyasztott gazdálkodási jutalmakat, de nem a függőben lévő bejövő és kimenő tranzakciókat."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Ez a teljes egyenleg + függőben lévő egyenleg: ez lesz az egyenleged az összes függőben lévő tranzakció megerősítése után."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Ez a csomópont teljesen felzárkózott és érvényesíti a hálózatot"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1735,15 +1735,15 @@ msgstr "Ez a táblázat megmutatja egy blokk kihívás elnyerésére tett kísé
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "A kereskedés a következő időben jött létre"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Ez a kereskedés a blokklánc ezen magasságán történt"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "A Chia ezen verziója többé már nem kompatibilis a blokklánccal és nem biztonságos."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1829,7 +1829,7 @@ msgstr "Korábbi kereskedések"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Tranzakciók Szűrési Hash-értéke"
 
 #: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
@@ -1854,7 +1854,7 @@ msgstr "Felhasználó publikus kulcsa"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF alhelyi ismétlések"
 
 #: src/electron/main.tsx:251
 msgid "View"
@@ -1936,7 +1936,7 @@ msgstr "Szeretne többet keresni Chia-val? Adjon hozzá több telket a gazdaság
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Szeretne késleltetést mielőtt elkezdi a következő percellát?"
 
 #: src/components/block/Block.jsx:198
 msgid "Weight"
@@ -1944,7 +1944,7 @@ msgstr "Súly"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Az összes alblokk teljes hozzáadott nehézségének a súlya, egészen ehhez az egységig"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
