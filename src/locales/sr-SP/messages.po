@@ -8,7 +8,7 @@ msgstr ""
 "Language: sr_SP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-16 11:27\n"
+"PO-Revision-Date: 2021-05-16 17:30\n"
 "Last-Translator: \n"
 "Language-Team: Serbian (Cyrillic)\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -2013,11 +2013,11 @@ msgstr "Твоја мрежа сакупљача"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "Дозвола одбијена. Покушавате да приступите датотеци / фолдеру без потребних дозвола. Највероватније је проблем у једном од фолдера са плотовима у вашем config.yaml фајлу."
+msgstr "[Грешка 13] Дозвола одбијена. Покушаваш да приступиш датотеци / фолдеру без потребних дозвола. Највероватније је проблем у једном од фолдера са плотовима у твом config.yaml фајлу."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "Фајл није пронађен. Највероватније је проблем у једном од фолдера са плотовима у вашем config.yaml фајлу."
+msgstr "[Грешка 22] Фајл није пронађен. Највероватније је проблем у једном од фолдера са плотовима у твом config.yaml фајлу."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2046,7 +2046,7 @@ msgstr "синхронизовано"
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
-msgstr "синхронизовање"
+msgstr "синхронизација"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -2058,13 +2058,13 @@ msgstr "синхронизовање"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr "{currencyCode} Награде од блокова"
+msgstr "{currencyCode} награде од блокова"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
-msgstr "{currencyCode} Укупно Чие са фарме"
+msgstr "{currencyCode} укупно Chia са фарме"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr "{currencyCode} Корисничких накнада за трансакције"
+msgstr "{currencyCode} накнаде за трансакције корисника"
 
