@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-16 05:31\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -146,7 +146,7 @@ msgstr "Volver"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "El archivo de respaldo se usa para restaurar monederos inteligentes."
+msgstr "El archivo de respaldo se usa para restaurar carteras inteligentes."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -357,7 +357,7 @@ msgstr "Conectado"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr "Conectar al Monedero"
+msgstr "Conectar a Cartera"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
@@ -456,7 +456,7 @@ msgstr "Crear nueva moneda de color"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr "Crear monedero de usuario"
+msgstr "Crear cartera de usuario"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -1003,7 +1003,7 @@ msgstr "No hay transacciones previas"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr "No hay llaves privadas para una o ambas direcciones. Es seguro sólo si usted está enviando recompensas hacia otro monedero."
+msgstr "No hay llaves privadas para una o ambas direcciones. Es seguro sólo si usted está enviando recompensas hacia otra cartera."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1388,7 +1388,7 @@ msgstr "Reportar un problema..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr "Restaurar Metadatos de Monedas de Color y otros Monederos Inteligentes desde Respaldo"
+msgstr "Restaurar Metadatos de Monedas de Color y otras Carteras Inteligentes desde Respaldo"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1951,11 +1951,11 @@ msgstr "Bienvenidos a Chia. Por favor inicie sesión con una llave existente o c
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su cartera. Sin ellas, perderá el acceso a su monedero, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
+msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su cartera. Sin ellas, perderá el acceso a su cartera, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Monedero con Tarifa Limitada:"
+msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Cartera con Tarifa Limitada:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
