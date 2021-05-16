@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-16 11:27\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -200,7 +200,7 @@ msgstr "عنوان المربع {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgstr "{headerHash}"
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -1513,7 +1513,7 @@ msgstr "تسجيل الدخول"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "تخطي إضافة دليل نهائي إلى الحصاد من أجل الزراعة"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
@@ -1853,7 +1853,7 @@ msgstr "المفتاح العام للمستخدم"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "تعديلات فتحة VDF الفرعية"
 
 #: src/electron/main.tsx:251
 msgid "View"
@@ -1939,23 +1939,23 @@ msgstr "هل ترغب في الحصول على تأخير قبل أن تبدأ �
 
 #: src/components/block/Block.jsx:198
 msgid "Weight"
-msgstr ""
+msgstr "الوزن/الأهمية"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "الوزن هو الصعوبة المضافة الكلية لجميع الكتل الفرعية حتى و بما في ذلك هذه"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "مرحبا بكم في تشيا. الرجاء تسجيل الدخول باستخدام مفتاح موجود, أو إنشاء مفتاح جديد."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "مرحبًا! تستخدم الكلمات التالية للنسخ الاحتياطي لمحفظتك. بدونهم، سوف تفقد الوصول إلى محفظتك، ابقائهم آمنين! اكتب كل كلمة مع رقم الطلب بجوارهم. (الطلب مهم)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "عندما تتلقى حزمة معلومات الإعداد من المشرف الخاص بك، قم بإدخالها أدناه لإكمال إعداد المحفظة المحدودة المعدل:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
@@ -2017,36 +2017,36 @@ msgstr "[خطأ 13] تم رفض الإذن. أنت تحاول الوصول إل�
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[خطأ 22] لم يتم العثور على الملف. على الأرجح أن أحد مجلدات المخطط في config.yaml لديه مشكلة."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
-msgstr ""
+msgstr "الإتصالات:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
-msgstr ""
+msgstr "ارتفاع:"
 
 #: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
-msgstr ""
+msgstr "لم تتم المزامنة"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
-msgstr ""
+msgstr "الحالة"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
-msgstr ""
+msgstr "تمت المزامنة"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
-msgstr ""
+msgstr "جاري المزامنة"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -2058,13 +2058,13 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr ""
+msgstr "جوائز حظر {currencyCode}"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
-msgstr ""
+msgstr "{currencyCode} مجموع مزارع شيا"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr ""
+msgstr "{currencyCode} رسوم المعاملات للمستخدم"
 
