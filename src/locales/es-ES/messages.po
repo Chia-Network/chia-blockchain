@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-16 05:31\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -73,7 +73,7 @@ msgstr "Añadir Parcela a la Cola"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "Añadir Monedero"
+msgstr "Añadir Cartera"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -146,7 +146,7 @@ msgstr "Atrás"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "El archivo de respaldo se usa para restaurar monederos inteligentes."
+msgstr "El archivo de respaldo se usa para restaurar carteras inteligentes."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -228,7 +228,7 @@ msgstr "Comprar"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr "Monedero CC"
+msgstr "Cartera CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -277,7 +277,7 @@ msgstr "Wiki de Cadena de Bloques Chia"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr "Monedero Chia"
+msgstr "Cartera Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -357,7 +357,7 @@ msgstr "Conectado"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr "Conectar al Monedero"
+msgstr "Conectar a cartera"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
@@ -406,7 +406,7 @@ msgstr "Crear"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "Crear Monedero DID"
+msgstr "Crear Cartera DID"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -418,11 +418,11 @@ msgstr "Crear Parcela"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Crear Monedero de Administrador con Tarifa Limitada"
+msgstr "Crear Cartera de Admin con Tarifa Limitada"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Crear Monedero de Usuario con Tarifa Limitada"
+msgstr "Crear Cartera de Usuario con Tarifa Limitada"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -448,7 +448,7 @@ msgstr "Crear una nueva llave privada"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr "Crear monedero de administrador"
+msgstr "Crear cartera de admin"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
@@ -456,15 +456,15 @@ msgstr "Crear nueva moneda de color"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr "Crear monedero de usuario"
+msgstr "Crear cartera de usuario"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr "Crear monedero para color"
+msgstr "Crear cartera para color"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr "Crear monedero para color existente"
+msgstr "Crear cartera para color existente"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -488,7 +488,7 @@ msgstr "ADVERTENCIA: eliminar llave privada permanentemente"
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr "Monedero DID"
+msgstr "Cartera DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -592,7 +592,7 @@ msgstr "Editar"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "Introduzca las 24 palabras mnemotécnicas que has guardado en orden para restaurar su monedero Chia."
+msgstr "Introduzca las 24 palabras mnemotécnicas que has guardado en orden para restaurar su cartera Chia."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -754,7 +754,7 @@ msgstr "Generar Nuevo Color"
 
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr "HD o llaves Jerárquicamente Determinísticas son un tipo de esquema de llave pública/llave privada donde una llave privada pueden tener una cantidad prácticamente infinita de llaves públicas (por ende direcciones de recepción de monedero) que en última instancia hacen referencia y pueden ser gastadas por una sola llave privada."
+msgstr "HD o llaves Jerárquicamente Determinísticas son un tipo de esquema de llave pública/llave privada donde una llave privada pueden tener una cantidad prácticamente infinita de llaves públicas (por ende direcciones de recepción de cartera) que en última instancia hacen referencia y pueden ser gastadas por una sola llave privada."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -809,7 +809,7 @@ msgstr "Si no se selecciona ninguno, se establecerá de forma predeterminada en 
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr "Importar Monedero desde Mnemotécnica"
+msgstr "Importar Cartera desde Mnemotécnica"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
@@ -846,7 +846,7 @@ msgstr "Monto Inicial"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr "Inicializar un Monedero de Usuario con Tarifa Limitada:"
+msgstr "Inicializar un Cartera de Usuario con Tarifa Limitada:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -972,7 +972,7 @@ msgstr "Nueva dirección"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr "Nuevo Monedero"
+msgstr "Nueva Cartera"
 
 #: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
@@ -1003,7 +1003,7 @@ msgstr "No hay transacciones previas"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr "No hay llaves privadas para una o ambas direcciones. Es seguro sólo si usted está enviando recompensas hacia otro monedero."
+msgstr "No hay llaves privadas para una o ambas direcciones. Es seguro sólo si usted está enviando recompensas hacia otra cartera."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1334,7 +1334,7 @@ msgstr "Uso Máximo de RAM"
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr "Monedero RL"
+msgstr "Cartera RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1355,7 +1355,7 @@ msgstr "Opciones de Tarifa Limitada"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr "Configuración de Monedero de Usuario con Tarifa Limitada"
+msgstr "Configuración de Cartera de Usuario con Tarifa Limitada"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
@@ -1364,7 +1364,7 @@ msgstr "Dirección de Recibir"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr "Recuperar Monedero DID"
+msgstr "Recuperar Cartera DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1388,7 +1388,7 @@ msgstr "Reportar un problema..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr "Restaurar Metadatos de Monedas de Color y otros Monederos Inteligentes desde Respaldo"
+msgstr "Restaurar Metadatos de Monedas de Color y otras Carteras Inteligentes desde Respaldo"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1450,7 +1450,7 @@ msgstr "Seleccione Directorio Temporal"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr "Seleccione Tipo de Monedero"
+msgstr "Seleccione Tipo de Cartera"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1480,11 +1480,11 @@ msgstr "Enviar"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr "Envíe este paquete de información al usuario de su Monedero con Tarifa Limitada, que debe usarlo para completar la configuración de su monedero:"
+msgstr "Envíe este paquete de información al usuario de su Cartera con Tarifa Limitada, que debe usarlo para completar la configuración de su monedero:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "Enviar si llave pública a su administrador de Monedero de Tarifa Limitada:"
+msgstr "Enviar su llave pública a su administrador de Cartera de Tarifa Limitada:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1923,7 +1923,7 @@ msgstr "Esperar sincronización"
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
-msgstr "Monederos"
+msgstr "Carteras"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -1951,11 +1951,11 @@ msgstr "Bienvenidos a Chia. Por favor inicie sesión con una llave existente o c
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su monedero. Sin ellas, perderá el acceso a su monedero, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
+msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su cartera. Sin ellas, perderá el acceso a su cartera, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Monedero con Tarifa Limitada:"
+msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Cartera con Tarifa Limitada:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
