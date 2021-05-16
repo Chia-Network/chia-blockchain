@@ -7,6 +7,11 @@ if [ -z "$VIRTUAL_ENV" ]; then
 	exit 1
 fi
 
+if [[ $EUID -eq 0 ]]; then
+  echo "The Chia Blockchain GUI can not be installed or run by the root user."
+	exit 1
+fi
+
 # Allows overriding the branch or commit to build in chia-blockchain-gui
 SUBMODULE_BRANCH=$1
 
