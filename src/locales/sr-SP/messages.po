@@ -8,7 +8,7 @@ msgstr ""
 "Language: sr_SP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-16 05:31\n"
+"PO-Revision-Date: 2021-05-16 11:27\n"
 "Last-Translator: \n"
 "Language-Team: Serbian (Cyrillic)\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -780,7 +780,7 @@ msgstr "Помоћ"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:39
 msgid "Help translate"
-msgstr "Помозите у превођењу"
+msgstr "Помози у превођењу"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
@@ -793,19 +793,19 @@ msgstr "Историја"
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr "Назив домаћина"
+msgstr "Назив хоста"
 
 #: src/components/fullNode/FullNodeConnections.tsx:27
 msgid "IP address"
-msgstr "IP Адреса"
+msgstr "IP адреса"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
-msgstr "IP адреса/хост"
+msgstr "IP адреса / хост"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr "Ако ниједна није изабрана, онда ће се подразумеани бити привремени директоријум."
+msgstr "Ако ништа није изабрано, тада ће се подразумевано поставити на привременом директоријуму."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
@@ -813,7 +813,7 @@ msgstr "Увези новчаник уз помоћ мнемотехнике"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr "Увези новчаник уз помоћ мнемотехнике (24 речи)"
+msgstr "Увези уз помоћ мнемотехнике (24 речи)"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
@@ -821,7 +821,7 @@ msgstr "У процесу"
 
 #: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
-msgstr "долазни"
+msgstr "Долазни"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Index"
@@ -829,11 +829,11 @@ msgstr "Индекс"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr "Означава да ли је ова понуда направљена од стране нас"
+msgstr "Наведено да ли смо ову понуду креирали ми"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr "Означава у које време је понуда прихваћена"
+msgstr "Наведено када је прихваћена ова понуда"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
@@ -854,7 +854,7 @@ msgstr "Интервал"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr "К-Величина"
+msgstr "К-величина"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
@@ -863,11 +863,11 @@ msgstr "Кључеви"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr "Килобајти отпремање/преузимање"
+msgstr "KiB горе/доле"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr "Доказ из последњег покушаја"
+msgstr "Доказ последњег покушаја"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
@@ -879,11 +879,11 @@ msgstr "Најновији блок изазови"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
-msgstr "Учитавам..."
+msgstr "Учитавање..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr "Локални плот сакупљач"
+msgstr "Локални сакупљач плотова"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -935,15 +935,15 @@ msgstr "Управљај наградама"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr "Управљај циљаним адресама награде"
+msgstr "Управљај циљаним адресама награда"
 
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
-msgstr "MiB Доле/Горе"
+msgstr "MiB горе/доле"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
-msgstr "Минути"
+msgstr "Минута"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
@@ -955,7 +955,7 @@ msgstr "Мој јавни кључ"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
-msgstr "Име мреже"
+msgstr "Назив мреже"
 
 #: src/components/fullNode/FullNode.jsx:106
 #~ msgid "Network has not yet been launched, once it launches full node will start automatically."
@@ -972,13 +972,13 @@ msgstr "Нова адреса"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr "Додај новчаник"
+msgstr "Нови новчаник"
 
 #: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr "Следећи"
+msgstr "Даље"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
@@ -1003,17 +1003,17 @@ msgstr "Нема претходних трансакција"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr "Нема приватних кључева за једну или обе адресе. Безбедно је само ако награде шаљете у други новчаник."
+msgstr "Нема приватних кључева за једну или обе адресе. Безбедно је само ако награде шаљете на други новчаник."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.tsx:23
 msgid "Node ID"
-msgstr "Идентификатор чвора"
+msgstr "ID чвора"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr "Ниједна од ваших парцела још није прошла филтер за парцелу."
+msgstr "Ниједан твој плот још увек није прошао филтер."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
@@ -1042,7 +1042,7 @@ msgstr "Није повезано"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr "Нису нађени плотови"
+msgstr "Нису пронађени плотови"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
@@ -1054,7 +1054,7 @@ msgstr "Број нити"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
-msgstr "Уреду"
+msgstr "ОК"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
@@ -1062,11 +1062,11 @@ msgstr "Понуда"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr "Креиране Понуде"
+msgstr "Креиране понуде"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr "У просеку је потребан један минут између сваког блока трансакције. Ако нема загушења, можете очекивати да ће ваша трансакција бити укључена за мање од једног минута."
+msgstr "У просеку је потребан један минут између сваког блока трансакције. Ако нема загушења, можеш очекивати да ће трансакција бити укључена за мање од једног минута."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1074,7 +1074,7 @@ msgstr "Одлазни"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr "Висина Врха"
+msgstr "Врх раста"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1082,7 +1082,7 @@ msgstr "Висина Врха"
 
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
-msgstr "Време Врха"
+msgstr "Време врха"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
@@ -1101,25 +1101,25 @@ msgstr "Промена на чекању"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr "Стање на чекању"
+msgstr "Укупно стање на чекању"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr "Молимо додајте пар за трговину"
+msgstr "Молимо додај пар за трговину"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr "Унесите 0 накнаде. Позитивне накнаде још нису подржане за ограничене стопе."
+msgstr "Унеси 0 накнаде. Позитивне накнаде још нису подржане за ограничене стопе."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr "Унесите важећи почетни износ кованице"
+msgstr "Унеси важећи почетни износ новчића"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
 #: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
-msgstr "Унесите важећи нумерички износ"
+msgstr "Унеси важећи нумерички износ"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -1127,36 +1127,36 @@ msgstr "Унесите важећи нумерички износ"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
 #: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
-msgstr "Унесите важећи нумерички износ накнаде"
+msgstr "Унеси важећи нумерички износ накнаде"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr "Унесите важећу дужину нумеричког интервала"
+msgstr "Унеси важећу дужину нумеричког интервала"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr "Унесите важећи нумерички потрошени износ"
+msgstr "Унеси важећи нумерички потрошени износ"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr "Унесите важећи јавни кључ"
+msgstr "Унеси важећи јавни кључ"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr "Завршите синхронизацију пре него што извршите трансакцију"
+msgstr "Заврши синхронизацију пре него што извршиш трансакцију"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
-msgstr "Изаберите износ"
+msgstr "Изабери износ"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr "Изаберите куповину или продају"
+msgstr "Изабери куповину или продају"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr "Молимо одаберите боју новчића"
+msgstr "Изабери боју новчића"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1165,12 +1165,12 @@ msgstr "Молимо одаберите боју новчића"
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr "Наведите коначни директоријум"
+msgstr "Наведи коначни директоријум"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr "Наведите привремени директоријум"
+msgstr "Наведи привремени директоријум"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1183,7 +1183,7 @@ msgstr "Број плотова"
 
 #: src/components/block/Block.jsx:268
 msgid "Plot Id"
-msgstr "ИД Парцеле"
+msgstr "ID плота"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
@@ -1195,7 +1195,7 @@ msgstr "Кључ плота"
 
 #: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
-msgstr "Јавни Кључ Парцеле"
+msgstr "Јавни кључ плота"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1215,15 +1215,15 @@ msgstr "Плот је дупликат {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr "Парцеле"
+msgstr "Плотови"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr "Филтриране Парцеле"
+msgstr "Филтрирани плотови"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr "Плотовима је додељен простор на вашем диску који се користи за фарму и зараду Чие. <0> Сазнајте више </0>"
+msgstr "Плотовима је додељен простор на твом хард-диску који се користи за фарму и Chia зараду. <0> Сазнај више </0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
@@ -1231,11 +1231,11 @@ msgstr "Плотовање"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr "Паралелно плотовање може уштедети време. У супротном, додајте парцелу(е) у ред."
+msgstr "Паралелно плотовање може уштедети време. У супротном, додај плот(ове) у ред."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr "Плотовање са омогућеним битовским пољем има око 30% мање укупних уписа и готово је увек брже. Можда ћете видети смањене захтеве за меморијом са онемогућеним писањем битовских поља. Ако је ваш процесор дизајн пре 2010. године, можда ћете морати да онемогућите ову опцију."
+msgstr "Плотовање са омогућеним бит пољем има око 30% мање укупних уписа и готово је увек брже. Можда ћеш приметити смањене захтеве за меморијом са онемогућеним писањем бит поља. Ако је твој процесор пре 2010. године, можда ћеш морати да онемогућиш ову опцију."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1243,23 +1243,23 @@ msgstr "Плотовање са омогућеним битовским поље
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
-msgstr "Кључ Парцеле"
+msgstr "Кључ пула"
 
 #: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
-msgstr "Јавни Кључ Парцеле"
+msgstr "Јавни кључ пула"
 
 #: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
-msgstr "Збирна хеш код слагалица"
+msgstr "Хеш слагалица пула"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
-msgstr "Адреса за Награду Фармера"
+msgstr "Адреса награде пула"
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr "Количина збирне награде"
+msgstr "Износ награде за пул"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1270,7 +1270,7 @@ msgstr "Порт"
 
 #: src/components/block/Block.jsx:320
 msgid "Previous"
-msgstr "Претходни"
+msgstr "Назад"
 
 #: src/components/block/Block.jsx:203
 #~ msgid "Previous Block Hash"
@@ -1298,7 +1298,7 @@ msgstr "Приватни кључ:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr "Величина простора"
+msgstr "Доказ о величина простора"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
@@ -1314,15 +1314,15 @@ msgstr "Јавни кључ:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr "Име реда"
+msgstr "Назив реда"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
-msgstr "Име реда"
+msgstr "Назив реда"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
-msgstr "Стављено у ред"
+msgstr "У ред"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
@@ -1330,7 +1330,7 @@ msgstr "Стављено у ред"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr "Максимална употреба радне меморије"
+msgstr "Максимална меморија"
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
@@ -1347,7 +1347,7 @@ msgstr "Ограничена стопа"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr "Информације о стопи ограничења"
+msgstr "Инфо о стопи ограничења"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
@@ -1364,7 +1364,7 @@ msgstr "Адреса за пријем"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr "Опорави новчаник"
+msgstr "Опорави DID новчаник"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1380,7 +1380,7 @@ msgstr "Уклањање"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr "Промени име"
+msgstr "Преименуј"
 
 #: src/electron/main.tsx:339
 msgid "Report an Issue..."
@@ -1388,7 +1388,7 @@ msgstr "Пријави проблем..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr "Вратите метаподатке за обојене новчиће и друге паметне новчанике из резервне копије"
+msgstr "Врати метаподатке за обојене новчиће и друге паметне новчанике из резервне копије"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1406,7 +1406,7 @@ msgstr "Безбедно је прескочити"
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr "Сними"
+msgstr "Сачувај"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -1414,7 +1414,7 @@ msgstr "Сними"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr "Претражите блок по хешу заглавља"
+msgstr "Претражи блок по хешу заглавља"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1430,11 +1430,11 @@ msgstr "Семе:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr "Изаберите други привремени фолдер"
+msgstr "Изабери други привремени фолдер"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr "Изаберите крајњи фолдер"
+msgstr "Изабери крајњи фолдер"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
@@ -1446,25 +1446,25 @@ msgstr "Изабери понуду"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr "Одабери привремени директоријум за снимање"
+msgstr "Изабери привремени директоријум"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr "Изаберите тип новчаника"
+msgstr "Изабери тип новчаника"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr "Изаберите локацију фолдера где ће готов плот бити сачуван. Препоручујемо да користите велики спори диск (на пример екстерни диск)."
+msgstr "Изабери локацију фолдера где ће готов плот бити сачуван. Препоручујемо да користиш велики спори хард-диск (нпр. екстерни диск)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "Изаберите локацију фолдера у ком желите да се плот чува током обраде. Препоручујемо вам да користите брзе ССД дискове."
+msgstr "Изабери локацију фолдера у ком желиш да се плот чува током обраде. Препоручујемо да користиш брзе SSD дискове."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr "Изабери"
+msgstr "Изабрано"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
@@ -1480,11 +1480,11 @@ msgstr "Пошаљи"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr "Пошаљите овај пакет информација свом кориснику ограниченог новчаника који га мора користити да би довршио подешавање свог новчаника:"
+msgstr "Пошаљи овај пакет информација свом кориснику ограниченог новчаника који га мора користити да би довршио подешавање свог новчаника:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "Пошаљите јавни кључ администратору вашег ограниченог новчаника:"
+msgstr "Пошаљи јавни кључ администратору твог ограниченог новчаника:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1513,7 +1513,7 @@ msgstr "Пријави се"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr "Прескаче додавање коначног фолдера сакупљачу за фарму"
+msgstr "Прескаче додавање коначног фолдера сакупљачу за фармање"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
@@ -1545,7 +1545,7 @@ msgstr "Дужина интервала трошења (број блокова)
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr "Ограничење потрошње (чиа по интервалу): {0}"
+msgstr "Ограничење потрошње (chia по интервалу): {0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
@@ -1601,17 +1601,17 @@ msgstr "Пошаљи"
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
-msgstr "Синхронизован"
+msgstr "Синхронизовано"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr "Синхронизовање…"
+msgstr "Синхронизација"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
-msgstr "Синхронизовање {progress}/{tip}"
+msgstr "Синхронизација {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1647,7 +1647,7 @@ msgstr "Апликација ће престати са радом код бло
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "Пуни чвор на ком је повезан фармер је испод. <0>Сазнајте више</0>"
+msgstr "Пуни чвор на ком је повезан фармер је испод. <0>Сазнај више</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1668,11 +1668,11 @@ msgstr "Семе које се користи да се направи плот.
 
 #: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr "Укупан број ВДФ (функција кашњења која се може проверити) или доказ о временским понављањима на целом ланцу до овог блока."
+msgstr "Укупан број VDF (проверљива функција одлагања) или доказ о временским понављањима на целом ланцу до овог блока."
 
 #: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr "Укупан број ВДФ (функција кашњења која се може проверити) или доказ о временским понављањима овог блока."
+msgstr "Укупан број VDF (проверљива функција одлагања) или доказ о временским понављањима овог блока."
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
@@ -1680,45 +1680,45 @@ msgstr "Укупне накнаде за трансакције у овом бл
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr "Плотови нису валидни, можда би требало да их обришете."
+msgstr "Плотови нису валидни, можда би требало да их обришеш."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr "Ово вам омогућава да додате фолдер који садржи плотове. Ако нисте направили ниједан плот, идите на прозор за њихово прављење."
+msgstr "Ово ти омогућава да додаш фолдер који садржи плотове. Ако још немаш креиран ниједан плот, иди на прозор за њихово креирање."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr "Ова функционалност је доступна само кроз корисничко окружење."
+msgstr "Ова опција је доступна само кроз корисничко окружење."
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr "Ово је количина Чие коју тренутно можете користити за обављање трансакција. Не укључује награде на фарми на чекању, долазне трансакције на чекању и Чиу коју сте управо потрошили, али још увек није у ланцу."
+msgstr "Ово је количина Chia коју тренутно можеш користити за обављање трансакција. Не укључује награде за фармање на чекању, долазне трансакције на чекању и Chia која је управо потрошена, али још увек није на блокчејну."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "Ово је промена на чекању, а то су новчићи који сте послали себи, али још нису потврђени."
+msgstr "Ово је промена на чекању, а то су новчићи који су себи послати, али још нису потврђени."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "Ово је збир долазних и одлазних трансакција на чекању (које још нису укључене у ланац). Ово не укључује награде из фарме."
+msgstr "Ово је збир долазних и одлазних трансакција на чекању (које још нису укључене у блокчејн). Ово не укључује награде за фарамање."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr "Ово је време задњег врхунца блока."
+msgstr "Ово је време најновијег блока."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr "Ово је време када је фармер створио блок, и то пре него што је финализован доказом о времену"
+msgstr "Ово је време када је фармер креирао блок, и то пре него што је финализован доказом о времену"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "Ово је укупна количина чие у ланцу у тренутном блоку којим управљају ваши приватни кључеви. Укључује замрзнуте награде из фарме, али не и долазне и одлазне трансакције."
+msgstr "Ово је укупна количина chia на блокчејну у тренутном блоку којим управљају твоји приватни кључеви. Укључује замрзнуте награде за фарамање, али не долазне и одлазне трансакције."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "Ово је укупно стање + стање на чекању: то ће бити ваше стање након потврде свих трансакција на чекању."
+msgstr "Ово је укупно стање + стање на чекању: то ће бити твоје стање након потврде свих трансакција на чекању."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
@@ -1730,19 +1730,19 @@ msgstr "Пун чвор је достигнут и верификује мреж
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr "Ова табела вам показује када је ваша фарма последњи пут покушала да победи у блок изазову. <0> Сазнајте више </0>"
+msgstr "Ова табела ти показује када је твоја фарма последњи пут покушала да победи у блок изазову. <0> Сазнај више </0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr "Ова трговина је створена у овом тренутку"
+msgstr "Ова трговина је креирана у овом тренутку"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr "Ова трговина је укључена у ланац у овој висини блока"
+msgstr "Ова трговина је укључена на блокчејну у овој висини блока"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr "Ова верзија Чие није компатибилна са ланцем и не може безбедно користити фарму."
+msgstr "Ова верзија Chia није компатибилна са блокчејном и не може безбедно користити фарму."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1754,7 +1754,7 @@ msgstr "Време креирања"
 
 #: src/components/block/Block.jsx:184
 msgid "Timestamp"
-msgstr "Временски печат"
+msgstr "Временска ознака"
 
 #: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
@@ -1780,19 +1780,19 @@ msgstr "Укупни простор на мрежи"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr "Величина свих плотова:"
+msgstr "Укупна величина плота:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr "Величина свих плотова"
+msgstr "Укупна величина плотова"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr "Укупно понављања ВДФ-а"
+msgstr "Укупно VDF понављања"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr "Укупно понављања од почетка ланца"
+msgstr "Укупно понављања од почетка блокчејна"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
@@ -1800,15 +1800,15 @@ msgstr "Укупно понављања од почетка ланца"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr "Информације о трговини"
+msgstr "Детаљи о трговини"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr "Идентификација трговине"
+msgstr "ID трговине"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr "Идентификација трговине:"
+msgstr "ID трговине:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
@@ -1816,7 +1816,7 @@ msgstr "Преглед трговине"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr "Трговања ће се појавити овде"
+msgstr "Овде ће се појавити трговине"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
@@ -1853,7 +1853,7 @@ msgstr "Кориснички јавни кључ"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr "Подслотови ВДФ понављања"
+msgstr "Подслотови VDF понављања"
 
 #: src/electron/main.tsx:251
 msgid "View"
@@ -1866,22 +1866,22 @@ msgstr "Погледај евиденцију"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr "Погледај понуде"
+msgstr "Погледај понуду"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr "Погледајте стања на чекању"
+msgstr "Погледај стања на чекању"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr "Погледајте стања на чекању..."
+msgstr "Преглед стања на чекању..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:25
 msgid "Wait for synchronization"
-msgstr "Чекање на синхронизацију"
+msgstr "Сачекај синхронизацију"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
@@ -1935,7 +1935,7 @@ msgstr "Желиш да зарадиш више? Додај још плотов�
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr "Да ли желите паузу пре почетка следећег плота?"
+msgstr "Да ли желиш паузу пре почетка следећег плота?"
 
 #: src/components/block/Block.jsx:198
 msgid "Weight"
@@ -1947,15 +1947,15 @@ msgstr "Тежина је укупна додата сложеност свих 
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr "Добродошли у Чиу. Пријавите се помоћу постојећег кључа или креирајте нови кључ."
+msgstr "Добродошли у Chia. Пријави се помоћу постојећег кључа или креирај нови кључ."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "Добродошли! Следеће речи се користе за резервну копију новчаника. Без њих ћете изгубити приступ новчанику, чувајте их! Запишите сваку реч заједно са бројем налога поред њих. (Редослед је важан)"
+msgstr "Добродошли! Следеће речи се користе за резервну копију новчаника. Без њих ћеш изгубити приступ новчанику, чувај их! Запиши сваку реч заједно са бројем налога поред њих. (Редослед је важан)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "Када од администратора примите пакет информација о подешавању, унесите га испод да бисте довршили подешавање ограниченог новчаника:"
+msgstr "Када од админа добијеш пакет информација о подешавању, унеси га испод како би се завршило подешавање ограниченог новчаника:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
@@ -1963,13 +1963,13 @@ msgstr "Прозор"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
-msgstr "Без накнада"
+msgstr "Без накнаде"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron/main.tsx:160
 msgid "Yes"
-msgstr "Da"
+msgstr "Да"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1977,7 +1977,7 @@ msgstr "Da"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Не морате бити синхронизовани или повезани да би правили плот. Привремене датотеке се креирају током процеса прављења плотова који премашују величину коначног плота. Проверите да ли имате довољно простора. <0> Сазнајте више </0>"
+msgstr "Не мораш се синхронизовати или повезати да би се креирао плот. Привремене датотеке се креирају током процеса креирања плотова који премашују величину коначног плота. Провери да ли имаш довољно простора. <0> Сазнај више </0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1985,7 +1985,7 @@ msgstr "Не морате бити синхронизовани или пове�
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr "Имате {0}% простора на мрежи, па ће за израду блока требати {expectedTimeToWin}. Стварни резултати могу трајати 3 до 4 пута дуже од ове процене."
+msgstr "Имаш {0}% простора на мрежи, за израду блока требаће ти {expectedTimeToWin}. Стварни резултати могу трајати 3 до 4 пута дуже од ове процене."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2001,15 +2001,15 @@ msgstr "Имате {0}% простора на мрежи, па ће за изр�
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
-msgstr "Преглед ваше фарме"
+msgstr "Преглед твоје фарме"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr "Ваша веза пуног чвора"
+msgstr "Твоја веза пуног чвора"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr "Ваша мрежа сакупљача"
+msgstr "Твоја мрежа сакупљача"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
