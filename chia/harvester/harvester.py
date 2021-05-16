@@ -1,6 +1,8 @@
 import asyncio
 import concurrent
 import logging
+import threading
+import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
@@ -54,6 +56,11 @@ class Harvester:
         self.state_changed_callback: Optional[Callable] = None
         self.last_load_time: float = 0
         self.plot_load_frequency = config.get("plot_loading_frequency_seconds", 120)
+        self.next_full_proof_benchmark = time.time()
+        self.full_proof_benchmark_lock = threading.Lock()
+
+        # 58 minutes to avoid coincidentally overlapping with hourly tasks
+        self.seconds_between_full_proof_benchmark = 58 * 60
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()

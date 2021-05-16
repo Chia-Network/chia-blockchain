@@ -114,7 +114,20 @@ class HarvesterAPI:
                             # Found a very good proof of space! will fetch the whole proof from disk,
                             # then send to farmer
                             try:
+                                full_proof_start = time.time()
                                 proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
+                                full_proof_duration = time.time() - full_proof_start
+
+                                if full_proof_duration > 10:
+                                    self.harvester.log.error(
+                                        f"Retrieving a full proof took {full_proof_duration} seconds and should be "
+                                        f"better than 10 seconds. This might result in missing the reward!"
+                                    )
+                                else:
+                                    self.harvester.log.info(
+                                        f"Successfully retrieved full proof within {full_proof_duration} seconds."
+                                    )
+
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(
@@ -146,10 +159,54 @@ class HarvesterAPI:
                                     ),
                                 )
                             )
+
+                    # To ensure the storage is well enough connected, run a periodic benchmark which simulates a
+                    # full proof retrieval. We do this after the "real" work was done to ensure we're not
+                    # interfering with anything.
+                    try_execute_full_proof_benchmark(plot_info, sp_challenge_hash)
+
                 return responses
             except Exception as e:
                 self.harvester.log.error(f"Unknown error: {e}")
                 return []
+
+        def try_execute_full_proof_benchmark(plot_info: PlotInfo, sp_challenge_hash: bytes32) -> None:
+            # Simulate a full proof retrieval in order to let the user know if their storage
+            # is capable of handling the time constraints in case a real proof would be requested.
+            if self.harvester.next_full_proof_benchmark < time.time():
+                # Benchmark should be executed. Try to acquire lock. If we got it, execute the benchmark.
+                # Otherwise, just skip it as another thread is already executing it.
+                lock_acquired = self.harvester.full_proof_benchmark_lock.acquire(False)
+                if lock_acquired:
+                    try:
+                        self.harvester.log.info(
+                            "Executing full proof benchmark to simulate whether your storage "
+                            "is able to handle a full proof in the appropriate time."
+                        )
+
+                        full_proof_benchmark_start = time.time()
+                        plot_info.prover.get_full_proof(sp_challenge_hash, 0)
+                        full_proof_benchmark_duration = time.time() - full_proof_benchmark_start
+
+                        if full_proof_benchmark_duration > 10:
+                            self.harvester.log.error(
+                                f"Benchmarking a full proof took {full_proof_benchmark_duration} seconds. "
+                                f"This should not take longer than 10 seconds or your reward would not have "
+                                f"been considered by the timelord."
+                            )
+                            # Run the benchmark frequently until it passes or the user notices
+                            self.harvester.next_full_proof_benchmark = time.time() + 3 * 60
+                        else:
+                            self.harvester.log.info(
+                                f"Benchmarking a full proof took {full_proof_benchmark_duration} seconds."
+                            )
+                            self.harvester.next_full_proof_benchmark = (
+                                time.time() + self.harvester.seconds_between_full_proof_benchmark
+                            )
+                    except Exception as e:
+                        self.harvester.log.info(f"Exception while benchmarking full proof: {e}")
+                    finally:
+                        self.harvester.full_proof_benchmark_lock.release()
 
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
