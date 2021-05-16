@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:31\n"
+"PO-Revision-Date: 2021-05-16 23:27\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -202,7 +202,7 @@ msgstr "بلوک با هش {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgstr "هیچ بلوکی با هش {headerHash} موجود نیست."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -787,11 +787,11 @@ msgstr "کمک در ترجمه"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr "پنهان سازی گزینه های پیشرفته"
+msgstr "مخفی کردن گزینه های پیشرفته"
 
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
-msgstr "پيشينه"
+msgstr "تاریخچه"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
