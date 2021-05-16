@@ -143,12 +143,13 @@ class MempoolManager:
         """
         if cost == 0:
             return False
-        fees_per_cost = fees / cost
-        if not self.mempool.at_full_capacity(cost) or (
-            fees_per_cost >= self.nonzero_fee_minimum_fpc and fees_per_cost > self.mempool.get_min_fee_rate(cost)
-        ):
+
+        min_fee_rate = self.mempool.get_min_fee_rate(cost)
+        if min_fee_rate == 0.0:
             return True
-        return False
+
+        fees_per_cost = fees / cost
+        return fees_per_cost > min_fee_rate and fees_per_cost >= self.nonzero_fee_minimum_fpc
 
     def add_and_maybe_pop_seen(self, spend_name: bytes32):
         self.seen_bundle_hashes[spend_name] = spend_name
