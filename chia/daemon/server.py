@@ -396,6 +396,8 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
+        f = request["f"]
+        p = request["p"]
         a = request.get("a")
         e = request["e"]
         x = request["x"]
@@ -414,6 +416,12 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
+
+        if f is not None:
+            command_args.append(f"-f{f}")
+
+        if p is not None:
+            command_args.append(f"-p{p}")
 
         if e is True:
             command_args.append("-e")
