@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-16 17:30\n"
+"PO-Revision-Date: 2021-05-17 17:54\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -32,7 +32,7 @@ msgstr "128 vödör az ajánlott"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "A betakarító egy szolgáltatás ahol a cserép(cserepek) valójában tárolásra kerülnek. A gazdász és a betakarító kommunikációjából kivehető egy teljes rész, hogy látható legyen miként is áll a lánc. Alább láthatód azokat a betakarítókat akik a hálózatodhoz vannak csatlakozva. Tuddj meg többet"
+msgstr "A betakarító egy szolgáltatás ahol a parcellák valójában tárolásra kerülnek. A gazdász és a betakarító kommunikációjából kivehető egy teljes rész, hogy látható legyen miként is áll a lánc. Alább láthatód azokat a betakarítókat akik a hálózatodhoz vannak csatlakozva. Tuddj meg többet"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -45,7 +45,7 @@ msgstr "Elfogad"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Elfogadásnak az ideje:"
+msgstr "Elfogadás ideje:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -65,11 +65,11 @@ msgstr "Hozzáadás"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Adj Cserepet a leltáradba"
+msgstr "Parcella könyvtár hozzáadása"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "Tégy cserepet a sorba"
+msgstr "Parcella hozzáadása a sorhoz"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
@@ -121,7 +121,7 @@ msgstr "Az aktuális érme mennyiség"
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "Biztos vagy benne, hogy törlöd ezt a cserepet? A törölt cserép nem visszaállítható."
+msgstr "Biztos vagy benne, hogy törlöd ezt a parcellát? A törölt parcella nem visszaállítható."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -281,11 +281,11 @@ msgstr "Chia Wallet"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr "Válaszd ki a cserepeid számát"
+msgstr "Válaszd ki a parcelláid számát"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr "Válassz cserép méretet"
+msgstr "Válassz parcella méretet"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:55
@@ -414,7 +414,7 @@ msgstr "Ajánlat létrehozása"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
-msgstr "Cserép létrehozása"
+msgstr "Parcella létrehozása"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -516,7 +516,7 @@ msgstr "Törlés"
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
-msgstr "Cserép törlése"
+msgstr "Parcella törlése"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
@@ -571,11 +571,11 @@ msgstr "Elosztott azonosítási lehetőségek"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "Vannak meglévő telkek ezen a gépen? <0>Telekkönyvtár Hozzáadása </0>"
+msgstr "Vannak meglévő parcellák ezen a gépen? <0>Parcella könyvtár Hozzáadása </0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr "A géped támogatja a párhuzamos plottolást?"
+msgstr "A géped támogatja a párhuzamos parcellákat?"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
@@ -632,7 +632,7 @@ msgstr "A végleges könyvtár kizárása"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr "Nem sikerült megnyitni (érvénytelen plot)"
+msgstr "Nem sikerült megnyitni (érvénytelen parcella)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
@@ -660,7 +660,7 @@ msgstr "A farmer nem fut"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr "A  farmerek blokkjutalmakat és tranzakciós díjakat keresnek azzal, hogy tartalék helyet szánnak a hálózatnak a tranzakciók biztosítása érdekében. Itt lesz a farm, ha hozzáadsz egy telket. <0> További információ </0>"
+msgstr "A  farmerek blokkjutalmakat és tranzakciós díjakat keresnek azzal, hogy tartalék helyet szánnak a hálózatnak a tranzakciók biztosítása érdekében. Itt lesz a farm, ha hozzáadsz egy parcellát. <0> További információ </0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
@@ -1042,7 +1042,7 @@ msgstr "Nincs csatlakozva"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr "Nem talált plot-ok"
+msgstr "Nem talált Parcellát"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
@@ -1219,7 +1219,7 @@ msgstr "Parcellák"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr "Szűrőn átjutott plot-ok"
+msgstr "Szűrőn átjutott parcellák"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
@@ -1781,11 +1781,11 @@ msgstr "Teljes hálózati tárhely kapacitás"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr "Teljes plot adatbázis méret:"
+msgstr "Teljes parcella adatbázis méret:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr "Plot fájlok összes mérete"
+msgstr "Parcella fájlok összes mérete"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
@@ -1978,7 +1978,7 @@ msgstr "Igen"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Plot készítéshez nem szükséges hálózati kapcsolat vagy, hogy a kliens szinkronban legyen. A folyamat közben létrejövő átmeneti fájlok mérete meghaladja az elkészített plot fájl méretét. Figyelj oda rá, hogy elegendő üres háttértárral rendelkezz. <0>További információ</0>"
+msgstr "Parcella készítéshez nem szükséges hálózati kapcsolat vagy, hogy a kliens szinkronban legyen. A folyamat közben létrejövő átmeneti fájlok mérete meghaladja az elkészített plot fájl méretét. Figyelj oda rá, hogy elegendő üres háttértárral rendelkezz. <0>További információ</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2014,11 +2014,11 @@ msgstr "Az arató hálózatod"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "[Error 13] A hozzáférés megtagadva. Megpróbáltál egy fájlhoz vagy könyvtárhoz jogosultság hiányában hozzáférni. Valószínűleg az egyik plot könyvtárad beállítása a config.yaml fájlban hibás."
+msgstr "[Error 13] A hozzáférés megtagadva. Megpróbáltál egy fájlhoz vagy könyvtárhoz jogosultság hiányában hozzáférni. Valószínűleg az egyik parcella könyvtárad beállítása a config.yaml fájlban hibás."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "[Error 22] A fájl nem található. Valószínűleg az egyik plot könyvtárad beállítása a config.yaml fájlban hibás."
+msgstr "[Error 22] A fájl nem található. Valószínűleg az egyik parcella könyvtárad beállítása a config.yaml fájlban hibás."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
