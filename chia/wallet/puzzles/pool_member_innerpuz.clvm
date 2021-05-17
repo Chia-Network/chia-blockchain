@@ -10,7 +10,7 @@
   ; absorb_coin_id and my_puzhash are only used for absorbtion case
 
   (include condition_codes.clvm)
-  (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a)
+  (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a00000000000000000000000000000000)
 
   (defun remove_zeroes (hex_val)
     (if (= (strlen hex_val) 33)
@@ -20,7 +20,7 @@
   )
 
   (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
-    (sha256 (remove_zeroes (concat (lsh GENESIS_CHALLENGE (- 128 (* (strlen pool_reward_height) 8))) pool_reward_height)) P2_SINGLETON_PUZHASH pool_reward_amount)
+    (sha256 (logior GENESIS_CHALLENGE pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
   )
 
   (defun absorb_pool_reward (POOL_PUZHASH my_puzhash my_amount pool_reward_amount pool_reward_id)
