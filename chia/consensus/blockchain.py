@@ -30,7 +30,7 @@ from chia.types.generator_types import BlockGenerator, GeneratorArg
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochChallengeSegmentV2
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
@@ -726,6 +726,22 @@ class Blockchain(BlockchainInterface):
         segments: Optional[List[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
             ses_block_hash
         )
+        if segments is None:
+            return None
+        return segments
+
+    async def persist_sub_epoch_challenge_segments_v2(
+        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegmentV2]
+    ):
+        return await self.block_store.persist_sub_epoch_challenge_segments_v2(ses_block_hash, segments)
+
+    async def get_sub_epoch_challenge_segmentsv2(
+        self,
+        ses_block_hash: bytes32,
+    ) -> Optional[List[SubEpochChallengeSegmentV2]]:
+        segments: Optional[
+            List[SubEpochChallengeSegmentV2]
+        ] = await self.block_store.get_sub_epoch_challenge_segments_v2(ses_block_hash)
         if segments is None:
             return None
         return segments

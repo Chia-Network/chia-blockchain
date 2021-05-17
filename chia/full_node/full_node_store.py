@@ -91,6 +91,7 @@ class FullNodeStore:
         self.tx_fetch_tasks = {}
         self.serialized_wp_message = None
         self.serialized_wp_message_tip = None
+        self.serialized_wp_is_v2 = False
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False

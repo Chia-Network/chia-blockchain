@@ -81,3 +81,6 @@ class ProtocolMessageTypes(Enum):
 
     # Simulator protocol
     farm_new_block = 65
+
+    request_proof_of_weight_v2 = 66
+    respond_proof_of_weight_v2 = 67
