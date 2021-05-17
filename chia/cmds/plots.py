@@ -36,6 +36,7 @@ def plots_cmd(ctx: click.Context):
 
 
 @plots_cmd.command("create", short_help="Create plots")
+@click.option("-j", "--job_name", help="Job name", type=str, default=None)
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
 @click.option("--override-k", help="Force size smaller than 32", default=False, show_default=True, is_flag=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
@@ -84,6 +85,7 @@ def plots_cmd(ctx: click.Context):
 @click.pass_context
 def create_cmd(
     ctx: click.Context,
+    job_name: str,
     size: int,
     override_k: bool,
     num: int,
@@ -106,6 +108,7 @@ def create_cmd(
 
     class Params(object):
         def __init__(self):
+            self.job_name = job_name
             self.size = size
             self.num = num
             self.buffer = buffer
