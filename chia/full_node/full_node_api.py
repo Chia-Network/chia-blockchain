@@ -550,10 +550,17 @@ class FullNodeAPI:
             return None
         async with self.full_node.timelord_lock:
             # Already have signage point
-            if (
-                self.full_node.full_node_store.get_signage_point(request.challenge_chain_vdf.output.get_hash())
-                is not None
+
+            if self.full_node.full_node_store.have_newer_signage_point(
+                request.challenge_chain_vdf.challenge,
+                request.index_from_challenge,
+                request.reward_chain_vdf.challenge,
             ):
+                return None
+            existing_sp = self.full_node.full_node_store.get_signage_point(
+                request.challenge_chain_vdf.output.get_hash()
+            )
+            if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
@@ -583,7 +590,7 @@ class FullNodeAPI:
             if added:
                 await self.full_node.signage_point_post_processing(request, peer, ip_sub_slot)
             else:
-                self.log.info(
+                self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
                     f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
                 )
