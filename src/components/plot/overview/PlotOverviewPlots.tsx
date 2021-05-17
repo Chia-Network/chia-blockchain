@@ -99,8 +99,12 @@ export default function PlotOverviewPlots() {
 
   return (
     <>
-      <PlotHeader />
-      <Card title={<Trans>Local Harvester Plots</Trans>}>
+      <PlotHeader>
+        <Typography variant="h5">
+          <Trans>Local Harvester Plots</Trans>
+        </Typography>
+      </PlotHeader>
+      <Card>
         <Flex gap={1}>
           <Flex flexGrow={1}>
             <Typography variant="body2">
