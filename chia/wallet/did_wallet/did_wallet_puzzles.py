@@ -17,6 +17,7 @@ SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
+    # MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED
     return DID_INNERPUZ_MOD.curry(SINGLETON_TOP_LAYER_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed)
 
 
