@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-17 11:58\n"
+"PO-Revision-Date: 2021-05-17 17:54\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "จำนวนบักเก็ตที่แนะนำคือ 12
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "ระบบกำลังทำงานอยู่ในระหว่างการพล็อต ซึ่งตัวโปรแกรมกำลังเชื่อมต่อกับเครื่อข่าย โดยสามารถดูรายละเอียดเพิ่มเติมได้ได้ใต้ข้อความนี้"
+msgstr "Harvester Service กำลังทำงานอยู่บนเครื่องที่เก็บไฟล์ Plot ซึ่ง Farmer และ Harvester เชื่อมต่อกับ Full Node เพื่อดูสถานะของ Chain ลองตรวจสอบเครือข่ายที่เชื่อมต่อกับ Harvesters ของคุณ โดยสามารถดูรายละเอียดเพิ่มเติมได้"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -65,15 +65,15 @@ msgstr "เพิ่ม"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "เพิ่มไดเรกทอรีของพล็อต"
+msgstr "เพิ่มไดเรกทอรี Plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "เพิ่มพล็อตลงคิว"
+msgstr "เพิ่ม Plot ลงคิว"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "เพิ่มวอลเล็ต"
+msgstr "เพิ่ม Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -846,7 +846,7 @@ msgstr "จำนวนเริ่มต้น"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr "สร้าง Rate Limited User ของกระเป๋า :"
+msgstr "สร้าง Rate Limited User Wallet:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -1219,7 +1219,7 @@ msgstr "พล็อต"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr "Plot ทั้งหมดที่ผ่านการคัดกรองแล้ว"
+msgstr "ตัวกรอง Plot ที่ผ่านแล้ว"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
@@ -1364,7 +1364,7 @@ msgstr "ที่อยู่ผู้รับ"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr "กู้คืน DID ของกระเป๋า"
+msgstr "การกู้คืน DID wallet"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1388,7 +1388,7 @@ msgstr "รายงานปัญหา..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr "กู้คือ Metadata สำหรับ Colored Coins และ Smart Wallets จากตัวสำรองข้อมูล"
+msgstr "กู้คืน Metadata สำหรับ Colored Coins และ Smart Wallets จากตัวสำรองข้อมูล"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1694,35 +1694,35 @@ msgstr "ฟีเจอร์นี้สามารถใช้ได้เฉ
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "นี่คือจำนวน Chia ทั้งหมดที่คุณสามารถทำรายการได้ในขณะนี้ ซึ่งยังไม่รวม Farming Reward ยอดที่รอทำรายการเข้ามา และยอดที่คุณเพิ่งใช้ไปที่ยังไม่ได้ไปอยู่ใน Blockchain"
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "นี่คือการเปลี่ยนแปลงที่รอดำเนินการซึ่งเป็นเหรียญการเปลี่ยนแปลงที่คุณส่งให้ตัวเอง แต่ยังไม่ได้รับการยืนยัน"
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "นี่คือผลรวมของธุรกรรมขาเข้าและขาออกที่รอดำเนินการ (ยังไม่รวมอยู่ในบล็อคเชน) ซึ่งไม่รวมถึง Framing Reward"
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "นี่คือช่วงเวลา Peak ล่าสุด ของ Sub Block"
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "นี่เป็นเวลาที่ Farmer สร้าง Block ซึ่งก่อนที่จะสรุปผลด้วย Proof of Time"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "นี่คือยอด Chia ทั้งหมดที่อยู่ใน Blockchain ในช่วง peak ของ Sub Block ล่าสุด ที่ถูกควบคุมโดยคีย์ส่วนตัวของคุณ ซึ่งรวมถึง Farming Reward ที่ถูกพักไว้ แต่ไม่ถูกเลื่อนการทำธุรกรรม"
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "นี่คือยอดทั้งหมด + ยอดที่รอทำรายการ: นี่คือยอดคงเหลือหลังจากทำรายการเสร็จสิ้น"
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Node นี้ติดตั้งอย่างสมบูรณ์และได้รับการยืนยันความถูกต้องจากเครือข่ายแล้ว"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1730,7 +1730,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr ""
+msgstr "ตารางนี้แสดงถึงการ Farm ล่าสุดของคุณเพื่อเอาชนะ Block Challenge <0>เรียนรู้เพิ่มเติม</0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
@@ -1742,7 +1742,7 @@ msgstr "การแลกเปลี่ยนนี้ได้ถูกรว
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Chia รุ่นนี้ล้าสมัย และไม่สามารถเข้ากันได้กับ Blockchain รวมถึงไม่สามารถ Farm ได้อีกต่อไป"
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1788,7 +1788,7 @@ msgstr "ขนาดพล็อตทั้งหมด"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "VDF Iterations ทั้งหมด"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
@@ -1828,7 +1828,7 @@ msgstr "ประวัติการแลกเปลี่ยน"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Transactions Filter Hash"
 
 #: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
@@ -1840,7 +1840,7 @@ msgstr "ยังไม่เสร็จ"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "ระบุเอกลักษณ์"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
@@ -1853,7 +1853,7 @@ msgstr "คีย์สาธารณะของผู้ใช้"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF Sub Slot Iterations"
 
 #: src/electron/main.tsx:251
 msgid "View"
@@ -1871,7 +1871,7 @@ msgstr "ดูข้อเสนอ"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr ""
+msgstr "ดูยอดที่รอทำรายการ"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
@@ -1943,7 +1943,7 @@ msgstr "น้ำหนัก"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "น้ำหนักคือ Difficulty ที่เพิ่มทั้งหมดของ Sub Block ทั้งหมดขึ้นอยู่กับและรวมถึงนี้ด้วย"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
@@ -1955,7 +1955,7 @@ msgstr "ยินดีต้อนรับ! กลุ่มคำต่อไ�
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "เมื่อคุณได้รับแพ็คเก็ตข้อมูลในการตั้งค่าจากผู้ดูแลระบบของคุณ ให้ป้อนข้อมูลด้านล่างเพื่อตั้งค่า Rate Limited Wallet ให้เสร็จสิ้น:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
@@ -2013,11 +2013,11 @@ msgstr "เครือข่ายผู้เก็บเกี่ยวขอ
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Error 13] ไม่ได้รับอนุญาต. คุณพยายามเข้าถึง File/Directory โดยไม่ได้รับสิทธิ์ในการเข้าถึง อาจเป็นไปได้ว่า Plot Folder ที่ระบุไว้ใน config.yaml มีปัญหา"
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Error 22] ไม่พบไฟล์ อาจเป็นไปได้ว่า Plot Folder ที่ระบุไว้ใน config.yaml มีปัญหา"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
