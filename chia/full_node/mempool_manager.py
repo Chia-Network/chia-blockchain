@@ -289,13 +289,11 @@ class MempoolManager:
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_coin_dict: Dict[bytes32, Coin] = {}
-        unknown_unspent_error: bool = False
         removal_amount = uint64(0)
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
-                unknown_unspent_error = True
-                break
+                return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
                 # TODO(straya): what timestamp to use here?
@@ -315,9 +313,6 @@ class MempoolManager:
             removal_coin_dict[name] = removal_record.coin
 
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
-
-        if unknown_unspent_error:
-            return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
         if addition_amount > removal_amount:
             print(addition_amount, removal_amount)
@@ -436,7 +431,10 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
-        log.info(f"add_spendbundle took {time.time() - start_time} seconds")
+        log.info(
+            f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
+            f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"
+        )
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
@@ -529,7 +527,7 @@ class MempoolManager:
             )
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
-        log.debug(
+        log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"
         )

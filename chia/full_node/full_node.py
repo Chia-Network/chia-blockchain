@@ -175,6 +175,12 @@ class FullNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
+        dns_servers = []
+        if "dns_servers" in self.config:
+            dns_servers = self.config["dns_servers"]
+        elif self.config["port"] == 8444:
+            # If `dns_servers` misses from the `config`, hardcode it if we're running mainnet.
+            dns_servers.append("dns-introducer.chia.net")
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
@@ -183,6 +189,7 @@ class FullNode:
                 self.config["target_outbound_peer_count"],
                 self.config["peer_db_path"],
                 self.config["introducer_peer"],
+                dns_servers,
                 self.config["peer_connect_interval"],
                 self.log,
             )
@@ -873,7 +880,8 @@ class FullNode:
         self.log.info(
             f"⏲️  Finished signage point {request.index_from_challenge}/"
             f"{self.constants.NUM_SPS_SUB_SLOT}: "
-            f"{request.challenge_chain_vdf.output.get_hash()} "
+            f"CC: {request.challenge_chain_vdf.output.get_hash()} "
+            f"RC: {request.reward_chain_vdf.output.get_hash()} "
         )
         self.signage_point_times[request.index_from_challenge] = time.time()
         sub_slot_tuple = self.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
@@ -950,12 +958,17 @@ class FullNode:
         if not self.sync_store.get_sync_mode():
             self.blockchain.clean_block_records()
 
+        fork_block: Optional[BlockRecord] = None
+        if fork_height != block.height - 1 and block.height != 0:
+            # This is a reorg
+            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))
+
         added_eos, new_sps, new_ips = self.full_node_store.new_peak(
             record,
             block,
             sub_slots[0],
             sub_slots[1],
-            fork_height != block.height - 1 and block.height != 0,
+            fork_block,
             self.blockchain,
         )
         if sub_slots[1] is None:
@@ -1175,7 +1188,6 @@ class FullNode:
                 # Only propagate blocks which extend the blockchain (becomes one of the heads)
                 new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 assert new_peak is not None and fork_height is not None
-                self.log.debug(f"Validation time for peak: {validation_time}")
 
                 await self.peak_post_processing(block, new_peak, fork_height, peer)
 
@@ -1186,6 +1198,20 @@ class FullNode:
             else:
                 # Should never reach here, all the cases are covered
                 raise RuntimeError(f"Invalid result from receive_block {added}")
+        percent_full_str = (
+            (
+                ", percent full: "
+                + str(round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3))
+                + "%"
+            )
+            if block.transactions_info is not None
+            else ""
+        )
+        self.log.info(
+            f"Block validation time: {validation_time}, "
+            f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
+            f"{percent_full_str}"
+        )
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
         peak = self.blockchain.get_peak()
@@ -1266,6 +1292,7 @@ class FullNode:
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
+            validation_start = time.time()
             validate_result = await self.blockchain.validate_unfinished_block(block)
             if validate_result.error is not None:
                 if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
@@ -1273,6 +1300,7 @@ class FullNode:
                     self.log.info(f"Consensus error {validate_result.error}, not disconnecting")
                     return
                 raise ConsensusError(Err(validate_result.error))
+            validation_time = time.time() - validation_start
 
         assert validate_result.required_iters is not None
 
@@ -1296,14 +1324,28 @@ class FullNode:
         self.full_node_store.add_unfinished_block(height, block, validate_result)
         if farmed_block is True:
             self.log.info(
-                f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}"
+                f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}, "
+                f"validation time: {validation_time}, "
+                f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
             )
         else:
+            percent_full_str = (
+                (
+                    ", percent full: "
+                    + str(round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3))
+                    + "%"
+                )
+                if block.transactions_info is not None
+                else ""
+            )
             self.log.info(
                 f"Added unfinished_block {block_hash}, not farmed by us,"
-                f" SP: {block.reward_chain_block.signage_point_index} time: "
-                f"{time.time() - self.signage_point_times[block.reward_chain_block.signage_point_index]}"
-                f"Pool pk {encode_puzzle_hash(block.foliage.foliage_block_data.pool_target.puzzle_hash, 'xch')}"
+                f" SP: {block.reward_chain_block.signage_point_index} farmer response time: "
+                f"{time.time() - self.signage_point_times[block.reward_chain_block.signage_point_index]}, "
+                f"Pool pk {encode_puzzle_hash(block.foliage.foliage_block_data.pool_target.puzzle_hash, 'xch')}, "
+                f"validation time: {validation_time}, "
+                f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
+                f"{percent_full_str}"
             )
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
@@ -1594,7 +1636,7 @@ class FullNode:
                         await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 else:
                     self.mempool_manager.remove_seen(spend_name)
-                    self.log.warning(
+                    self.log.debug(
                         f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
                     )
         return status, error
@@ -1720,7 +1762,7 @@ class FullNode:
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             assert new_block is not None
             async with self.db_wrapper.lock:
-                await self.block_store.add_full_block(new_block, block_record)
+                await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
