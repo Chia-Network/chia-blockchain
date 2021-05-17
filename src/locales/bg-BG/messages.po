@@ -8,7 +8,7 @@ msgstr ""
 "Language: bg_BG\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-17 11:58\n"
 "Last-Translator: \n"
 "Language-Team: Bulgarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -41,7 +41,7 @@ msgstr "Относно Чиа Блокчейн"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr "Приеми"
+msgstr "Приемам"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
@@ -269,11 +269,11 @@ msgstr "Чат в KeyBase"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
-msgstr "Chia"
+msgstr "Чиа"
 
 #: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr "Chia блокчейн Wiki"
+msgstr "Чиа блокчейн Wiki"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
@@ -307,7 +307,7 @@ msgstr "Цвят"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr "Инфо за цвят"
+msgstr "Информация за цвят"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
@@ -1789,7 +1789,7 @@ msgstr "Общ обем на полета"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Общи брой VDF итерации"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
@@ -1854,7 +1854,7 @@ msgstr "Публичен ключ на потребител"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF под групова итерация"
 
 #: src/electron/main.tsx:251
 msgid "View"
