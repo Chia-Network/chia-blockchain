@@ -42,7 +42,7 @@ class CrawlStore:
             (
                 "CREATE TABLE IF NOT EXISTS peer_reliability("
                 " peer_id text PRIMARY KEY,"
-                " ignore_till int,"
+                " ignore_till int, ban_till int,"
                 " stat_2h_w real, stat_2h_c real, stat_2h_r real,"
                 " stat_8h_w real, stat_8h_c real, stat_8h_r real,"
                 " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
@@ -94,10 +94,11 @@ class CrawlStore:
         )
         await cursor.close()
         cursor = await self.crawl_db.execute(
-            "INSERT OR REPLACE INTO peer_reliability VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO peer_reliability VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_reliability.peer_id,
                 peer_reliability.ignore_till,
+                peer_reliability.ban_till,
                 peer_reliability.stat_2h.weight,
                 peer_reliability.stat_2h.count,
                 peer_reliability.stat_2h.reliability,
@@ -156,7 +157,7 @@ class CrawlStore:
             add = False
             counter += 1
             reliability = self.host_to_reliability[peer_id]
-            if reliability.ignore_till < now and reliability.get_ban_time() < now:
+            if reliability.ignore_till < now and reliability.ban_till < now:
                 add = True
             else:
                 self.banned_peers += 1
@@ -213,6 +214,7 @@ class CrawlStore:
                 row[14],
                 row[15],
                 row[16],
+                row[17],
             )
             self.host_to_reliability[row[0]] = reliability
         cursor = await self.crawl_db.execute(

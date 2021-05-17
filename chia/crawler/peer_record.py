@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 import math
+import time
 from datetime import datetime
 from pytz import timezone
 
@@ -39,6 +40,7 @@ class PeerStat:
 class PeerReliability:
     peer_id: str
     ignore_till: int
+    ban_till: int
     stat_2h: PeerStat
     stat_8h: PeerStat
     stat_1d: PeerStat
@@ -51,6 +53,7 @@ class PeerReliability:
         self,
         peer_id: str,
         ignore_till: int = 0,
+        ban_till: int = 0,
         stat_2h_weight: float = 0,
         stat_2h_count: float = 0,
         stat_2h_reliability: float = 0,
@@ -69,6 +72,7 @@ class PeerReliability:
     ):
         self.peer_id = peer_id
         self.ignore_till = ignore_till
+        self.ban_till = ban_till
         self.stat_2h = PeerStat(stat_2h_weight, stat_2h_count, stat_2h_reliability)
         self.stat_8h = PeerStat(stat_8h_weight, stat_8h_count, stat_8h_reliability)
         self.stat_1d = PeerStat(stat_1d_weight, stat_1d_count, stat_1d_reliability)
@@ -126,8 +130,9 @@ class PeerReliability:
         if is_reachable:
             self.successes += 1
         current_ignore_time = self.get_ignore_time()
-        now = datetime.utcnow()
-        now = now.replace(tzinfo=timezone("UTC"))
-        return int(now.timestamp())
+        now = int(time.time())
         if current_ignore_time > 0 and (self.ignore_till == 0 or self.ignore_till < current_ignore_time + now):
             self.ignore_till = current_ignore_time + now
+        current_ban_time = self.get_ban_time()
+        if current_ban_time > 0 and (self.ban_till == 0 or self.ban_till < current_ban_time + now):
+            self.ban_till = current_ban_time + now

@@ -58,7 +58,11 @@ class Crawler:
         self.peer_count = 0
         self.with_peak = set()
         self.peers_retrieved = []
-
+        self.versions = {}
+        self.host_to_version = {}
+        self.version_cache = []
+        self.handshake_time = {}
+        self.best_timestamp_per_peer = {}
         db_path_replaced: str = "crawler.db"
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
@@ -71,6 +75,10 @@ class Crawler:
 
     async def connect_task(self, peer):
         async def peer_action(peer: ws.WSChiaConnection):
+            peer_info = peer.get_peer_info()
+            version = peer.get_version()
+            if peer_info is not None and version is not None:
+                self.version_cache.append((peer_info.host, version))
             # Ask peer for peers
             response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=2)
             # Add peers to DB
@@ -123,7 +131,7 @@ class Crawler:
                 if random.randrange(0, 4) == 0:
                     await self.crawl_store.load_to_db()
                 await self.crawl_store.load_reliable_peers_to_db()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(10000, 100000)
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
 
                 self.peer_queue = asyncio.Queue()
                 for peer in peers_to_crawl:
@@ -143,6 +151,11 @@ class Crawler:
 
                 for response in self.peers_retrieved:
                     for response_peer in response.peer_list:
+                        if response_peer.host not in self.best_timestamp_per_peer:
+                            self.best_timestamp_per_peer[response_peer.host] = response_peer.timestamp
+                        self.best_timestamp_per_peer[response_peer.host] = max(
+                            self.best_timestamp_per_peer[response_peer.host], response_peer.timestamp
+                        )
                         if (
                             response_peer.host not in self.seen_nodes
                             and response_peer.timestamp > time.time() - 5 * 24 * 3600
@@ -161,13 +174,50 @@ class Crawler:
                             new_peer_reliability = PeerReliability(response_peer.host)
                             if self.crawl_store is not None:
                                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+                for host, version in self.version_cache:
+                    self.handshake_time[host] = int(time.time())
+                    if host not in self.host_to_version:
+                        self.host_to_version[host] = version
+                        if version not in self.versions:
+                            self.versions[version] = 0
+                        self.versions[version] += 1
+                    else:
+                        old_version = self.host_to_version[host]
+                        if old_version != version:
+                            self.versions[old_version] -= 1
+                            self.versions[version] += 1
+                            self.host_to_version[host] = version
+                to_remove = set()
+                to_remove_version = {}
+                now = int(time.time())
+                for host in self.host_to_version.keys():
+                    active = True
+                    if host not in self.handshake_time:
+                        active = False
+                    elif self.handshake_time[host] < now - 5 * 24 * 3600:
+                        active = False
+                    if not active:
+                        to_remove.add(host)
+                        version = self.host_to_version[host]
+                        if version in self.versions:
+                            self.versions[version] = max(self.versions[version] - 1, 0)
+                            if self.versions[version] == 0:
+                                del self.versions[version]
+                self.host_to_version = {
+                    host: version for host, version in self.host_to_version.items() if host not in to_remove
+                }
+                self.best_timestamp_per_peer = {
+                    host: timestamp for host, timestamp in self.best_timestamp_per_peer.items()
+                    if timestamp >= now - 5 * 24 * 3600
+                }
+                self.version_cache = []
                 self.peers_retrieved = []
 
                 self.server.banned_peers = {}
                 self.log.error("***")
                 self.log.error("Finished batch:")
-                self.log.error(f"Total connections attempted: {total_nodes}")
-                self.log.error(f"Total unique nodes attempted: {len(tried_nodes)}.")
+                self.log.error(f"Total connections attempted since crawler started: {total_nodes}.")
+                self.log.error(f"Total unique nodes attempted since crawler started: {len(tried_nodes)}.")
                 t_now = time.time()
                 t_delta = int(t_now - t_start)
                 if t_delta > 0:
@@ -176,6 +226,16 @@ class Crawler:
                 reliable_peers = self.crawl_store.get_reliable_peers()
                 self.log.error(f"Reliable nodes: {reliable_peers}")
                 banned_peers = self.crawl_store.get_banned_peers()
+                tot = 0
+                for version, count in self.versions.items():
+                    tot += count
+                addresses_count = len(self.best_timestamp_per_peer)
+                self.log.error(f"IP addresses gossiped with timestamp in the last 5 days: {addresses_count}.")
+                self.log.error(f"Total nodes reachable in the last 5 days: {tot}.")
+                self.log.error("Version distribution (at least 100 nodes):")
+                for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
+                    if count >= 100:
+                        self.log.error(f"Version: {version} - Count: {count}")
                 self.log.error(f"Banned/ignored addresses: {banned_peers}")
                 self.log.error("***")
         except Exception as e:
