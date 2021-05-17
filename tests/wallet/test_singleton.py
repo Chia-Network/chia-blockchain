@@ -12,12 +12,12 @@ POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 
 def test_only_odd_coins():
     did_core_hash = SINGLETON_MOD.get_tree_hash()
+    # (MOD_HASH GENESIS_ID INNERPUZ parent_info my_amount inner_solution)
     solution = Program.to(
         [
             did_core_hash,
             did_core_hash,
             1,
-            [0xFADEDDAB, 203],
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
             [[51, 0xCAFEF00D, 200]],
@@ -29,12 +29,12 @@ def test_only_odd_coins():
         assert e.args == ("clvm raise",)
     else:
         assert False
+
     solution = Program.to(
         [
             did_core_hash,
             did_core_hash,
             1,
-            [0xFADEDDAB, 203],
             [0xDEADBEEF, 0xCAFEF00D, 210],
             205,
             [[51, 0xCAFEF00D, 205]],
@@ -53,7 +53,6 @@ def test_only_one_odd_coin_created():
             did_core_hash,
             did_core_hash,
             1,
-            [0xFADEDDAB, 203],
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [[51, 0xCAFEF00D, 203], [51, 0xFADEDDAB, 203]],
@@ -70,7 +69,6 @@ def test_only_one_odd_coin_created():
             did_core_hash,
             did_core_hash,
             1,
-            [0xFADEDDAB, 203],
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [[51, 0xCAFEF00D, 203], [51, 0xFADEDDAB, 202], [51, 0xFADEDDAB, 4]],
@@ -124,13 +122,18 @@ def test_pool_puzzles():
     escape_innerpuz = POOL_ESCAPING_MOD.curry(pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash)
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
     committed_innerpuz = POOL_COMMITED_MOD.curry(pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey)
+
     singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
     singleton_amount = 3
 
     # innersol = spend_type, my_puzhash, my_amount, pool_reward_amount, pool_reward_height
     inner_sol = Program.to([0, singleton_full.get_tree_hash(), singleton_amount, p2_singlton_coin_amount, block_height])
-    full_sol = Program.to([genesis_id, singleton_amount, inner_sol])
 
-    cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
+    full_sol = Program.to([[genesis_id, singleton_amount], singleton_amount, inner_sol])
+
+    try:
+        cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
+    except Exception as e:
+        assert e.args == ("clvm raise",)
 
     # result = '((70 0x196fde08c221af2dfc00c4d281a3a7969cda6791cf97fe2dcf10d5f25b7efdb4) (51 0xfee0b1f4d6c86e0e34f3e3e253482a0db29436dd30891809333a2d094540b6f7 3) (72 0xfee0b1f4d6c86e0e34f3e3e253482a0db29436dd30891809333a2d094540b6f7) (73 3) (51 0x00d34db33f 0x77359400) (62 0x5bfd313e20659e7da5e1f9c165b83b342a0d32974ae80a090a3f1857e3331fde) (61 0x7b17ee829e409d2132a6ccebb9b064746eb68888c51082bb6373788f71702b77))'
