@@ -35,7 +35,7 @@ class Mempool:
                 f"Transaction with cost {cost} does not fit in mempool of max cost {self.max_size_in_cost}"
             )
         else:
-            return 0.0
+            return 0
 
     def remove_from_pool(self, item: MempoolItem):
         """
