@@ -735,7 +735,7 @@ class Blockchain(BlockchainInterface):
     ):
         return await self.block_store.persist_sub_epoch_challenge_segments_v2(ses_block_hash, segments)
 
-    async def get_sub_epoch_challenge_segmentsv2(
+    async def get_sub_epoch_challenge_segments_v2(
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegmentV2]]:
