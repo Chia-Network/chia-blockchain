@@ -116,14 +116,18 @@ def test_pool_puzzles():
     p2_singlton_coin_amount = 2000000000
     p2_singleton_coin_id = Coin(pool_reward_parent_id, p2_singleton_full_puzhash, p2_singlton_coin_amount).name()
 
-    pool_puzhash = 0xd34db33f
+    pool_puzhash = 0xD34DB33F
     relative_lock_height = 600
     owner_pubkey = 0xFADEDDAB
 
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
-    escape_innerpuz = POOL_ESCAPING_MOD.curry(pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash)
+    escape_innerpuz = POOL_ESCAPING_MOD.curry(
+        pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash
+    )
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
-    committed_innerpuz = POOL_COMMITED_MOD.curry(pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey)
+    committed_innerpuz = POOL_COMMITED_MOD.curry(
+        pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey
+    )
 
     singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
     singleton_amount = 3
@@ -138,6 +142,9 @@ def test_pool_puzzles():
 
     assert bytes32(result.first().rest().first().as_atom()) == singleton_coin.name()
     assert bytes32(result.rest().rest().first().rest().first().as_atom()) == singleton_full.get_tree_hash()
-    assert bytes32(result.rest().rest().rest().rest().rest().rest().first().rest().first().as_atom()) == Announcement(p2_singleton_coin_id, bytes.fromhex("80")).name()
+    assert (
+        bytes32(result.rest().rest().rest().rest().rest().rest().first().rest().first().as_atom())
+        == Announcement(p2_singleton_coin_id, bytes.fromhex("80")).name()
+    )
 
-    # result = '((70 0x3ca5a8530504c46ecd1cc11cacd3bd656d110ba33dff346c95015e33a358d4f4) (51 0x01527389c9be48a11b4e0620e9fb1663907776fc15b426e616c458c24ea304d5 3) (72 0x01527389c9be48a11b4e0620e9fb1663907776fc15b426e616c458c24ea304d5) (73 3) (51 0x00d34db33f 0x77359400) (62 0x706f0c47e87d9d0c85b688b16330d1d158329756432e88f9229ad31600121868) (61 0x34c9ba15ce7b40081ae7bd2c120ba88069fddb023814d42f793c255f8785b1df))'
+    # result = '((70 0x3ca5a8530504c46ecd1cc11cacd3bd656d110ba33dff346c95015e33a358d4f4) (51 0x01527389c9be48a11b4e0620e9fb1663907776fc15b426e616c458c24ea304d5 3) (72 0x01527389c9be48a11b4e0620e9fb1663907776fc15b426e616c458c24ea304d5) (73 3) (51 0x00d34db33f 0x77359400) (62 0x706f0c47e87d9d0c85b688b16330d1d158329756432e88f9229ad31600121868) (61 0x34c9ba15ce7b40081ae7bd2c120ba88069fddb023814d42f793c255f8785b1df))'  # noqa
