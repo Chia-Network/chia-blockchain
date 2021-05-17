@@ -606,6 +606,29 @@ class WalletRpcApi:
             "transaction_id": tx.name,
         }
 
+    async def send_transaction_multi(self, request):
+        assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before sending transactions")
+
+        if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
+            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
+            raise ValueError(f"No transactions before: {end_date}")
+
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        async with self.service.wallet_state_manager.lock:
+            transaction: TransactionRecord = (await self.create_signed_transaction(request))["signed_tx"]
+            await wallet.push_transaction(transaction)
+
+        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
+        return {
+            "transaction": transaction,
+            "transaction_id": transaction.name,
+        }
+
     async def get_transaction_count(self, request):
         wallet_id = int(request["wallet_id"])
         count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
