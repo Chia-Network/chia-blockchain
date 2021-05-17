@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-16 05:31\n"
+"PO-Revision-Date: 2021-05-17 17:54\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "*¿Quieres explorar más los bloques de Chia? Échale un vistazo a <0>Chia Explorer</0> construido por un desarrollador de código abierto."
+msgstr "*¿Quieres explorar más los bloques de Chia? Échale un vistazo a <0>Chia Explorer</0> construido en código abierto."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,12 +32,12 @@ msgstr "Se recomiendan 128 cubos"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Un cosechador es un servicio que se ejecuta en una máquina en donde actualmente se almacena(n) la(s) parcela(s). Un agricultor y un cosechador hablan con un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
+msgstr "Un cosechador es un servicio que se ejecuta en una máquina, donde se almacena las parcelas. Un agricultor y un cosechador hablan mediante un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "Acerca de Chia Blockchain"
+msgstr "Acerca de la Blockchain de Chía"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -200,7 +200,7 @@ msgstr "Bloque con hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgstr "No existe bloque con el hash {headerHash}."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -265,7 +265,7 @@ msgstr "Desafío Hash"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr "Chatear en Keybase"
+msgstr "Chat en Keybase"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
@@ -273,7 +273,7 @@ msgstr "Chia"
 
 #: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr "Wiki de Cadena de Bloques Chia"
+msgstr "Wiki de la Blockchain de Chia"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
