@@ -367,8 +367,8 @@ class TestFullSync:
             s.prev_subepoch_summary_hash,
             s.reward_chain_hash,
             s.num_blocks_overflow,
-            s.new_difficulty*2,
-            s.new_sub_slot_iters*2,
+            s.new_difficulty * 2,
+            s.new_sub_slot_iters * 2,
         )
         await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
         await time_out_assert(180, node_height_exactly, True, full_node_2, 320)
