@@ -5,7 +5,7 @@ from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64, uint16
+from chia.util.ints import uint64, uint16, uint32
 from chia.util.streamable import Streamable, streamable
 
 
@@ -15,7 +15,6 @@ class PoolInfo(Streamable):
     name: str
     logo_url: str
     minimum_difficulty: uint64
-    maximum_difficulty: uint64
     relative_lock_height: uint32
     protocol_version: str
     fee: str
