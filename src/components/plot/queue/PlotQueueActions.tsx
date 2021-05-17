@@ -12,6 +12,7 @@ import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
 import { stopPlotting } from '../../../modules/plotter_messages';
 import PlotQueueLogDialog from './PlotQueueLogDialog';
+import isWindows from '../../../util/isWindows';
 
 type Props = {
   queueItem: PlotQueueItem;
@@ -27,8 +28,7 @@ export default function PlotQueueAction(props: Props) {
 
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
-
-  const canDelete = state !== PlotStatus.REMOVING;
+  const canDelete = state !== PlotStatus.REMOVING && !isWindows;
 
   async function handleDeletePlot() {
     if (!canDelete) {
