@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-17 11:58\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -200,7 +200,7 @@ msgstr "บล็อคกับ Hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgstr "ไม่พบ Block กับ Hash {headerHash}"
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -754,7 +754,7 @@ msgstr "สร้าง Colour ใหม่"
 
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr ""
+msgstr "HD หรือ คีย์กำหนดลำดับชั้นเป็นคีย์ประเภทหนึ่งของคีย์สาธารณะ (public key) / คีย์ส่วนตัว (private key) ที่คีย์ส่วนตัวหนึ่งคีย์สามารถมีคีย์สาธารณะที่แตกต่างกันได้เกือบไม่สิ้นสุด (และรวมถึงที่อยู่สำหรับรับเงิน) ซึ่งท้ายที่สุดแล้วจะกลับมาอ้างคีย์ส่วนตัวและสามารถใช้จ่ายได้ด้วยคีย์ส่วนตัวเพียงอันเดียว"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -829,11 +829,11 @@ msgstr "ดัชนี"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "ระบุแล้ว ถ้าข้อเสนอนี้เราเป็นผู้สร้างขึ้น"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "ระบุช่วงเวลาที่ข้อเสนอได้ถูกอนุมัติแล้ว"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
@@ -846,7 +846,7 @@ msgstr "จำนวนเริ่มต้น"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "สร้าง Rate Limited User ของกระเป๋า :"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -1131,11 +1131,11 @@ msgstr "กรุณาป้อนจำนวนค่าธรรมเนี
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "โปรดป้อนความยาวช่วงตัวเลขที่ถูกต้อง"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "โปรดป้อนจำนวนที่ใช้ได้ให้ถูกต้อง"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
@@ -1144,7 +1144,7 @@ msgstr "กรุณาใส่คีย์สาธารณะให้ถู
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "โปรดรอการเชื่อมข้อมูลให้สำเร็จก่อนทำธุรกรรมใดๆ"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1219,7 +1219,7 @@ msgstr "พล็อต"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr ""
+msgstr "Plot ทั้งหมดที่ผ่านการคัดกรองแล้ว"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
@@ -1235,7 +1235,7 @@ msgstr "การพล็อตแบบขนานกันสามารถ
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "การ Plot ด้วยการเปิดใช้งาน bitfield จะทำให้การเขียนโดยรวมน้อยลงประมาณ 30% และจะเร็วขึ้น โดยคุณอาจเห็นความต้องการใช้หน่วยความจำลดลงเมื่อปิดใช้งาน bitfield และหาก CPU เป็นรุ่นก่อนปี 2010 คุณอาจต้องปิดใช้งาน bitfield"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1259,7 +1259,7 @@ msgstr "ที่อยู่ของรางวัลที่ได้จา
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "Pool Reward จำนวน"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1278,7 +1278,7 @@ msgstr "ก่อน​หน้า​นี้"
 
 #: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "Header Hash ก่อนหน้า"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1298,11 +1298,11 @@ msgstr "คีย์ส่วนตัว:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "Proof of Space ขนาด"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "ค้นพบ Proofs"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
@@ -1342,20 +1342,20 @@ msgstr "กระเป๋า RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "มีการจำกัดอัตรา"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "ข้อมูล Rate Limited "
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "ตัวเลือก Rate Limited "
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "ตั้งค่า Rate Limited User ของกระเป๋า"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
@@ -1364,7 +1364,7 @@ msgstr "ที่อยู่ผู้รับ"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "กู้คืน DID ของกระเป๋า"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1388,7 +1388,7 @@ msgstr "รายงานปัญหา..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "กู้คือ Metadata สำหรับ Colored Coins และ Smart Wallets จากตัวสำรองข้อมูล"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1480,11 +1480,11 @@ msgstr "ส่ง"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "ส่งข้อมูลนี้ไปยังผู้ใช้ Rate Limited Wallet เพื่อตั้งค่ากระเป๋าให้เสร็จสิ้น"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "ส่งคีย์สาธารณะไปยัง Rate Limited Wallet ผู้ใช้หลัก:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1525,7 +1525,7 @@ msgstr "จำนวนที่สามารถใช้จ่ายได้
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "จำนวนที่ใช้/ช่วงเวลา"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
@@ -1536,16 +1536,16 @@ msgstr "ยอดคงเหลือพร้อมใช้"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "ช่วงการจ่าย (จำนวน block): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "ช่วงความกว้างของการจ่าย (จำนวนของ block)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "จำกัดการจ่าย (Chia ต่อช่วงเวลา) : {0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
@@ -1664,19 +1664,19 @@ msgstr "โหนดกำลังซิงค์ หมายถึงระ�
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "Seed ที่ถูกใช้ในการสร้าง plot ขึ้นอยู่กับ pool pk และ plot pk"
 
 #: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "จำนวน VDF ทั้งหมด (verifiable delay function) หรือ Proof of Time ใน chain ทั้งหมดขึ้นอยู่กับ sub block นี้"
 
 #: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "จำนวน VDF ทั้งหมด (verifiable delay function) หรือ Proof of Time ใน chain ทั้งหมดขึ้นอยู่กับ block นี้"
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "ค่าธรรมเนียมในการทำธุรกรรมใน Block นี้ จะเป็นรางวัลแก่ farmer"
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
@@ -1684,7 +1684,7 @@ msgstr "พล็อตเหล่านี้ไม่ถูกต้อง �
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "กรณีที่มีไฟล์ Plot แล้ว คุณสามารถเพิ่ม Directory ที่มีไฟล์ Plot ได้จากเมนูนี้ แต่หากยังไม่มีให้ไปที่หน้า Plotting"
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
