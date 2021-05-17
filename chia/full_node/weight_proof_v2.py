@@ -282,7 +282,7 @@ class WeightProofHandlerV2:
         for idx, height in enumerate(reversed(summary_heights)):
             if height <= peak:
                 if summaries_n - idx < 3:
-                    log.warning(f"chain to short not enough sub epochs ")
+                    log.warning("chain to short not enough sub epochs ")
                     return None, None
                 last_ses_block = await self.blockchain.get_block_record_from_db(
                     self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 1]))
