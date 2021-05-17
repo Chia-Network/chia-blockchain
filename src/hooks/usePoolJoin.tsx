@@ -8,10 +8,7 @@ import useOpenDialog from './useOpenDialog';
 import usePoolClaimRewards from './usePoolClaimRewards';
 
 export default function usePoolJoin(pool: PoolGroup) {
-  const { 
-    state,
-    balance,
-  } = pool;
+  const { state, balance } = pool;
 
   const openDialog = useOpenDialog();
   const [claimRewards] = usePoolClaimRewards(pool);
@@ -24,22 +21,18 @@ export default function usePoolJoin(pool: PoolGroup) {
 
   async function handleJoin() {
     if (isWalletSyncing) {
-      await openDialog((
+      await openDialog(
         <AlertDialog>
-          <Trans>
-            Please wait for synchronization
-          </Trans>
-        </AlertDialog>
-      ));
+          <Trans>Please wait for synchronization</Trans>
+        </AlertDialog>,
+      );
       return;
-    } else if (!isPooling) {
-      await openDialog((
+    } if (!isPooling) {
+      await openDialog(
         <AlertDialog>
-          <Trans>
-            You are not pooling
-          </Trans>
-        </AlertDialog>
-      ));
+          <Trans>You are not pooling</Trans>
+        </AlertDialog>,
+      );
       return;
     }
 

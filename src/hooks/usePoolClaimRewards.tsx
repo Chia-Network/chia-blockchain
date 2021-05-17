@@ -7,11 +7,7 @@ import type { RootState } from '../modules/rootReducer';
 import useOpenDialog from './useOpenDialog';
 
 export default function usePoolClaimRewards(pool: PoolGroup) {
-  const { 
-    state,
-    balance,
-    address,
-  } = pool;
+  const { state, balance, address } = pool;
 
   const openDialog = useOpenDialog();
 
@@ -23,36 +19,33 @@ export default function usePoolClaimRewards(pool: PoolGroup) {
 
   async function handleClaimRewards() {
     if (isWalletSyncing) {
-      await openDialog((
+      await openDialog(
         <AlertDialog>
-          <Trans>
-            Please wait for synchronization
-          </Trans>
-        </AlertDialog>
-      ));
+          <Trans>Please wait for synchronization</Trans>
+        </AlertDialog>,
+      );
       return;
-    } else if (!isPooling) {
-      await openDialog((
+    } if (!isPooling) {
+      await openDialog(
         <AlertDialog>
-          <Trans>
-            You are not pooling
-          </Trans>
-        </AlertDialog>
-      ));
+          <Trans>You are not pooling</Trans>
+        </AlertDialog>,
+      );
       return;
     }
 
-    const canClaimRewards = await openDialog((
+    const canClaimRewards = await openDialog(
       <ConfirmDialog
         title={<Trans>Please Confirm</Trans>}
         confirmTitle={<Trans>Confirm</Trans>}
         confirmColor="primary"
       >
         <Trans>
-          You will recieve <UnitFormat value={balance} display="inline" /> to {address}
+          You will recieve <UnitFormat value={balance} display="inline" /> to{' '}
+          {address}
         </Trans>
-      </ConfirmDialog>
-    ));
+      </ConfirmDialog>,
+    );
 
     if (canClaimRewards) {
       // TODO add claim functionality here
