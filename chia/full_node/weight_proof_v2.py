@@ -259,7 +259,7 @@ class WeightProofHandlerV2:
 
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 sample_n += 1
-                segments = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.height)
+                segments = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.header_hash)
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
                     if segments is None:
