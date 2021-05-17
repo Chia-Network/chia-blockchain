@@ -1,4 +1,4 @@
-(mod (POOL_PUZHASH ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY spend_type my_puzhash my_amount pool_reward_amount pool_reward_height)
+(mod (POOL_PUZHASH ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY (singleton_id is_eve) spend_type my_puzhash my_amount pool_reward_amount pool_reward_height)
 
   ; POOL_PUZHASH is commitment to the pool's puzzle hash
   ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process

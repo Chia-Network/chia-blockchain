@@ -125,6 +125,6 @@
   )
 
   ;main
-  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount (a INNERPUZ inner_solution))
+  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount (a INNERPUZ (c (list SINGLETON_ID (if (r (r parent_info)) 0 1)) inner_solution)))
 
 )
