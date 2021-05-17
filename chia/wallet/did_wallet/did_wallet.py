@@ -627,7 +627,7 @@ class DIDWallet:
     ) -> SpendBundle:
         assert self.did_info.origin_coin is not None
 
-        # innersol is (mode amount new_puz my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)
+        # innersol is (mode amount new_puz my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
         innersol = Program.to(
             [
                 2,

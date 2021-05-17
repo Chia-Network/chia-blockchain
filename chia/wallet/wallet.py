@@ -195,10 +195,10 @@ class Wallet:
         primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,
-        coin_announcements: Optional[List[bytes32]] = None,
-        coin_announcements_to_assert: Optional[List[bytes32]] = None,
-        puzzle_announcements=None,
-        puzzle_announcements_to_assert=None,
+        coin_announcements: Optional[Set[bytes32]] = None,
+        coin_announcements_to_assert: Optional[Set[bytes32]] = None,
+        puzzle_announcements: Optional[Set[bytes32]] = None,
+        puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
         fee=0,
     ) -> Program:
         assert fee >= 0
@@ -345,10 +345,15 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                solution: Program = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message], coin_announcements_to_assert=announcements_to_consume)
+                solution: Program = self.make_solution(
+                    primaries=primaries,
+                    fee=fee,
+                    coin_announcements={message},
+                    coin_announcements_to_assert=announcements_to_consume,
+                )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                solution = self.make_solution(coin_announcements_to_assert=[primary_announcement_hash])
+                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
 
             spends.append(
                 CoinSolution(
