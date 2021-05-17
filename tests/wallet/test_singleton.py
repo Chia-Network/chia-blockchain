@@ -5,6 +5,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_LAUNCHER_MOD = load_clvm("singleton_launcher.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 POOL_COMMITED_MOD = load_clvm("pool_member_innerpuz.clvm")
 POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
@@ -100,7 +101,8 @@ def test_p2_singleton():
 
 def test_pool_puzzles():
     singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
-    genesis_id = 0xCAFEF00D
+    genesis_coin = Coin(SINGLETON_LAUNCHER_MOD.get_tree_hash(), SINGLETON_LAUNCHER_MOD.get_tree_hash(), 200)
+    genesis_id = genesis_coin.name()
 
     genesis_challenge = bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
     block_height = 101  # 0x65
@@ -125,15 +127,17 @@ def test_pool_puzzles():
 
     singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
     singleton_amount = 3
+    singleton_coin = Coin(genesis_id, singleton_full.get_tree_hash(), singleton_amount)
 
     # innersol = spend_type, my_puzhash, my_amount, pool_reward_amount, pool_reward_height
     inner_sol = Program.to([0, singleton_full.get_tree_hash(), singleton_amount, p2_singlton_coin_amount, block_height])
+    # full_sol = parent_info, my_amount, inner_solution
+    full_sol = Program.to([[genesis_coin.parent_coin_info, genesis_coin.amount], singleton_amount, inner_sol])
 
-    full_sol = Program.to([[genesis_id, singleton_amount], singleton_amount, inner_sol])
+    cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
 
-    try:
-        cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
-    except Exception as e:
-        assert e.args == ("clvm raise",)
+    assert bytes32(result.first().rest().first().as_atom()) == singleton_coin.name()
+    assert bytes32(result.rest().rest().first().rest().first().as_atom()) == singleton_full.get_tree_hash()
+    assert bytes32(result.rest().rest().rest().rest().rest().rest().first().rest().first().as_atom()) == Announcement(p2_singleton_coin_id, bytes.fromhex("80")).name()
 
-    # result = '((70 0x196fde08c221af2dfc00c4d281a3a7969cda6791cf97fe2dcf10d5f25b7efdb4) (51 0xfee0b1f4d6c86e0e34f3e3e253482a0db29436dd30891809333a2d094540b6f7 3) (72 0xfee0b1f4d6c86e0e34f3e3e253482a0db29436dd30891809333a2d094540b6f7) (73 3) (51 0x00d34db33f 0x77359400) (62 0x5bfd313e20659e7da5e1f9c165b83b342a0d32974ae80a090a3f1857e3331fde) (61 0x7b17ee829e409d2132a6ccebb9b064746eb68888c51082bb6373788f71702b77))'
+    # result = '((70 0x3ca5a8530504c46ecd1cc11cacd3bd656d110ba33dff346c95015e33a358d4f4) (51 0x01527389c9be48a11b4e0620e9fb1663907776fc15b426e616c458c24ea304d5 3) (72 0x01527389c9be48a11b4e0620e9fb1663907776fc15b426e616c458c24ea304d5) (73 3) (51 0x00d34db33f 0x77359400) (62 0x706f0c47e87d9d0c85b688b16330d1d158329756432e88f9229ad31600121868) (61 0x34c9ba15ce7b40081ae7bd2c120ba88069fddb023814d42f793c255f8785b1df))'
