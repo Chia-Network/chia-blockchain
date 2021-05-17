@@ -68,7 +68,6 @@
 
   (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
     (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
-    ; (x coin_id (make_message_puzzle my_id new_innerpuz pubkey) (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey)))
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`

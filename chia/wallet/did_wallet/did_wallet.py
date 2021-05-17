@@ -421,7 +421,7 @@ class DIDWallet:
 
     def get_my_DID(self) -> str:
         assert self.did_info.origin_coin is not None
-        core = self.did_info.origin_coin.puzzle_hash
+        core = self.did_info.origin_coin.name()
         assert core is not None
         return core.hex()
 
@@ -757,14 +757,14 @@ class DIDWallet:
         did_puzzle_hash = did_full_puz.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([did_puzzle_hash, amount, 0x00]).get_tree_hash()
+        announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount, genesis_launcher_puz.get_tree_hash(), uint64(0), origin.name(), coins, None, False, announcement_set
         )
 
-        genesis_launcher_solution = Program.to([did_puzzle_hash, amount, 0x00])
+        genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
 
         launcher_cs = CoinSolution(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
