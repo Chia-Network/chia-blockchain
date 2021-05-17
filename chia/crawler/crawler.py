@@ -58,7 +58,6 @@ class Crawler:
         self.peer_count = 0
         self.with_peak = set()
         self.peers_retrieved = []
-        self.versions = {}
         self.host_to_version = {}
         self.version_cache = []
         self.handshake_time = {}
@@ -178,17 +177,7 @@ class Crawler:
                     self.handshake_time[host] = int(time.time())
                     if host not in self.host_to_version:
                         self.host_to_version[host] = version
-                        if version not in self.versions:
-                            self.versions[version] = 0
-                        self.versions[version] += 1
-                    else:
-                        old_version = self.host_to_version[host]
-                        if old_version != version:
-                            self.versions[old_version] -= 1
-                            self.versions[version] += 1
-                            self.host_to_version[host] = version
                 to_remove = set()
-                to_remove_version = {}
                 now = int(time.time())
                 for host in self.host_to_version.keys():
                     active = True
@@ -198,18 +187,20 @@ class Crawler:
                         active = False
                     if not active:
                         to_remove.add(host)
-                        version = self.host_to_version[host]
-                        if version in self.versions:
-                            self.versions[version] = max(self.versions[version] - 1, 0)
-                            if self.versions[version] == 0:
-                                del self.versions[version]
+
                 self.host_to_version = {
                     host: version for host, version in self.host_to_version.items() if host not in to_remove
                 }
                 self.best_timestamp_per_peer = {
-                    host: timestamp for host, timestamp in self.best_timestamp_per_peer.items()
+                    host: timestamp
+                    for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
+                versions = {}
+                for host, version in self.host_to_version.items():
+                    if version not in versions:
+                        versions[version] = 0
+                    versions[version] += 1
                 self.version_cache = []
                 self.peers_retrieved = []
 
@@ -226,17 +217,17 @@ class Crawler:
                 reliable_peers = self.crawl_store.get_reliable_peers()
                 self.log.error(f"Reliable nodes: {reliable_peers}")
                 banned_peers = self.crawl_store.get_banned_peers()
-                tot = 0
-                for version, count in self.versions.items():
-                    tot += count
+                ignored_peers = self.crawl_store.get_ignored_peers()
+                available_peers = len(self.host_to_version)
                 addresses_count = len(self.best_timestamp_per_peer)
                 self.log.error(f"IP addresses gossiped with timestamp in the last 5 days: {addresses_count}.")
-                self.log.error(f"Total nodes reachable in the last 5 days: {tot}.")
+                self.log.error(f"Total nodes reachable in the last 5 days: {available_peers}.")
                 self.log.error("Version distribution (at least 100 nodes):")
-                for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
+                for version, count in sorted(versions.items(), key=lambda kv: kv[1], reverse=True):
                     if count >= 100:
                         self.log.error(f"Version: {version} - Count: {count}")
-                self.log.error(f"Banned/ignored addresses: {banned_peers}")
+                self.log.error(f"Banned addresses: {banned_peers}")
+                self.log.error(f"Temporary ignored addresses: {ignored_peers}")
                 self.log.error("***")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")

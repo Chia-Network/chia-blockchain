@@ -18,6 +18,7 @@ class CrawlStore:
     host_to_records: Dict
     host_to_reliability: Dict
     banned_peers: int
+    ignored_peers: int
     reliable_peers: int
 
     @classmethod
@@ -67,6 +68,7 @@ class CrawlStore:
 
         await self.crawl_db.commit()
         self.last_timestamp = 0
+        self.ignored_peers = 0
         self.banned_peers = 0
         self.reliable_peers = 0
         await self.unload_from_db()
@@ -152,6 +154,7 @@ class CrawlStore:
         now = int(time.time())
         records = []
         counter = 0
+        self.ignored_peers = 0
         self.banned_peers = 0
         for peer_id in self.host_to_reliability:
             add = False
@@ -160,7 +163,10 @@ class CrawlStore:
             if reliability.ignore_till < now and reliability.ban_till < now:
                 add = True
             else:
-                self.banned_peers += 1
+                if reliability.ban_till < now:
+                    self.banned_peers += 1
+                elif reliability.ignore_till < now:
+                    self.ignored_peers += 1
             record = self.host_to_records[peer_id]
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
                 add = True
@@ -172,6 +178,9 @@ class CrawlStore:
             random.shuffle(records)
             records = records[:batch_size]
         return records
+
+    def get_ignored_peers(self) -> int:
+        return self.ignored_peers
 
     def get_banned_peers(self) -> int:
         return self.banned_peers
