@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -127,6 +127,24 @@ class WalletRpcClient(RpcClient):
             {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
         )
         return TransactionRecord.from_json_dict(res["transaction"])
+
+    async def send_transaction_multi(
+        self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
+    ) -> Dict:
+        # Converts bytes to hex for puzzle hashes
+        additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        if coins is not None and len(coins) > 0:
+            coins_json = [c.to_json_dict() for c in coins]
+            response: Dict = await self.fetch(
+                "send_transaction_multi",
+                {"wallet_id": wallet_id, "additions": additions_hex, "coins": coins_json, "fee": fee},
+            )
+        else:
+            response: Dict = await self.fetch(
+                "send_transaction_multi", {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee}
+            )
+        response["signed_tx"] = TransactionRecord.from_json(response["tx_record"])
+        return response
 
     async def create_backup(self, file_path: Path) -> None:
         return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
