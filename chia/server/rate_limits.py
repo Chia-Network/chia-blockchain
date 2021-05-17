@@ -57,6 +57,8 @@ rate_limits_other = {
     ProtocolMessageTypes.new_peak: RLSettings(200, 512),
     ProtocolMessageTypes.request_proof_of_weight: RLSettings(5, 100),
     ProtocolMessageTypes.respond_proof_of_weight: RLSettings(5, 50 * 1024 * 1024, 100 * 1024 * 1024),
+    ProtocolMessageTypes.request_proof_of_weight_v2: RLSettings(5, 100),
+    ProtocolMessageTypes.respond_proof_of_weight_v2: RLSettings(5, 50 * 1024 * 1024, 100 * 1024 * 1024),
     ProtocolMessageTypes.request_block: RLSettings(200, 100),
     ProtocolMessageTypes.reject_block: RLSettings(200, 100),
     ProtocolMessageTypes.request_blocks: RLSettings(100, 100),

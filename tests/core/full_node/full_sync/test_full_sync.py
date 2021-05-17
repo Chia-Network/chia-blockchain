@@ -6,7 +6,9 @@ from typing import List
 
 import pytest
 
+from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
@@ -48,10 +50,10 @@ class TestFullSync:
             yield _
 
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks):
+    async def test_long_sync_from_zero(self, five_nodes, default_10000_blocks):
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_400_blocks)
-        blocks: List[FullBlock] = default_400_blocks
+        num_blocks = len(default_10000_blocks)
+        blocks: List[FullBlock] = default_10000_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
@@ -60,7 +62,7 @@ class TestFullSync:
         server_5 = full_node_5.full_node.server
 
         # If this constant is changed, update the tests to use more blocks
-        assert test_constants.WEIGHT_PROOF_RECENT_BLOCKS < 400
+        assert test_constants.WEIGHT_PROOF_RECENT_BLOCKS < 1001
 
         # Syncs up less than recent blocks
         for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5]:
@@ -343,30 +345,3 @@ class TestFullSync:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
-
-    @pytest.mark.asyncio
-    async def test_block_ses_mismatch(self, three_nodes, default_1000_blocks):
-        full_node_1, full_node_2, full_node_3 = three_nodes
-        server_1 = full_node_1.full_node.server
-        server_2 = full_node_2.full_node.server
-        blocks = default_1000_blocks
-
-        for block in blocks[:501]:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        peak1 = full_node_1.full_node.blockchain.get_peak()
-        full_node_2.full_node.sync_store.set_long_sync(True)
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-        wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
-        summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
-        summaries2 = summaries1
-        s = summaries1[1]
-        summaries2[1] = SubEpochSummary(
-            s.prev_subepoch_summary_hash,
-            s.reward_chain_hash,
-            s.num_blocks_overflow,
-            s.new_difficulty*2,
-            s.new_sub_slot_iters*2,
-        )
-        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
-        await time_out_assert(180, node_height_exactly, True, full_node_2, 320)
