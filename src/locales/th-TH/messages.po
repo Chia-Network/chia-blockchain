@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-18 00:00\n"
+"PO-Revision-Date: 2021-05-18 21:03\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -65,15 +65,15 @@ msgstr "เพิ่ม"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "เพิ่มไดเรกทอรี Plot"
+msgstr "เพิ่มไดเรกทอรีของพล็อต"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "เพิ่ม Plot ลงคิว"
+msgstr "เพิ่มพล็อตลงคิว"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "เพิ่ม Wallet"
+msgstr "เพิ่มวอลเล็ต"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -1270,7 +1270,7 @@ msgstr "พอร์ต"
 
 #: src/components/block/Block.jsx:320
 msgid "Previous"
-msgstr "ก่อน​หน้า​นี้"
+msgstr "ก่อน​หน้า​"
 
 #: src/components/block/Block.jsx:203
 #~ msgid "Previous Block Hash"
