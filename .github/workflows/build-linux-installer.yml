@@ -117,25 +117,8 @@ jobs:
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/builds/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/builds/
 
-    - name: Install py3createtorrent
-      #if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        pip3 install py3createtorrent
-
-    - name: Create .rpm torrent
-      #if: startsWith(github.ref, 'refs/tags/')
-      run: |
-          py3createtorrent ${{ github.workspace }}/build_scripts/final_installer/*.rpm ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.torrent
-          ls
-
-    - name: Create .deb torrent
-      #if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        py3createtorrent  ${{ github.workspace }}/build_scripts/final_installer/*.deb ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.torrent
-        ls
-
     - name: Create Checksums
-      #if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/')
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -144,10 +127,8 @@ jobs:
          sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.checksum
 
     - name: Upload Release Files
-      #if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/')
       run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/test-installs/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/test-installs/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.torrent s3://download-chia-net/test-installs/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.torrent s3://download-chia-net/test-installs/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.checksum s3://download-chia-net/test-installs/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/releases/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/releases/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.checksum s3://download-chia-net/releases/
