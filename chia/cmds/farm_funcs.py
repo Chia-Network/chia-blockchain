@@ -17,6 +17,7 @@ SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
 async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
+    harvester_client = None
     plots = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -33,12 +34,14 @@ async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
         else:
             print(f"Exception from 'harvester' {e}")
 
-    harvester_client.close()
-    await harvester_client.await_closed()
+    if harvester_client is not None:
+        harvester_client.close()
+        await harvester_client.await_closed()
     return plots
 
 
 async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
+    client = None
     blockchain_state = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -53,12 +56,14 @@ async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
         else:
             print(f"Exception from 'full node' {e}")
 
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return blockchain_state
 
 
 async def get_average_block_time(rpc_port: int) -> float:
+    client = None
     try:
         blocks_to_compare = 500
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -97,12 +102,14 @@ async def get_average_block_time(rpc_port: int) -> float:
         else:
             print(f"Exception from 'full node' {e}")
 
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
     return SECONDS_PER_BLOCK
 
 
 async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
+    wallet_client = None
     amounts = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -117,12 +124,14 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
         else:
             print(f"Exception from 'wallet' {e}")
 
-    wallet_client.close()
-    await wallet_client.await_closed()
+    if wallet_client is not None:
+        wallet_client.close()
+        await wallet_client.await_closed()
     return amounts
 
 
 async def is_farmer_running(farmer_rpc_port: int) -> bool:
+    farmer_client = None
     is_running = False
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -138,12 +147,14 @@ async def is_farmer_running(farmer_rpc_port: int) -> bool:
         else:
             print(f"Exception from 'farmer' {e}")
 
-    farmer_client.close()
-    await farmer_client.await_closed()
+    if farmer_client is not None:
+        farmer_client.close()
+        await farmer_client.await_closed()
     return is_running
 
 
 async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]:
+    farmer_client = None
     signage_points = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -158,8 +169,9 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
         else:
             print(f"Exception from 'farmer' {e}")
 
-    farmer_client.close()
-    await farmer_client.await_closed()
+    if farmer_client is not None:
+        farmer_client.close()
+        await farmer_client.await_closed()
     return signage_points
 
 

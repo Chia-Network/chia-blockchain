@@ -29,6 +29,8 @@ async def show_async(
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
 
+    client = None
+
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
@@ -272,8 +274,9 @@ async def show_async(
             tb = traceback.format_exc()
             print(f"Exception from 'show' {tb}")
 
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
 
 
 @click.command("show", short_help="Show node information")

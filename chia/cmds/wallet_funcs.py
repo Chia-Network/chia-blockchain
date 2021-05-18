@@ -204,6 +204,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
 
 
 async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_params: dict, function: Callable) -> None:
+    wallet_client = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
@@ -224,5 +225,6 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
             print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
         else:
             print(f"Exception from 'wallet' {e}")
-    wallet_client.close()
-    await wallet_client.await_closed()
+    if wallet_client is not None:
+        wallet_client.close()
+        await wallet_client.await_closed()

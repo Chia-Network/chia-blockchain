@@ -11,6 +11,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
     """
     Calculates the estimated space on the network given two block header hashes.
     """
+    client = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
@@ -76,5 +77,6 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
         else:
             print(f"Exception {e}")
 
-    client.close()
-    await client.await_closed()
+    if client is not None:
+        client.close()
+        await client.await_closed()
