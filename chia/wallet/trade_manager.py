@@ -117,6 +117,8 @@ class TradeManager:
         all_coins.extend(removals)
         all_coins.extend(additions)
 
+        self.log.warning(f"coins_of_interest_farmed")
+
         for coin in all_coins:
             if coin.name() in checked:
                 continue
@@ -140,10 +142,14 @@ class TradeManager:
                 checked[coin.name()] = coin
 
             if failed is False:
+                self.log.warning(f"coins_of_interest_farmed succeeded")
+
                 # Mark this trade as successful
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
                 self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
             else:
+                self.log.warning(f"coins_of_interest_farmed failed")
+
                 # Either we canceled this trade or this trade failed
                 if trade.status == TradeStatus.PENDING_CANCEL.value:
                     await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED, True)
