@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-17 17:54\n"
+"PO-Revision-Date: 2021-05-18 00:00\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -80,11 +80,11 @@ msgstr "เพิ่ม Wallet"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "เพิ่มแปลง"
+msgstr "เพิ่มพล็อต"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr "เพิ่มแปลง"
+msgstr "เพิ่มพล็อต"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
@@ -196,11 +196,11 @@ msgstr "ปริมาณของบล็อคใน Chia blockchain คื�
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr "บล็อคกับ Hash {headerHash}"
+msgstr "บล็อกที่มีค่าแฮช {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr "ไม่พบ Block กับ Hash {headerHash}"
+msgstr "ไม่พบบล็อกที่มีค่าแฮช {headerHash}"
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
