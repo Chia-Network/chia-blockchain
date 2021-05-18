@@ -611,7 +611,7 @@ class WeightProofHandlerV2:
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
 
-        log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
+        log.debug(f"slot end vdf end height {curr.height} ")
         return sub_slots_data, curr.height
 
     def handle_block_vdfs(self, curr: HeaderBlock, blocks: Dict[bytes32, BlockRecord]):
