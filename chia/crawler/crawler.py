@@ -21,10 +21,6 @@ from chia.util.ints import uint32, uint64
 log = logging.getLogger(__name__)
 
 
-bootstrap_peers = ["node.chia.net"]
-minimum_height = 240000
-
-
 class Crawler:
     sync_store: Any
     coin_store: CoinStore
@@ -65,6 +61,8 @@ class Crawler:
         db_path_replaced: str = "crawler.db"
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
+        self.bootstrap_peers = config["bootstrap_peers"]
+        self.minimum_height = config["minimum_height"]
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -79,19 +77,23 @@ class Crawler:
             if peer_info is not None and version is not None:
                 self.version_cache.append((peer_info.host, version))
             # Ask peer for peers
-            response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=2)
+            response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=3)
             # Add peers to DB
             if isinstance(response, full_node_protocol.RespondPeers):
                 self.peers_retrieved.append(response)
             peer_info = peer.get_peer_info()
             tries = 0
-            while tries < 10:
+            got_peak = False
+            while tries < 25:
                 tries += 1
                 if peer_info is None:
                     break
                 if peer_info in self.with_peak:
+                    got_peak = True
                     break
                 await asyncio.sleep(0.1)
+            if not got_peak and peer_info is not None:
+                await self.crawl_store.peer_connected_hostname(peer_info.host, False)
             await peer.close()
 
         try:
@@ -120,7 +122,7 @@ class Crawler:
             total_nodes = 0
             self.seen_nodes = set()
             tried_nodes = set()
-            for peer in bootstrap_peers:
+            for peer in self.bootstrap_peers:
                 new_peer = PeerRecord(peer, peer, 8444, False, 0, 0, 0, uint64(int(time.time())))
                 new_peer_reliability = PeerReliability(peer)
                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
@@ -220,6 +222,7 @@ class Crawler:
                 ignored_peers = self.crawl_store.get_ignored_peers()
                 available_peers = len(self.host_to_version)
                 addresses_count = len(self.best_timestamp_per_peer)
+                total_records = self.crawl_store.get_total_records()
                 self.log.error(f"IP addresses gossiped with timestamp in the last 5 days: {addresses_count}.")
                 self.log.error(f"Total nodes reachable in the last 5 days: {available_peers}.")
                 self.log.error("Version distribution (at least 100 nodes):")
@@ -228,6 +231,7 @@ class Crawler:
                         self.log.error(f"Version: {version} - Count: {count}")
                 self.log.error(f"Banned addresses: {banned_peers}")
                 self.log.error(f"Temporary ignored addresses: {ignored_peers}")
+                self.log.error(f"Peers to crawl from: {total_records - banned_peers - ignored_peers}")
                 self.log.error("***")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
@@ -244,7 +248,7 @@ class Crawler:
             peer_info = peer.get_peer_info()
             if peer_info is None:
                 return
-            if request.height >= minimum_height:
+            if request.height >= self.minimum_height:
                 if self.crawl_store is not None:
                     await self.crawl_store.peer_connected_hostname(peer_info.host)
             self.with_peak.add(peer_info)

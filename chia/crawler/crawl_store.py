@@ -144,11 +144,14 @@ class CrawlStore:
         reliability.update(True, now - peer.last_try_timestamp)
         await self.add_peer(replaced, reliability)
 
-    async def peer_connected_hostname(self, host: str):
+    async def peer_connected_hostname(self, host: str, connected: bool = True):
         if host not in self.host_to_records:
             return
         record = self.host_to_records[host]
-        await self.peer_connected(record)
+        if connected:
+            await self.peer_connected(record)
+        else:
+            await self.peer_failed_to_connect(record)
 
     async def get_peers_to_crawl(self, min_batch_size, max_batch_size) -> List[PeerRecord]:
         now = int(time.time())
@@ -171,13 +174,17 @@ class CrawlStore:
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
                 add = True
             if add:
-                records.append(record)
+                if now - record.last_try_timestamp >= 1000 or now - record.connected_timestamp >= 1000:
+                    records.append(record)
         batch_size = max(min_batch_size, len(records) // 10)
         batch_size = min(batch_size, max_batch_size)
         if len(records) > batch_size:
             random.shuffle(records)
             records = records[:batch_size]
         return records
+
+    def get_total_records(self) -> int:
+        return len(self.host_to_records)
 
     def get_ignored_peers(self) -> int:
         return self.ignored_peers

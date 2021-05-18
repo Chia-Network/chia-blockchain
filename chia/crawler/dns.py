@@ -22,22 +22,12 @@ class DomainName(str):
         return DomainName(item + "." + self)
 
 
-D = DomainName("seeder.example.com.")
-ns = DomainName("example.com.")
+D = None
+ns = None
 IP = "127.0.0.1"
-TTL = 60 * 5
-soa_record = SOA(
-    mname=ns,  # primary name server
-    rname=ns.hostmaster,  # email of the domain administrator
-    times=(
-        1619105223,  # serial number
-        10800,  # refresh
-        3600,  # retry
-        604800,  # expire
-        1800,  # minimum
-    ),
-)
-ns_records = [NS(ns)]
+TTL = None
+soa_record = None
+ns_records = []
 
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
@@ -99,9 +89,10 @@ class DNSServer:
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
 
     async def periodically_get_reliable_peers(self):
+        sleep_interval = 0
         while True:
-            # Restore every 15 mins.
-            await asyncio.sleep(15 * 60)
+            sleep_interval = min(15, sleep_interval + 1)
+            await asyncio.sleep(sleep_interval * 60)
             try:
                 # TODO: double check this. It shouldn't take this long to connect.
                 crawl_db = await aiosqlite.connect(self.db_path, timeout=600)
@@ -200,9 +191,29 @@ async def kill_processes():
 
 def main():
     root_path = DEFAULT_ROOT_PATH
-    service_name = "full_node"
-    service_config = load_config(root_path, "config.yaml", service_name)
-    initialize_logging(service_name, service_config["logging"], root_path)
+    service_name = "dns"
+    config = load_config(root_path, "config.yaml", service_name)
+    initialize_logging(service_name, config["logging"], root_path)
+    global D
+    global ns
+    global TTL
+    global soa_record
+    global ns_records
+    D = DomainName(config["domain_name"])
+    ns = DomainName(config["nameserver"])
+    TTL = config["ttl"]
+    soa_record = SOA(
+        mname=ns,  # primary name server
+        rname=config["soa"]["rname"],  # email of the domain administrator
+        times=(
+            config["soa"]["serial_number"],
+            config["soa"]["refresh"],
+            config["soa"]["retry"],
+            config["soa"]["expire"],
+            config["soa"]["minimum"],
+        ),
+    )
+    ns_records = [NS(ns)]
 
     def signal_received():
         asyncio.create_task(kill_processes())
