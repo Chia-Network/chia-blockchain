@@ -69,6 +69,7 @@ jobs:
     - name: Create installer version number
       id: version_number
       run: |
+        pwd
         . ./activate
         echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
 
