@@ -1015,10 +1015,10 @@ def _validate_segment(
                 None if ses is None else ses.new_sub_slot_iters,
                 None if ses is None else ses.new_difficulty,
             )
+            ses = None
             log.debug(f"cc sub slot {cc_sub_slot} {cc_sub_slot.get_hash()}")
             cc_sub_slot_hash = cc_sub_slot.get_hash()
             curr_ssi = ssi
-            ses = None
             slot_iters = slot_iters + curr_ssi  # type: ignore
             slots = uint64(slots + 1)
     return True, ip_iters, slot_iters, slots, cc_sub_slot_hash
