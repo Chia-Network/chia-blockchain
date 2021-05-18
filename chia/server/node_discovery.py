@@ -311,7 +311,7 @@ class FullNodeDiscovery:
                 elif len(groups) <= 5:
                     max_tries = 25
                 while not got_peer and not self.is_closed:
-                    sleep_interval = 1 + len(groups) * 0.5
+                    sleep_interval = len(groups) * 0.25
                     sleep_interval = min(sleep_interval, self.peer_connect_interval)
                     # Special case: try to find our first peer much quicker.
                     if len(groups) == 0:
@@ -365,7 +365,7 @@ class FullNodeDiscovery:
                     disconnect_after_handshake = True
                     retry_introducers = False
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
-                sleep_interval = 1 + len(groups) * 0.5
+                sleep_interval = len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
                 # Special case: try to find our first peer much quicker.
                 if len(groups) == 0:
