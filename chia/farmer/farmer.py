@@ -1,19 +1,22 @@
 import asyncio
+import json
 import logging
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from blspy import G1Element
+import aiohttp
+from blspy import G1Element, G2Element
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
+from chia.farmer.pool_config import PoolConfig
 from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.harvester_protocol import PoolThreshold
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
@@ -21,6 +24,12 @@ from chia.util.config import load_config, save_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.puzzles.load_clvm import load_clvm
+from tests.wallet.test_singleton import P2_SINGLETON_MOD
+
+SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
 log = logging.getLogger(__name__)
 
@@ -92,10 +101,13 @@ class Farmer:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
-        self.pool_thresholds: List[PoolThreshold] = []
+        self.pool_config_list: List[PoolConfig] = self._load_pool_config()
+        self.pool_state: Dict[str, Dict] = {}
+        self.log.warning(f"Pool state: {self.pool_state}")
 
     async def _start(self):
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
+        await self._update_pool_state()
 
     def _close(self):
         self._shut_down = True
@@ -127,6 +139,54 @@ class Farmer:
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
+
+    def _load_pool_config(self) -> List[PoolConfig]:
+        config = load_config(self._root_path, "config.yaml")
+        ret_list: List[PoolConfig] = []
+        if "pool_list" in config["pool"]:
+            for pool_config_dict in config["pool"]["pool_list"]:
+                pool_config = PoolConfig(
+                    pool_config_dict["pool_url"],
+                    bytes.fromhex(pool_config_dict["target"]),
+                    G2Element.from_bytes(bytes.fromhex(pool_config_dict["target_signature"])),
+                    bytes.fromhex(pool_config_dict["pool_puzzle_hash"]),
+                    bytes.fromhex(pool_config_dict["singleton_genesis"]),
+                    G1Element.from_bytes(bytes.fromhex(pool_config_dict["owner_public_key"])),
+                )
+                ret_list.append(pool_config)
+        return ret_list
+
+    async def _update_pool_state(self):
+        for pool_config in self.pool_config_list:
+            try:
+                if pool_config.pool_url not in self.pool_state:
+                    p2_singleton_full = P2_SINGLETON_MOD.curry(
+                        singleton_mod_hash,
+                        Program.to(singleton_mod_hash).get_tree_hash(),
+                        pool_config.singleton_genesis,
+                    )
+                    p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
+                    self.pool_state[pool_config.pool_url] = {
+                        "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash,
+                        "points_found_since_start": 0,
+                        "points_found_24h": [],
+                        "points_acknowledged_since_start": 0,
+                        "points_acknowledged_24h": [],
+                        "current_points_balance": 0,
+                        "current_difficulty": 10,
+                        "pool_errors_24h": [],
+                        "pool_info": {},
+                    }
+                self.pool_state[pool_config.pool_url]["pool_config"] = pool_config
+                # Makes a GET request to the pool to get the updated information
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f"http://{pool_config.pool_url}/get_pool_info") as resp:
+                        if resp.ok:
+                            self.pool_state[pool_config.pool_url]["pool_info"] = json.loads(await resp.text())
+                        else:
+                            self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
+            except Exception as e:
+                self.log.error(f"Exception fetching pool info from {pool_config.pool_url}, {e}")
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]

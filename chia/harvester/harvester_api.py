@@ -104,10 +104,11 @@ class HarvesterAPI:
                         # If we are pooling, override the difficulty and sub slot iters with the pool threshold info.
                         # This will mean more proofs actually get found, but they are only submitted to the pool,
                         # not the blockchain
-                        for pool_threshold in new_challenge.pool_thresholds:
-                            if pool_threshold.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
-                                difficulty = pool_threshold.difficulty
-                                sub_slot_iters = pool_threshold.sub_slot_iters
+                        for pool_difficulty in new_challenge.pool_difficulties:
+                            if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
+                                self.harvester.log.warning(f"Farming plot with {pool_difficulty}")
+                                difficulty = pool_difficulty.difficulty
+                                sub_slot_iters = pool_difficulty.sub_slot_iters
 
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):

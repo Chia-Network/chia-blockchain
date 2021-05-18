@@ -1,12 +1,16 @@
+import json
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, List, Any
 
+import aiohttp
 from blspy import AugSchemeMPL, G2Element
 
 import chia.server.ws_connection as ws
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.harvester_protocol import PoolDifficulty
+from chia.protocols.pool_protocol import SubmitPartial, PartialPayload
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -108,24 +112,86 @@ class FarmerAPI:
                 self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
                 return make_msg(ProtocolMessageTypes.request_signatures, request)
-            else:
+            elif new_proof_of_space.proof.pool_contract_puzzle_hash is not None:
                 # Otherwise, send the proof of space to the pool
-                for pool_threshold in self.farmer.pool_thresholds:
-                    if pool_threshold.pool_contract_puzzle_hash == new_proof_of_space.proof.pool_contract_puzzle_hash:
+
+                for pool_url, pool_state_dict in self.farmer.pool_state.items():
+                    if (
+                        pool_state_dict["p2_singleton_puzzle_hash"]
+                        == new_proof_of_space.proof.pool_contract_puzzle_hash
+                    ):
+
                         required_iters = calculate_iterations_quality(
                             self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
                             computed_quality_string,
                             new_proof_of_space.proof.size,
-                            pool_threshold.difficulty,
+                            pool_state_dict["current_difficulty"],
                             new_proof_of_space.sp_hash,
                         )
                         if required_iters >= calculate_sp_interval_iters(
-                            self.farmer.constants, pool_threshold.sub_slot_iters
+                            self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
                         ):
-                            self.farmer.log.error(f"Proof of space not good enough for pool: {pool_threshold}")
+                            self.farmer.log.info(
+                                f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['difficulty']}"
+                            )
                             return
 
-                        # Submit share to pool
+                        # Submit partial to pool
+                        is_eos = new_proof_of_space.signage_point_index == 0
+                        payload = PartialPayload(
+                            new_proof_of_space.proof,
+                            new_proof_of_space.sp_hash,
+                            is_eos,
+                            pool_state_dict["current_difficulty"],
+                            pool_state_dict["pool_config"].singleton_genesis,
+                            pool_state_dict["pool_config"].owner_public_key,
+                            pool_state_dict["pool_config"].target,
+                        )
+
+                        # The plot key is 2/2 so we need the harvester's half of the signature
+                        m_to_sign = payload.get_hash()
+                        request = harvester_protocol.RequestSignatures(
+                            new_proof_of_space.plot_identifier,
+                            new_proof_of_space.challenge_hash,
+                            new_proof_of_space.sp_hash,
+                            [m_to_sign],
+                        )
+                        response: Any = await peer.request_signatures(request)
+                        if not isinstance(response, harvester_protocol.RespondSignatures):
+                            self.farmer.log.error(f"Invalid response from harvester: {response}")
+                            return
+
+                        assert len(response.message_signatures) == 1
+
+                        plot_signature: Optional[G2Element] = None
+                        for sk in self.farmer.get_private_keys():
+                            pk = sk.get_g1()
+                            if pk == response.farmer_pk:
+                                agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
+                                assert agg_pk == new_proof_of_space.proof.plot_public_key
+                                sig_farmer = AugSchemeMPL.sign(sk, m_to_sign, agg_pk)
+                                plot_signature = AugSchemeMPL.aggregate([sig_farmer, response.message_signatures[0][1]])
+                                assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
+
+                        assert plot_signature is not None
+
+                        assert AugSchemeMPL.verify(
+                            pool_state_dict["pool_config"].owner_public_key,
+                            pool_state_dict["pool_config"].target,
+                            pool_state_dict["pool_config"].target_signature,
+                        )
+                        agg_sig: G2Element = AugSchemeMPL.aggregate(
+                            [pool_state_dict["pool_config"].target_signature, plot_signature]
+                        )
+
+                        submit_partial: SubmitPartial = SubmitPartial(payload, agg_sig)
+                        json_data = json.dumps(submit_partial.to_json_dict())
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(f"http://{pool_url}/submit_partial", data=json_data) as resp:
+                                if resp.ok:
+                                    self.farmer.log.info(f"Pool response: {json.loads(await resp.text())}")
+                                else:
+                                    self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
 
                         return
 
@@ -259,13 +325,23 @@ class FarmerAPI:
 
     @api_request
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
+        pool_difficulties: List[PoolDifficulty] = []
+        for pool_dict in self.farmer.pool_state.values():
+            pool_difficulties.append(
+                PoolDifficulty(
+                    pool_dict["current_difficulty"],
+                    self.farmer.constants.POOL_SUB_SLOT_ITERS,
+                    pool_dict["p2_singleton_puzzle_hash"],
+                )
+            )
+        self.farmer.log.warning(f"Farming to: pools: {pool_difficulties}")
         message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,
             new_signage_point.sub_slot_iters,
             new_signage_point.signage_point_index,
             new_signage_point.challenge_chain_sp,
-            self.farmer.pool_thresholds,
+            pool_difficulties,
         )
 
         msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
