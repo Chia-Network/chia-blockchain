@@ -8,6 +8,7 @@ import pytest
 
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -50,10 +51,10 @@ class TestFullSync:
             yield _
 
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_10000_blocks):
+    async def test_long_sync_from_zero(self, five_nodes, default_1000_blocks):
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_10000_blocks)
-        blocks: List[FullBlock] = default_10000_blocks
+        num_blocks = len(default_1000_blocks)
+        blocks: List[FullBlock] = default_1000_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
@@ -345,3 +346,81 @@ class TestFullSync:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
+
+    @pytest.mark.asyncio
+    async def test_wp_backwards_comp(self, five_nodes, default_1000_blocks):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        num_blocks = len(default_1000_blocks)
+        blocks: List[FullBlock] = default_1000_blocks
+        full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        server_4 = full_node_4.full_node.server
+        server_5 = full_node_5.full_node.server
+
+        # no capabilities
+        server_3.capabilities = [(uint16(Capability.BASE.value), "1")]
+        server_4.capabilities = [(uint16(Capability.BASE.value), "1")]
+
+        for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+        )
+
+        await server_3.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+        )
+
+        timeout_seconds = 150
+
+        # Node 3 and Node 2 sync up to node 1
+        await time_out_assert(
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+        )
+        await time_out_assert(
+            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+        )
+
+        cons = list(server_1.all_connections.values())[:]
+        for con in cons:
+            await con.close()
+        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
+        )
+        await server_3.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+        )
+        await server_4.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_4.full_node.on_connect
+        )
+        await server_3.start_client(
+            PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_3.full_node.on_connect
+        )
+        await server_4.start_client(
+            PeerInfo(self_hostname, uint16(server_3._port)), on_connect=full_node_4.full_node.on_connect
+        )
+        await server_4.start_client(
+            PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_4.full_node.on_connect
+        )
+
+        # All four nodes are synced
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, num_blocks - 1)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_2, num_blocks - 1)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_3, num_blocks - 1)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
+
+        # Deep reorg, fall back from batch sync to long sync
+        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
+        for block in blocks_node_5:
+            await full_node_5.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await server_5.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
+        )
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)

@@ -181,7 +181,7 @@ class FullNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         dns_servers = []
-        server.set_capabilities( [(uint16(Capability.BASE.value), "1"), (uint16(Capability.WP.value), "1")])
+        server.set_capabilities([(uint16(Capability.BASE.value), "1"), (uint16(Capability.WP.value), "1")])
         if "dns_servers" in self.config:
             dns_servers = self.config["dns_servers"]
         elif self.config["port"] == 8444:

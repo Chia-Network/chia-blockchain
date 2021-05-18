@@ -8,7 +8,7 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.shared_protocol import Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -104,7 +104,14 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
-    async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType,capabilities: List[Tuple[uint16, str]]):
+    async def perform_handshake(
+        self,
+        network_id: str,
+        protocol_version: str,
+        server_port: int,
+        local_type: NodeType,
+        capabilities: List[Tuple[uint16, str]],
+    ):
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
