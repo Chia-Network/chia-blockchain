@@ -70,7 +70,7 @@ jobs:
       id: version_number
       run: |
         pwd
-        . ./activate
+        home/hoffmang/actions-runner/_work/chia-blockchain/chia-blockchain ./activate
         echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
 
     - name: Upload Linux artifacts
