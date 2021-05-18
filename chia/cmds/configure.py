@@ -73,7 +73,7 @@ def configure(
             print("uPnP disabled")
         change_made = True
     if testnet is not None:
-        if testnet is 'true' or 't' or 'True'
+        if testnet is 'true' or 't' or 'True':
             testnet_port = "58444"
             testnet_introducer = "beta1_introducer.chia.net"
             testnet = "testnet7"
@@ -94,7 +94,7 @@ def configure(
             config["ui"]["selected_network"] = testnet
             config["introducer"]["selected_network"] = testnet
             config["wallet"]["selected_network"] = testnet
-        elif testnet is 'false' or 'f' or 'False'
+        elif testnet is 'false' or 'f' or 'False':
             mainnet_port = "8444"
             mainnet_introducer = "introducer.chia.net"
             net = "mainnet"
