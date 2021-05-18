@@ -28,10 +28,9 @@ class PartialPayload(Streamable):
     proof_of_space: ProofOfSpace
     sp_hash: bytes32
     end_of_sub_slot: bool
-    difficulty: uint64  # This is the difficulty threshold for this account, assuming SSI = 1024*5
+    suggested_difficulty: uint64  # This is suggested the difficulty threshold for this account
     singleton_genesis: bytes32  # This is what identifies the farmer's account for the pool
     owner_public_key: G1Element  # Current public key specified in the singleton
-    singleton_coin_id_hint: bytes32  # Some incarnation of the singleton, the later the better
     rewards_target: bytes  # The farmer can choose where to send the rewards. This can take a few minutes
 
 
