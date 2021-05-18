@@ -114,7 +114,7 @@ class ChiaServer:
         self.on_connect: Optional[Callable] = None
         self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
-        self.capabilities: List[Tuple[uint16, str]] = [(uint16(Capability.BASE.value), "1")],
+        self.capabilities: List[Tuple[uint16, str]] = [(uint16(Capability.BASE.value), "1")]
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
@@ -251,11 +251,7 @@ class ChiaServer:
                 close_event,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
-                self.capabilities
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
 
             assert handshake is True
@@ -397,11 +393,7 @@ class ChiaServer:
                     session=session,
                 )
                 handshake = await connection.perform_handshake(
-                    self._network_id,
-                    protocol_version,
-                    self._port,
-                    self._local_type,
-                    self.capabilities
+                    self._network_id, protocol_version, self._port, self._local_type, self.capabilities
                 )
                 assert handshake is True
                 await self.connection_added(connection, on_connect)
