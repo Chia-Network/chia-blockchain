@@ -73,7 +73,8 @@ def configure(
             print("uPnP disabled")
         change_made = True
     if testnet is not None:
-        if testnet == 'true' or 't' or 'True':
+        if testnet == "true" or testnet == "t":
+            print("Setting Testnet")
             testnet_port = "58444"
             testnet_introducer = "beta1_introducer.chia.net"
             testnet = "testnet7"
@@ -96,7 +97,9 @@ def configure(
             config["wallet"]["selected_network"] = testnet
             print("Default full node port, introducer and network setting updated")
             change_made = True
-        elif testnet == 'false' or 'f' or 'False':
+
+        elif testnet == "false" or testnet == "f":
+            print("Setting Mainnet")
             mainnet_port = "8444"
             mainnet_introducer = "introducer.chia.net"
             net = "mainnet"
@@ -119,6 +122,9 @@ def configure(
             config["wallet"]["selected_network"] = net
             print("Default full node port, introducer and network setting updated")
             change_made = True
+        else:
+            print("Please choose True or False")
+
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
