@@ -94,6 +94,8 @@ def configure(
             config["ui"]["selected_network"] = testnet
             config["introducer"]["selected_network"] = testnet
             config["wallet"]["selected_network"] = testnet
+            print("Default full node port, introducer and network setting updated")
+            change_made = True
         elif testnet == 'false' or 'f' or 'False':
             mainnet_port = "8444"
             mainnet_introducer = "introducer.chia.net"
@@ -115,8 +117,8 @@ def configure(
             config["ui"]["selected_network"] = net
             config["introducer"]["selected_network"] = net
             config["wallet"]["selected_network"] = net
-        print("Default full node port, introducer and network setting updated")
-        change_made = True
+            print("Default full node port, introducer and network setting updated")
+            change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
