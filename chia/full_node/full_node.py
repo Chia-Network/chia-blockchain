@@ -1599,6 +1599,7 @@ class FullNode:
             return MempoolInclusionStatus.FAILED, Err.INITIAL_TRANSACTION_FREEZE
 
         if self.mempool_manager.seen(spend_name):
+            self.log.warning(f"self.mempool_manager.seen {spend_name}")
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
         self.log.debug(f"Processing transaction: {spend_name}")
@@ -1615,6 +1616,7 @@ class FullNode:
             async with self.blockchain.lock:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
+                    self.log.warning(f"self.mempool_manager.remove_seen {spend_name}")
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
                 if status == MempoolInclusionStatus.SUCCESS:
