@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-17 17:54\n"
+"PO-Revision-Date: 2021-05-18 21:03\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1096,7 +1096,7 @@ msgstr "Avoin Saldo"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr "Avoimet Siirrot"
+msgstr "Avoimet Vaihtorahat"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
@@ -1698,7 +1698,7 @@ msgstr "Transaktioihin käytettävissä oleva Chiojen määrä. Ei sisällä avo
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "Avoimet siirrot ovat kolikoita, jotka olet siirtänyt, mutta joiden siirtoa ei ole vielä vahvistettu loppuun."
+msgstr "Avoimet vaihtorahat ovat kolikoita, jotka olet siirtänyt, mutta joiden siirtoa ei ole vielä vahvistettu loppuun."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
