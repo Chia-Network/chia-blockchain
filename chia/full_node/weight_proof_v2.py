@@ -389,7 +389,7 @@ class WeightProofHandlerV2:
         assert prev_ses_sub_block.sub_epoch_summary_included is not None
         segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
         assert segments is not None
-        await self.blockchain.persist_sub_epoch_challenge_segments_v2(ses_sub_block.height, segments)
+        await self.blockchain.persist_sub_epoch_challenge_segments_v2(ses_sub_block.header_hash, segments)
         log.debug("sub_epoch_segments done")
         return
 
@@ -979,7 +979,9 @@ def _validate_segment(
                 pospace_challenge = cc_sub_slot_hash
                 if is_overflow_block(constants, ssd.signage_point_index):
                     pospace_challenge = prev_hash
-                required_iters = __validate_pospace(constants, sub_slot_data, idx, curr_difficulty, pospace_challenge)
+                required_iters = __validate_pospace(
+                    constants, sub_slot_data, idx, curr_difficulty, pospace_challenge, ssi
+                )
                 if required_iters is None:
                     return None
                 if not _validate_challenge_sub_slot_data(
@@ -1351,13 +1353,15 @@ def __validate_pospace(
     idx: int,
     curr_diff: uint64,
     cc_sub_slot_hash: bytes32,
+    ssi: uint64,
 ) -> Optional[uint64]:
-
     ssd: SubSlotDataV2 = sub_slot_data[idx]
-
-    if ssd.cc_sp_vdf_output is None:
+    assert ssd.signage_point_index is not None
+    sp_iters = calculate_sp_iters(constants, ssi, ssd.signage_point_index)
+    if sp_iters == uint64(0):
         cc_sp_hash = cc_sub_slot_hash
     else:
+        assert ssd.cc_sp_vdf_output
         cc_sp_hash = ssd.cc_sp_vdf_output.get_hash()
 
     # validate proof of space
