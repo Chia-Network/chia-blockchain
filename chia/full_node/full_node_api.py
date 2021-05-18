@@ -238,12 +238,12 @@ class FullNodeAPI:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if (request.tip, False) in self.full_node.pow_creation:
-            event = self.full_node.pow_creation[request.tip]
+            event = self.full_node.pow_creation[(request.tip, False)]
             await event.wait()
             wp = await self.full_node.weight_proof_handler.get_proof_of_weight(request.tip)
         else:
             event = asyncio.Event()
-            self.full_node.pow_creation[request.tip, False] = event
+            self.full_node.pow_creation[(request.tip, False)] = event
             wp = await self.full_node.weight_proof_handler.get_proof_of_weight(request.tip)
             event.set()
         tips = list(self.full_node.pow_creation.keys())
@@ -289,12 +289,12 @@ class FullNodeAPI:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if (request.tip, True) in self.full_node.pow_creation:
-            event = self.full_node.pow_creation[request.tip]
+            event = self.full_node.pow_creation[(request.tip, True)]
             await event.wait()
             wp = await self.full_node.weight_proof_handler_v2.get_proof_of_weight(request.tip)
         else:
             event = asyncio.Event()
-            self.full_node.pow_creation[request.tip, True] = event
+            self.full_node.pow_creation[(request.tip, True)] = event
             wp = await self.full_node.weight_proof_handler_v2.get_proof_of_weight(request.tip)
             event.set()
         tips = list(self.full_node.pow_creation.keys())

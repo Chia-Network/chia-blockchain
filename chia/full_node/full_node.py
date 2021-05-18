@@ -849,6 +849,8 @@ class FullNode:
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
+                if self.weight_proof_handler_v2 is not None:
+                    await self.weight_proof_handler_v2.create_prev_sub_epoch_segments()
         if advanced_peak:
             self._state_changed("new_peak")
             self.log.debug(
