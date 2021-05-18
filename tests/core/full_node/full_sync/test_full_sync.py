@@ -129,14 +129,14 @@ class TestFullSync:
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
 
         # Deep reorg, fall back from batch sync to long sync
-        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
+        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:950], seed=b"node5")
         for block in blocks_node_5:
             await full_node_5.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await server_5.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
         )
-        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
-        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 1009)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 1009)
 
     @pytest.mark.asyncio
     async def test_sync_from_fork_point_and_weight_proof(self, three_nodes, default_1000_blocks, default_400_blocks):
@@ -422,5 +422,5 @@ class TestFullSync:
         await server_5.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
         )
-        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
-        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 1009)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 1009)
