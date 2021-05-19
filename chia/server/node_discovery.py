@@ -370,6 +370,8 @@ class FullNodeDiscovery:
                 # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
                 if len(groups) == 0:
                     sleep_interval = 0.25
+                if not initiate_connection:
+                    sleep_interval += 15
                 if addr is not None and initiate_connection:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
                         self.log.debug(f"Max concurrent outbound connections reached. Retrying in {sleep_interval}s.")
