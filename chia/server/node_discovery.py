@@ -24,7 +24,7 @@ from chia.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
-MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 100
+MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
 
 
 class FullNodeDiscovery:
@@ -146,7 +146,7 @@ class FullNodeDiscovery:
 
     def _num_needed_peers(self) -> int:
         diff = self.target_outbound_count
-        outgoing = self.server.get_outgoing_connections()
+        outgoing = self.server.get_full_node_outgoing_connections()
         diff -= len(outgoing)
         return diff if diff >= 0 else 0
 
@@ -269,8 +269,8 @@ class FullNodeDiscovery:
                     introducer_backoff = 1
 
                 # Only connect out to one peer per network group (/16 for IPv4).
-                groups = []
-                full_node_connected = self.server.get_full_node_connections()
+                groups = set()
+                full_node_connected = self.server.get_full_node_outgoing_connections()
                 connected = [c.get_peer_info() for c in full_node_connected]
                 connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:
@@ -279,7 +279,7 @@ class FullNodeDiscovery:
                         continue
                     group = peer.get_group()
                     if group not in groups:
-                        groups.append(group)
+                        groups.add(group)
 
                 # Feeler Connections
                 #
@@ -310,12 +310,13 @@ class FullNodeDiscovery:
                     max_tries = 10
                 elif len(groups) <= 5:
                     max_tries = 25
+                sleep_interval = len(groups) * 0.25
+                sleep_interval = min(sleep_interval, self.peer_connect_interval)
+                # Special case: try to find our first peer much quicker.
+                if len(groups) == 0:
+                    sleep_interval = 0.1
                 while not got_peer and not self.is_closed:
-                    sleep_interval = len(groups) * 0.25
-                    sleep_interval = min(sleep_interval, self.peer_connect_interval)
-                    # Special case: try to find our first peer much quicker.
-                    if len(groups) == 0:
-                        sleep_interval = 0.1
+                    self.log.debug(f"Address manager query count: {tries}. Query limit: {max_tries}")
                     try:
                         await asyncio.sleep(sleep_interval)
                     except asyncio.CancelledError:
@@ -348,9 +349,7 @@ class FullNodeDiscovery:
                     if addr in connected:
                         addr = None
                         continue
-                    # only consider very recently tried nodes after 30 failed attempts
-                    # attempt a node once per 30 minutes if we lack connections to increase the chance
-                    # to try all the peer table.
+                    # attempt a node once per 30 minutes.
                     if now - info.last_try < 1800:
                         continue
                     if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
@@ -359,11 +358,13 @@ class FullNodeDiscovery:
                     if local_peerinfo is not None and addr == local_peerinfo:
                         continue
                     got_peer = True
+                    self.log.debug(f"Addrman selected address: {addr}.")
 
                 disconnect_after_handshake = is_feeler
                 if self._num_needed_peers() == 0:
                     disconnect_after_handshake = True
                     retry_introducers = False
+                self.log.debug(f"Num peers needed: {self._num_needed_peers()}")
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
                 sleep_interval = len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
@@ -374,6 +375,7 @@ class FullNodeDiscovery:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
                         self.log.debug(f"Max concurrent outbound connections reached. Retrying in {sleep_interval}s.")
                         await asyncio.sleep(sleep_interval)
+                    self.log.debug(f"Creating connection task with {addr}.")
                     asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
                 await asyncio.sleep(sleep_interval)
             except Exception as e:
