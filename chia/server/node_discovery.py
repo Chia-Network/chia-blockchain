@@ -145,10 +145,9 @@ class FullNodeDiscovery:
                 await self.address_manager.connect(peer_info)
 
     def _num_needed_peers(self) -> int:
-        diff = self.target_outbound_count
-        outgoing = self.server.get_full_node_outgoing_connections()
-        diff -= len(outgoing)
-        return diff if diff >= 0 else 0
+        target = self.target_outbound_count
+        outgoing = len(self.server.get_full_node_outgoing_connections())
+        return max(0, target - outgoing)
 
     """
     Uses the Poisson distribution to determine the next time
@@ -278,8 +277,7 @@ class FullNodeDiscovery:
                     if peer is None:
                         continue
                     group = peer.get_group()
-                    if group not in groups:
-                        groups.add(group)
+                    groups.add(group)
 
                 # Feeler Connections
                 #
@@ -312,7 +310,7 @@ class FullNodeDiscovery:
                     max_tries = 25
                 sleep_interval = len(groups) * 0.25
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
-                # Special case: try to find our first peer much quicker.
+                # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
                 if len(groups) == 0:
                     sleep_interval = 0.1
                 while not got_peer and not self.is_closed:
@@ -361,16 +359,17 @@ class FullNodeDiscovery:
                     self.log.debug(f"Addrman selected address: {addr}.")
 
                 disconnect_after_handshake = is_feeler
-                if self._num_needed_peers() == 0:
+                extra_peers_needed = self._num_needed_peers()
+                if extra_peers_needed == 0:
                     disconnect_after_handshake = True
                     retry_introducers = False
-                self.log.debug(f"Num peers needed: {self._num_needed_peers()}")
-                initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
+                self.log.debug(f"Num peers needed: {extra_peers_needed}")
+                initiate_connection = extra_peers_needed > 0 or has_collision or is_feeler
                 sleep_interval = len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
-                # Special case: try to find our first peer much quicker.
+                # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
                 if len(groups) == 0:
-                    sleep_interval = 0.1
+                    sleep_interval = 0.25
                 if addr is not None and initiate_connection:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
                         self.log.debug(f"Max concurrent outbound connections reached. Retrying in {sleep_interval}s.")
