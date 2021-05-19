@@ -70,6 +70,8 @@ jobs:
       id: version_number
       run: |
         ls && pwd ${{ github.workspace }}
+        sh ${{ github.workspace }}/install.sh
+        cd ${{ github.workspace }} && . ./activate
         echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
 
     - name: Upload Linux artifacts
