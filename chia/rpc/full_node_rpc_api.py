@@ -179,6 +179,7 @@ class FullNodeRpcApi:
             number_of_slots_searched = 0
             while number_of_slots_searched < 10:
                 if curr.first_in_sub_slot:
+                    assert curr.finished_challenge_slot_hashes is not None
                     if curr.finished_challenge_slot_hashes[-1] == eos.challenge_chain.get_hash():
                         # Found this slot in the blockchain
                         return {"eos": eos, "time_received": time_received, "reverted": False}
@@ -205,36 +206,42 @@ class FullNodeRpcApi:
 
         # Otherwise we can backtrack from peak to find it in the blockchain
         rc_challenge: bytes32 = sp.rc_vdf.challenge
-        next: Optional[BlockRecord] = None
-        curr: Optional[BlockRecord] = self.service.blockchain.get_peak()
+        next_b: Optional[BlockRecord] = None
+        curr_b_optional: Optional[BlockRecord] = self.service.blockchain.get_peak()
+        assert curr_b_optional is not None
+        curr_b: BlockRecord = curr_b_optional
 
         for _ in range(200):
-            sp_total_iters = sp.cc_vdf.number_of_iterations + curr.ip_sub_slot_total_iters(self.service.constants)
-            if curr.reward_infusion_new_challenge == rc_challenge:
-                if next is None:
+            sp_total_iters = sp.cc_vdf.number_of_iterations + curr_b.ip_sub_slot_total_iters(self.service.constants)
+            if curr_b.reward_infusion_new_challenge == rc_challenge:
+                if next_b is None:
                     return {"signage_point": sp, "time_received": time_received, "reverted": False}
-                next_total_iters = next.ip_sub_slot_total_iters(self.service.constants) + next.ip_iters(
+                next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
                     self.service.constants
                 )
 
                 return {
                     "signage_point": sp,
                     "time_received": time_received,
-                    "reverted": sp_total_iters > next_total_iters,
+                    "reverted": sp_total_iters > next_b_total_iters,
                 }
-            if curr.finished_reward_slot_hashes is not None:
-                for eos_rc in curr.finished_challenge_slot_hashes:
+            if curr_b.finished_reward_slot_hashes is not None:
+                assert curr_b.finished_challenge_slot_hashes is not None
+                for eos_rc in curr_b.finished_challenge_slot_hashes:
                     if eos_rc == rc_challenge:
-                        if next is None:
+                        if next_b is None:
                             return {"signage_point": sp, "time_received": time_received, "reverted": False}
-                        next_total_iters = next.ip_sub_slot_total_iters(self.service.constants) + next.ip_iters(
+                        next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
                             self.service.constants
                         )
                         return {
                             "signage_point": sp,
                             "time_received": time_received,
-                            "reverted": sp_total_iters > next_total_iters,
+                            "reverted": sp_total_iters > next_b_total_iters,
                         }
+            next_b = curr_b
+            curr_b = self.service.blockchain.block_record(curr_b.prev_hash)
+
         return {"signage_point": sp, "time_received": time_received, "reverted": True}
 
     async def get_block(self, request: Dict) -> Optional[Dict]:

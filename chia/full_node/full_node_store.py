@@ -740,9 +740,9 @@ class FullNodeStore:
         self.future_sp_cache.pop(peak.reward_infusion_new_challenge, [])
         self.future_ip_cache.pop(peak.reward_infusion_new_challenge, [])
 
-        for eos, _, _ in self.finished_sub_slots:
-            if eos is not None:
-                self.recent_eos.put(eos.get_hash(), (eos, time.time()))
+        for eos_op, _, _ in self.finished_sub_slots:
+            if eos_op is not None:
+                self.recent_eos.put(eos_op.get_hash(), (eos_op, time.time()))
 
         return new_eos, new_sps, new_ips
 

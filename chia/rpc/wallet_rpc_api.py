@@ -71,6 +71,7 @@ class WalletRpcApi:
             "/get_transactions": self.get_transactions,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
+            "/send_transaction_multi": self.send_transaction_multi,
             "/create_backup": self.create_backup,
             "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
@@ -620,7 +621,9 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            transaction: TransactionRecord = (await self.create_signed_transaction(request))["signed_tx"]
+            transaction: TransactionRecord = (await self.create_signed_transaction(request, hold_lock=False))[
+                "signed_tx"
+            ]
             await wallet.push_transaction(transaction)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
@@ -1005,7 +1008,7 @@ class WalletRpcApi:
             "last_height_farmed": last_height_farmed,
         }
 
-    async def create_signed_transaction(self, request):
+    async def create_signed_transaction(self, request, hold_lock=True):
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
 
@@ -1034,7 +1037,12 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        async with self.service.wallet_state_manager.lock:
+        if hold_lock:
+            async with self.service.wallet_state_manager.lock:
+                signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
+                    amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
+                )
+        else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                 amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
             )

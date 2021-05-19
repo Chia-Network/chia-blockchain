@@ -130,7 +130,7 @@ class WalletRpcClient(RpcClient):
 
     async def send_transaction_multi(
         self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
-    ) -> Dict:
+    ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
         if coins is not None and len(coins) > 0:
@@ -140,11 +140,10 @@ class WalletRpcClient(RpcClient):
                 {"wallet_id": wallet_id, "additions": additions_hex, "coins": coins_json, "fee": fee},
             )
         else:
-            response: Dict = await self.fetch(
+            response = await self.fetch(
                 "send_transaction_multi", {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee}
             )
-        response["signed_tx"] = TransactionRecord.from_json(response["tx_record"])
-        return response
+        return TransactionRecord.from_json_dict(response["transaction"])
 
     async def create_backup(self, file_path: Path) -> None:
         return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
@@ -154,16 +153,17 @@ class WalletRpcClient(RpcClient):
 
     async def create_signed_transaction(
         self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
-    ) -> Dict:
+    ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
-            return await self.fetch(
+            response: Dict = await self.fetch(
                 "create_signed_transaction", {"additions": additions_hex, "coins": coins_json, "fee": fee}
             )
         else:
-            return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
+            response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
+        return TransactionRecord.from_json_dict(response["signed_tx"])
 
     async def create_new_pool_wallet(
         self,
