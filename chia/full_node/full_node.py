@@ -1882,7 +1882,7 @@ class FullNode:
                 if max_height is None:
                     await asyncio.sleep(30)
                     continue
-                # Calculate 'min_height' correctly the first time this task is launched, using the db.
+                # Calculate 'min_height' correctly the first time this task is launched, using the db
                 assert min_height is not None
                 min_height = await self.block_store.get_first_not_compactified(min_height)
                 if min_height is None or min_height > max(0, max_height - 1000):
