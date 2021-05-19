@@ -194,7 +194,6 @@ class WalletNode:
         self.sync_task = asyncio.create_task(self.sync_job())
         self.logged_in_fingerprint = fingerprint
         self.logged_in = True
-        asyncio.create_task(self.wallet_peers.start())
         return True
 
     def _close(self):
@@ -315,6 +314,7 @@ class WalletNode:
             self.config["peer_connect_interval"],
             self.log,
         )
+        asyncio.create_task(self.wallet_peers.start())
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:

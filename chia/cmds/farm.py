@@ -47,23 +47,11 @@ def farm_cmd() -> None:
     default=None,
     show_default=True,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def summary_cmd(
-    rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int, fingerprint: int
-) -> None:
+def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
     from .farm_funcs import summary
     import asyncio
 
-    from .wallet_funcs import execute_with_wallet
-
-    asyncio.run(
-        execute_with_wallet(
-            wallet_rpc_port,
-            fingerprint,
-            {},
-            lambda *ignored: summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port),
-        )
-    )
+    asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
 
 @farm_cmd.command("challenges", short_help="Show the latest challenges")
