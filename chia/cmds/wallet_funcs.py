@@ -141,6 +141,10 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
         return None
     if len(fingerprints) == 1:
         fingerprint = fingerprints[0]
+    if fingerprint is None:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        if 'default_fingerprint' in config:
+            fingerprint = config["default_fingerprint"]
     if fingerprint is not None:
         log_in_response = await wallet_client.log_in(fingerprint)
     else:
