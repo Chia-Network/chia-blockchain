@@ -101,7 +101,7 @@ jobs:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ls ${{ github.workspace }}/build_scripts/final_installer/
-        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }.deb > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.deb.checksum
+        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.deb > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.deb.checksum
 
     - name: Upload Release Files
       if: startsWith(github.ref, 'refs/tags/')
