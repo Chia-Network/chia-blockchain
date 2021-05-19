@@ -100,31 +100,38 @@
     )
   )
 
-  ; Check that only one output with odd value exists
-  (defun check_outputs_value (outputs_loop flag)
+
+  ; Assert exactly one output with odd value exists - ignore it if value is -1337
+  (defun check_outputs_value (MOD_HASH MOD_HASH_HASH GENESIS_ID outputs_loop flag output_ammended)
     (if outputs_loop
       (if (= (f (f outputs_loop)) CREATE_COIN)
         (if (logand (f (r (r (f outputs_loop)))) 1)
-          (if flag
-            (x)
-            (check_outputs_value (r outputs_loop) 1)
+          (if (= flag 2)
+            (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 2 (c (f outputs_loop) output_ammended))
+            (if (= (f (r (r (f outputs_loop)))) -1337)
+              (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 2 output_ammended)
+              (if flag
+                (x)
+                (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 1 (c (list CREATE_COIN (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r (f outputs_loop)))) (f (r (r (f outputs_loop))))) output_ammended))
+              )
+            )
           )
-          (check_outputs_value (r outputs_loop) flag)
+          (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) flag (c (f outputs_loop) output_ammended))
         )
-        (check_outputs_value (r outputs_loop) flag)
+        (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) flag (c (f outputs_loop) output_ammended))
       )
-      1
+      (if flag
+        output_ammended
+        (x)
+      )
     )
   )
 
   (defun check_id_and_check_outputs (MOD_HASH MOD_HASH_HASH GENESIS_ID parent_info innerpuzhash my_amount outputs)
-    (if (check_outputs_value outputs 0)
-      (c (check_my_amount_and_ID MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_info my_amount) outputs)
-      (x)
-    )
+    (c (check_my_amount_and_ID MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_info my_amount) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID outputs 0 ()))
   )
 
   ;main
-  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount (a INNERPUZ (c (list GENESIS_ID (if (r (r parent_info)) 0 1)) inner_solution)))
+  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount (a INNERPUZ (c (list GENESIS_ID (if (r (r parent_info)) (f (r (r parent_info))) 0)) inner_solution)))
 
 )
