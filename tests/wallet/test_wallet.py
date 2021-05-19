@@ -558,7 +558,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 4)
+        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 5)
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
