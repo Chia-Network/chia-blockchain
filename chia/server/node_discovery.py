@@ -308,15 +308,14 @@ class FullNodeDiscovery:
                     max_tries = 10
                 elif len(groups) <= 5:
                     max_tries = 25
-                sleep_interval = len(groups) * 0.25
-                sleep_interval = min(sleep_interval, self.peer_connect_interval)
+                select_peer_interval = len(groups) * 0.25
                 # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
                 if len(groups) == 0:
-                    sleep_interval = 0.1
+                    select_peer_interval = 0.1
                 while not got_peer and not self.is_closed:
                     self.log.debug(f"Address manager query count: {tries}. Query limit: {max_tries}")
                     try:
-                        await asyncio.sleep(sleep_interval)
+                        await asyncio.sleep(select_peer_interval)
                     except asyncio.CancelledError:
                         return None
                     tries += 1
@@ -365,20 +364,19 @@ class FullNodeDiscovery:
                     retry_introducers = False
                 self.log.debug(f"Num peers needed: {extra_peers_needed}")
                 initiate_connection = extra_peers_needed > 0 or has_collision or is_feeler
-                sleep_interval = len(groups) * 0.5
-                sleep_interval = min(sleep_interval, self.peer_connect_interval)
+                connect_peer_interval = len(groups) * 0.5
                 # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
                 if len(groups) == 0:
-                    sleep_interval = 0.25
+                    connect_peer_interval = 0.25
                 if not initiate_connection:
-                    sleep_interval += 15
+                    connect_peer_interval += 15
                 if addr is not None and initiate_connection:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
-                        self.log.debug(f"Max concurrent outbound connections reached. Retrying in {sleep_interval}s.")
-                        await asyncio.sleep(sleep_interval)
+                        self.log.debug(f"Max concurrent outbound connections reached. Retrying in {connect_peer_interval}s.")
+                        await asyncio.sleep(connect_peer_interval)
                     self.log.debug(f"Creating connection task with {addr}.")
                     asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
-                await asyncio.sleep(sleep_interval)
+                await asyncio.sleep(connect_peer_interval)
             except Exception as e:
                 self.log.error(f"Exception in create outbound connections: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
