@@ -96,7 +96,7 @@ jobs:
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/builds/
 
     - name: Create Checksums
-      if: startsWith(github.ref, 'refs/tags/')
+      #if: startsWith(github.ref, 'refs/tags/')
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -107,7 +107,6 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       run: |
           aws s3 cp /home/hoffmang/actions-runner/_work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/releases/
-          aws s3 cp /home/hoffmang/actions-runner/_work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/releases/
 
     - name: Clean up on self hosted runner
       run: |
