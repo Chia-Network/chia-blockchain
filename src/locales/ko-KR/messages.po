@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-19 03:16\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "128의 버킷을 권장합니다."
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "수확기는 구성(들) 이 실제로 저장되어 있는 기기에서 동작하는 서비스입니다. 농부와 수확기는 전체 체인의 상태를 보기 위해 풀 노드와 정보를 교환합니다. 아래 더보기에서 연결된 수확기들의 네트워크를 확인하세요."
+msgstr "수확기는 플롯이 실제 저장되어 구동되는 기기입니다. 파머와 수확기는 전체 체인의 상황을 풀 노드를 통해 확인합니다. 아래의 더 보기 버튼을 눌러, 네트워크에 연결된 수확기를 확인하십시오."
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -88,7 +88,7 @@ msgstr "플롯 추가"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "플롯 디렉토리 추가"
+msgstr "플롯 폴더 추가"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -108,11 +108,11 @@ msgstr "주소 / 퍼즐 해시"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Amount"
-msgstr "양"
+msgstr "금액"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
-msgstr "수량 ({cc_unit})"
+msgstr "금액 ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
@@ -129,7 +129,7 @@ msgstr "정말로 접속을 끊으시겠습니까?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "정말로 나가시겠습니까? GUI 플로팅과 채굴 역시 멈출 것입니다."
+msgstr "정말 종료해도 괜찮습니까? GUI 플로팅과 코인 파밍이 중단됩니다."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -156,7 +156,7 @@ msgstr "잔고"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "기본 농부 보상 수량"
+msgstr "파밍에 대한 보상 지급의 최소 금액"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -165,7 +165,7 @@ msgstr "아래는 현재 도전중인 블록입니다. 당신은 이 도전에 �
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr "지난 24시간에 대한 예측치"
+msgstr "지난 24시간 동안의 최적 예측값입니다."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -200,7 +200,7 @@ msgstr "해쉬 {headerHash} 의 블록"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgstr "{headerHash} 에 해당하는 블록이 존재하지 않습니다."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -249,7 +249,7 @@ msgstr "취소"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr "취소 그리고 전송"
+msgstr "취소하고 전송"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -281,11 +281,11 @@ msgstr "치아 지갑"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr "플롯의 갯수를 고르세요"
+msgstr "몇 개의 플롯을 만들까요?"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr "플롯의 크기를 고르세요"
+msgstr "플롯 사이즈를 선택해 주십시오."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:55
@@ -294,7 +294,7 @@ msgstr "닫기"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "노드와 서버 닫는 중"
+msgstr "노드와 서버의 연결을 닫는 중..."
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -303,11 +303,11 @@ msgstr "코인:"
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr "색상"
+msgstr "컬러"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr "색상 정보"
+msgstr "컬러 정보"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
@@ -327,7 +327,7 @@ msgstr "컬러드 코인 옵션"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
-msgstr "승인"
+msgstr "확인"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -554,7 +554,7 @@ msgstr "난이도"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr "비트필드 플로팅 비활성화"
+msgstr "비트필드 플로팅을 끕니다."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -611,7 +611,7 @@ msgstr "에러: 치아를 컬러드 주소로 보낼 수 없습니다. 치아 �
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr "블록 보상을 얻기까지 남은 시간"
+msgstr "블록 보상을 얻기까지 남은 예상 시간"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -619,11 +619,11 @@ msgstr "전체 네트워크 용량 추정치"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr "네트워크에 있는 모든 농부의 총 플롯된 디스크 용량의 총합 예측치"
+msgstr "전체 네트워크 사용자의 디스크 크기 총합"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr "최종 경로 제외"
+msgstr "최종 경로 없이 플롯 만들기"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -632,7 +632,7 @@ msgstr "최종 경로 제외"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr "열기에 실패했습니다(부적절한 플롯들)"
+msgstr "플롯 열기에 실패했습니다. (사유: 유효하지 않은 플롯)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
@@ -646,28 +646,28 @@ msgstr "수확기 퍼즐 해시"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr "농부 보상 주소"
+msgstr "파밍 보상을 수령할 주소"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "수확기가 연결되어 있지 않습니다"
+msgstr "파머가 연결되어 있지 않습니다"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "수확기가 작동중이 아닙니다"
+msgstr "파머가 작동하지 않고 있습니다."
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr "농부들은 안전한 거래를 돕기 위해 네트워크에 여유 공간을 할당함으로써 블록 보상과 거래 수수료를받습니다. 여기에 플롯을 추가하면 농장이 생깁니다. <0>더 알아보기</0>"
+msgstr "파머(농부)는 남는 공간을 네트워크에 할당하여, 블록 보상과 거래 수수료를 통해 수익을 창출합니다. 이곳에 플롯을 생성하면 농장이 생성됩니다. <0>더 알아보기</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr "수확중"
+msgstr "재배 중"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -754,7 +754,7 @@ msgstr "새로운 컬러 만들기"
 
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr "HD 또는 계층 적 결정 론적 키는 공개 키 / 개인 키 타입으로 개인 키 하나에 거의 무한한 수의 서로 다른 공개 키 (그리고 지갑 수신 주소) 를 가질 수있는 공개 키 / 개인 키 체계의 한 유형으로, 궁극적으로 하나의 개인키로 돌아와서 사용할 수 있습니다."
+msgstr "HD키, 또는 \"계층구조 결정성 키\" 라고 부르는 이것은 개인 키 하나에 무한대에 가까운 공개키를 가질 수 있는 공개키 암호화 방식으로, 시드를 안전하게 보관하기만 한다면 언제든 시드로부터 개인키를 순차적으로 재생성할 수 있다는 장점을 지니고 있습니다."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -829,7 +829,7 @@ msgstr "인덱스"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr "이 제안이 당사에서 생성되었는지 표시"
+msgstr "이 거래 요청이 저희에게서 생성되었는지를 표시합니다."
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
@@ -863,7 +863,7 @@ msgstr "키"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr "KiB 증가/감소"
+msgstr "KiB 업로드/다운로드"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -1058,7 +1058,7 @@ msgstr "확인"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr "제안"
+msgstr "거래 제안"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
@@ -1066,7 +1066,7 @@ msgstr "제안이 생성되었습니다"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "당신이 보낸 트랜잭션(이체) 주문이 1분 이내로 처리된다고 느끼겠지만, 평균적으로는 각 트랜잭션 블록은 1분 정도의 차이를 두고 있습니다."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1875,7 +1875,7 @@ msgstr "미결제 잔액보기"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr "미결제 잔액보기..."
+msgstr "미결제 잔액을 표시합니다..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1977,7 +1977,7 @@ msgstr "예"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "플롯에 동기화하거나 연결할 필요가 없습니다. 플로팅 과정에서 최정 플롯 파일의 크기를 뛰어넘는 임시 플롯 파일이 생성됩니다. 충분한 공간이 확보됐는지 확인하십시오. <0>더 알아보기</0>"
+msgstr "동기화나 플롯 연결이 필요하지 않습니다. 임시 파일은 플로팅 과정 중 생성되며, 최종적으로 생성되는 플롯 파일보다 큽니다. 충분한 용량이 확보되었는지 반드시 확인하여 주십시오. <0>더 알아보기</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1985,7 +1985,7 @@ msgstr "플롯에 동기화하거나 연결할 필요가 없습니다. 플로팅
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr "당신은 네트워크에서 {0}% 의 공간을 가지고 있기 때문에, 블록을 파밍하는데 {expectedTimeToWin} 만큼 걸릴것으로 추정됩니다. 실제결과는 추정치보다 3배에서 4배만큼 차이가 날수도 있습니다."
+msgstr "당신은 네트워크에서 {0}% 만큼의 공간을 보유하였으며 블록 보상을 획득하기까지 {expectedTimeToWin} 만큼의 시간이 필요한 것으로 예상됩니다. 실제 결과는 추정치보다 3배에서 4배만큼 차이가 날 수도 있습니다."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
