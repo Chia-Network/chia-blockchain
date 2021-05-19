@@ -1199,7 +1199,12 @@ class FullNode:
                 )
                 assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                 added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
-
+                if (
+                    self.full_node_store.previous_generator is not None
+                    and fork_height is not None
+                    and fork_height < self.full_node_store.previous_generator.block_height
+                ):
+                    self.full_node_store.previous_generator = None
             validation_time = time.time() - validation_start
 
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:

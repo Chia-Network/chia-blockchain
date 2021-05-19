@@ -202,7 +202,7 @@ class CoinStore:
                 new_record = CoinRecord(
                     coin_record.coin,
                     coin_record.confirmed_block_index,
-                    coin_record.spent_block_index,
+                    uint32(0),
                     False,
                     coin_record.coinbase,
                     coin_record.timestamp,
