@@ -97,7 +97,7 @@ class Blockchain(BlockchainInterface):
         """
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
-        self.compact_proof_lock= asyncio.Lock()
+        self.compact_proof_lock = asyncio.Lock()
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
