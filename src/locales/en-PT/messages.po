@@ -2067,4 +2067,3 @@ msgstr "{currencyCode} Total Prize Claimed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Earned On The Side"
-
