@@ -68,7 +68,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
                 break
 
 
-def check_unusual_transaction(amount, fee):
+def check_unusual_transaction(amount: Decimal, fee: Decimal):
     return fee >= amount
 
 
