@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-18 21:03\n"
+"PO-Revision-Date: 2021-05-19 09:14\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -335,11 +335,11 @@ msgstr "ยืนยันการตัดการเชื่อมต่อ
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr "ยืนยันที่บล็อค:"
+msgstr "ยืนยันที่บล็อก:"
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr "ยืนยันที่ปริมาณ {0}"
+msgstr "ยืนยันที่ความสูง {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -1086,7 +1086,7 @@ msgstr "เวลาจุดยอด"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
-msgstr "อยู่ระหว่างดำเนินการ"
+msgstr "รอดำเนินการ"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
