@@ -519,7 +519,12 @@ class ChiaServer:
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
                     else:
-                        coroutine = f(full_message.data)
+                        try:
+                            coroutine = f(full_message.data)
+                        except Exception as e:
+                            self.log.error(f"mt {message_type} fmdh {full_message.data.hex()}")
+                            breakpoint()
+                            raise e
 
                     async def wrapped_coroutine() -> Optional[Message]:
                         try:
