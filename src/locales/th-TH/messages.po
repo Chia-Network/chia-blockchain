@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-19 09:14\n"
+"PO-Revision-Date: 2021-05-19 15:22\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1985,7 +1985,7 @@ msgstr "คุณไม่จำเป็นที่ต้องซิงค์
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr "คุณมีพื้นที่ {0}% ในเครือข่าย ดังนั้นการฟาร์มจะใช้เวลา {expectedTimeToWin} เผื่อให้ได้ผลลัพธ์ที่ตรง โดยปกติแล้ว ผลลัพธ์ที่จะออกมานั้น จะใช้ประมาณ 3-4 รอบ"
+msgstr "คุณมีพื้นที่ {0}% จากทั้งหมดในเครือข่าย ดังนั้นการฟาร์มบล็อกจะใช้เวลา {expectedTimeToWin} โดยประมาณ โดยผลลัพธ์ที่แท้จริงนั้นอาจใช้เวลานานกว่าที่ประมาณการไว้ 3 ถึง 4 เท่า"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
