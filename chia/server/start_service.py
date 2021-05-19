@@ -128,7 +128,9 @@ class Service:
         await self._node._start(**kwargs)
 
         for port in self._upnp_ports:
-            self.upnp = UPnP()
+            if self.upnp is None:
+                self.upnp = UPnP()
+
             self.upnp.remap(port)
 
         await self._server.start_server(self._on_connect_callback)
