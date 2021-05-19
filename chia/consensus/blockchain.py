@@ -82,6 +82,7 @@ class Blockchain(BlockchainInterface):
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
+    compact_proof_lock: asyncio.Lock
 
     @staticmethod
     async def create(
@@ -96,6 +97,7 @@ class Blockchain(BlockchainInterface):
         """
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
+        self.compact_proof_lock= asyncio.Lock()
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
@@ -172,7 +174,6 @@ class Blockchain(BlockchainInterface):
         invalid. Also returns the fork height, in the case of a new peak.
         """
         genesis: bool = block.height == 0
-
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 

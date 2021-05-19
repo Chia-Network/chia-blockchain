@@ -1771,7 +1771,7 @@ class FullNode:
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
             return None
-        async with self.blockchain.lock:
+        async with self.blockchain.compact_proof_lock:
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
@@ -1848,7 +1848,7 @@ class FullNode:
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
             return None
-        async with self.blockchain.lock:
+        async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
