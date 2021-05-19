@@ -1606,44 +1606,45 @@ class FullNode:
         if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
+            self.mempool_manager.remove_seen(spend_name)
         else:
             try:
                 cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction)
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
-            async with self.blockchain.lock:
+            async with self.mempool_manager.lock:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
-                if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.debug(
-                        f"Added transaction to mempool: {spend_name} mempool size: "
-                        f"{self.mempool_manager.mempool.total_mempool_cost}"
-                    )
-                    # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
-                    # vector.
-                    mempool_item = self.mempool_manager.get_mempool_item(spend_name)
-                    assert mempool_item is not None
-                    fees = mempool_item.fee
-                    assert fees >= 0
-                    assert cost is not None
-                    new_tx = full_node_protocol.NewTransaction(
-                        spend_name,
-                        cost,
-                        fees,
-                    )
-                    msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
-                    if peer is None:
-                        await self.server.send_to_all([msg], NodeType.FULL_NODE)
-                    else:
-                        await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            if status == MempoolInclusionStatus.SUCCESS:
+                self.log.debug(
+                    f"Added transaction to mempool: {spend_name} mempool size: "
+                    f"{self.mempool_manager.mempool.total_mempool_cost}"
+                )
+                # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
+                # vector.
+                mempool_item = self.mempool_manager.get_mempool_item(spend_name)
+                assert mempool_item is not None
+                fees = mempool_item.fee
+                assert fees >= 0
+                assert cost is not None
+                new_tx = full_node_protocol.NewTransaction(
+                    spend_name,
+                    cost,
+                    fees,
+                )
+                msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
+                if peer is None:
+                    await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
-                    self.mempool_manager.remove_seen(spend_name)
-                    self.log.debug(
-                        f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
-                    )
+                    await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            else:
+                self.mempool_manager.remove_seen(spend_name)
+                self.log.debug(
+                    f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
+                )
         return status, error
 
     async def _needs_compact_proof(
