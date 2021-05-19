@@ -79,7 +79,7 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
         except Exception:
             return None
-        return CoinRecord.from_json(response["coin_record"])
+        return CoinRecord.from_json_dict(response["coin_record"])
 
     async def get_coin_records_by_puzzle_hash(
         self,
