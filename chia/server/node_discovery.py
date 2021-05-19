@@ -308,10 +308,7 @@ class FullNodeDiscovery:
                     max_tries = 10
                 elif len(groups) <= 5:
                     max_tries = 25
-                select_peer_interval = len(groups) * 0.25
-                # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
-                if len(groups) == 0:
-                    select_peer_interval = 0.1
+                select_peer_interval = max(0.1, len(groups) * 0.25)
                 while not got_peer and not self.is_closed:
                     self.log.debug(f"Address manager query count: {tries}. Query limit: {max_tries}")
                     try:
@@ -364,12 +361,10 @@ class FullNodeDiscovery:
                     retry_introducers = False
                 self.log.debug(f"Num peers needed: {extra_peers_needed}")
                 initiate_connection = extra_peers_needed > 0 or has_collision or is_feeler
-                connect_peer_interval = len(groups) * 0.5
-                # Special case: avoid sleeping 0 and busy loop when we don't have any outgoing connections
-                if len(groups) == 0:
-                    connect_peer_interval = 0.25
+                connect_peer_interval = max(0.25, len(groups) * 0.5)
                 if not initiate_connection:
                     connect_peer_interval += 15
+                connect_peer_interval = min(connect_peer_interval, self.peer_connect_interval)
                 if addr is not None and initiate_connection:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
                         self.log.debug(
