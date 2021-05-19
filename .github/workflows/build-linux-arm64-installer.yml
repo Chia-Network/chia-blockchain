@@ -69,7 +69,7 @@ jobs:
     - name: Create installer version number
       id: version_number
       run: |
-        pwd ${{ github.workspace }}
+        ls && pwd ${{ github.workspace }}
         echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
 
     - name: Upload Linux artifacts
