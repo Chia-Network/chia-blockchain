@@ -15,8 +15,8 @@ def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
 
 
-def create_default_chia_config(root_path: Path) -> None:
-    for filename in ["config.yaml"]:
+def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> None:
+    for filename in filenames:
         default_config_file_data = initial_config_file(filename)
         path = config_path_for_filename(root_path, filename)
         mkdir(path.parent)
@@ -83,7 +83,7 @@ def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = 
     return unflatten_properties(flattened_props)
 
 
-def flatten_properties(config: Dict) -> Dict:
+def flatten_properties(config: Dict):
     properties = {}
     for key, value in config.items():
         if type(value) is dict:
@@ -94,7 +94,7 @@ def flatten_properties(config: Dict) -> Dict:
     return properties
 
 
-def unflatten_properties(config: Dict) -> Dict:
+def unflatten_properties(config: Dict):
     properties: Dict = {}
     for key, value in config.items():
         if "." in key:
@@ -114,7 +114,7 @@ def add_property(d: Dict, partial_key: str, value: Any):
         d[key_1][key_2] = value
 
 
-def str2bool(v: Union[str, bool]) -> bool:
+def str2bool(v: Any) -> bool:
     # Source from https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     if isinstance(v, bool):
         return v

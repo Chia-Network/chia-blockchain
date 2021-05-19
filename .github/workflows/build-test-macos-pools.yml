@@ -1,4 +1,4 @@
-name: MacOS core-types Tests
+name: MacOS pools Tests
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: MacOS core-types Tests
+    name: MacOS pools Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -87,7 +87,7 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test core-types code with pytest
+    - name: Test pools code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/types/test_coin.py tests/core/types/test_proof_of_space.py -s -v --durations 0 
+        ./venv/bin/py.test tests/pools/test_pool_config.py -s -v --durations 0 
