@@ -47,6 +47,7 @@ class TestWalletRpc:
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await asyncio.sleep(10)
 
         initial_funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
@@ -119,6 +120,7 @@ class TestWalletRpc:
 
             for i in range(0, 5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+            await asyncio.sleep(10)
 
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
