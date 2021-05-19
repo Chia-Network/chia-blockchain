@@ -372,7 +372,9 @@ class FullNodeDiscovery:
                     connect_peer_interval += 15
                 if addr is not None and initiate_connection:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
-                        self.log.debug(f"Max concurrent outbound connections reached. Retrying in {connect_peer_interval}s.")
+                        self.log.debug(
+                            f"Max concurrent outbound connections reached. Retrying in {connect_peer_interval}s."
+                        )
                         await asyncio.sleep(connect_peer_interval)
                     self.log.debug(f"Creating connection task with {addr}.")
                     asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
