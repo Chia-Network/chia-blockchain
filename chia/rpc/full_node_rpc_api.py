@@ -240,7 +240,10 @@ class FullNodeRpcApi:
                             "reverted": sp_total_iters > next_b_total_iters,
                         }
             next_b = curr_b
-            curr_b = self.service.blockchain.block_record(curr_b.prev_hash)
+            curr_b_optional = self.service.blockchain.try_block_record(curr_b.prev_hash)
+            if curr_b_optional is None:
+                break
+            curr_b = curr_b_optional
 
         return {"signage_point": sp, "time_received": time_received, "reverted": True}
 
