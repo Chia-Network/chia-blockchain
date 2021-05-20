@@ -469,7 +469,7 @@ class RLWallet:
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
         if rl_parent_id == self.rl_info.rl_origin_id:
             return self.rl_info.rl_origin
-        rl_parent = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(rl_parent_id)
+        rl_parent = await self.wallet_state_manager.coin_store.get_coin_record(rl_parent_id)
         if rl_parent is None:
             return None
 

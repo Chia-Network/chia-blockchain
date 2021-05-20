@@ -189,7 +189,7 @@ class TradeManager:
         result = {}
         removals = bundle.removals()
         for coin in removals:
-            coin_record = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(coin.name())
+            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin.name())
             if coin_record is None:
                 continue
             result[coin_record.name()] = coin_record

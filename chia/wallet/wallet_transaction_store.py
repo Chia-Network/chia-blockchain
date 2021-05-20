@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
@@ -19,17 +19,14 @@ class WalletTransactionStore:
 
     db_connection: aiosqlite.Connection
     db_wrapper: DBWrapper
-    cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
-    tx_wallet_cache: Dict[int, Dict[Any, Set[bytes32]]]
     tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000)):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
 
-        self.cache_size = cache_size
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
 
@@ -79,15 +76,24 @@ class WalletTransactionStore:
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
 
         await self.db_connection.commit()
-        self.tx_record_cache = dict()
-        self.tx_wallet_cache = dict()
-        self.tx_submitted = dict()
-        self.unconfirmed_for_wallet = dict()
+        self.tx_record_cache = {}
+        self.tx_submitted = {}
+        self.unconfirmed_for_wallet = {}
+        await self.rebuild_tx_cache()
         return self
 
-    async def _init_cache(self):
+    async def rebuild_tx_cache(self):
         # init cache here
-        pass
+        all_records = await self.get_all_transactions()
+        self.tx_record_cache = {}
+        self.unconfirmed_for_wallet = {}
+
+        for record in all_records:
+            self.tx_record_cache[record.name] = record
+            if record.wallet_id not in self.unconfirmed_for_wallet:
+                self.unconfirmed_for_wallet[record.name] = {}
+            if not record.confirmed:
+                self.unconfirmed_for_wallet[record.name] = record
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM transaction_record")
@@ -98,6 +104,15 @@ class WalletTransactionStore:
         """
         Store TransactionRecord in DB and Cache.
         """
+        self.tx_record_cache[record.name] = record
+        if record.wallet_id not in self.unconfirmed_for_wallet:
+            self.unconfirmed_for_wallet[record.wallet_id] = {}
+        unconfirmed_dict = self.unconfirmed_for_wallet[record.wallet_id]
+        if record.confirmed and record.name in unconfirmed_dict:
+            unconfirmed_dict.pop(record.name)
+        if not record.confirmed:
+            unconfirmed_dict[record.name] = record
+
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
@@ -119,33 +134,15 @@ class WalletTransactionStore:
                 ),
             )
             await cursor.close()
-        finally:
             if not in_transaction:
                 await self.db_connection.commit()
+        except BaseException:
+            if not in_transaction:
+                await self.rebuild_tx_cache()
+            raise
+        finally:
+            if not in_transaction:
                 self.db_wrapper.lock.release()
-        self.tx_record_cache[record.name] = record
-
-        if record.wallet_id in self.unconfirmed_for_wallet:
-            unconfirmed: Dict[bytes32, TransactionRecord] = self.unconfirmed_for_wallet[record.wallet_id]
-            if record.name in unconfirmed:
-                if record.confirmed:
-                    unconfirmed.pop(record.name)
-                else:
-                    unconfirmed[record.name] = record
-            else:
-                if not record.confirmed:
-                    unconfirmed[record.name] = record
-
-        if record.wallet_id in self.tx_wallet_cache:
-            if None in self.tx_wallet_cache[record.wallet_id]:
-                self.tx_wallet_cache[record.wallet_id][None].add(record.name)
-            if record.type in self.tx_wallet_cache[record.wallet_id]:
-                self.tx_wallet_cache[record.wallet_id][record.type].add(record.name)
-
-        if len(self.tx_record_cache) > self.cache_size:
-            while len(self.tx_record_cache) > self.cache_size:
-                first_in = list(self.tx_record_cache.keys())[0]
-                self.tx_record_cache.pop(first_in)
 
     async def set_confirmed(self, tx_id: bytes32, height: uint32):
         """
@@ -225,30 +222,26 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx, False)
         return True
 
-    async def tx_reorged(self, tx_id: bytes32):
+    async def tx_reorged(self, record: TransactionRecord):
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
-
-        current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
-        if current is None:
-            return None
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=current.created_at_time,
-            to_puzzle_hash=current.to_puzzle_hash,
-            amount=current.amount,
-            fee_amount=current.fee_amount,
+            created_at_time=record.created_at_time,
+            to_puzzle_hash=record.to_puzzle_hash,
+            amount=record.amount,
+            fee_amount=record.fee_amount,
             confirmed=False,
             sent=uint32(0),
-            spend_bundle=current.spend_bundle,
-            additions=current.additions,
-            removals=current.removals,
-            wallet_id=current.wallet_id,
+            spend_bundle=record.spend_bundle,
+            additions=record.additions,
+            removals=record.removals,
+            wallet_id=record.wallet_id,
             sent_to=[],
             trade_id=None,
-            type=current.type,
-            name=current.name,
+            type=record.type,
+            name=record.name,
         )
         await self.add_transaction_record(tx, True)
 
@@ -338,24 +331,8 @@ class WalletTransactionStore:
         """
         if wallet_id in self.unconfirmed_for_wallet:
             return list(self.unconfirmed_for_wallet[wallet_id].values())
-        cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?",
-            (
-                0,
-                wallet_id,
-            ),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        records = []
-        dict = {}
-        for row in rows:
-            record = TransactionRecord.from_bytes(row[0])
-            records.append(record)
-            dict[record.name] = record
-
-        self.unconfirmed_for_wallet[wallet_id] = dict
-        return records
+        else:
+            return []
 
     async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
@@ -393,7 +370,7 @@ class WalletTransactionStore:
         await cursor.close()
         return count
 
-    async def get_all_transactions(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
+    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
@@ -419,9 +396,20 @@ class WalletTransactionStore:
             records.append(record)
             cache_set.add(record.name)
 
-        if wallet_id not in self.tx_wallet_cache:
-            self.tx_wallet_cache[wallet_id] = {}
-        self.tx_wallet_cache[wallet_id][type] = cache_set
+        return records
+
+    async def get_all_transactions(self) -> List[TransactionRecord]:
+        """
+        Returns all stored transactions.
+        """
+        cursor = await self.db_connection.execute("SELECT * from transaction_record")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
 
         return records
 
@@ -443,7 +431,12 @@ class WalletTransactionStore:
 
     async def rollback_to_block(self, height: int):
         # Delete from storage
-        self.tx_wallet_cache = {}
-        self.unconfirmed_for_wallet = {}
+        to_delete = []
+        for tx in self.tx_record_cache.values():
+            if tx.confirmed_at_height > height:
+                to_delete.append(tx)
+        for tx in to_delete:
+            self.tx_record_cache.pop(tx.name)
+
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
