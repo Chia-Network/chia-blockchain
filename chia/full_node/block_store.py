@@ -165,7 +165,7 @@ class BlockStore:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             log.debug(f"cache hit for block {header_hash.hex()}")
-            return cached
+            return bytes(cached)
         log.debug(f"cache miss for block {header_hash.hex()}")
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
