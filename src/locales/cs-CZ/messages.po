@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Částka pro počáteční minci"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Jste si jisti, že chcete pole odstranit? Pole nelze obnovit."
 
@@ -506,15 +506,15 @@ msgstr "Zpoždění"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:64
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Smazat"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Smazat pole"
 
@@ -869,7 +869,7 @@ msgstr "MiB odesláno/přijato"
 msgid "Last Attempted Proof"
 msgstr "Poslední provedené pokusy o důkaz"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "Last Height Farmed"
 msgstr "Poslední farmařená výška"
 
@@ -993,7 +993,7 @@ msgstr "Ne"
 msgid "No 24 word seed, since this key is imported."
 msgstr "Žádný 24 slov, protože tento klíč je importován."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
 msgstr "Zatím nic nevyfarmařeno"
 
@@ -1176,7 +1176,7 @@ msgstr "Zadejte, prosím, dočasnou složku"
 msgid "Plot"
 msgstr "Pole"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:7
+#: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
 msgstr "Počet polí"
@@ -1558,7 +1558,7 @@ msgstr "Stav"
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/WalletStatusCard.tsx:12
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Stav"
@@ -1610,8 +1610,12 @@ msgid "Syncing"
 msgstr "Synchronizace"
 
 #: src/components/fullNode/FullNode.jsx:107
-msgid "Syncing {progress}/{tip}"
-msgstr "Synchronizace {progress}/{tip}"
+msgid "Syncing <0/>/<1/>"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Synchronizace {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1859,7 +1863,7 @@ msgstr "VDF dílčí iterace slotu"
 msgid "View"
 msgstr "Zobrazení"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Zobrazit log"
@@ -2019,12 +2023,12 @@ msgstr "[Chyba 13] Přístup odepřen. Snažíte se o přístup k souboru/složc
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[Chyba 22] Soubor nenalezen. Jedna ze složek polí v konfiguraci má pravděpodobně potíže."
 
-#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/WalletStatusCard.tsx:31
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "spojení:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/WalletStatusCard.tsx:25
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "výška:"
@@ -2033,17 +2037,17 @@ msgstr "výška:"
 msgid "not synced"
 msgstr " není synchronizováno"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "stav:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "synchronizováno"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "synchronizace"

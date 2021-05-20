@@ -57,10 +57,13 @@ export default function useThrottleSelector<T extends (...args: any) => any>(
     }
   });
 
-  useEffect(() => () => {
+  useEffect(
+    () => () => {
       // @ts-ignore
       processUpdate.cancel();
-    }, []);
+    },
+    [],
+  );
 
   return refData.current;
 }

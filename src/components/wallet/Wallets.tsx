@@ -12,7 +12,7 @@ import {
 } from '@material-ui/core';
 import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Flex } from '@chia/core';
+import { Flex, FormatLargeNumber } from '@chia/core';
 import StandardWallet from './standard/WalletStandard';
 import {
   changeWalletMenu,
@@ -151,13 +151,13 @@ export function StatusCard() {
           <Box flexGrow={1}>
             <Trans>height:</Trans>
           </Box>
-          <Box>{height}</Box>
+          <Box><FormatLargeNumber value={height} /></Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
             <Trans>connections:</Trans>
           </Box>
-          <Box>{connectionCount}</Box>
+          <Box><FormatLargeNumber value={connectionCount} /></Box>
         </Box>
       </div>
     </div>

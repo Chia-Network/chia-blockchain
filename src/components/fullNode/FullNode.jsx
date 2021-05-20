@@ -68,10 +68,10 @@ const cols = [
       const height = get(row, 'reward_chain_block.height');
 
       if (!isFinished) {
-        return <i>{foliageHeight}</i>;
+        return <i><FormatLargeNumber value={foliageHeight} /></i>;
       }
 
-      return height;
+      return <FormatLargeNumber value={height} />;
     },
     title: <Trans>Height</Trans>,
   },
@@ -105,7 +105,7 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
       label: <Trans>Status</Trans>,
       value: (
         <Trans>
-          Syncing {progress}/{tip}
+          Syncing <FormatLargeNumber value={progress} />/<FormatLargeNumber value={tip} />
         </Trans>
       ),
       colour: 'orange',
@@ -165,7 +165,7 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const peakHeight = state.peak?.height ?? 0;
   status_items.push({
     label: <Trans>Peak Height</Trans>,
-    value: peakHeight,
+    value: <FormatLargeNumber value={peakHeight} />,
   });
 
   status_items.push({
@@ -177,7 +177,7 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const { difficulty } = state;
   const diff_item = {
     label: <Trans>Difficulty</Trans>,
-    value: difficulty,
+    value: <FormatLargeNumber value={difficulty} />,
   };
   status_items.push(diff_item);
 

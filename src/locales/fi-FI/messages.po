@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Alkumäärä"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Haluatko tuhota plotin? Plottia ei voi palauttaa."
 
@@ -506,15 +506,15 @@ msgstr "Viive"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:64
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Poista"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Poista Plot-tiedosto"
 
@@ -869,7 +869,7 @@ msgstr "KiB Lähetys/Lataus"
 msgid "Last Attempted Proof"
 msgstr "Viimeisin Yritetty Todiste"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "Last Height Farmed"
 msgstr "Viimeisin Tuotettu Lohkokorkeus"
 
@@ -993,7 +993,7 @@ msgstr "Ei"
 msgid "No 24 word seed, since this key is imported."
 msgstr "Tuotu avain, ei 24 muistisanaa."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
 msgstr "Ei vielä farmilohkoja"
 
@@ -1176,7 +1176,7 @@ msgstr "Valitse väliaikaishakemisto"
 msgid "Plot"
 msgstr "Plotti"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:7
+#: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
 msgstr "Plottien Määrä"
@@ -1558,7 +1558,7 @@ msgstr "Tila"
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/WalletStatusCard.tsx:12
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Tila"
@@ -1610,8 +1610,12 @@ msgid "Syncing"
 msgstr "Synkronoi...."
 
 #: src/components/fullNode/FullNode.jsx:107
-msgid "Syncing {progress}/{tip}"
-msgstr "Synkronoi {progress}/{tip}"
+msgid "Syncing <0/>/<1/>"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Synkronoi {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1859,7 +1863,7 @@ msgstr "VDF -alaiteraatioita"
 msgid "View"
 msgstr "Näkymä"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Katso Loki"
@@ -2019,12 +2023,12 @@ msgstr "[Virhe 13] Lupa evätty. Yrität käyttää tiedostoa / hakemistoa ilman
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[Virhe 22] Tiedostoa ei löydy. Todennäköisesti yhdessä config.yaml-tiedostosi juontikansioista on ongelma."
 
-#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/WalletStatusCard.tsx:31
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "yhteydet:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/WalletStatusCard.tsx:25
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "korkeus:"
@@ -2033,17 +2037,17 @@ msgstr "korkeus:"
 msgid "not synced"
 msgstr "ei synkronoitu"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "tila:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "synkronoitu"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "synkronoi"

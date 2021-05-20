@@ -4,7 +4,7 @@ import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Card, Link, Loading, TooltipIcon, Flex, CurrencyCode } from '@chia/core';
+import { Card, FormatLargeNumber, Link, Loading, TooltipIcon, Flex } from '@chia/core';
 import {
   unix_to_short_date,
   hex_to_array,
@@ -192,11 +192,11 @@ export default function Block() {
     },
     {
       name: <Trans>Height</Trans>,
-      value: blockRecord.height,
+      value: <FormatLargeNumber value={blockRecord.height} />,
     },
     {
       name: <Trans>Weight</Trans>,
-      value: BigInt(blockRecord.weight).toLocaleString(),
+      value: <FormatLargeNumber value={blockRecord.weight} />,
       tooltip: (
         <Trans>
           Weight is the total added difficulty of all sub blocks up to and including
@@ -214,11 +214,11 @@ export default function Block() {
     },
     {
       name: <Trans>Difficulty</Trans>,
-      value: BigInt(difficulty).toLocaleString(),
+      value: <FormatLargeNumber value={difficulty} />,
     },
     {
       name: <Trans>Total VDF Iterations</Trans>,
-      value: BigInt(blockRecord.total_iters).toLocaleString(),
+      value: <FormatLargeNumber value={blockRecord.total_iters} />,
       tooltip: (
         <Trans>
           The total number of VDF (verifiable delay function) or proof of time
@@ -228,7 +228,7 @@ export default function Block() {
     },
     {
       name: <Trans>Block VDF Iterations</Trans>,
-      value: BigInt(block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations).toLocaleString(),
+      value: <FormatLargeNumber value={block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations} />,
       tooltip: (
         <Trans>
           The total number of VDF (verifiable delay function) or proof of time
@@ -238,7 +238,7 @@ export default function Block() {
     },
     {
       name: <Trans>Proof of Space Size</Trans>,
-      value: block.reward_chain_block.proof_of_space.size,
+      value: <FormatLargeNumber value={block.reward_chain_block.proof_of_space.size} />,
     },
     {
       name: <Trans>Plot Public Key</Trans>,

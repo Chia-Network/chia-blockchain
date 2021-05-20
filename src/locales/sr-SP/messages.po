@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Вредност иницијалног новчића"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Да ли сте сигурни да желите да избришете плот? Плот се не може повратити."
 
@@ -202,7 +202,7 @@ msgstr "Блок са хешом {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Блок са хешом {headerHash} не постоји."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Блокови"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Повежи се са другим пировима"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Повезано"
 
@@ -359,7 +359,7 @@ msgstr "Повезано"
 msgid "Connecting to wallet"
 msgstr "Повезивање са новчаником"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Статус везе"
 
@@ -506,15 +506,15 @@ msgstr "Одлагање"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:64
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Обриши"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Обриши плот"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Алати за програмера"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Тежина"
 
@@ -613,11 +613,11 @@ msgstr "Грешка: Не могу послати чија на обојену 
 msgid "Estimated Time to Win"
 msgstr "Процењено време за победу"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Процењени мрежни простор"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Процењени збир укупног простора на диску свих фармера у мрежи"
 
@@ -722,8 +722,8 @@ msgstr "Ime datoteke"
 msgid "Final folder location"
 msgstr "Коначна локација фолдера"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Завршено"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Често Постављана Питања"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Пун Чвор"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Статус пуног чвора"
 
@@ -760,7 +760,7 @@ msgstr "ХД или хијерархијски детерминистички к
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Хеш код заглавља"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Хеш код заглавља"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Висина"
@@ -815,7 +815,7 @@ msgstr "Увези новчаник уз помоћ мнемотехнике"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Увези уз помоћ мнемотехнике (24 речи)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "У процесу"
 
@@ -869,7 +869,7 @@ msgstr "KiB горе/доле"
 msgid "Last Attempted Proof"
 msgstr "Доказ последњег покушаја"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "Last Height Farmed"
 msgstr "Последња обрађена величина"
 
@@ -953,7 +953,7 @@ msgstr "Више меморије мало повећава брзину"
 msgid "My Pubkey"
 msgstr "Мој јавни кључ"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Назив мреже"
 
@@ -993,7 +993,7 @@ msgstr "Не"
 msgid "No 24 word seed, since this key is imported."
 msgstr "Нема 24 речи, јер је кључ увезен."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
 msgstr "Још нема обрађених блокова"
 
@@ -1022,7 +1022,7 @@ msgstr "Ниједан твој плот још увек није прошао �
 msgid "Not Available"
 msgstr "Недоступно"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Није синхронизовано"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Још није потврђено"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Није повезано"
 
@@ -1072,7 +1072,7 @@ msgstr "У просеку је потребан један минут измеђ
 msgid "Outgoing"
 msgstr "Одлазни"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Врх раста"
 
@@ -1080,7 +1080,7 @@ msgstr "Врх раста"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Време врха"
 
@@ -1176,7 +1176,7 @@ msgstr "Наведи привремени директоријум"
 msgid "Plot"
 msgstr "Плот"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:7
+#: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
 msgstr "Број плотова"
@@ -1547,18 +1547,18 @@ msgstr "Дужина интервала трошења (број блокова)
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Ограничење потрошње (chia по интервалу): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Стање"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/WalletStatusCard.tsx:12
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Статус"
@@ -1599,7 +1599,7 @@ msgstr "Статус:"
 msgid "Submit"
 msgstr "Пошаљи"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Синхронизовано"
 
@@ -1609,9 +1609,13 @@ msgstr "Синхронизовано"
 msgid "Syncing"
 msgstr "Синхронизација"
 
-#: src/components/fullNode/FullNode.jsx:106
-msgid "Syncing {progress}/{tip}"
-msgstr "Синхронизација {progress}/{tip}"
+#: src/components/fullNode/FullNode.jsx:107
+msgid "Syncing <0/>/<1/>"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Синхронизација {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1654,11 +1658,11 @@ msgstr "Пуни чвор на ком је повезан фармер је ис
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Минимална величина за плот је к=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "Чвор није синхронизован"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Чвор се синхронизује, што значи да преузима блокове од осталих чворова да би дошао до последњег блока у ланцу"
 
@@ -1704,7 +1708,7 @@ msgstr "Ово је промена на чекању, а то су новчић�
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Ово је збир долазних и одлазних трансакција на чекању (које још нису укључене у блокчејн). Ово не укључује награде за фарамање."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Ово је време најновијег блока."
 
@@ -1720,7 +1724,7 @@ msgstr "Ово је укупна количина chia на блокчејну �
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Ово је укупно стање + стање на чекању: то ће бити твоје стање након потврде свих трансакција на чекању."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Пун чвор је достигнут и верификује мрежу"
 
@@ -1744,7 +1748,7 @@ msgstr "Ова трговина је укључена на блокчејну у
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "Ова верзија Chia није компатибилна са блокчејном и не може безбедно користити фарму."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Време креирања"
 
@@ -1770,7 +1774,7 @@ msgstr "Укупно стање"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Укупно понављања"
 
@@ -1790,7 +1794,7 @@ msgstr "Укупна величина плотова"
 msgid "Total VDF Iterations"
 msgstr "Укупно VDF понављања"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Укупно понављања од почетка блокчејна"
 
@@ -1834,7 +1838,7 @@ msgstr "Хеш за филтер трансакције"
 msgid "Type"
 msgstr "Тип"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Незавршено"
 
@@ -1851,7 +1855,7 @@ msgstr "Непознато"
 msgid "User Pubkey"
 msgstr "Кориснички јавни кључ"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "Подслотови VDF понављања"
 
@@ -1859,7 +1863,7 @@ msgstr "Подслотови VDF понављања"
 msgid "View"
 msgstr "Преглед"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Погледај евиденцију"
@@ -2019,12 +2023,12 @@ msgstr "[Грешка 13] Дозвола одбијена. Покушаваш д
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[Грешка 22] Фајл није пронађен. Највероватније је проблем у једном од фолдера са плотовима у твом config.yaml фајлу."
 
-#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/WalletStatusCard.tsx:31
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "везе:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/WalletStatusCard.tsx:25
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "величина:"
@@ -2033,17 +2037,17 @@ msgstr "величина:"
 msgid "not synced"
 msgstr "није синхронизовано"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "статус:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "синхронизовано"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "синхронизација"

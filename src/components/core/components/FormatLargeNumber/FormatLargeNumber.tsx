@@ -1,32 +1,39 @@
-import React from 'react';
-import { Tooltip } from '@material-ui/core';
-
+import React, { useMemo } from 'react';
+// import { Tooltip } from '@material-ui/core';
 import useLocale from '../../../../hooks/useLocale';
 import { defaultLocale } from '../../../../config/locales';
 
-const LARGE_NUMBER_THRESHOLD = 1000;
+// const LARGE_NUMBER_THRESHOLD = 1000;
 
 type Props = {
-  value: number;
+  value?: string | number | BigInt;
+};
+
+// TODO add ability to use it in new settings page
+const compactConfig = {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 1,
+  notation: 'compact',
 };
 
 export default function FormatLargeNumber(props: Props) {
   const { value } = props;
   const [locale] = useLocale(defaultLocale);
 
-  if (value < LARGE_NUMBER_THRESHOLD) {
-    return value;
-  }
+  const numberFormat = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const formatedValue = useMemo(() => {
+    if (typeof value === 'undefined') {
+      return value;
+    } else if (typeof value === 'bigint') {
+      return BigInt(value).toLocaleString(locale);
+    }
+
+    return numberFormat.format(value);
+  }, [value, numberFormat]);
 
   return (
-    <Tooltip title={value}>
-      <span>
-        {new Intl.NumberFormat(locale, {
-          maximumFractionDigits: 1,
-          minimumFractionDigits: 1,
-          notation: 'compact',
-        }).format(value)}
-      </span>
-    </Tooltip>
+    <span>
+      {formatedValue}
+    </span>
   );
 }

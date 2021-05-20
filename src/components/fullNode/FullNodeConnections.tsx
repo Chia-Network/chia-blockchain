@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { Delete as DeleteIcon } from '@material-ui/icons';
 import styled from 'styled-components';
-import { Card, Flex, FormatBytes, Loading, Table, IconButton } from '@chia/core';
+import { Card, Flex, FormatBytes, FormatLargeNumber, Loading, Table, IconButton } from '@chia/core';
 import { Button, Tooltip } from '@material-ui/core';
 import { service_connection_types } from '../../util/service_names';
 import Connection from '../../types/Connection';
@@ -58,7 +58,7 @@ const cols = [
     title: <Trans>Connection type</Trans>,
   },
   {
-    field: 'peak_height',
+    field: (row: Connection) => <FormatLargeNumber value={row.peak_height} />,
     title: <Trans>Height</Trans>,
   },
   {

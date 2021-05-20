@@ -2,6 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { Box, Typography } from '@material-ui/core';
+import { FormatLargeNumber } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 
 export default function WalletStatusCard() {
@@ -36,13 +37,13 @@ export default function WalletStatusCard() {
           <Box flexGrow={1}>
             <Trans>height:</Trans>
           </Box>
-          <Box>{height}</Box>
+          <Box><FormatLargeNumber value={height} /></Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
             <Trans>connections:</Trans>
           </Box>
-          <Box>{connectionCount}</Box>
+          <Box><FormatLargeNumber value={connectionCount} /></Box>
         </Box>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import { FormatLargeNumber } from '@chia/core';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
@@ -18,7 +19,7 @@ export default function FarmCardLastHeightFarmed() {
       title={
         <Trans>Last Height Farmed</Trans>
       }
-      value={lastHeightFarmed}
+      value={<FormatLargeNumber value={lastHeightFarmed} />}
       description={
         !lastHeightFarmed && (
           <Trans>
