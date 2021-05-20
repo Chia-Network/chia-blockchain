@@ -62,7 +62,7 @@
      (sha256tree_esc_list TREE LITERAL)
   )
 
-  ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   (defun-inline create_fullpuzhash (MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
     (sha256tree_esc (curry MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
                     MOD_HASH
@@ -107,7 +107,7 @@
       (if (= (f (f outputs_loop)) CREATE_COIN)
         (if (logand (f (r (r (f outputs_loop)))) 1)
           (if (= flag 2)
-            (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 2 (c (f outputs_loop) output_ammended))
+            (x)
             (if (= (f (r (r (f outputs_loop)))) -1337)
               (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 2 output_ammended)
               (if flag
