@@ -489,7 +489,7 @@ class ChiaServer:
                 try:
                     if self.received_message_callback is not None:
                         await self.received_message_callback(connection)
-                    connection.log.info(
+                    connection.log.debug(
                         f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
@@ -604,6 +604,14 @@ class ChiaServer:
             if connection.is_outbound:
                 result.append(connection)
 
+        return result
+
+    def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
+        result = []
+        connections = self.get_full_node_connections()
+        for connection in connections:
+            if connection.is_outbound:
+                result.append(connection)
         return result
 
     def get_full_node_connections(self) -> List[WSChiaConnection]:

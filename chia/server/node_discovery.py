@@ -5,11 +5,12 @@ import traceback
 from pathlib import Path
 from random import Random
 from secrets import randbits
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Set
 
 import aiosqlite
 
 import chia.server.ws_connection as ws
+import dns.asyncresolver
 from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
@@ -23,6 +24,7 @@ from chia.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
+MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
 
 
 class FullNodeDiscovery:
@@ -33,6 +35,7 @@ class FullNodeDiscovery:
         target_outbound_count: int,
         peer_db_path: str,
         introducer_info: Optional[Dict],
+        dns_servers: List[str],
         peer_connect_interval: int,
         log,
     ):
@@ -41,6 +44,7 @@ class FullNodeDiscovery:
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
+        self.dns_servers = dns_servers
         if introducer_info is not None:
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
                 introducer_info["host"],
@@ -59,6 +63,8 @@ class FullNodeDiscovery:
         self.serialize_task: Optional[asyncio.Task] = None
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
+        self.resolver = dns.asyncresolver.Resolver()
+        self.pending_outbound_connections: Set = set()
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -139,10 +145,9 @@ class FullNodeDiscovery:
                 await self.address_manager.connect(peer_info)
 
     def _num_needed_peers(self) -> int:
-        diff = self.target_outbound_count
-        outgoing = self.server.get_outgoing_connections()
-        diff -= len(outgoing)
-        return diff if diff >= 0 else 0
+        target = self.target_outbound_count
+        outgoing = len(self.server.get_full_node_outgoing_connections())
+        return max(0, target - outgoing)
 
     """
     Uses the Poisson distribution to determine the next time
@@ -166,12 +171,60 @@ class FullNodeDiscovery:
 
         await self.server.start_client(self.introducer_info, on_connect)
 
+    async def _query_dns(self, dns_address):
+        try:
+            peers: List[TimestampedPeerInfo] = []
+            result = await self.resolver.resolve(qname=dns_address, lifetime=30)
+            for ip in result:
+                peers.append(
+                    TimestampedPeerInfo(
+                        ip.to_text(),
+                        8444,
+                        0,
+                    )
+                )
+            self.log.info(f"Received {len(peers)} peers from DNS seeder.")
+            if len(peers) == 0:
+                return
+            await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
+        except Exception as e:
+            self.log.error(f"Exception while querying DNS server: {e}")
+
+    async def start_client_async(self, addr: PeerInfo, is_feeler: bool) -> None:
+        try:
+            if self.address_manager is None:
+                return
+            if addr.host in self.pending_outbound_connections:
+                return
+            self.pending_outbound_connections.add(addr.host)
+            client_connected = await self.server.start_client(
+                addr,
+                on_connect=self.server.on_connect,
+                is_feeler=is_feeler,
+            )
+            if self.server.is_duplicate_or_self_connection(addr):
+                # Mark it as a softer attempt, without counting the failures.
+                await self.address_manager.attempt(addr, False)
+            else:
+                if client_connected is True:
+                    await self.address_manager.mark_good(addr)
+                    await self.address_manager.connect(addr)
+                else:
+                    await self.address_manager.attempt(addr, True)
+            self.pending_outbound_connections.remove(addr.host)
+        except Exception as e:
+            if addr.host in self.pending_outbound_connections:
+                self.pending_outbound_connections.remove(addr.host)
+            self.log.error(f"Exception in create outbound connections: {e}")
+            self.log.error(f"Traceback: {traceback.format_exc()}")
+
     async def _connect_to_peers(self, random) -> None:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
-        empty_tables = False
+        retry_introducers = False
+        introducer_attempts: int = 0
+        dns_server_index: int = 0
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
-        first = True
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
 
@@ -182,22 +235,30 @@ class FullNodeDiscovery:
 
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
-                if size == 0 or empty_tables or first:
-                    first = False
+                if size == 0 or retry_introducers:
                     try:
                         await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
                         return None
-                    await self._introducer_client()
-                    # there's some delay between receiving the peers from the
-                    # introducer until they get incorporated to prevent this
-                    # loop for running one more time. Add this delay to ensure
-                    # that once we get peers, we stop contacting the introducer.
-                    try:
-                        await asyncio.sleep(5)
-                    except asyncio.CancelledError:
-                        return None
-                    empty_tables = False
+                    # Run dual between DNS servers and introducers. One time query DNS server,
+                    # next two times query the introducer.
+                    if introducer_attempts % 3 == 0 and len(self.dns_servers) > 0:
+                        dns_address = self.dns_servers[dns_server_index]
+                        dns_server_index = (dns_server_index + 1) % len(self.dns_servers)
+                        await self._query_dns(dns_address)
+                    else:
+                        await self._introducer_client()
+                        # there's some delay between receiving the peers from the
+                        # introducer until they get incorporated to prevent this
+                        # loop for running one more time. Add this delay to ensure
+                        # that once we get peers, we stop contacting the introducer.
+                        try:
+                            await asyncio.sleep(5)
+                        except asyncio.CancelledError:
+                            return None
+
+                    retry_introducers = False
+                    introducer_attempts += 1
                     # keep doubling the introducer delay until we reach 5
                     # minutes
                     if introducer_backoff < 300:
@@ -207,8 +268,8 @@ class FullNodeDiscovery:
                     introducer_backoff = 1
 
                 # Only connect out to one peer per network group (/16 for IPv4).
-                groups = []
-                full_node_connected = self.server.get_full_node_connections()
+                groups = set()
+                full_node_connected = self.server.get_full_node_outgoing_connections()
                 connected = [c.get_peer_info() for c in full_node_connected]
                 connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:
@@ -216,8 +277,7 @@ class FullNodeDiscovery:
                     if peer is None:
                         continue
                     group = peer.get_group()
-                    if group not in groups:
-                        groups.append(group)
+                    groups.add(group)
 
                 # Feeler Connections
                 #
@@ -248,17 +308,17 @@ class FullNodeDiscovery:
                     max_tries = 10
                 elif len(groups) <= 5:
                     max_tries = 25
+                select_peer_interval = max(0.1, len(groups) * 0.25)
                 while not got_peer and not self.is_closed:
-                    sleep_interval = 1 + len(groups) * 0.5
-                    sleep_interval = min(sleep_interval, self.peer_connect_interval)
+                    self.log.debug(f"Address manager query count: {tries}. Query limit: {max_tries}")
                     try:
-                        await asyncio.sleep(sleep_interval)
+                        await asyncio.sleep(select_peer_interval)
                     except asyncio.CancelledError:
                         return None
                     tries += 1
                     if tries > max_tries:
                         addr = None
-                        empty_tables = True
+                        retry_introducers = True
                         break
                     info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
                     if info is None:
@@ -267,7 +327,7 @@ class FullNodeDiscovery:
                         has_collision = True
                     if info is None:
                         if not is_feeler:
-                            empty_tables = True
+                            retry_introducers = True
                         break
                     # Require outbound connections, other than feelers,
                     # to be to distinct network groups.
@@ -283,8 +343,8 @@ class FullNodeDiscovery:
                     if addr in connected:
                         addr = None
                         continue
-                    # only consider very recently tried nodes after 30 failed attempts
-                    if now - info.last_try < 600 and tries < 30:
+                    # attempt a node once per 30 minutes.
+                    if now - info.last_try < 1800:
                         continue
                     if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
                         local_peerinfo = await self.server.get_peer_info()
@@ -292,37 +352,28 @@ class FullNodeDiscovery:
                     if local_peerinfo is not None and addr == local_peerinfo:
                         continue
                     got_peer = True
+                    self.log.debug(f"Addrman selected address: {addr}.")
 
                 disconnect_after_handshake = is_feeler
-                if self._num_needed_peers() == 0:
+                extra_peers_needed = self._num_needed_peers()
+                if extra_peers_needed == 0:
                     disconnect_after_handshake = True
-                    empty_tables = False
-                initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
-                client_connected = False
+                    retry_introducers = False
+                self.log.debug(f"Num peers needed: {extra_peers_needed}")
+                initiate_connection = extra_peers_needed > 0 or has_collision or is_feeler
+                connect_peer_interval = max(0.25, len(groups) * 0.5)
+                if not initiate_connection:
+                    connect_peer_interval += 15
+                connect_peer_interval = min(connect_peer_interval, self.peer_connect_interval)
                 if addr is not None and initiate_connection:
-                    try:
-                        client_connected = await self.server.start_client(
-                            addr,
-                            is_feeler=disconnect_after_handshake,
-                            on_connect=self.server.on_connect,
+                    while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
+                        self.log.debug(
+                            f"Max concurrent outbound connections reached. Retrying in {connect_peer_interval}s."
                         )
-                    except Exception as e:
-                        self.log.error(f"Exception in create outbound connections: {e}")
-                        self.log.error(f"Traceback: {traceback.format_exc()}")
-
-                    if self.server.is_duplicate_or_self_connection(addr):
-                        # Mark it as a softer attempt, without counting the failures.
-                        await self.address_manager.attempt(addr, False)
-                    else:
-                        if client_connected is True:
-                            await self.address_manager.mark_good(addr)
-                            await self.address_manager.connect(addr)
-                        else:
-                            await self.address_manager.attempt(addr, True)
-
-                sleep_interval = 1 + len(groups) * 0.5
-                sleep_interval = min(sleep_interval, self.peer_connect_interval)
-                await asyncio.sleep(sleep_interval)
+                        await asyncio.sleep(connect_peer_interval)
+                    self.log.debug(f"Creating connection task with {addr}.")
+                    asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
+                await asyncio.sleep(connect_peer_interval)
             except Exception as e:
                 self.log.error(f"Exception in create outbound connections: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -408,6 +459,7 @@ class FullNodePeers(FullNodeDiscovery):
         target_outbound_count,
         peer_db_path,
         introducer_info,
+        dns_servers,
         peer_connect_interval,
         log,
     ):
@@ -417,6 +469,7 @@ class FullNodePeers(FullNodeDiscovery):
             target_outbound_count,
             peer_db_path,
             introducer_info,
+            dns_servers,
             peer_connect_interval,
             log,
         )
@@ -575,6 +628,7 @@ class WalletPeers(FullNodeDiscovery):
         target_outbound_count,
         peer_db_path,
         introducer_info,
+        dns_servers,
         peer_connect_interval,
         log,
     ) -> None:
@@ -584,6 +638,7 @@ class WalletPeers(FullNodeDiscovery):
             target_outbound_count,
             peer_db_path,
             introducer_info,
+            dns_servers,
             peer_connect_interval,
             log,
         )

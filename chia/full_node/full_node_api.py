@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import time
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set, Any
+from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -292,7 +292,7 @@ class FullNodeAPI:
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             reject = RejectBlocks(request.start_height, request.end_height)
-            msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
+            msg: Message = make_msg(ProtocolMessageTypes.reject_blocks, reject)
             return msg
         for i in range(request.start_height, request.end_height + 1):
             if not self.full_node.blockchain.contains_height(uint32(i)):
@@ -300,8 +300,8 @@ class FullNodeAPI:
                 msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                 return msg
 
-        blocks: List[Any] = []
         if not request.include_transaction_block:
+            blocks: List[FullBlock] = []
             for i in range(request.start_height, request.end_height + 1):
                 block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
                     self.full_node.blockchain.height_to_hash(uint32(i))
@@ -312,7 +312,12 @@ class FullNodeAPI:
                     return msg
                 block = dataclasses.replace(block, transactions_generator=None)
                 blocks.append(block)
+            msg = make_msg(
+                ProtocolMessageTypes.respond_blocks,
+                full_node_protocol.RespondBlocks(request.start_height, request.end_height, blocks),
+            )
         else:
+            blocks_bytes: List[bytes] = []
             for i in range(request.start_height, request.end_height + 1):
                 block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(
                     self.full_node.blockchain.height_to_hash(uint32(i))
@@ -321,12 +326,18 @@ class FullNodeAPI:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                     return msg
-                blocks.append(block_bytes)
 
-        msg = make_msg(
-            ProtocolMessageTypes.respond_blocks,
-            full_node_protocol.RespondBlocks(request.start_height, request.end_height, blocks),
-        )
+                blocks_bytes.append(block_bytes)
+
+            respond_blocks_manually_streamed: bytes = (
+                bytes(uint32(request.start_height))
+                + bytes(uint32(request.end_height))
+                + len(blocks_bytes).to_bytes(4, "big", signed=False)
+            )
+            for block_bytes in blocks_bytes:
+                respond_blocks_manually_streamed += block_bytes
+            msg = make_msg(ProtocolMessageTypes.respond_blocks, respond_blocks_manually_streamed)
+
         return msg
 
     @api_request
@@ -454,7 +465,7 @@ class FullNodeAPI:
                     )
                     response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
                     if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
-                        self.full_node.log.warning(f"Invalid response for slot {response}")
+                        self.full_node.log.debug(f"Invalid response for slot {response}")
                         return None
                     collected_eos.append(response)
                     if (
@@ -550,10 +561,17 @@ class FullNodeAPI:
             return None
         async with self.full_node.timelord_lock:
             # Already have signage point
-            if (
-                self.full_node.full_node_store.get_signage_point(request.challenge_chain_vdf.output.get_hash())
-                is not None
+
+            if self.full_node.full_node_store.have_newer_signage_point(
+                request.challenge_chain_vdf.challenge,
+                request.index_from_challenge,
+                request.reward_chain_vdf.challenge,
             ):
+                return None
+            existing_sp = self.full_node.full_node_store.get_signage_point(
+                request.challenge_chain_vdf.output.get_hash()
+            )
+            if existing_sp is not None and existing_sp.rc_vdf == request.reward_chain_vdf:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
@@ -583,7 +601,7 @@ class FullNodeAPI:
             if added:
                 await self.full_node.signage_point_post_processing(request, peer, ip_sub_slot)
             else:
-                self.log.info(
+                self.log.debug(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
                     f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
                 )

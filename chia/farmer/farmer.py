@@ -174,7 +174,7 @@ class Farmer:
                 now = time.time()
                 removed_keys: List[bytes32] = []
                 for key, add_time in self.cache_add_time.items():
-                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 2:
+                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
                         self.sps.pop(key, None)
                         self.proofs_of_space.pop(key, None)
                         self.quality_str_to_identifiers.pop(key, None)

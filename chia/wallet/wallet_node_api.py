@@ -122,7 +122,8 @@ class WalletNodeAPI:
         await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
 
     @api_request
-    async def reject_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
+    async def reject_puzzle_solution(self, request: wallet_protocol.RejectPuzzleSolution):
+        self.log.warning(f"Reject puzzle solution: {request}")
         pass
 
     @api_request
@@ -131,4 +132,5 @@ class WalletNodeAPI:
 
     @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
+        self.log.warning(f"Reject header blocks: {request}")
         pass
