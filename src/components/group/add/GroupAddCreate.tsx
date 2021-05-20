@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { useWatch, useFormContext } from "react-hook-form";
 import { Autocomplete, Flex, CardStep, RadioGroup } from '@chia/core';
-import { Grid, FormControl, FormControlLabel, Typography, InputLabel, MenuItem, Radio } from '@material-ui/core';
+import { Grid, FormControl, FormControlLabel, Typography, Radio } from '@material-ui/core';
 import type Group from '../../../types/Group';
 
 export default function GroupAddCreate() {

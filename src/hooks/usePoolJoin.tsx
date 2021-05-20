@@ -27,7 +27,8 @@ export default function usePoolJoin(group: Group) {
         </AlertDialog>,
       );
       return;
-    } if (!isPooling) {
+    }
+    if (!isPooling) {
       await openDialog(
         <AlertDialog>
           <Trans>You are not pooling</Trans>
