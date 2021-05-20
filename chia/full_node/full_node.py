@@ -1790,11 +1790,15 @@ class FullNode:
                         new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
                         break
             if field_vdf == CompressibleVDFField.CC_SP_VDF:
-                assert block.challenge_chain_sp_proof is not None
-                new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
+                if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
+                    assert block.challenge_chain_sp_proof is not None
+                    new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
             if field_vdf == CompressibleVDFField.CC_IP_VDF:
-                new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
-            assert new_block is not None
+                if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
+                    new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+            if new_block is None:
+                self.log.debug("did not replace any proof, vdf does not match")
+                return
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
@@ -1805,7 +1809,7 @@ class FullNode:
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
             return None
-        async with self.blockchain.lock:
+        async with self.blockchain.compact_proof_lock:
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
@@ -1882,7 +1886,7 @@ class FullNode:
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
             return None
-        async with self.blockchain.lock:
+        async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
