@@ -1756,10 +1756,12 @@ class FullNode:
                         new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
                         break
             if field_vdf == CompressibleVDFField.CC_SP_VDF:
-                assert block.challenge_chain_sp_proof is not None
-                new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
+                if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
+                    assert block.challenge_chain_sp_proof is not None
+                    new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
             if field_vdf == CompressibleVDFField.CC_IP_VDF:
-                new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+                if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
+                    new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             assert new_block is not None
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
