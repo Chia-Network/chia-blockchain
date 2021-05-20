@@ -1762,7 +1762,9 @@ class FullNode:
             if field_vdf == CompressibleVDFField.CC_IP_VDF:
                 if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
                     new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
-            assert new_block is not None
+            if new_block is None:
+                self.log.debug("did not replace any proof, vdf does not match")
+                return
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
