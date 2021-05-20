@@ -235,7 +235,7 @@ class FullNodeDiscovery:
 
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
-                if size == 0 or retry_introducers or introducer_attempts == 0:
+                if size == 0 or retry_introducers:
                     try:
                         await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
