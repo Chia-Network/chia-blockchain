@@ -115,9 +115,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         tx = await wallet.generate_signed_transaction(
-            10,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            0,
+            10, await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), 0
         )
         await wallet.push_transaction(tx)
 
@@ -253,9 +251,7 @@ class TestWalletSimulator:
         assert await wallet_0.get_unconfirmed_balance() == funds
 
         tx = await wallet_0.generate_signed_transaction(
-            10,
-            await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            0,
+            10, await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(), 0
         )
 
         await wallet_0.push_transaction(tx)
@@ -358,9 +354,7 @@ class TestWalletSimulator:
         tx_amount = 3200000000000
         tx_fee = 10
         tx = await wallet.generate_signed_transaction(
-            tx_amount,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_fee,
+            tx_amount, await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), tx_fee
         )
 
         fees = tx.spend_bundle.fees()
@@ -431,11 +425,7 @@ class TestWalletSimulator:
         # 1) Generate transaction that is under the limit
         under_limit_tx = None
         try:
-            under_limit_tx = await wallet.generate_signed_transaction(
-                max_sent_amount - 1,
-                ph,
-                0,
-            )
+            under_limit_tx = await wallet.generate_signed_transaction(max_sent_amount - 1, ph, 0)
         except ValueError:
             assert ValueError
 
@@ -444,11 +434,7 @@ class TestWalletSimulator:
         # 2) Generate transaction that is equal to limit
         at_limit_tx = None
         try:
-            at_limit_tx = await wallet.generate_signed_transaction(
-                max_sent_amount,
-                ph,
-                0,
-            )
+            at_limit_tx = await wallet.generate_signed_transaction(max_sent_amount, ph, 0)
         except ValueError:
             assert ValueError
 
@@ -457,11 +443,7 @@ class TestWalletSimulator:
         # 3) Generate transaction that is greater than limit
         above_limit_tx = None
         try:
-            above_limit_tx = await wallet.generate_signed_transaction(
-                max_sent_amount + 1,
-                ph,
-                0,
-            )
+            above_limit_tx = await wallet.generate_signed_transaction(max_sent_amount + 1, ph, 0)
         except ValueError:
             pass
 
@@ -494,9 +476,7 @@ class TestWalletSimulator:
         tx_amount = 3200000000000
         tx_fee = 300000000000
         tx = await wallet.generate_signed_transaction(
-            tx_amount,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_fee,
+            tx_amount, await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), tx_fee
         )
 
         # extract coin_solution from generated spend_bundle
@@ -563,18 +543,25 @@ class TestWalletSimulator:
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
+
+        # send 1000 out of wallet1
         tx = await wallet.generate_signed_transaction(1000, ph2)
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
+
+        # bury first num_blocks, and incorporate transaction
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
         await time_out_assert(10, wallet_2.get_confirmed_balance, 1000)
-
         await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
+        # reorg out the transaction
+        # will the tx be re-issued after the reorg?
         await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(3), uint32(num_blocks + 6), 32 * b"0"))
 
+        #  rename suggestion: pre_reorg_funds? pre_tx_funds? new_wallet1_funds?
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
@@ -589,6 +576,9 @@ class TestWalletSimulator:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
+        # does wallet1 see an increase in their balance?
+        # assert new_funds == funds + 1000
+
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
         tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx.name)
