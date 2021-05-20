@@ -68,13 +68,6 @@
 
   (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a00000000000000000000000000000000)
 
-  (defun remove_zeroes (hex_val)
-    (if (= (strlen hex_val) 33)
-      (substr hex_val 1 33)
-      hex_val
-    )
-  )
-
   (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
     (sha256 (logior GENESIS_CHALLENGE pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
   )
