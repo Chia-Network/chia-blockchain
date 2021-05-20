@@ -112,8 +112,7 @@ class TestDIDWallet:
         coins = await did_wallet_1.select_coins(1)
         coin = coins.copy().pop()
         assert did_wallet_2.did_info.temp_coin == coin
-        newpuz = await did_wallet_2.get_new_puzzle()
-        newpuzhash = newpuz.get_tree_hash()
+        newpuzhash = await did_wallet_2.get_new_inner_hash()
         pubkey = bytes(
             (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
         )
@@ -148,7 +147,7 @@ class TestDIDWallet:
 
         # DIDWallet3 spends the money back to itself
         ph2 = await wallet_1.get_new_puzzlehash()
-        await did_wallet_2.create_spend(ph2)
+        await did_wallet_2.create_exit_spend(ph2)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -224,29 +223,35 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 201)
         coins = await did_wallet_3.select_coins(1)
         coin = coins.pop()
+
+        filename = "test.backup"
+        did_wallet_3.create_backup(filename)
+
+        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node_2.wallet_state_manager, wallet2, filename)
         pubkey = (
-            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
+            await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
-        message_spend_bundle = await did_wallet.create_attestment(coin.name(), ph, pubkey, "test1.attest")
-        message_spend_bundle2 = await did_wallet_2.create_attestment(coin.name(), ph, pubkey, "test2.attest")
+        new_ph = await did_wallet_4.get_new_inner_hash()
+        message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, "test1.attest")
+        message_spend_bundle2 = await did_wallet_2.create_attestment(coin.name(), new_ph, pubkey, "test2.attest")
         message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])
 
         (
             test_info_list,
             test_message_spend_bundle,
-        ) = await did_wallet_3.load_attest_files_for_recovery_spend(["test1.attest", "test2.attest"])
+        ) = await did_wallet_4.load_attest_files_for_recovery_spend(["test1.attest", "test2.attest"])
         assert message_spend_bundle == test_message_spend_bundle
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
-        await did_wallet_3.recovery_spend(coin, ph, test_info_list, pubkey, message_spend_bundle)
+        await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
-        # ends in 899 so it got the 201 back
-        await time_out_assert(15, wallet2.get_confirmed_balance, 15999999999899)
-        await time_out_assert(15, wallet2.get_unconfirmed_balance, 15999999999899)
+
+        await time_out_assert(15, did_wallet_4.get_confirmed_balance, 201)
+        await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 201)
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
 
