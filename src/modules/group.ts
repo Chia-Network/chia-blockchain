@@ -1,6 +1,19 @@
 import type Group from '../types/Group';
 
-export async function createGroup() {}
+export async function createGroup() {};
+
+const mockedDetails = {
+  p2_singleton_puzzle_hash: 'asdfsadfsadfsdfadsfaf',
+  points_found_since_start: 14,
+  points_acknowledged_since_start: 1425,
+  current_points_balance: 5,
+  current_difficulty: 8,
+  pool_info: {
+    pool_name: 'Super Pool',
+    pool_description: 'Join our pool and get rewards like a boss',
+  },
+};
+
 
 type GroupState = {
   groups?: Group[];
@@ -16,6 +29,7 @@ const initialState: GroupState = {
       state: 'FREE',
       balance: 0,
       address: 'xch1rdgndazfzqn6qf0kt4a62k4zq6ny6altk0rfssy4xtavfysvupyq389a57',
+      ...mockedDetails,
     },
     {
       id: '2',
@@ -24,6 +38,7 @@ const initialState: GroupState = {
       state: 'POOLING',
       balance: 0,
       address: 'xch1rdgndazfzqn6qf0kt4a62k4zq6ny6altk0rfssy4xtavfysvupyq389a57',
+      ...mockedDetails,
     },
     {
       id: '3',
@@ -33,6 +48,7 @@ const initialState: GroupState = {
       state: 'ESCAPING',
       balance: 0,
       address: 'xch1rdgndazfzqn6qf0kt4a62k4zq6ny6altk0rfssy4xtavfysvupyq389a57',
+      ...mockedDetails,
     },
   ],
 };
