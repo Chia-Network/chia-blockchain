@@ -454,7 +454,7 @@ class FullNodeAPI:
                     )
                     response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
                     if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
-                        self.full_node.log.warning(f"Invalid response for slot {response}")
+                        self.full_node.log.debug(f"Invalid response for slot {response}")
                         return None
                     collected_eos.append(response)
                     if (
