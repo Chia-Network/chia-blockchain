@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
@@ -6,8 +6,7 @@ import { Button, Typography } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm } from 'react-hook-form';
 import { Flex, Form, Loading } from '@chia/core';
-import { PoolHeaderSource } from '../PoolHeader';
-import PoolAddCreate from './PoolAddCreate';
+import GroupAddCreate from './GroupAddCreate';
 import type { RootState } from '../../../modules/rootReducer';
 
 type JoinPoolFormData = {
@@ -15,7 +14,13 @@ type JoinPoolFormData = {
   pool?: string;
 };
 
-export default function PlotAdd() {
+type Props = {
+  headerTag?: ReactNode;
+}
+
+export default function GroupAdd(props: Props) {
+  const { headerTag: HeaderTag } = props;
+
   const dispatch = useDispatch();
   const history = useHistory();
   const [loading, setLoading] = useState<boolean>(false);
@@ -25,6 +30,7 @@ export default function PlotAdd() {
     shouldUnregister: false,
     defaultValues: {
       self: true,
+      poolUrl: 'test',
     },
   });
 
@@ -49,14 +55,16 @@ export default function PlotAdd() {
       methods={methods}
       onSubmit={handleSubmit}
     >
-      <PoolHeaderSource>
-        <Flex alignItems="center">
-          <ChevronRightIcon color="secondary" />
-          <Trans>
-            Add a Group
-          </Trans>
-        </Flex>
-      </PoolHeaderSource>
+      {HeaderTag && (
+        <HeaderTag>
+          <Flex alignItems="center">
+            <ChevronRightIcon color="secondary" />
+            <Trans>
+              Add a Group
+            </Trans>
+          </Flex>
+        </HeaderTag>
+      )}
       <Flex flexDirection="column" gap={3}>
         {loading ? (
           <Flex flexDirection="column" gap={3} alignItems="center">
@@ -69,7 +77,7 @@ export default function PlotAdd() {
           </Flex>
         ) : (
           <>
-            <PoolAddCreate />
+            <GroupAddCreate />
             <Flex gap={1}>
               <Button color="primary" type="submit" variant="contained">
                 <Trans>

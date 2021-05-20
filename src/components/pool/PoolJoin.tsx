@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import usePoolJoin from '../../hooks/usePoolJoin';
-import type PoolGroup from '../../types/PoolGroup';
+import type Group from '../../types/Group';
 
 type Props = {
-  pool: PoolGroup;
+  group: Group;
   children: (join) => JSX.Element,
 };
 
 export default function PoolJoin(props: Props) {
-  const { pool, children } = props;
+  const { group, children } = props;
 
-  const [join] = usePoolJoin(pool);
+  const [join] = usePoolJoin(group);
 
   return children(join);
 }

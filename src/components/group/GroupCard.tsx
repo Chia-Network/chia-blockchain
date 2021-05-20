@@ -10,12 +10,12 @@ import {
   CardContent,
   Typography,
 } from '@material-ui/core';
-import type PoolGroup from '../../types/PoolGroup';
+import type Group from '../../types/Group';
 import type { RootState } from '../../modules/rootReducer';
-import PoolName from './PoolName';
-import PoolStatus from './PoolStatus';
-import PoolWalletStatus from './PoolWalletStatus';
-import usePoolClaimRewards from '../../hooks/usePoolClaimRewards';
+import GroupName from './GroupName';
+import GroupStatus from './GroupStatus';
+import WalletStatus from '../wallet/WalletStatus';
+import usePoolClaimRewards from '../../hooks/useGroupClaimRewards';
 import usePoolJoin from '../../hooks/usePoolJoin';
 
 const StyledCard = styled(Card)`
@@ -39,21 +39,21 @@ const StyledSyncingFooter = styled(CardContent)`
 `;
 
 type Props = {
-  pool: PoolGroup;
+  group: Group;
 };
 
-export default function PoolCard(props: Props) {
+export default function GroupCard(props: Props) {
   const { 
-    pool,
-    pool: {
+    group,
+    group: {
       self,
       state,
       balance,
     },
   } = props;
 
-  const [claimRewards] = usePoolClaimRewards(pool);
-  const [joinPool] = usePoolJoin(pool);
+  const [claimRewards] = usePoolClaimRewards(group);
+  const [joinPool] = usePoolJoin(group);
 
   const isWalletSyncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
@@ -74,7 +74,7 @@ export default function PoolCard(props: Props) {
     <StyledCard>
       <StyledCardContent>
         <Flex flexDirection="column" gap={4} flexGrow={1}>
-          <PoolName pool={pool} variant="h6" />
+          <GroupName group={group} variant="h6" />
 
           <Flex flexDirection="column" flexGrow={1}>
             <Grid container spacing={1}>
@@ -92,7 +92,7 @@ export default function PoolCard(props: Props) {
                 </Typography>
               </Grid>
               <Grid container xs={8} lg={9} item>
-                <PoolWalletStatus />
+                <WalletStatus />
               </Grid>
               <Grid container xs={4} lg={3} item>
                 <Typography variant="body1" color="textSecondary"> 
@@ -100,7 +100,7 @@ export default function PoolCard(props: Props) {
                 </Typography>
               </Grid>
               <Grid container xs={8} lg={9} item>
-                <PoolStatus pool={pool} />
+                <GroupStatus group={group} />
               </Grid>
             </Grid>
           </Flex>

@@ -13,18 +13,18 @@ import { useSelector } from 'react-redux';
 import { Box, Button, ListItemIcon, MenuItem, IconButton, Grid, Tooltip, Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 import { sumBy } from 'lodash';
-import type PoolGroup from '../../types/PoolGroup';
-import PoolCard from './PoolCard';
-import PoolName from './PoolName';
-import PoolStatus from './PoolStatus';
-import PoolWalletStatus from './PoolWalletStatus';
-import PoolClaimRewards from './PoolClaimRewards';
+import type Group from '../../types/Group';
+import PoolCard from '../group/GroupCard';
+import GroupName from '../group/GroupName';
+import GroupStatus from '../Group/GroupStatus';
+import PoolWalletStatus from '../wallet/WalletStatus';
+import PoolClaimRewards from '../group/GroupClaimRewards';
 import PoolJoin from './PoolJoin';
 import PoolHero from './PoolHero';
 
-const poolsCols = [
+const groupsCols = [
   {
-    field: (pool: PoolGroup) => <PoolName pool={pool} />,
+    field: (group: Group) => <GroupName group={group} />,
     title: <Trans>Pool Name: URL</Trans>,
   },
   {
@@ -32,21 +32,21 @@ const poolsCols = [
     title: <Trans>Wallet Status</Trans>,
   },
   {
-    field: (pool: PoolGroup) => <PoolStatus pool={pool} />,
+    field: (group: Group) => <GroupStatus group={group} />,
     title: <Trans>Pool Status</Trans>,
   },
   {
-    field: (pool: PoolGroup) => <UnitFormat value={pool.balance} />,
+    field: (group: Group) => <UnitFormat value={group.balance} />,
     title: <Trans>Pool Winnings</Trans>,
   },
   {
     title: <Trans>Actions</Trans>,
-    field(pool: PoolGroup) {
+    field(group: Group) {
       return (
         <More>
           {({ onClose }) => (
             <Box>
-              <PoolClaimRewards pool={pool}>
+              <PoolClaimRewards group={group}>
                 {(claimRewards) => (
                   <MenuItem onClick={() => { onClose(); claimRewards(); }}>
                     <ListItemIcon>
@@ -58,14 +58,14 @@ const poolsCols = [
                   </MenuItem>
                 )}
               </PoolClaimRewards>
-              <PoolJoin pool={pool}>
+              <PoolJoin group={group}>
                 {(join) => (
                   <MenuItem onClick={() => { onClose(); join(); }}>
                     <ListItemIcon>
                       <PowerIcon fontSize="small" />
                     </ListItemIcon>
                     <Typography variant="inherit" noWrap>
-                      {pool.self 
+                      {group.self 
                         ? <Trans>Join Pool</Trans>
                         : <Trans>Change Pool</Trans>}
                     </Typography>
@@ -83,14 +83,14 @@ const poolsCols = [
 export default function PoolOverview() {
   const history = useHistory();
   const [showTable, toggleShowTable] = useToggle(false);
-  const pools = useSelector<PoolGroup[] | undefined>((state: RootState) => state.pool_group.pools);
-  const loading = !pools;
+  const groups = useSelector<Group[] | undefined>((state: RootState) => state.group.groups);
+  const loading = !groups;
 
   const totalWinning = useMemo<number>(
-    () => pools && pools.length
-      ? sumBy<PoolGroup>(pools, (item) => item.balance)
+    () => groups && groups.length
+      ? sumBy<Group>(groups, (item) => item.balance)
       : 0, 
-    [pools],
+    [groups],
   );
 
   function handleAddPool() {
@@ -105,7 +105,7 @@ export default function PoolOverview() {
     return null;
   }
 
-  if (!pools) {
+  if (!groups) {
     return (
       <PoolHero />
     );
@@ -147,14 +147,14 @@ export default function PoolOverview() {
         </Flex>
         {showTable ? (
           <Table
-            rows={pools} 
-            cols={poolsCols} 
+            rows={groups} 
+            cols={groupsCols} 
           />
         ) : (
           <Grid spacing={3} alignItems="stretch" container>
-            {pools.map((pool) => (
-              <Grid key={pool.id} xs={12} md={6} item>
-                <PoolCard pool={pool} />
+            {groups.map((group) => (
+              <Grid key={group.id} xs={12} md={6} item>
+                <PoolCard group={group} />
               </Grid>
             ))}
           </Grid>

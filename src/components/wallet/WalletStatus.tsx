@@ -8,7 +8,7 @@ type Props = {
   variant?: string;
 };
 
-export default function PoolWalletStatus(props: Props) {
+export default function WalletStatus(props: Props) {
   const { variant } = props;
 
   const isWalletSyncing = useSelector(
@@ -31,6 +31,6 @@ export default function PoolWalletStatus(props: Props) {
   );
 }
 
-PoolWalletStatus.defaultProps = {
+WalletStatus.defaultProps = {
   variant: 'body1',
 };

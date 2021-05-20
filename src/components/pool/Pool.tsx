@@ -5,15 +5,16 @@ import { useSelector } from 'react-redux';
 import { Flex, Link } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 import PoolOverview from './PoolOverview';
-import PoolAdd from './add/PoolAdd';
+import GroupAdd from '../group/add/GroupAdd';
 import { PoolHeaderTarget }  from './PoolHeader';
 import type { RootState } from '../../modules/rootReducer';
+import { PoolHeaderSource } from './PoolHeader';
 
 export default function Pool() {
   const { path } = useRouteMatch();
 
-  const pools = useSelector((state: RootState) => state.pool_group.pools);
-  const loading = !pools;
+  const groups = useSelector((state: RootState) => state.group.groups);
+  const loading = !groups;
 
   return (
     <LayoutMain 
@@ -33,7 +34,7 @@ export default function Pool() {
             <PoolOverview />
           </Route>
           <Route path={`${path}/add`}>
-            <PoolAdd />
+            <GroupAdd headerTag={PoolHeaderSource} />
           </Route>
         </Switch>
       </Flex>

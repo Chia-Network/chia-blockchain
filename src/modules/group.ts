@@ -1,13 +1,13 @@
-import type PoolGroup from '../types/PoolGroup';
+import type Group from '../types/Group';
 
-export async function createPoolGroup() {}
+export async function createGroup() {}
 
-type PoolGroupState = {
-  pools?: PoolGroup[];
+type GroupState = {
+  groups?: Group[];
 };
 
-const initialState: PoolGroupState = {
-  pools: [
+const initialState: GroupState = {
+  groups: [
     {
       id: '1',
       self: false,
@@ -37,17 +37,17 @@ const initialState: PoolGroupState = {
   ],
 };
 
-export default function poolGroupReducer(
+export default function groupReducer(
   state = { ...initialState },
   action: any,
-): PoolGroupState {
+): GroupState {
   const { queue } = action;
 
   switch (action.type) {
     case 'POOL_GROUP_INIT':
       return {
         ...state,
-        pools: action.pools,
+        groups: action.groups,
       };
     default:
       return state;

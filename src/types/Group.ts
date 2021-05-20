@@ -1,4 +1,4 @@
-type PoolGroup = {
+type Group = {
   id: string;
   self: boolean;
   name: string;
@@ -11,4 +11,4 @@ type PoolGroup = {
   address: string;
 };
 
-export default PoolGroup;
+export default Group;

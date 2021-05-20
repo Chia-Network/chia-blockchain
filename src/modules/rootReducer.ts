@@ -14,7 +14,7 @@ import fullNodeReducer from './fullNode';
 import farmingReducer from './farming';
 import plotControlReducer from './plotterControl';
 import plotQueueReducer from './plotQueue';
-import poolGroupReducer from './poolGroup';
+import groupReducer from './group';
 import progressReducer from './progress';
 import backupReducer from './backup';
 import localStorageReducer from './localStorage';
@@ -35,7 +35,7 @@ const reducers = {
   progress: progressReducer,
   backup_state: backupReducer,
   plot_queue: plotQueueReducer,
-  pool_group: poolGroupReducer,
+  group: groupReducer,
   local_storage: localStorageReducer,
 };
 

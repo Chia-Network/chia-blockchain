@@ -2,12 +2,12 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { AlertDialog, ConfirmDialog, Flex, UnitFormat } from '@chia/core';
-import type PoolGroup from '../types/PoolGroup';
+import type Group from '../types/Group';
 import type { RootState } from '../modules/rootReducer';
 import useOpenDialog from './useOpenDialog';
 
-export default function usePoolClaimRewards(pool: PoolGroup) {
-  const { state, balance, address } = pool;
+export default function useGroupClaimRewards(group: Group) {
+  const { state, balance, address } = group;
 
   const openDialog = useOpenDialog();
 

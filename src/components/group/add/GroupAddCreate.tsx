@@ -1,25 +1,34 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import { Flex, CardStep, Select, RadioGroup } from '@chia/core';
+import { useWatch, useFormContext } from "react-hook-form";
+import { Autocomplete, Flex, CardStep, RadioGroup } from '@chia/core';
 import { Grid, FormControl, FormControlLabel, Typography, InputLabel, MenuItem, Radio } from '@material-ui/core';
-import type PoolGroup from '../../../types/PoolGroup';
+import type Group from '../../../types/Group';
 
-export default function PoolAddCreate() {
-  const pools = useSelector<PoolGroup[] | undefined>((state: RootState) => state.pool_group.pools);
+export default function GroupAddCreate() {
+  const groups = useSelector<Group[] | undefined>((state: RootState) => state.group.groups);
+  const { control, setValue } = useFormContext();
+  const self = useWatch({
+    control,
+    name: 'self',
+  });
 
-  const poolsOptions = useMemo(() => {
-    if (!pools) {
+  const groupsOptions = useMemo(() => {
+    if (!groups) {
       return [];
     }
 
-    return pools
-      .filter(pool => !!pool.poolUrl)
-      .map(pool => ({
-        value: pool.poolUrl,
-        label: pool.poolUrl,
-      }));
-  }, [pools]);
+    return groups
+      .filter((group) => !!group.poolUrl)
+      .map((group) => group.poolUrl);
+  }, [groups]);
+
+  function handleDisableSelfPooling() {
+    if (self) {
+      setValue('self', false);
+    }
+  }
 
   return (
     <CardStep
@@ -59,20 +68,20 @@ export default function PoolAddCreate() {
                     variant="filled"
                     fullWidth
                   >
-                    <InputLabel>
-                      <Trans>Pool URL</Trans>
-                    </InputLabel>
-                    <Select name="poolUrl">
-                      {poolsOptions.map((option) => (
-                        <MenuItem value={option.value} key={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
+                    <Autocomplete
+                      name="poolUrl"
+                      label="Pool URL"
+                      variant="outlined"
+                      options={groupsOptions}
+                      onClick={handleDisableSelfPooling}
+                      onChange={handleDisableSelfPooling}
+                      forcePopupIcon
+                      fullWidth 
+                      freeSolo 
+                    />
                   </FormControl>
                   </Flex>
                 </Flex>
-
               </Flex>
             </RadioGroup>
           </FormControl>

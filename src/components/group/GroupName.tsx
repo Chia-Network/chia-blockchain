@@ -1,16 +1,16 @@
 import { Typography } from '@material-ui/core';
 import React from 'react';
-import type PoolGroup from '../../types//PoolGroup';
+import type Group from '../../types/Group';
 
 type Props = {
-  pool: PoolGroup;
+  group: Group;
   variant?: string;
 };
 
-export default function PoolName(props: Props) {
+export default function GroupName(props: Props) {
   const {
     variant,
-    pool: {
+    group: {
       name,
       poolUrl,
     }
@@ -25,6 +25,6 @@ export default function PoolName(props: Props) {
   );
 }
 
-PoolName.defaultProps = {
+GroupName.defaultProps = {
   variant: 'body1',
 };

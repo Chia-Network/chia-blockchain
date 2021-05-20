@@ -2,15 +2,15 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex, State, StateTypography, TooltipIcon } from '@chia/core';
 import { Typography } from '@material-ui/core';
-import type PoolGroup from '../../types/PoolGroup';
+import type Group from '../../types/Group';
 
 type Props = {
-  pool: PoolGroup;
+  group: Group;
 };
 
-export default function PoolStatus(props: Props) {
+export default function GroupStatus(props: Props) {
   const { 
-    pool: {
+    group: {
       state, 
       self,
     },
