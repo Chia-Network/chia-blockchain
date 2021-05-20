@@ -69,11 +69,6 @@ class HarvesterAPI:
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
 
-        # Refresh plots to see if there are any new ones
-        if start - self.harvester.last_load_time > self.harvester.plot_load_frequency:
-            await self.harvester.refresh_plots()
-            self.harvester.last_load_time = time.time()
-
         loop = asyncio.get_running_loop()
 
         def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[Tuple[bytes32, ProofOfSpace]]:
