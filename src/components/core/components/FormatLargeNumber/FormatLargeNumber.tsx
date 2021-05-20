@@ -10,11 +10,13 @@ type Props = {
 };
 
 // TODO add ability to use it in new settings page
+/*
 const compactConfig = {
   maximumFractionDigits: 1,
   minimumFractionDigits: 1,
   notation: 'compact',
 };
+*/
 
 export default function FormatLargeNumber(props: Props) {
   const { value } = props;
