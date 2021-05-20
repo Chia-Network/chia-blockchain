@@ -562,6 +562,8 @@ class TestWalletSimulator:
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
+        # Waits a few seconds to receive rewards
+        await asyncio.sleep(5)
         tx = await wallet.generate_signed_transaction(1000, ph2)
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
@@ -587,6 +589,7 @@ class TestWalletSimulator:
             await asyncio.sleep(1)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
+        # By this point, the transaction should be resubmitted
         await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
