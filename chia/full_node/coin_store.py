@@ -130,15 +130,16 @@ class CoinStore:
         return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
-        cursor = await self.coin_record_db.execute(
-            "SELECT * from coin_record WHERE spent_index=? and spent=1", (height,)
-        )
+        cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE spent_index=?", (height,))
         rows = await cursor.fetchall()
         await cursor.close()
         coins = []
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            coins.append(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            spent: bool = bool(row[3])
+            if spent:
+                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+                coin_record = CoinRecord(coin, row[1], row[2], spent, row[4], row[8])
+                coins.append(coin_record)
         return coins
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
@@ -202,7 +203,7 @@ class CoinStore:
                 new_record = CoinRecord(
                     coin_record.coin,
                     coin_record.confirmed_block_index,
-                    coin_record.spent_block_index,
+                    uint32(0),
                     False,
                     coin_record.coinbase,
                     coin_record.timestamp,
