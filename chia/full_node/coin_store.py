@@ -135,9 +135,9 @@ class CoinStore:
         await cursor.close()
         coins = []
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             spent: bool = bool(row[3])
             if spent:
+                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
                 coin_record = CoinRecord(coin, row[1], row[2], spent, row[4], row[8])
                 coins.append(coin_record)
         return coins
