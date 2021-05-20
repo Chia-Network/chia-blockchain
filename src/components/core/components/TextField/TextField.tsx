@@ -3,7 +3,7 @@ import { get } from 'lodash';
 import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 import { TextField as MaterialTextField, TextFieldProps } from '@material-ui/core';
 
-type ReactRules<T> = ControllerProps<ReactElement<T>>['rules'] | {
+export type ReactRules<T> = ControllerProps<ReactElement<T>>['rules'] | {
   min?: number | string | {
     value: number,
     message: ReactNode,
