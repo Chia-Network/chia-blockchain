@@ -37,6 +37,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain
+from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.block_record import HeaderBlockRecord
@@ -109,6 +110,7 @@ class WalletNode:
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
+        self.last_new_peak_messages = LRUCache(5)
 
     def get_key_for_fingerprint(self, fingerprint: Optional[int]):
         private_keys = self.keychain.get_all_private_keys()
@@ -194,7 +196,6 @@ class WalletNode:
         self.sync_task = asyncio.create_task(self.sync_job())
         self.logged_in_fingerprint = fingerprint
         self.logged_in = True
-        asyncio.create_task(self.wallet_peers.start())
         return True
 
     def _close(self):
@@ -315,6 +316,7 @@ class WalletNode:
             self.config["peer_connect_interval"],
             self.log,
         )
+        asyncio.create_task(self.wallet_peers.start())
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
@@ -442,6 +444,7 @@ class WalletNode:
                 # Request weight proof
                 # Sync if PoW validates
                 if self.wallet_state_manager.sync_mode:
+                    self.last_new_peak_messages.put(peer, peak)
                     return None
                 weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
                 weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
@@ -501,6 +504,7 @@ class WalletNode:
                 break
             asyncio.create_task(self.check_new_peak())
             await self.sync_event.wait()
+            self.last_new_peak_messages = LRUCache(5)
             self.sync_event.clear()
 
             if self._shut_down is True:
@@ -515,6 +519,8 @@ class WalletNode:
             finally:
                 if self.wallet_state_manager is not None:
                     self.wallet_state_manager.set_sync_mode(False)
+                for peer, peak in self.last_new_peak_messages.cache.items():
+                    asyncio.create_task(self.new_peak_wallet(peak, peer))
             self.log.info("Loop end in sync job")
 
     async def _sync(self) -> None:
