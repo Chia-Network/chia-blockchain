@@ -327,7 +327,6 @@ class FullNodeAPI:
                     msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                     return msg
 
-                self.log.warning(f"Type: {type(block_bytes)}")
                 blocks_bytes.append(block_bytes)
 
             respond_blocks_manually_streamed: bytes = (
