@@ -109,7 +109,7 @@ jobs:
       run: |
           ls ${{ github.workspace }}/build_scripts/final_installer/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/releases/
-          aws s3 cp chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_arm64.deb.checksum s3://download-chia-net/releases/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.checksum s3://download-chia-net/releases/
 
     - name: Clean up on self hosted runner
       run: |
