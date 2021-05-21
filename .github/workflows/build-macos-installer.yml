@@ -135,7 +135,7 @@ jobs:
     - name: Create Checksums
       run: |
           ls
-          sha256sum ${{ github.workspace }}/build_scripts/final_installer/*.dmg
+          shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/*.dmg
 
     - name: Upload to s3
       run: |
