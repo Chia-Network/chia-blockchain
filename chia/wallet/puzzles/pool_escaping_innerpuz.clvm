@@ -1,4 +1,4 @@
-(mod (TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH (singleton_id my_innerpuzhash my_amount parent_innerpuz) spend_type my_puzhash pool_reward_amount pool_reward_height extra_data)
+(mod (TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH (singleton_id my_innerpuzhash my_amount parent_info) spend_type my_puzhash pool_reward_amount pool_reward_height extra_data)
 
   ; TARGET_PUZHASH is commitment to the pool's puzzlehash
   ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
