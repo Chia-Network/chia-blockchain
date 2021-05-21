@@ -274,7 +274,7 @@ class FarmerAPI:
 
     @api_request
     @peer_required
-    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: ws.WSChiaConnection = None):
+    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: ws.WSChiaConnection):
         self.farmer.state_changed(
             "new_farming_info",
             {
@@ -288,6 +288,8 @@ class FarmerAPI:
                 }
             },
         )
-        self.farmer.log.info(f"{request.passed} / {request.total_plots} plots eligible from "
-                             f"{peer.peer_host} {peer.peer_node_id} Proofs: {request.proofs} "
-                             f"Challenge: {request.challenge_hash} Signage Point: {request.sp_hash}")
+        self.farmer.log.info(
+            f"{request.passed} / {request.total_plots} plots eligible from "
+            f"{peer.peer_host} {peer.peer_node_id} Proofs: {request.proofs} "
+            f"Challenge: {request.challenge_hash} Signage Point: {request.sp_hash}"
+        )
