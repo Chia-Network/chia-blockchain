@@ -166,9 +166,9 @@ class CrawlStore:
             if reliability.ignore_till < now and reliability.ban_till < now:
                 add = True
             else:
-                if reliability.ban_till < now:
+                if reliability.ban_till >= now:
                     self.banned_peers += 1
-                elif reliability.ignore_till < now:
+                elif reliability.ignore_till >= now:
                     self.ignored_peers += 1
             record = self.host_to_records[peer_id]
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
