@@ -123,19 +123,19 @@ def test_pool_puzzles():
 
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
     escape_innerpuz = POOL_ESCAPING_MOD.curry(
-        singleton_mod_hash, pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash
+        pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash
     )
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
     committed_innerpuz = POOL_COMMITED_MOD.curry(
-        singleton_mod_hash, pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey
+        pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey
     )
 
     singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
     singleton_amount = 3
     singleton_coin = Coin(genesis_id, singleton_full.get_tree_hash(), singleton_amount)
 
-    # innersol = spend_type, my_puzhash, my_amount, pool_reward_amount, pool_reward_height
-    inner_sol = Program.to([0, committed_innerpuz.get_tree_hash(), singleton_amount, p2_singlton_coin_amount, block_height, "bonus data"])
+    # innersol = spend_type pool_reward_amount pool_reward_height extra_data
+    inner_sol = Program.to([0, p2_singlton_coin_amount, block_height, "bonus data"])
     # full_sol = parent_info, my_amount, inner_solution
     full_sol = Program.to([[genesis_coin.parent_coin_info, genesis_coin.amount], singleton_amount, inner_sol])
     cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
@@ -145,6 +145,5 @@ def test_pool_puzzles():
         bytes32(result.rest().first().rest().first().as_atom())
         == Announcement(p2_singleton_coin_id, bytes.fromhex("80")).name()
     )
-    assert bytes32(result.rest().rest().rest().rest().rest().rest().first().rest().first().as_atom()) == singleton_full.get_tree_hash()
 
-    # result = '((70 0xda4edca4b72cac36d95387bfc82d632834153e9997248caf332eeeecf536452f) (61 0x23a9194df3ea82eb79f966f295564635386ad56d74e0ce3457e9829176202123) (62 0x14a2dbf5a81b74727ab60ab590c634c7191970d9b85332e667a72fa1818cda87) (51 0x00d34db33f 0x77359400) (73 3) (72 0xdfad1c96ad9da9bfcae9328c16f5ddc5f2ae7fa960772432c22f87d9138d61f8) (51 0xdfad1c96ad9da9bfcae9328c16f5ddc5f2ae7fa960772432c22f87d9138d61f8 3))'  # noqa
+    # result = '((70 0x90b2708399fadb0f35aaf0d7a0973045214180ce45d6968a5cdaba749dbf0ca6) (61 0x93e1b4675d94b6edf31bcfdca9bb2ce3c3da28715fe628b577c48a787dc3e440) (62 0x881b7255ced9576bd8782b6efec2ec9ce46b8b08500125092a69645c754d09cb) (51 0x00d34db33f 0x77359400) (51 0xa4878510fee591565037bf60c38e58445d1d451a7374d8d7f44db2c8a3107806 3))'  # noqa

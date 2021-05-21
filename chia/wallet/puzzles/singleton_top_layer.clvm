@@ -127,11 +127,11 @@
     )
   )
 
-  (defun check_id_and_check_outputs (MOD_HASH MOD_HASH_HASH GENESIS_ID parent_info innerpuzhash my_amount outputs)
-    (c (check_my_amount_and_ID MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_info my_amount) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID outputs 0 ()))
+  (defun check_id_and_check_outputs (MOD_HASH MOD_HASH_HASH GENESIS_ID parent_info innerpuzhash my_amount INNERPUZ inner_solution)
+    (c (check_my_amount_and_ID MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_info my_amount) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (a INNERPUZ (c (list GENESIS_ID my_innerpuzhash my_amount (if (r (r parent_info)) (f (r (r parent_info))) 0)) inner_solution)) 0 ()))
   )
 
   ;main
-  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount (a INNERPUZ (c (list GENESIS_ID (sha256tree1 INNERPUZ) (if (r (r parent_info)) (f (r (r parent_info))) 0)) inner_solution)))
+  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount INNERPUZ inner_solution)
 
 )
