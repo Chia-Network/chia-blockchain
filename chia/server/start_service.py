@@ -15,7 +15,7 @@ except ImportError:
 from chia.rpc.rpc_server import start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.server.upnp import upnp
+from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
@@ -108,6 +108,7 @@ class Service:
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
         self._reconnect_tasks: List[asyncio.Task] = []
+        self.upnp: Optional[UPnP] = None
 
     async def start(self, **kwargs) -> None:
         # we include `kwargs` as a hack for the wallet, which for some
@@ -127,7 +128,10 @@ class Service:
         await self._node._start(**kwargs)
 
         for port in self._upnp_ports:
-            upnp.remap(port)
+            if self.upnp is None:
+                self.upnp = UPnP()
+
+            self.upnp.remap(port)
 
         await self._server.start_server(self._on_connect_callback)
 
@@ -190,7 +194,8 @@ class Service:
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 
             for port in self._upnp_ports:
-                upnp.release(port)
+                if self.upnp is not None:
+                    self.upnp.release(port)
 
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()

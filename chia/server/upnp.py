@@ -60,6 +60,3 @@ class UPnP:
 
     def __del__(self):
         self.shutdown()
-
-
-upnp: UPnP = UPnP()
