@@ -132,22 +132,17 @@ jobs:
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
         aws-region: us-west-2
 
+    - name: Create Checksums
+      run: |
+          ls
+          sha256sum ${{ github.workspace }}/build_scripts/final_installer/*.dmg
+
     - name: Upload to s3
       run: |
           aws s3 cp /Users/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/builds/
 
-    - name: Install mktorrent
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-          sudo apt-get install -y mktorrent
-
-    - name: Create Torrent Files
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-          mktorrent /Users/runner/work/chia-blockchain/chia-blockchain/*.dmg
 
     - name: Upload Release Files
       if: startsWith(github.ref, 'refs/tags/')
       run: |
           aws s3 cp /Users/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/test-installs/
-          aws s3 cp /Users/runner/work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/test-installs/
