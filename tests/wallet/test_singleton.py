@@ -92,7 +92,7 @@ def test_p2_singleton():
     expected_announcement = Announcement(singleton_full.get_tree_hash(), p2_singleton_coin_id).name()
 
     p2_singleton_full = P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), genesis_id
+        singleton_mod_hash, genesis_id
     )
     cost, result = p2_singleton_full.run_with_cost(
         INFINITE_COST, Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
@@ -123,11 +123,11 @@ def test_pool_puzzles():
 
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
     escape_innerpuz = POOL_ESCAPING_MOD.curry(
-        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash
+        singleton_mod_hash, pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash
     )
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
     committed_innerpuz = POOL_COMMITED_MOD.curry(
-        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey
+        singleton_mod_hash, pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey
     )
 
     singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
@@ -135,7 +135,7 @@ def test_pool_puzzles():
     singleton_coin = Coin(genesis_id, singleton_full.get_tree_hash(), singleton_amount)
 
     # innersol = spend_type, my_puzhash, my_amount, pool_reward_amount, pool_reward_height
-    inner_sol = Program.to([0, committed_innerpuz.get_tree_hash(), singleton_amount, p2_singlton_coin_amount, block_height])
+    inner_sol = Program.to([0, committed_innerpuz.get_tree_hash(), singleton_amount, p2_singlton_coin_amount, block_height, "bonus data"])
     # full_sol = parent_info, my_amount, inner_solution
     full_sol = Program.to([[genesis_coin.parent_coin_info, genesis_coin.amount], singleton_amount, inner_sol])
     cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
