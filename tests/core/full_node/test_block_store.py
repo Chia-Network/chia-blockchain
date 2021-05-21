@@ -65,7 +65,7 @@ class TestBlockStore:
 
             # Get blocks
             block_record_records = await store.get_block_records_in_range(0, 0xFFFFFFFF)
-            assert len(block_record_records[0]) == len(blocks)
+            assert len(block_record_records) == len(blocks)
 
             # Peak is correct
             assert block_record_records[1] == blocks[-1].header_hash
