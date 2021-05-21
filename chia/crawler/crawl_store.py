@@ -174,7 +174,7 @@ class CrawlStore:
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
                 add = True
             if add:
-                if now - record.last_try_timestamp >= 1000 or now - record.connected_timestamp >= 1000:
+                if now - record.last_try_timestamp >= 1000 and now - record.connected_timestamp >= 1000:
                     records.append(record)
         batch_size = max(min_batch_size, len(records) // 10)
         batch_size = min(batch_size, max_batch_size)
