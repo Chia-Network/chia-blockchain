@@ -126,22 +126,26 @@ class CrawlStore:
 
     async def peer_failed_to_connect(self, peer: PeerRecord):
         now = int(time.time())
+        age_timestamp = max(peer.last_try_timestamp, peer.connected_timestamp)
+        if age_timestamp == 0:
+            age_timestamp = now - 1000
         replaced = dataclasses.replace(peer, try_count=peer.try_count + 1, last_try_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
             reliability = PeerReliability(peer.peer_id)
-        reliability.update(False, now - peer.last_try_timestamp)
+        reliability.update(False, now - age_timestamp)
         await self.add_peer(replaced, reliability)
 
     async def peer_connected(self, peer: PeerRecord):
         now = int(time.time())
-        if now - peer.connected_timestamp < 60:
-            return
+        age_timestamp = max(peer.last_try_timestamp, peer.connected_timestamp)
+        if age_timestamp == 0:
+            age_timestamp = now - 1000
         replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
             reliability = PeerReliability(peer.peer_id)
-        reliability.update(True, now - peer.last_try_timestamp)
+        reliability.update(True, now - age_timestamp)
         await self.add_peer(replaced, reliability)
 
     async def peer_connected_hostname(self, host: str, connected: bool = True):
