@@ -81,7 +81,7 @@
   (defun check_launcher (genesis_parent GENESIS_ID genesis_amount my_fullpuzhash my_amount)
     (if (= GENESIS_ID (sha256 genesis_parent launcher_puzhash genesis_amount))
       (list ASSERT_MY_COIN_ID (sha256 GENESIS_ID my_fullpuzhash my_amount))
-      (x GENESIS_ID (sha256 genesis_parent launcher_puzhash genesis_amount))
+      (x)
     )
   )
 

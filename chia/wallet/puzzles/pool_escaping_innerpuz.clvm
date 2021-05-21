@@ -1,4 +1,4 @@
-(mod (SINGLETON_MOD_HASH SINGLETON_MOD_HASH_HASH TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH (singleton_id parent_innerpuz) spend_type my_puzhash my_amount pool_reward_amount pool_reward_height)
+(mod (SINGLETON_MOD_HASH SINGLETON_MOD_HASH_HASH TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH (singleton_id parent_innerpuz) spend_type my_puzhash my_amount pool_reward_amount pool_reward_height extra_data)
 
   ; TARGET_PUZHASH is commitment to the pool's puzzlehash
   ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
@@ -79,7 +79,7 @@
   ; main
 
   (if spend_type
-    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT) (list CREATE_COIN my_puzhash my_amount) (list AGG_SIG_ME OWNER_PUBKEY (concat my_puzhash my_amount)))
+    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT) (list CREATE_COIN my_puzhash my_amount) (list AGG_SIG_ME OWNER_PUBKEY (sha256tree_esc (list my_puzhash my_amount extra_data) ())))
     (absorb_pool_reward SINGLETON_MOD_HASH SINGLETON_MOD_HASH_HASH singleton_id TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount))
   )
 
