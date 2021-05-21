@@ -1,0 +1,98 @@
+(mod (MOD_HASH GENESIS_ID INNERPUZ parent_info my_amount inner_solution)
+
+	  (include condition_codes.clvm)	
+
+    ; "assert" is a macro that wraps repeated instances of "if"
+    ; usage: (assert A0 A1 ... An R)
+    ; all of A0, A1, ... An must evaluate to non-null, or an exception is raised
+    ; return the value of R (if we get that far)
+
+    (defmacro assert items
+        (if (r items)
+            (list if (f items) (c assert (r items)) (q . (x)))
+            (f items)
+        )
+    )
+
+    ;; boolean and macro
+    ;; This lets you write something like (if (and COND1 COND2 COND3) (do-something) (do-something-else))
+    (defmacro and ARGS
+        (if ARGS
+            (qq (if (unquote (f ARGS))
+                (unquote (c and (r ARGS)))
+                ()
+                ))
+            1)
+    )
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  (defun create_fullpuzhash (MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
+		;; this is a simplifying hack that obviates the need to import all the curry magic stuff
+		;; it's just for testing
+		(concat "WRAPPED-" inner_puzzle_hash)
+  )
+
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  (defun-inline value_for_CREATE_COIN (condition)
+		(f (r (r condition)))
+  )
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  (defun-inline is_creating_odd_coin (condition)
+		(and (= (f condition) CREATE_COIN) (logand (value_for_CREATE_COIN condition) 1))
+  )
+
+	;; take a boolean and a non-empty list of conditions
+	;; strip off the first condition if a boolean is set
+	;; this is used to remove `(CREATE_COIN xxx -113)`
+	;; pretty sneaky, eh?
+	(defun-inline strip_first_condition_if (boolean condition_list)
+		(if boolean
+			(r condition_list)
+			condition_list
+		)
+	)
+
+	(defun-inline morph_condition (condition MOD_HASH MOD_HASH_HASH GENESIS_ID)
+		(list (f condition) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r condition))) (f (r (r condition))))
+	)
+
+
+  ; Assert exactly one output with odd value exists - ignore it if value is -113
+
+	;; this function iterates over the output conditions from the inner puzzle & solution
+	;; and both checks that exactly one unique singleton child is created (with odd valued output),
+	;; and wraps the inner puzzle with this same singleton wrapper puzzle
+	;;
+	;; The special case where the output value is -113 means a child singleton is intentionally
+	;; *NOT* being created, thus forever ending this singleton's existence
+
+  (defun check_and_morph_conditions_for_singleton (MOD_HASH MOD_HASH_HASH GENESIS_ID conditions odd_output_found)
+    (if conditions
+			  (if (is_creating_odd_coin (f conditions))
+				  	(if odd_output_found
+					      (x)  ;; multiple odd outputs
+						  	(strip_first_condition_if
+							      (= (value_for_CREATE_COIN (f conditions)) -113)
+							      (c (morph_condition (f conditions) MOD_HASH MOD_HASH_HASH GENESIS_ID)
+										   (check_and_morph_conditions_for_singleton MOD_HASH MOD_HASH_HASH GENESIS_ID (r conditions) 1)))
+ 						)
+						(c (f conditions) (check_and_morph_conditions_for_singleton MOD_HASH MOD_HASH_HASH GENESIS_ID (r conditions) odd_output_found))
+    		 )
+	       (if (odd_output_found)
+	           0
+	           (x)  ;; no odd output found
+	       )
+	     )
+	)
+
+	(check_and_morph_conditions_for_singleton MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID inner_solution 0)
+)
+
+
+;; (mod (MOD_HASH GENESIS_ID INNERPUZ parent_info my_amount inner_solution)
+;;
+;; brun -y main.sym '(a (q 2 20 (c 2 (c 5 (c (sha256 (q . 1) 5) (c 11 (c -65 (q ()))))))) (c (q (51 (a (i (a 18 (c 2 (c 79 ()))) (q 2 (i 95 (q 8) (q 2 22 (c 2 (c (= (a 30 (c 2 (c 79 ()))) (q . -113)) (c (c (a 26 (c 2 (c 79 (c 5 (c 11 (c 23 ())))))) (a 20 (c 2 (c 5 (c 11 (c 23 (c 111 (q 1)))))))) ()))))) 1) (q 4 79 (a 20 (c 2 (c 5 (c 11 (c 23 (c 111 (c 95 ()))))))))) 1) 14 (q . "WRAPPED-") 47) ((a (i (= 9 8) (q 2 (i (logand (a 30 (c 2 (c 5 ()))) (q . 1)) (q 1 . 1) ()) 1) ()) 1) 4 9 (c (a 28 (c 2 (c 11 (c 23 (c 47 (c 21 ())))))) (c 45 ()))) (a (i 5 (q . 27) (q . 11)) 1) . 45) 1))'
+;; '(MOD_HASH GENESIS_ID INNERPUZ 0 0 ((51 FOO 1) (51 BAR 10) (52 BAZ 1)))' 
+;;
