@@ -1,6 +1,6 @@
 (mod (MOD_HASH GENESIS_ID INNERPUZ parent_info my_amount inner_solution)
 
-	  (include condition_codes.clvm)	
+    (include condition_codes.clvm)
 
     ; "assert" is a macro that wraps repeated instances of "if"
     ; usage: (assert A0 A1 ... An R)
@@ -27,67 +27,83 @@
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   (defun create_fullpuzhash (MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
-		;; this is a simplifying hack that obviates the need to import all the curry magic stuff
-		;; it's just for testing
-		(concat "WRAPPED-" inner_puzzle_hash)
+    ;; this is a simplifying hack that obviates the need to import all the curry magic stuff
+    ;; it's just for testing
+    (concat "WRAPPED-" inner_puzzle_hash)
   )
 
 
-  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
-  (defun-inline value_for_CREATE_COIN (condition)
-		(f (r (r condition)))
+  ;; take a boolean and a non-empty list of conditions
+  ;; strip off the first condition if a boolean is set
+  ;; this is used to remove `(CREATE_COIN xxx -113)`
+  ;; pretty sneaky, eh?
+  (defun-inline strip_first_condition_if (boolean condition_list)
+    (if boolean
+      (r condition_list)
+      condition_list
+    )
   )
 
-  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
-  (defun-inline is_creating_odd_coin (condition)
-		(and (= (f condition) CREATE_COIN) (logand (value_for_CREATE_COIN condition) 1))
+  (defun-inline morph_condition (condition MOD_HASH MOD_HASH_HASH GENESIS_ID)
+    (list (f condition) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r condition))) (f (r (r condition))))
   )
 
-	;; take a boolean and a non-empty list of conditions
-	;; strip off the first condition if a boolean is set
-	;; this is used to remove `(CREATE_COIN xxx -113)`
-	;; pretty sneaky, eh?
-	(defun-inline strip_first_condition_if (boolean condition_list)
-		(if boolean
-			(r condition_list)
-			condition_list
-		)
-	)
+  ;; return the value of the coin created if this is a `CREATE_COIN` condition, or 0 otherwise
+  (defun-inline created_coin_value_or_0 (condition)
+    (if (= (f condition) CREATE_COIN)
+        (f (r (r condition)))
+        0
+    )
+  )
 
-	(defun-inline morph_condition (condition MOD_HASH MOD_HASH_HASH GENESIS_ID)
-		(list (f condition) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r condition))) (f (r (r condition))))
-	)
+
+  ;;
+  (defun-inline odd_cons_m113 (output_amount)
+    (c
+      (= (logand output_amount 1) 1)
+      (= output_amount -113)
+    )
+  )
 
 
   ; Assert exactly one output with odd value exists - ignore it if value is -113
 
-	;; this function iterates over the output conditions from the inner puzzle & solution
-	;; and both checks that exactly one unique singleton child is created (with odd valued output),
-	;; and wraps the inner puzzle with this same singleton wrapper puzzle
-	;;
-	;; The special case where the output value is -113 means a child singleton is intentionally
-	;; *NOT* being created, thus forever ending this singleton's existence
+  ;; this function iterates over the output conditions from the inner puzzle & solution
+  ;; and both checks that exactly one unique singleton child is created (with odd valued output),
+  ;; and wraps the inner puzzle with this same singleton wrapper puzzle
+  ;;
+  ;; The special case where the output value is -113 means a child singleton is intentionally
+  ;; *NOT* being created, thus forever ending this singleton's existence
 
   (defun check_and_morph_conditions_for_singleton (MOD_HASH MOD_HASH_HASH GENESIS_ID conditions odd_output_found)
     (if conditions
-			  (if (is_creating_odd_coin (f conditions))
-				  	(if odd_output_found
-					      (x)  ;; multiple odd outputs
-						  	(strip_first_condition_if
-							      (= (value_for_CREATE_COIN (f conditions)) -113)
-							      (c (morph_condition (f conditions) MOD_HASH MOD_HASH_HASH GENESIS_ID)
-										   (check_and_morph_conditions_for_singleton MOD_HASH MOD_HASH_HASH GENESIS_ID (r conditions) 1)))
- 						)
-						(c (f conditions) (check_and_morph_conditions_for_singleton MOD_HASH MOD_HASH_HASH GENESIS_ID (r conditions) odd_output_found))
-    		 )
-	       (if (odd_output_found)
-	           0
-	           (x)  ;; no odd output found
-	       )
-	     )
-	)
+        (morph_next_condition MOD_HASH MOD_HASH_HASH GENESIS_ID conditions odd_output_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
+          (if (odd_output_found)
+              0
+              (x)  ;; no odd output found
+          )
+        )
+   )
 
-	(check_and_morph_conditions_for_singleton MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID inner_solution 0)
+
+   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `output_odd` and `output_m113`
+   ;; precalculated
+   (defun morph_next_condition (MOD_HASH MOD_HASH_HASH GENESIS_ID conditions odd_output_found (output_odd . output_m113))
+       (assert
+          (not (all output_odd odd_output_found))
+          (strip_first_condition_if
+             output_m113
+             (c (if output_odd
+                    (morph_condition (f conditions) MOD_HASH MOD_HASH_HASH GENESIS_ID)
+                    (f conditions)
+                )
+                (check_and_morph_conditions_for_singleton MOD_HASH MOD_HASH_HASH GENESIS_ID (r conditions) (any output_odd odd_output_found))
+             )
+          )
+      )
+   )
+
+  (check_and_morph_conditions_for_singleton MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID inner_solution 0)
 )
 
 
