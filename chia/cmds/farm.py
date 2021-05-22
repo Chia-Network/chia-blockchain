@@ -47,11 +47,17 @@ def farm_cmd() -> None:
     default=None,
     show_default=True,
 )
-def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
+@click.option(
+    "-j",
+    "--json",
+    help="Print summary in JSON format",
+    is_flag=True,
+)
+def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int, json: bool) -> None:
     from .farm_funcs import summary
     import asyncio
 
-    asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
+    asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port, json))
 
 
 @farm_cmd.command("challenges", short_help="Show the latest challenges")
