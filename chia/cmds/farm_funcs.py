@@ -187,63 +187,70 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
 
-    print("Farming status: ", end="")
+    summary = {}
+
     if blockchain_state is None:
-        print("Not available")
+        farming_status = "Not available"
     elif blockchain_state["sync"]["sync_mode"]:
-        print("Syncing")
+        farming_status = "Syncing"
     elif not blockchain_state["sync"]["synced"]:
-        print("Not synced or not connected to peers")
+        farming_status = "Not synced or not connected to peers"
     elif not farmer_running:
-        print("Not running")
+        farming_status = "Not running"
     else:
-        print("Farming")
+        farming_status = "Farming"
+
+    summary["Farming status"] = farming_status
 
     if amounts is not None:
-        print(f"Total chia farmed: {amounts['farmed_amount'] / units['chia']}")
-        print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
-        print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
-        print(f"Last height farmed: {amounts['last_height_farmed']}")
+        summary["Total chia farmed"] = amounts['farmed_amount'] / units['chia']
+        summary["User transaction fees"] = amounts['fee_amount'] / units['chia']
+        summary["Block rewards"] = (amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']
+        summary["Last height farmed"] = amounts['last_height_farmed']
     else:
-        print("Total chia farmed: Unknown")
-        print("User transaction fees: Unknown")
-        print("Block rewards: Unknown")
-        print("Last height farmed: Unknown")
+        summary["Total chia farmed"] = "Unknown"
+        summary["User transaction fees"] = "Unknown"
+        summary["Block rewards"] = "Unknown"
+        summary["Last height farmed"] = "Unknown"
 
-    total_plot_size = 0
     if plots is not None:
+        summary["Plot count"] = len(plots['plots'])
+
         total_plot_size = sum(map(lambda x: x["file_size"], plots["plots"]))
-
-        print(f"Plot count: {len(plots['plots'])}")
-
-        print("Total size of plots: ", end="")
         plots_space_human_readable = total_plot_size / 1024 ** 3
         if plots_space_human_readable >= 1024 ** 2:
             plots_space_human_readable = plots_space_human_readable / (1024 ** 2)
-            print(f"{plots_space_human_readable:.3f} PiB")
+            plots_total_size = f"{plots_space_human_readable:.3f} PiB"
         elif plots_space_human_readable >= 1024:
             plots_space_human_readable = plots_space_human_readable / 1024
-            print(f"{plots_space_human_readable:.3f} TiB")
+            plots_total_size = f"{plots_space_human_readable:.3f} TiB"
         else:
-            print(f"{plots_space_human_readable:.3f} GiB")
+            plots_total_size = f"{plots_space_human_readable:.3f} GiB"
+
+        summary["Total size of plots"] = plots_total_size
     else:
-        print("Plot count: Unknown")
-        print("Total size of plots: Unknown")
+        total_plot_size = 0
+        summary["Plot count"] = "Unknown"
+        summary["Total size of plots"] = "Unknown"
 
     if blockchain_state is not None:
-        print("Estimated network space: ", end="")
         network_space_human_readable = blockchain_state["space"] / 1024 ** 4
         if network_space_human_readable >= 1024:
             network_space_human_readable = network_space_human_readable / 1024
-            print(f"{network_space_human_readable:.3f} PiB")
+            estimated_network_space = f"{network_space_human_readable:.3f} PiB"
         else:
-            print(f"{network_space_human_readable:.3f} TiB")
+            estimated_network_space = f"{network_space_human_readable:.3f} TiB"
+        summary["Estimated network space"] = estimated_network_space
     else:
-        print("Estimated network space: Unknown")
+        summary["Estimated network space"] = "Unknown"
 
-    minutes = -1
+    minutes_to_win = -1
     if blockchain_state is not None and plots is not None:
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
-        minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
-    print("Expected time to win: " + format_minutes(minutes))
-    print("Note: log into your key using 'chia wallet show' to see rewards for each key")
+        minutes_to_win = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
+
+    summary["Expected time to win"] = format_minutes(minutes_to_win)
+    summary["Note"] = "log into your key using 'chia wallet show' to see rewards for each key"
+
+    for key, value in summary.items():
+        print(f"{key}: {value}")
