@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Optional
-
 import aiohttp
+import json
+from typing import Any, Dict, List, Optional
 
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
@@ -181,7 +181,9 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
         )
 
 
-async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
+async def summary(
+        rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int, json_format: bool
+) -> None:
     amounts = await get_wallets_stats(wallet_rpc_port)
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
@@ -252,5 +254,8 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     summary["Expected time to win"] = format_minutes(minutes_to_win)
     summary["Note"] = "log into your key using 'chia wallet show' to see rewards for each key"
 
-    for key, value in summary.items():
-        print(f"{key}: {value}")
+    if json_format:
+        print(json.dumps(summary))
+    else:
+        for key, value in summary.items():
+            print(f"{key}: {value}")
