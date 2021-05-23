@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import math
 import random
+import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
@@ -210,6 +211,7 @@ class WeightProofHandlerV2:
         """
         Creates a weight proof object
         """
+        start = time.time()
         assert self.blockchain is not None
         sub_epoch_segments: List[SubEpochChallengeSegmentV2] = []
         tip_rec = self.blockchain.try_block_record(tip)
@@ -274,7 +276,7 @@ class WeightProofHandlerV2:
                 log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block
-        log.debug(f"sub_epochs: {len(sub_epoch_data)}")
+        log.info(f"time to create proof: {time.time() - start}")
         return WeightProofV2(sub_epoch_data, sub_epoch_segments, recent_chain)
 
     async def get_last_l_weight(self, summary_heights, peak):
@@ -305,7 +307,7 @@ class WeightProofHandlerV2:
                 min_height = ses_height - 1
                 break
         log.debug(f"start {min_height} end {tip_height}")
-        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
+        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height,tx_filter=False)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0
         curr_height = tip_height
@@ -402,7 +404,7 @@ class WeightProofHandlerV2:
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
         header_blocks = await self.blockchain.get_header_blocks_in_range(
-            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
+            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS,tx_filter=False
         )
         curr: Optional[HeaderBlock] = header_blocks[se_start.header_hash]
         height = se_start.height
