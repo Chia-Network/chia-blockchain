@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-17 17:54\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "Felszeretnéd fedezni a Chia rendszerét bővebben? Csekkold a <0> Chia Explorert</0> amit egy nyílt forráskóddal foglalkozó fejlesztő készített."
+msgstr "Fel szeretnéd fedezni a Chia rendszerét bővebben? Nézd meg a <0> Chia Explorert</0> amit egy nyílt forráskóddal foglalkozó fejlesztő készített."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,11 +28,11 @@ msgstr "Felszeretnéd fedezni a Chia rendszerét bővebben? Csekkold a <0> Chia 
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "128 vödör az ajánlott"
+msgstr "Az ajánlott vödrök száma 128"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "A betakarító egy szolgáltatás ahol a parcellák valójában tárolásra kerülnek. A gazdász és a betakarító kommunikációjából kivehető egy teljes rész, hogy látható legyen miként is áll a lánc. Alább láthatód azokat a betakarítókat akik a hálózatodhoz vannak csatlakozva. Tuddj meg többet"
+msgstr "A betakarító egy szolgáltatás ahol a parcellák valójában tárolásra kerülnek. A gazdász és a betakarító kommunikációjából kivehető egy teljes rész, hogy látható legyen miként is áll a lánc. Alább láthatód azokat a betakarítókat akik a hálózatodhoz vannak csatlakozva. Tudj meg többet"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Az aktuális érme mennyiség"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Biztos vagy benne, hogy törlöd ezt a parcellát? A törölt parcella nem visszaállítható."
 
@@ -129,7 +129,7 @@ msgstr "Biztos megszakítod?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Biztos vagy benne, hogy kilépsz? Az ültetés és a gyűjtés meg fog állni."
+msgstr "Biztos vagy benne, hogy kilépsz? Az ültetés és a betakarítás meg fog állni."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -137,7 +137,7 @@ msgstr "Biztos vagy benne, hogy kilépsz? Az ültetés és a gyűjtés meg fog �
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "Biztos vagy benne, hogy használni szeretnéd k={plotSize}?"
+msgstr "Biztos vagy benne, hogy használni szeretnéd a k={plotSize}-t?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -202,7 +202,7 @@ msgstr "Blokk hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "A {headerHash} hash-t tartalmazó blokk nem létezik."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Blokkok"
 
@@ -218,7 +218,7 @@ msgstr "Tallózás"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr "De te jelenleg farmolsz <0/>"
+msgstr "De te jelenleg betakarítasz <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -236,7 +236,7 @@ msgstr "CC Tárca"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr "Biztonsági mentés elérhető a mnemonic seed-del"
+msgstr "Biztonsági mentés elérhető a mnemonic maggal"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Csatlakozás másokhoz"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Csatlakozva"
 
@@ -359,7 +359,7 @@ msgstr "Csatlakozva"
 msgid "Connecting to wallet"
 msgstr "Csatlakozás a tárcához"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Kapcsolat állapota"
 
@@ -444,7 +444,7 @@ msgstr "Mentés létrehozása"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr "Új titkos kulcs készítése"
+msgstr "Új privát kulcs készítése"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
@@ -506,15 +506,15 @@ msgstr "Késleltetés"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:64
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Törlés"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Parcella törlése"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Fejlesztői eszközök"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Bonyolultság"
 
@@ -613,11 +613,11 @@ msgstr "Hiba: A chia nem küldhető színes címre. Kérjük, adjon meg másik c
 msgid "Estimated Time to Win"
 msgstr "Becsült idő a győzelemre"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Becsült hálózati kapacitás"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "A hálózat becsült összes lemezterületének összege"
 
@@ -722,8 +722,8 @@ msgstr "Fájlnév"
 msgid "Final folder location"
 msgstr "Végleges mappa helye"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Befejezve"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Gyakran Ismételt Kérdések"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Teljes csomópont"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Teljes csomópont állapota"
 
@@ -760,7 +760,7 @@ msgstr "A HD vagy a hierarchikus determinisztikus kulcsok egyfajta nyilvános ku
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Fejléc Hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Fejléc Hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Magasság"
@@ -815,7 +815,7 @@ msgstr "A Wallet importálása a Mnemonicsból"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importálás a memonikából (24 szó)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "Folyamatban"
 
@@ -869,7 +869,7 @@ msgstr "KiB Feltöltés/Letöltés"
 msgid "Last Attempted Proof"
 msgstr "Utoljára megkísérelt bizonyítás"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "Last Height Farmed"
 msgstr "Utolsó kitermelt blokk"
 
@@ -953,7 +953,7 @@ msgstr "A több memória kissé növeli a sebességet"
 msgid "My Pubkey"
 msgstr "Publikus kulcsom"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Hálózat neve"
 
@@ -993,7 +993,7 @@ msgstr "Nem"
 msgid "No 24 word seed, since this key is imported."
 msgstr "Nincs 24 szó mag, mivel ezt a kulcsot importálják."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
 msgstr "Nincs kitermelt blokk"
 
@@ -1022,7 +1022,7 @@ msgstr "Még egyik kerted sem ment át a kert szűrőn."
 msgid "Not Available"
 msgstr "Nem elérhető"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Nem szinkronizált"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Nincs megerősítve"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Nincs csatlakozva"
 
@@ -1072,7 +1072,7 @@ msgstr "Az egyes tranzakciós blokkok között átlagosan egy perc van. Hacsak n
 msgid "Outgoing"
 msgstr "Kimenő"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Csúcsmagasság"
 
@@ -1080,7 +1080,7 @@ msgstr "Csúcsmagasság"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Csúcsidôszak"
 
@@ -1176,7 +1176,7 @@ msgstr "Kérjük, adja meg a temporális mappát"
 msgid "Plot"
 msgstr "Parcella"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:7
+#: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
 msgstr "Parcellák száma"
@@ -1547,18 +1547,18 @@ msgstr "Kiadási mennyiség hossza (blokkok száma)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Költési limit (chia / intervallum): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Állapot"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/WalletStatusCard.tsx:12
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Állapot"
@@ -1599,7 +1599,7 @@ msgstr "Állapot:"
 msgid "Submit"
 msgstr "Küldés"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Szinkronizálva"
 
@@ -1609,9 +1609,13 @@ msgstr "Szinkronizálva"
 msgid "Syncing"
 msgstr "Szinkronizálás"
 
-#: src/components/fullNode/FullNode.jsx:106
-msgid "Syncing {progress}/{tip}"
-msgstr "Szinkronizálás {progress}/{tip}"
+#: src/components/fullNode/FullNode.jsx:107
+msgid "Syncing <0/>/<1/>"
+msgstr "Szinkronizálás <0/>/<1/>"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1654,11 +1658,11 @@ msgstr "Alább látható az összes csomópont, amelyhez a bányász csatlakozik
 msgid "The minimum required size for mainnet is k=32"
 msgstr "A mainnet legkisebb megengedett mérete k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "A csomópont nincs szinkronizálva"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "A csomópont szinkronizálás alatt van, ez azt jelenti, hogy más csomópontokról tölt le blokkokat, hogy elérje a láncolat utolsó blokkját"
 
@@ -1705,7 +1709,7 @@ msgid "This is the sum of the incoming and outgoing pending transactions (not ye
 msgstr "Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
 "Nem tartalmazza a termesztési díjakat."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Ez a legutóbbi csúcs alblokk ideje."
 
@@ -1721,7 +1725,7 @@ msgstr "Ez az összes Chia mennyiség a blokkláncban az aktuális csúcs alblok
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Ez a teljes egyenleg + függőben lévő egyenleg: ez lesz az egyenleged az összes függőben lévő tranzakció megerősítése után."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Ez a csomópont teljesen felzárkózott és érvényesíti a hálózatot"
 
@@ -1745,7 +1749,7 @@ msgstr "Ez a kereskedés a blokklánc ezen magasságán történt"
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "A Chia ezen verziója többé már nem kompatibilis a blokklánccal és nem biztonságos."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Létrehozva"
 
@@ -1771,7 +1775,7 @@ msgstr "Teljes egyenleg"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Összes ismétlések száma"
 
@@ -1791,7 +1795,7 @@ msgstr "Parcella fájlok összes mérete"
 msgid "Total VDF Iterations"
 msgstr "Összes VDF ismétlések száma"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Összes ismétlések száma a blokklánc indulása óta"
 
@@ -1835,7 +1839,7 @@ msgstr "Tranzakciók Szűrési Hash-értéke"
 msgid "Type"
 msgstr "Típus"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Befejezetlen"
 
@@ -1852,7 +1856,7 @@ msgstr "Ismeretlen"
 msgid "User Pubkey"
 msgstr "Felhasználó publikus kulcsa"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF alhelyi ismétlések"
 
@@ -1860,7 +1864,7 @@ msgstr "VDF alhelyi ismétlések"
 msgid "View"
 msgstr "Nézet"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Napló megtekintése"
@@ -2020,12 +2024,12 @@ msgstr "[Error 13] A hozzáférés megtagadva. Megpróbáltál egy fájlhoz vagy
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[Error 22] A fájl nem található. Valószínűleg az egyik parcella könyvtárad beállítása a config.yaml fájlban hibás."
 
-#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/WalletStatusCard.tsx:31
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "kapcsolatok:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/WalletStatusCard.tsx:25
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "magasság:"
@@ -2034,17 +2038,17 @@ msgstr "magasság:"
 msgid "not synced"
 msgstr "nincs szinkronizálva"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "állapot:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "szinkronizálva"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "szinkronizálás"
