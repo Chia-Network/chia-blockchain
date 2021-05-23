@@ -8,7 +8,7 @@ msgstr ""
 "Language: lol_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: LOLCAT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Amount 4 initial coin"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "R u sure u wants 2 delete teh plot? Teh plot cant be recoverd."
 
@@ -202,7 +202,7 @@ msgstr "Blok wif hASH {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Blokz"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "connect 2 othr perz"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Connectd"
 
@@ -359,7 +359,7 @@ msgstr "Connectd"
 msgid "Connecting to wallet"
 msgstr "Connectin 2 walet"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Connecshun statuz"
 
@@ -506,15 +506,15 @@ msgstr "DEelai"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:64
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Deelete"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Deelete Plot"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Developr Tools"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Difficulty"
 
@@ -613,11 +613,11 @@ msgstr "Error: canNOT sen chia 2 colOrd addrez. Pleez intr chia addrez."
 msgid "Estimated Time to Win"
 msgstr "Estimatd tiem 2 Win"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "estIMATD NEtWork spas"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "estimatd sum for al teH plottd disk spas fOR AL farmerz in teh neTwork"
 
@@ -722,8 +722,8 @@ msgstr "Filename"
 msgid "Final folder location"
 msgstr "finEl fOLdr locashun"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "FinisHD"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "frEKwentle askd questiONz"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "ful NOde"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "ful NOde Statuz"
 
@@ -760,7 +760,7 @@ msgstr ""
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Heedr Hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Heedr hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Heite"
@@ -815,7 +815,7 @@ msgstr ""
 msgid "Import from Mnemonics (24 words)"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "in progrez"
 
@@ -869,7 +869,7 @@ msgstr ""
 msgid "Last Attempted Proof"
 msgstr ""
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "Last Height Farmed"
 msgstr ""
 
@@ -953,7 +953,7 @@ msgstr "moar mems sliGHTLE incrEesez sped"
 msgid "My Pubkey"
 msgstr "My Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Network neme"
 
@@ -993,7 +993,7 @@ msgstr "No"
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
 msgstr ""
 
@@ -1022,7 +1022,7 @@ msgstr ""
 msgid "Not Available"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr ""
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr ""
 
@@ -1072,7 +1072,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr "Outgoin"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "peek heite"
 
@@ -1080,7 +1080,7 @@ msgstr "peek heite"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "peek tIMe"
 
@@ -1176,7 +1176,7 @@ msgstr ""
 msgid "Plot"
 msgstr "Plot"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:7
+#: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
 msgstr "Plot Count"
@@ -1547,18 +1547,18 @@ msgstr ""
 msgid "Spending Limit (chia per interval): {0}"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/WalletStatusCard.tsx:12
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr ""
@@ -1599,7 +1599,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr ""
 
@@ -1609,9 +1609,13 @@ msgstr ""
 msgid "Syncing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:106
-msgid "Syncing {progress}/{tip}"
+#: src/components/fullNode/FullNode.jsx:107
+msgid "Syncing <0/>/<1/>"
 msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1654,11 +1658,11 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr ""
 
@@ -1704,7 +1708,7 @@ msgstr ""
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1720,7 +1724,7 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1744,7 +1748,7 @@ msgstr ""
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr ""
 
@@ -1770,7 +1774,7 @@ msgstr "totel balens"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Totel iterationz"
 
@@ -1790,7 +1794,7 @@ msgstr "Totel size ov Plotz"
 msgid "Total VDF Iterations"
 msgstr "Totel VDF Iterations"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "totEL Iterationz sins teh sTART For tEH bloKCHAIN"
 
@@ -1834,7 +1838,7 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr ""
 
@@ -1851,7 +1855,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
@@ -1859,7 +1863,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr ""
@@ -2019,12 +2023,12 @@ msgstr ""
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/WalletStatusCard.tsx:31
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/WalletStatusCard.tsx:25
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr ""
@@ -2033,17 +2037,17 @@ msgstr ""
 msgid "not synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr ""
