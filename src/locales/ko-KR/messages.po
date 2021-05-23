@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-19 03:16\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -224,7 +224,7 @@ msgstr "하지만 당신은 현재 <0/>을 파밍하고 있습니다."
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr "매수"
+msgstr "사기"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
@@ -939,7 +939,7 @@ msgstr "채굴 보상 타겟 경로 관리"
 
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
-msgstr "MiB 증가/감소"
+msgstr "MiB 업로드/다운로드"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
@@ -982,7 +982,7 @@ msgstr "다음"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
-msgstr "별명"
+msgstr "닉네임"
 
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron/main.tsx:159
@@ -995,7 +995,7 @@ msgstr "24 단어의 씨드가 없습니다, 나중에 키를 가져 옵니다."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
-msgstr "채굴된 블록이 없습니다"
+msgstr "아직 수확한 블록이 없습니다"
 
 #: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
@@ -1086,7 +1086,7 @@ msgstr "최고 시간"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
-msgstr "보류중"
+msgstr "대기중"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
@@ -1174,20 +1174,20 @@ msgstr "임시 경로를 지정하십시오"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
-msgstr "구성"
+msgstr "플롯"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
-msgstr "구성 갯수"
+msgstr "플롯 수"
 
 #: src/components/block/Block.jsx:268
 msgid "Plot Id"
-msgstr "구성 Id"
+msgstr "플롯 ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr "구성 키"
+msgstr "플롯 키"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1203,7 +1203,7 @@ msgstr "구성 공개 키"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
-msgstr "구성 크기"
+msgstr "플롯의 크기"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
@@ -1615,7 +1615,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
-#~ msgstr "동기화 중: {progress}/{tip} 완료"
+#~ msgstr "Syncing {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1784,7 +1784,7 @@ msgstr "총 네트워크 공간"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr "총 구성 크기:"
+msgstr "전체 플롯의 용량:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
@@ -2071,3 +2071,4 @@ msgstr "{currencyCode} 채굴된 총 Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 사용자 거래 수수료"
+
