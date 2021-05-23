@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.1.6 Chia Blockchain 2021-05-20
+
+### Added
+
+- This is the initial release of our DNS introducer. We built a far too simple basic introducer that we hoped to replace as quickly as possible with an introducer that uses DNS in the style of Bitcoin. This release will now use both and as we gain testing with the DNS version, we will slowly be phasing the classic introducers out. This should significantly help in finding nodes to connect and sync to.
+- You can now whitelist networks and hosts so that a node can always connect with chosen peers.
+- We added a simple profiler to track performance times in the application (see /chia/util/profiler.py for instructions).
+- We added a transaction filter to get_header_blocks_in_range.
+- There is now an unspent coin count and pending coin removal count to wallet_rpc_api.
+- Added configuration options for moving an install to testnet and back (use `chia configure -t true|false`).
+- Added Arabic language support. Thank you to the following community members for their translation contributions: @MohamedSiddig, @bilalghalib, @HoussenAlSamer, @esmailelbob, @MCoreiX, @bestq8, @bt.layth, @sam_774, @yahyakhalid, @itsmekarim44, @anasjawabreh1996, @algeria98, @abduallh, @rabee.khalil, @ajoolee.
+- Added Bulgarian language support. Thank you to the following community members for their translation contributions: @shaosoft, @sitio72, @yonchevsv, @sleit2000, @TerminalX, @WoWGeleto, @DrEnderTV, @l2rx, @iliakurdalanov, @liveroy.
+- Added Croatian language support. Thank you to the following community members for their translation contributions: @hrvoje555, @ATfarm, @m.filipovski2505, @goranpravda035, @Fistrake, @marko.anti12.
+- Added Persian language support. Thank you to the following community members for their translation contributions: @ali.tavanaie, @soheils13, @zanaei, @parham_saeedi, @HYNazism, @IGSkyGuy, @mmbtmp, @esfandani, @amirhh00, @Alirezabayatorg, @dotMahdi, @amirisatisss, @Navidnkh, @tgmgfe, @babooshios, @mahbodius, @amiragheli, @pouyanagazadeh97, @yaghout.ad, @faramarz1985, @inert1a, @want3d, @avion.raid, @hadiamirnejad, @iziran, @hamidreza13771393, @ebrahimfalamarzi, @navidnr, @behzadmosaffa.
+- Added Serbian language support. Thank you to the following community members for their translation contributions: @mihailokg, @Cheli0S, @stevica.canadi, @ukica92, @stefanmih, @acko83.
+- Added Spanish (Argentina) language support. Thank you to the following community members for their translation contributions: @franpepper94, @gdestribats, @omar17, @tomigambi, @doldraug.
+- Added Spanish (Mexico) language support. Thank you to the following community members for their translation contributions: @javieriv, @dvd101x, @cdgraff, @danielrangel6.
+- Thanks to @proea for adding RockyLinux support for install-gui.sh.
+- And thank you to @etr2460 for various GUI contributions.
+
+### Changed
+
+- Performance improvement of speeding up outbound connections.
+- Performance improvements to block_store.
+- Optimized Streamable parsing by avoiding extra post-init checks, making parsing block records from database up to 40% faster.
+- Made the serialization of Coin follow the normal protocol of implementing stream().
+- Minor improvements to add_spendbundle and weight proofs.
+- We now use version 1.0.2 of chiapos. We now reopen files on read or write failure with thanks to @mreid-moz! We also prevent chiapos prover crashing for more bad plots.
+- Disabled deletion of running plot for Windows users as the crash/lockup bug has returned.
+- We more clearly prohibit root from installing/running the GUI.
+- Thanks to @sargonas for improvements to the template for creating Issues.
+- Thanks to @aisk for continuing to add more types.
+- Thanks for @dkackman for improving the remote harvester setup by having init -c only copy the right certs.
+- And thank you to @vidschofelix, @meawoppl, and @rongou for various other changes and improvements.
+
+### Fixed
+
+- Fixed a bug where multiple wallets running at the same time would all issue a transaction.
+- Fixed issues with signage points: duplicate signage point spikes, and bugs in signage point cache.
+- Fixed a blank screen error during Centos install.
+- Thanks to @linnik for fixing a TypeError exception in case of unresponsive service.
+- Thanks to @msg7086 for fixing install.sh for Debian.
+- And thank you to @alfonsoperez, @asdf2014, @fredericosilva, @lamba09, @Nikolaj-K, @sargonas, @aisk, @Ich5003, and @trumankain for various other fixes and improvements.
+
 ## 1.1.5 Chia Blockchain 2021-05-09
 
 ### Fixed
