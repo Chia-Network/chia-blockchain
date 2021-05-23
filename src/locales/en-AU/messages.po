@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_AU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-16 05:31\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: English, Australia\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -108,7 +108,7 @@ msgstr "Address / Puzzle hash"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Amount"
-msgstr "How much beer money to do you want to spend"
+msgstr "How much beer money"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
@@ -656,7 +656,7 @@ msgstr "Farmer is not connected you drongo"
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "Farmer is not running"
+msgstr "Farmer is not running you drongo"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1070,7 +1070,7 @@ msgstr "On average there is one minute between each transaction block. Unless th
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
-msgstr "Outgoing"
+msgstr "Beer money out of your wallet"
 
 #: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
@@ -1611,7 +1611,7 @@ msgstr "Syncing, not yet getting beer money"
 
 #: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing <0/>/<1/>"
-msgstr ""
+msgstr "Syncing <0/>/<1/>"
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
@@ -2035,7 +2035,7 @@ msgstr "height:"
 
 #: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
-msgstr "not synced"
+msgstr "not synced, no beer money for you"
 
 #: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
@@ -2045,12 +2045,12 @@ msgstr "status:"
 #: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
-msgstr "synced"
+msgstr "synced, earning beer money"
 
 #: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
-msgstr "syncing"
+msgstr "syncing, not yet getting beer money"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -2071,3 +2071,4 @@ msgstr "{currencyCode} Total Chia Farmed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} User Transaction Fees, extra beer money"
+
