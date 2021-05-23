@@ -31,25 +31,28 @@ class PlotInfo:
 
 
 def _get_filenames(directory: Path) -> List[Path]:
-    try:
-        if not directory.exists():
-            log.warning(f"Directory: {directory} does not exist.")
+    error_count = 0
+    while error_count < 3:
+        try:
+            if not directory.exists():
+                log.warning(f"Directory: {directory} does not exist.")
+                return []
+        except OSError as e:
+            log.warning(f"Error checking if directory {directory} exists: {e}")
             return []
-    except OSError as e:
-        log.warning(f"Error checking if directory {directory} exists: {e}")
-        return []
-    all_files: List[Path] = []
-    try:
-        for child in directory.iterdir():
-            if not child.is_dir():
-                # If it is a file ending in .plot, add it - work around MacOS ._ files
-                if child.suffix == ".plot" and not child.name.startswith("._"):
-                    all_files.append(child)
-            else:
-                log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
-    except Exception as e:
-        log.warning(f"Error reading directory {directory} {e}")
-    return all_files
+        all_files: List[Path] = []
+        try:
+            for child in directory.iterdir():
+                if not child.is_dir():
+                    # If it is a file ending in .plot, add it - work around MacOS ._ files
+                    if child.suffix == ".plot" and not child.name.startswith("._"):
+                        all_files.append(child)
+                else:
+                    log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
+        except Exception as e:
+            error_count += 1
+            log.warning(f"Error reading directory {directory} ({error_count}) {e}")
+        return all_files
 
 
 def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
