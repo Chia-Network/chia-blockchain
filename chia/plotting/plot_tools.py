@@ -52,7 +52,9 @@ def _get_filenames(directory: Path) -> List[Path]:
         except Exception as e:
             error_count += 1
             log.warning(f"Error reading directory {directory} ({error_count}) {e}")
-        return all_files
+        else:
+            return all_files
+    return all_files
 
 
 def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
