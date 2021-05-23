@@ -8,7 +8,7 @@ msgstr ""
 "Language: el_GR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-15 23:32\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: Greek\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "*Θέλετε να εμβαθύνετε περαιτέρω στον κόσμο των Chia Blocks? Τσέκαρέ το! <0>Ο Εξερευνητής Chiar</0> δημιουργήθηκε από έναν προγραμματιστή ανοιχτού κώδικα."
+msgstr "*Θέλετε να εξερευνήσετε περαιτέρω τα μπλοκ της Chia? Δοκιμάστε το <0>Chia Explorer</0> που χτίστηκε από έναν προγραμματιστή ανοιχτού κώδικα."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -45,7 +45,7 @@ msgstr "Αποδοχή"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Έγινε αποδεκτή την ημερομηνία:"
+msgstr "Αποδεκτή εγκαίρως:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -94,12 +94,12 @@ msgstr "Προσθήκη Plot Directory"
 #: src/components/wallet/coloured/WalletColoured.tsx:457
 #: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Address"
-msgstr "Ηλ. Διεύθυνση"
+msgstr "Διεύθυνση"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:323
 msgid "Address / Puzzle hash"
-msgstr "Ηλ. Διεύθυνση / Puzzle hash"
+msgstr "Διεύθυνση / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -116,12 +116,12 @@ msgstr "Ποσό ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "Ποσό Αρχικού Νομίσματος"
+msgstr "Ποσό για Αρχικό Νομίσμα"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτόν τον πελάτη; Δεν είναι δυνατή η αναίρεση αυτής της ενέργειας."
+msgstr "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το plot?? Το plot δεν μπορεί να ανακτηθεί."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -156,12 +156,12 @@ msgstr "Υπόλοιπο"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Βασικό Ποσό Ανταμοιβής Αγρότη"
+msgstr "Ποσό Ανταμοιβής Base Farmer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "Παρακάτω είναι οι τρέχουσες προκλήσεις block. Μπορεί να έχετε ή να μην έχετε αποδεικτικό χώρου για αυτές τις προκλήσεις. Αυτά τα μπλοκ δεν περιέχουν επί του παρόντος αποδεικτικό χρόνου."
+msgstr "Παρακάτω είναι οι τρέχουσες προκλήσεις block. Μπορεί να έχετε ή να μην έχετε αποδεικτικό χώρου για αυτές τις προκλήσεις. Αυτά τα block δεν περιέχουν επί του παρόντος αποδεικτικό χρόνου."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
@@ -180,15 +180,15 @@ msgstr "Block"
 
 #: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr "Δοκιμή Μπλοκ"
+msgstr "Δοκιμή block"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr "Αποκλεισμός Επαναλήψεων Vdf"
+msgstr "Επαναλήψεις VDF του Block"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Αποκλεισμός στο ύψος {0} στο Chia blockchain"
+msgstr "Block στο ύψος {0} στο Chia blockchain"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr "Αποκλεισμός στο ύψος {0} στο Chia blockchain"
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr "Block with hash {headerHash}"
+msgstr "Block με hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
-msgstr ""
+msgstr "Block με hash {headerHash} δεν υπάρχει."
 
 #: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
@@ -249,7 +249,7 @@ msgstr "Ακύρωση"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr "Ακύρωσε και Ξόδεψε"
+msgstr "Ακύρωση και Δαπάνη"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -257,11 +257,11 @@ msgstr "Προσοχή, η διαγραφή αυτών των plot, θα τα δ
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr "Challenge"
+msgstr "Πρόκληση"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr "Πρόσκληση κατακερματισμού"
+msgstr "Πρόκληση Hash"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
@@ -335,7 +335,7 @@ msgstr "Επιβεβαίωση Αποσύνδεσης"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr "Επιβεβαιώθηκε στο μπλοκ:"
+msgstr "Επιβεβαιώθηκε στο block:"
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
@@ -418,11 +418,11 @@ msgstr "Δημιουργία Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Δημιουργία Περιορισμένου Ρυθμού του Διαχειριστή του Πορτοφολιού"
+msgstr "Δημιουργία Πορτοφολιού Διαχειριστή με Περιορισμένο Ρυθμό"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Δημιουργία Περιορισμένου Ρυθμού του Χρήστη του Πορτοφολιού"
+msgstr "Δημιουργία Πορτοφολιού χρήστη με Περιορισμένο Ρυθμό"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -533,7 +533,7 @@ msgstr "Διαγράφοντας όλα τα κλειδιά θα αφαιρέσ�
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Διαγράφοντας όλα τα κλειδιά θα αφαιρέσετε μόνιμα τα κλειδιά από τον υπολογιστή σας, βεβαιωθείτε ότι έχετε αντίγραφα ασφαλείας. Είστε σίγουροι ότι θέλετε να συνεχίσετε;"
+msgstr "Διαγραφή του κλειδιού θα αφαιρέσει μόνιμα το κλειδί από τον υπολογιστή σας, βεβαιωθείτε ότι έχετε αντίγραφο ασφαλείας. Είστε σίγουροι ότι θέλετε να συνεχίσετε;"
 
 #: src/electron/main.tsx:260
 msgid "Developer"
@@ -571,7 +571,7 @@ msgstr "Επιλογές Διανεμημένης Ταυτότητας"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "Έχετε ήδη plots σε αυτό το μηχάνημα? <0>Προσθήκη καταλόγου Plot</0>"
+msgstr "Έχετε υπάρχοντα plots σε αυτό το μηχάνημα? <0>Προσθήκη Plot Directory</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -584,7 +584,7 @@ msgstr "Μεταφορά και απόθεση αρχείου προσφοράς
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
-msgstr "Σύρετε και αποθέστε το αρχείο σας εδώ"
+msgstr "Σύρετε και αποθέστε το αρχείο αντιγράφου ασφαλείας"
 
 #: src/electron/main.tsx:219
 msgid "Edit"
@@ -592,7 +592,7 @@ msgstr "Επεξεργασία"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "Εισάγετε την 24η μνημονική λέξη που έχετε αποθηκεύσει για να επαναφέρετε το Chia πορτοφόλι σας."
+msgstr "Εισάγετε το μνημονικό 24ων λέξεων που έχετε αποθηκεύσει για να επαναφέρετε το Chia πορτοφόλι σας."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -646,17 +646,17 @@ msgstr "Farmer Puzzle Hash"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr "Διεύθυνση Ανταμοιβής Αγρότη"
+msgstr "Διεύθυνση Ανταμοιβής Farmer"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "Ο αγρότης δεν είναι συνδεδεμένος"
+msgstr "Ο Farmer δεν είναι συνδεδεμένος"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "Ο αγρότης δεν εκτελείται"
+msgstr "Διακομιστής δεν λειτουργεί"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -701,7 +701,7 @@ msgstr "Τέλη ({currencyCode})"
 
 #: src/components/block/Block.jsx:294
 msgid "Fees Amount"
-msgstr "Ποσό Χρεώσεων"
+msgstr "Ποσό Τέλων"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
@@ -1549,7 +1549,7 @@ msgstr "Όριο δαπανών (chia ανά διάστημα): {0}"
 
 #: src/components/fullNode/FullNode.jsx:95
 msgid "State"
-msgstr "State"
+msgstr "Κατάσταση"
 
 #: src/components/fullNode/FullNode.jsx:105
 #: src/components/fullNode/FullNode.jsx:122
@@ -1615,7 +1615,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
-#~ msgstr "Γίνεται συγχρονισμός {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1824,11 +1824,11 @@ msgstr "Οι Συναλλαγές θα εμφανιστούν εδώ"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr "Trading"
+msgstr "Συναλλαγές"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr "Trading History"
+msgstr "Ιστορικό Συναλλαγών"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
@@ -2071,3 +2071,4 @@ msgstr "{currencyCode} Σύνολο Chia που έχουν γίνει Farmed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Τέλη Συναλλαγής Χρήστη"
+
