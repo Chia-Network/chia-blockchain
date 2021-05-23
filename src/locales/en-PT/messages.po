@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-18 21:03\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1611,11 +1611,11 @@ msgstr "Catchin' up wit' other Capt'ns"
 
 #: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing <0/>/<1/>"
-msgstr ""
+msgstr "Pillagin' <0/>/<1/>"
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
-#~ msgstr "Catchin' up {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1981,7 +1981,7 @@ msgstr "Aye"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Ye nah need t' be synched or connected t' recruit. Temporary files are created durin' the recruitin' which exceed the size o' the final plot files. Make sure ye 'ave enough space. <0>Look fer more</0>"
+msgstr "Ye nah need t' be synced or connected t' recruit. Temporary files are created durin' the recruitin' which exceed the size o' the final plot files. Make sure ye 'ave enough space. <0>Look fer more</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2071,3 +2071,4 @@ msgstr "{currencyCode} Total Prize Claimed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Earned On The Side"
+
