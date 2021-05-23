@@ -215,6 +215,7 @@ async def summary(
         summary["Block rewards"] = "Unknown"
         summary["Last height farmed"] = "Unknown"
 
+    total_plot_size = 0
     if plots is not None:
         summary["Plot count"] = len(plots['plots'])
 
@@ -231,7 +232,6 @@ async def summary(
 
         summary["Total size of plots"] = plots_total_size
     else:
-        total_plot_size = 0
         summary["Plot count"] = "Unknown"
         summary["Total size of plots"] = "Unknown"
 
