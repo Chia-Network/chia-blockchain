@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-19 15:22\n"
+"PO-Revision-Date: 2021-05-23 21:04\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "จำนวนของเหรียญเริ่มต้น"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "คุณแน่ใจหรือไม่ว่าต้องการลบพล็อตนี้? พล็อตที่ถูกลบจะไม่สามารถกู้คืนได้"
 
@@ -142,7 +142,7 @@ msgstr "คุณแน่ใจที่จะใช้ k={plotSize} หรื�
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr "กลับ"
+msgstr "ย้อนกลับ"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
@@ -202,7 +202,7 @@ msgstr "บล็อกที่มีค่าแฮช {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "ไม่พบบล็อกที่มีค่าแฮช {headerHash}"
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "บล็อก"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "เชื่อมต่อกับลูกข่ายอื่น"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "เชื่อมต่อแล้ว"
 
@@ -359,7 +359,7 @@ msgstr "เชื่อมต่อแล้ว"
 msgid "Connecting to wallet"
 msgstr "กำลังเชื่อมต่อวอลเล็ต"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "สถานะการเชื่อมต่อ"
 
@@ -506,15 +506,15 @@ msgstr "หน่วงเวลา"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:64
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "ลบ"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "ลบพล็อต"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "เครืองมือนักพัฒนา"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "ระดับความยาก"
 
@@ -613,11 +613,11 @@ msgstr "ข้อผิดพลาด: ไม่สามารถส่งchia
 msgid "Estimated Time to Win"
 msgstr "เวลาที่ชนะโดยประมาณ"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "พื้นที่ในเครือข่ายโดยประมาณ"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "ประมาณค่าจากผลรวมขนาดขนาดของพล็อตทั้งหมดจากฟาร์มเมอร์ทั้งหมดในเครือข่าย"
 
@@ -722,8 +722,8 @@ msgstr "ชื่อไฟล์"
 msgid "Final folder location"
 msgstr "ตำแหน่งโฟลเดอร์ของไฟล์พล็อตสำเร็จ"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "เสร็จสิ้น"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "คำถามที่พบบ่อย"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "ฟูลโหนด"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "สถานะฟูลโหนด"
 
@@ -760,7 +760,7 @@ msgstr "HD หรือ คีย์กำหนดลำดับชั้น�
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "แฮชส่วนหัว"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "แฮชส่วนหัว"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "ความสูง"
@@ -815,7 +815,7 @@ msgstr "นำเข้าวอลเล็ตจากรหัสนีโม
 msgid "Import from Mnemonics (24 words)"
 msgstr "นำเข้าจากรหัสนีโมนิค (24 คำ)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "กำลังดำเนินการ"
 
@@ -869,7 +869,7 @@ msgstr "KiB Up/Down"
 msgid "Last Attempted Proof"
 msgstr "การพิสูจน์ที่พยายามล่าสุด"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "Last Height Farmed"
 msgstr "ความสูงล่าสุดที่ถูกฟาร์ม"
 
@@ -953,7 +953,7 @@ msgstr "หน่วยความจำที่มากขึ้นสาม
 msgid "My Pubkey"
 msgstr "คีย์สาธารณะของฉัน"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "ชื่อเครือข่าย"
 
@@ -993,7 +993,7 @@ msgstr "ไม่"
 msgid "No 24 word seed, since this key is imported."
 msgstr "ไม่มีรหัสนีโมนิค 24 คำ เนื่องจากคีย์นี้ได้ถูกนำเข้ามา"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
 msgstr "ยังไม่มีบล็อกที่ถูกฟาร์ม"
 
@@ -1022,7 +1022,7 @@ msgstr "พล็อตที่มีของคุณยังไม่เค
 msgid "Not Available"
 msgstr "ไม่พร้อมใช้งาน"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "ไม่ได้ซิงค์"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "ยังไม่ได้ยืนยัน"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "ยังไม่เชื่อมต่อ"
 
@@ -1072,7 +1072,7 @@ msgstr "โดยเฉลี่ยแล้วจะมีเวลาหนึ
 msgid "Outgoing"
 msgstr "เงินออก"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "ความสูงจุดยอด"
 
@@ -1080,7 +1080,7 @@ msgstr "ความสูงจุดยอด"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "เวลาจุดยอด"
 
@@ -1176,7 +1176,7 @@ msgstr "กรุณาระบุไดเรกทอรีชั่วคร
 msgid "Plot"
 msgstr "พล็อต"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:7
+#: src/components/farm/card/FarmCardPlotCount.tsx:8
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
 msgstr "จำนวนพล็อต"
@@ -1547,18 +1547,18 @@ msgstr "ช่วงความกว้างของการจ่าย (�
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "จำกัดการจ่าย (Chia ต่อช่วงเวลา) : {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "สถานะ"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/WalletStatusCard.tsx:12
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "สถานะ"
@@ -1599,7 +1599,7 @@ msgstr "สถานะ:"
 msgid "Submit"
 msgstr "ส่ง"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "ซิงค์แล้ว"
 
@@ -1609,9 +1609,13 @@ msgstr "ซิงค์แล้ว"
 msgid "Syncing"
 msgstr "กำลังซิงค์"
 
-#: src/components/fullNode/FullNode.jsx:106
-msgid "Syncing {progress}/{tip}"
-msgstr "กำลังซิงค์ {progress}/{tip}"
+#: src/components/fullNode/FullNode.jsx:107
+msgid "Syncing <0/>/<1/>"
+msgstr "กำลังซิงค์ <0/>/<1/>"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1654,11 +1658,11 @@ msgstr "โนดที่ผู้ฟาร์มจะเชื่อมต่
 msgid "The minimum required size for mainnet is k=32"
 msgstr "ขนาดขั้นต่ำที่ต้องการสำหรับ mainnet คือ k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "โหนดไม่ได้รับการซิงค์"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "โหนดกำลังซิงค์ หมายถึงระบบกำลังดาวน์โหลดบล็อกจากโหนดอื่น ๆ จนถึงบล็อกล่าสุดในบล็อกเชน"
 
@@ -1704,7 +1708,7 @@ msgstr "นี่คือการเปลี่ยนแปลงที่ร
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "นี่คือผลรวมของธุรกรรมขาเข้าและขาออกที่รอดำเนินการ (ยังไม่รวมอยู่ในบล็อคเชน) ซึ่งไม่รวมถึง Framing Reward"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "นี่คือช่วงเวลา Peak ล่าสุด ของ Sub Block"
 
@@ -1720,7 +1724,7 @@ msgstr "นี่คือยอด Chia ทั้งหมดที่อยู
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "นี่คือยอดทั้งหมด + ยอดที่รอทำรายการ: นี่คือยอดคงเหลือหลังจากทำรายการเสร็จสิ้น"
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Node นี้ติดตั้งอย่างสมบูรณ์และได้รับการยืนยันความถูกต้องจากเครือข่ายแล้ว"
 
@@ -1744,7 +1748,7 @@ msgstr "การแลกเปลี่ยนนี้ได้ถูกรว
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "Chia รุ่นนี้ล้าสมัย และไม่สามารถเข้ากันได้กับ Blockchain รวมถึงไม่สามารถ Farm ได้อีกต่อไป"
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "เวลาที่สร้าง"
 
@@ -1770,7 +1774,7 @@ msgstr "ยอดคงเหลือทั้งหมด"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "จำนวนวนซ้ำทั้งหมด"
 
@@ -1790,7 +1794,7 @@ msgstr "ขนาดพล็อตทั้งหมด"
 msgid "Total VDF Iterations"
 msgstr "VDF Iterations ทั้งหมด"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "จำนวนการวนซ้ำทั้งหมดนับตั้งแต่เริ่มต้นบล็อกเชน"
 
@@ -1834,7 +1838,7 @@ msgstr "Transactions Filter Hash"
 msgid "Type"
 msgstr "ประเภท"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "ยังไม่เสร็จ"
 
@@ -1851,7 +1855,7 @@ msgstr "ไม่ทราบ"
 msgid "User Pubkey"
 msgstr "คีย์สาธารณะของผู้ใช้"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterations"
 
@@ -1859,7 +1863,7 @@ msgstr "VDF Sub Slot Iterations"
 msgid "View"
 msgstr "แสดง"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "ดู Log"
@@ -2019,12 +2023,12 @@ msgstr "[Error 13] ไม่ได้รับอนุญาต. คุณพ�
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[Error 22] ไม่พบไฟล์ อาจเป็นไปได้ว่า Plot Folder ที่ระบุไว้ใน config.yaml มีปัญหา"
 
-#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/WalletStatusCard.tsx:31
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "การเชื่อมต่อ:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/WalletStatusCard.tsx:25
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "ความสูง:"
@@ -2033,17 +2037,17 @@ msgstr "ความสูง:"
 msgid "not synced"
 msgstr "ไม่ได้ซิงค์"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "สถานะ:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "ซิงค์แล้ว"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/WalletStatusCard.tsx:20
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "กำลังซิงค์"
