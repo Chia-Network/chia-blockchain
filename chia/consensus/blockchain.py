@@ -723,12 +723,7 @@ class Blockchain(BlockchainInterface):
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        segments: Optional[List[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
-            ses_block_hash
-        )
-        if segments is None:
-            return None
-        return segments
+        return await self.block_store.get_sub_epoch_challenge_segments(ses_block_hash)
 
     async def persist_sub_epoch_challenge_segments_v2(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegmentV2]
@@ -739,12 +734,7 @@ class Blockchain(BlockchainInterface):
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegmentV2]]:
-        segments: Optional[
-            List[SubEpochChallengeSegmentV2]
-        ] = await self.block_store.get_sub_epoch_challenge_segments_v2(ses_block_hash)
-        if segments is None:
-            return None
-        return segments
+        return await self.block_store.get_sub_epoch_challenge_segments_v2(ses_block_hash)
 
     # Returns 'True' if the info is already in the set, otherwise returns 'False' and stores it.
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
