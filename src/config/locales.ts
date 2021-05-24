@@ -82,7 +82,7 @@ export const defaultLocale = 'en-US';
 
 // https://www.codetwo.com/admins-blog/list-of-office-365-language-id/
 // https://www.venea.net/web/culture_code
-export const locales = [ 
+export const locales = [
   {
     locale: 'be-BY',
     label: 'Беларускі',
