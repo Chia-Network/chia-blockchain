@@ -9,6 +9,8 @@ from blspy import PrivateKey, G1Element
 
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.pools.pool_wallet import PoolWallet
+from chia.pools.pool_wallet_info import PoolSingletonState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -98,6 +100,9 @@ class WalletRpcApi:
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
+            # Pool Wallet
+            "/pw_pw_set_target_state": self.pw_set_target_state,
+            "/pw_collect_self_pooling_rewards": self.pw_collect_self_pooling_rewards,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -432,6 +437,38 @@ class WalletRpcApi:
                     "pubkey": pubkey.hex(),
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
+                }
+        elif request["wallet_type"] == "pool_wallet":
+            if request["mode"] == "new":
+                from chia.pools.pool_wallet_info import pool_state_from_dict
+                # If request["initial_target_state"]["state"] is SELF_POOLING, then
+                # request["initial_target_state"]["target_puzzlehash"] should be an address from our standard wallet
+                # If request["initial_target_state"]["state"] is FARMING_TO_POOL, then
+                # target_puzzlehash, relative_lock_height and pool_url are given by the pool
+                err, initial_target_state = pool_state_from_dict(request["initial_target_state"])
+                if err is not None:
+                    return {
+                        "success": False,
+                        "error": err,
+                    }
+                async with self.service.wallet_state_manager.lock:
+                    pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        initial_target_state,
+                    )
+                return {
+                    "success": True,
+                    "type": pool_wallet.type(),
+                    "wallet_id": pool_wallet.id(),
+                    "current_state": pool_wallet.pool_info.current,
+                    "target_state": pool_wallet.pool_info.target,
+                    "p2_puzzle_hash": "",
+                }
+            elif request["mode"] == "recovery":
+                return {
+                    "success": False,
+                    "error": "Need upgraded singleton for on-chain recovery",
                 }
 
     ##########################################################################################
@@ -979,3 +1016,63 @@ class WalletRpcApi:
                 amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
             )
         return {"signed_tx": signed_tx}
+
+    ##########################################################################################
+    # Pool Wallet
+    ##########################################################################################
+    '''
+    async def join_pool(self, request):
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.pool_info.current.state != PoolSingletonState.SELF_POOLING:
+            return {
+                "error": ""
+            }
+        # Check for pending transactions that may induce a state change
+        pass
+
+
+    async def leave_pool(self, request):
+        # Leaving a pool requires two state transitions.
+        # First we transition to PoolSingletonState.LEAVING_POOL
+        # Then we transition to PoolSingletonState.FARMING_TO_POOL
+        # or to PoolSingletonState.SELF_POOLING
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.pool_info.current.state != PoolSingletonState.FARMING_TO_POOL:
+            return {
+                "error": ""
+            }
+    '''
+    async def pw_set_target_state(self, request):
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        valid_target_states = ["SELF_POOLING", "FARMING_TO_POOL"]
+        if request["target_state"] not in valid_target_states:
+            return {
+                "error": "Invalid target_state. Must be one of {valid_target_states}"
+            }
+        from chia.pools.pool_wallet_info import pool_state_from_dict
+        # If request["target_state"]["state"] is SELF_POOLING, then
+        # request["target_state"]["target_puzzlehash"] should be an address from our standard wallet
+        # If request["target_state"]["state"] is FARMING_TO_POOL, then
+        # target_puzzlehash, relative_lock_height and pool_url are given by the pool
+        err, new_target_state = pool_state_from_dict(request["target_state"])
+        if err is not None:
+            return {
+                "success": False,
+                "error": err,
+            }
+        await wallet.set_target_state(new_target_state)
+
+    async def pw_collect_self_pooling_rewards(self, request):
+        """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        fee = uint64(request["fee"])
+        await wallet.collect_self_pooling_rewards(fee)
+        # Return True if the SpendBundle was submitted to the Mempool
+        return {
+            "success": True,
+        }
+
