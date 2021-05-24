@@ -19,6 +19,7 @@ class FarmerRpcApi:
             "/set_reward_targets": self.set_reward_targets,
             "/get_pool_state": self.get_pool_state,
             "/set_pool_payout_instructions": self.set_pool_payout_instructions,
+            "/get_plots": self.get_plots,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -110,3 +111,6 @@ class FarmerRpcApi:
         singleton_genesis: bytes32 = hexstr_to_bytes(request["singleton_genesis"])
         await self.service.set_pool_payout_instructions(singleton_genesis, request["pool_payout_instructions"])
         return {}
+
+    async def get_plots(self, _: Dict):
+        return await self.service.get_plots()
