@@ -1,6 +1,6 @@
 import aiohttp
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
@@ -182,14 +182,14 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
 
 
 async def summary(
-        rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int, json_format: bool
+    rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int, json_format: bool
 ) -> None:
     amounts = await get_wallets_stats(wallet_rpc_port)
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
 
-    summary = {}
+    summary: Dict[str, Union[str, int]] = {}
 
     if blockchain_state is None:
         farming_status = "Not available"
@@ -205,10 +205,10 @@ async def summary(
     summary["Farming status"] = farming_status
 
     if amounts is not None:
-        summary["Total chia farmed"] = amounts['farmed_amount'] / units['chia']
-        summary["User transaction fees"] = amounts['fee_amount'] / units['chia']
-        summary["Block rewards"] = (amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']
-        summary["Last height farmed"] = amounts['last_height_farmed']
+        summary["Total chia farmed"] = amounts["farmed_amount"] / units["chia"]
+        summary["User transaction fees"] = amounts["fee_amount"] / units["chia"]
+        summary["Block rewards"] = (amounts["farmer_reward_amount"] + amounts["pool_reward_amount"]) / units["chia"]
+        summary["Last height farmed"] = amounts["last_height_farmed"]
     else:
         summary["Total chia farmed"] = "Unknown"
         summary["User transaction fees"] = "Unknown"
@@ -217,7 +217,7 @@ async def summary(
 
     total_plot_size = 0
     if plots is not None:
-        summary["Plot count"] = len(plots['plots'])
+        summary["Plot count"] = len(plots["plots"])
 
         total_plot_size = sum(map(lambda x: x["file_size"], plots["plots"]))
         plots_space_human_readable = total_plot_size / 1024 ** 3
