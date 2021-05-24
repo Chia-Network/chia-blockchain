@@ -46,7 +46,7 @@ class RpcServer:
     async def _state_changed(self, *args):
         change = args[0]
         if self.websocket is None:
-            return
+            return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
         if change == "add_connection" or change == "close_connection":
@@ -71,7 +71,7 @@ class RpcServer:
 
     def state_changed(self, *args):
         if self.websocket is None:
-            return
+            return None
         asyncio.create_task(self._state_changed(*args))
 
     def _wrap_http_handler(self, f) -> Callable:
@@ -227,7 +227,7 @@ class RpcServer:
             else:
                 error = {"success": False, "error": f"{e}"}
             if message is None:
-                return
+                return None
             await websocket.send_str(format_response(message, error))
 
     async def connection(self, ws):

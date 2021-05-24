@@ -149,6 +149,7 @@ class Err(Enum):
     DOUBLE_SPEND_IN_FORK = 122
 
     INVALID_FEE_TOO_CLOSE_TO_ZERO = 123
+    COIN_AMOUNT_NEGATIVE = 124
 
 
 class ValidationError(Exception):

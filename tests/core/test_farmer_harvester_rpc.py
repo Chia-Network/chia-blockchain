@@ -172,8 +172,10 @@ class TestRpc:
 
             await client_2.delete_plot(str(plot_dir / filename))
             await client_2.delete_plot(str(plot_dir / filename_2))
+            await client_2.refresh_plots()
             res_3 = await client_2.get_plots()
-            assert len(res_3["plots"]) == num_plots
+
+            assert len(res_3["plots"]) == num_plots + 1
 
             await client_2.remove_plot_directory(str(plot_dir))
             assert len(await client_2.get_plot_directories()) == 2

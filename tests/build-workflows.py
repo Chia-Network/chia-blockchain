@@ -37,17 +37,17 @@ def read_file(filename):
     return None
 
 
-# input file
+# Input file
 def workflow_yaml_template_text(os):
     return Path(f"runner-templates/build-test-{os}").read_text()
 
 
-# output files
+# Output files
 def workflow_yaml_file(dir, os, test_name):
     return Path(dir / f"build-test-{os}-{test_name}.yml")
 
 
-# Function from test dir to test name
+# String function from test dir to test name
 def test_name(dir):
     return str(dir).replace("/", "-")
 
@@ -77,7 +77,7 @@ default_replacements = {
 # -----
 
 
-# replace with update_config
+# Replace with update_config
 def generate_replacements(defaults, conf, dir, test_files):
     assert len(test_files) > 0
     replacements = dict(defaults)
@@ -102,7 +102,7 @@ def generate_replacements(defaults, conf, dir, test_files):
     return replacements
 
 
-# overwrite with directory specific values
+# Overwrite with directory specific values
 def update_config(parent, child):
     if child is None:
         return parent

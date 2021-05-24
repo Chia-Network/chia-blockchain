@@ -7,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional
+from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -269,8 +269,19 @@ class Streamable:
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
-        values = [parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls]]
-        return cls(*values)
+        # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
+        obj: Streamable = object.__new__(cls)
+        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        for field, value in zip(fields, values):
+            object.__setattr__(obj, field, value)
+
+        # Use -1 as a sentinel value as it's not currently serializable
+        if next(fields, -1) != -1:
+            raise ValueError("Failed to parse incomplete Streamable object")
+        if next(values, -1) != -1:
+            raise ValueError("Failed to parse unknown data in Streamable object")
+        return obj
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
         inner_type: Type

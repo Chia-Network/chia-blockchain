@@ -71,6 +71,7 @@ class MempoolManager:
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
         self.mempool: Mempool = Mempool(self.mempool_max_total_cost)
+        self.lock: asyncio.Lock = asyncio.Lock()
 
     def shut_down(self):
         self.pool.shutdown(wait=True)
@@ -96,11 +97,11 @@ class MempoolManager:
         additions = []
         broke_from_inner_loop = False
         log.info(f"Starting to make block, max cost: {self.constants.MAX_BLOCK_COST_CLVM}")
-        for dic in self.mempool.sorted_spends.values():
+        for dic in reversed(self.mempool.sorted_spends.values()):
             if broke_from_inner_loop:
                 break
             for item in dic.values():
-                log.info(f"Cumulative cost: {cost_sum}")
+                log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
                 if (
                     item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
@@ -157,7 +158,7 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(first_in)
 
     def seen(self, bundle_hash: bytes32) -> bool:
-        """Return true if we saw this spendbundle before"""
+        """Return true if we saw this spendbundle recently"""
         return bundle_hash in self.seen_bundle_hashes
 
     def remove_seen(self, bundle_hash: bytes32):
@@ -229,8 +230,8 @@ class MempoolManager:
         program: Optional[SerializedProgram] = None,
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
-        Tries to add spendbundle to either self.mempools or to_pool if it's specified.
-        Returns true if it's added in any of pools, Returns error if it fails.
+        Tries to add spend bundle to the mempool
+        Returns the cost (if SUCCESS), the result (MempoolInclusion status), and an optional error
         """
         start_time = time.time()
         if self.peak is None:
@@ -260,6 +261,12 @@ class MempoolManager:
         addition_amount = uint64(0)
         # Check additions for max coin amount
         for coin in additions:
+            if coin.amount < 0:
+                return (
+                    None,
+                    MempoolInclusionStatus.FAILED,
+                    Err.COIN_AMOUNT_NEGATIVE,
+                )
             if coin.amount > self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
@@ -283,13 +290,11 @@ class MempoolManager:
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_coin_dict: Dict[bytes32, Coin] = {}
-        unknown_unspent_error: bool = False
         removal_amount = uint64(0)
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
-                unknown_unspent_error = True
-                break
+                return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
                 # TODO(straya): what timestamp to use here?
@@ -309,9 +314,6 @@ class MempoolManager:
             removal_coin_dict[name] = removal_record.coin
 
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
-
-        if unknown_unspent_error:
-            return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
         if addition_amount > removal_amount:
             print(addition_amount, removal_amount)
@@ -430,7 +432,10 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
-        log.info(f"add_spendbundle took {time.time() - start_time} seconds")
+        log.info(
+            f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
+            f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"
+        )
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
@@ -463,7 +468,7 @@ class MempoolManager:
         This is later used to retry to add them.
         """
         if item.spend_bundle_name in self.potential_txs:
-            return
+            return None
 
         self.potential_txs[item.spend_bundle_name] = item
         self.potential_cache_cost += item.cost
@@ -502,21 +507,29 @@ class MempoolManager:
         self.peak = new_peak
 
         old_pool = self.mempool
-        self.mempool = Mempool(self.mempool_max_total_cost)
+        async with self.lock:
+            self.mempool = Mempool(self.mempool_max_total_cost)
 
-        for item in old_pool.spends.values():
-            await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program)
+            for item in old_pool.spends.values():
+                _, result, _ = await self.add_spendbundle(
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
+                )
+                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
+                # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
+                # it can be resubmitted
+                if result != MempoolInclusionStatus.SUCCESS:
+                    self.remove_seen(item.spend_bundle_name)
 
-        potential_txs_copy = self.potential_txs.copy()
-        self.potential_txs = {}
-        txs_added = []
-        for item in potential_txs_copy.values():
-            cost, status, error = await self.add_spendbundle(
-                item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
-            )
-            if status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
-        log.debug(
+            potential_txs_copy = self.potential_txs.copy()
+            self.potential_txs = {}
+            txs_added = []
+            for item in potential_txs_copy.values():
+                cost, status, error = await self.add_spendbundle(
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
+                )
+                if status == MempoolInclusionStatus.SUCCESS:
+                    txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
+        log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"
         )

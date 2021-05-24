@@ -328,7 +328,7 @@ class DIDWallet:
             f.close()
         except Exception as e:
             raise e
-        return
+        return None
 
     async def load_backup(self, filename: str):
         try:
@@ -412,7 +412,7 @@ class DIDWallet:
                         )
                         await self.save_info(did_info, False)
 
-            return
+            return None
         except Exception as e:
             raise e
 
@@ -682,7 +682,7 @@ class DIDWallet:
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         message = bytes(puzhash)
         sigs = [AugSchemeMPL.sign(private, message)]
-        for c in spend_bundle.coin_solutions:
+        for _ in spend_bundle.coin_solutions:
             sigs.append(AugSchemeMPL.sign(private, message))
         aggsig = AugSchemeMPL.aggregate(sigs)
         # assert AugSchemeMPL.verify(pubkey, message, aggsig)
