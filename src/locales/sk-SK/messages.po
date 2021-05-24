@@ -2071,4 +2071,3 @@ msgstr "{currencyCode} Celkové množstvo vyfarmárčenej Chii"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Užívateľské poplatky za transakcie"
-
