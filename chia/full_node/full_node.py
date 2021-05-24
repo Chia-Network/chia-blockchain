@@ -637,10 +637,10 @@ class FullNode:
             if "weight_proof_timeout" in self.config:
                 wp_timeout = self.config["weight_proof_timeout"]
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-            capabilities = peer.capabilities
+            capabilities = weight_proof_peer.capabilities
             self.log.debug(f"capabilities {capabilities} ")
             weight_proof_v2 = False
-            if (uint16(Capability.WP.value), "1") in capabilities:
+            if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
                 weight_proof_v2 = True
                 self.log.info("using new weight proof format")
             if weight_proof_v2:

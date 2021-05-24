@@ -15,6 +15,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     RejectAdditionsRequest,
     RejectRemovalsRequest,
@@ -35,7 +36,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint128
+from chia.util.ints import uint32, uint128, uint16
 from chia.util.keychain import Keychain
 from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
@@ -446,30 +447,64 @@ class WalletNode:
                 if self.wallet_state_manager.sync_mode:
                     self.last_new_peak_messages.put(peer, peak)
                     return None
-                weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
-                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-                    weight_request, timeout=360
-                )
+
+                capabilities = peer.capabilities
+                weight_proof_v2 = False
+                if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
+                    weight_proof_v2 = True
+                    self.log.info("using new weight proof format")
+                if weight_proof_v2 is False:
+                    weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
+                        RequestProofOfWeight(header_block.height, header_block.header_hash), timeout=360
+                    )
+                else:
+                    weight_proof_response = await peer.request_proof_of_weight_v2(
+                        RequestProofOfWeight(header_block.height, header_block.header_hash), timeout=360
+                    )
                 if weight_proof_response is None:
                     return None
-                weight_proof = weight_proof_response.wp
+
                 if self.wallet_state_manager is None:
                     return None
                 if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
-                    valid, fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
-                        weight_proof
-                    )
-                else:
-                    valid, fork_point, _ = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
-                        weight_proof
-                    )
-                    if not valid:
-                        self.log.error(
-                            f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
-                            f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+                    if weight_proof_v2 is False:
+                        (
+                            valid,
+                            fork_point,
+                        ) = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
+                            weight_proof_response.wp
                         )
-                        self.log.debug(f"{weight_proof}")
-                        return None
+                    else:
+                        (
+                            valid,
+                            fork_point,
+                        ) = self.wallet_state_manager.weight_proof_handler_v2.get_fork_point_no_validations(
+                            weight_proof_response.wp
+                        )
+                else:
+                    if weight_proof_v2 is False:
+                        (
+                            valid,
+                            fork_point,
+                            _,
+                        ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
+                            weight_proof_response.wp
+                        )
+                    else:
+                        (
+                            valid,
+                            fork_point,
+                            _,
+                        ) = await self.wallet_state_manager.weight_proof_handler_v2.validate_weight_proof(
+                            weight_proof_response.wp
+                        )
+                if not valid:
+                    self.log.error(
+                        f"invalid weight proof, num of epochs {len(weight_proof_response.wp.sub_epochs)}"
+                        f" recent blocks num ,{len(weight_proof_response.wp.recent_chain_data)}"
+                    )
+                    self.log.debug(f"{weight_proof_response.wp}")
+                    return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
                     header_block.header_hash, uint32(fork_point)
@@ -504,6 +539,7 @@ class WalletNode:
                 break
             asyncio.create_task(self.check_new_peak())
             await self.sync_event.wait()
+            self.log.info("Loop start queue")
             self.last_new_peak_messages = LRUCache(5)
             self.sync_event.clear()
 
@@ -512,6 +548,7 @@ class WalletNode:
             try:
                 assert self.wallet_state_manager is not None
                 self.wallet_state_manager.set_sync_mode(True)
+                self.log.info("set sync mode true")
                 await self._sync()
             except Exception as e:
                 tb = traceback.format_exc()
@@ -520,6 +557,7 @@ class WalletNode:
                 if self.wallet_state_manager is not None:
                     self.wallet_state_manager.set_sync_mode(False)
                 for peer, peak in self.last_new_peak_messages.cache.items():
+                    self.log.info("create peak task")
                     asyncio.create_task(self.new_peak_wallet(peak, peer))
             self.log.info("Loop end in sync job")
 

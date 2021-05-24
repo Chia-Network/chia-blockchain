@@ -18,6 +18,7 @@ from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
+from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -99,6 +100,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     weight_proof_handler: Any
+    weight_proof_handler_v2: Any
     server: ChiaServer
 
     @staticmethod
@@ -145,7 +147,7 @@ class WalletStateManager:
             self.lock,
         )
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
-
+        self.weight_proof_handler_v2 = WeightProofHandlerV2(self.constants, self.blockchain)
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
 
