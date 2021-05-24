@@ -8,7 +8,7 @@ msgstr ""
 "Language: cy_GB\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-23 21:04\n"
+"PO-Revision-Date: 2021-05-24 21:10\n"
 "Last-Translator: \n"
 "Language-Team: Welsh\n"
 "Plural-Forms: nplurals=6; plural=(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n == 3) ? 3 : ((n == 6) ? 4 : 5))));\n"
@@ -1457,7 +1457,11 @@ msgid "Select the final destination for the folder where you would like the plot
 msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
-msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
 msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
