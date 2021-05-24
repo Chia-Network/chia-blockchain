@@ -204,11 +204,29 @@ class FarmerAPI:
 
                 submit_partial: SubmitPartial = SubmitPartial(payload, agg_sig)
                 json_data = json.dumps(submit_partial.to_json_dict())
+                pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
+                pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(f"http://{pool_url}/submit_partial", data=json_data) as resp:
                             if resp.ok:
-                                self.farmer.log.info(f"Pool response: {json.loads(await resp.text())}")
+                                response: Dict = json.loads(await resp.text())
+                                self.farmer.log.info(f"Pool response: {response}")
+                                if "error_code" in response:
+                                    self.farmer.log.error(
+                                        f"Error in pooling: {response['error_code'], response['error_message']}"
+                                    )
+                                    pool_state_dict["pool_errors_24"].append(response)
+                                else:
+                                    pool_state_dict["points_acknowledged_since_start"] += pool_state_dict[
+                                        "current_difficulty"
+                                    ]
+                                    pool_state_dict["points_acknowledged_24h"].append(
+                                        (time.time(), pool_state_dict["current_difficulty"])
+                                    )
+                                    pool_state_dict["current_difficulty"] = response["current_difficulty"]
+                                    pool_state_dict["current_points_balance"] = response["points_balance"]
+
                             else:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
                 except Exception as e:
