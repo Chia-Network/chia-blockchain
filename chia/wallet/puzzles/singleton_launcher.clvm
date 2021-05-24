@@ -1,5 +1,7 @@
 (mod (singleton_fullpuz amount extra_data)
 
+  (include condition_codes.clvm)
+
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
       (if (l TREE)
@@ -9,5 +11,6 @@
   )
 
   ; main
-  (list (list 51 singleton_fullpuz amount) (list 60 (sha256tree1 (list singleton_fullpuz amount extra_data))))
+  (list (list CREATE_COIN singleton_fullpuz amount)
+        (list CREATE_COIN_ANNOUNCEMENT (sha256tree1 (list singleton_fullpuz amount extra_data))))
 )
