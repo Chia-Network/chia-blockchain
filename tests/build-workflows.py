@@ -6,9 +6,12 @@ import argparse
 import testconfig
 import logging
 import subprocess
+import os
+import os.path as os_path
 from pathlib import Path
 from typing import List
 
+template_dir = 'runner-templates'
 
 def subdirs(root_dirs: List[str]) -> List[Path]:
     dirs: List[Path] = []
@@ -38,8 +41,8 @@ def read_file(filename):
 
 
 # Input file
-def workflow_yaml_template_text(os):
-    return Path(f"runner-templates/build-test-{os}").read_text()
+def workflow_yaml_template_text(templateDir,os):
+    return Path(os_path.join(templateDir,f"build-test-{os}")).read_text()
 
 
 # Output files
@@ -72,6 +75,7 @@ default_replacements = {
     "TEST_DIR": "",
     "TEST_NAME": "",
     "PYTEST_PARALLEL_ARGS": "",
+    "CHIAHOME": os_path.join(os.getcwd(), '..'),
 }
 
 # -----
@@ -124,6 +128,7 @@ def dir_path(string):
 # args
 arg_parser = argparse.ArgumentParser(description="Build github workflows")
 arg_parser.add_argument("--output-dir", "-d", default="../.github/workflows", type=dir_path)
+arg_parser.add_argument("--template-dir", "-t", default="./runner-templates", type=dir_path)
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 args = arg_parser.parse_args()
 
@@ -134,7 +139,7 @@ if args.verbose:
 test_dirs = subdirs(testconfig.root_test_dirs)
 
 for os in testconfig.oses:
-    template_text = workflow_yaml_template_text(os)
+    template_text = workflow_yaml_template_text(args.template_dir, os)
     for dir in test_dirs:
         test_files = test_files_in_dir(dir)
         if len(test_files) == 0:
