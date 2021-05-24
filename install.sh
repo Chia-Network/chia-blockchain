@@ -1,4 +1,4 @@
-#!/bin/bash -xv
+#!/bin/bash
 set -e
 UBUNTU=false
 DEBIAN=false
