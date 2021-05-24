@@ -19,7 +19,7 @@ from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerPr
 from chia.cmds.init_funcs import chia_init
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
-from chia.ssl.create_ssl import get_mozzila_ca_crt
+from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
@@ -51,8 +51,8 @@ service_plotter = "chia plots create"
 async def fetch(url: str):
     async with ClientSession() as session:
         try:
-            mozzila_root = get_mozzila_ca_crt()
-            ssl_context = ssl_context_for_root(mozzila_root)
+            mozilla_root = get_mozilla_ca_crt()
+            ssl_context = ssl_context_for_root(mozilla_root)
             response = await session.get(url, ssl=ssl_context)
             if not response.ok:
                 log.warning("Response not OK.")
