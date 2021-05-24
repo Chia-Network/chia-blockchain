@@ -283,6 +283,25 @@ class Farmer:
 
         self.log.warning(f"Singleton genesis: {singleton_genesis} not found")
 
+    async def get_plots(self) -> Dict:
+        rpc_response = {}
+        for connection in self.server.get_connections():
+            if connection.connection_type == NodeType.HARVESTER:
+                peer_host = connection.peer_host
+                peer_port = connection.peer_port
+                peer_full = f"{peer_host}:{peer_port}"
+                response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
+                if response is None:
+                    self.log.error(
+                        "Harvester did not respond. You might need to update harvester to the latest version"
+                    )
+                    continue
+                if not isinstance(response, harvester_protocol.RespondPlots):
+                    self.log.error(f"Invalid response from harvester: {peer_host}:{peer_port}")
+                    continue
+                rpc_response[peer_full] = response.to_json_dict()
+        return rpc_response
+
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
         while not self._shut_down:

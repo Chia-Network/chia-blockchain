@@ -428,3 +428,7 @@ class FarmerAPI:
                 }
             },
         )
+
+    @api_request
+    async def respond_plots(self, _: harvester_protocol.RespondPlots):
+        self.farmer.log.warning("Respond plots came too late")
