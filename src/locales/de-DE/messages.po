@@ -8,7 +8,7 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-23 21:04\n"
+"PO-Revision-Date: 2021-05-24 15:08\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -529,15 +529,13 @@ msgstr "Lösche Schlüssel"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
-"Alle Schlüssel löschen entfernt alle Schlüssel unwiederbringlich vom Computer. \n"
+msgstr "Alle Schlüssel löschen entfernt alle Schlüssel unwiederbringlich vom Computer. \n"
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
 #: src/components/selectKey/SelectKey.tsx:65
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
-"Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich vom Computer. \n"
+msgstr "Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich vom Computer. \n"
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
@@ -1241,8 +1239,7 @@ msgstr "Paralleles plotten kann Zeit sparen. Andernfalls kannst du Plots der War
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:208
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
-"Das Plotten mit aktiviertem Bitfeld benötigt etwa 30 % weniger Schreibvorgänge und ist jetzt fast immer schneller. Möglicherweise ist der Speicherbedarf reduziert, wenn das Bitfeld-Plotten deaktiviert ist. Es wird empfohlen das Bitfeld-Plotten zu deaktivieren, wenn ihre CPU-Architektur\n"
+msgstr "Das Plotten mit aktiviertem Bitfeld benötigt etwa 30 % weniger Schreibvorgänge und ist jetzt fast immer schneller. Möglicherweise ist der Speicherbedarf reduziert, wenn das Bitfeld-Plotten deaktiviert ist. Es wird empfohlen das Bitfeld-Plotten zu deaktivieren, wenn ihre CPU-Architektur\n"
 "vor 2010 entwickelt wurde."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
@@ -2083,3 +2080,4 @@ msgstr "{currencyCode} Gesamtes Chia gefarmt"
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Benutzer Transaktionsgebühren"
+
