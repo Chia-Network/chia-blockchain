@@ -1,6 +1,7 @@
 from typing import Callable, Dict, List
 
 from chia.farmer.farmer import Farmer
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -92,4 +93,12 @@ class FarmerRpcApi:
             pool_target = request["pool_target"]
 
         self.service.set_reward_targets(farmer_target, pool_target)
+        return {}
+
+    async def get_pool_state(self, _: Dict) -> Dict:
+        return self.service.pool_state
+
+    async def set_pool_payout_instructions(self, request: Dict) -> Dict:
+        singleton_genesis: bytes32 = hexstr_to_bytes(request["singleton_genesis"])
+        await self.service.set_pool_payout_instructions(singleton_genesis, request["pool_payout_instructions"])
         return {}

@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import json
 import logging
 import time
@@ -6,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
-from blspy import G1Element, G2Element
+from blspy import G1Element, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -23,7 +24,12 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config, save_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+    master_sk_to_pooling_authentication_sk,
+)
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.wallet.test_singleton import P2_SINGLETON_MOD
 
@@ -88,7 +94,7 @@ class Farmer:
 
         self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
-        # This is the pool configuration, which should be moved out to the pool once it exists
+        # This is the self pooling configuration, which is only used for original self-pooled plots
         self.pool_target_encoded = pool_config["xch_target_address"]
         self.pool_target = decode_puzzle_hash(self.pool_target_encoded)
         self.pool_sks_map: Dict = {}
@@ -101,8 +107,15 @@ class Farmer:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
-        self.pool_config_list: List[PoolConfig] = self._load_pool_config()
-        self.pool_state: Dict[str, Dict] = {}
+        # The variables below are for use with an actual pool
+
+        # List of configs from from config.yaml
+
+        # From p2_singleton_puzzle_hash to pool state dict
+        self.pool_state: Dict[bytes32, Dict] = {}
+
+        # From public key bytes to PrivateKey
+        self.authentication_keys: Dict[bytes, PrivateKey] = {}
         self.log.warning(f"Pool state: {self.pool_state}")
 
     async def _start(self):
@@ -146,27 +159,36 @@ class Farmer:
             for pool_config_dict in config["pool"]["pool_list"]:
                 pool_config = PoolConfig(
                     pool_config_dict["pool_url"],
-                    bytes.fromhex(pool_config_dict["target"]),
-                    G2Element.from_bytes(bytes.fromhex(pool_config_dict["target_signature"])),
-                    bytes.fromhex(pool_config_dict["pool_puzzle_hash"]),
+                    bytes.fromhex(pool_config_dict["pool_payout_instructions"]),
+                    bytes.fromhex(pool_config_dict["target_puzzle_hash"]),
                     bytes.fromhex(pool_config_dict["singleton_genesis"]),
                     G1Element.from_bytes(bytes.fromhex(pool_config_dict["owner_public_key"])),
+                    G1Element.from_bytes(bytes.fromhex(pool_config_dict["authentication_public_key"])),
+                    pool_config_dict["authentication_public_key_timestamp"],
+                    G2Element.from_bytes(bytes.fromhex(pool_config_dict["authentication_key_info_signature"])),
                 )
                 ret_list.append(pool_config)
         return ret_list
 
     async def _update_pool_state(self):
-        for pool_config in self.pool_config_list:
+        pool_config_list: List[PoolConfig] = self._load_pool_config()
+        for pool_config in pool_config_list:
+            p2_singleton_full = P2_SINGLETON_MOD.curry(
+                singleton_mod_hash,
+                Program.to(singleton_mod_hash).get_tree_hash(),
+                pool_config.singleton_genesis,
+            )
+            p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
             try:
-                if pool_config.pool_url not in self.pool_state:
-                    p2_singleton_full = P2_SINGLETON_MOD.curry(
-                        singleton_mod_hash,
-                        Program.to(singleton_mod_hash).get_tree_hash(),
-                        pool_config.singleton_genesis,
-                    )
-                    p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
-                    self.pool_state[pool_config.pool_url] = {
-                        "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash,
+                authentication_sk: Optional[PrivateKey] = await self._find_authentication_sk(
+                    pool_config.authentication_public_key
+                )
+                if authentication_sk is None:
+                    self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")
+                    continue
+                if p2_singleton_puzzle_hash not in self.pool_state:
+                    self.authentication_keys[bytes(pool_config.authentication_public_key)] = authentication_sk
+                    self.pool_state[p2_singleton_puzzle_hash] = {
                         "points_found_since_start": 0,
                         "points_found_24h": [],
                         "points_acknowledged_since_start": 0,
@@ -176,16 +198,29 @@ class Farmer:
                         "pool_errors_24h": [],
                         "pool_info": {},
                     }
-                self.pool_state[pool_config.pool_url]["pool_config"] = pool_config
+                self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
+
                 # Makes a GET request to the pool to get the updated information
                 async with aiohttp.ClientSession() as session:
                     async with session.get(f"http://{pool_config.pool_url}/get_pool_info") as resp:
                         if resp.ok:
-                            self.pool_state[pool_config.pool_url]["pool_info"] = json.loads(await resp.text())
+                            self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
                         else:
                             self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
             except Exception as e:
                 self.log.error(f"Exception fetching pool info from {pool_config.pool_url}, {e}")
+
+    async def _find_authentication_sk(self, authentication_pk: G1Element) -> Optional[G1Element]:
+        # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
+        # many times.
+        all_sks = self.keychain.get_all_private_keys()
+        for wallet_id in range(20):
+            for auth_key_index in range(20):
+                for sk, _ in all_sks:
+                    auth_sk = master_sk_to_pooling_authentication_sk(sk, uint32(wallet_id), uint32(auth_key_index))
+                    if auth_sk.get_g1() == authentication_pk:
+                        return auth_sk
+        return None
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]
@@ -229,6 +264,23 @@ class Farmer:
             self.pool_target = decode_puzzle_hash(pool_target_encoded)
             config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
+
+    async def set_pool_payout_instructions(self, singleton_genesis: bytes32, pool_payout_instructions: str):
+        for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state:
+            if singleton_genesis == pool_state_dict["singleton_genesis"]:
+                config = load_config(self._root_path, "config.yaml")
+                new_list = []
+                for list_element in config["pool"]["pool_list"]:
+                    if bytes.fromhex(list_element["singleton_genesis"]) == bytes(singleton_genesis):
+                        list_element["pool_payout_instructions"] = pool_payout_instructions
+                    new_list.append(list_element)
+
+                config["pool"]["pool_list"] = new_list
+                save_config(self._root_path, "config.yaml", config)
+                await self._update_pool_state()
+                return
+
+        self.log.warning(f"Singleton genesis: {singleton_genesis} not found")
 
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)

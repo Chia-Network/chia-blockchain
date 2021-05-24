@@ -8,7 +8,7 @@ from chia.util.ints import uint32
 # https://eips.ethereum.org/EIPS/eip-2334
 # 12381 = bls spec number
 # 8444 = Chia blockchain number and port number
-# 0, 1, 2, 3, 4, farmer, pool, wallet, local, backup key numbers
+# 0, 1, 2, 3, 4, 5, 6 farmer, pool, wallet, local, backup key, singleton, pooling authentication key numbers
 
 
 def _derive_path(sk: PrivateKey, path: List[int]) -> PrivateKey:
@@ -35,3 +35,19 @@ def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
 
 def master_sk_to_backup_sk(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 4, 0])
+
+
+def master_sk_to_singleton_owner_sk(master: PrivateKey, wallet_id: uint32) -> PrivateKey:
+    """
+    This key controls a singleton on the blockchain, allowing for dynamic pooling (changing pools)
+    """
+    return _derive_path(master, [12381, 8444, 5, wallet_id])
+
+
+def master_sk_to_pooling_authentication_sk(master: PrivateKey, wallet_id: uint32, index: uint32) -> PrivateKey:
+    """
+    This key is used for the farmer to authenticate to the pool when sending partials
+    """
+    assert index < 10000
+    assert wallet_id < 10000
+    return _derive_path(master, [12381, 8444, 6, wallet_id * 10000 + index])
