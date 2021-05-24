@@ -26,13 +26,21 @@
   )
 
   (defun absorb_pool_reward (TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount pool_reward_id)
-    (list (list CREATE_COIN my_innerpuzhash my_amount) (list CREATE_COIN TARGET_PUZHASH pool_reward_amount) (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id) (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x80)))
+    (list
+        (list CREATE_COIN my_innerpuzhash my_amount)
+        (list CREATE_COIN TARGET_PUZHASH pool_reward_amount)
+        (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id)
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x80))
+    )
   )
 
   ; main
 
   (if spend_type
-    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT) (list CREATE_COIN my_puzhash my_amount) (list AGG_SIG_ME OWNER_PUBKEY (sha256tree1 (list my_puzhash my_amount extra_data) ())))
+    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT)
+          (list CREATE_COIN my_puzhash my_amount)
+          (list AGG_SIG_ME OWNER_PUBKEY (sha256tree1 (list my_puzhash my_amount extra_data) ()))
+    )
     (absorb_pool_reward TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount))
   )
 

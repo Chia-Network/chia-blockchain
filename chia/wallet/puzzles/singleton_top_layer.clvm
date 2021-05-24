@@ -4,22 +4,8 @@
 
 ; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
-
-; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
-; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
-
   (include condition_codes.clvm)
-
-  (defun is-in-list (atom items)
-    ;; returns 1 iff `atom` is in the list of `items`
-    (if items
-      (if (= atom (f items))
-        1
-        (is-in-list atom (r items))
-      )
-      0
-    )
-  )
+  (include curry-and-treehash.clinc)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
@@ -29,57 +15,21 @@
       )
   )
 
-  ;; utility function used by `curry_args`
-  (defun fix_curry_args (items core)
-    (if items
-        (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
-        core
-    )
-  )
-
-  ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-  (defun curry_args (func list_of_args) (qq (a (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1))))))
-
-  ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
-  (defun curry (func . args) (curry_args func args))
-
-  ;; hash a tree with escape values representing already-hashed subtrees
-  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
-  ;; You probably actually want to use `curry_and_hash` though.
-  (defun sha256tree_esc_list
-         (TREE LITERALS)
-         (if (l TREE)
-             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
-             (if (is-in-list TREE LITERALS)
-                 TREE
-                 (sha256 1 TREE)
-             )
-         )
-  )
-
-  ;; hash a tree with escape values representing already-hashed subtrees
-  ;; This optimization can be useful if you know the tree hash of a sub-expression.
-  (defun sha256tree_esc
-     (TREE . LITERAL)
-     (sha256tree_esc_list TREE LITERAL)
-  )
-
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
-  (defun-inline create_fullpuzhash (MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
-    (sha256tree_esc (curry MOD_HASH MOD_HASH_HASH GENESIS_ID inner_puzzle_hash)
-                    MOD_HASH
-                    MOD_HASH_HASH
-                    inner_puzzle_hash)
+  (defun-inline create_fullpuzhash (MOD_HASH GENESIS_ID inner_puzzle_hash)
+     (puzzle-hash-of-curried-function MOD_HASH inner_puzzle_hash (sha256 1 GENESIS_ID) (sha256 1 MOD_HASH))
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
-  (defun-inline create_my_ID (MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_parent parent_INNERPUZ parent_amount my_amount)
-    (sha256 (sha256 parent_parent (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID parent_INNERPUZ) parent_amount) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash) my_amount)
+  (defun-inline create_my_ID (MOD_HASH GENESIS_ID innerpuzhash parent_parent parent_INNERPUZ parent_amount my_amount)
+    (sha256 (sha256 parent_parent (create_fullpuzhash MOD_HASH GENESIS_ID parent_INNERPUZ) parent_amount)
+            (create_fullpuzhash MOD_HASH GENESIS_ID my_innerpuzhash)
+            my_amount)
   )
 
   ; This is the puzzlehash of the singleton_launcher which you can find in singleton_launcher.clvm
   ; We commit to this because we want to guarantee that we, and all other singletons like us, came from a puzzle which only creates one output
-  (defconstant launcher_puzhash 0x879d46938cfe331fb3cb1ea7ac5abde72e17041a0a2208549dfac1cb18d2e073)
+  (defconstant launcher_puzhash 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)
 
   ; if we are the child of genesis check that the genesis puzzle only creates me
   ; if we are the child of genesis check that our parent actually is the genesis coin
@@ -96,11 +46,22 @@
   ; if we are eve, then check the genesis was a launcher puzzle
   ; if we are a child of lineage, do the standard singleton lineage check
 
-  (defun assert_my_coin_id_based_on_information (MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash parent_info my_amount)
+  (defun check_my_amount_and_ID (MOD_HASH GENESIS_ID my_innerpuzhash parent_info my_amount)
     (if (logand my_amount 1)
       (if (r (r parent_info))
-        (list ASSERT_MY_COIN_ID (create_my_ID MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
-        (check_launcher (f parent_info) GENESIS_ID (f (r parent_info)) (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID my_innerpuzhash) my_amount)
+        (list ASSERT_MY_COIN_ID
+              (create_my_ID MOD_HASH
+                            GENESIS_ID
+                            my_innerpuzhash
+                            (f parent_info)
+                            (f (r parent_info))
+                            (f (r (r parent_info)))
+                            my_amount))
+        (check_launcher (f parent_info)
+                        GENESIS_ID
+                        (f (r parent_info))
+                        (create_fullpuzhash MOD_HASH GENESIS_ID my_innerpuzhash)
+                        my_amount)
       )
       (x)
     )
@@ -110,21 +71,21 @@
   ; Assert exactly one output with odd value exists - ignore it if value is -113
   ; This function loops over values created by running the innerpuz with the amended innersol
   ; If it finds a CREATE_COIN with odd value it morphs that condition to have our singleton top layer wrapper
-  
-  (defun check_outputs_value (MOD_HASH MOD_HASH_HASH GENESIS_ID outputs_loop flag)
+
+  (defun check_outputs_value (MOD_HASH GENESIS_ID outputs_loop flag)
     (if outputs_loop
       (if (= (f (f outputs_loop)) CREATE_COIN)
         (if (logand (f (r (r (f outputs_loop)))) 1)
           (if (= (f (r (r (f outputs_loop)))) -113)
-            (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 1)
+            (check_outputs_value MOD_HASH GENESIS_ID (r outputs_loop) 1)
             (if flag
               (x)
-              (c (list CREATE_COIN (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r (f outputs_loop)))) (f (r (r (f outputs_loop))))) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 1))
+              (c (list CREATE_COIN (create_fullpuzhash MOD_HASH GENESIS_ID (f (r (f outputs_loop)))) (f (r (r (f outputs_loop))))) (check_outputs_value MOD_HASH GENESIS_ID (r outputs_loop) 1))
             )
           )
-          (c (f outputs_loop) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) flag))
+          (c (f outputs_loop) (check_outputs_value MOD_HASH GENESIS_ID (r outputs_loop) flag))
         )
-        (c (f outputs_loop) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) flag))
+        (c (f outputs_loop) (check_outputs_value MOD_HASH GENESIS_ID (r outputs_loop) flag))
       )
       (if flag
         ()
@@ -134,11 +95,11 @@
   )
 
   ; this function acts as a loader so that we don't have to calculate innerpuzhash
-  (defun check_id_and_check_outputs (MOD_HASH MOD_HASH_HASH GENESIS_ID parent_info innerpuzhash my_amount INNERPUZ inner_solution)
-    (c (assert_my_coin_id_based_on_information MOD_HASH MOD_HASH_HASH GENESIS_ID innerpuzhash parent_info my_amount) (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (a INNERPUZ (c (list GENESIS_ID innerpuzhash my_amount parent_info) inner_solution)) 0))
+  (defun check_id_and_check_outputs (MOD_HASH GENESIS_ID parent_info innerpuzhash my_amount INNERPUZ inner_solution)
+    (c (check_my_amount_and_ID MOD_HASH GENESIS_ID innerpuzhash parent_info my_amount)
+       (check_outputs_value MOD_HASH GENESIS_ID (a INNERPUZ (c (list GENESIS_ID innerpuzhash my_amount parent_info) inner_solution)) 0))
   )
 
   ;main
-  (check_id_and_check_outputs MOD_HASH (sha256 1 MOD_HASH) GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount INNERPUZ inner_solution)
-
+  (check_id_and_check_outputs MOD_HASH GENESIS_ID parent_info (sha256tree1 INNERPUZ) my_amount INNERPUZ inner_solution)
 )
