@@ -342,8 +342,8 @@ class WalletStateManager:
                     uint32(index),
                     puzzlehash,
                     pubkey,
-                    target_wallet.wallet_info.type,
-                    uint32(target_wallet.wallet_info.id),
+                    target_wallet.db_wallet_info.type,
+                    uint32(target_wallet.db_wallet_info.id),
                 )
             )
         await self.puzzle_store.add_derivation_paths(derivation_paths)
