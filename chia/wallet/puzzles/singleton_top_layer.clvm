@@ -106,14 +106,11 @@
     (if outputs_loop
       (if (= (f (f outputs_loop)) CREATE_COIN)
         (if (logand (f (r (r (f outputs_loop)))) 1)
-          (if (= flag 2)
-            (x)
-            (if (= (f (r (r (f outputs_loop)))) -1337)
-              (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 2 output_ammended)
-              (if flag
-                (x)
-                (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 1 (c (list CREATE_COIN (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r (f outputs_loop)))) (f (r (r (f outputs_loop))))) output_ammended))
-              )
+          (if (= (f (r (r (f outputs_loop)))) -113)
+            (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 1 output_ammended)
+            (if flag
+              (x)
+              (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) 1 (c (list CREATE_COIN (create_fullpuzhash MOD_HASH MOD_HASH_HASH GENESIS_ID (f (r (f outputs_loop)))) (f (r (r (f outputs_loop))))) output_ammended))
             )
           )
           (check_outputs_value MOD_HASH MOD_HASH_HASH GENESIS_ID (r outputs_loop) flag (c (f outputs_loop) output_ammended))
