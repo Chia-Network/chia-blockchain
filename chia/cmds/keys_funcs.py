@@ -7,7 +7,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed, bytes_from_mnemonic
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 keychain: Keychain = Keychain()
@@ -19,8 +19,20 @@ def generate_and_print():
     """
 
     mnemonic = generate_mnemonic()
+    root_path = DEFAULT_ROOT_PATH
+    config = load_config(root_path, "config.yaml")
+    selected = config["selected_network"]
+    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+    passphrase = ""
+    seed = mnemonic_to_seed(mnemonic, passphrase)
+    entropy = bytes_from_mnemonic(mnemonic)
+    key = AugSchemeMPL.key_gen(seed)
     print("Generating private key. Mnemonic (24 secret words):")
     print(mnemonic)
+    print(
+        "First wallet address:",
+        encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(key, uint32(0)).get_g1()), prefix),
+    )
     print("Note that this key has not been added to the keychain. Run chia keys add")
     return mnemonic
 
