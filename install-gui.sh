@@ -28,7 +28,7 @@ if [ "$(uname)" = "Linux" ]; then
 		echo "Installing on Amazon Linux 2."
 		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
 		sudo yum install -y nodejs
-	elif type yum && [ ! -f /etc/rocky-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+	elif type yum && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
 		# CentOS or Redhat
 		echo "Installing on CentOS/Redhat."
 		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
