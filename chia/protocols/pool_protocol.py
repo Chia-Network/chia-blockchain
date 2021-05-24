@@ -9,6 +9,7 @@ from chia.util.ints import uint64, uint16, uint32
 from chia.util.streamable import Streamable, streamable
 
 
+# GET /get_pool_info
 @dataclass(frozen=True)
 @streamable
 class PoolInfo(Streamable):
@@ -42,6 +43,7 @@ class PartialPayload(Streamable):
     authentication_key_info: AuthenticationKeyInfo
 
 
+# POST /submit_partial
 @dataclass(frozen=True)
 @streamable
 class SubmitPartial(Streamable):
@@ -49,10 +51,17 @@ class SubmitPartial(Streamable):
     auth_key_and_partial_aggregate_signature: G2Element  # Sig of auth key by owner key, and partial by plot key and authentication key
 
 
+# Response in error case
 @dataclass(frozen=True)
 @streamable
-class RespondSubmitPartial(Streamable):
+class RespondSubmitPartialError(Streamable):
     error_code: uint16
     error_message: Optional[str]
+
+
+# Response in success case
+@dataclass(frozen=True)
+@streamable
+class RespondSubmitPartialSuccess(Streamable):
     points_balance: uint64
-    difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer
+    current_difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer

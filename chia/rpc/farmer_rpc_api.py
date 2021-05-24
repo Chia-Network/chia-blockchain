@@ -17,6 +17,8 @@ class FarmerRpcApi:
             "/get_signage_points": self.get_signage_points,
             "/get_reward_targets": self.get_reward_targets,
             "/set_reward_targets": self.set_reward_targets,
+            "/get_pool_state": self.get_pool_state,
+            "/set_pool_payout_instructions": self.set_pool_payout_instructions,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -96,7 +98,13 @@ class FarmerRpcApi:
         return {}
 
     async def get_pool_state(self, _: Dict) -> Dict:
-        return self.service.pool_state
+        pools_list = []
+        for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
+            pool_state = pool_dict.copy()
+            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pools_list.append(pool_state)
+        self.service.log.warning(f"Ret dict: {pools_list}")
+        return {"pool_state": pools_list}
 
     async def set_pool_payout_instructions(self, request: Dict) -> Dict:
         singleton_genesis: bytes32 = hexstr_to_bytes(request["singleton_genesis"])
