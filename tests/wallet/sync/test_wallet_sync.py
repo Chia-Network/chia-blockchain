@@ -38,7 +38,6 @@ class TestWalletSync:
         async for _ in setup_node_and_wallet(test_constants):
             yield _
 
-
     @pytest.fixture(scope="function")
     async def wallet_node_simulator(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
@@ -207,13 +206,12 @@ class TestWalletSync:
         await time_out_assert(10, get_tx_count, 2, 1)
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
 
-
     @pytest.mark.asyncio
-    async def test_wallet_wp_backwards_comp(self,two_nodes_two_wallets, default_1000_blocks):
+    async def test_wallet_wp_backwards_comp(self, two_nodes_two_wallets, default_1000_blocks):
         full_nodes, wallets = two_nodes_two_wallets
         blocks: List[FullBlock] = default_1000_blocks
-        full_node_1,full_node_2 = full_nodes
-        wallet_1,wallet_2 = wallets
+        full_node_1, full_node_2 = full_nodes
+        wallet_1, wallet_2 = wallets
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
         wallet_node_1, wallet_server_1 = wallet_1
@@ -221,7 +219,7 @@ class TestWalletSync:
         # no capabilities
         server_2.capabilities = [(uint16(Capability.BASE.value), "1")]
 
-        for block in blocks[: 800]:
+        for block in blocks[:800]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
@@ -232,4 +230,3 @@ class TestWalletSync:
         # same tip at height num_blocks - 1.
         await time_out_assert(600, wallet_height_at_least, True, wallet_node_1, 799)
         await time_out_assert(600, wallet_height_at_least, True, wallet_node_2, 799)
-
