@@ -382,7 +382,6 @@ class FullNode:
 
             if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
-                # TODO(almog): fix weight proofs so they work at the beginning as well
                 self.log.debug("Doing batch sync, no backup")
                 await self.short_sync_batch(peer, uint32(0), request.height)
                 return None
