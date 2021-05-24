@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-23 21:04\n"
+"PO-Revision-Date: 2021-05-24 21:10\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1457,8 +1457,12 @@ msgid "Select the final destination for the folder where you would like the plot
 msgstr "เลือกตำแหน่งโฟลเดอร์สุดท้ายสำหรับจัดเก็บไฟล์พล็อตที่สร้างเสร็จแล้ว เราแนะนำให้คุณใช้ฮาร์ดดิสก์ที่มีขนาดใหญ่และช้า (เช่น ฮาร์ดดิสก์พกพา)"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
-msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "เลือกตำแหน่งโฟลเดอร์ชั่วคราวสำหรับจัดเก็บไฟล์พล็อตที่กำลังสร้าง เราแนะนำให้คุณใช้ SSD ที่เร็ว"
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "เลือกตำแหน่งโฟลเดอร์ชั่วคราวสำหรับจัดเก็บไฟล์พล็อตที่กำลังสร้าง เราแนะนำให้คุณใช้ไดร์ฟที่เร็ว"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
