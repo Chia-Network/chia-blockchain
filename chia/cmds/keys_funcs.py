@@ -25,7 +25,6 @@ def generate_and_print():
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     passphrase = ""
     seed = mnemonic_to_seed(mnemonic, passphrase)
-    entropy = bytes_from_mnemonic(mnemonic)
     key = AugSchemeMPL.key_gen(seed)
     print("Generating private key. Mnemonic (24 secret words):")
     print(mnemonic)
