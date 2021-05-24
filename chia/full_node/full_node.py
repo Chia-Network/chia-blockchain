@@ -1153,31 +1153,29 @@ class FullNode:
             pre_validation_results: Optional[
                 List[PreValidationResult]
             ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+            prevalidation_done = time.time()
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
                 if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
-                    added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
-                    error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
-                    fork_height: Optional[uint32] = None
+                    self.log.info(f"Disconnected block {header_hash} at height {block.height}")
+                    return None
                 else:
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
                         f"{block.height}: {Err(pre_validation_results[0].error).name}"
                     )
-            else:
-                result_to_validate = (
-                    pre_validation_results[0] if pre_validation_result is None else pre_validation_result
-                )
-                assert result_to_validate.required_iters == pre_validation_results[0].required_iters
-                added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
-                if (
-                    self.full_node_store.previous_generator is not None
-                    and fork_height is not None
-                    and fork_height < self.full_node_store.previous_generator.block_height
-                ):
-                    self.full_node_store.previous_generator = None
-            validation_time = time.time() - validation_start
+
+            result_to_validate = pre_validation_results[0] if pre_validation_result is None else pre_validation_result
+            assert result_to_validate.required_iters == pre_validation_results[0].required_iters
+            added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
+            if (
+                self.full_node_store.previous_generator is not None
+                and fork_height is not None
+                and fork_height < self.full_node_store.previous_generator.block_height
+            ):
+                self.full_node_store.previous_generator = None
+            validation_time = time.time()
 
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
                 return None
@@ -1185,7 +1183,6 @@ class FullNode:
                 assert error_code is not None
                 self.log.error(f"Block {header_hash} at height {block.height} is invalid with code {error_code}.")
                 raise ConsensusError(error_code, header_hash)
-
             elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 self.log.info(f"Disconnected block {header_hash} at height {block.height}")
                 return None
@@ -1212,8 +1209,12 @@ class FullNode:
             if block.transactions_info is not None
             else ""
         )
+        validation_complete = time.time()
         self.log.info(
-            f"Block validation time: {validation_time}, "
+            f"Block validation time: {validation_complete-validation_start:.3f}s, "
+            f"[pre: {prevalidation_done-validation_start:.3f}s "
+            f"full: {validation_time-prevalidation_done:.3f}s "
+            f"post: {validation_complete-validation_time:.3f}s] "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str}"
         )
