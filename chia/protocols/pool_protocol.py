@@ -19,7 +19,14 @@ class PoolInfo(Streamable):
     protocol_version: str
     fee: str
     description: str
-    pool_puzzle_hash: bytes32
+    target_puzzle_hash: bytes32
+
+
+@dataclass(frozen=True)
+@streamable
+class AuthenticationKeyInfo(Streamable):
+    authentication_public_key: G1Element
+    authentication_public_key_timestamp: uint64
 
 
 @dataclass(frozen=True)
@@ -31,14 +38,15 @@ class PartialPayload(Streamable):
     suggested_difficulty: uint64  # This is suggested the difficulty threshold for this account
     singleton_genesis: bytes32  # This is what identifies the farmer's account for the pool
     owner_public_key: G1Element  # Current public key specified in the singleton
-    rewards_target: bytes  # The farmer can choose where to send the rewards. This can take a few minutes
+    pool_payout_instructions: bytes  # The farmer can choose where to send the rewards. This can take a few minutes
+    authentication_key_info: AuthenticationKeyInfo
 
 
 @dataclass(frozen=True)
 @streamable
 class SubmitPartial(Streamable):
     payload: PartialPayload
-    rewards_and_partial_aggregate_signature: G2Element  # Signature of rewards by singleton key, and partial by plot key
+    auth_key_and_partial_aggregate_signature: G2Element  # Sig of auth key by owner key, and partial by plot key and authentication key
 
 
 @dataclass(frozen=True)
