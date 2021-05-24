@@ -1457,8 +1457,12 @@ msgid "Select the final destination for the folder where you would like the plot
 msgstr "Selecione o destino final para a pasta onde deseja que o plot seja armazenado. Recomendamos que você use um disco rígido grande e lento (como HDD externo)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
-msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "Selecione o destino temporário para a pasta onde deseja que o plot seja armazenado. Recomendamos que você use um SSD rápido."
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Selecione o destino temporário para a pasta onde deseja que o plot seja armazenado. Recomendamos que você use um SSD rápido."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63

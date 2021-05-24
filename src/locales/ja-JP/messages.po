@@ -1457,8 +1457,12 @@ msgid "Select the final destination for the folder where you would like the plot
 msgstr "耕地の最終保存先となるフォルダを選択してください。大容量の遅いハードドライブがおすすめです。 (外部 HDD など)"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
-msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "耕地の一時保存先となるフォルダを選択してください。高速な SSD がおすすめです。"
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "耕地の一時保存先となるフォルダを選択してください。高速な SSD がおすすめです。"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63

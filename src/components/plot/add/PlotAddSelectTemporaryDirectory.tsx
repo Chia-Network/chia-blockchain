@@ -39,7 +39,7 @@ export default function PlotAddSelectTemporaryDirectory() {
       <Typography variant="subtitle1">
         <Trans>
           Select the temporary destination for the folder where you would like the plot to be stored.
-          We recommend you use a fast SSD.
+          We recommend you use a fast drive.
         </Trans>
       </Typography>
 

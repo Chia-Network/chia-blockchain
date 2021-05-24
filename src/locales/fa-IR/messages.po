@@ -1465,8 +1465,12 @@ msgid "Select the final destination for the folder where you would like the plot
 msgstr "مقصد نهایی را برای پوشه ای که می خواهید پلات در آن ذخیره شود انتخاب کنید. ما به شما توصیه می کنیم از یک هارد دیسک بزرگ (مثل هارد اکسترنال) استفاده کنید."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
-msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "مقصد موقت را برای پوشه ای که می خواهید پلات در آن ذخیره شود انتخاب کنید. توصیه می کنیم از SSD سریع استفاده کنید."
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "مقصد موقت را برای پوشه ای که می خواهید پلات در آن ذخیره شود انتخاب کنید. توصیه می کنیم از SSD سریع استفاده کنید."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
