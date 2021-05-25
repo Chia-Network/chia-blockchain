@@ -49,7 +49,8 @@ steps:
       pip install wheel pep517 setuptools_scm
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
-      python -m build_scripts/installer-version
+      cd build_scripts
+      python -m installer-version
     displayName: "Install dependencies"
 
   - script: |
