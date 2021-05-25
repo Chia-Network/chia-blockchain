@@ -29,8 +29,8 @@ class CoinStore:
         self.cache_size = cache_size
         self.db_wrapper = db_wrapper
         self.coin_record_db = db_wrapper.db
-        await self.coin_record_db.execute("pragma journal_mode=wal")
-        await self.coin_record_db.execute("pragma synchronous=2")
+        # the coin_name is unique in this table because the CoinStore always
+        # only represent a single peak
         await self.coin_record_db.execute(
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("
