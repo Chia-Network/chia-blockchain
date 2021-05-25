@@ -1,4 +1,4 @@
-(mod (MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED (singleton_id my_innerpuzhash my_amount parent_info) mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)
+(mod (MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED (mod_hash launcher_id my_id my_full_puzhash my_innerpuzhash my_amount parent_info) mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)
   ;message is the new puzzle in the recovery and standard spend cases
 
   ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST_HASH are curried into the puzzle

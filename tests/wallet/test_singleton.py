@@ -60,7 +60,7 @@ def test_only_odd_coins():
             LAUNCHER_ID,
             LAUNCHER_PUZZLE_HASH,
             1,
-            [0xDEADBEEF, 0xCAFEF00D, 210],
+            [0xDEADBEEF, 0xCAFED00D, 210],
             205,
             [[51, 0xCAFEF00D, 205]],
         ]
@@ -169,6 +169,7 @@ def test_pool_puzzles():
     inner_sol = Program.to([0, p2_singleton_coin_amount, block_height, "bonus data"])
     # full_sol = parent_info, my_amount, inner_solution
     full_sol = Program.to([[launcher_coin.parent_coin_info, launcher_coin.amount], singleton_amount, inner_sol])
+    breakpoint()
     cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
 
     conditions = result.as_python()
