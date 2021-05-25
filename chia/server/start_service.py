@@ -190,6 +190,13 @@ class Service:
     def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
+
+            # start with UPnP, since this can take a while, we want it to happen
+            # in the background while shutting down everything else
+            for port in self._upnp_ports:
+                if self.upnp is not None:
+                    self.upnp.release(port)
+
             self._log.info("Cancelling reconnect task")
             for _ in self._reconnect_tasks:
                 _.cancel()
@@ -209,10 +216,6 @@ class Service:
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 
-            for port in self._upnp_ports:
-                if self.upnp is not None:
-                    self.upnp.release(port)
-
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()
 
@@ -228,6 +231,11 @@ class Service:
 
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
+
+        if self.upnp is not None:
+            # this is a blocking call, waiting for the UPnP thread to exit
+            self.upnp.shutdown()
+
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
