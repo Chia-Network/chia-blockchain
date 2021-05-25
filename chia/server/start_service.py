@@ -1,4 +1,5 @@
 import asyncio
+import os
 import logging
 import logging.config
 import signal
@@ -23,6 +24,11 @@ from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
 
 from .reconnect_task import start_reconnect_task
+
+
+# this is used to detect whether we are running in the main process or not, in
+# signal handlers. We need to ignore signals in the sub processes.
+main_pid: Optional[int] = None
 
 
 class Service:
@@ -161,6 +167,9 @@ class Service:
         await self.wait_closed()
 
     def _enable_signals(self) -> None:
+
+        global main_pid
+        main_pid = os.getpid()
         signal.signal(signal.SIGINT, self._accept_signal)
         signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
@@ -169,6 +178,13 @@ class Service:
 
     def _accept_signal(self, signal_number: int, stack_frame):
         self._log.info(f"got signal {signal_number}")
+
+        # we only handle signals in the main process. In the ProcessPoolExecutor
+        # processes, we have to ignore them. We'll shut them down gracefully
+        # from the main process
+        global main_pid
+        if os.getpid() != main_pid:
+            return
         self.stop()
 
     def stop(self) -> None:
