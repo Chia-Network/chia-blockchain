@@ -398,6 +398,7 @@ class WebSocketServer:
         r = request["r"]
         f = request.get("f")
         p = request.get("p")
+        c = request.get("c")
         a = request.get("a")
         e = request["e"]
         x = request["x"]
@@ -422,6 +423,9 @@ class WebSocketServer:
 
         if p is not None:
             command_args.append(f"-p{p}")
+
+        if c is not None:
+            command_args.append(f"-c{c}")
 
         if e is True:
             command_args.append("-e")
@@ -525,6 +529,14 @@ class WebSocketServer:
         size = request.get("k")
         count = request.get("n", 1)
         queue = request.get("queue", "default")
+
+        if ("p" in request) and ("c" in request):
+            response = {
+                "success": False,
+                "service_name": service_name,
+                "error": "Choose one of pool_contract_address and pool_public_key"
+            }
+            return response
 
         for k in range(count):
             id = str(uuid.uuid4())
