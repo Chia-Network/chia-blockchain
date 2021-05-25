@@ -396,8 +396,8 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
-        f = request["f"]
-        p = request["p"]
+        f = request.get("f")
+        p = request.get("p")
         a = request.get("a")
         e = request["e"]
         x = request["x"]
