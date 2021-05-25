@@ -43,7 +43,6 @@ if __name__ == '__main__':
     shutil.copytree('..', '../docker-stage/app', ignore=shutil.ignore_patterns('.git', 'docker-stage'))
     shutil.copy('docker/Dockerfile', '../docker-stage/Dockerfile')
     shutil.copy('docker/create-container.sh', '../docker-stage/app/create-container.sh')
-    shutil.copy('docker/pytest.ini', '../docker-stage/app/pytest.ini')
     for pv in PYTHON_VERSIONS:
         writePythonEnv('../docker-stage/app', pv)
 
