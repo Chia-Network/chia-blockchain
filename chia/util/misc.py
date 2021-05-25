@@ -8,8 +8,10 @@ def format_bytes(bytes: int) -> str:
     value = bytes / BASE
     for label in LABELS:
         value /= BASE
-        if value < BASE or label == LABELS[-1]:
+        if value < BASE:
             return f"{value:.3f} {label}"
+
+    return f"{value:.3f} {LABELS[-1]}"
 
 
 def format_minutes(minutes: int) -> str:
