@@ -25,7 +25,9 @@ if [ "$(uname -m)" = "armv7l" ]; then
 	exit 1
 fi
 # Get submodules
-git submodule update --init mozilla-ca
+if [ -z "${CHIATEST}" ] ; then
+    git submodule update --init mozilla-ca
+fi
 
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
@@ -38,7 +40,7 @@ if $UBUNTU; then
 fi
 
 # Manage npm and other install requirements on an OS specific basis
-if [ "$(uname)" = "Linux" ]; then
+if [ "$(uname)" = "Linux" ] && [ -z "${CHIATEST}" ] ; then
 	#LINUX=1
 	if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
 		# Ubuntu
@@ -103,21 +105,26 @@ fi
 
 INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
-echo "Python version is $INSTALL_PYTHON_VERSION"
-$INSTALL_PYTHON_PATH -m venv venv
-if [ ! -f "activate" ]; then
-	ln -s venv/bin/activate .
+if [ -z "${CHIATEST}" ] ; then
+    echo "Python version is $INSTALL_PYTHON_VERSION"
+    $INSTALL_PYTHON_PATH -m venv venv
+    if [ ! -f "activate" ] ; then
+	      ln -s venv/bin/activate .
+    fi
+
+    # shellcheck disable=SC1091
+    . ./activate
 fi
 
-# shellcheck disable=SC1091
-. ./activate
 # pip 20.x+ supports Linux binary wheels
 python -m pip install --upgrade pip
 python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1
-python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
+if [ -z "${CHIATEST}" ] ; then
+    python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
+fi
 
 echo ""
 echo "Chia blockchain install.sh complete."

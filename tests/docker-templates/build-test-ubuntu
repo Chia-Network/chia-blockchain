@@ -8,6 +8,7 @@ services:
     network_mode: bridge
     environment:
       - PYVER
+      - CHIAPROFILE
     volumes:
       - CHIAHOME:/app
-    command: ["sh", "-c", "conda run -n python${PYVER} --no-capture-output pytest --durations 0 TEST_DIR"]
+    command: ["sh", "-c", "if [ -z \"${CHIAPROFILE}\" ] ; then conda run -n python${PYVER} --no-capture-output python3 -m cProfile -o profile -m pytest --durations 0 TEST_DIR ; else conda run -n python${PYVER} --no-capture-output pytest --durations 0 TEST_DIR ; fi"]
