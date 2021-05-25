@@ -1,7 +1,7 @@
-(mod (SINGLETON_MOD_HASH SINGLETON_ID singleton_innerpuzhash my_id)
+(mod (SINGLETON_MOD_HASH LAUNCHER_ID singleton_innerpuzhash my_id)
 
   ; SINGLETON_MOD_HASH is the mod-hash for the singleton_top_layer puzzle
-  ; SINGLETON_ID is the genesis ID of the singleton we are commited to paying to
+  ; LAUNCHER_ID is the ID of the singleton we are commited to paying to
   ; singleton_innerpuzhash is the innerpuzzlehash for our singleton at the current time
   ; my_id is the coin_id of the coin that this puzzle is locked into
 
@@ -13,7 +13,7 @@
       (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256 (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
                                                      singleton_innerpuzhash
-                                                     (sha256 1 SINGLETON_ID)
+                                                     (sha256 1 LAUNCHER_ID)
                                                      (sha256 1 SINGLETON_MOD_HASH))
                      my_id))
       (list CREATE_COIN_ANNOUNCEMENT 0x80)
