@@ -6,6 +6,7 @@ from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
+from chia.cmds.password import password_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
@@ -38,6 +39,7 @@ def monkey_patch_click() -> None:
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
+
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
 @click.pass_context
 def cli(ctx: click.Context, root_path: str) -> None:
@@ -60,6 +62,10 @@ def run_daemon_cmd(ctx: click.Context) -> None:
 
     asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))
 
+def supports_keyring_password() -> bool:
+    from sys import platform
+
+    return platform == 'linux'
 
 cli.add_command(keys_cmd)
 cli.add_command(plots_cmd)
@@ -72,6 +78,9 @@ cli.add_command(start_cmd)
 cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
+
+if supports_keyring_password():
+    cli.add_command(password_cmd)
 
 
 def main() -> None:
