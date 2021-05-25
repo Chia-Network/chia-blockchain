@@ -49,6 +49,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_blockchain import ReceiveBlockResult
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.util.profiler import profile_task
 
 
 class WalletNode:
@@ -139,6 +140,9 @@ class WalletNode:
         if private_key is None:
             self.logged_in = False
             return False
+
+        if self.config.get("enable_profiler", False):
+            asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
         db_path_replaced: str = (
