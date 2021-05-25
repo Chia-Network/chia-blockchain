@@ -69,7 +69,7 @@ export default function PlotAddSelectTemporaryDirectory() {
           }}
           required
         />
-        <ButtonSelected onClick={handleSelect} size="large" variant="contained" selected={hasWorkspaceLocation}>
+        <ButtonSelected onClick={handleSelect} style={{ minWidth: '92px' }} size="large" variant="contained" selected={hasWorkspaceLocation}>
           {hasWorkspaceLocation ? (
             <Trans>Selected</Trans>
           ) : (
@@ -100,7 +100,7 @@ export default function PlotAddSelectTemporaryDirectory() {
               }}
               variant="outlined"
             />
-            <ButtonSelected onClick={handleSelect2} size="large" variant="contained" selected={hasWorkspaceLocation2}>
+            <ButtonSelected onClick={handleSelect2} style={{ minWidth: '92px' }} size="large" variant="contained" selected={hasWorkspaceLocation2}>
               {hasWorkspaceLocation2 ? (
                 <Trans>Selected</Trans>
               ) : (
