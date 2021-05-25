@@ -108,12 +108,12 @@ class Keychain:
 
     testing: bool
     user: str
-    class KeyringWrapper:
+    class _KeyringWrapper:
         # Static instances
         __keyring: Keyring = None
 
         def __init__(self):
-            if Keychain.KeyringWrapper.__keyring != None:
+            if Keychain._KeyringWrapper.__keyring != None:
                 raise Exception("KeyringWrapper has already been instantiated")
 
             if platform == "win32" or platform == "cygwin":
@@ -130,21 +130,21 @@ class Keychain:
             else:
                 keyring = keyring_main
 
-            Keychain.KeyringWrapper.__keyring = keyring
+            Keychain._KeyringWrapper.__keyring = keyring
 
         @staticmethod
         def get_keyring() -> Keyring:
-            if Keychain.KeyringWrapper.__keyring == None:
-                Keychain.KeyringWrapper()
+            if Keychain._KeyringWrapper.__keyring == None:
+                Keychain._KeyringWrapper()
             
-            return Keychain.KeyringWrapper.__keyring
+            return Keychain._KeyringWrapper.__keyring
 
     def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
         self.testing = testing
         self.user = user
 
     def _get_keyring(self) -> Keyring:
-        return Keychain.KeyringWrapper.get_keyring()
+        return Keychain._KeyringWrapper.get_keyring()
 
     def _get_service(self) -> str:
         """
