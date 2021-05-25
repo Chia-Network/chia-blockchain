@@ -185,7 +185,6 @@ def add_cmd(ctx: click.Context, final_dir: str):
 @click.pass_context
 def remove_cmd(ctx: click.Context, final_dir: str):
     from chia.plotting.plot_tools import remove_plot_directory
-
     remove_plot_directory(Path(final_dir), ctx.obj["root_path"])
     print(f'Removed plot directory "{final_dir}".')
 
@@ -193,4 +192,14 @@ def remove_cmd(ctx: click.Context, final_dir: str):
 @plots_cmd.command("show", short_help="Shows the directory of current plots")
 @click.pass_context
 def show_cmd(ctx: click.Context):
+
     show_plots(ctx.obj["root_path"])
+
+@plots_cmd.command("plotinfo", short_help="get info from a plot file")
+@click.option("-p", "--path", help="plot path", type=str)
+@click.pass_context
+def check_cmd(
+    _: click.Context, path: str
+):
+    from chia.plotting.plot_info import plot_info
+    plot_info( path)
