@@ -2,37 +2,39 @@ import os
 import os.path
 import shutil
 import subprocess
-import traceback
-from stat import *
+from stat import S_ISDIR
 
-PYTHON_VERSIONS=["3.8", "3.9"]
+PYTHON_VERSIONS = ["3.8", "3.9"]
+
 
 def pyver_string(v):
     return v.replace('.', '_')
 
-def writePythonEnv(targetDir,target):
+
+def writePythonEnv(targetDir, target):
     flat_ver = pyver_string(target)
     name = "python%s" % flat_ver
-    f = open(os.path.join(targetDir,'environment%s.yml' % flat_ver),'w')
-    f.write('name: %s\ndependencies:\n - python=%s' % (name,target))
+    f = open(os.path.join(targetDir, 'environment%s.yml' % flat_ver), 'w')
+    f.write('name: %s\ndependencies:\n - python=%s' % (name, target))
     f.close()
+
 
 if __name__ == '__main__':
     try:
         shutil.rmtree('../docker-stage')
-    except:
+    except Exception as _:  # noqa: F841
         pass
 
     try:
         shutil.rmtree('./docker-compose')
-    except:
+    except Exception as _:  # noqa: F841
         pass
 
     have_test_cache = False
     try:
         mode = os.stat('test-cache').st_mode
         have_test_cache = S_ISDIR(mode)
-    except:
+    except Exception as _:  # noqa: F841
         pass
 
     if not have_test_cache:
@@ -47,6 +49,10 @@ if __name__ == '__main__':
         writePythonEnv('../docker-stage/app', pv)
 
     versions_env = " ".join(map(pyver_string, PYTHON_VERSIONS))
-    cmd = ['sh','-c','cd ../docker-stage && docker build --build-arg PYTHON_VERSIONS="%s" -t chia-test .' % versions_env]
+    cmd = [
+        'sh',
+        '-c',
+        'cd ../docker-stage && docker build --build-arg PYTHON_VERSIONS="%s" -t chia-test .' % versions_env
+    ]
     subprocess.check_call(cmd)
     subprocess.check_call(['python3', 'build-workflows.py', '-t', './docker-templates', '-d', 'docker-compose'])

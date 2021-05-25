@@ -6,12 +6,13 @@ import argparse
 import testconfig
 import logging
 import subprocess
-import os
+import os as os_mod
 import os.path as os_path
 from pathlib import Path
 from typing import List
 
 template_dir = 'runner-templates'
+
 
 def subdirs(root_dirs: List[str]) -> List[Path]:
     dirs: List[Path] = []
@@ -41,8 +42,8 @@ def read_file(filename):
 
 
 # Input file
-def workflow_yaml_template_text(templateDir,os):
-    return Path(os_path.join(templateDir,f"build-test-{os}")).read_text()
+def workflow_yaml_template_text(templateDir, os):
+    return Path(os_path.join(templateDir, f"build-test-{os}")).read_text()
 
 
 # Output files
@@ -75,7 +76,7 @@ default_replacements = {
     "TEST_DIR": "",
     "TEST_NAME": "",
     "PYTEST_PARALLEL_ARGS": "",
-    "CHIAHOME": os_path.join(os.getcwd(), '..'),
+    "CHIAHOME": os_path.join(os_mod.getcwd(), '..'),
 }
 
 # -----
