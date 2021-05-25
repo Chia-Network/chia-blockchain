@@ -364,6 +364,9 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return None
         header_block_records: List[HeaderBlockRecord] = []
+        trusted = False
+        if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
+            trusted = True
         async with self.wallet_state_manager.blockchain.lock:
             for block in header_blocks:
                 if block.is_transaction_block:
@@ -389,7 +392,7 @@ class WalletNode:
                     result,
                     error,
                     fork_h,
-                ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
+                ) = await self.wallet_state_manager.blockchain.receive_block(hbr, trusted=trusted)
                 if result == ReceiveBlockResult.NEW_PEAK:
                     if not self.wallet_state_manager.sync_mode:
                         self.wallet_state_manager.blockchain.clean_block_records()
