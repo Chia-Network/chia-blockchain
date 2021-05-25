@@ -21,6 +21,7 @@ class TestMisc:
         assert format_bytes(1024 ** 7) == "1.000 ZiB"
         assert format_bytes(1024 ** 8) == "1.000 YiB"
         assert format_bytes(1024 ** 9) == "1024.000 YiB"
+        assert format_bytes(1024 ** 10) == "1048576.000 YiB"
         assert format_bytes(1024 ** 20).endswith("YiB")
 
     @pytest.mark.asyncio
