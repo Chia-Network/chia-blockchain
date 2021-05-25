@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -41,3 +41,13 @@ class FarmerRpcClient(RpcClient):
         if pool_target is not None:
             request["pool_target"] = pool_target
         return await self.fetch("set_reward_targets", request)
+
+    async def get_pool_state(self) -> Dict:
+        return await self.fetch("get_pool_state", {})
+
+    async def set_pool_payout_instructions(self, singleton_genesis: bytes32, pool_payout_instructions: str) -> Dict:
+        request = {"singleton_genesis": singleton_genesis.hex(), "pool_payout_instructions": pool_payout_instructions}
+        return await self.fetch("set_pool_payout_instructions", request)
+
+    async def get_plots(self) -> Dict[str, Any]:
+        return await self.fetch("get_plots", {})

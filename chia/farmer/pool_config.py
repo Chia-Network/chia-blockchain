@@ -15,7 +15,7 @@ class PoolConfig(Streamable):
     """
 
     pool_url: str
-    pool_payout_instructions: bytes32
+    pool_payout_instructions: str
     target_puzzle_hash: bytes32
     singleton_genesis: bytes32
     owner_public_key: G1Element

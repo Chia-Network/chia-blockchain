@@ -104,7 +104,6 @@ class FarmerRpcApi:
             pool_state = pool_dict.copy()
             pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
             pools_list.append(pool_state)
-        self.service.log.warning(f"Ret dict: {pools_list}")
         return {"pool_state": pools_list}
 
     async def set_pool_payout_instructions(self, request: Dict) -> Dict:

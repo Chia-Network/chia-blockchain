@@ -80,7 +80,6 @@ class FarmerAPI:
 
             # If the iters are good enough to make a block, proceed with the block making flow
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
-                self.farmer.log.warning(f"WON proof!!! {required_iters}")
                 # Proceed at getting the signatures for this PoSpace
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
@@ -204,19 +203,20 @@ class FarmerAPI:
 
                 submit_partial: SubmitPartial = SubmitPartial(payload, agg_sig)
                 json_data = json.dumps(submit_partial.to_json_dict())
+                self.farmer.log.info(f"Data: {json_data}")
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(f"http://{pool_url}/submit_partial", data=json_data) as resp:
                             if resp.ok:
-                                response: Dict = json.loads(await resp.text())
-                                self.farmer.log.info(f"Pool response: {response}")
-                                if "error_code" in response:
+                                pool_response: Dict = json.loads(await resp.text())
+                                self.farmer.log.info(f"Pool response: {pool_response}")
+                                if "error_code" in pool_response:
                                     self.farmer.log.error(
-                                        f"Error in pooling: {response['error_code'], response['error_message']}"
+                                        f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
                                     )
-                                    pool_state_dict["pool_errors_24"].append(response)
+                                    pool_state_dict["pool_errors_24"].append(pool_response)
                                 else:
                                     pool_state_dict["points_acknowledged_since_start"] += pool_state_dict[
                                         "current_difficulty"
@@ -224,8 +224,8 @@ class FarmerAPI:
                                     pool_state_dict["points_acknowledged_24h"].append(
                                         (time.time(), pool_state_dict["current_difficulty"])
                                     )
-                                    pool_state_dict["current_difficulty"] = response["current_difficulty"]
-                                    pool_state_dict["current_points_balance"] = response["points_balance"]
+                                    pool_state_dict["current_difficulty"] = pool_response["current_difficulty"]
+                                    pool_state_dict["current_points_balance"] = pool_response["points_balance"]
 
                             else:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
