@@ -60,8 +60,8 @@ steps:
 
   - script: |
       ls
-      cd chia-blockchain
       . ./activate
+      cd build_scripts
       python bulid_scripts/installer-version.py
     displayName: "Get Chia Version"
 
