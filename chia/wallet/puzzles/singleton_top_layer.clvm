@@ -110,6 +110,7 @@
   ; Assert exactly one output with odd value exists - ignore it if value is -113
   ; This function loops over values created by running the innerpuz with the amended innersol
   ; If it finds a CREATE_COIN with odd value it morphs that condition to have our singleton top layer wrapper
+  
   (defun check_outputs_value (MOD_HASH MOD_HASH_HASH GENESIS_ID outputs_loop flag)
     (if outputs_loop
       (if (= (f (f outputs_loop)) CREATE_COIN)

@@ -152,8 +152,10 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, wallet_1.get_confirmed_balance, 201)
-        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 201)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, 200)
+        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 200)
+        await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
+        await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
 
     @pytest.mark.asyncio
     async def test_did_recovery_with_multiple_backup_dids(self, two_wallet_nodes):
@@ -227,7 +229,7 @@ class TestDIDWallet:
         filename = "test.backup"
         did_wallet_3.create_backup(filename)
 
-        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node_2.wallet_state_manager, wallet2, filename)
+        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node.wallet_state_manager, wallet, filename)
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
@@ -353,8 +355,7 @@ class TestDIDWallet:
         recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        updated_puz = await did_wallet.get_new_puzzle()
-        await did_wallet.create_spend(updated_puz.get_tree_hash())
+        await did_wallet.create_update_spend()
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
@@ -363,8 +364,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
 
         # DID Wallet 2 recovers into itself with new innerpuz
-        new_puz = await did_wallet_2.get_new_puzzle()
-        new_ph = new_puz.get_tree_hash()
+        new_ph = await did_wallet_2.get_new_inner_hash()
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
         pubkey = (
