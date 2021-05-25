@@ -45,7 +45,6 @@ steps:
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
-      chia version
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
@@ -58,8 +57,12 @@ steps:
       pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
       pip install --no-index --find-links=./wheels/ chia-blockchain
     displayName: "Build and install wheels"
-    name: createVersion
 
+  - script: |
+      . ./activate
+      python bulid_scripts/installer-version.py
+    displayName: "Get Chia Version"
+    
   - task: NodeTool@0
     inputs:
       versionSpec: '12.x'
