@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-25 03:18\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1462,7 +1462,7 @@ msgstr "选择您希望保存农田文件的最终输出文件夹。我们建议
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr "选择您希望保存农田文件的临时目录。我们建议您使用读写速度快的驱动器。"
+msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
