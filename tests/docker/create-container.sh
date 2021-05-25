@@ -7,6 +7,7 @@ for PYVER in `cat /app/pyvers.txt` ; do
     conda run -n python$PYVER sh install-timelord.sh
     conda run -n python$PYVER python3 setup.py install
     conda run -n python$PYVER pip install pytest
+    conda run -n python$PYVER pip install cProfile
     conda run -n python$PYVER pip install aiosqlite
     conda run -n python$PYVER pip install pytest-asyncio
 done
