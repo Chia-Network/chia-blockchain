@@ -56,7 +56,9 @@ steps:
       clang --version
       pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
       pip install --no-index --find-links=./wheels/ chia-blockchain
+      echo "##vso[task.setvariable variable=CHIA_VERSION_NUMBER;]$chia version"
     displayName: "Build and install wheels"
+    name: createVersion
 
   - task: NodeTool@0
     inputs:
