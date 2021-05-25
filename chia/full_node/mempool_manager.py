@@ -71,6 +71,7 @@ class MempoolManager:
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
         self.mempool: Mempool = Mempool(self.mempool_max_total_cost)
+        self.lock: asyncio.Lock = asyncio.Lock()
 
     def shut_down(self):
         self.pool.shutdown(wait=True)
@@ -431,7 +432,10 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
-        log.info(f"add_spendbundle took {time.time() - start_time} seconds")
+        log.info(
+            f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
+            f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"
+        )
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
@@ -503,28 +507,29 @@ class MempoolManager:
         self.peak = new_peak
 
         old_pool = self.mempool
-        self.mempool = Mempool(self.mempool_max_total_cost)
+        async with self.lock:
+            self.mempool = Mempool(self.mempool_max_total_cost)
 
-        for item in old_pool.spends.values():
-            _, result, _ = await self.add_spendbundle(
-                item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
-            )
-            # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be successfully
-            # added to the new mempool. In this case, remove it from seen, so in the case of a reorg, it can be
-            # resubmitted
-            if result != MempoolInclusionStatus.SUCCESS:
-                self.remove_seen(item.spend_bundle_name)
+            for item in old_pool.spends.values():
+                _, result, _ = await self.add_spendbundle(
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program
+                )
+                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
+                # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
+                # it can be resubmitted
+                if result != MempoolInclusionStatus.SUCCESS:
+                    self.remove_seen(item.spend_bundle_name)
 
-        potential_txs_copy = self.potential_txs.copy()
-        self.potential_txs = {}
-        txs_added = []
-        for item in potential_txs_copy.values():
-            cost, status, error = await self.add_spendbundle(
-                item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
-            )
-            if status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
-        log.debug(
+            potential_txs_copy = self.potential_txs.copy()
+            self.potential_txs = {}
+            txs_added = []
+            for item in potential_txs_copy.values():
+                cost, status, error = await self.add_spendbundle(
+                    item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
+                )
+                if status == MempoolInclusionStatus.SUCCESS:
+                    txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
+        log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"
         )

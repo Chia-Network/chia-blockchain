@@ -442,16 +442,17 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        balance = await wallet.get_confirmed_balance(unspent_records)
-        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-        spendable_balance = await wallet.get_spendable_balance(unspent_records)
-        pending_change = await wallet.get_pending_change_balance()
-        max_send_amount = await wallet.get_max_send_amount(unspent_records)
+        async with self.service.wallet_state_manager.lock:
+            unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            balance = await wallet.get_confirmed_balance(unspent_records)
+            pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+            spendable_balance = await wallet.get_spendable_balance(unspent_records)
+            pending_change = await wallet.get_pending_change_balance()
+            max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
-        unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
-            wallet_id
-        )
+            unconfirmed_removals: Dict[
+                bytes32, Coin
+            ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
 
         wallet_balance = {
             "wallet_id": wallet_id,
@@ -913,8 +914,6 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
-        request["wallet_id"] = 1
-        request["puzzle_hash"] = puzzle_hash
         async with self.service.wallet_state_manager.lock:
             await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}

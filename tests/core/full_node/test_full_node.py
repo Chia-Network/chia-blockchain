@@ -365,6 +365,7 @@ class TestFullNodeBlockCompression:
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
+        assert full_node_1.full_node.full_node_store.previous_generator is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
@@ -386,6 +387,11 @@ class TestFullNodeBlockCompression:
                         assert results is not None
                         for result in results:
                             assert result.error is None
+
+            # Test revert previous_generator
+            for block in reog_blocks:
+                await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            assert full_node_1.full_node.full_node_store.previous_generator is None
 
     @pytest.mark.asyncio
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
