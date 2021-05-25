@@ -1,5 +1,3 @@
-from hashlib import sha256
-
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
@@ -14,16 +12,16 @@ P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 POOL_COMMITED_MOD = load_clvm("pool_member_innerpuz.clvm")
 POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 
-GENESIS_ID = bytes32(sha256(b"genesis").digest())
+LAUNCHER_ID = bytes32(Program.to(b"launcher-id").get_tree_hash())
 
 
 def test_only_odd_coins():
     did_core_hash = SINGLETON_MOD.get_tree_hash()
-    # (MOD_HASH GENESIS_ID INNERPUZ parent_info my_amount inner_solution)
+    # (MOD_HASH LAUNCHER_ID INNERPUZ parent_info my_amount inner_solution)
     solution = Program.to(
         [
             did_core_hash,
-            GENESIS_ID,
+            LAUNCHER_ID,
             Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
@@ -40,7 +38,7 @@ def test_only_odd_coins():
     solution = Program.to(
         [
             did_core_hash,
-            GENESIS_ID,
+            LAUNCHER_ID,
             1,
             [0xDEADBEEF, 0xCAFEF00D, 210],
             205,
@@ -58,7 +56,7 @@ def test_only_one_odd_coin_created():
     solution = Program.to(
         [
             did_core_hash,
-            GENESIS_ID,
+            LAUNCHER_ID,
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -74,7 +72,7 @@ def test_only_one_odd_coin_created():
     solution = Program.to(
         [
             did_core_hash,
-            GENESIS_ID,
+            LAUNCHER_ID,
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -89,24 +87,24 @@ def test_only_one_odd_coin_created():
 
 def test_p2_singleton():
     # create a singleton. This should call driver code.
-    singleton_id = bytes32(sha256(b"singleton").digest())
+    launcher_id = LAUNCHER_ID
     singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
     innerpuz = Program.to(1)
-    singleton_full_puzzle = SINGLETON_MOD.curry(singleton_mod_hash, singleton_id, innerpuz)
+    singleton_full_puzzle = SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, innerpuz)
 
     # create a fake coin id for the `p2_singleton`
     p2_singleton_coin_id = Program.to(["test_hash"]).get_tree_hash()
     expected_announcement = Announcement(singleton_full_puzzle.get_tree_hash(), p2_singleton_coin_id).name()
 
     # create a `p2_singleton` puzzle. This should call driver code.
-    p2_singleton_full = P2_SINGLETON_MOD.curry(singleton_mod_hash, singleton_id)
+    p2_singleton_full = P2_SINGLETON_MOD.curry(singleton_mod_hash, launcher_id)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
     cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
     err, conditions = parse_sexp_to_conditions(result)
     assert err == None
 
     p2_singleton_full = P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, singleton_id
+        singleton_mod_hash, launcher_id
     )
     cost, result = p2_singleton_full.run_with_cost(
         INFINITE_COST, Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
@@ -116,11 +114,11 @@ def test_p2_singleton():
 
 
 def test_pool_puzzles():
-    # create a singleton with id `singleton_id`
+    # create a singleton with id `launcher_id`
     singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
     launcher_parent_id = Program.to(b"launcher-parent").get_tree_hash()
     launcher_coin = Coin(launcher_parent_id, SINGLETON_LAUNCHER_MOD.get_tree_hash(), 200)
-    singleton_id = launcher_coin.name()
+    launcher_id = launcher_coin.name()
 
     # create a `p2_singleton` that's provably a block reward
     genesis_challenge = bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
@@ -128,7 +126,7 @@ def test_pool_puzzles():
     pool_reward_parent_id = bytes32(genesis_challenge[:16] + block_height.to_bytes(16, "big"))
 
     p2_singleton_full = P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), singleton_id
+        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), launcher_id
     )
 
     p2_singleton_full_puzhash = p2_singleton_full.get_tree_hash()
@@ -150,9 +148,9 @@ def test_pool_puzzles():
     )
 
     # the singleton is committed to the pool
-    singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, singleton_id, committed_innerpuz)
+    singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, committed_innerpuz)
     singleton_amount = 3
-    singleton_coin = Coin(singleton_id, singleton_full.get_tree_hash(), singleton_amount)
+    singleton_coin = Coin(launcher_id, singleton_full.get_tree_hash(), singleton_amount)
 
     # innersol = spend_type pool_reward_amount pool_reward_height extra_data
     inner_sol = Program.to([0, p2_singleton_coin_amount, block_height, "bonus data"])
