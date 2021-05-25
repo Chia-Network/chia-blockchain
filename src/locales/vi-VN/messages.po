@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-25 03:18\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -57,7 +57,7 @@ msgstr "Hành động"
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr "Hoạt động"
+msgstr "Thao tác"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -176,7 +176,7 @@ msgstr "Ước tính tốt nhất trong 24 giờ qua"
 #: src/components/block/Block.jsx:151
 #: src/components/block/Block.jsx:306
 msgid "Block"
-msgstr "Block"
+msgstr "Khối"
 
 #: src/components/block/Block.jsx:124
 msgid "Block Test"
@@ -1462,7 +1462,7 @@ msgstr "Chọn điểm đến cuối cùng cho thư mục nơi bạn muốn lưu
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr ""
+msgstr "Chọn thư mục tạm để vẽ plot. Chúng tôi đề nghị sử dụng SSD tốc độ cao."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
