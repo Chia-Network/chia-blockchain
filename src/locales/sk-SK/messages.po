@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:11\n"
+"PO-Revision-Date: 2021-05-25 03:18\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -1028,7 +1028,7 @@ msgstr "Nesynchronizované"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr "Zatiaľ neakcteptované"
+msgstr "Zatiaľ neakceptované"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
@@ -1488,7 +1488,7 @@ msgstr "Poslať tento informačný paket používateľovi peňaženky s obmedzen
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "Pošlite svoj verejný klúč vášmu správcovi peňaženky s obmedzenou sadzbou:"
+msgstr "Pošlite svoj verejný kľúč vášmu správcovi peňaženky s obmedzenou sadzbou:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
