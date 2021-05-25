@@ -59,6 +59,7 @@ steps:
     displayName: "Build and install wheels"
 
   - script: |
+      pwd
       cd chia-blockchain
       . ./activate
       python bulid_scripts/installer-version.py
