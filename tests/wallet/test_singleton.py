@@ -13,6 +13,24 @@ POOL_COMMITED_MOD = load_clvm("pool_member_innerpuz.clvm")
 POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 
 LAUNCHER_ID = bytes32(Program.to(b"launcher-id").get_tree_hash())
+LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER_MOD.get_tree_hash()
+SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
+
+
+def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
+    return SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash, inner_puzzle)
+
+
+def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
+    return P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash)
+
+
+def singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> bytes32:
+    return singleton_puzzle(launcher_id, launcher_puzzle_hash, inner_puzzle).get_tree_hash()
+
+
+def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32) -> bytes32:
+    return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
 def test_only_odd_coins():
@@ -22,6 +40,7 @@ def test_only_odd_coins():
         [
             did_core_hash,
             LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH,
             Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
@@ -39,6 +58,7 @@ def test_only_odd_coins():
         [
             did_core_hash,
             LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH,
             1,
             [0xDEADBEEF, 0xCAFEF00D, 210],
             205,
@@ -57,6 +77,7 @@ def test_only_one_odd_coin_created():
         [
             did_core_hash,
             LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH,
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -73,6 +94,7 @@ def test_only_one_odd_coin_created():
         [
             did_core_hash,
             LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH,
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -88,34 +110,29 @@ def test_only_one_odd_coin_created():
 def test_p2_singleton():
     # create a singleton. This should call driver code.
     launcher_id = LAUNCHER_ID
-    singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
     innerpuz = Program.to(1)
-    singleton_full_puzzle = SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, innerpuz)
+    singleton_full_puzzle = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, innerpuz)
 
     # create a fake coin id for the `p2_singleton`
     p2_singleton_coin_id = Program.to(["test_hash"]).get_tree_hash()
     expected_announcement = Announcement(singleton_full_puzzle.get_tree_hash(), p2_singleton_coin_id).name()
 
     # create a `p2_singleton` puzzle. This should call driver code.
-    p2_singleton_full = P2_SINGLETON_MOD.curry(singleton_mod_hash, launcher_id)
+    p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
     cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
     err, conditions = parse_sexp_to_conditions(result)
-    assert err == None
+    assert err is None
 
-    p2_singleton_full = P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, launcher_id
-    )
-    cost, result = p2_singleton_full.run_with_cost(
-        INFINITE_COST, Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
-    )
+    p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
+    solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
+    cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
     assert result.first().rest().first().as_atom() == expected_announcement
     assert conditions[0].vars[0] == expected_announcement
 
 
 def test_pool_puzzles():
     # create a singleton with id `launcher_id`
-    singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
     launcher_parent_id = Program.to(b"launcher-parent").get_tree_hash()
     launcher_coin = Coin(launcher_parent_id, SINGLETON_LAUNCHER_MOD.get_tree_hash(), 200)
     launcher_id = launcher_coin.name()
@@ -125,11 +142,7 @@ def test_pool_puzzles():
     block_height = 101  # 0x65
     pool_reward_parent_id = bytes32(genesis_challenge[:16] + block_height.to_bytes(16, "big"))
 
-    p2_singleton_full = P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), launcher_id
-    )
-
-    p2_singleton_full_puzhash = p2_singleton_full.get_tree_hash()
+    p2_singleton_full_puzhash = p2_singleton_puzzle_hash(launcher_id, LAUNCHER_PUZZLE_HASH)
     p2_singleton_coin_amount = 2000000000
     p2_singleton_coin_id = Coin(pool_reward_parent_id, p2_singleton_full_puzhash, p2_singleton_coin_amount).name()
 
@@ -148,7 +161,7 @@ def test_pool_puzzles():
     )
 
     # the singleton is committed to the pool
-    singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, committed_innerpuz)
+    singleton_full = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, committed_innerpuz)
     singleton_amount = 3
     singleton_coin = Coin(launcher_id, singleton_full.get_tree_hash(), singleton_amount)
 
