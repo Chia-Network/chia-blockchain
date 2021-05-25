@@ -103,6 +103,7 @@ class WalletRpcApi:
             # Pool Wallet
             "/pw_pw_set_target_state": self.pw_set_target_state,
             "/pw_collect_self_pooling_rewards": self.pw_collect_self_pooling_rewards,
+            "/pw_status": self.pw_status,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -1050,7 +1051,6 @@ class WalletRpcApi:
         # Check for pending transactions that may induce a state change
         pass
 
-
     async def leave_pool(self, request):
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
@@ -1093,5 +1093,14 @@ class WalletRpcApi:
         # Return True if the SpendBundle was submitted to the Mempool
         return {
             "success": True,
+        }
+
+    async def pw_status(self, request):
+        """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        state = await wallet.get_all_state()
+        return {
+            "pool_wallet_state": state.to_json_dict(),
         }
 
