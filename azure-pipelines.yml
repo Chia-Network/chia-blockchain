@@ -59,10 +59,11 @@ steps:
     displayName: "Build and install wheels"
 
   - script: |
+      cd chia-blockchain
       . ./activate
       python bulid_scripts/installer-version.py
     displayName: "Get Chia Version"
-    
+
   - task: NodeTool@0
     inputs:
       versionSpec: '12.x'
