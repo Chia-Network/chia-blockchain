@@ -1,4 +1,5 @@
 def format_bytes(bytes: int) -> str:
+
     if not isinstance(bytes, int) or bytes < 0:
         return "Invalid"
 
@@ -7,7 +8,7 @@ def format_bytes(bytes: int) -> str:
     value = bytes / BASE
     for label in LABELS:
         value /= BASE
-        if value < BASE or label==LABELS[-1]:
+        if value < BASE or label == LABELS[-1]:
             return f"{value:.3f} {label}"
 
 
