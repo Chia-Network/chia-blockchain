@@ -62,7 +62,7 @@ steps:
       ls
       . ./activate
       cd build_scripts
-      python bulid_scripts/installer-version.py
+      python build_scripts/installer-version.py
     displayName: "Get Chia Version"
 
   - task: NodeTool@0
