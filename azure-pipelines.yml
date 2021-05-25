@@ -49,6 +49,7 @@ steps:
       pip install wheel pep517 setuptools_scm
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
+      python -m build_scripts/installer-version
     displayName: "Install dependencies"
 
   - script: |
@@ -58,12 +59,6 @@ steps:
       pip install --no-index --find-links=./wheels/ chia-blockchain
     displayName: "Build and install wheels"
 
-  - script: |
-      ls
-      . ./activate
-      cd build_scripts
-      python -m build_scripts/installer-version
-    displayName: "Get Chia Version"
 
   - task: NodeTool@0
     inputs:
