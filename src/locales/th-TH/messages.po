@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-25 09:20\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -45,7 +45,7 @@ msgstr "ยอมรับ"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "ยอมรับเมื่อเวลา:"
+msgstr "ยอมรับแล้ว เมื่อเวลา:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -99,7 +99,7 @@ msgstr "ที่อยู่"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:323
 msgid "Address / Puzzle hash"
-msgstr "ที่อยู่ / แฮชปริศนา"
+msgstr "Address / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -116,12 +116,12 @@ msgstr "จำนวน ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "จำนวนของเหรียญเริ่มต้น"
+msgstr "จำนวนเหรียญเริ่มต้น"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "คุณแน่ใจหรือไม่ว่าต้องการลบพล็อตนี้? พล็อตที่ถูกลบจะไม่สามารถกู้คืนได้"
+msgstr "พล็อตที่ถูกลบจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่ว่าต้องการลบพล็อตนี้?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -129,7 +129,7 @@ msgstr "คุณแน่ใจที่จะตัดการเชื่อ
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "คุณแน่ใจที่จะปิดโปรแกรมหรือไม่? การพล็อตและการฟาร์มแบบ GUI จะหยุดการทำงาน"
+msgstr "การพล็อตและการฟาร์มแบบ GUI จะหยุดการทำงาน คุณแน่ใจที่จะปิดโปรแกรมหรือไม่?"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -156,7 +156,7 @@ msgstr "ยอดคงเหลือ"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "ฐานรางวัลที่ Farmer จะได้รับจำนวน"
+msgstr "จำนวนพื้นฐานที่ Farmer จะได้รับ"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -165,7 +165,7 @@ msgstr "ภายใต้บล็อคปัจจุบัน, คุณอ�
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr "ปริมาณที่มากที่สุดภายใน 24 ชั่วโมง"
+msgstr "ค่าประมาณภายใน 24 ชั่วโมงที่ผ่านมา"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -228,7 +228,7 @@ msgstr "ซื้อ"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr "CC วอลเล็ต"
+msgstr "CC Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -257,7 +257,7 @@ msgstr "ระวัง การลบพล็อตเหล่านี้�
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr "ชาเลนจ์"
+msgstr "ความพยายาม"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
@@ -277,7 +277,7 @@ msgstr "Chia Blockchain Wiki"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr "Chia วอลเล็ต"
+msgstr "Chia Wallet"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -294,7 +294,7 @@ msgstr "ปิด"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "กำลังปิดโหนดและเซิร์ฟเวอร์"
+msgstr "กำลังปิด Node และเซิร์ฟเวอร์"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -406,7 +406,7 @@ msgstr "สร้าง"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "สร้าง DID ของกระเป๋า"
+msgstr "สร้าง DID wallet"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
