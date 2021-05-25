@@ -534,7 +534,7 @@ class WebSocketServer:
             response = {
                 "success": False,
                 "service_name": service_name,
-                "error": "Choose one of pool_contract_address and pool_public_key"
+                "error": "Choose one of pool_contract_address and pool_public_key",
             }
             return response
 
