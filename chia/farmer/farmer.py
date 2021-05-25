@@ -21,6 +21,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
@@ -116,7 +117,6 @@ class Farmer:
 
         # From public key bytes to PrivateKey
         self.authentication_keys: Dict[bytes, PrivateKey] = {}
-        self.log.warning(f"Pool state: {self.pool_state}")
 
     async def _start(self):
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
@@ -159,13 +159,13 @@ class Farmer:
             for pool_config_dict in config["pool"]["pool_list"]:
                 pool_config = PoolConfig(
                     pool_config_dict["pool_url"],
-                    bytes.fromhex(pool_config_dict["pool_payout_instructions"]),
-                    bytes.fromhex(pool_config_dict["target_puzzle_hash"]),
-                    bytes.fromhex(pool_config_dict["singleton_genesis"]),
-                    G1Element.from_bytes(bytes.fromhex(pool_config_dict["owner_public_key"])),
-                    G1Element.from_bytes(bytes.fromhex(pool_config_dict["authentication_public_key"])),
+                    pool_config_dict["pool_payout_instructions"],
+                    hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
+                    hexstr_to_bytes(pool_config_dict["singleton_genesis"]),
+                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
+                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
                     pool_config_dict["authentication_public_key_timestamp"],
-                    G2Element.from_bytes(bytes.fromhex(pool_config_dict["authentication_key_info_signature"])),
+                    G2Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_key_info_signature"])),
                 )
                 ret_list.append(pool_config)
         return ret_list
@@ -198,6 +198,7 @@ class Farmer:
                         "pool_errors_24h": [],
                         "pool_info": {},
                     }
+                    self.log.info(f"Added pool: {pool_config}")
                 self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
 
                 # Makes a GET request to the pool to get the updated information
@@ -266,8 +267,8 @@ class Farmer:
         save_config(self._root_path, "config.yaml", config)
 
     async def set_pool_payout_instructions(self, singleton_genesis: bytes32, pool_payout_instructions: str):
-        for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state:
-            if singleton_genesis == pool_state_dict["singleton_genesis"]:
+        for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
+            if singleton_genesis == pool_state_dict["pool_config"].singleton_genesis:
                 config = load_config(self._root_path, "config.yaml")
                 new_list = []
                 for list_element in config["pool"]["pool_list"]:
@@ -321,5 +322,7 @@ class Farmer:
                     f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
                     f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
                 )
+                log.debug("Updating pool state")
+                await self._update_pool_state()
             time_slept += 1
             await asyncio.sleep(1)
