@@ -2,7 +2,7 @@ import unicodedata
 from hashlib import pbkdf2_hmac
 from secrets import token_bytes
 from sys import platform
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, NewType
 
 import keyring as keyring_main
 import pkg_resources
@@ -14,20 +14,7 @@ from chia.util.hash import std_hash
 
 MAX_KEYS = 100
 
-if platform == "win32" or platform == "cygwin":
-    import keyring.backends.Windows
-
-    keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
-elif platform == "darwin":
-    import keyring.backends.macOS
-
-    keyring.set_keyring(keyring.backends.macOS.Keyring())
-elif platform == "linux":
-    keyring = CryptFileKeyring()
-    keyring.keyring_key = "your keyring password"  # type: ignore
-else:
-    keyring = keyring_main
-
+Keyring = NewType('Keyring', keyring_main)
 
 def bip39_word_list() -> str:
     return pkg_resources.resource_string(__name__, "english.txt").decode()
@@ -121,10 +108,43 @@ class Keychain:
 
     testing: bool
     user: str
+    class KeyringWrapper:
+        # Static instances
+        __keyring: Keyring = None
+
+        def __init__(self):
+            if Keychain.KeyringWrapper.__keyring != None:
+                raise Exception("KeyringWrapper has already been instantiated")
+
+            if platform == "win32" or platform == "cygwin":
+                import keyring.backends.Windows
+
+                keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
+            elif platform == "darwin":
+                import keyring.backends.macOS
+
+                keyring.set_keyring(keyring.backends.macOS.Keyring())
+            elif platform == "linux":
+                keyring = CryptFileKeyring()
+                keyring.keyring_key = "your keyring password"  # type: ignore
+            else:
+                keyring = keyring_main
+
+            Keychain.KeyringWrapper.__keyring = keyring
+
+        @staticmethod
+        def get_keyring() -> Keyring:
+            if Keychain.KeyringWrapper.__keyring == None:
+                Keychain.KeyringWrapper()
+            
+            return Keychain.KeyringWrapper.__keyring
 
     def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
         self.testing = testing
         self.user = user
+
+    def _get_keyring(self) -> Keyring:
+        return Keychain.KeyringWrapper.get_keyring()
 
     def _get_service(self) -> str:
         """
@@ -141,7 +161,7 @@ class Keychain:
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = keyring.get_password(self._get_service(), user)
+        read_str = self._get_keyring().get_password(self._get_service(), user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
@@ -187,7 +207,7 @@ class Keychain:
             # Prevents duplicate add
             return key
 
-        keyring.set_password(
+        self._get_keyring().set_password(
             self._get_service(),
             self._get_private_key_user(index),
             bytes(key.get_g1()).hex() + entropy.hex(),
@@ -297,7 +317,7 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                    self._get_keyring().delete_password(self._get_service(), self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -312,7 +332,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                self._get_keyring().delete_password(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -330,7 +350,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                self._get_keyring().delete_password(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
