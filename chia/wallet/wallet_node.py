@@ -855,28 +855,27 @@ class WalletNode:
     async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
         assert self.wallet_state_manager is not None
 
-        puzzle_store = self.wallet_state_manager.puzzle_store
+        # Check all additions
         REQUEST_TYPES = (
             WalletType.COLOURED_COIN,  # TODO why ?
             WalletType.DISTRIBUTED_ID,
         )
-
-        def no_request(coin):
+        puzzle_store = self.wallet_state_manager.puzzle_store
+        def doesnt_have_request_type(coin):
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
             return (record_info is None) or record_info.wallet_type not in REQUEST_TYPES
+        no_removal_requests = all(map(doesnt_have_request_type, additions))
 
-        no_requests = all(map(no_request, additions))
-        if no_requests and len(removals) == 0:
+        if no_removal_requests and len(removals) == 0:
             return []
 
-        coin_names = removals if no_requests else None
+        coin_names = removals if no_removal_requests else None
         removals_request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, coin_names)
         removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
             removals_request
         )
-
         if isinstance(removals_res, RespondRemovals):
             if self.validate_removals(
                 removals_res.coins, removals_res.proofs, block_i.foliage_transaction_block.removals_root,
