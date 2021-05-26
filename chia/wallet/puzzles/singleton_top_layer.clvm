@@ -127,7 +127,7 @@
   ; it then passes that output conditions from the innerpuz to the morph conditions function
 
   (defun stager_three (MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info my_id full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
-    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH (a INNERPUZ (c (list MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH my_id full_puzhash innerpuzhash my_amount parent_info) inner_solution)) 0))
+    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH (a INNERPUZ (c (list my_id full_puzhash innerpuzhash my_amount parent_info MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH) inner_solution)) 0))
   )
 
   ; this checks whether we are an eve spend or not and calculates our full coin ID appropriately and passes it on to the final stager

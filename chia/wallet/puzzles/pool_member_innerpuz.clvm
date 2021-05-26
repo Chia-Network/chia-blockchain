@@ -1,4 +1,4 @@
-(mod (POOL_PUZZLE_HASH P2_SINGLETON_PUZHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZHASH (mod_hash launcher_id launcher_puzzle_hash my_id my_full_puzhash my_innerpuzhash my_amount parent_info) spend_type pool_reward_amount pool_reward_height extra_data)
+(mod (POOL_PUZZLE_HASH P2_SINGLETON_PUZHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZHASH (my_id my_full_puzhash my_innerpuzhash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash) spend_type pool_reward_amount pool_reward_height extra_data)
 
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
   ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
