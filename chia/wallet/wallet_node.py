@@ -862,17 +862,19 @@ class WalletNode:
         )
         puzzle_store = self.wallet_state_manager.puzzle_store
 
-        async def doesnt_have_request_type(coin):
+        addition_requests = False
+        for coin in additions:
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
-            return (record_info is None) or record_info.wallet_type not in REQUEST_TYPES
+            addition_requests = (record_info is not None) and record_info.wallet_type in REQUEST_TYPES
+            if addition_requests:
+                break
 
-        no_addition_requests = all(map(doesnt_have_request_type, additions))
-        if no_addition_requests and len(removals) == 0:
+        if len(removals) == 0 and not addition_requests:
             return []
 
-        coin_names = removals if no_addition_requests else None
+        coin_names = None if addition_requests else removals
         request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, coin_names)
         removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(request)
 
