@@ -353,8 +353,6 @@ class WalletRpcApi:
                     )
                     asyncio.create_task(self._create_backup_and_upload(host))
                 return {"type": cc_wallet.type()}
-            else:
-                pass
 
         elif request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
@@ -439,6 +437,8 @@ class WalletRpcApi:
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
+            else:
+                pass
 
         return None
 
