@@ -862,7 +862,7 @@ class WalletNode:
         )
         puzzle_store = self.wallet_state_manager.puzzle_store
 
-        def doesnt_have_request_type(coin):
+        async def doesnt_have_request_type(coin):
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
