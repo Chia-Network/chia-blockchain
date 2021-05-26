@@ -188,7 +188,7 @@ class FullNodeDiscovery:
                 return
             await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
-            self.log.error(f"Exception while querying DNS server: {e}")
+            self.log.warn(f"querying DNS introducer failed: {e}")
 
     async def start_client_async(self, addr: PeerInfo, is_feeler: bool) -> None:
         try:
@@ -225,6 +225,7 @@ class FullNodeDiscovery:
         dns_server_index: int = 0
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        last_collision_timestamp = 0
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
 
@@ -321,10 +322,11 @@ class FullNodeDiscovery:
                         retry_introducers = True
                         break
                     info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
-                    if info is None:
+                    if info is None or time.time() - last_collision_timestamp <= 60:
                         info = await self.address_manager.select_peer(is_feeler)
                     else:
                         has_collision = True
+                        last_collision_timestamp = int(time.time())
                     if info is None:
                         if not is_feeler:
                             retry_introducers = True
