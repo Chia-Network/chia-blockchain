@@ -774,7 +774,6 @@ class WalletNode:
 
         return True
 
-
     def validate_removals(self, coins, proofs, root):
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
@@ -805,7 +804,6 @@ class WalletNode:
         )
 
         return all(validities)
-
 
     async def get_additions(self, peer: WSChiaConnection, block_i, additions) -> Optional[List[Coin]]:
         if len(additions) > 0:
