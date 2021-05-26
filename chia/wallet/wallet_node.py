@@ -852,56 +852,37 @@ class WalletNode:
             added_coins = []
             return added_coins
 
-    async def get_removals(
-        self, peer: WSChiaConnection, block_i, additions, removals
-    ) -> Optional[List[Coin]]:
+    async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
         assert self.wallet_state_manager is not None
 
         puzzle_store = self.wallet_state_manager.puzzle_store
-        REQUEST_WALLET_TYPES = (
+        REQUEST_TYPES = (
             WalletType.COLOURED_COIN,  # TODO why ?
             WalletType.DISTRIBUTED_ID,
         )
 
-        def request_removal(coin):
-            record_info: Optional[
-                DerivationRecord
-            ] = await puzzle_store.get_derivation_record_for_puzzle_hash(
+        def dont_request(coin):
+            record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
-            return (
-                record_info is not None
-                and record_info.wallet_type in REQUEST_WALLET_TYPES
-            )
+            return (record_info is None) or record_info.wallet_type not in REQUEST_TYPES
 
-        request_all_removals = any(map(request_removal, additions))
-        if request_all_removals or len(removals):
-            coin_names = None if request_all_removals else removals
-            removals_res: Optional[
-                Union[RespondRemovals, RejectRemovalsRequest]
-            ] = await peer.request_removals(
-                wallet_protocol.RequestRemovals(
-                    block_i.height, block_i.header_hash, coin_names
-                )
-            )
-
-            if isinstance(removals_res, RespondRemovals):
-                if self.validate_removals(
-                    removals_res.coins,
-                    removals_res.proofs,
-                    block_i.foliage_transaction_block.removals_root,
-                ):
-                    return [
-                        coins_l
-                        for _, coins_l in removals_res.coins
-                        if coins_l is not None
-                    ]
-                else:
-                    await peer.close()
-                    return None
-
-            else:
-                return None
-
-        else:
+        all_dont_request_removal = all(map(dont_request, additions))
+        if all_dont_request_removal and len(removals) == 0:
             return []
+
+        removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
+            wallet_protocol.RequestRemovals(
+                block_i.height, block_i.header_hash, (removals if all_dont_request_removal else None)
+            )
+        )
+
+        if isinstance(removals_res, RespondRemovals):
+            if self.validate_removals(
+                removals_res.coins, removals_res.proofs, block_i.foliage_transaction_block.removals_root,
+            ):
+                return [coins_l for _, coins_l in removals_res.coins if coins_l is not None]
+
+            await peer.close()
+
+        return None
