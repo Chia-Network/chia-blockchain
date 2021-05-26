@@ -35,6 +35,7 @@ def launch_singleton_from_standard_coin(
     curried_singleton = SINGLETON_MOD.curry(
         SINGLETON_MOD.get_tree_hash(),
         launcher_coin.name(),
+        SINGLETON_LAUNCHER.get_tree_hash(),
         inner_puzzle,
     )
     launcher_solution = Program.to(
@@ -82,6 +83,7 @@ def spend_singleton(
     puzzle_reveal = SINGLETON_MOD.curry(
         SINGLETON_MOD.get_tree_hash(),
         launcher_id,
+        SINGLETON_LAUNCHER.get_tree_hash(),
         inner_puzzle,
     )
 
