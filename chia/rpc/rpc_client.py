@@ -43,12 +43,14 @@ class RpcClient:
             res_json = await response.json()
             if not res_json["success"]:
                 raise ValueError(res_json)
+
             return res_json
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
         for connection in response["connections"]:
             connection["node_id"] = hexstr_to_bytes(connection["node_id"])
+
         return response["connections"]
 
     async def open_connection(self, host: str, port: int) -> Dict:

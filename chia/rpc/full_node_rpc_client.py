@@ -24,6 +24,7 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_blockchain_state", {})
         if response["blockchain_state"]["peak"] is not None:
             response["blockchain_state"]["peak"] = BlockRecord.from_json_dict(response["blockchain_state"]["peak"])
+
         return response["blockchain_state"]
 
     async def get_block(self, header_hash) -> Optional[FullBlock]:
@@ -31,6 +32,7 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
         except Exception:
             return None
+
         return FullBlock.from_json_dict(response["block"])
 
     async def get_block_record_by_height(self, height) -> Optional[BlockRecord]:
@@ -38,6 +40,7 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_block_record_by_height", {"height": height})
         except Exception:
             return None
+
         return BlockRecord.from_json_dict(response["block_record"])
 
     async def get_block_record(self, header_hash) -> Optional[BlockRecord]:
@@ -47,6 +50,7 @@ class FullNodeRpcClient(RpcClient):
                 return None
         except Exception:
             return None
+
         return BlockRecord.from_json_dict(response["block_record"])
 
     async def get_unfinished_block_headers(self) -> List[UnfinishedHeaderBlock]:
@@ -70,6 +74,7 @@ class FullNodeRpcClient(RpcClient):
             )
         except Exception:
             return None
+
         return network_space_bytes_estimate["space"]
 
     async def get_coin_records_by_puzzle_hash(
@@ -84,9 +89,10 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
+
         return [
             CoinRecord.from_json_dict(coin)
-            for coin in ((await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"])
+            for coin in (await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"]
         ]
 
     async def get_coin_records_by_puzzle_hashes(
@@ -102,9 +108,10 @@ class FullNodeRpcClient(RpcClient):
             d["start_height"] = start_height
         if end_height is not None:
             d["end_height"] = end_height
+
         return [
             CoinRecord.from_json_dict(coin)
-            for coin in ((await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"])
+            for coin in (await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"]
         ]
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
@@ -112,12 +119,10 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_additions_and_removals", {"header_hash": header_hash.hex()})
         except Exception:
             return [], []
-        removals = []
-        additions = []
-        for coin_record in response["removals"]:
-            removals.append(CoinRecord.from_json_dict(coin_record))
-        for coin_record in response["additions"]:
-            additions.append(CoinRecord.from_json_dict(coin_record))
+
+        removals = [CoinRecord.from_json_dict(coin_record) for coin_record in response["removals"]]
+        additions = [CoinRecord.from_json_dict(coin_record) for coin_record in response["additions"]]
+
         return additions, removals
 
     async def get_block_records(self, start: int, end: int) -> List:
@@ -127,7 +132,9 @@ class FullNodeRpcClient(RpcClient):
                 return []
         except Exception:
             return []
+
         # TODO: return block records
+        # ??
         return response["block_records"]
 
     async def push_tx(self, spend_bundle: SpendBundle):
@@ -142,6 +149,7 @@ class FullNodeRpcClient(RpcClient):
         converted: Dict[bytes32, Dict] = {}
         for tx_id_hex, item in response["mempool_items"].items():
             converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
+
         return converted
 
     async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:

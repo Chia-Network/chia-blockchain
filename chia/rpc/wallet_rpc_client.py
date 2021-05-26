@@ -112,6 +112,7 @@ class WalletRpcClient(RpcClient):
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
             del modified_tx["to_address"]
             reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
+
         return reverted_tx
 
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
@@ -120,7 +121,6 @@ class WalletRpcClient(RpcClient):
     async def send_transaction(
         self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
-
         res = await self.fetch(
             "send_transaction",
             {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
@@ -138,6 +138,7 @@ class WalletRpcClient(RpcClient):
     ) -> Dict:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        # ?? does the order of this dict matter here in any way
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             return await self.fetch(

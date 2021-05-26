@@ -59,6 +59,7 @@ class FullNodeRpcApi:
                 )
             )
             return payloads
+
         return []
 
     async def get_initial_freeze_period(self, _: Dict):
@@ -87,6 +88,7 @@ class FullNodeRpcApi:
                 },
             }
             return res
+
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
 
         if peak is not None and peak.height > 0:
@@ -189,6 +191,7 @@ class FullNodeRpcApi:
             if not exclude_hh:
                 json["header_hash"] = block.header_hash.hex()
             json_blocks.append(json)
+
         return {"blocks": json_blocks}
 
     async def get_block_records(self, request: Dict) -> Optional[Dict]:
@@ -217,6 +220,7 @@ class FullNodeRpcApi:
                 raise ValueError(f"Block {header_hash.hex()} does not exist")
 
             records.append(record)
+
         return {"block_records": records}
 
     async def get_block_record_by_height(self, request: Dict) -> Optional[Dict]:
@@ -236,6 +240,7 @@ class FullNodeRpcApi:
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
             raise ValueError(f"Block {header_hash} does not exist")
+
         return {"block_record": record}
 
     async def get_block_record(self, request: Dict):
@@ -271,6 +276,7 @@ class FullNodeRpcApi:
                     b"",
                 )
                 response_headers.append(unfinished_header_block)
+
         return {"headers": response_headers}
 
     async def get_network_space(self, request: Dict) -> Optional[Dict]:
@@ -385,6 +391,7 @@ class FullNodeRpcApi:
         if status == MempoolInclusionStatus.FAILED:
             assert error is not None
             raise ValueError(f"Failed to include transaction {spend_name}, error {error.name}")
+
         return {
             "status": status.name,
         }
@@ -414,6 +421,7 @@ class FullNodeRpcApi:
         spends = {}
         for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id.hex()] = item
+
         return {"mempool_items": spends}
 
     async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
