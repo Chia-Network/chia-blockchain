@@ -159,15 +159,12 @@ def test_pool_puzzles():
     # Only the escape puzzle has RELATIVE_LOCK_HEIGHT
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
     escape_innerpuz = POOL_ESCAPING_MOD.curry(
-        pool_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash, POOL_REWARD_PREFIX_MAINNET
+        pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, relative_lock_height
     )
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
+    escape_innerpuz_hash = escape_innerpuz.get_tree_hash()
     committed_innerpuz = POOL_MEMBER_MOD.curry(
-        pool_puzzle_hash,
-        escape_innerpuz.get_tree_hash(),
-        p2_singleton_full_puzhash,
-        owner_pubkey,
-        POOL_REWARD_PREFIX_MAINNET,
+        pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, escape_innerpuz_hash
     )
 
     # the singleton is committed to the pool
