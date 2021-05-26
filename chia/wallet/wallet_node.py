@@ -778,7 +778,7 @@ class WalletNode:
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # We must find the ones relevant to our wallets. Verify removals root.
-            # TODO review all verification
+            # TODO: review all verification
             removals_merkle_set = MerkleSet()
             for _name, coin in coins:
                 if coin is not None:
