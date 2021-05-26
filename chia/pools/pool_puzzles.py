@@ -7,7 +7,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 # from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 
 # from chia.types.coin_solution import CoinSolution
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -133,32 +133,34 @@ def generate_pool_eve_spend(
     # Note: The Pool MUST check the reveal of the new singleton
     # to confirm that the escape puzhash is what they expect
     # def create_pool_member_innerpuz(pool_puzhash: bytes, relative_lock_height: uint32, pubkey: bytes) -> Program:
-    genesis_id = launcher_coin.name()
+    genesis_id: bytes32 = launcher_coin.name()
     inner_puzzle: Program = create_pool_member_innerpuz(pool_puzhash, relative_lock_height, owner_pubkey)
-    full_puzzle: Program = create_fullpuz(inner_puzzle, genesis_id)
+    full_puzzle: SerializedProgram = SerializedProgram.from_bytes(bytes(create_fullpuz(inner_puzzle, genesis_id)))
 
     # inner_solution is:
     # ((singleton_id is_eve)
     # spend_type outer_puzhash my_amount pool_puzhash, escape_innerpuz_hash, p2_singleton_full_puzhash, owner_pubkey
 
-    spend_type = 0
-    my_amount = 1
+    spend_type: int = 0
+    my_amount: int = 1
     inner_solution = Program.to(
         [spend_type, inner_puzzle.get_tree_hash(), my_amount, pool_reward_amount, pool_reward_height]
     )
 
     # full solution is (parent_info my_amount inner_solution)
-    full_solution = Program.to(
-        [
-            [origin_coin.parent_coin_info, origin_coin.amount],
-            eve_coin.amount,
-            inner_solution,
-        ]
+    full_solution: SerializedProgram = SerializedProgram.from_bytes(
+        bytes(
+            Program.to(
+                [
+                    [origin_coin.parent_coin_info, origin_coin.amount],
+                    eve_coin.amount,
+                    inner_solution,
+                ]
+            )
+        )
     )
 
-    return generate_eve_spend(
-        origin_coin, eve_coin, full_puzzle, inner_puzzle, private_key, owner_pubkey, our_puzzle_hash, full_solution
-    )
+    return generate_eve_spend(eve_coin, full_puzzle, private_key, full_solution)
 
 
 ######################################
@@ -167,30 +169,21 @@ def generate_pool_eve_spend(
 
 
 def generate_eve_spend(
-    origin_coin: Coin,
     eve_coin: Coin,
-    full_puzzle: Program,
-    inner_puzzle: Program,
+    full_puzzle: SerializedProgram,
     private_key: G2Element,
-    owner_pubkey: G1Element,
-    our_puzzle_hash: bytes32,
-    full_solution,
+    full_solution: SerializedProgram,
 ) -> SpendBundle:
-    assert origin_coin is not None
-
     list_of_solutions = [CoinSolution(eve_coin, full_puzzle, full_solution)]
+
     # sign for AGG_SIG_ME
-    message = (
+    message: bytes = (
         Program.to([eve_coin.amount, eve_coin.puzzle_hash]).get_tree_hash()
         + eve_coin.name()
         + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
     )
 
-    signature = AugSchemeMPL.sign(private_key, message)
-    sigs = [signature]
-    aggsig = AugSchemeMPL.aggregate(sigs)
-    spend_bundle = SpendBundle(list_of_solutions, aggsig)
-    return spend_bundle
+    return SpendBundle(list_of_solutions, AugSchemeMPL.sign(private_key, message))
 
 
 def get_pubkey_from_member_innerpuz(innerpuz: Program) -> G1Element:

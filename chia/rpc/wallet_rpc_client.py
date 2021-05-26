@@ -146,5 +146,44 @@ class WalletRpcClient(RpcClient):
         else:
             return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
 
+    async def create_new_pool_wallet(
+        self,
+        target_puzzlehash: bytes32,
+        pool_url: str,
+        relative_lock_height: uint32,
+        backup_host: str,
+        mode: str = "new",
+        state: str = "FARMING_TO_POOL",
+    ) -> Dict:
+        request = {
+            "wallet_type": "pool_wallet",
+            "mode": mode,
+            "host": backup_host,
+            "initial_target_state": {
+                "target_puzzlehash": target_puzzlehash.hex(),
+                "relative_lock_height": relative_lock_height,
+                "pool_url": pool_url,
+                "state": state,
+            },
+        }
+        return await self.fetch("create_new_wallet", request)
 
-# TODO: add APIs for coloured coins and RL wallet
+    async def pw_self_pool(self, wallet_id: str):
+        return await self.fetch("pw_self_pool", {"wallet_id": wallet_id})
+
+    async def pw_join_pool(
+        self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32
+    ):
+        request = {
+            "wallet_id": wallet_id,
+            "target_puzzlehash": target_puzzlehash.hex(),
+            "relative_lock_height": relative_lock_height,
+            "pool_url": pool_url,
+        }
+        return await self.fetch("pw_join_pool", request)
+
+    async def pw_collect_self_pooling_rewards(self, wallet_id: str, fee: uint64 = uint64(0)):
+        return await self.fetch("pw_collect_self_pooling_rewards", {"wallet_id": wallet_id, "fee": fee})
+
+    async def pw_status(self, wallet_id: str):
+        return await self.fetch("pw_status", {"wallet_id": wallet_id})

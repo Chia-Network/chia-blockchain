@@ -1,20 +1,23 @@
 import asyncio
+import logging
+
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.pools.pool_wallet_info import FARMING_TO_POOL, create_pool_state, PENDING_CREATION, SELF_POOLING
+from chia.pools.pool_wallet_info import PENDING_CREATION, SELF_POOLING
+from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 
-# from chia.types.blockchain_format.coin import Coin
-# from chia.types.blockchain_format.sized_bytes import bytes32
-# from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-# from chia.util.bech32m import encode_puzzle_hash
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
+
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -25,16 +28,18 @@ def event_loop():
 
 class TestPoolWalletRpc:
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
+    async def one_wallet_node(self):
+        async for _ in setup_simulators_and_wallets(1, 1, {}):
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def two_wallet_nodes(self):
+        async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     async def get_total_block_rewards(self, num_blocks):
         funds = sum(
-            [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
-            ]
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
         return funds
 
@@ -45,10 +50,10 @@ class TestPoolWalletRpc:
         # TODO also return calculated block rewards
 
     @pytest.mark.asyncio
-    async def test_create_new_pool_wallet(self, three_wallet_nodes):
+    async def test_create_new_pool_wallet(self, one_wallet_node):
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallets = three_wallet_nodes
+        full_nodes, wallets = one_wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -57,69 +62,74 @@ class TestPoolWalletRpc:
         ph = await wallet_0.get_new_puzzlehash()
 
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-
-        total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
-        total_block_rewards = await self.get_total_block_rewards(total_blocks)
-
-        await time_out_assert(10, wallet_0.get_unconfirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_0.get_spendable_balance, total_block_rewards)
-        assert total_block_rewards > 0
-        print(f"total_block_rewards: {total_block_rewards}")
-        wallet_initial_confirmed_balance = await wallet_0.get_confirmed_balance()
-        print(f"wallet_initial_confirmed_balance: {wallet_initial_confirmed_balance}")
-
         api_user = WalletRpcApi(wallet_node_0)
-        our_address = ph
-        initial_state = {
-            "state": "SELF_POOLING",
-            "target_puzzlehash": our_address.hex(),
-            "pool_url": "",
-            "relative_lock_height": 0,
-        }
-        val = await api_user.create_new_wallet(
-            {
-                "wallet_type": "pool_wallet",
-                "mode": "new",
-                "initial_target_state": initial_state,
-                "host": f"{self_hostname}:5000",
-            }
-        )
-        assert isinstance(val, dict)
-        if "success" in val:
-            assert val["success"]
-        assert val["wallet_id"] == 2
-        assert val["type"] == WalletType.POOLING_WALLET.value
-        assert val["current_state"]["state"] == PENDING_CREATION.value
-        assert val["target_state"]["state"] == SELF_POOLING.value
+        config = bt.config
+        hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+        test_rpc_port = uint16(21529)
 
-        assert val["current_state"] == {
-            "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
-            "pool_url": None,
-            "relative_lock_height": 0,
-            "state": 1,
-            "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-            "version": 1,
-        }
-        assert val["target_state"] == {
-            "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
-            "pool_url": None,
-            "relative_lock_height": 0,
-            "state": 2,
-            "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-            "version": 1,
-        }
-        assert (
-            val["owner_pubkey"]
-            == "844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94"
+        rpc_cleanup = await start_rpc_server(
+            api_user,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            lambda x: None,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
         )
-        # TODO: Put the p2_puzzle_hash in the config for the plotter
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+
+        try:
+            total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
+            total_block_rewards = await self.get_total_block_rewards(total_blocks)
+
+            await time_out_assert(10, wallet_0.get_unconfirmed_balance, total_block_rewards)
+            await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
+            await time_out_assert(10, wallet_0.get_spendable_balance, total_block_rewards)
+            assert total_block_rewards > 0
+            print(f"total_block_rewards: {total_block_rewards}")
+            wallet_initial_confirmed_balance = await wallet_0.get_confirmed_balance()
+            print(f"wallet_initial_confirmed_balance: {wallet_initial_confirmed_balance}")
+
+            val = await client.create_new_pool_wallet(ph, "", 0, "localhost:5000", "new", "SELF_POOLING")
+
+            assert isinstance(val, dict)
+            assert val["success"]
+            assert val["wallet_id"] == 2
+            assert val["type"] == WalletType.POOLING_WALLET.value
+            log.warning(f"Current stat: {val['current_state']}")
+
+            assert val["current_state"]["state"] == PENDING_CREATION.value
+            assert val["target_state"]["state"] == SELF_POOLING.value
+
+            assert val["current_state"] == {
+                "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
+                "pool_url": None,
+                "relative_lock_height": 0,
+                "state": 1,
+                "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+                "version": 1,
+            }
+            assert val["target_state"] == {
+                "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
+                "pool_url": None,
+                "relative_lock_height": 0,
+                "state": 2,
+                "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+                "version": 1,
+            }
+            # TODO: Put the p2_puzzle_hash in the config for the plotter
+        finally:
+            client.close()
+            await client.await_closed()
+            await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_self_pooling_to_pooling(self, three_wallet_nodes):
+    async def test_self_pooling_to_pooling(self, two_wallet_nodes):
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallets = three_wallet_nodes
+        full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -173,9 +183,9 @@ class TestPoolWalletRpc:
             }
         )
 
-        print(val2)
+        print(val2["pool_wallet_state"])
 
-        assert val2 == {
+        correct_dict = {
             "current": {
                 "version": 1,
                 "state": 1,
@@ -301,6 +311,13 @@ class TestPoolWalletRpc:
             "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
             "owner_pay_to_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
         }
+
+        real_dict = val2["pool_wallet_state"]
+
+        assert real_dict["current"] == correct_dict["current"]
+        assert real_dict["target"] == correct_dict["target"]
+        assert real_dict["pending_transaction"] == correct_dict["pending_transaction"]
+        assert real_dict == correct_dict
 
     # pooling -> escaping -> self pooling
     # Pool A -> Pool B
