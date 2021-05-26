@@ -44,11 +44,11 @@ class RpcServer:
             await self.websocket.close()
 
     async def _state_changed(self, *args):
-        change = args[0]
         if self.websocket is None:
             return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
+        change = args[0]
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
             if data is not None:
@@ -226,9 +226,8 @@ class RpcServer:
                 error = {"success": False, "error": f"{e.args[0]}"}
             else:
                 error = {"success": False, "error": f"{e}"}
-            if message is None:
-                return None
-            await websocket.send_str(format_response(message, error))
+            if message is not None:
+                await websocket.send_str(format_response(message, error))
 
     async def connection(self, ws):
         data = {"service": self.service_name}
