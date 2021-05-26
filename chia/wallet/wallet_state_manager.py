@@ -1061,7 +1061,7 @@ class WalletStateManager:
     # search through the blockrecords and return the most recent coin to use a given puzzlehash
     async def search_blockrecords_for_puzzlehash(self, puzzlehash: bytes32):
         header_hash_of_interest = None
-        heighest_block_height = 0
+        highest_block_height = 0
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is None:
             return None, None
@@ -1070,16 +1070,16 @@ class WalletStateManager:
         )
         while peak_block is not None:
             tx_filter = PyBIP158([b for b in peak_block.header.transactions_filter])
-            if tx_filter.Match(bytearray(puzzlehash)) and peak_block.height > heighest_block_height:
+            if tx_filter.Match(bytearray(puzzlehash)) and peak_block.height > highest_block_height:
                 header_hash_of_interest = peak_block.header_hash
-                heighest_block_height = peak_block.height
+                highest_block_height = peak_block.height
                 break
             else:
                 peak_block = await self.blockchain.block_store.get_header_block_record(
                     peak_block.header.prev_header_hash
                 )
 
-        return heighest_block_height, header_hash_of_interest
+        return highest_block_height, header_hash_of_interest
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
         if self.peak is None:
@@ -1154,3 +1154,12 @@ class WalletStateManager:
                     if callback_str is not None:
                         callback = getattr(wallet, callback_str)
                         await callback(unwrapped, action.id)
+
+    def get_peak(self) -> Optional[BlockRecord]:
+        return self.blockchain.get_peak()
+
+    '''
+    async def get_block_height_and_hash(self) -> Tuple[uint32, Optional[bytes32]]:
+        peak = self.blockchain.get_peak()
+        return peak, self.blockchain.height_to_hash(peak)
+'''

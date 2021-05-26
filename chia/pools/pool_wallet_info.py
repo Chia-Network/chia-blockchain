@@ -11,6 +11,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint8
 from chia.util.streamable import streamable, Streamable
 from chia.wallet.cc_wallet.ccparent import CCParent
+# from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -52,6 +53,7 @@ SELF_POOLING = PoolSingletonState.SELF_POOLING
 LEAVING_POOL = PoolSingletonState.LEAVING_POOL
 FARMING_TO_POOL = PoolSingletonState.FARMING_TO_POOL
 
+
 @dataclass(frozen=True)
 @streamable
 class TargetState(Streamable):
@@ -59,6 +61,7 @@ class TargetState(Streamable):
     User description of the
     Does not include information that is fixed at PoolWallet creation time, per-pool
     """
+
     pass
 
 
@@ -70,8 +73,6 @@ class PoolKeys:
     target_puzzlehash: bytes32
 
 
-
-
 @dataclass(frozen=True)
 @streamable
 class PoolState(Streamable):
@@ -80,29 +81,34 @@ class PoolState(Streamable):
     `target_puzzlehash` is either the pool address, or the self-pooling address that pool rewards will be paid to.
     `target_puzzlehash` is NOT the p2_singleton puzzle that block rewards are sent to.
     The `p2_singleton` address is the initial address, and the `target_puzzlehash` is the final destination.
+    `relative_lock_height` is zero when in SELF_POOLING state
     """
-    # XXX aqk: pubkey and target_puzhash (in self-pool case) is set by the wallet
-
-    # Note about using different pubkeys on each singleton iteration:
-    # xxx owner_pubkey
     version: uint8
     state: uint8  # PoolSingletonState
-
+    # `target_puzzlehash`: A puzzlehash we pay to
+    # Either set by the main wallet in the self-pool case,
+    # or sent by the pool
+    target_puzzlehash: bytes32  #
+    # owner_pubkey is set by the wallet, once
+    owner_pubkey: G1Element
     # Fields below are only valid in `FARMING_TO_POOL` state
     pool_url: Optional[str]
-    relative_lock_height: Optional[uint32]
+    relative_lock_height: uint32
 
 
-def pool_state_from_dict(state_dict: Dict) -> Union[Tuple[str, None], Tuple[None, PoolState]]:
+def pool_state_from_dict(
+    state_dict: Dict, owner_pubkey: G1Element, owner_puzzlehash: bytes32
+) -> Union[Tuple[str, None], Tuple[None, PoolState]]:
     state_str = state_dict["state"]
     if state_str not in ["SELF_POOLING", "FARMING_TO_POOL"]:
         return "Initial State must be SELF_POOLING or FARMING_TO_POOL", None
     singleton_state = PoolSingletonState[state_str]
-    target_puzzlehash = None
-    owner_pubkey = None
     pool_url = None
     relative_lock_height = None
-    if "target_puzzlehash" in state_dict:
+    target_puzzlehash = None
+    if singleton_state == SELF_POOLING:
+        target_puzzlehash = owner_puzzlehash
+    elif singleton_state == FARMING_TO_POOL:
         target_puzzlehash = bytes32(hexstr_to_bytes(state_dict["target_puzzlehash"]))
     if singleton_state == PoolSingletonState.FARMING_TO_POOL:
         pool_url = state_dict["pool_url"]
@@ -114,18 +120,7 @@ def pool_state_from_dict(state_dict: Dict) -> Union[Tuple[str, None], Tuple[None
 def normalize_pool_state():
     pass
 
-@dataclass(frozen=True)
-class SelfPoolingTargetState:
-    state: PoolSingletonState
 
-@dataclass(frozen=True)
-class PoolingTargetState:
-    state: PoolSingletonState
-    target_puzzlehash: bytes32
-    pool_url: Optional[str]
-    relative_lock_height: Optional[uint32]
-
-# XXX aqk: pubkey and target_puzhash (in self-pool case) is set by the wallet
 def create_pool_state(
     state: PoolSingletonState,
     target_puzzlehash: bytes32,
@@ -136,26 +131,28 @@ def create_pool_state(
     if state not in set(s.value for s in PoolSingletonState):
         raise AssertionError("state {state} is not a valid PoolSingletonState,")
     ps = PoolState(POOL_PROTOCOL_VERSION, uint8(state), target_puzzlehash, owner_pubkey, pool_url, relative_lock_height)
-    # TODO verify here, as well.
+    # TODO Move verify here
     return ps
 
 
 # pool wallet transaction types:
+
 @dataclass(frozen=True)
 @streamable
 class PoolWalletInfo(Streamable):
     """
     Internal Pool Wallet state, not destined for the blockchain
     """
+
     # Regarding target state, reorgs and the same pool wallet id on
     # multiple computers:
     # * If our state is reverted on the blockchain, because of a reorg, or another computer
-    #   with the same wallet, 
+    #   with the same wallet,
     # How long will the main_wallet retry a transaction?
     # * Conflicting transaction:
 
-    # done with reorg? reset target 
-    # 
+    # done with reorg? reset target
+    #
     current: PoolState
     target: PoolState
     pending_transaction: Optional[TransactionRecord]
@@ -164,9 +161,6 @@ class PoolWalletInfo(Streamable):
     parent_list: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
     current_inner: Optional[Program]  # represents a Program as bytes
     self_pooled_reward_list: List[bytes32]
-    # current_derivation_path: DerivationRecord # this is the rewards_pubkey and rewards_puzzlehash
-    # current_rewards_pubkey: bytes  # a pubkey from our default wallet
-    # current_rewards_puzhash: bytes32  # A puzzlehash we control
-    # owner_pubkey needn't be from the same wallet that generated the genesis coin,
-    # but it is, in this implementation.
-    owner_pubkey: G1Element
+    # master_derivation_path: DerivationRecord
+    owner_pubkey: G1Element  # a pubkey from our default wallet
+    owner_pay_to_puzzlehash: bytes32  # A puzzlehash we control
