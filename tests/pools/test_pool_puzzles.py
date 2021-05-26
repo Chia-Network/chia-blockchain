@@ -7,6 +7,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.program import Program, INFINITE_COST
@@ -25,24 +26,33 @@ from chia.pools.pool_puzzles import (
 )
 from chia.util.ints import uint32, uint64
 from tests.core.full_node.test_conditions import check_conditions, initial_blocks, check_spend_bundle_validity
+from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
 
 
 def test_p2_singleton():
-    singleton_mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    genesis_id = 0xCAFEF00D
-    innerpuz = Program.to(1)
-    singleton_full = SINGLETON_TOP_LAYER_MOD.curry(singleton_mod_hash, genesis_id, innerpuz)
+    # create a singleton. This should call driver code.
+    launcher_id = LAUNCHER_ID
+    owner_puzzlehash = 32 * "b\1"
+    owner_pubkey = 32 * b"\2"
+    innerpuz = create_self_pooling_innerpuz(owner_puzzlehash, owner_pubkey)
+    singleton_full_puzzle = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, innerpuz)
 
+    # create a fake coin id for the `p2_singleton`
     p2_singleton_coin_id = Program.to(["test_hash"]).get_tree_hash()
-    expected_announcement = Announcement(singleton_full.get_tree_hash(), p2_singleton_coin_id).name()
+    expected_announcement = Announcement(singleton_full_puzzle.get_tree_hash(), p2_singleton_coin_id).name()
 
-    p2_singleton_full = P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), genesis_id
-    )
-    cost, result = p2_singleton_full.run_with_cost(
-        INFINITE_COST, Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
-    )
+    # create a `p2_singleton` puzzle. This should call driver code.
+    p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
+    solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
+    cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
+    err, conditions = parse_sexp_to_conditions(result)
+    assert err is None
+
+    p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
+    solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
+    cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
     assert result.first().rest().first().as_atom() == expected_announcement
+    assert conditions[0].vars[0] == expected_announcement
 
 
 def test_create():
@@ -73,6 +83,11 @@ def test_singleton_creation_with_eve_and_launcher():
     self_pooling_inner_puzzle = create_self_pooling_innerpuz(our_puzzle_hash, owner_pubkey)
     full_puzzle = create_fullpuz(self_pooling_inner_puzzle, genesis_id)
     eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
+
+    # pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
+    # index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+    # private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+
 
     pool_reward_amount = 4000000000000
     pool_reward_height = 101
