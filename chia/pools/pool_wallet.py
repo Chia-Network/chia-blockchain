@@ -289,6 +289,7 @@ class PoolWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = main_wallet
         self.wallet_state_manager = wallet_state_manager
+        self.puzzle_hash_to_state = {}
 
         balance = await self.standard_wallet.get_confirmed_balance()
         if balance < self.MINIMUM_INITIAL_BALANCE:
@@ -437,8 +438,8 @@ class PoolWallet:
 
     async def watch_for_pooling_puz(self, pool_pay_address: bytes, relative_lock_height: uint32, pool_url: str):
         genesis_id = self.pool_info.origin_coin.name()
-        assert self.pool_info.pubkey is not None
-        owner_pubkey = self.pool_info.pubkey
+        assert self.pool_info.owner_pubkey is not None
+        owner_pubkey = self.pool_info.owner_pubkey
         pooling_inner = create_pool_member_innerpuz(pool_pay_address, relative_lock_height, owner_pubkey)
         pooling_full = create_fullpuz(pooling_inner, genesis_id)
         pooling_puzzle_hash = pooling_full.get_tree_hash()
@@ -451,8 +452,8 @@ class PoolWallet:
 
     async def watch_for_self_pooling_puz(self):
         genesis_id = self.pool_info.origin_coin.name()
-        assert self.pool_info.pubkey is not None
-        owner_pubkey = self.pool_info.pubkey
+        assert self.pool_info.owner_pubkey is not None
+        owner_pubkey = self.pool_info.owner_pubkey
         pay_to_address = self.pool_info.owner_pay_to_puzzlehash
         pooling_inner = create_pool_member_innerpuz(pay_to_address, uint32(0), owner_pubkey)
         pooling_full = create_fullpuz(pooling_inner, genesis_id)
@@ -466,8 +467,8 @@ class PoolWallet:
 
     async def watch_for_escaping_puz(self, pool_pay_address: bytes, relative_lock_height: uint32, pool_url: str):
         genesis_id = self.pool_info.origin_coin.name()
-        assert self.pool_info.pubkey is not None
-        owner_pubkey = self.pool_info.pubkey
+        assert self.pool_info.owner_pubkey is not None
+        owner_pubkey = self.pool_info.owner_pubkey
         pooling_inner = create_escaping_innerpuz(pool_pay_address, relative_lock_height, owner_pubkey)
         pooling_full = create_fullpuz(pooling_inner, genesis_id)
         pooling_puzzle_hash = pooling_full.get_tree_hash()
