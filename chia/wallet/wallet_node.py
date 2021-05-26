@@ -861,20 +861,20 @@ class WalletNode:
             WalletType.DISTRIBUTED_ID,
         )
 
-        def dont_request(coin):
+        def no_request(coin):
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
             return (record_info is None) or record_info.wallet_type not in REQUEST_TYPES
 
-        all_dont_request_removal = all(map(dont_request, additions))
-        if all_dont_request_removal and len(removals) == 0:
+        no_requests = all(map(no_request, additions))
+        if no_requests and len(removals) == 0:
             return []
 
+        coin_names = removals if no_requests else None
+        removals_request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, coin_names)
         removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
-            wallet_protocol.RequestRemovals(
-                block_i.height, block_i.header_hash, (removals if all_dont_request_removal else None)
-            )
+            removals_request
         )
 
         if isinstance(removals_res, RespondRemovals):
