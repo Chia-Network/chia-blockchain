@@ -3,16 +3,15 @@ def format_bytes(bytes: int) -> str:
     if not isinstance(bytes, int) or bytes < 0:
         return "Invalid"
 
-    labels = {0: "MiB", 1: "GiB", 2: "TiB", 3: "PiB", 4: "EiB", 5: "ZiB", 6: "YiB"}
+    LABELS = ("MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB")
+    BASE = 1024
+    value = bytes / BASE
+    for label in LABELS:
+        value /= BASE
+        if value < BASE:
+            return f"{value:.3f} {label}"
 
-    base = 1024
-    value = bytes / base ** 2
-    key = 0
-    while value >= base and key < 6:
-        value /= base
-        key += 1
-
-    return f"{value:.3f} {labels[key]}"
+    return f"{value:.3f} {LABELS[-1]}"
 
 
 def format_minutes(minutes: int) -> str:
