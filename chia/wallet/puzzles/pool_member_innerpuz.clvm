@@ -1,6 +1,6 @@
-(mod (TARGET_PUZHASH ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY (mod_hash launcher_id my_id my_full_puzhash my_innerpuzhash my_amount parent_info) spend_type pool_reward_amount pool_reward_height extra_data)
+(mod (POOL_PUZZLE_HASH ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY POOL_REWARD_PREFIX (mod_hash launcher_id my_id my_full_puzhash my_innerpuzhash my_amount parent_info) spend_type pool_reward_amount pool_reward_height extra_data)
 
-  ; TARGET_PUZHASH is commitment to the pool's puzzle hash
+  ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
   ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
   ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
   ; PUBKEY is the farmer pubkey which authorises an escape attempt
@@ -19,16 +19,14 @@
       )
   )
 
-  (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a00000000000000000000000000000000)
-
-  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
-    (sha256 (logior GENESIS_CHALLENGE pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
+  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH POOL_REWARD_PREFIX pool_reward_amount)
+    (sha256 (logior POOL_REWARD_PREFIX pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
   )
 
-  (defun absorb_pool_reward (TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount pool_reward_id)
+  (defun-inline absorb_pool_reward (POOL_PUZZLE_HASH my_innerpuzhash my_amount pool_reward_amount pool_reward_id)
     (list
         (list CREATE_COIN my_innerpuzhash my_amount)
-        (list CREATE_COIN TARGET_PUZHASH pool_reward_amount)
+        (list CREATE_COIN POOL_PUZZLE_HASH pool_reward_amount)
         (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id)
         (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x80))
     )
@@ -40,6 +38,6 @@
     (list (list AGG_SIG_ME PUBKEY (sha256tree1 extra_data ()))
           (list CREATE_COIN ESCAPE_MODE_PUZHASH my_amount)
     )
-    (absorb_pool_reward TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount))
+    (absorb_pool_reward POOL_PUZZLE_HASH my_innerpuzhash my_amount pool_reward_amount (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH POOL_REWARD_PREFIX pool_reward_amount))
   )
 )
