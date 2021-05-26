@@ -798,7 +798,12 @@ def validate_removals(self, coins, proofs, root):
         # Verifies merkle proof of inclusion of coin name
         return confirm_included_already_hashed(root, coin_name, proof)
 
-    return all(is_valid(cn, c, pn, p) for (cn, c), (pn, p) in zip(coins, proofs))
+    validities = (
+        is_valid(c_name, c, p_name, p)
+        for (c_name, c), (p_name, p) in zip(coins, proofs)
+    )
+
+    return all(validities)
 
     async def get_additions(self, peer: WSChiaConnection, block_i, additions) -> Optional[List[Coin]]:
         if len(additions) > 0:
