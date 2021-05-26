@@ -1,5 +1,5 @@
 from typing import List, Optional, Tuple
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 
 # from clvm_tools import binutils
 from chia.clvm.singleton import P2_SINGLETON_MOD, SINGLETON_TOP_LAYER_MOD, SINGLETON_LAUNCHER
@@ -19,6 +19,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.util.ints import uint32, uint64
 
 # "Full" is the outer singleton, with the inner puzzle filled in
+from tests.wallet.test_singleton import singleton_puzzle, LAUNCHER_PUZZLE_HASH
+
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
@@ -75,9 +77,9 @@ def create_self_pooling_innerpuz(our_puzhash: bytes, pubkey: bytes) -> Program:
     """
 
 
-def create_pool_member_innerpuz(pool_puzhash: bytes, relative_lock_height: uint32, owner_pubkey: bytes) -> Program:
+def create_pool_member_innerpuz(pool_puzhash: bytes, owner_pubkey: bytes) -> Program:
     return POOL_MEMBER_MOD.curry(
-        pool_puzhash, relative_lock_height, POOL_ESCAPING_INNER_HASH, P2_SINGLETON_HASH, owner_pubkey
+        pool_puzhash, POOL_ESCAPING_INNER_HASH, P2_SINGLETON_HASH, owner_pubkey
     )
 
 
@@ -122,7 +124,7 @@ def generate_pool_eve_spend(
     origin_coin: Coin,
     eve_coin: Coin,
     launcher_coin: Coin,
-    private_key: G2Element,
+    private_key: PrivateKey,
     owner_pubkey: G1Element,
     our_puzzle_hash: bytes32,
     pool_reward_amount,
@@ -133,9 +135,13 @@ def generate_pool_eve_spend(
     # Note: The Pool MUST check the reveal of the new singleton
     # to confirm that the escape puzhash is what they expect
     # def create_pool_member_innerpuz(pool_puzhash: bytes, relative_lock_height: uint32, pubkey: bytes) -> Program:
-    genesis_id = launcher_coin.name()
-    inner_puzzle: Program = create_pool_member_innerpuz(pool_puzhash, relative_lock_height, owner_pubkey)
-    full_puzzle: Program = create_fullpuz(inner_puzzle, genesis_id)
+    launcher_id = launcher_coin.name()
+    committed_innerpuzzle: Program = create_pool_member_innerpuz(pool_puzhash, owner_pubkey)
+    # full_puzzle: Program = create_fullpuz(inner_puzzle, genesis_id)
+
+    full_puzzle = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, committed_innerpuzzle)
+    singleton_amount = 3
+    #singleton_coin = Coin(launcher_id, singleton_full.get_tree_hash(), singleton_amount)
 
     # inner_solution is:
     # ((singleton_id is_eve)
@@ -144,7 +150,7 @@ def generate_pool_eve_spend(
     spend_type = 0
     my_amount = 1
     inner_solution = Program.to(
-        [spend_type, inner_puzzle.get_tree_hash(), my_amount, pool_reward_amount, pool_reward_height]
+        [spend_type, committed_innerpuzzle.get_tree_hash(), my_amount, pool_reward_amount, pool_reward_height]
     )
 
     # full solution is (parent_info my_amount inner_solution)
@@ -156,8 +162,14 @@ def generate_pool_eve_spend(
         ]
     )
 
+    # Sanity check puzzles
+    # inner_ret = committed_innerpuzzle.run(inner_solution)
+    # full_ret = full_puzzle.run_with_cost(1e18, full_solution)
+
     return generate_eve_spend(
-        origin_coin, eve_coin, full_puzzle, inner_puzzle, private_key, owner_pubkey, our_puzzle_hash, full_solution
+        origin_coin, launcher_coin, full_puzzle, committed_innerpuzzle, private_key
+        # origin_coin, eve_coin, full_puzzle, committed_innerpuzzle
+        # origin_coin, eve_coin, full_puzzle, committed_innerpuzzle, private_key, owner_pubkey, our_puzzle_hash, full_solution
     )
 
 
@@ -166,7 +178,7 @@ def generate_pool_eve_spend(
 # TODO: Move these to a common singleton file.
 
 
-def generate_eve_spend(
+def generate_eve_spend_old(
     origin_coin: Coin,
     eve_coin: Coin,
     full_puzzle: Program,
@@ -178,7 +190,8 @@ def generate_eve_spend(
 ) -> SpendBundle:
     assert origin_coin is not None
 
-    list_of_solutions = [CoinSolution(eve_coin, full_puzzle, full_solution)]
+    list_of_solutions = [CoinSolution(origin_coin, full_puzzle, full_solution)]
+    # list_of_solutions = [CoinSolution(eve_coin, full_puzzle, full_solution)]
     # sign for AGG_SIG_ME
     message = (
         Program.to([eve_coin.amount, eve_coin.puzzle_hash]).get_tree_hash()
@@ -192,6 +205,31 @@ def generate_eve_spend(
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
 
+def generate_eve_spend(origin_coin: Coin, coin: Coin, full_puzzle: Program, innerpuz: Program, private_key):
+    assert origin_coin is not None
+    # innerpuz solution is (mode amount message my_id new_puzhash)
+    innersol = Program.to([1, coin.amount, [], coin.name(), innerpuz.get_tree_hash()])
+    # full solution is (parent_info my_amount innersolution)
+    fullsol = Program.to(
+        [
+            [origin_coin.parent_coin_info, origin_coin.amount],
+            coin.amount,
+            innersol,
+        ]
+    )
+    list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+    # sign for AGG_SIG_ME
+    message = (
+        Program.to([innerpuz.get_tree_hash(), coin.amount, []]).get_tree_hash()
+        + coin.name()
+        + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+    )
+
+    signature = AugSchemeMPL.sign(private_key, message)
+    sigs = [signature]
+    aggsig = AugSchemeMPL.aggregate(sigs)
+    spend_bundle = SpendBundle(list_of_solutions, aggsig)
+    return spend_bundle
 
 def get_pubkey_from_member_innerpuz(innerpuz: Program) -> G1Element:
     args = uncurry_pool_member_innerpuz(innerpuz)
