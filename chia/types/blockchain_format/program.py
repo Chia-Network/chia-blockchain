@@ -160,6 +160,12 @@ class SerializedProgram:
         ret._buf = bytes(blob)
         return ret
 
+    @classmethod
+    def from_program(cls, p: Program) -> "SerializedProgram":
+        ret = SerializedProgram()
+        ret._buf = bytes(p)
+        return ret
+
     def __bytes__(self) -> bytes:
         return self._buf
 

@@ -170,4 +170,4 @@ class PoolWalletInfo(Streamable):
     current_inner: Optional[Program]  # represents a Program as bytes
     self_pooled_reward_list: List[bytes32]
     owner_pubkey: G1Element  # a pubkey from our default wallet
-    owner_pay_to_puzzle_hash: bytes32  # A puzzle_hash we control
+    owner_target_puzzle_hash: bytes32  # A puzzle_hash we control
