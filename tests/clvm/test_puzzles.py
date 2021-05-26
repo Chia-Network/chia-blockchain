@@ -1,14 +1,16 @@
 from typing import Iterable, List, Tuple
 from unittest import TestCase
 
-from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.hash import std_hash
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
@@ -16,11 +18,12 @@ from chia.wallet.puzzles import (
     p2_delegated_puzzle_or_hidden_puzzle,
     p2_m_of_n_delegate_direct,
     p2_puzzle_hash,
+    singleton_top_layer,
 )
 from tests.util.key_tool import KeyTool
 
 from ..core.make_block_generator import int_to_public_key
-from .coin_store import CoinStore, CoinTimestamp
+from .coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 
 T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)
@@ -240,3 +243,150 @@ class TestPuzzles(TestCase):
     def test_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(self):
         for hidden_pub_key_index in range(1, 10):
             self.do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hidden_pub_key_index)
+
+    def test_singleton_top_layer(self):
+        # Generate starting info
+        key_lookup = KeyTool()
+        pk = public_key_for_index(1, key_lookup)
+        starting_puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)
+        adapted_starting_puzzle = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)
+
+        # Get our starting standard coin created
+        coin_db = CoinStore()
+        coin_db.farm_coin(starting_puzzle.get_tree_hash(), T1, 1023)
+        starting_coin = next(coin_db.all_unspent_coins())
+
+        comment = b'80' #This comment can be any data in bytes
+
+        # Let's create a fake coin of an even amount and make sure we're not allowed to create it
+        try:
+            even_starting_coin = Coin(
+                starting_coin.parent_coin_info,
+                starting_coin.puzzle_hash,
+                1024
+            )
+            delegated_puzzle, launcher_solution = singleton_top_layer.launch_singleton_from_standard_coin(even_starting_coin, adapted_starting_puzzle, comment)
+            raise AssertionError("This should have failed due to an even amount")
+        except ValueError:
+            delegated_puzzle, launcher_solution = singleton_top_layer.launch_singleton_from_standard_coin(starting_coin, adapted_starting_puzzle, comment)
+
+        # Creating the signature for the standard transaction
+        synthetic_secret_key = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(
+            PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big")),
+            p2_delegated_puzzle_or_hidden_puzzle.DEFAULT_HIDDEN_PUZZLE_HASH
+        )
+        signature = AugSchemeMPL.sign(
+            synthetic_secret_key,
+            (delegated_puzzle.get_tree_hash() + starting_coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        )
+
+        spend_bundle = SpendBundle(
+            [
+                CoinSolution( # Just a regular spend, using the generated delegated puzzle
+                    starting_coin,
+                    starting_puzzle,
+                    Program.to([[], delegated_puzzle, []])
+                ),
+                launcher_solution # Spending the launcher also
+            ],
+            signature
+        )
+
+        # Attempt to "spend" the spend bundle
+        coin_db.update_coin_store_for_spend_bundle(spend_bundle, T1, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+
+        # Eve spend
+        singleton_eve = next(coin_db.all_unspent_coins())
+        launcher_coin = singleton_top_layer.get_launcher_coin_from_parent(starting_coin)
+        # This delegated puzzle just recreates the coin exactly as it already is
+        delegated_puzzle = Program.to((1, [[ConditionOpcode.CREATE_COIN, adapted_starting_puzzle.get_tree_hash(), singleton_eve.amount]]))
+        inner_solution = Program.to([[], delegated_puzzle, []])
+        singleton_solution = singleton_top_layer.spend_singleton(
+            singleton_eve,            # coin being spent
+            launcher_coin.name(),     # launcher id
+            adapted_starting_puzzle,  # the inner puzzle of singleton_eve
+            launcher_coin,            # parent of singleton_eve
+            True,                     # is this the eve spend?
+            inner_solution            # solution to the inner puzzle (adapted_starting_puzzle)
+        )
+
+        signature = AugSchemeMPL.sign(
+            synthetic_secret_key,
+            (delegated_puzzle.get_tree_hash() + singleton_eve.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        )
+
+        spend_bundle = SpendBundle([singleton_solution], signature)
+
+        coin_db.update_coin_store_for_spend_bundle(spend_bundle, T1, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+
+        # Post-eve spend
+        singleton = next(coin_db.all_unspent_coins())
+        # We can use the same delegated_puzzle and inner_solution since we're just recreating ourself
+        singleton_solution = singleton_top_layer.spend_singleton(
+            singleton,
+            launcher_coin.name(),
+            adapted_starting_puzzle,
+            singleton_eve,
+            False,
+            inner_solution,
+            parent_innerpuz_hash=adapted_starting_puzzle.get_tree_hash()
+        )
+        signature = AugSchemeMPL.sign(
+            synthetic_secret_key,
+            (delegated_puzzle.get_tree_hash() + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        )
+        spend_bundle = SpendBundle([singleton_solution], signature)
+
+        coin_db.update_coin_store_for_spend_bundle(spend_bundle, T1, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+
+        #Try to spend multiple odd amounts
+        singleton_child = next(coin_db.all_unspent_coins())
+        delegated_puzzle = Program.to((1, [
+            [ConditionOpcode.CREATE_COIN, adapted_starting_puzzle.get_tree_hash(), 3],
+            [ConditionOpcode.CREATE_COIN, adapted_starting_puzzle.get_tree_hash(), 7],
+        ]))
+        inner_solution = Program.to([[], delegated_puzzle, []])
+        singleton_solution = singleton_top_layer.spend_singleton(
+            singleton_child,
+            launcher_coin.name(),
+            adapted_starting_puzzle,
+            singleton,
+            False,
+            inner_solution,
+            parent_innerpuz_hash=adapted_starting_puzzle.get_tree_hash()
+        )
+        signature = AugSchemeMPL.sign(
+            synthetic_secret_key,
+            (delegated_puzzle.get_tree_hash() + singleton_child.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        )
+        spend_bundle = SpendBundle([singleton_solution], signature)
+
+        try:
+            coin_db.update_coin_store_for_spend_bundle(spend_bundle, T1, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+            raise AssertionError("This should fail because it's creating more than one singleton!")
+        except BadSpendBundleError:
+            pass
+
+        #Test melting
+        delegated_puzzle = singleton_top_layer.delegated_puzzle_for_melting(adapted_starting_puzzle.get_tree_hash(), (singleton_child.amount - 1))
+        inner_solution = Program.to([[], delegated_puzzle, []])
+        singleton_solution = singleton_top_layer.spend_singleton(
+            singleton_child,
+            launcher_coin.name(),
+            adapted_starting_puzzle,
+            singleton,
+            False,
+            inner_solution,
+            parent_innerpuz_hash=adapted_starting_puzzle.get_tree_hash()
+        )
+        signature = AugSchemeMPL.sign(
+            synthetic_secret_key,
+            (delegated_puzzle.get_tree_hash() + singleton_child.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        )
+        spend_bundle = SpendBundle([singleton_solution], signature)
+
+        coin_db.update_coin_store_for_spend_bundle(spend_bundle, T1, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+
+        melted_coin = next(coin_db.all_unspent_coins())
+
+        assert melted_coin.puzzle_hash == adapted_starting_puzzle.get_tree_hash()

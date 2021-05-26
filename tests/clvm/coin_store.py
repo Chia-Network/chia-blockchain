@@ -56,16 +56,19 @@ class CoinStore:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
             conditions_dicts.append(conditions_dict)
             coin_announcements.update(
-                coin_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin.name())
+                coin_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin)
             )
             puzzle_announcements.update(
-                puzzle_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin.puzzle_hash)
+                puzzle_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin)
             )
 
         for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):
             prev_transaction_block_height = now.height
             timestamp = now.seconds
-            coin_record = self._db[coin_solution.coin.name()]
+            try:
+                coin_record = self._db[coin_solution.coin.name()]
+            except KeyError:
+                coin_record = CoinRecord(coin_solution.coin, now.height, 0, False, False, now.seconds)
             err = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements,
@@ -85,10 +88,15 @@ class CoinStore:
             raise BadSpendBundleError(f"validation failure {err}")
         for spent_coin in spend_bundle.removals():
             coin_name = spent_coin.name()
-            coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
+            try:
+                coin_record = self._db[coin_name]
+                self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
+            except KeyError:
+                self._db[coin_name] = CoinRecord(spent_coin, now.height, now.height, True, False, now.seconds)
+
         for new_coin in spend_bundle.additions():
-            self._add_coin_entry(new_coin, now)
+            if new_coin not in spend_bundle.removals():
+                self._add_coin_entry(new_coin, now)
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
         for coin_name in self._ph_index[puzzle_hash]:
@@ -99,6 +107,11 @@ class CoinStore:
     def all_coins(self) -> Iterator[Coin]:
         for coin_entry in self._db.values():
             yield coin_entry.coin
+
+    def all_unspent_coins(self) -> Iterator[Coin]:
+        for coin_entry in self._db.values():
+            if not coin_entry.spent:
+                yield coin_entry.coin
 
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
         name = coin.name()
