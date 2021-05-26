@@ -99,6 +99,9 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
+        self.blockchain = None
+        self.uncompact_task = None
+        self.mempool_manager = None
 
         if name:
             self.log = logging.getLogger(name)
@@ -147,7 +150,6 @@ class FullNode:
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        self.uncompact_task = None
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)

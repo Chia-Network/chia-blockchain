@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, List
 
+from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -185,5 +186,7 @@ class WalletRpcClient(RpcClient):
     async def pw_collect_self_pooling_rewards(self, wallet_id: str, fee: uint64 = uint64(0)):
         return await self.fetch("pw_collect_self_pooling_rewards", {"wallet_id": wallet_id, "fee": fee})
 
-    async def pw_status(self, wallet_id: str):
-        return await self.fetch("pw_status", {"wallet_id": wallet_id})
+    async def pw_status(self, wallet_id: str) -> PoolWalletInfo:
+        return PoolWalletInfo.from_json_dict(
+            (await self.fetch("pw_status", {"wallet_id": wallet_id}))["pool_wallet_state"]
+        )

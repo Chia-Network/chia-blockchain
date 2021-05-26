@@ -263,6 +263,52 @@ class PoolWallet:
         pass
 
     @staticmethod
+    async def create(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+        name: str = None,
+    ):
+        self = PoolWallet()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.wallet_state_manager = wallet_state_manager
+        self.puzzle_hash_to_state = {}
+        self.wallet_state_manager = wallet_state_manager
+        self.wallet_id = wallet_info.id
+        self.standard_wallet = wallet
+        self.db_wallet_info = wallet_info
+        self._init_log(name)
+        self.load_info(wallet_info)
+
+        if self.pool_info.current.state == PENDING_CREATION.value:
+            assert self.pool_info.target != PENDING_CREATION.value
+            # TODO: use real genesis
+            genesis_puzzlehash = token_bytes(32)
+            self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
+                genesis_puzzlehash, self.genesis_callback
+            )
+
+        # Always watch for self-pooling
+        await self.watch_for_self_pooling_puz()
+        await self.watch_p2_singleton_rewards()
+
+        # Watch for new pool states as we acquire the needed parameters
+        if self.pool_info.current.state == FARMING_TO_POOL.value:
+            pool_pay_address = self.pool_info.current.target_puzzlehash
+            relative_lock_height = self.pool_info.current.relative_lock_height
+            pool_url = self.pool_info.current.pool_url
+            await self.watch_for_pooling_puz(pool_pay_address, relative_lock_height, pool_url)
+            await self.watch_for_escaping_puz(pool_pay_address, relative_lock_height, pool_url)
+        elif self.pool_info.target.state == FARMING_TO_POOL.value:
+            pool_pay_address = self.pool_info.target.target_puzzlehash
+            relative_lock_height = self.pool_info.target.relative_lock_height
+            pool_url = self.pool_info.target.pool_url
+            await self.watch_for_pooling_puz(pool_pay_address, relative_lock_height, pool_url)
+            await self.watch_for_escaping_puz(pool_pay_address, relative_lock_height, pool_url)
+        return self
+
+    @staticmethod
     # note: we can be created by a user action, or by recovering state
     # from the blockchain
     async def create_new_pool_wallet(
@@ -985,7 +1031,11 @@ Fingerprint + derivation path of owner
     # search_blockrecords_for_puzzlehash
     # puzzle_solution_received
 
-    async def save_info(self, pool_info: PoolWalletInfo, in_transaction: bool):
+    def load_info(self, wallet_info: WalletInfo) -> None:
+        pool_info_json: Dict = json.loads(wallet_info.data)
+        self.pool_info = PoolWalletInfo.from_json_dict(pool_info_json)
+
+    async def save_info(self, pool_info: PoolWalletInfo, in_transaction: bool) -> None:
         self.pool_info = pool_info
         current_info = self.db_wallet_info
         data_str = json.dumps(pool_info.to_json_dict())
@@ -1133,6 +1183,19 @@ Fingerprint + derivation path of owner
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
         return uint64(1)
+
+    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+        return uint64(1)
+
+    async def get_spendable_balance(self, record_list=None) -> uint64:
+        return uint64(1)
+
+    async def get_pending_change_balance(self, record_list=None) -> uint64:
+        return uint64(1)
+
+    async def get_max_send_amount(self, record_list=None) -> uint64:
+        return uint64(1)
+
         """
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
