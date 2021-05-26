@@ -770,11 +770,13 @@ class WalletRpcApi:
         my_did: str = wallet.get_my_DID()
         async with self.service.wallet_state_manager.lock:
             coins = await wallet.select_coins(1)
-        if coins is None or coins == set():
-            return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
-        else:
-            coin = coins.pop()
-            return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
+
+        success = coins not in (None, set())
+        res = {"success": success, "wallet_id": wallet_id, "my_did": my_did}
+        if success:
+            res["coin_id"] = coins.pop().name()
+
+        return res
 
     async def did_get_recovery_list(self, request):
         wallet_id = int(request["wallet_id"])

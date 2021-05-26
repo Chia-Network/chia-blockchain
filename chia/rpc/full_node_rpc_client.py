@@ -127,7 +127,7 @@ class FullNodeRpcClient(RpcClient):
                 return []
         except Exception:
             return []
-        # TODO: return block records
+
         return response["block_records"]
 
     async def push_tx(self, spend_bundle: SpendBundle):
