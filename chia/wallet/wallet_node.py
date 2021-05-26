@@ -774,32 +774,31 @@ class WalletNode:
 
         return True
 
-    def validate_removals(self, coins, proofs, root):
-        if proofs is None:
-            # If there are no proofs, it means all removals were returned in the response.
-            # We must find the ones relevant to our wallets. Verify removals root.
-            coin_names = (coin.name() for (_name, coin) in coins if coin is not None)
-            removals_merkle_set = MerkleSet()
-            for name in coin_names:
-                # TODO review all verification
-                removals_merkle_set.add_already_hashed(name)
-            return removals_merkle_set.get_root() == root
+def validate_removals(self, coins, proofs, root):
+    if proofs is None:
+        # If there are no proofs, it means all removals were returned in the response.
+        # We must find the ones relevant to our wallets. Verify removals root.
+        coin_names = (coin.name() for (_name, coin) in coins if coin is not None)
+        removals_merkle_set = MerkleSet()
+        for name in coin_names:
+            # TODO review all verification
+            removals_merkle_set.add_already_hashed(name)
+        return removals_merkle_set.get_root() == root
 
-        if len(coins) != len(proofs):
+    if len(coins) != len(proofs):
+        return False
+
+    def is_valid(coin_name, coin, proof_name, proof):
+        if coin_name != proof_name:
             return False
+        if coin is None:  # Verifies merkle proof of exclusion
+            return confirm_not_included_already_hashed(root, coin_name, proof)
+        if coin.name() != coin_name:
+            return False
+        # Verifies merkle proof of inclusion of coin name
+        return confirm_included_already_hashed(root, coin_name, proof)
 
-        # The full node has responded only with the relevant removals for our wallet.
-        # Each merkle proof must be verified.
-        def is_valid(coin_name, coin, proof_name, proof):
-            if not (coin_name == proof_name and ((coin is None) or coin.name() == coin_name)):
-                return False
-            if coin is None:  # Verifies merkle proof of exclusion
-                return confirm_not_included_already_hashed(root, coin_name, proof)
-            # Verifies merkle proof of inclusion of coin name
-            return confirm_included_already_hashed(root, coin_name, proof)
-
-        iter = (is_valid(cn, c, pn, p) for (cn, c), (pn, p) in zip(coins, proofs))
-        return all(iter)
+    return all(is_valid(cn, c, pn, p) for (cn, c), (pn, p) in zip(coins, proofs))
 
     async def get_additions(self, peer: WSChiaConnection, block_i, additions) -> Optional[List[Coin]]:
         if len(additions) > 0:
