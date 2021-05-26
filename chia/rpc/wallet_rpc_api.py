@@ -1040,7 +1040,7 @@ class WalletRpcApi:
             uint32(request["relative_lock_height"]),
         )
         await wallet.set_target_state(new_target_state)
-        state = await wallet.get_all_state()
+        state = wallet.get_all_state()
         return {
             "pool_wallet_state": state.to_json_dict(),
         }
@@ -1058,7 +1058,7 @@ class WalletRpcApi:
             SELF_POOLING, target_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=0
         )
         await wallet.set_target_state(new_target_state)
-        state = await wallet.get_all_state()
+        state = wallet.get_all_state()
         return {
             "pool_wallet_state": state.to_json_dict(),
         }
