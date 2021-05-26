@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48, bytes96
+
 """
 Config example
 pool_list:
@@ -10,7 +11,8 @@ pool_list:
     singleton_genesis: ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa
     target: c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8
     target_signature: 95ae82302134489d68cf0890356fc2d360c3bda9c9f15a3111a6a776df073a2fc6194896f3196a10fba18bb9de8e4fae0caf08e49fe32786d35fe0538daf0ceb6f7ace9477440b9978589bcaa28690dded6e5a296b47bffe2db97c1c28c9d13c
-""" # noqa
+"""  # noqa
+
 
 @dataclass(frozen=True)
 class PoolWalletConfig:
@@ -18,8 +20,9 @@ class PoolWalletConfig:
     pool_puzzle_hash: bytes32  # Duplicate of target_address?
     pool_url: str
     singleton_genesis: bytes32
-    target_address: bytes32 # 1/8 block reward address?
+    target_address: bytes32  # 1/8 block reward address?
     target_signature: bytes96
+
 
 def pool_wallet_config_to_dict(p: PoolWalletConfig) -> Dict:
     return {
@@ -28,5 +31,5 @@ def pool_wallet_config_to_dict(p: PoolWalletConfig) -> Dict:
         "pool_url": p.pool_url,
         "singleton_genesis": p.singleton_genesis.hex(),
         "target_address": p.target_address.hex(),
-        "target_signature": p.target_signature.hex()
+        "target_signature": p.target_signature.hex(),
     }
