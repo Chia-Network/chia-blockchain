@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-26 19:14\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -37,7 +37,7 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot on tallennettu. Far
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "Tietoa Chia farmista"
+msgstr "Chia Lohkoketjusta"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -45,7 +45,7 @@ msgstr "Hyväksy"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Hyväksyntä ajankohta:"
+msgstr "Hyväksyntäajankohta:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -69,7 +69,7 @@ msgstr "Lisää Plot-hakemisto"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "Lisää farmisi jonoon"
+msgstr "Lisää Plottausprosessi Jonoon"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
@@ -80,11 +80,11 @@ msgstr "Lisää Lompakko"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "Lisää uusi farmi"
+msgstr "Plottaa tiedosto"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr "Lisää farmi"
+msgstr "Plottaa tiedosto"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
@@ -218,7 +218,7 @@ msgstr "Selaa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr "Mutta sinulla on jo viljelyä <0/>"
+msgstr "Mutta farmisi sisältää <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -253,7 +253,7 @@ msgstr "Peruuta ja Käytä"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "Huomio, plot-tiedostojen poistoa ei voi koskaan perua. Tarkista että tallennusmediat ovat oikein kytketty."
+msgstr "Huomio, plot-tiedostojen poistoa ei voi perua. Tarkista että tallennusmediat ovat oikein kytketty."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
@@ -1462,7 +1462,7 @@ msgstr "Valitse lopullinen kohdehakemisto plot-tiedostolle. Suosittelemme isoa m
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr ""
+msgstr "Valitse väliaikainen työhakemisto plot-tiedostolle. Suosittelemme nopeaa levyä."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1615,7 +1615,7 @@ msgstr "Synkronoi...."
 
 #: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing <0/>/<1/>"
-msgstr ""
+msgstr "Synkronoi <0/>/<1/>"
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
