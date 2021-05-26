@@ -346,6 +346,7 @@ class WalletRpcApi:
                     "colour": colour,
                     "wallet_id": cc_wallet.id(),
                 }
+
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet = await CCWallet.create_wallet_for_cc(
@@ -375,6 +376,7 @@ class WalletRpcApi:
                     "origin": rl_admin.rl_info.rl_origin,
                     "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
                 }
+
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
                 async with self.service.wallet_state_manager.lock:
@@ -412,6 +414,7 @@ class WalletRpcApi:
                     "my_did": my_did,
                     "wallet_id": did_wallet.id(),
                 }
+
             elif request["did_type"] == "recovery":
                 async with self.service.wallet_state_manager.lock:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
@@ -437,6 +440,7 @@ class WalletRpcApi:
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
+
             else:
                 pass
 
