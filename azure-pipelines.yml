@@ -50,7 +50,7 @@ steps:
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
       cd build_scripts
-      CHIA_VERSION = python -m installer-version
+      echo "##vso[task.setvariable variable=installer-version]python -m installer-version"
     displayName: "Install dependencies"
 
   - script: |
