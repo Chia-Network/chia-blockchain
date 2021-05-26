@@ -778,11 +778,11 @@ class WalletNode:
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # We must find the ones relevant to our wallets. Verify removals root.
+            # TODO review all verification
             removals_merkle_set = MerkleSet()
-            coin_names = (coin.name() for (_name, coin) in coins if coin is not None)
-            for name in coin_names:
-                # TODO review all verification
-                removals_merkle_set.add_already_hashed(name)
+            for _name, coin in coins:
+                if coin is not None:
+                    removals_merkle_set.add_already_hashed(coin.name())
             return removals_merkle_set.get_root() == root
 
         if len(proofs) != len(coins):
@@ -799,8 +799,8 @@ class WalletNode:
             return confirm_included_already_hashed(root, coin_name, proof)
 
         validities = (
-            is_valid(c_name, c, p_name, p)
-            for (c_name, c), (p_name, p) in zip(coins, proofs)
+            is_valid(coin_name, coin, proof_name, proof)
+            for (coin_name, coin), (proof_name, proof) in zip(coins, proofs)
         )
 
         return all(validities)
