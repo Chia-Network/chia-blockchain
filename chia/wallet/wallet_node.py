@@ -874,16 +874,14 @@ class WalletNode:
 
         coin_names = removals if no_addition_requests else None
         request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, coin_names)
-        removals_res_msg: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(request)
+        removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(request)
 
         # Return list of removed coins. Return None also for RejectRemovalsRequest.
-        if isinstance(removals_res_msg, RespondRemovals):
-            proofs = removals_res_msg.proofs
-            coins = removals_res_msg.coins
+        if isinstance(removals_res, RespondRemovals):
+            coins = removals_res.coins
             removals_root = block_i.foliage_transaction_block.removals_root
-            if self.validate_removals(coins, proofs, removals_root):
-                removed_coins = [coins_l for _, coins_l in coins if coins_l is not None]
-                return removed_coins
+            if self.validate_removals(coins, removals_res.proofs, removals_root):
+                return [coin for _, coin in coins if coin is not None]
 
             await peer.close()
 
