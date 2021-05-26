@@ -1095,7 +1095,7 @@ class WalletRpcApi:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        state = await wallet.get_all_state()
+        state = wallet.get_all_state()
         return {
             "pool_wallet_state": state.to_json_dict(),
         }

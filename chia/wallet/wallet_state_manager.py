@@ -18,6 +18,7 @@ from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
+from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -177,6 +178,12 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
+            elif wallet_info.type == WalletType.POOLING_WALLET:
+                wallet = await PoolWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
@@ -271,6 +278,8 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
+                if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
+                    continue
                 if WalletType(target_wallet.type()) == WalletType.RATE_LIMITED:
                     if target_wallet.rl_info.initialized is False:
                         break
@@ -1155,8 +1164,8 @@ class WalletStateManager:
     def get_peak(self) -> Optional[BlockRecord]:
         return self.blockchain.get_peak()
 
-    '''
+    """
     async def get_block_height_and_hash(self) -> Tuple[uint32, Optional[bytes32]]:
         peak = self.blockchain.get_peak()
         return peak, self.blockchain.height_to_hash(peak)
-'''
+"""
