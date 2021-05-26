@@ -364,9 +364,8 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return None
         header_block_records: List[HeaderBlockRecord] = []
-        trusted = False
-        if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
-            trusted = True
+        assert self.server
+        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
         async with self.wallet_state_manager.blockchain.lock:
             for block in header_blocks:
                 if block.is_transaction_block:
