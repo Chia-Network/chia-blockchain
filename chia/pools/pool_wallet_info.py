@@ -11,6 +11,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint8
 from chia.util.streamable import streamable, Streamable
 from chia.wallet.cc_wallet.ccparent import CCParent
+
 # from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 
@@ -83,6 +84,7 @@ class PoolState(Streamable):
     The `p2_singleton` address is the initial address, and the `target_puzzlehash` is the final destination.
     `relative_lock_height` is zero when in SELF_POOLING state
     """
+
     version: uint8
     state: uint8  # PoolSingletonState
     # `target_puzzlehash`: A puzzlehash we pay to
@@ -102,17 +104,20 @@ def pool_state_from_dict(
     state_str = state_dict["state"]
     if state_str not in ["SELF_POOLING", "FARMING_TO_POOL"]:
         return "Initial State must be SELF_POOLING or FARMING_TO_POOL", None
+
     singleton_state = PoolSingletonState[state_str]
     pool_url = None
     relative_lock_height = None
     target_puzzlehash = None
+
     if singleton_state == SELF_POOLING:
         target_puzzlehash = owner_puzzlehash
+        relative_lock_height = 0
     elif singleton_state == FARMING_TO_POOL:
         target_puzzlehash = bytes32(hexstr_to_bytes(state_dict["target_puzzlehash"]))
-    if singleton_state == PoolSingletonState.FARMING_TO_POOL:
         pool_url = state_dict["pool_url"]
         relative_lock_height = state_dict["relative_lock_height"]
+
     # TODO: change create_pool_state to return error messages, as well
     return None, create_pool_state(singleton_state, target_puzzlehash, owner_pubkey, pool_url, relative_lock_height)
 
@@ -136,6 +141,7 @@ def create_pool_state(
 
 
 # pool wallet transaction types:
+
 
 @dataclass(frozen=True)
 @streamable
