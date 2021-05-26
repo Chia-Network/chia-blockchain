@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-26 05:21\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -224,7 +224,7 @@ msgstr "하지만 당신은 현재 <0/>을 파밍하고 있습니다."
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr "사기"
+msgstr "매수"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
@@ -1135,7 +1135,7 @@ msgstr "유효한 길이의 수를 입력하십시오"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr "유효한 수의 지출 가능한 양을 입력하십시오"
+msgstr "지급 가능한 액수를 정확하게 입력하여 주십시오."
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
@@ -1462,7 +1462,7 @@ msgstr "플롯이 최종 저장될 폴더를 지정하십시오. 용량이 크�
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr ""
+msgstr "플롯 생성에 필요한 임시 공간 폴더를 지정하십시오. 속도가 빠른 드라이브를 권장합니다."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1615,7 +1615,7 @@ msgstr "동기화 중"
 
 #: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing <0/>/<1/>"
-msgstr ""
+msgstr "동기화 중... <0/> / <1/>"
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
