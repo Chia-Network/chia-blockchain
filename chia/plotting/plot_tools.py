@@ -319,38 +319,37 @@ def find_duplicate_plot_IDs(all_filenames=None) -> None:
 
 
 def load_plot(
-    filename: str,
-) ->  Tuple[PlotInfo,str]:
-    if filename==None:
-        return  {},"use -f to add a plot file, use -h to see usage"
+    filename: Path,
+) ->  Tuple[PlotInfo, str]:
+    if filename is None:
+        return  None, "Use -f to add a plot file, use -h to see usage."
    
-    filename=Path(filename)
-    if filename.exists():
-        try:
-            prover = DiskProver(str(filename))
+    if not filename.exists():
+        return None, f"Path: {filename} does not exist."
 
-            expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
-            stat_info = filename.stat()
+    if filename.is_dir():
+        return None, f"Path: {filename} is a directory not a plot file."
 
-            if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                return {}, f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected,\nat least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+    try:
+        prover = DiskProver(str(filename))
 
-            (
+        expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+        stat_info = filename.stat()
+
+        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+            return None, f"Not a valid plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected,\nat least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+
+        pool_public_key_or_puzzle_hash, farmer_public_key, _ = parse_plot_info(prover.get_memo())
+        stat_info = filename.stat()
+        return   PlotInfo(
+                prover,
+                pool_public_key_or_puzzle_hash,
                 pool_public_key_or_puzzle_hash,
                 farmer_public_key,
-                _,
-            ) = parse_plot_info(prover.get_memo())
-            stat_info = filename.stat()
-            return   PlotInfo(
-                    prover,
-                    pool_public_key_or_puzzle_hash,
-                    pool_public_key_or_puzzle_hash,
-                    farmer_public_key,
-                    stat_info.st_size,
-                    stat_info.st_mtime,
-                ),""
-        except Exception as e:
-            tb = traceback.format_exc()
-            return {}, f"Failed to open file {filename}. {e} {tb}"
-    return {},f"File: {filename} does not exist"
+                stat_info.st_size,
+                stat_info.st_mtime,
+            ), None
+    except Exception as e:
+        tb = traceback.format_exc()
+        return None, f"Failed to open file {filename}. {e} {tb}."
     

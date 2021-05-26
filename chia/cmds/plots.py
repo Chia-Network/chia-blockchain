@@ -197,8 +197,8 @@ def show_cmd(ctx: click.Context):
 
 
 @plots_cmd.command("plotinfo", short_help="get info from a plot file")
-@click.option("-f", "--file", help="plot file", type=str)
-def check_cmd(file: str):
+@click.option("-f", "--file", help="plot file", type=Path)
+def check_cmd(file: Path):
     from chia.plotting.plot_info import plot_info
     plot_info(file)
     
