@@ -5,10 +5,11 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, create_pool_state
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-#from chia.types.blockchain_format.coin import Coin
-#from chia.types.blockchain_format.sized_bytes import bytes32
-#from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-#from chia.util.bech32m import encode_puzzle_hash
+
+# from chia.types.blockchain_format.coin import Coin
+# from chia.types.blockchain_format.sized_bytes import bytes32
+# from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+# from chia.util.bech32m import encode_puzzle_hash
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.util.wallet_types import WalletType
@@ -77,18 +78,40 @@ class TestPoolWalletRpc:
             "relative_lock_height": 0,
         }
         val = await api_user.create_new_wallet(
-            {"wallet_type": "pool_wallet", "mode": "new", "initial_target_state": initial_state, "host": f"{self_hostname}:5000"}
+            {
+                "wallet_type": "pool_wallet",
+                "mode": "new",
+                "initial_target_state": initial_state,
+                "host": f"{self_hostname}:5000",
+            }
         )
         assert isinstance(val, dict)
         if "success" in val:
             assert val["success"]
-        assert val["id"]
+        assert val["wallet_id"] == 2
         assert val["type"] == WalletType.POOLING_WALLET.value
-        user_wallet_id = val["id"]
-        target_puzzlehash = val["target_puzzlehash"]
-        #pubkey = val["pubkey"]
+        assert val["current_state"] == {
+            "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
+            "pool_url": None,
+            "relative_lock_height": 0,
+            "state": 1,
+            "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+            "version": 1,
+        }
+        assert val["target_state"] == {
+            "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
+            "pool_url": None,
+            "relative_lock_height": 0,
+            "state": 2,
+            "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+            "version": 1,
+        }
+        assert (
+            val["owner_pubkey"]
+            == "844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94"
+        )
+        # TODO: Put the p2_puzzle_hash in the config for the plotter
 
-    # self pooling -> pooling
     @pytest.mark.asyncio
     async def test_self_pooling_to_pooling(self, three_wallet_nodes):
         num_blocks = 4  # Num blocks to farm at a time
@@ -122,21 +145,20 @@ class TestPoolWalletRpc:
         initial_state = {
             "state": "SELF_POOLING",
             "target_puzzlehash": our_address.hex(),
-            "pool_url": "",
+            "pool_url": None,
             "relative_lock_height": 0,
         }
         val = await api_user.create_new_wallet(
-            {"wallet_type": "pool_wallet", "mode": "new", "initial_target_state": initial_state, "host": f"{self_hostname}:5000"}
+            {
+                "wallet_type": "pool_wallet",
+                "mode": "new",
+                "initial_target_state": initial_state,
+                "host": f"{self_hostname}:5000",
+            }
         )
         assert isinstance(val, dict)
         if "success" in val:
             assert val["success"]
-        assert val["id"]
-        assert val["type"] == WalletType.POOLING_WALLET.value
-        user_wallet_id = val["id"]
-        target_puzzlehash = val["target_puzzlehash"]
-        pubkey = val["pubkey"]
-        print(val)
 
         val2 = await api_user.pw_join_pool(
             {
@@ -145,11 +167,10 @@ class TestPoolWalletRpc:
                 "relative_lock_height": 10,
                 "target_puzzlehash": pool_ph.hex(),
                 "host": f"{self_hostname}:5000",
-             }
+            }
         )
 
         print(val2)
-
 
     # pooling -> escaping -> self pooling
     # Pool A -> Pool B
