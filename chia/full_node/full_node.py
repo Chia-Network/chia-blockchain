@@ -130,7 +130,7 @@ class FullNode:
         asyncio.create_task(self.initialize_weight_proof())
 
         if self.config.get("enable_profiler", False):
-            asyncio.create_task(profile_task(self.root_path, self.log))
+            asyncio.create_task(profile_task(self.root_path, "node", self.log))
 
         self._sync_task = None
         self._segment_task = None
