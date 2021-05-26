@@ -321,8 +321,7 @@ def find_duplicate_plot_IDs(all_filenames=None) -> None:
 def load_plot(
     filename: Path,
 ) ->  Tuple[PlotInfo, str]:
-    if filename is None:
-        return  None, "Use -f to add a plot file, use -h to see usage."
+    assert filename is not None
    
     if not filename.exists():
         return None, f"Path: {filename} does not exist."
