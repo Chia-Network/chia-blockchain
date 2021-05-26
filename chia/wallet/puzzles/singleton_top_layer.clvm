@@ -1,6 +1,6 @@
-(mod (MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH INNERPUZ parent_info my_amount inner_solution)
+(mod (MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH INNERPUZ parent_info my_amount inner_solution)
 
-; MOD_HASH, GENESIS_ID, INNERPUZ are curried in by the wallet
+; MOD_HASH, LAUNCHER_ID, INNERPUZ are curried in by the wallet
 
 ; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
@@ -126,26 +126,26 @@
   ; it also runs the innerpuz with the innersolution with the "truths" added
   ; it then passes that output conditions from the innerpuz to the morph conditions function
 
-  (defun stager_three (MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info my_id full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
-    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH (a INNERPUZ (c (list MOD_HASH GENESIS_ID my_id full_puzhash innerpuzhash my_amount parent_info) inner_solution)) 0))
+  (defun stager_three (MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info my_id full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
+    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH (a INNERPUZ (c (list MOD_HASH LAUNCHER_ID my_id full_puzhash innerpuzhash my_amount parent_info) inner_solution)) 0))
   )
 
   ; this checks whether we are an eve spend or not and calculates our full coin ID appropriately and passes it on to the final stager
   ; if we are the eve spend it also adds the additional checks that our parent's puzzle is the standard launcher format and that out parent ID is the same as our singleton ID
 
-  (defun stager_two (MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
+  (defun stager_two (MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
     (if (r (r parent_info))
-      (stager_three MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info (create_my_ID MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH full_puzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount) full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
-      (if (= GENESIS_ID (sha256 (f parent_info) LAUNCHER_PUZZLE_HASH (f (r parent_info))))
-        (stager_three MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info (sha256 GENESIS_ID full_puzhash my_amount) full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
+      (stager_three MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (create_my_ID MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH full_puzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount) full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
+      (if (= LAUNCHER_ID (sha256 (f parent_info) LAUNCHER_PUZZLE_HASH (f (r parent_info))))
+        (stager_three MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (sha256 LAUNCHER_ID full_puzhash my_amount) full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
         (x "one")
       )
     )
   )
 
   ; this calculates our current full puzzle hash and passes it to stager two
-  (defun stager_one (MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info my_innerpuzhash my_amount INNERPUZ inner_solution)
-    (stager_two MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info (calculate_full_puzzle_hash MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH my_innerpuzhash) my_innerpuzhash my_amount INNERPUZ inner_solution)
+  (defun stager_one (MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info my_innerpuzhash my_amount INNERPUZ inner_solution)
+    (stager_two MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (calculate_full_puzzle_hash MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH my_innerpuzhash) my_innerpuzhash my_amount INNERPUZ inner_solution)
   )
 
 
@@ -154,7 +154,7 @@
   ; if our value is not an odd amount then we are invalid
   ; this calculates my_innerpuzhash and passes all values to stager_one
   (if (logand my_amount 1)
-    (stager_one MOD_HASH GENESIS_ID LAUNCHER_PUZZLE_HASH parent_info (sha256tree1 INNERPUZ) my_amount INNERPUZ inner_solution)
+    (stager_one MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (sha256tree1 INNERPUZ) my_amount INNERPUZ inner_solution)
     (x "two")
   )
 
