@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+
 # import time
 # from secrets import token_bytes
 
@@ -30,6 +31,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 from tests.setup_nodes import self_hostname
 from tests.time_out_assert import time_out_assert
+
 # from tests.wallet.cc_wallet.test_cc_wallet import tx_in_pool
 from tests.setup_nodes import setup_simulators_and_wallets
 
@@ -64,7 +66,7 @@ class TestPoolWalletSimulator:
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         return num_blocks
-        #TODO combine output block rewards
+        # TODO combine output block rewards
 
     @pytest.mark.asyncio
     async def test_pool_wallet_creation(self, one_wallet_node):
@@ -74,9 +76,9 @@ class TestPoolWalletSimulator:
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
-        #wallet_node_1, wallet_server_1 = wallets[1]
+        # wallet_node_1, wallet_server_1 = wallets[1]
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        #wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+        # wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         total_blocks = 0
 
         ph = await wallet_0.get_new_puzzlehash()
@@ -92,9 +94,10 @@ class TestPoolWalletSimulator:
         target_state = PoolSingletonState.FARMING_TO_POOL
         rewards_puzzlehash = bytes32(b"\x01" * 32)
 
-        initial_pool_state = create_pool_state(PoolSingletonState.PENDING_CREATION, rewards_puzzlehash, None, None)
+        dr = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(wallet_0.id())
+        initial_pool_state = create_pool_state(PoolSingletonState.PENDING_CREATION, rewards_puzzlehash, dr.pubkey, None, 0)
         pool_wallet_0: PoolWallet = await PoolWallet.create_new_pool_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, initial_pool_state
+            wallet_node_0.wallet_state_manager, wallet_0, initial_pool_state, dr.pubkey, dr.puzzle_hash
         )
 
         total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
@@ -106,50 +109,46 @@ class TestPoolWalletSimulator:
         relative_lock_height = 10
         pool_puzzlehash = bytes32(b"\x02" * 32)
         fee = 5
-        #await pool_wallet_0.join_pool(pool_url, rewards_puzzlehash, relative_lock_height, fee)
+        # await pool_wallet_0.join_pool(pool_url, rewards_puzzlehash, relative_lock_height, fee)
 
         # Check to see if the singleton is created
-        #for i in range(1, num_blocks):
+        # for i in range(1, num_blocks):
         #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        #await time_out_assert(15, pool_wallet.get_confirmed_balance, 100)
+        # await time_out_assert(15, pool_wallet.get_confirmed_balance, 100)
 
         # wallet = wallet_node.wallet_state_manager.main_wallet
 
         # ph = await wallet.get_new_puzzlehash()
 
         # XXX note running wallet_server_0.start_client down here creates indeterminism
-        #await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        # await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-
-        #for i in range(0, num_blocks):
+        # for i in range(0, num_blocks):
         #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-
-        #pool_wallet_1: PoolWallet = await PoolWallet.create_new_pool_wallet(
+        # pool_wallet_1: PoolWallet = await PoolWallet.create_new_pool_wallet(
         #    wallet_node_1.wallet_state_manager, wallet_1, initial_pool_state
-        #)
+        # )
 
+        # interval = uint64(2)
+        # limit = uint64(1)
+        # amount = uint64(100)
+        # await pool_wallet.admin_create_coin(interval, limit, pool_wallet.pool_info.user_pubkey.hex(), amount, 0)
 
-
-        #interval = uint64(2)
-        #limit = uint64(1)
-        #amount = uint64(100)
-        #await pool_wallet.admin_create_coin(interval, limit, pool_wallet.pool_info.user_pubkey.hex(), amount, 0)
-
-        #current: PoolState
-        #target: PoolState
-        #pending_transaction: Optional[TransactionRecord]
-        #origin_coin: Optional[Coin]  # puzzlehash of this coin is our Singleton state
-        #parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
-        #current_inner: Optional[Program]  # represents a Program as bytes
+        # current: PoolState
+        # target: PoolState
+        # pending_transaction: Optional[TransactionRecord]
+        # origin_coin: Optional[Coin]  # puzzlehash of this coin is our Singleton state
+        # parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
+        # current_inner: Optional[Program]  # represents a Program as bytes
 
         # TODO: need to test recovering this information
         origin = pool_wallet_0.pool_info.origin_coin
         current_rewards_pubkey = pool_wallet_0.current_rewards_pubkey
         current_rewards_puzhash = pool_wallet_0.current_rewards_puzhash
 
-        #pubkey = pool_wallet_0.pool_info.admin_pubkey
+        # pubkey = pool_wallet_0.pool_info.admin_pubkey
         print(f"origin: {origin}")
 
         print(f"pubkey: {current_rewards_pubkey} puzhash: {current_rewards_puzhash}")
@@ -165,11 +164,10 @@ class TestPoolWalletSimulator:
         bal = await wallet_0.get_confirmed_balance()
         assert bal == funds - 1
         await time_out_assert(SIM_TIMEOUT, wallet_0.get_confirmed_balance, funds - 1)
-        #pool_balance = await pool_wallet_0.get_confirmed_balance()
-        #assert pool_balance == 1
+        # pool_balance = await pool_wallet_0.get_confirmed_balance()
+        # assert pool_balance == 1
 
-
-        '''
+        """
         await pool_wallet.set_user_info(
             interval,
             limit,
@@ -178,28 +176,28 @@ class TestPoolWalletSimulator:
             origin.amount,
             admin_pubkey.hex(),
         )
-        '''
+        """
 
-        #for i in range(0, num_blocks):
+        # for i in range(0, num_blocks):
         #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
-        #for i in range(0, num_blocks):
+        # for i in range(0, num_blocks):
         #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
-        #await time_out_assert(15, pool_wallet_0.get_confirmed_balance, 1)
+        # await time_out_assert(15, pool_wallet_0.get_confirmed_balance, 1)
         # balance = await pool_wallet.available_balance()
 
-        #tx_record = await pool_wallet_0.generate_signed_transaction(1, 32 * b"\0")
+        # tx_record = await pool_wallet_0.generate_signed_transaction(1, 32 * b"\0")
 
-        #await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
+        # await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 
-        #for i in range(0, num_blocks):
+        # for i in range(0, num_blocks):
         #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
         balance = await pool_wallet_0.get_confirmed_balance()
         print(f"Pool wallet balance: {balance}")
 
-        #await time_out_assert(15, pool_wallet.get_confirmed_balance, 99)
+        # await time_out_assert(15, pool_wallet.get_confirmed_balance, 99)
 
         # pool_wallet.get_aggregation_puzzlehash(pool_wallet.get_new_puzzle())
 

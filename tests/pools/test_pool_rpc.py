@@ -57,13 +57,6 @@ class TestPoolWalletRpc:
 
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        #for i in range(0, num_blocks + 1):
-        #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
-
         total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
         total_block_rewards = await self.get_total_block_rewards(total_blocks)
 
@@ -108,18 +101,10 @@ class TestPoolWalletRpc:
 
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         pool_wallet = pool_wallet_node.wallet_state_manager.main_wallet
-        #our_ph = await wallet.get_new_puzzlehash()
         our_ph = await wallet_0.get_new_puzzlehash()
         pool_ph = await pool_wallet.get_new_puzzlehash()
 
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(our_ph))
-        #for i in range(0, num_blocks + 1):
-        #    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(our_ph))
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(our_ph))
-        #await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
         total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
         total_block_rewards = await self.get_total_block_rewards(total_blocks)
@@ -153,14 +138,14 @@ class TestPoolWalletRpc:
         pubkey = val["pubkey"]
         print(val)
 
-        pool_url = "https://pool.example.com"
-        relative_lock_height = uint32(10)
-        pool_pay_addr = pool_ph
-
-        # xxx should not be able to set pool_pay_addr, pubkey
-        new_target_state = create_pool_state(FARMING_TO_POOL, pool_pay_addr, pubkey, pool_url, relative_lock_height)
-        val2 = await api_user.pw_set_target_state(
-            {"wallet_id": val["id"], "target_state": new_target_state, "host": f"{self_hostname}:5000"}
+        val2 = await api_user.pw_join_pool(
+            {
+                "wallet_id": val["id"],
+                "pool_url": "https://pool.example.com",
+                "relative_lock_height": 10,
+                "target_puzzlehash": pool_ph.hex(),
+                "host": f"{self_hostname}:5000",
+             }
         )
 
         print(val2)

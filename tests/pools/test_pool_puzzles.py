@@ -1,6 +1,10 @@
-from blspy import AugSchemeMPL
 
+from blspy import AugSchemeMPL, G1Element, PrivateKey
+
+from chia.clvm.singleton import P2_SINGLETON_MOD, SINGLETON_TOP_LAYER_MOD, SINGLETON_LAUNCHER
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
@@ -12,22 +16,22 @@ from chia.pools.pool_puzzles import (
     POOL_OUTER_MOD,
     POOL_ESCAPING_MOD,
     POOL_MEMBER_MOD,
-    create_innerpuz,
-    create_fullpuz, get_pubkey_from_member_innerpuz, POOL_ESCAPING_INNER_HASH, P2_SINGLETON_HASH,
-)  # , get_pubkey_from_innerpuz
-from chia.util.ints import uint32
-
-
-# tests/wallet/test_singleton
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+    create_pool_member_innerpuz,
+    create_fullpuz,
+    get_pubkey_from_member_innerpuz,
+    POOL_ESCAPING_INNER_HASH,
+    P2_SINGLETON_HASH,
+    generate_pool_eve_spend, create_self_pooling_innerpuz
+)
+from chia.util.ints import uint32, uint64
+from tests.core.full_node.test_conditions import check_conditions, initial_blocks, check_spend_bundle_validity
 
 
 def test_p2_singleton():
-    singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
+    singleton_mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     genesis_id = 0xCAFEF00D
     innerpuz = Program.to(1)
-    singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, innerpuz)
+    singleton_full = SINGLETON_TOP_LAYER_MOD.curry(singleton_mod_hash, genesis_id, innerpuz)
 
     p2_singleton_coin_id = Program.to(["test_hash"]).get_tree_hash()
     expected_announcement = Announcement(singleton_full.get_tree_hash(), p2_singleton_coin_id).name()
@@ -51,6 +55,34 @@ def test_create():
 def test_uncurry():
     pass
 
+
+def test_singleton_creation_with_eve_and_launcher():
+    amount = uint64(1)
+    genesis_launcher_puz = SINGLETON_LAUNCHER
+    origin_coin = Coin(b'\1' * 32, b'\1' * 32, uint64(1234))
+    our_puzzle_hash: bytes32 = b'\1' * 32
+    pool_puzhash: bytes = b'\2' * 32
+    private_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
+    owner_pubkey = private_key.get_g1()
+
+    # sk = BasicSchemeMPL.key_gen(b"\1" * 32)
+    # pk = sk.get_g1()
+
+    launcher_coin = Coin(origin_coin.name(), genesis_launcher_puz.get_tree_hash(), amount)
+    genesis_id = launcher_coin.name()
+    self_pooling_inner_puzzle = create_self_pooling_innerpuz(our_puzzle_hash, owner_pubkey)
+    full_puzzle = create_fullpuz(self_pooling_inner_puzzle, genesis_id)
+    eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
+
+    pool_reward_amount = 4000000000000
+    pool_reward_height = 101
+    relative_lock_height = uint32(10)
+    eve_spend: SpendBundle = generate_pool_eve_spend(origin_coin, eve_coin, launcher_coin,
+                            private_key, owner_pubkey, our_puzzle_hash,
+                            pool_reward_amount, pool_reward_height,
+                            pool_puzhash, relative_lock_height)
+    assert eve_spend
+    '''
 def test_singleton_creation_with_eve_and_launcher():
     from chia.consensus.constants import ConsensusConstants
 
@@ -68,12 +100,20 @@ def test_singleton_creation_with_eve_and_launcher():
     full_self_pooling_puzzle = create_fullpuz(self_pooling_inner_puzzle, genesis_puzhash)
     inner = self_pooling_inner_puzzle
     full_puz = full_self_pooling_puzzle
-    coin = {'amount': 1,
-     'parent_coin_info': '0x4ed5f1195300d479237070d095101a138142caa24c731d8de99b6c4e8d7f7b3d',
-    'puzzle_hash': '0x924175b2583440413221321541e672989fe6d201ee0643d945b6679671f20d74'}
+    coin = {
+        "amount": 1,
+        "parent_coin_info": "0x4ed5f1195300d479237070d095101a138142caa24c731d8de99b6c4e8d7f7b3d",
+        "puzzle_hash": "0x924175b2583440413221321541e672989fe6d201ee0643d945b6679671f20d74",
+    }
     origin_coin_puzzle_hash = 32 * b"\0"
-    origin_coin = Coin(hexstr_to_bytes("7eafe79ac873ad528287f905620ee0eefb3bd1b70274a4c1a4817ca1db952007", origin_coin_puzzle_hash, 100))
-    current_rewards_pubkey = hexstr_to_bytes("844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94")
+    origin_coin = Coin(
+        hexstr_to_bytes(
+            "7eafe79ac873ad528287f905620ee0eefb3bd1b70274a4c1a4817ca1db952007", origin_coin_puzzle_hash, 100
+        )
+    )
+    current_rewards_pubkey = hexstr_to_bytes(
+        "844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94"
+    )
     current_rewards_puzhash = hexstr_to_bytes("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7")
     owner_pubkey = coin.amount, current_rewards_pubkey
     innersol = Program.to(
@@ -107,13 +147,14 @@ def test_singleton_creation_with_eve_and_launcher():
         + ConsensusConstants.AGG_SIG_ME_ADDITIONAL_DATA
     )
     pubkey = get_pubkey_from_member_innerpuz(innerpuz)
-    index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-    private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+    #index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+    #private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
     signature = AugSchemeMPL.sign(private, message)
     sigs = [signature]
     aggsig = AugSchemeMPL.aggregate(sigs)
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
+'''
 
 def test_pooling():
     pass
