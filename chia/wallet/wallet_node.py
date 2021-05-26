@@ -861,13 +861,14 @@ class WalletNode:
             WalletType.DISTRIBUTED_ID,
         )
         puzzle_store = self.wallet_state_manager.puzzle_store
+
         def doesnt_have_request_type(coin):
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
             return (record_info is None) or record_info.wallet_type not in REQUEST_TYPES
-        no_removal_requests = all(map(doesnt_have_request_type, additions))
 
+        no_removal_requests = all(map(doesnt_have_request_type, additions))
         if no_removal_requests and len(removals) == 0:
             return []
 
@@ -876,11 +877,13 @@ class WalletNode:
         removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
             removals_request
         )
+
+        # Return list of removed coins. Return None also for RejectRemovalsRequest
         if isinstance(removals_res, RespondRemovals):
-            if self.validate_removals(
-                removals_res.coins, removals_res.proofs, block_i.foliage_transaction_block.removals_root,
-            ):
-                return [coins_l for _, coins_l in removals_res.coins if coins_l is not None]
+            removals_root = block_i.foliage_transaction_block.removals_root
+            if self.validate_removals(removals_res.coins, removals_res.proofs, removals_root):
+                removed_coins = [coins_l for _, coins_l in removals_res.coins if coins_l is not None]
+                return removed_coins
 
             await peer.close()
 
