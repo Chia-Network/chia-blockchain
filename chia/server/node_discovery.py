@@ -188,7 +188,7 @@ class FullNodeDiscovery:
                 return
             await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
-            self.log.error(f"Exception while querying DNS server: {e}")
+            self.log.warn(f"querying DNS introducer failed: {e}")
 
     async def start_client_async(self, addr: PeerInfo, is_feeler: bool) -> None:
         try:
