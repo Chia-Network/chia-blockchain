@@ -453,10 +453,7 @@ class WalletRpcApi:
                     request["initial_target_state"], owner_pubkey, owner_puzzlehash
                 )
                 if err is not None:
-                    return {
-                        "success": False,
-                        "error": err,
-                    }
+                    raise ValueError(str(err))
                 async with self.service.wallet_state_manager.lock:
                     pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet(
                         wallet_state_manager,
@@ -466,7 +463,6 @@ class WalletRpcApi:
                         owner_puzzlehash,
                     )
                 return {
-                    "success": True,
                     "type": pool_wallet.type(),
                     "wallet_id": pool_wallet.id(),
                     "current_state": pool_wallet.pool_info.current,
@@ -475,10 +471,7 @@ class WalletRpcApi:
                     "p2_puzzle_hash": "",  # puzzlehash for our plots
                 }
             elif request["mode"] == "recovery":
-                return {
-                    "success": False,
-                    "error": "Need upgraded singleton for on-chain recovery",
-                }
+                raise ValueError("Need upgraded singleton for on-chain recovery")
 
     ##########################################################################################
     # Wallet
