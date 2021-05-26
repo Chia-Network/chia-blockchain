@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Dict, Iterator, Set
 
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
+from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict  # noqa
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -30,7 +30,12 @@ class CoinStore:
         self._db: Dict[bytes32, CoinRecord] = dict()
         self._ph_index = defaultdict(list)
 
-    def farm_coin(self, puzzle_hash: bytes32, birthday: CoinTimestamp, amount: int = 1024) -> Coin:
+    def farm_coin(
+        self,
+        puzzle_hash: bytes32,
+        birthday: CoinTimestamp,
+        amount: int = 1024,
+    ) -> Coin:
         parent = birthday.height.to_bytes(32, "big")
         coin = Coin(parent, puzzle_hash, uint64(amount))
         self._add_coin_entry(coin, birthday)
@@ -56,19 +61,32 @@ class CoinStore:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
             conditions_dicts.append(conditions_dict)
             coin_announcements.update(
-                coin_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin)
+                coin_announcement_names_for_conditions_dict(
+                    conditions_dict,
+                    coin_solution.coin,
+                )
             )
             puzzle_announcements.update(
-                puzzle_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin)
+                puzzle_announcement_names_for_conditions_dict(
+                    conditions_dict,
+                    coin_solution.coin,
+                )
             )
 
-        for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):
+        for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):  # noqa
             prev_transaction_block_height = now.height
             timestamp = now.seconds
             try:
                 coin_record = self._db[coin_solution.coin.name()]
             except KeyError:
-                coin_record = CoinRecord(coin_solution.coin, now.height, 0, False, False, now.seconds)
+                coin_record = CoinRecord(
+                    coin_solution.coin,
+                    uint32(now.height),
+                    uint32(0),
+                    False,
+                    False,
+                    uint64(now.seconds),
+                )
             err = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements,
@@ -82,7 +100,12 @@ class CoinStore:
 
         return 0
 
-    def update_coin_store_for_spend_bundle(self, spend_bundle: SpendBundle, now: CoinTimestamp, max_cost: int):
+    def update_coin_store_for_spend_bundle(
+        self,
+        spend_bundle: SpendBundle,
+        now: CoinTimestamp,
+        max_cost: int,
+    ):
         err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
@@ -90,9 +113,20 @@ class CoinStore:
             coin_name = spent_coin.name()
             try:
                 coin_record = self._db[coin_name]
-                self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
+                self._db[coin_name] = replace(
+                    coin_record,
+                    spent_block_index=now.height,
+                    spent=True,
+                )
             except KeyError:
-                self._db[coin_name] = CoinRecord(spent_coin, now.height, now.height, True, False, now.seconds)
+                self._db[coin_name] = CoinRecord(
+                    spent_coin,
+                    uint32(now.height),
+                    uint32(now.height),
+                    True,
+                    False,
+                    uint64(now.seconds),
+                )
 
         for new_coin in spend_bundle.additions():
             if new_coin not in spend_bundle.removals():
@@ -116,5 +150,12 @@ class CoinStore:
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
         name = coin.name()
         assert name not in self._db
-        self._db[name] = CoinRecord(coin, uint32(birthday.height), uint32(0), False, False, uint64(birthday.seconds))
+        self._db[name] = CoinRecord(
+            coin,
+            uint32(birthday.height),
+            uint32(0),
+            False,
+            False,
+            uint64(birthday.seconds),
+        )
         self._ph_index[coin.puzzle_hash].append(name)
