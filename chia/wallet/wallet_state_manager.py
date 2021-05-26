@@ -557,6 +557,10 @@ class WalletStateManager:
         trade_removals, removed = await self.coins_of_interest_removed(removals, height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
             await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
+
+        # TODO: if any addition is a launcher with a parent of our removals, we need to create the pool wallet
+        # TODO: If any removal is a singleton, we need to fetch the solution and update the pool wallet state
+
         added_notified = set()
         removed_notified = set()
         for coin_record in added:
@@ -1066,6 +1070,12 @@ class WalletStateManager:
     async def add_new_wallet(self, wallet: Any, wallet_id: int):
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
+
+    async def spends_pool_wallet_coin(self, removals: List[Coin]) -> bool:
+        for wallet_id, wallet in self.wallets:
+            if wallet.type() == WalletType.POOLING_WALLET.value:
+                if wallet.
+        pass
 
     # search through the blockrecords and return the most recent coin to use a given puzzlehash
     async def search_blockrecords_for_puzzlehash(self, puzzlehash: bytes32):
