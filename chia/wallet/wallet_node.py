@@ -12,6 +12,7 @@ from blspy import PrivateKey
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -400,6 +401,12 @@ class WalletNode:
                     removed_coins = await self.get_removals(peer, block, added_coins, removals)
                     if removed_coins is None:
                         raise ValueError("Failed to fetch removals")
+
+                    # If there is a launcher created, or we have a singleton spent, fetches all additions and removals
+                    removed_coins, added_coins = await self.include_all_if_singleton(
+                        peer, block, added_coins, removed_coins
+                    )
+
                     hbr = HeaderBlockRecord(block, added_coins, removed_coins)
                 else:
                     hbr = HeaderBlockRecord(block, [], [])
@@ -701,6 +708,11 @@ class WalletNode:
                 if removed_coins is None:
                     raise ValueError("Failed to fetch removals")
 
+                # If there is a launcher created, or we have a singleton spent, fetches all additions and removals
+                removed_coins, added_coins = await self.include_all_if_singleton(
+                    peer, header_block, added_coins, removed_coins
+                )
+
                 header_block_record = HeaderBlockRecord(header_block, added_coins, removed_coins)
             else:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
@@ -833,7 +845,36 @@ class WalletNode:
                         return False
         return True
 
-    async def get_additions(self, peer: WSChiaConnection, block_i, additions) -> Optional[List[Coin]]:
+    async def include_all_if_singleton(
+        self, peer, block, removed_coins: List[Coin], added_coins: List[Coin]
+    ) -> Tuple[List[Coin], List[Coin]]:
+        # This is done to detect pool wallet creation. If we detect a launcher being created from one of our coins,
+        # makes sure to get all removals and all additions
+        return_all: bool = False
+        all_removed_coins: Optional[List[Coin]] = []
+        all_added_coins: Optional[List[Coin]] = []
+        if len(removed_coins) > 0:
+            removed_coin_ids = [coin.name() for coin in removed_coins]
+            all_added_coins = await self.get_additions(peer, block, [])
+            assert all_added_coins is not None
+            if all_added_coins is not None:
+                for coin in all_added_coins:
+                    if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.parent_coin_info in removed_coin_ids:
+                        return_all = True
+
+            if self.wallet_state_manager.spends_pool_wallet_coin(removed_coins):
+                return_all = True
+
+            if return_all:
+                all_removed_coins = await self.get_removals(
+                    peer, block, added_coins, removed_coins, request_all_removals=True
+                )
+                return all_removed_coins, all_added_coins
+        return removed_coins, added_coins
+
+    async def get_additions(
+        self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]]
+    ) -> Optional[List[Coin]]:
         if len(additions) > 0:
             additions_request = RequestAdditions(block_i.height, block_i.header_hash, additions)
             additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
@@ -863,9 +904,10 @@ class WalletNode:
         else:
             return []  # No added coins
 
-    async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
+    async def get_removals(
+        self, peer: WSChiaConnection, block_i, additions, removals, request_all_removals=False
+    ) -> Optional[List[Coin]]:
         assert self.wallet_state_manager is not None
-        request_all_removals = False
         # Check if we need all removals
         for coin in additions:
             puzzle_store = self.wallet_state_manager.puzzle_store
@@ -879,7 +921,6 @@ class WalletNode:
             if record_info is not None and record_info.wallet_type == WalletType.DISTRIBUTED_ID:
                 request_all_removals = True
                 break
-
         if len(removals) > 0 or request_all_removals:
             if request_all_removals:
                 removals_request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, None)

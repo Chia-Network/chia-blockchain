@@ -161,7 +161,7 @@ class WalletRpcClient(RpcClient):
             "mode": mode,
             "host": backup_host,
             "initial_target_state": {
-                "target_puzzlehash": target_puzzlehash.hex(),
+                "target_puzzle_hash": target_puzzlehash.hex(),
                 "relative_lock_height": relative_lock_height,
                 "pool_url": pool_url,
                 "state": state,
@@ -177,7 +177,7 @@ class WalletRpcClient(RpcClient):
     ):
         request = {
             "wallet_id": wallet_id,
-            "target_puzzlehash": target_puzzlehash.hex(),
+            "target_puzzle_hash": target_puzzlehash.hex(),
             "relative_lock_height": relative_lock_height,
             "pool_url": pool_url,
         }
