@@ -40,7 +40,8 @@ from chia.pools.pool_puzzles import (
     P2_SINGLETON_HASH,
     get_pubkey_from_member_innerpuz,
     P2_SINGLETON_MOD,
-    SINGLETON_MOD, generate_pool_eve_spend,
+    SINGLETON_MOD,
+    generate_pool_eve_spend,
 )
 
 from chia.util.ints import uint8, uint32, uint64
@@ -49,6 +50,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+
 # from chia.wallet.wallet_state_manager import WalletStateManager
 # from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -309,7 +311,8 @@ class PoolWallet:
         target_puzzlehash = initial_target_state.target_puzzlehash
         relative_lock_height = initial_target_state.relative_lock_height
         spend_bundle, genesis_puzzlehash, parents, origin_coin = await self.generate_new_pool_wallet_id(
-            uint64(1), owner_pubkey, owner_puzzlehash, target_puzzlehash, relative_lock_height)
+            uint64(1), owner_pubkey, owner_puzzlehash, target_puzzlehash, relative_lock_height
+        )
 
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
@@ -332,7 +335,7 @@ class PoolWallet:
         # the transaction, but we only want to save this information if the transaction is valid
         # new_pool_info: PoolWalletInfo = self.pool_info.copy()
         # new_pool_info.origin_coin = launcher_coin
-        #await self.set_origin(launcher_coin, False)
+        # await self.set_origin(launcher_coin, False)
 
         # launcher.name() is the genesis_id
         self.pool_info = PoolWalletInfo(
@@ -345,10 +348,9 @@ class PoolWallet:
             current_inner=None,
             self_pooled_reward_list=[],
             owner_pubkey=owner_pubkey,
-            owner_pay_to_puzzlehash=owner_puzzlehash
+            owner_pay_to_puzzlehash=owner_puzzlehash,
         )
         info_as_string = json.dumps(self.pool_info.to_json_dict())
-
 
         # BEGIN Create Wallet
         self.db_wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -423,7 +425,6 @@ class PoolWallet:
             await self.watch_for_escaping_puz(pool_pay_address, relative_lock_height, pool_url)
 
         return self
-
 
     async def watch_p2_singleton_rewards(self):
         singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
@@ -523,11 +524,9 @@ class PoolWallet:
         await self.save_info(new_pool_info, in_transaction)
 
         # Set the puzzlehash watch callback for our next anticipated transition
-        #self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
+        # self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
         #    next_puzzle_hash, self.singleton_callback
-        #)
-
-
+        # )
 
     async def singleton_callback(self, coin: Coin):
         pass
@@ -635,8 +634,14 @@ class PoolWallet:
         dr = await self._get_new_standard_derivation_record()
         return dr.pubkey, dr.puzzle_hash
 
-    async def generate_new_pool_wallet_id(self, amount: uint64, owner_pubkey: G1Element, our_puzzle_hash: bytes32,
-                                          target_puzzlehash: bytes32, relative_lock_height: uint32):
+    async def generate_new_pool_wallet_id(
+        self,
+        amount: uint64,
+        owner_pubkey: G1Element,
+        our_puzzle_hash: bytes32,
+        target_puzzlehash: bytes32,
+        relative_lock_height: uint32,
+    ):
         # -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
@@ -713,9 +718,18 @@ class PoolWallet:
             relative_lock_height = 0
         # @ mariano How should we calculate POOL_REWARD_AMOUNT and block_height?
         # @ matt_howard Does pool_reward_height have to match the block height that the spend is included in?
-        eve_spend = generate_pool_eve_spend(origin, eve_coin, launcher_coin, private_key, owner_pubkey,
-                                            our_puzzle_hash,
-                                            POOL_REWARD_AMOUNT, block_height, target_puzzlehash, relative_lock_height)
+        eve_spend = generate_pool_eve_spend(
+            origin,
+            eve_coin,
+            launcher_coin,
+            private_key,
+            owner_pubkey,
+            our_puzzle_hash,
+            POOL_REWARD_AMOUNT,
+            block_height,
+            target_puzzlehash,
+            relative_lock_height,
+        )
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         return full_spend, full_puz.get_tree_hash(), parents, launcher_coin  # origin
@@ -757,7 +771,6 @@ class PoolWallet:
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
     '''
-
 
     """
         return Success if added to mempool
@@ -1073,9 +1086,9 @@ Fingerprint + derivation path of owner
         #    pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed
         # )
 
-        #owner_puzhash: bytes32 = self.current_rewards_puzhash
-        #owner_pubkey: bytes = self.current_rewards_pubkey
-        #pool_puzhash: bytes32 = self.current_rewards_puzhash
+        # owner_puzhash: bytes32 = self.current_rewards_puzhash
+        # owner_pubkey: bytes = self.current_rewards_pubkey
+        # pool_puzhash: bytes32 = self.current_rewards_puzhash
         relative_lock_height = self.pool_info.current.relative_lock_height
 
         # xxx
@@ -1120,7 +1133,7 @@ Fingerprint + derivation path of owner
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
         return uint64(1)
-        '''
+        """
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
@@ -1132,6 +1145,6 @@ Fingerprint + derivation path of owner
 
         self.log.info(f"Confirmed balance for pool wallet {self.id()} is {amount}")
         return uint64(amount)
-        '''
+        """
 
     # TODO: Need to be able to retrieve owner_pubkey from blockchain
