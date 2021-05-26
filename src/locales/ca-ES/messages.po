@@ -8,7 +8,7 @@ msgstr ""
 "Language: ca_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-26 13:18\n"
 "Last-Translator: \n"
 "Language-Team: Catalan\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -935,7 +935,7 @@ msgstr "Gestió de recompenses de collita"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr ""
+msgstr "Gestiona les adreces de les recompenses de cultiu"
 
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
@@ -995,7 +995,7 @@ msgstr "No hi ha llavor de 24 paraules, ja que aquesta clau ha estat importada."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "Encara no s'ha cultivat cap bloc"
 
 #: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
@@ -1119,7 +1119,7 @@ msgstr "Si us plau, introdueixi una quantitat de moneda inicial vàlida"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
 #: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "Si us plau, introdueix una quantitat numèrica vàlida"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -1127,15 +1127,15 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
 #: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Si us plau, introdueix una quota numèrica vàlida"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Si us plau, introdueix una llargària d'interval numèric vàlida"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Si us plau, introdueix una quantitat de despesa numèrica vàlida"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
@@ -1144,7 +1144,7 @@ msgstr "Si us plau introdueix una clau pública vàlida"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Si us plau, espera que acabi la sincronització abans de fer una transacció"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1156,7 +1156,7 @@ msgstr "Seleccions comprar o vendre"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Si us plau, escull un color de moneda"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1165,12 +1165,12 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "Si us plau, especifica un directori de destinació final"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "Si us plau, introdueix un directori temporal"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1235,7 +1235,7 @@ msgstr "Traçar en paral·lel pot estalviar temps, en cas contrari afegeix traç
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "Parcel·lar amb el bitfield activat genera un 30% menys d'escriptura en el disc i gairebé sempre és més ràpid. Probablement veuràs que la teva memòria es redueix quan desactivis la parcel·lació amb bitfield. Si el disseny de la teva CPU és d'abans del 2010 és molt probable que hagis de desactivar la parcel·lació amb bitfield."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1251,7 +1251,7 @@ msgstr "Clau pública de piscina"
 
 #: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "El Puzzle Hash de la Pool"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
@@ -1259,7 +1259,7 @@ msgstr "Adressa de recompensa de l'agricultor"
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "La quanitat de recompensa de la Pool"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1286,7 +1286,7 @@ msgstr "Hash del Bloc previ"
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Clau privada amb el fingerprint públic {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
@@ -1294,35 +1294,35 @@ msgstr "Clau privada{0}"
 
 #: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
-msgstr ""
+msgstr "Clau privada:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "Mida de la Prova d'Espai (Proof of Space)"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "Proves trobades"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "Pubkey"
 
 #: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
-msgstr ""
+msgstr "Clau pública:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr ""
+msgstr "Mida de la cua"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
-msgstr ""
+msgstr "Nom de la cua"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
-msgstr ""
+msgstr "A la cua"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
@@ -1330,11 +1330,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "Màxima us de la RAM"
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr ""
+msgstr "Moneder RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1342,49 +1342,49 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "Límit de freqüència"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Informació de la limitació de la freqüència"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Opcions de la limitació de la freqüència"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Configuració de la cartera de l'usuari en la limitació de la freqüència"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "Receive Address"
-msgstr ""
+msgstr "Adreça per rebre"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Recupera la cartera DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Actualitza les parcel·les"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
-msgstr ""
+msgstr "Notes de la versió"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "Eliminant"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr ""
+msgstr "Canvia el nom"
 
 #: src/electron/main.tsx:339
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Informeu d'un problema..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
