@@ -222,11 +222,9 @@ class RpcServer:
         except Exception as e:
             tb = traceback.format_exc()
             self.log.warning(f"Error while handling message: {tb}")
-            if len(e.args) > 0:
-                error = {"success": False, "error": f"{e.args[0]}"}
-            else:
-                error = {"success": False, "error": f"{e}"}
             if message is not None:
+                error_msg = e.args[0] if e.args else e
+                error = {"success": False, "error": f"{e.args[0] if e.args else e}"}
                 await websocket.send_str(format_response(message, error))
 
     async def connection(self, ws):
