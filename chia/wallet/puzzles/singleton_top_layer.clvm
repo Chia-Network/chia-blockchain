@@ -26,7 +26,7 @@
 
   (defmacro assert items
     (if (r items)
-        (list if (f items) (c assert (r items)) (q . (x "three")))
+        (list if (f items) (c assert (r items)) (q . (x)))
       (f items)
       )
     )
@@ -100,7 +100,7 @@
         (morph_next_condition MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH conditions odd_output_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
           (if (odd_output_found)
               0
-              (x "four")  ;; no odd output found
+              (x)  ;; no odd output found
           )
         )
    )
@@ -138,7 +138,7 @@
       (stager_three MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (create_my_ID MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH full_puzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount) full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
       (if (= LAUNCHER_ID (sha256 (f parent_info) LAUNCHER_PUZZLE_HASH (f (r parent_info))))
         (stager_three MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (sha256 LAUNCHER_ID full_puzhash my_amount) full_puzhash innerpuzhash my_amount INNERPUZ inner_solution)
-        (x "one")
+        (x)
       )
     )
   )
@@ -155,7 +155,7 @@
   ; this calculates my_innerpuzhash and passes all values to stager_one
   (if (logand my_amount 1)
     (stager_one MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH parent_info (sha256tree1 INNERPUZ) my_amount INNERPUZ inner_solution)
-    (x "two")
+    (x)
   )
 
 )
