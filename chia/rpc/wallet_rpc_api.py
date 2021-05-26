@@ -9,6 +9,7 @@ from blspy import PrivateKey, G1Element
 
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.pools.pool_puzzles import launcher_id_to_p2_puzzle_hash
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, SELF_POOLING
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -482,7 +483,9 @@ class WalletRpcApi:
                     "current_state": pool_wallet.pool_info.current,
                     "target_state": pool_wallet.pool_info.target,
                     "owner_pubkey": pool_wallet.pool_info.owner_pubkey,
-                    "p2_puzzle_hash": "",  # puzzlehash for our plots
+                    "p2_puzzle_hash": launcher_id_to_p2_puzzle_hash(pool_wallet.pool_info.launcher_id),
+                    "launcher_id": pool_wallet.pool_info.launcher_id,
+                    "pending_transaction_id": pool_wallet.pool_info.pending_transaction.name,
                 }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")

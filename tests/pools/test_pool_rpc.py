@@ -1,16 +1,20 @@
 import asyncio
 import logging
+from typing import Dict
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.pools.pool_wallet_info import PENDING_CREATION, SELF_POOLING
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.types.peer_info import PeerInfo
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
@@ -43,7 +47,7 @@ class TestPoolWalletRpc:
         )
         return funds
 
-    async def farm_blocks(self, full_node_api, ph, num_blocks):
+    async def farm_blocks(self, full_node_api: FullNodeAPI, ph: bytes32, num_blocks: int):
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         return num_blocks
@@ -88,11 +92,9 @@ class TestPoolWalletRpc:
             await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
             await time_out_assert(10, wallet_0.get_spendable_balance, total_block_rewards)
             assert total_block_rewards > 0
-            print(f"total_block_rewards: {total_block_rewards}")
-            wallet_initial_confirmed_balance = await wallet_0.get_confirmed_balance()
-            print(f"wallet_initial_confirmed_balance: {wallet_initial_confirmed_balance}")
 
             val = await client.create_new_pool_wallet(ph, "", 0, "localhost:5000", "new", "SELF_POOLING")
+            log.warning(f"Reponse: {val}")
 
             assert isinstance(val, dict)
             assert val["success"]
@@ -108,18 +110,24 @@ class TestPoolWalletRpc:
                 "pool_url": None,
                 "relative_lock_height": 0,
                 "state": 1,
-                "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-                "version": 1,
-            }
-            assert val["target_state"] == {
-                "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
-                "pool_url": None,
-                "relative_lock_height": 0,
-                "state": 2,
-                "target_puzzlehash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+                "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
                 "version": 1,
             }
             # TODO: Put the p2_puzzle_hash in the config for the plotter
+
+            status: Dict = await client.pw_status(2)
+            log.warning(f"Initial staus: {status}")
+            await asyncio.sleep(2)
+            assert (
+                full_node_api.full_node.mempool_manager.get_mempool_item(
+                    bytes32(hexstr_to_bytes(val["pending_transaction_id"]))
+                )
+                is not None
+            )
+            await self.farm_blocks(full_node_api, ph, 3)
+            status: Dict = await client.pw_status(2)
+            log.warning(f"New staus: {status}")
+
         finally:
             client.close()
             await client.await_closed()

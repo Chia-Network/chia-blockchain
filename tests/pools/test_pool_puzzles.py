@@ -1,4 +1,4 @@
-from blspy import AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, PrivateKey, G1Element
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.types.blockchain_format.coin import Coin
@@ -10,8 +10,8 @@ from chia.types.announcement import Announcement
 from chia.pools.pool_puzzles import (
     create_full_puzzle,
     generate_pool_eve_spend,
-    create_self_pooling_inner_puzzle,
     create_escaping_inner_puzzle,
+    create_pooling_inner_puzzle,
 )
 from chia.util.ints import uint32, uint64
 from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
@@ -21,13 +21,11 @@ def test_p2_singleton():
     # create a singleton. This should call driver code.
     launcher_id: bytes32 = LAUNCHER_ID
     owner_puzzle_hash: bytes32 = 32 * b"3"
-    owner_pubkey_bytes: bytes = 48 * b"4"
+    owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
     pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
-        owner_puzzle_hash, uint32(0), owner_pubkey_bytes
+        owner_puzzle_hash, uint32(0), owner_pubkey
     ).get_tree_hash()
-    inner_puzzle: Program = create_self_pooling_inner_puzzle(
-        owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey_bytes
-    )
+    inner_puzzle: Program = create_pooling_inner_puzzle(owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey)
     singleton_full_puzzle: Program = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, inner_puzzle)
 
     # create a fake coin id for the `p2_singleton`
@@ -66,13 +64,13 @@ def test_singleton_creation_with_eve_and_launcher():
     our_puzzle_hash: bytes32 = b"\1" * 32
     pool_puzzle_hash: bytes = b"\2" * 32
     private_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
-    owner_pubkey = private_key.get_g1()
+    owner_pubkey: G1Element = private_key.get_g1()
 
     # sk = BasicSchemeMPL.key_gen(b"\1" * 32)
     # pk = sk.get_g1()
 
-    launcher_coin = Coin(origin_coin.name(), genesis_launcher_puz.get_tree_hash(), amount)
-    genesis_id = launcher_coin.name()
+    launcher_coin: Coin = Coin(origin_coin.name(), genesis_launcher_puz.get_tree_hash(), amount)
+    genesis_id: bytes32 = launcher_coin.name()
 
     pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
         our_puzzle_hash, uint32(0), owner_pubkey

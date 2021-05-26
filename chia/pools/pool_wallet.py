@@ -4,9 +4,9 @@ import time
 
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Any, Optional, Set, Dict, Tuple
+from typing import Any, Optional, Set, Dict, Tuple, List
 
-from blspy import AugSchemeMPL, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
     PoolSingletonState,
@@ -22,19 +22,17 @@ from chia.pools.pool_wallet_info import (
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 
 from chia.pools.pool_puzzles import (
     create_escaping_inner_puzzle,
-    create_self_pooling_inner_puzzle,
-    create_pool_member_inner_puzzle,
     create_full_puzzle,
     SINGLETON_LAUNCHER,
     P2_SINGLETON_MOD,
     SINGLETON_MOD,
-    generate_pool_eve_spend,
+    create_pooling_inner_puzzle,
 )
 
 from chia.util.ints import uint8, uint32, uint64
@@ -45,7 +43,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.util.transaction_type import TransactionType
 
 # TODO Refactor Singleton Wallet Python code
@@ -276,17 +273,17 @@ class PoolWallet:
 
         # Watch for new pool states as we acquire the needed parameters
         if self.pool_info.current.state == FARMING_TO_POOL.value:
-            pool_pay_address = self.pool_info.current.target_puzzle_hash
+            pool_puzzle_hash = self.pool_info.current.target_puzzle_hash
             relative_lock_height = self.pool_info.current.relative_lock_height
             pool_url = self.pool_info.current.pool_url
-            await self.watch_for_pooling_puz(pool_pay_address, relative_lock_height, pool_url)
-            await self.watch_for_escaping_puz(pool_pay_address, relative_lock_height, pool_url)
+            await self.watch_for_pooling_puz(pool_puzzle_hash, relative_lock_height, pool_url)
+            await self.watch_for_escaping_puz(pool_puzzle_hash, relative_lock_height, pool_url)
         elif self.pool_info.target.state == FARMING_TO_POOL.value:
-            pool_pay_address = self.pool_info.target.target_puzzle_hash
+            pool_puzzle_hash = self.pool_info.target.target_puzzle_hash
             relative_lock_height = self.pool_info.target.relative_lock_height
             pool_url = self.pool_info.target.pool_url
-            await self.watch_for_pooling_puz(pool_pay_address, relative_lock_height, pool_url)
-            await self.watch_for_escaping_puz(pool_pay_address, relative_lock_height, pool_url)
+            await self.watch_for_pooling_puz(pool_puzzle_hash, relative_lock_height, pool_url)
+            await self.watch_for_escaping_puz(pool_puzzle_hash, relative_lock_height, pool_url)
         return self
 
     @staticmethod
@@ -340,7 +337,7 @@ class PoolWallet:
         # TODO: Check genesis_puzzle_hash is correct, check if launcher_coin is launcher, or eve
         target_puzzle_hash = initial_target_state.target_puzzle_hash
         relative_lock_height = initial_target_state.relative_lock_height
-        spend_bundle, genesis_puzzle_hash, parents, launcher_coin = await self.generate_new_pool_wallet_id(
+        spend_bundle, parents, singleton_puzzle_hash, launcher_coin = await self.generate_new_pool_wallet_id(
             uint64(1), owner_pubkey, owner_puzzle_hash, target_puzzle_hash, relative_lock_height
         )
 
@@ -363,7 +360,7 @@ class PoolWallet:
             current_inner=None,
             self_pooled_reward_list=[],
             owner_pubkey=owner_pubkey,
-            owner_pay_to_puzzle_hash=owner_puzzle_hash,
+            owner_target_puzzle_hash=owner_puzzle_hash,
         )
         info_as_string = json.dumps(self.pool_info.to_json_dict())
 
@@ -383,13 +380,15 @@ class PoolWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.db_wallet_info.id)
         # END Create Wallet
 
-        self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(genesis_puzzle_hash, self.genesis_callback)
+        self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
+            singleton_puzzle_hash, self.genesis_callback
+        )
 
         # Create TransactionRecord
         pool_wallet_incoming_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=genesis_puzzle_hash,
+            to_puzzle_hash=singleton_puzzle_hash,
             amount=uint64(amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -401,12 +400,12 @@ class PoolWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=spend_bundle.name(),
         )
-        genesis_spend_record = TransactionRecord(
+        standard_wallet_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=genesis_puzzle_hash,
+            to_puzzle_hash=singleton_puzzle_hash,
             amount=uint64(amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -418,13 +417,13 @@ class PoolWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=token_bytes(),
+            name=spend_bundle.name(),
         )
 
-        await self.standard_wallet.push_transaction(genesis_spend_record)
         await self.standard_wallet.push_transaction(pool_wallet_incoming_record)
+        await self.standard_wallet.push_transaction(standard_wallet_record)
 
-        await self.set_pending_transaction(genesis_spend_record, False)
+        await self.set_pending_transaction(standard_wallet_record, False)
 
         # Always watch for self-pooling
         await self.watch_for_self_pooling_puz()
@@ -432,11 +431,11 @@ class PoolWallet:
 
         # Watch for new pool states as we acquire the needed parameters
         if initial_target_state.state == FARMING_TO_POOL:
-            pool_pay_address = initial_target_state.target_puzzle_hash
+            pool_puzzle_hash = initial_target_state.target_puzzle_hash
             relative_lock_height = initial_target_state.relative_lock_height
             pool_url = initial_target_state.pool_url
-            await self.watch_for_pooling_puz(pool_pay_address, relative_lock_height, pool_url)
-            await self.watch_for_escaping_puz(pool_pay_address, relative_lock_height, pool_url)
+            await self.watch_for_pooling_puz(pool_puzzle_hash, relative_lock_height, pool_url)
+            await self.watch_for_escaping_puz(pool_puzzle_hash, relative_lock_height, pool_url)
 
         return self
 
@@ -451,47 +450,56 @@ class PoolWallet:
             p2_singleton_puzzle_hash, self.p2_singleton_callback
         )
 
-    async def watch_for_pooling_puz(self, pool_pay_address: bytes, relative_lock_height: uint32, pool_url: str):
-        launcher_id = self.pool_info.launcher_coin.name()
+    async def watch_for_pooling_puz(self, pool_puzzle_hash: bytes32, relative_lock_height: uint32, pool_url: str):
+        launcher_id: bytes32 = self.pool_info.launcher_coin.name()
         assert self.pool_info.owner_pubkey is not None
-        owner_pubkey = self.pool_info.owner_pubkey
-        pooling_inner = create_pool_member_inner_puzzle(pool_pay_address, owner_pubkey)
-        pooling_full = create_full_puzzle(pooling_inner, launcher_id)
-        pooling_puzzle_hash = pooling_full.get_tree_hash()
+        owner_pubkey: G1Element = self.pool_info.owner_pubkey
+
+        escaping_inner_puzzle_hash: bytes32 = create_escaping_inner_puzzle(
+            pool_puzzle_hash, relative_lock_height, owner_pubkey
+        ).get_tree_hash()
+        pooling_inner: Program = create_pooling_inner_puzzle(pool_puzzle_hash, escaping_inner_puzzle_hash, owner_pubkey)
+        pooling_full: Program = create_full_puzzle(pooling_inner, launcher_id)
+        pooling_puzzle_hash: bytes32 = pooling_full.get_tree_hash()
         self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
             pooling_puzzle_hash, self.pooling_state_callback
         )
         self.puzzle_hash_to_state[pooling_puzzle_hash] = create_pool_state(
-            FARMING_TO_POOL, pool_pay_address, owner_pubkey, pool_url, relative_lock_height
+            FARMING_TO_POOL, pool_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
         )
 
     async def watch_for_self_pooling_puz(self):
-        launcher_id = self.pool_info.launcher_coin.name()
+        launcher_id: bytes32 = self.pool_info.launcher_coin.name()
         assert self.pool_info.owner_pubkey is not None
-        owner_pubkey = self.pool_info.owner_pubkey
-        pay_to_address = self.pool_info.owner_pay_to_puzzle_hash
-        pooling_inner = create_pool_member_inner_puzzle(pay_to_address, owner_pubkey)
-        pooling_full = create_full_puzzle(pooling_inner, launcher_id)
-        pooling_puzzle_hash = pooling_full.get_tree_hash()
+        owner_pubkey: G1Element = self.pool_info.owner_pubkey
+        target_puzzle_hash: bytes32 = self.pool_info.owner_target_puzzle_hash
+        escaping_inner_puzzle_hash: bytes32 = create_escaping_inner_puzzle(
+            target_puzzle_hash, uint32(0), owner_pubkey
+        ).get_tree_hash()
+        pooling_inner: Program = create_pooling_inner_puzzle(
+            target_puzzle_hash, escaping_inner_puzzle_hash, owner_pubkey
+        )
+        pooling_full: Program = create_full_puzzle(pooling_inner, launcher_id)
+        pooling_puzzle_hash: bytes32 = pooling_full.get_tree_hash()
         self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
             pooling_puzzle_hash, self.pooling_state_callback
         )
         self.puzzle_hash_to_state[pooling_puzzle_hash] = create_pool_state(
-            SELF_POOLING, pay_to_address, owner_pubkey, None, uint32(0)
+            SELF_POOLING, target_puzzle_hash, owner_pubkey, None, uint32(0)
         )
 
-    async def watch_for_escaping_puz(self, pool_pay_address: bytes, relative_lock_height: uint32, pool_url: str):
-        launcher_id = self.pool_info.launcher_coin.name()
+    async def watch_for_escaping_puz(self, pool_puzzle_hash: bytes32, relative_lock_height: uint32, pool_url: str):
+        launcher_id: bytes32 = self.pool_info.launcher_coin.name()
         assert self.pool_info.owner_pubkey is not None
-        owner_pubkey = self.pool_info.owner_pubkey
-        pooling_inner = create_escaping_inner_puzzle(pool_pay_address, relative_lock_height, owner_pubkey)
-        pooling_full = create_full_puzzle(pooling_inner, launcher_id)
-        pooling_puzzle_hash = pooling_full.get_tree_hash()
+        owner_pubkey: G1Element = self.pool_info.owner_pubkey
+        pooling_inner: Program = create_escaping_inner_puzzle(pool_puzzle_hash, relative_lock_height, owner_pubkey)
+        pooling_full: Program = create_full_puzzle(pooling_inner, launcher_id)
+        pooling_puzzle_hash: bytes32 = pooling_full.get_tree_hash()
         self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
             pooling_puzzle_hash, self.pooling_state_callback
         )
         self.puzzle_hash_to_state[pooling_puzzle_hash] = create_pool_state(
-            LEAVING_POOL, pool_pay_address, owner_pubkey, pool_url, relative_lock_height
+            LEAVING_POOL, pool_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
         )
 
     async def pooling_state_callback(self, coin: Coin):
@@ -533,7 +541,7 @@ class PoolWallet:
             inner,
             self.pool_info.self_pooled_reward_list,
             self.pool_info.owner_pubkey,
-            self.pool_info.owner_pay_to_puzzle_hash,
+            self.pool_info.owner_target_puzzle_hash,
         )
         await self.save_info(new_pool_info, in_transaction)
 
@@ -642,7 +650,7 @@ class PoolWallet:
     # Note about using different pubkeys on each singleton iteration:
     # owner_pubkey needn't be from the same wallet that generated the genesis coin,
     # but it is, in this implementation.
-    # target_puzhash and owner_pay_to_puzhash
+    # target_puzzle_hash and owner_target_puzzle_hash
     async def _get_pubkey_and_puzzle_hash(self) -> Tuple[G1Element, bytes32]:
         """This puzzle / pubkey pair is for paying into the user's main wallet"""
         dr = await self._get_new_standard_derivation_record()
@@ -655,100 +663,75 @@ class PoolWallet:
         our_puzzle_hash: bytes32,
         target_puzzle_hash: bytes32,
         relative_lock_height: uint32,
-    ):
-        # -> Optional[SpendBundle]:
+    ) -> Tuple[SpendBundle, List, bytes32, Coin]:
         """
-        This must be called under the wallet state manager lock
+        Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
+        with the "pooling" inner state, which can be either self pooling or using a pool
         """
 
         coins: Set[Coin] = await self.standard_wallet.select_coins(amount)
         if coins is None:
-            return None
+            raise ValueError("Not enough coins to create pool wallet")
+
+        assert len(coins) == 1
 
         launcher_parent: Coin = coins.copy().pop()
         genesis_launcher_puz: Program = SINGLETON_LAUNCHER
         launcher_coin: Coin = Coin(launcher_parent.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        # inner: Program = await self.get_new_inner_puzzle()
-        # full_puz = pool_wallet_puzzles.create_full_puzzle(did_inner, launcher_coin.name())
-
         # inner always starts in "member" state; either self or pooled
-        # our_pubkey, our_puzzle_hash = await self._get_pubkey_and_puzzle_hash()
-        # our_pubkey, our_puzzle_hash = self.pool_info.owner_pubkey, self.pool_info.owner_pay_to_puzzle_hash
+        escaping_inner_puzzle_hash: bytes32 = create_escaping_inner_puzzle(
+            target_puzzle_hash, relative_lock_height, owner_pubkey
+        )
 
-        self_pooling_inner_puzzle = create_self_pooling_inner_puzzle(our_puzzle_hash, owner_pubkey)
-        genesis_puzhash = genesis_launcher_puz.get_tree_hash()  # or should this be the coin id?
-        full_self_pooling_puzzle = create_full_puzzle(self_pooling_inner_puzzle, genesis_puzhash)
-        inner = self_pooling_inner_puzzle
-        full_puz = full_self_pooling_puzzle
+        self_pooling_inner_puzzle: Program = create_pooling_inner_puzzle(
+            our_puzzle_hash, escaping_inner_puzzle_hash, owner_pubkey
+        )
+        full_self_pooling_puzzle: Program = create_full_puzzle(
+            self_pooling_inner_puzzle, launcher_id=launcher_coin.name()
+        )
+        inner: Program = self_pooling_inner_puzzle
 
-        inner_hash = inner.get_tree_hash()
-        puzzle_hash = full_puz.get_tree_hash()
+        puzzle_hash: bytes32 = full_self_pooling_puzzle.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             uint64(0),
-            launcher.name(),
+            None,
             coins,
             None,
             False,
             announcement_set,
         )
+        assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
-        genesis_launcher_solution = Program.to([puzzle_hash, amount, bytes(0x80)])
+        # TODO: add PoolState serialization in the solution here
+        genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, bytes(0x80)])
 
-        launcher_cs = CoinSolution(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
-        eve_coin = Coin(launcher_coin.name(), puzzle_hash, amount)
-        future_parent = CCParent(
-            eve_coin.parent_coin_info,
-            inner_hash,
-            eve_coin.amount,
+        launcher_cs: CoinSolution = CoinSolution(
+            launcher_coin,
+            SerializedProgram.from_program(genesis_launcher_puz),
+            SerializedProgram.from_program(genesis_launcher_solution),
         )
+        launcher_sb: SpendBundle = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+
+        eve_coin: Coin = Coin(launcher_coin.name(), puzzle_hash, amount)
         eve_parent = CCParent(
             launcher_coin.parent_coin_info,
             launcher_coin.puzzle_hash,
             launcher_coin.amount,
         )
 
-        parents = [(eve_coin.parent_coin_info, eve_parent), (eve_coin.name(), future_parent)]
-        # await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
-        # await self.add_parent(eve_coin.name(), future_parent, False)
-
-        if tx_record is None or tx_record.spend_bundle is None:
-            return None
+        parents = [(eve_coin.parent_coin_info, eve_parent)]
 
         # Current inner will be updated when state is verified on the blockchain
-
-        # eve_spend = await self.generate_eve_spend(launcher, eve_coin, full_puz, inner, our_pubkey, our_puzzle_hash)
-
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(owner_pubkey)
-        private_key = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
-
-        block_height = self.wallet_state_manager.get_peak().height
-        if block_height is None:
-            raise ValueError("Could not get peak block height")
-        # TODO: POOL_REWARD_AMOUNT = calculate_pool_reward()
-        POOL_REWARD_AMOUNT = 100
-        if relative_lock_height is None:
-            relative_lock_height = 0
-        # @ mariano How should we calculate POOL_REWARD_AMOUNT and block_height?
-        # @ matt_howard Does pool_reward_height have to match the block height that the spend is included in?
-        eve_spend = generate_pool_eve_spend(
-            launcher_parent,
-            launcher_coin,
-            private_key,
-            owner_pubkey,
-            our_puzzle_hash,
-        )
-
-        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        return full_spend, full_puz.get_tree_hash(), parents, launcher_coin
+        full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
+        return full_spend, parents, puzzle_hash, launcher_coin
 
     '''
     async def generate_p2_singleton_spend(self, coin: Coin, full_puzzle: Program, inner_puzzle: Program):
@@ -757,7 +740,7 @@ class PoolWallet:
         block_height = 101  # XXX
         # inner_puzzle solution is:
         # ((singleton_id is_eve)
-        #   spend_type inner_puzhash my_amount pool_reward_amount pool_reward_height)
+        #   spend_type inner_puzzle_hash my_amount pool_reward_amount pool_reward_height)
         # singleton_inner_puzzle_hash my_id)
         innersol = Program.to(
             [0, full_puzzle.get_tree_hash(), singleton_amount, p2_singleton_coin_amount, block_height]
@@ -943,7 +926,7 @@ Fingerprint + derivation path of owner
         # wallet.push_transaction
 
     async def join_pool(
-        self, pool_url: str, target_puzhash: bytes, relative_lock_height: uint32, fee: uint64
+        self, pool_url: str, target_puzzle_hash: bytes, relative_lock_height: uint32, fee: uint64
     ) -> Optional[JoinPoolResult]:
         ok = True
         key_fingerprint = 1
@@ -1028,7 +1011,7 @@ Fingerprint + derivation path of owner
             self.pool_info.current_inner,
             new_reward_list,
             self.pool_info.owner_pubkey,
-            self.pool_info.owner_pay_to_puzzle_hash,
+            self.pool_info.owner_target_puzzle_hash,
         )
         await self.save_info(new_pool_info, in_transaction)
 
@@ -1046,7 +1029,7 @@ Fingerprint + derivation path of owner
             self.pool_info.current_inner,
             self.pool_info.self_pooled_reward_list,
             self.pool_info.owner_pubkey,
-            self.pool_info.owner_pay_to_puzzle_hash,
+            self.pool_info.owner_target_puzzle_hash,
         )
         await self.save_info(new_pool_info, in_transaction)
 
@@ -1061,7 +1044,7 @@ Fingerprint + derivation path of owner
             self.pool_info.current_inner,
             self.pool_info.self_pooled_reward_list,
             self.pool_info.owner_pubkey,
-            self.pool_info.owner_pay_to_puzzle_hash,
+            self.pool_info.owner_target_puzzle_hash,
         )
         await self.save_info(new_pool_info, in_transaction)
 
@@ -1076,7 +1059,7 @@ Fingerprint + derivation path of owner
             self.pool_info.current_inner,
             self.pool_info.self_pooled_reward_list,
             self.pool_info.owner_pubkey,
-            self.pool_info.owner_pay_to_puzzle_hash,
+            self.pool_info.owner_target_puzzle_hash,
         )
         await self.save_info(new_pool_info, in_transaction)
 
@@ -1091,7 +1074,7 @@ Fingerprint + derivation path of owner
             self.pool_info.current_inner,
             self.pool_info.self_pooled_reward_list,
             self.pool_info.owner_pubkey,
-            self.pool_info.owner_pay_to_puzzle_hash,
+            self.pool_info.owner_target_puzzle_hash,
         )
         await self.save_info(new_pool_info, in_transaction)
 
@@ -1106,15 +1089,15 @@ Fingerprint + derivation path of owner
         #    pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed
         # )
 
-        # owner_puzhash: bytes32 = self.current_rewards_puzhash
+        # owner_puzzle_hash: bytes32 = self.current_rewards_puzzle_hash
         # owner_pubkey: bytes = self.current_rewards_pubkey
-        # pool_puzhash: bytes32 = self.current_rewards_puzhash
+        # pool_puzzle_hash: bytes32 = self.current_rewards_puzzle_hash
         relative_lock_height = self.pool_info.current.relative_lock_height
 
         # xxx
 
         inner_puzzle = create_self_pooling_inner_puzzle(
-            self.pool_info.owner_pay_to_puzzle_hash, self.pool_info.owner_pubkey
+            self.pool_info.owner_target_puzzle_hash, self.pool_info.owner_pubkey
         )
         return create_full_puzzle(inner_puzzle, self.pool_info.launcher_coin.name())
         # xxx
@@ -1138,17 +1121,17 @@ Fingerprint + derivation path of owner
             # XXX danger
         elif self.pool_info.current.state == SELF_POOLING:
             inner_puzzle = pool_puzzles.create_self_pooling_inner_puzzle(
-                owner_puzhash, owner_pubkey)
+                owner_puzzle_hash, owner_pubkey)
         elif self.pool_info.current.state == LEAVING_POOL:
             inner_puzzle = pool_puzzles.create_escaping_inner_puzzle(
-                pool_puzhash, relative_lock_height, owner_pubkey)
+                pool_puzzle_hash, relative_lock_height, owner_pubkey)
         elif self.pool_info.current.state == FARMING_TO_POOL:
             inner_puzzle = pool_puzzles.create_pool_member_inner_puzzle(
-                pool_puzhash, relative_lock_height, powner_pubkey)
+                pool_puzzle_hash, relative_lock_height, powner_pubkey)
         else:
             raise AssertError("puzzle_for_pk: Invalid state current={self.pool_info.current.state} target={self.pool_info.target.state}")
             #return None  # TODO: validate and raise in this case
-        # TODO: 2nd argument: genesis puzhash or launcher_coin.name
+        # TODO: 2nd argument: genesis puzzle_hash or launcher_coin.name
         return pool_puzzles.create_full_puzzle(inner_puzzle, self.pool_info.launcher_coin.name())
 
         """

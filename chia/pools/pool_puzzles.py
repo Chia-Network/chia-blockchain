@@ -36,30 +36,28 @@ P2_SINGLETON_GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c26899
 
 
 def create_escaping_inner_puzzle(
-    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: bytes
+    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element
 ) -> Program:
-    return POOL_ESCAPING_MOD.curry(target_puzzle_hash, relative_lock_height, owner_pubkey, P2_SINGLETON_HASH)
+    return POOL_ESCAPING_MOD.curry(target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), P2_SINGLETON_HASH)
 
 
-def create_self_pooling_inner_puzzle(
-    our_puzzle_hash: bytes, pool_escaping_inner_hash: bytes32, pubkey: bytes
+def create_pooling_inner_puzzle(
+    target_puzzle_hash: bytes, pool_escaping_inner_hash: bytes32, owner_pubkey: G1Element
 ) -> Program:
-    return POOL_MEMBER_MOD.curry(our_puzzle_hash, pool_escaping_inner_hash, P2_SINGLETON_HASH, pubkey)
+    return POOL_MEMBER_MOD.curry(target_puzzle_hash, pool_escaping_inner_hash, P2_SINGLETON_HASH, bytes(owner_pubkey))
 
 
-def create_pool_member_inner_puzzle(
-    pool_puzzle_hash: bytes, escaping_inner_puzzle_hash: bytes32, owner_pubkey: bytes
-) -> Program:
-    return POOL_MEMBER_MOD.curry(pool_puzzle_hash, escaping_inner_puzzle_hash, P2_SINGLETON_HASH, owner_pubkey)
+def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
+    return POOL_OUTER_MOD.curry(POOL_OUTER_MOD_HASH, launcher_id, inner_puzzle)
 
 
-def create_full_puzzle(inner_puzzle: Program, genesis_puzzle_hash: bytes) -> Program:
-    return POOL_OUTER_MOD.curry(POOL_OUTER_MOD_HASH, genesis_puzzle_hash, inner_puzzle)
-
-
-def create_p2_singleton_puzzle(singleton_mod_hash: bytes, genesis_id: bytes) -> Program:
+def create_p2_singleton_puzzle(singleton_mod_hash: bytes, launcher_id: bytes32) -> Program:
     # TODO: Test these hash conversions
-    return P2_SINGLETON_MOD.curry(POOL_OUTER_MOD_HASH, Program.to(singleton_mod_hash).get_tree_hash(), genesis_id)
+    return P2_SINGLETON_MOD.curry(POOL_OUTER_MOD_HASH, Program.to(singleton_mod_hash).get_tree_hash(), launcher_id)
+
+
+def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32) -> bytes32:
+    return create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id).get_tree_hash()
 
 
 ######################################
@@ -106,7 +104,7 @@ def generate_pool_eve_spend(
     pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
         pool_puzzlehash, relative_lock_height, owner_pubkey
     )
-    committed_inner_puzzle: Program = create_pool_member_inner_puzzle(
+    committed_inner_puzzle: Program = create_pooling_inner_puzzle(
         pool_puzzlehash, pool_escaping_inner_hash, owner_pubkey
     )
     # full_puzzle: Program = create_full_puzzle(inner_puzzle, genesis_id)
@@ -197,7 +195,7 @@ def uncurry_pool_escaping_inner_puzzle(puzzle: Program) -> Optional[Tuple[Progra
     pass
 
 
-def get_inner_puzzlezle_from_puzzle(puzzle: Program) -> Optional[Program]:
+def get_inner_puzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
     r = puzzle.uncurry()
     if r is None:
         return None

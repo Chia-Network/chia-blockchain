@@ -399,7 +399,7 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
-    def set_coin_with_puzzlehash_created_callback(self, puzzlehash, callback: Callable):
+    def set_coin_with_puzzlehash_created_callback(self, puzzlehash: bytes32, callback: Callable):
         """
         Callback to be called when new coin is seen with specified puzzlehash
         """
