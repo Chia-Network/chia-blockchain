@@ -1,4 +1,3 @@
-
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.clvm.singleton import P2_SINGLETON_MOD, SINGLETON_TOP_LAYER_MOD, SINGLETON_LAUNCHER
@@ -21,7 +20,8 @@ from chia.pools.pool_puzzles import (
     get_pubkey_from_member_innerpuz,
     POOL_ESCAPING_INNER_HASH,
     P2_SINGLETON_HASH,
-    generate_pool_eve_spend, create_self_pooling_innerpuz
+    generate_pool_eve_spend,
+    create_self_pooling_innerpuz,
 )
 from chia.util.ints import uint32, uint64
 from tests.core.full_node.test_conditions import check_conditions, initial_blocks, check_spend_bundle_validity
@@ -59,9 +59,9 @@ def test_uncurry():
 def test_singleton_creation_with_eve_and_launcher():
     amount = uint64(1)
     genesis_launcher_puz = SINGLETON_LAUNCHER
-    origin_coin = Coin(b'\1' * 32, b'\1' * 32, uint64(1234))
-    our_puzzle_hash: bytes32 = b'\1' * 32
-    pool_puzhash: bytes = b'\2' * 32
+    origin_coin = Coin(b"\1" * 32, b"\1" * 32, uint64(1234))
+    our_puzzle_hash: bytes32 = b"\1" * 32
+    pool_puzhash: bytes = b"\2" * 32
     private_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
     owner_pubkey = private_key.get_g1()
 
@@ -77,12 +77,20 @@ def test_singleton_creation_with_eve_and_launcher():
     pool_reward_amount = 4000000000000
     pool_reward_height = 101
     relative_lock_height = uint32(10)
-    eve_spend: SpendBundle = generate_pool_eve_spend(origin_coin, eve_coin, launcher_coin,
-                            private_key, owner_pubkey, our_puzzle_hash,
-                            pool_reward_amount, pool_reward_height,
-                            pool_puzhash, relative_lock_height)
+    eve_spend: SpendBundle = generate_pool_eve_spend(
+        origin_coin,
+        eve_coin,
+        launcher_coin,
+        private_key,
+        owner_pubkey,
+        our_puzzle_hash,
+        pool_reward_amount,
+        pool_reward_height,
+        pool_puzhash,
+        relative_lock_height,
+    )
     assert eve_spend
-    '''
+    """
 def test_singleton_creation_with_eve_and_launcher():
     from chia.consensus.constants import ConsensusConstants
 
@@ -154,7 +162,8 @@ def test_singleton_creation_with_eve_and_launcher():
     aggsig = AugSchemeMPL.aggregate(sigs)
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
-'''
+"""
+
 
 def test_pooling():
     pass

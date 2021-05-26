@@ -444,11 +444,14 @@ class WalletRpcApi:
                 dr = await self.service.wallet_state_manager.get_unused_derivation_record(main_wallet.id())
                 owner_pubkey, owner_puzzlehash = dr.pubkey, dr.puzzle_hash
                 from chia.pools.pool_wallet_info import pool_state_from_dict
+
                 # If request["initial_target_state"]["state"] is SELF_POOLING, then
                 # request["initial_target_state"]["target_puzzlehash"] should be an address from our standard wallet
                 # If request["initial_target_state"]["state"] is FARMING_TO_POOL, then
                 # target_puzzlehash, relative_lock_height and pool_url are given by the pool
-                err, initial_target_state = pool_state_from_dict(request["initial_target_state"], owner_pubkey, owner_puzzlehash)
+                err, initial_target_state = pool_state_from_dict(
+                    request["initial_target_state"], owner_pubkey, owner_puzzlehash
+                )
                 if err is not None:
                     return {
                         "success": False,

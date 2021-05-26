@@ -95,7 +95,9 @@ class TestPoolWalletSimulator:
         rewards_puzzlehash = bytes32(b"\x01" * 32)
 
         dr = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(wallet_0.id())
-        initial_pool_state = create_pool_state(PoolSingletonState.PENDING_CREATION, rewards_puzzlehash, dr.pubkey, None, 0)
+        initial_pool_state = create_pool_state(
+            PoolSingletonState.PENDING_CREATION, rewards_puzzlehash, dr.pubkey, None, 0
+        )
         pool_wallet_0: PoolWallet = await PoolWallet.create_new_pool_wallet(
             wallet_node_0.wallet_state_manager, wallet_0, initial_pool_state, dr.pubkey, dr.puzzle_hash
         )
