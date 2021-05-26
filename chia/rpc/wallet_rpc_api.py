@@ -466,13 +466,16 @@ class WalletRpcApi:
                 if err is not None:
                     raise ValueError(str(err))
                 async with self.service.wallet_state_manager.lock:
-                    pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet(
-                        wallet_state_manager,
-                        main_wallet,
-                        initial_target_state,
-                        owner_pubkey,
-                        owner_puzzlehash,
-                    )
+                    try:
+                        pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet(
+                            wallet_state_manager,
+                            main_wallet,
+                            initial_target_state,
+                            owner_pubkey,
+                            owner_puzzlehash,
+                        )
+                    except Exception as e:
+                        raise ValueError(str(e))
                 return {
                     "type": pool_wallet.type(),
                     "wallet_id": pool_wallet.id(),
