@@ -855,9 +855,9 @@ class WalletNode:
     async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
         assert self.wallet_state_manager is not None
 
-        # Check all additions
+        # Check all additions coins
         REQUEST_TYPES = (
-            WalletType.COLOURED_COIN,  # TODO why ?
+            WalletType.COLOURED_COIN,  # TODO: Why?
             WalletType.DISTRIBUTED_ID,
         )
         puzzle_store = self.wallet_state_manager.puzzle_store
