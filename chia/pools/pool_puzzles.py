@@ -1,9 +1,11 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from blspy import G1Element, AugSchemeMPL, PrivateKey
 
 from chia.clvm.singleton import P2_SINGLETON_MOD
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL
+from chia.consensus.pool_rewards import calculate_pool_reward
+from chia.consensus.coinbase import pool_parent_id
+from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, PoolWalletInfo
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -132,11 +134,11 @@ def generate_pool_eve_spend(
 
 
 def generate_eve_spend(
-    origin_coin: Coin, coin: Coin, full_puzzle: Program, inner_puzzle: Program, private_key: PrivateKey
+    origin_coin: Coin, coin: Coin, full_puzzle: Program, inner_puzzle: Program, private_key: PrivateKey, extra_data: bytes,
 ) -> SpendBundle:
     assert origin_coin is not None
-    # inner_puzzle solution is (mode amount message my_id new_puzzle_hash)
-    innersol = Program.to([1, coin.amount, [], coin.name(), inner_puzzle.get_tree_hash()])
+    # inner_puzzle solution is (mode amount message my_id new_puzzle_hash extra_data)
+    innersol = Program.to([1, coin.amount, [], coin.name(), inner_puzzle.get_tree_hash(), extra_data])
     # res = inner_puzzle.run(innersol)
     # print(res)
     # full solution is (parent_info my_amount innersolution)
@@ -153,7 +155,7 @@ def generate_eve_spend(
 
     # sign for AGG_SIG_ME
     message = (
-        Program.to([inner_puzzle.get_tree_hash(), coin.amount, []]).get_tree_hash()
+        Program.to([inner_puzzle.get_tree_hash(), coin.amount, extra_data]).get_tree_hash()
         + coin.name()
         + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
     )
@@ -163,6 +165,62 @@ def generate_eve_spend(
     aggsig = AugSchemeMPL.aggregate(sigs)
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
+
+def create_escape_spend(last_coinsolution: CoinSolution, pool_info: PoolWalletInfo) -> CoinSolution:
+    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
+    if is_pooling_inner_puzzle(inner_puzzle):
+        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
+        inner_sol: Program = Program.to([1, 0, 0, bytes(pool_info.current)])
+    elif is_escaping_inner_puzzle(inner_puzzle):
+        # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
+        destination_inner: Program = pool_state_to_inner_puzzle(pool_info.target)
+        inner_sol: Program = Program.to([1, destination_inner, 0, 0, bytes(pool_info.target)])
+    else:
+        raise ValueError
+    # full sol = (parent_info, my_amount, inner_solution)
+    coin: Coin = get_most_recent_singleton_coin_from_coinsolution(last_coinsolution)
+    if coin.parent_coin_info == pool_info.launcher_coin.name():
+        parent_info = Program.to([pool_info.launcher_coin.parent_coin_info, pool_info.launcher_coin.amount])
+    else:
+        parent_info: Program = Program.to([last_coinsolution.coin.name(), get_inner_puzzle_from_puzzle(last_coinsolution.puzzle_reveal), last_coinsolution.coin.amount])
+    full_solution: Program = Program.to(parent_info, last_coinsolution.coin.amount, inner_sol)
+    full_puzzle: Program = create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name())
+    return CoinSolution(coin, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution))
+
+
+def create_absorb_spend(last_coinsolution: CoinSolution, pool_info: PoolWalletInfo, height: uint32) -> List[CoinSolution]:
+    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
+    reward_amount: uint64 = calculate_pool_reward(height)
+    if is_pooling_inner_puzzle(inner_puzzle):
+        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
+        inner_sol: Program = Program.to([0, reward_amount, height, 0])
+    elif is_escaping_inner_puzzle(inner_puzzle):
+        # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
+        inner_sol: Program = Program.to([0, 0, reward_amount, height, 0])
+    else:
+        raise ValueError
+    # full sol = (parent_info, my_amount, inner_solution)
+    coin: Coin = get_most_recent_singleton_coin_from_coinsolution(last_coinsolution)
+    if coin.parent_coin_info == pool_info.launcher_coin.name():
+        parent_info = Program.to([pool_info.launcher_coin.parent_coin_info, pool_info.launcher_coin.amount])
+    else:
+        parent_info: Program = Program.to([last_coinsolution.coin.name(), get_inner_puzzle_from_puzzle(last_coinsolution.puzzle_reveal), last_coinsolution.coin.amount])
+    full_solution: SerializedProgram = SerializedProgram.from_program(Program.to(parent_info, last_coinsolution.coin.amount, inner_sol))
+    full_puzzle: SerializedProgram = SerializedProgram.from_program(create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name()))
+
+    reward_parent: bytes32 = pool_parent_id(height, P2_SINGLETON_GENESIS_CHALLENGE)
+    p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(create_p2_singleton_puzzle(SINGLETON_MOD_HASH, pool_info.launcher_coin.name()))
+    reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
+    p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(Program.to(inner_puzzle.get_tree_hash(), reward_coin.name()))
+    return [CoinSolution(coin, full_puzzle, full_solution), CoinSolution(reward_coin, p2_singleton_puzzle, p2_singleton_solution)]
+
+
+def get_most_recent_singleton_coin_from_coinsolution(coinsol: CoinSolution) -> Coin:
+    additions = coinsol.additions()
+    for coin in additions:
+        if coin.amount % 2 == 1:
+            return coin
+
 
 def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     args = uncurry_pool_member_inner_puzzle(inner_puzzle)
