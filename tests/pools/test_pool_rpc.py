@@ -3,8 +3,10 @@ import logging
 from typing import Dict, Optional
 
 import pytest
+from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -117,38 +119,19 @@ class TestPoolWalletRpc:
                     wallet_id = summary["id"]
             assert wallet_id is not None
             log.warning(f"PW status wallet id: {wallet_id}")
-            status: Dict = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
 
-            # log.warning(f"Reponse: {val}")
-            #
-            # assert isinstance(val, dict)
-            # assert val["success"]
-            # assert val["wallet_id"] == 2
-            # assert val["type"] == WalletType.POOLING_WALLET.value
-            # log.warning(f"Current stat: {val['current_state']}")
-            #
-            # assert val["target_state"]["state"] == SELF_POOLING.value
-            #
-            # assert val["current_state"] == {
-            #     "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
-            #     "pool_url": None,
-            #     "relative_lock_height": 0,
-            #     "state": 1,
-            #     "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-            #     "version": 1,
-            # }
-            # # TODO: Put the p2_puzzle_hash in the config for the plotter
-            #
-            # status: Dict = await client.pw_status(2)
-            # log.warning(f"Initial staus: {status}")
-            # await asyncio.sleep(2)
-            # assert (
-            #     full_node_api.full_node.mempool_manager.get_mempool_item(
-            #         bytes32(hexstr_to_bytes(val["pending_transaction_id"]))
-            #     )
-            #     is not None
-            # )
+            assert status.current.state == PoolSingletonState.SELF_POOLING.value
+            assert status.target is None
+            assert status.current.to_json_dict() == {
+                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
+                "pool_url": None,
+                "relative_lock_height": 0,
+                "state": 1,
+                "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+                "version": 1,
+            }
 
         finally:
             client.close()
