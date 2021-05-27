@@ -34,7 +34,7 @@ def launch_conditions_and_coinsol(
     inner_puzzle: Program,
     comment: List[Tuple[str, str]],
     amount: uint64,
-) -> Tuple[Program, CoinSolution]:
+) -> Tuple[List, CoinSolution]:
     if (amount % 2) == 0:
         raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
