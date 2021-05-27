@@ -6,6 +6,8 @@ from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set
 from collections import defaultdict
 from blspy import G1Element
+
+from chia.pools.pool_wallet import PoolWallet
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 
@@ -30,7 +32,6 @@ from chia.types.blockchain_format.program import Program
 # from chia.util.ints import uint16, uint32, uint64
 # from chia.wallet.derivation_record import DerivationRecord
 # from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.pools.pool_wallet_old import PoolWallet
 
 # from chia.wallet.transaction_record import TransactionRecord
 # from chia.wallet.util.transaction_type import TransactionType

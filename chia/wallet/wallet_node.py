@@ -848,6 +848,7 @@ class WalletNode:
     async def get_additional_coin_spends(
         self, peer, block, removed_coins: List[Coin], added_coins: List[Coin]
     ) -> List[CoinSolution]:
+        assert self.wallet_state_manager is not None
         additional_coin_spends: List[CoinSolution] = []
         if len(removed_coins) > 0:
             removed_coin_ids = set([coin.name() for coin in removed_coins])
@@ -861,13 +862,13 @@ class WalletNode:
                         cs: CoinSolution = await self.fetch_puzzle_solution(peer, block.height, coin)
                         additional_coin_spends.append(cs)
                         # Apply this coin solution, which might add things to interested list
-                        self.wallet_state_manager.get_next_interesting_coin_ids(cs)
+                        await self.wallet_state_manager.get_next_interesting_coin_ids(cs)
 
                 all_removed_coins: Optional[List[Coin]] = await self.get_removals(
                     peer, block, added_coins, removed_coins, request_all_removals=True
                 )
-                all_removed_coins_dict: Dict[bytes32, Coin] = {coin.name(): coin for coin in all_removed_coins}
                 assert all_removed_coins is not None
+                all_removed_coins_dict: Dict[bytes32, Coin] = {coin.name(): coin for coin in all_removed_coins}
                 keep_searching = True
                 while keep_searching:
                     # This keeps fetching solutions for coins we are interested list, in this block, until
@@ -879,10 +880,10 @@ class WalletNode:
                     for coin_id in interested_ids:
                         if coin_id in all_removed_coins_dict:
                             coin = all_removed_coins_dict[coin_id]
-                            cs: CoinSolution = await self.fetch_puzzle_solution(peer, block.height, coin)
+                            cs = await self.fetch_puzzle_solution(peer, block.height, coin)
 
                             # Apply this coin solution, which might add things to interested list
-                            self.wallet_state_manager.get_next_interesting_coin_ids(cs)
+                            await self.wallet_state_manager.get_next_interesting_coin_ids(cs)
                             additional_coin_spends.append(cs)
                             keep_searching = True
                             all_removed_coins_dict.pop(coin_id)
@@ -892,7 +893,7 @@ class WalletNode:
     async def get_additions(
         self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]]
     ) -> Optional[List[Coin]]:
-        if len(additions) > 0:
+        if additions is not None and len(additions) > 0:
             additions_request = RequestAdditions(block_i.height, block_i.header_hash, additions)
             additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
                 additions_request

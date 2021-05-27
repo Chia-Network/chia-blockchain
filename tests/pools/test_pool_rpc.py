@@ -6,7 +6,7 @@ import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.pools.pool_wallet_info import PENDING_CREATION, SELF_POOLING
+from chia.pools.pool_wallet_info import SELF_POOLING
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -47,7 +47,7 @@ class TestPoolWalletRpc:
         )
         return funds
 
-    async def farm_blocks(self, full_node_api: FullNodeAPI, ph: bytes32, num_blocks: int):
+    async def farm_blocks(self, full_node_api, ph: bytes32, num_blocks: int):
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         return num_blocks
@@ -102,7 +102,6 @@ class TestPoolWalletRpc:
             assert val["type"] == WalletType.POOLING_WALLET.value
             log.warning(f"Current stat: {val['current_state']}")
 
-            assert val["current_state"]["state"] == PENDING_CREATION.value
             assert val["target_state"]["state"] == SELF_POOLING.value
 
             assert val["current_state"] == {
