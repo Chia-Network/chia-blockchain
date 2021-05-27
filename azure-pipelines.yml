@@ -50,7 +50,7 @@ steps:
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
       cd build_scripts
-      echo "##vso[task.setvariable variable=python -m installer-version]$INSTALLER_VERSION"
+      python -m installer-version >> version.txt
     displayName: "Install dependencies"
 
   - script: |
@@ -91,5 +91,5 @@ steps:
 
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-      echo $(INSTALLER_VERSION)
+      cat install.txt
     displayName: "list files in dir"
