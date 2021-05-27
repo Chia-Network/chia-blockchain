@@ -6,7 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.coin_solution import CoinSolution
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.cc_wallet.ccparent import CCParent
+from chia.wallet.lineage_proof import LineageProof
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 
@@ -75,7 +75,7 @@ def launch_conditions_and_coinsol(
 
 
 # Take a coin solution, return a lineage proof for their child to use in spends
-def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> CCParent:
+def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> LineageProof:
     parent_name = coin_solution.coin.parent_coin_info
 
     inner_puzzle_hash = None
@@ -87,7 +87,7 @@ def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> CCParent:
 
     amount = coin_solution.coin.amount
 
-    return CCParent(
+    return LineageProof(
         parent_name,
         inner_puzzle_hash,
         amount,
@@ -106,7 +106,7 @@ def puzzle_for_singleton(launcher_id: bytes32, inner_puz: Program) -> Program:
 
 # Return a solution to spend a singleton
 def solution_for_singleton(
-    lineage_proof: CCParent,
+    lineage_proof: LineageProof,
     amount: uint64,
     inner_solution: Program
 ) -> Program:
