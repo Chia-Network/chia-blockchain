@@ -50,7 +50,6 @@ def add_private_key_seed(mnemonic: str):
         sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint} and mnemonic")
-        print(mnemonic)
 
     except ValueError as e:
         print(e)
@@ -91,7 +90,7 @@ def show_all_keys(show_mnemonic: bool):
             print("Master private key (m):", bytes(sk).hex())
             print(
                 "First wallet secret key (m/12381/8444/2/0):",
-                master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+                master_sk_to_wallet_sk(sk, uint32(0)),
             )
             mnemonic = bytes_to_mnemonic(seed)
             print("  Mnemonic seed (24 secret words):")

@@ -1,4 +1,5 @@
 import asyncio
+import os
 import logging
 import logging.config
 import signal
@@ -23,6 +24,11 @@ from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
 
 from .reconnect_task import start_reconnect_task
+
+
+# this is used to detect whether we are running in the main process or not, in
+# signal handlers. We need to ignore signals in the sub processes.
+main_pid: Optional[int] = None
 
 
 class Service:
@@ -161,6 +167,9 @@ class Service:
         await self.wait_closed()
 
     def _enable_signals(self) -> None:
+
+        global main_pid
+        main_pid = os.getpid()
         signal.signal(signal.SIGINT, self._accept_signal)
         signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
@@ -169,11 +178,25 @@ class Service:
 
     def _accept_signal(self, signal_number: int, stack_frame):
         self._log.info(f"got signal {signal_number}")
+
+        # we only handle signals in the main process. In the ProcessPoolExecutor
+        # processes, we have to ignore them. We'll shut them down gracefully
+        # from the main process
+        global main_pid
+        if os.getpid() != main_pid:
+            return
         self.stop()
 
     def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
+
+            # start with UPnP, since this can take a while, we want it to happen
+            # in the background while shutting down everything else
+            for port in self._upnp_ports:
+                if self.upnp is not None:
+                    self.upnp.release(port)
+
             self._log.info("Cancelling reconnect task")
             for _ in self._reconnect_tasks:
                 _.cancel()
@@ -193,10 +216,6 @@ class Service:
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 
-            for port in self._upnp_ports:
-                if self.upnp is not None:
-                    self.upnp.release(port)
-
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()
 
@@ -212,6 +231,11 @@ class Service:
 
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
+
+        if self.upnp is not None:
+            # this is a blocking call, waiting for the UPnP thread to exit
+            self.upnp.shutdown()
+
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
