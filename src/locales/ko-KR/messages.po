@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-26 05:21\n"
+"PO-Revision-Date: 2021-05-27 07:14\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -484,7 +484,7 @@ msgstr "현재 거래 상태"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr "위험: 영구적으로 개인 키 삭제"
+msgstr "경고: 영구적으로 개인 키를 삭제합니다."
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
@@ -529,11 +529,11 @@ msgstr "키 삭제"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "모든 키를 제거하는 것은 당신의 컴퓨터로부터 영구적으로 키를 삭제하게 됩니다. 그 전에 확실한 백업을 준비하세요. 삭제를 계속하시겠습니까?"
+msgstr "모든 키를 컴퓨터에서 영구적으로 제거합니다. 만일을 대비하여 백업이 준비되었는지 확인하십시오. 계속하시겠습니까?"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "키 삭제는 당신의 컴퓨터에서 키를 영구적으로 삭제하게 됩니다. 백업이 준비되었는지 확인하십시오. 계속하시겠습니까?"
+msgstr "이 키를 컴퓨터에서 영구적으로 삭제합니다. 만일을 대비하여 백업이 되어 있는지 확인하십시오. 계속하시겠습니까?"
 
 #: src/electron/main.tsx:260
 msgid "Developer"
@@ -558,7 +558,7 @@ msgstr "비트필드 플로팅을 끕니다."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr "연결 끊김"
+msgstr "접속 끊김"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -575,7 +575,7 @@ msgstr "이 장치에 플롯 파일이 있습니까? <0>플롯 경로 추가하�
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr "당신의 장치가 병렬 플로팅을 지원합니까?"
+msgstr "이 장치가 병렬 플로팅을 지원합니까?"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
@@ -588,7 +588,7 @@ msgstr "백업 파일을 끌어 놓으세요"
 
 #: src/electron/main.tsx:219
 msgid "Edit"
-msgstr "수정"
+msgstr "편집"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -602,7 +602,7 @@ msgstr "치아 지갑을 복구하기 위해서 24자로 된 니모닉 단어를
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
-msgstr "에러"
+msgstr "오류"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -1062,7 +1062,7 @@ msgstr "거래 제안"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr "제안이 생성되었습니다"
+msgstr "거래 주문이 생성되었습니다."
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
@@ -1082,7 +1082,7 @@ msgstr "최종 높이"
 
 #: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
-msgstr "최고 시간"
+msgstr "절정 시간"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
@@ -1148,7 +1148,7 @@ msgstr "거래하기 전에 동기화를 완료하십시오"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
-msgstr "양을 선택하십시오"
+msgstr "수량을 선택해 주십시오."
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
@@ -1442,11 +1442,11 @@ msgstr "키 선택"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr "제안 선택"
+msgstr "거래 주문을 선택"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr "임시 경로 선택"
+msgstr "플롯 생성을 위한 임시 폴더를 선택"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
@@ -1874,7 +1874,7 @@ msgstr "로그 보기"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr "제안 보기"
+msgstr "거래 제안 보기"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
