@@ -1,4 +1,4 @@
-(mod (singleton_full_puzzle_hash amount extra_data)
+(mod (singleton_full_puzzle_hash amount key_value_list)
 
   (include condition_codes.clvm)
 
@@ -12,5 +12,5 @@
 
   ; main
   (list (list CREATE_COIN singleton_full_puzzle_hash amount)
-        (list CREATE_COIN_ANNOUNCEMENT (sha256tree1 (list singleton_full_puzzle_hash amount extra_data))))
+        (list CREATE_COIN_ANNOUNCEMENT (sha256tree1 (list singleton_full_puzzle_hash amount key_value_list))))
 )
