@@ -842,7 +842,6 @@ class WalletNode:
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise ValueError(f"Was not able to obtain solution {solution_response}")
-        self.log.warning("Obtained solution!")
         return CoinSolution(coin, solution_response.response.puzzle, solution_response.response.solution)
 
     async def get_additional_coin_spends(
@@ -850,9 +849,7 @@ class WalletNode:
     ) -> List[CoinSolution]:
         assert self.wallet_state_manager is not None
         additional_coin_spends: List[CoinSolution] = []
-        self.log.info("GET ADDITIONAL COIN SPENDS")
         if len(removed_coins) > 0:
-            self.log.info(f"GET ADDITIONAL COIN SPENDS 2. NUm removals: {removed_coins}")
             removed_coin_ids = set([coin.name() for coin in removed_coins])
             all_added_coins = await self.get_additions(peer, block, [], get_all_additions=True)
             assert all_added_coins is not None

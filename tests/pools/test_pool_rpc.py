@@ -5,8 +5,6 @@ from typing import Dict, Optional
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.pools.pool_wallet_info import SELF_POOLING
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -14,7 +12,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.types.peer_info import PeerInfo
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -119,7 +116,7 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     wallet_id = summary["id"]
             assert wallet_id is not None
-
+            log.warning(f"PW status wallet id: {wallet_id}")
             status: Dict = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
 

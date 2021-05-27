@@ -569,6 +569,7 @@ class WalletStateManager:
 
         if len(additional_coin_spends) > 0:
             self.log.warning(f"Additional coin spends: {len(additional_coin_spends)}")
+            created_pool_wallet_ids: List[int] = []
             for cs in additional_coin_spends:
                 if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
                     self.log.warning("Found created launcher :). now make the wallet")
@@ -581,12 +582,17 @@ class WalletStateManager:
                             self.log.warning("Already have, not recreating")
                             already_have = True
                     if not already_have:
-                        await PoolWallet.create(
+                        pool_wallet = await PoolWallet.create(
                             self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, True, "pool_wallet"
                         )
+                        created_pool_wallet_ids.append(pool_wallet.wallet_id)
+                        self.log.warning(f"MADE WALLET ID: {pool_wallet.wallet_id}")
+                        await self.pool_store.get_all_state_transitions(pool_wallet.wallet_id)
 
             for wallet_id, wallet in self.wallets.items():
-                if wallet.type() == WalletType.POOLING_WALLET:
+                if wallet.type() == WalletType.POOLING_WALLET and wallet_id not in created_pool_wallet_ids:
+                    # TODO: support applying state transition in the same block. Doesn't work because we did not
+                    # update the DB yet.
                     await wallet.apply_state_transitions(additional_coin_spends, height)
 
         added_notified = set()
@@ -1103,9 +1109,10 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def add_new_wallet(self, wallet: Any, wallet_id: int):
+    async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True):
         self.wallets[uint32(wallet_id)] = wallet
-        await self.create_more_puzzle_hashes()
+        if create_puzzle_hashes:
+            await self.create_more_puzzle_hashes()
 
     # search through the blockrecords and return the most recent coin to use a given puzzlehash
     async def search_blockrecords_for_puzzlehash(self, puzzlehash: bytes32):
