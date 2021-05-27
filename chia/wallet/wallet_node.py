@@ -239,18 +239,17 @@ class WalletNode:
             return []
 
         actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-        puzzle_actions = filter(lambda action: action.name == "request_puzzle_solution", actions)
+        solution_actions = filter(lambda a: a.name == "request_puzzle_solution", actions)
 
         def make_msg_from_action(action) -> Message:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
             coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
             height = uint32(action_data["height"])
-            return make_msg(
-                ProtocolMessageTypes.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin_name, height),
-            )
+            msg_data = wallet_protocol.RequestPuzzleSolution(coin_name, height)
+            return make_msg(ProtocolMessageTypes.request_puzzle_solution, msg_data)
 
-        return map(make_msg_from_action, puzzle_actions)
+        return map(make_msg_from_action, solution_actions)
 
     async def _resend_queue(self):
         if (

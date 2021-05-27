@@ -1141,9 +1141,9 @@ class WalletStateManager:
         unwrapped: PuzzleSolutionResponse = response.response
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
         for action in actions:
-            data = json.loads(action.data)
-            action_data = data["data"]["action_data"]
             if action.name == "request_puzzle_solution":
+                data = json.loads(action.data)
+                action_data = data["data"]["action_data"]
                 stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
                 height = uint32(action_data["height"])
                 if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
