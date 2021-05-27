@@ -94,3 +94,8 @@ steps:
       ls $(System.DefaultWorkingDirectory)/build_scripts/
       cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
     displayName: "list files in dir"
+
+  - bash: |
+      curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+      sudo installer -pkg AWSCLIV2.pkg -target /
+    displayName: "Install AWS CLI"
