@@ -48,25 +48,6 @@ FARMING_TO_POOL = PoolSingletonState.FARMING_TO_POOL
 
 @dataclass(frozen=True)
 @streamable
-class TargetState(Streamable):
-    """
-    User description of the
-    Does not include information that is fixed at PoolWallet creation time, per-pool
-    """
-
-    pass
-
-
-class PoolKeys:
-    # `target_puzzle_hash` is the ph the script is locked to pay to
-    # Note: If we allowed setting target_puzzle_hash in the self-pooling state,
-    # We might want to check that the target_puzzle_hash is spendable by the current
-    # user wallet. For now, let's choose it ourselves in the self-pooling case.
-    target_puzzle_hash: bytes32
-
-
-@dataclass(frozen=True)
-@streamable
 class PoolState(Streamable):
     """
     `PoolState` is a type that is serialized to the blockchain to track the state of the user's pool singleton
@@ -114,10 +95,6 @@ def pool_state_from_dict(
     return None, create_pool_state(singleton_state, target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height)
 
 
-def normalize_pool_state():
-    pass
-
-
 def create_pool_state(
     state: PoolSingletonState,
     target_puzzle_hash: bytes32,
@@ -134,25 +111,14 @@ def create_pool_state(
     return ps
 
 
-# pool wallet transaction types:
-
-
 @dataclass(frozen=True)
 @streamable
 class PoolWalletInfo(Streamable):
     """
-    Internal Pool Wallet state, not destined for the blockchain
+    Internal Pool Wallet state, not destined for the blockchain. This can be completely derived with CoinSolutions list,
+    or with the information from the WalletPoolStore.
     """
 
-    # Regarding target state, reorgs and the same pool wallet id on
-    # multiple computers:
-    # * If our state is reverted on the blockchain, because of a reorg, or another computer
-    #   with the same wallet,
-    # How long will the main_wallet retry a transaction?
-    # * Conflicting transaction:
-
-    # done with reorg? reset target
-    #
     current: PoolState
     target: Optional[PoolState]
     launcher_coin: Coin
