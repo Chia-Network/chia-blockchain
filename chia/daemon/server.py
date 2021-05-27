@@ -769,7 +769,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(service_array, shell=False, stderr=outfile, stdout=outfile, startupinfo=startupinfo)
+    process = subprocess.Popen(service_array, shell=True, stderr=outfile, stdout=outfile, startupinfo=startupinfo)
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
@@ -815,7 +815,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
         creationflags = 0
     environ_copy = os.environ.copy()
     process = subprocess.Popen(
-        service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
+        service_array, shell=True, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
     )
     pid_path = pid_path_for_service(root_path, service_command)
     try:
