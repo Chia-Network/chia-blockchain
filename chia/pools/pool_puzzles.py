@@ -3,9 +3,10 @@ from blspy import G1Element, AugSchemeMPL, PrivateKey
 
 from chia.clvm.singleton import P2_SINGLETON_MOD
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
@@ -171,12 +172,12 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     return pubkey
 
 
-def uncurry_pool_member_inner_puzzle(puzzle: Program) -> Optional[Tuple[Program, Program]]:
+def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Program, Program]]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
     """
-    r = puzzle.uncurry()
+    r = inner_puzzle.uncurry()
     if r is None:
         return r
     inner_f, args = r
@@ -193,8 +194,8 @@ def uncurry_pool_escaping_inner_puzzle(puzzle: Program) -> Optional[Tuple[Progra
     pass
 
 
-def get_inner_puzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
-    r = puzzle.uncurry()
+def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
+    r = full_puzzle.uncurry()
     if r is None:
         return None
     inner_f, args = r
@@ -202,6 +203,48 @@ def get_inner_puzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
         return None
     mod_hash, genesis_id, inner_puzzle = list(args.as_iter())
     return inner_puzzle
+
+
+def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
+    full_solution_ser: SerializedProgram = full_spend.solution
+    full_solution: Program = Program.from_bytes(bytes(full_solution_ser))
+
+    if full_spend.coin.puzzle_hash == SINGLETON_LAUNCHER:
+        # Launcher spend
+        extra_data = full_solution.rest().rest().first().as_atom()
+        return PoolState.from_bytes(extra_data)
+
+    # Not launcher spend
+    inner_solution: Program = full_solution.rest().rest().first()
+    inner_spend_type: int = inner_solution.first().as_int()
+
+    if inner_spend_type == 0:
+        # Absorb
+        return None
+
+    # Spend which is not absorb, and is not the launcher
+    num_args = len(inner_solution.as_atom_list())
+    assert num_args == 4 or num_args == 5
+
+    if num_args == 4:
+        # pool member
+        extra_data = inner_solution.rest().rest().rest().first().as_atom()
+    else:
+        # pool escaping
+        extra_data = inner_solution.rest().rest().rest().rest().first().as_atom()
+    return PoolState.from_bytes(extra_data)
+
+
+def pool_state_to_inner_puzzle(pool_state: PoolState) -> Program:
+    escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
+        pool_state.target_puzzle_hash, pool_state.relative_lock_height, pool_state.owner_pubkey
+    )
+    if pool_state.state == LEAVING_POOL:
+        return escaping_inner_puzzle
+    else:
+        return create_pooling_inner_puzzle(
+            pool_state.target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), pool_state.owner_pubkey
+        )
 
 
 """

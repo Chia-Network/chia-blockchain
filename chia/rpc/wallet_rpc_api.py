@@ -9,7 +9,6 @@ from blspy import PrivateKey, G1Element
 
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.pools.pool_puzzles import launcher_id_to_p2_puzzle_hash
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, SELF_POOLING
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -340,6 +339,10 @@ class WalletRpcApi:
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
+        if "fee" in request:
+            fee: uint64 = request["fee"]
+        else:
+            fee = 0
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
@@ -443,13 +446,10 @@ class WalletRpcApi:
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
                 dr = await self.service.wallet_state_manager.get_unused_derivation_record(main_wallet.id())
+
                 owner_pubkey, owner_puzzlehash = dr.pubkey, dr.puzzle_hash
                 from chia.pools.pool_wallet_info import pool_state_from_dict
 
-                # If request["initial_target_state"]["state"] is SELF_POOLING, then
-                # request["initial_target_state"]["target_puzzlehash"] should be an address from our standard wallet
-                # If request["initial_target_state"]["state"] is FARMING_TO_POOL, then
-                # target_puzzlehash, relative_lock_height and pool_url are given by the pool
                 err, initial_target_state = pool_state_from_dict(
                     request["initial_target_state"], owner_pubkey, owner_puzzlehash
                 )
@@ -457,24 +457,16 @@ class WalletRpcApi:
                     raise ValueError(str(err))
                 async with self.service.wallet_state_manager.lock:
                     try:
-                        pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet(
+                        pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet_transactions(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
-                            owner_pubkey,
-                            owner_puzzlehash,
+                            fee,
                         )
                     except Exception as e:
                         raise ValueError(str(e))
                 return {
-                    "type": pool_wallet.type(),
-                    "wallet_id": pool_wallet.id(),
-                    "current_state": pool_wallet.pool_info.current,
-                    "target_state": pool_wallet.pool_info.target,
-                    "owner_pubkey": pool_wallet.pool_info.owner_pubkey,
-                    "p2_puzzle_hash": launcher_id_to_p2_puzzle_hash(pool_wallet.pool_info.launcher_id),
-                    "launcher_id": pool_wallet.pool_info.launcher_id,
-                    "pending_transaction_id": pool_wallet.pool_info.pending_transaction.name,
+                    "state": pool_wallet.pool_info.to_json_dict(),
                 }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
@@ -1084,5 +1076,5 @@ class WalletRpcApi:
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         state = wallet.get_all_state()
         return {
-            "pool_wallet_state": state.to_json_dict(),
+            "state": state.to_json_dict(),
         }

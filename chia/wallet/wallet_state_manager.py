@@ -18,11 +18,13 @@ from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_solution import CoinSolution
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -51,6 +53,8 @@ from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo, WalletInfoBackup
+from chia.wallet.wallet_interested_store import WalletInterestedStore
+from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
@@ -99,6 +103,7 @@ class WalletStateManager:
     block_store: WalletBlockStore
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
+    interested_store: WalletInterestedStore
     weight_proof_handler: Any
     server: ChiaServer
 
@@ -135,6 +140,8 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.block_store = await WalletBlockStore.create(self.db_wrapper)
+        self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
+        self.pool_store = await WalletPoolStore.create(self.db_wrapper)
 
         self.blockchain = await WalletBlockchain.create(
             self.block_store,
@@ -184,7 +191,7 @@ class WalletStateManager:
                     wallet_info,
                 )
             elif wallet_info.type == WalletType.POOLING_WALLET:
-                wallet = await PoolWallet.create(
+                wallet = await PoolWallet.create_from_db(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -550,7 +557,9 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32):
+    async def coins_of_interest_received(
+        self, removals: List[Coin], additions: List[Coin], height: uint32, additional_coin_spends: List[CoinSolution]
+    ):
         for coin in additions:
             await self.puzzle_hash_created(coin)
         trade_additions, added = await self.coins_of_interest_added(additions, height)
@@ -558,8 +567,27 @@ class WalletStateManager:
         if len(trade_additions) > 0 or len(trade_removals) > 0:
             await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
 
-        # TODO: if any addition is a launcher with a parent of our removals, we need to create the pool wallet
-        # TODO: If any removal is a singleton, we need to fetch the solution and update the pool wallet state
+        if len(additional_coin_spends) > 0:
+            self.log.warning(f"Additional coin spends: {len(additional_coin_spends)}")
+            for cs in additional_coin_spends:
+                if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                    self.log.warning("Found created launcher :). now make the wallet")
+                    already_have = False
+                    for wallet_id, wallet in self.wallets.items():
+                        if (
+                            wallet.type() == WalletType.POOLING_WALLET
+                            and wallet.pool_info.launcher_id == cs.coin.name()
+                        ):
+                            self.log.warning("Already have, not recreating")
+                            already_have = True
+                    if not already_have:
+                        await PoolWallet.create(
+                            self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, "pool_wallet"
+                        )
+
+            for wallet_id, wallet in self.wallets.items():
+                if wallet.type() == WalletType.POOLING_WALLET:
+                    await wallet.apply_state_transitions(additional_coin_spends, height)
 
         added_notified = set()
         removed_notified = set()
@@ -904,6 +932,10 @@ class WalletStateManager:
             if tx_filter.Match(bytearray(puzzle_hash)):
                 additions_of_interest.append(puzzle_hash)
 
+        for coin_id in await self.interested_store.get_interested_coin_ids():
+            if tx_filter.Match(bytearray(coin_id)):
+                removals_of_interest.append(coin_id)
+
         return additions_of_interest, removals_of_interest
 
     async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
@@ -1071,12 +1103,6 @@ class WalletStateManager:
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
 
-    async def spends_pool_wallet_coin(self, removals: List[Coin]) -> bool:
-        for wallet_id, wallet in self.wallets:
-            if wallet.type() == WalletType.POOLING_WALLET.value:
-                if wallet.
-        pass
-
     # search through the blockrecords and return the most recent coin to use a given puzzlehash
     async def search_blockrecords_for_puzzlehash(self, puzzlehash: bytes32):
         header_hash_of_interest = None
@@ -1176,6 +1202,12 @@ class WalletStateManager:
 
     def get_peak(self) -> Optional[BlockRecord]:
         return self.blockchain.get_peak()
+
+    def get_next_interesting_coin_ids(self, spend: CoinSolution) -> List[bytes32]:
+        pool_wallet_interested: List[bytes32] = PoolWallet.get_next_interesting_coin_ids(spend)
+        for coin_id in pool_wallet_interested:
+            await self.interested_store.add_interested_coin_id(coin_id)
+        return pool_wallet_interested
 
     """
     async def get_block_height_and_hash(self) -> Tuple[uint32, Optional[bytes32]]:
