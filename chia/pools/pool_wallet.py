@@ -4,6 +4,7 @@ from typing import Any, Optional, Set, Tuple, List, Dict
 
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 
+from chia.consensus.block_record import BlockRecord
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
@@ -74,8 +75,7 @@ class PoolWallet:
     after the user declares that they are leaving the pool, and before they can start to
     self-claim rewards again.
 
-    Control of switching states is granted to the controller of the private key that
-    corresponds to `self.pool_info.singleton_pubkey`, the user, in this case.
+    Control of switching states is granted to the owner public key.
 
     We reveal the inner_puzzle to the pool during setup of the pooling protocol.
     The pool can prove to itself that the inner puzzle pays to the pooling address,
@@ -471,6 +471,7 @@ class PoolWallet:
 
         all_sks = [self.wallet_state_manager.private_key]
         owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+
         # Check if we can join a pool (timelock)
         # Create the first blockchain transaction
         # Whenever we detect a new peak, potentially initiate the second blockchain transaction
@@ -491,7 +492,7 @@ class PoolWallet:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
         pass
 
-    async def new_peak(self) -> None:
+    async def new_peak(self, peak: BlockRecord) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
         pass
 
