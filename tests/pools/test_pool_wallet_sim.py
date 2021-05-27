@@ -6,24 +6,13 @@ import pytest
 
 # from blspy import AugSchemeMPL
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.pools.pool_wallet import PoolWallet
 
-# from chia.protocols.full_node_protocol import RespondBlock
-# from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from chia.pools.pool_wallet_old import PoolWallet
 
-# from chia.wallet.transaction_record import TransactionRecord
-# from chia.wallet.util.transaction_type import TransactionType
-# from chia.wallet.wallet_state_manager import WalletStateManager
-
-# from chia.types.blockchain_format.program import Program
-# from chia.wallet.derivation_record import DerivationRecord
-# from chia.types.coin_solution import CoinSolution
-# from chia.types.spend_bundle import SpendBundle
-# from chia.wallet.derive_keys import master_sk_to_wallet_sk
-# from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.pools.pool_wallet_info import create_pool_state, PoolSingletonState
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -90,21 +79,19 @@ class TestPoolWalletSimulator:
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
-        current_state = PoolSingletonState.PENDING_CREATION
-        target_state = PoolSingletonState.FARMING_TO_POOL
         rewards_puzzlehash = bytes32(b"\x01" * 32)
 
         dr = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(wallet_0.id())
-        initial_pool_state = create_pool_state(
-            PoolSingletonState.PENDING_CREATION, rewards_puzzlehash, dr.pubkey, None, 0
-        )
-        pool_wallet_0: PoolWallet = await PoolWallet.create_new_pool_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, initial_pool_state, dr.pubkey, dr.puzzle_hash
-        )
-
-        total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
-        funds = await self.get_total_block_rewards(total_blocks)
-        await time_out_assert(10, pool_wallet_0.get_confirmed_balance, 1)
+        # initial_pool_state = create_pool_state(
+        #     PoolSingletonState.PENDING_CREATION, rewards_puzzlehash, dr.pubkey, None, 0
+        # )
+        # pool_wallet_0: PoolWallet = await PoolWallet.create_new_pool_wallet(
+        #     wallet_node_0.wallet_state_manager, wallet_0, initial_pool_state, dr.pubkey, dr.puzzle_hash
+        # )
+        #
+        # total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
+        # funds = await self.get_total_block_rewards(total_blocks)
+        # await time_out_assert(10, pool_wallet_0.get_confirmed_balance, 1)
 
         return
         pool_url = "https://pool.example.org/"

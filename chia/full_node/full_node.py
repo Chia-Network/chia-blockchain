@@ -101,9 +101,7 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
-        self.blockchain = None
         self.uncompact_task = None
-        self.mempool_manager = None
 
         self.log = logging.getLogger(name if name else __name__)
 

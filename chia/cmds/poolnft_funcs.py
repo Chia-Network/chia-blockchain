@@ -32,13 +32,13 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     user_input: str = input("Confirm [n]/y: ")
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
-            response: Dict = await wallet_client.create_new_pool_wallet(
+            wc_response: Dict = await wallet_client.create_new_pool_wallet(
                 hexstr_to_bytes(json_dict["target_puzzle_hash"]),
                 pool_url,
                 json_dict["relative_lock_height"],
                 "localhost:5000",
             )
-            pprint(response)
+            pprint(wc_response)
         except Exception as e:
             print(f"Error creating pool NFT: {e}")
         return
@@ -48,7 +48,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 def pprint_pool_wallet_state(pool_wallet_info: PoolWalletInfo):
     print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
     pprint(pool_wallet_info.current)
-    if pool_wallet_info.target.state is not None:
+    if pool_wallet_info.target is not None:
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         pprint(pool_wallet_info.target)
 

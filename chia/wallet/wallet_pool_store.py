@@ -71,6 +71,6 @@ class WalletPoolStore:
 
         return state_transitions
 
-    async def rollback(self, height: uint32) -> None:
+    async def rollback(self, height: int) -> None:
         cursor = await self.db_connection.execute("DELETE FROM pool_state_transitions WHERE height>?", (height,))
         await cursor.close()

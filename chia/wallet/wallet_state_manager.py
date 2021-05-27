@@ -104,6 +104,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
+    pool_store: WalletPoolStore
     weight_proof_handler: Any
     server: ChiaServer
 
@@ -988,6 +989,10 @@ class WalletStateManager:
 
         await self.retry_sending_after_reorg(reorged)
 
+        for wallet_id, wallet in self.wallets.items():
+            if wallet.type == WalletType.POOLING_WALLET.value:
+                await wallet.rewind(height)
+
     async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
         """
         Retries sending spend_bundle to the Full_Node, after confirmed tx
@@ -1200,7 +1205,7 @@ class WalletStateManager:
     def get_peak(self) -> Optional[BlockRecord]:
         return self.blockchain.get_peak()
 
-    def get_next_interesting_coin_ids(self, spend: CoinSolution) -> List[bytes32]:
+    async def get_next_interesting_coin_ids(self, spend: CoinSolution) -> List[bytes32]:
         pool_wallet_interested: List[bytes32] = PoolWallet.get_next_interesting_coin_ids(spend)
         for coin_id in pool_wallet_interested:
             await self.interested_store.add_interested_coin_id(coin_id)

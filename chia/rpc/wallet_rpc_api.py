@@ -343,7 +343,7 @@ class WalletRpcApi:
         if "fee" in request:
             fee: uint64 = request["fee"]
         else:
-            fee = 0
+            fee = uint64(0)
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:

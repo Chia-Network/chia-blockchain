@@ -130,7 +130,7 @@ class PoolWallet:
         return err
 
     @classmethod
-    def _verify_pool_state(cls, state) -> Optional[str]:
+    def _verify_pool_state(cls, state: PoolState) -> Optional[str]:
         # SELF_POOLING = 1
         # LEAVING_POOL = 2
         # FARMING_TO_POOL = 3
@@ -144,7 +144,7 @@ class PoolWallet:
                 f"to use this pooling wallet"
             )
 
-        if state.state == PoolSingletonState.PENDING_CREATION or state.state == PoolSingletonState.SELF_POOLING:
+        if state.state == PoolSingletonState.SELF_POOLING:
             return cls._verify_self_pooled(state)
         elif state.state == PoolSingletonState.FARMING_TO_POOL or state.state == PoolSingletonState.LEAVING_POOL:
             return cls._verify_pooling_state(state)
@@ -178,7 +178,7 @@ class PoolWallet:
         extra_data: Optional[PoolState] = None
         while extra_data is None:
             full_spend: CoinSolution = state_transitions[curr_spend_i][2]
-            extra_data: Optional[PoolState] = solution_to_extra_data(full_spend)
+            extra_data = solution_to_extra_data(full_spend)
 
         assert extra_data is not None
         current_inner = pool_state_to_inner_puzzle(extra_data)
@@ -215,7 +215,7 @@ class PoolWallet:
                         advanced_state = True
                         break
 
-    def rewind(self, block_height: uint32) -> None:
+    async def rewind(self, block_height: int) -> None:
         await self.wallet_state_manager.pool_store.rollback(block_height)
         await self.update_pool_wallet_info(self.pool_info.target)
 
@@ -232,10 +232,6 @@ class PoolWallet:
         This loads it from the DB
         """
         self = PoolWallet()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
-        self.wallet_state_manager = wallet_state_manager
-        self.puzzle_hash_to_state = {}
         self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -270,10 +266,7 @@ class PoolWallet:
         This loads it from the DB
         """
         self = PoolWallet()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
         self.wallet_state_manager = wallet_state_manager
-        self.puzzle_hash_to_state = {}
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = wallet_info.id
         self.standard_wallet = wallet

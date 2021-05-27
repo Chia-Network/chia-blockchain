@@ -21,12 +21,6 @@ POOL_PROTOCOL_VERSION = uint8(1)
 class PoolSingletonState(IntEnum):
     """
     From the user's point of view, a pool group can be in these states:
-    `PENDING_CREATION`: The puzzle controlling the pool group has been created,
-        but the genesis coin / singleton has not appeared on the blockchain
-        yet. The user could technically farm to this puzzle_hash, but we simplify
-        the GUI but not allowing plotting or use of the PoolWallet until the singleton
-        is created.
-
     `SELF_POOLING`: The singleton exists on the blockchain, and we are farming
         block rewards to a wallet address controlled by the user
 
@@ -102,20 +96,21 @@ def pool_state_from_dict(
     if state_str not in ["SELF_POOLING", "FARMING_TO_POOL"]:
         return "Initial State must be SELF_POOLING or FARMING_TO_POOL", None
 
-    singleton_state = PoolSingletonState[state_str]
-    pool_url = None
-    relative_lock_height = None
-    target_puzzle_hash = None
+    singleton_state: PoolSingletonState = PoolSingletonState[state_str]
+    pool_url: Optional[str] = None
+    relative_lock_height: Optional[uint32] = None
+    target_puzzle_hash: Optional[bytes32] = None
 
     if singleton_state == SELF_POOLING:
         target_puzzle_hash = owner_puzzle_hash
-        relative_lock_height = 0
+        relative_lock_height = uint32(0)
     elif singleton_state == FARMING_TO_POOL:
         target_puzzle_hash = bytes32(hexstr_to_bytes(state_dict["target_puzzle_hash"]))
         pool_url = state_dict["pool_url"]
-        relative_lock_height = state_dict["relative_lock_height"]
+        relative_lock_height = uint32(state_dict["relative_lock_height"])
 
     # TODO: change create_pool_state to return error messages, as well
+    assert relative_lock_height is not None
     return None, create_pool_state(singleton_state, target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height)
 
 
@@ -128,7 +123,7 @@ def create_pool_state(
     target_puzzle_hash: bytes32,
     owner_pubkey: G1Element,
     pool_url: Optional[str],
-    relative_lock_height: Optional[uint32],
+    relative_lock_height: uint32,
 ) -> PoolState:
     if state not in set(s.value for s in PoolSingletonState):
         raise AssertionError("state {state} is not a valid PoolSingletonState,")

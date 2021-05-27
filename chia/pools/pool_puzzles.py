@@ -81,7 +81,7 @@ def is_pool_protocol_inner_puzzle(inner_f: Program) -> bool:
 def is_pool_singleton_inner_puzzle(puzzle: Program) -> bool:
     r = puzzle.uncurry()
     if r is None:
-        return r
+        return False
     inner_f, args = r
     return is_escaping_inner_puzzle(inner_f) or is_pooling_inner_puzzle(inner_f)
 
@@ -175,7 +175,7 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     return pubkey
 
 
-def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Program, Program]]:
+def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
