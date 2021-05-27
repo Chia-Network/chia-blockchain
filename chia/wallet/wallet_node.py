@@ -635,7 +635,6 @@ class WalletNode:
     ) -> Tuple[bool, bool]:
         """
         Returns whether the blocks validated, and whether the peak was advanced
-
         """
         if self.wallet_state_manager is None:
             return False, False
