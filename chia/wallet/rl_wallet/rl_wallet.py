@@ -634,7 +634,7 @@ class RLWallet:
         if self.rl_coin_record is None:
             raise ValueError("Rl coin record is None")
 
-        list_of_coinsolutions = []
+        list_of_coin_solutions = []
         self.rl_coin_record = await self._get_rl_coin_record()
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
@@ -659,7 +659,7 @@ class RLWallet:
         signature = AugSchemeMPL.sign(secretkey, solution.get_tree_hash())
         rl_spend = CoinSolution(self.rl_coin_record.coin, puzzle, solution)
 
-        list_of_coinsolutions.append(rl_spend)
+        list_of_coin_solutions.append(rl_spend)
 
         # Spend consolidating coin
         puzzle = rl_make_aggregation_puzzle(self.rl_coin_record.coin.puzzle_hash)
@@ -670,10 +670,10 @@ class RLWallet:
         )
         agg_spend = CoinSolution(consolidating_coin, puzzle, solution)
 
-        list_of_coinsolutions.append(agg_spend)
+        list_of_coin_solutions.append(agg_spend)
         aggsig = AugSchemeMPL.aggregate([signature])
 
-        return SpendBundle(list_of_coinsolutions, aggsig)
+        return SpendBundle(list_of_coin_solutions, aggsig)
 
     def rl_get_aggregation_puzzlehash(self, wallet_puzzle):
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()

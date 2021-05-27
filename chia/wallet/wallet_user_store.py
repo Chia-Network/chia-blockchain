@@ -74,11 +74,16 @@ class WalletUserStore:
 
         return await self.get_last_wallet()
 
-    async def delete_wallet(self, id: int):
-        async with self.db_wrapper.lock:
+    async def delete_wallet(self, id: int, in_transaction: bool):
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
             cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def update_wallet(self, wallet_info: WalletInfo, in_transaction):
         if not in_transaction:
