@@ -237,21 +237,20 @@ class WalletNode:
     async def _action_messages(self) -> List[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-        result: List[Message] = []
-        for action in actions:
+
+        def _make_msg(action) -> Message:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
-            if action.name == "request_puzzle_solution":
-                coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                height = uint32(action_data["height"])
-                msg = make_msg(
-                    ProtocolMessageTypes.request_puzzle_solution,
-                    wallet_protocol.RequestPuzzleSolution(coin_name, height),
-                )
-                result.append(msg)
+            coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+            height = uint32(action_data["height"])
+            return make_msg(
+                ProtocolMessageTypes.request_puzzle_solution,
+                wallet_protocol.RequestPuzzleSolution(coin_name, height),
+            )
 
-        return result
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+
+        return [_make_msg(a) for a in actions if a.name == "request_puzzle_solution"]
 
     async def _resend_queue(self):
         if (
