@@ -5,7 +5,7 @@ import socket
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from blspy import PrivateKey
 
@@ -234,12 +234,10 @@ class WalletNode:
             return None
         asyncio.create_task(self._resend_queue())
 
-    async def _action_messages(self):
+    async def _action_messages(self) -> Iterator[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
-            return []
-
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-        solution_actions = filter(lambda a: a.name == "request_puzzle_solution", actions)
+            yield from ()
+            return None
 
         def make_msg_from_action(action) -> Message:
             data = json.loads(action.data)
@@ -249,7 +247,10 @@ class WalletNode:
             msg_data = wallet_protocol.RequestPuzzleSolution(coin_name, height)
             return make_msg(ProtocolMessageTypes.request_puzzle_solution, msg_data)
 
-        return map(make_msg_from_action, solution_actions)
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        for action in actions:
+            if action.name == "request_puzzle_solution":
+                yield make_msg_from_action(action)
 
     async def _resend_queue(self):
         if (
