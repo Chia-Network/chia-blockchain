@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 from blspy import G1Element, G2Element
 
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48, bytes96
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.ints import uint64

@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Optional, Set, Tuple, List
+from typing import Any, Optional, Set, Tuple, List, Dict
 
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 
@@ -29,6 +29,7 @@ from chia.pools.pool_puzzles import (
     pool_state_to_inner_puzzle,
     get_most_recent_singleton_coin_from_coin_solution,
 )
+from chia.util.config import load_config
 
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk
@@ -189,10 +190,11 @@ class PoolWallet:
 
     async def update_pool_config(self, spends: List[CoinSolution], make_new_authentication_key: bool):
         current_state: PoolWalletInfo = await self.get_current_state(spends)
-        config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.wallet_node.root_path)
-
+        # config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.wallet_node.root_path)
+        # full_config: Dict = load_config(self.wallet_state_manager.wallet_node.root_path, "config.yaml")
+        #
         # found = False
-        # for config in config_list:
+        # for config in full_config:
         #     if config.launcher_id == current_state.launcher_coin.name():
         #         found = True
         #         if make_new_authentication_key:
@@ -207,22 +209,25 @@ class PoolWallet:
         #             auth_key_signature: G2Element = AugSchemeMPL.sign(
         #                 owner_sk, AuthenticationKeyInfo(auth_pk, auth_pk_timestamp)
         #             )
-        #             pool_payout_instructions: bytes32 = self.standard_wallet.get_new_puzzlehash()
+        #             pool_payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash()).hex()
         #         else:
         #             auth_pk = config.authentication_public_key
         #             auth_pk_timestamp = config.authentication_public_key_timestamp
         #             auth_key_signature = config.authentication_key_info_signature
-        #             payout_instructions = config.pool_payout_instructions
+        #             pool_payout_instructions = config.pool_payout_instructions
         #         new_config = PoolWalletConfig(
         #             current_state.current.pool_url,
         #             pool_payout_instructions,
         #             current_state.current.target_puzzle_hash,
         #             config.launcher_id,
         #             current_state.current.owner_pubkey,
+        #             auth_pk,
+        #             auth_pk_timestamp,
+        #             auth_key_signature,
         #         )
-
-        if not found and not make_new_authentication_key:
-            raise ValueError("Can't use existing authentication key because config was not found")
+        #
+        # if not found and not make_new_authentication_key:
+        #     raise ValueError("Can't use existing authentication key because config was not found")
 
     @staticmethod
     def get_next_interesting_coin_ids(spend: CoinSolution) -> List[bytes32]:
@@ -308,7 +313,7 @@ class PoolWallet:
         assert launcher_spend is not None
 
         await self.wallet_state_manager.pool_store.apply_state(self.wallet_id, [launcher_spend], block_height)
-        await self.update_pool_config(True)
+        await self.update_pool_config([launcher_spend], True)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
         return self
@@ -482,12 +487,12 @@ class PoolWallet:
         # Whenever we detect a new peak, potentially initiate the second blockchain transaction
         pass
 
-    async def new_peak(self) -> None:
-        # This gets called from the WalletStateManager whenever there is a new peak
+    async def claim_pool_rewards(self) -> None:
+        # Search for p2_puzzle_hash coins, and spend them with the singleton
         pass
 
-    async def new_pool_reward(self) -> None:
-        # This gets called from the WalletStateManager whenever there is a new pool reward (so we can absorb)
+    async def new_peak(self) -> None:
+        # This gets called from the WalletStateManager whenever there is a new peak
         pass
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
