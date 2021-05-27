@@ -762,7 +762,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
 
     # Windows-specific.
     # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
-    try:  
+    try:
         creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore
     except AttributeError:  # Not on Windows.
         creationflags = 0
@@ -782,7 +782,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         stderr=outfile,
         stdout=outfile,
         startupinfo=startupinfo,
-        creationflags=creationflags
+        creationflags=creationflags,
     )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
