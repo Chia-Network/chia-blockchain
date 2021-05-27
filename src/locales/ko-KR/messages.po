@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-27 07:14\n"
+"PO-Revision-Date: 2021-05-27 13:10\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1144,7 +1144,7 @@ msgstr "유효한 공개 키를 입력하십시오"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr "거래하기 전에 동기화를 완료하십시오"
+msgstr "거래 주문을 하기 위해서는 동기화가 완료되어야 합니다."
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1792,7 +1792,7 @@ msgstr "전체 플롯의 용량:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr "총 구성 크기"
+msgstr "전체 플롯의 용량"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
