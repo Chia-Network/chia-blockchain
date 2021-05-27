@@ -105,7 +105,7 @@ def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletI
         parent_info: Program = Program.to(
             [
                 last_coin_solution.coin.name(),
-                get_inner_puzzle_from_puzzle(last_coin_solution.puzzle_reveal),
+                get_inner_puzzle_from_puzzle(last_coin_solution.puzzle_reveal).get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
         )
@@ -137,7 +137,7 @@ def create_absorb_spend(
         parent_info: Program = Program.to(
             [
                 last_coin_solution.coin.name(),
-                get_inner_puzzle_from_puzzle(last_coin_solution.puzzle_reveal),
+                get_inner_puzzle_from_puzzle(last_coin_solution.puzzle_reveal).get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
         )
