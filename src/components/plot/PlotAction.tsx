@@ -29,9 +29,9 @@ export default function PlotAction(props: Props) {
   const canDelete = !isWindows;
 
   async function handleDeletePlot() {
-    if (!canDelete) {
-      return;
-    }
+    // if (!canDelete) {
+    //  return;
+    // }
 
     const deleteConfirmed = await openDialog((
       <ConfirmDialog

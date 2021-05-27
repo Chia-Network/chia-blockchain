@@ -28,7 +28,7 @@ export default function PlotQueueAction(props: Props) {
 
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
-  const canDelete = state !== PlotStatus.REMOVING && !isWindows;
+  const canDelete = state !== PlotStatus.REMOVING;
 
   async function handleDeletePlot() {
     if (!canDelete) {
