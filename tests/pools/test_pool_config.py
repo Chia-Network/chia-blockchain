@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from chia.pools.pool_config import PoolWalletConfig, pool_wallet_config_to_dict
-from chia.util.byte_types import hexstr_to_bytes
+from blspy import AugSchemeMPL, PrivateKey
+
+from chia.pools.pool_config import PoolWalletConfig
 from chia.util.config import load_config, save_config, create_default_chia_config
 
 
@@ -16,29 +17,25 @@ def test_pool_config():
     eg_config.rename(to_config)
     config = load_config(test_root, "test_pool_config.yaml")
 
+    auth_sk: PrivateKey = AugSchemeMPL.key_gen(b"1" * 32)
     d = {
-        "owner_public_key": "b6509da7ddb76adacdffd9c93145a585f07e8976d9d5b1f575d82fdafda2e2f0dd66fa22589ca344d95ee9d44cf51c74",
-        "target_puzzle_hash": "2e4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791af9",
-        "pool_url": "https://pool.example.org:5555/config.json",
+        "authentication_key_info_signature": "8fa411d3164d6d4fc1a5985ea474a853304fec99b93300e12e3b3e8fc16dea8834804eb3dfcee7181a59cd4e969ada0e119d7c8cc94f5c912280dc4cfdbadd9076b6393b135e35b182bcd4e13bf9216877a6033dd9f89c249981e83908c5a926",
+        "authentication_public_key": bytes(auth_sk.get_g1()).hex(),
+        "authentication_public_key_timestamp": 1621854388,
+        "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",
+        "pool_payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+        "pool_url": "localhost",
         "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
-        "target": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-        "target_signature": "95ae82302134489d68cf0890356fc2d360c3bda9c9f15a3111a6a776df073a2fc6194896f3196a10fba18bb9de8e4fae0caf08e49fe32786d35fe0538daf0ceb6f7ace9477440b9978589bcaa28690dded6e5a296b47bffe2db97c1c28c9d13c",
+        "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
     }
 
-    pwc = PoolWalletConfig(
-        hexstr_to_bytes(d["owner_public_key"]),
-        hexstr_to_bytes(d["pool_puzzle_hash"]),
-        d["pool_url"],
-        hexstr_to_bytes(d["launcher_id"]),
-        hexstr_to_bytes(d["target"]),
-        hexstr_to_bytes(d["target_signature"]),
-    )
+    pwc = PoolWalletConfig.from_json_dict(d)
 
     config_a = config.copy()
     config_b = config.copy()
 
     config_a["wallet"]["pool_list"] = [d]
-    config_b["wallet"]["pool_list"] = [pool_wallet_config_to_dict(pwc)]
+    config_b["wallet"]["pool_list"] = [pwc.to_json_dict()]
 
     print(config["wallet"]["pool_list"])
     save_config(test_root, "test_pool_config_a.yaml", config_a)

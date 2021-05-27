@@ -12,7 +12,7 @@ from blspy import G1Element, G2Element, PrivateKey
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
-from chia.farmer.pool_config import PoolConfig
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -153,26 +153,8 @@ class Farmer:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 
-    def _load_pool_config(self) -> List[PoolConfig]:
-        config = load_config(self._root_path, "config.yaml")
-        ret_list: List[PoolConfig] = []
-        if "pool_list" in config["pool"]:
-            for pool_config_dict in config["pool"]["pool_list"]:
-                pool_config = PoolConfig(
-                    pool_config_dict["pool_url"],
-                    pool_config_dict["pool_payout_instructions"],
-                    hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
-                    hexstr_to_bytes(pool_config_dict["launcher_id"]),
-                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
-                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
-                    pool_config_dict["authentication_public_key_timestamp"],
-                    G2Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_key_info_signature"])),
-                )
-                ret_list.append(pool_config)
-        return ret_list
-
     async def _update_pool_state(self):
-        pool_config_list: List[PoolConfig] = self._load_pool_config()
+        pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
             p2_singleton_full = P2_SINGLETON_MOD.curry(
                 singleton_mod_hash,
