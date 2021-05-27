@@ -46,7 +46,8 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        await self.wallet_node.new_peak_wallet(peak, peer)
+        async with self.wallet_node.new_peak_sem:
+            return await self.wallet_node.new_peak_wallet(peak, peer)
 
     @api_request
     async def reject_block_header(self, response: wallet_protocol.RejectHeaderRequest):
