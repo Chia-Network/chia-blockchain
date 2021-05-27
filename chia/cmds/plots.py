@@ -169,7 +169,7 @@ def check_cmd(
 def add_cmd(ctx: click.Context, final_dir: str):
     from chia.plotting.plot_tools import add_plot_directory
 
-    _config = add_plot_directory(final_dir, ctx.obj["root_path"])
+    add_plot_directory(final_dir, ctx.obj["root_path"])  # Unused config return value
     print(f'Added plot directory "{final_dir}".')
 
 
