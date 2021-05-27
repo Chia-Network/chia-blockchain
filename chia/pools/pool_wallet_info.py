@@ -12,7 +12,6 @@ from chia.util.ints import uint32, uint8
 from chia.util.streamable import streamable, Streamable
 from chia.wallet.cc_wallet.ccparent import CCParent
 
-# from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -39,17 +38,15 @@ class PoolSingletonState(IntEnum):
         self-pooled funds.
     """
 
-    PENDING_CREATION = 1
-    SELF_POOLING = 2
-    LEAVING_POOL = 3
-    FARMING_TO_POOL = 4
+    SELF_POOLING = 1
+    LEAVING_POOL = 2
+    FARMING_TO_POOL = 3
 
     # Revise this: we need to transition through the pending
     # "claim rewards" tx, then the "leave self-pooling" tx
     # CLAIMING_SELF_POOLED_REWARDS = 5
 
 
-PENDING_CREATION = PoolSingletonState.PENDING_CREATION
 SELF_POOLING = PoolSingletonState.SELF_POOLING
 LEAVING_POOL = PoolSingletonState.LEAVING_POOL
 FARMING_TO_POOL = PoolSingletonState.FARMING_TO_POOL
@@ -90,7 +87,7 @@ class PoolState(Streamable):
     # `target_puzzle_hash`: A puzzle_hash we pay to
     # Either set by the main wallet in the self-pool case,
     # or sent by the pool
-    target_puzzle_hash: bytes32  #
+    target_puzzle_hash: bytes32
     # owner_pubkey is set by the wallet, once
     owner_pubkey: G1Element
     # Fields below are only valid in `FARMING_TO_POOL` state
@@ -162,12 +159,7 @@ class PoolWalletInfo(Streamable):
     # done with reorg? reset target
     #
     current: PoolState
-    target: PoolState
-    pending_transaction: Optional[TransactionRecord]
-    launcher_coin: Optional[Coin]  # Coin id of the launcher is launcher_id
-    launcher_id: bytes32
-    parent_list: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
-    current_inner: Optional[Program]  # represents a Program as bytes
-    self_pooled_reward_list: List[bytes32]
-    owner_pubkey: G1Element  # a pubkey from our default wallet
-    owner_target_puzzle_hash: bytes32  # A puzzle_hash we control
+    target: Optional[PoolState]
+    launcher_coin: Coin
+    current_inner: Program  # Inner puzzle in current singleton, not revealed yet
+    tip_singleton_coin_id: bytes32

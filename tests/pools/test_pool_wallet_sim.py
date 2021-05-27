@@ -12,7 +12,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from chia.pools.pool_wallet import PoolWallet
+from chia.pools.pool_wallet_old import PoolWallet
 
 # from chia.wallet.transaction_record import TransactionRecord
 # from chia.wallet.util.transaction_type import TransactionType

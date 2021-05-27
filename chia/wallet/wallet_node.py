@@ -32,6 +32,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_solution import CoinSolution
 from chia.types.header_block import HeaderBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
@@ -402,8 +403,8 @@ class WalletNode:
                     if removed_coins is None:
                         raise ValueError("Failed to fetch removals")
 
-                    # If there is a launcher created, or we have a singleton spent, fetches all additions and removals
-                    removed_coins, added_coins = await self.include_all_if_singleton(
+                    # If there is a launcher created, or we have a singleton spent, fetches the required solutions
+                    additional_coin_spends: List[CoinSolution] = await self.get_additional_coin_spends(
                         peer, block, added_coins, removed_coins
                     )
 
@@ -411,11 +412,10 @@ class WalletNode:
                 else:
                     hbr = HeaderBlockRecord(block, [], [])
                     header_block_records.append(hbr)
-                (
-                    result,
-                    error,
-                    fork_h,
-                ) = await self.wallet_state_manager.blockchain.receive_block(hbr, trusted=trusted)
+                    additional_coin_spends = []
+                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
+                    hbr, additional_coin_spends=additional_coin_spends
+                )
                 if result == ReceiveBlockResult.NEW_PEAK:
                     if not self.wallet_state_manager.sync_mode:
                         self.wallet_state_manager.blockchain.clean_block_records()
@@ -708,23 +708,32 @@ class WalletNode:
                 if removed_coins is None:
                     raise ValueError("Failed to fetch removals")
 
-                # If there is a launcher created, or we have a singleton spent, fetches all additions and removals
-                removed_coins, added_coins = await self.include_all_if_singleton(
+                # If there is a launcher created, or we have a singleton spent, fetches the required solutions
+                additional_coin_spends: List[CoinSolution] = await self.get_additional_coin_spends(
                     peer, header_block, added_coins, removed_coins
                 )
 
                 header_block_record = HeaderBlockRecord(header_block, added_coins, removed_coins)
             else:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
+                additional_coin_spends = []
             start_t = time.time()
             if trusted:
                 (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    header_block_record, None, trusted, fork_point_with_old_peak
+                    header_block_record,
+                    None,
+                    trusted,
+                    fork_point_with_old_peak,
+                    additional_coin_spends=additional_coin_spends,
                 )
             else:
                 assert pre_validation_results is not None
                 (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    header_block_record, pre_validation_results[i], trusted, fork_point_with_old_peak
+                    header_block_record,
+                    pre_validation_results[i],
+                    trusted,
+                    fork_point_with_old_peak,
+                    additional_coin_spends=additional_coin_spends,
                 )
             self.log.debug(
                 f"Time taken to validate {header_block.height} with fork "
@@ -845,32 +854,58 @@ class WalletNode:
                         return False
         return True
 
-    async def include_all_if_singleton(
+    async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSolution:
+        solution_response = await peer.request_puzzle_solution(
+            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        )
+        if solution_response is None or isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+            raise ValueError(f"Was not able to obtain solution {solution_response}")
+        self.log.warning("Obtained solution!")
+        return CoinSolution(coin, solution_response.response.puzzle, solution_response.response.solution)
+
+    async def get_additional_coin_spends(
         self, peer, block, removed_coins: List[Coin], added_coins: List[Coin]
-    ) -> Tuple[List[Coin], List[Coin]]:
-        # This is done to detect pool wallet creation. If we detect a launcher being created from one of our coins,
-        # makes sure to get all removals and all additions
-        return_all: bool = False
-        all_removed_coins: Optional[List[Coin]] = []
-        all_added_coins: Optional[List[Coin]] = []
+    ) -> List[CoinSolution]:
+        additional_coin_spends: List[CoinSolution] = []
         if len(removed_coins) > 0:
-            removed_coin_ids = [coin.name() for coin in removed_coins]
+            removed_coin_ids = set([coin.name() for coin in removed_coins])
             all_added_coins = await self.get_additions(peer, block, [])
             assert all_added_coins is not None
             if all_added_coins is not None:
+
                 for coin in all_added_coins:
+                    # This searches specifically for a launcher being created, and adds the solution of the launcher
                     if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.parent_coin_info in removed_coin_ids:
-                        return_all = True
+                        cs: CoinSolution = await self.fetch_puzzle_solution(peer, block.height, coin)
+                        additional_coin_spends.append(cs)
+                        # Apply this coin solution, which might add things to interested list
+                        self.wallet_state_manager.get_next_interesting_coin_ids(cs)
 
-            if self.wallet_state_manager.spends_pool_wallet_coin(removed_coins):
-                return_all = True
-
-            if return_all:
-                all_removed_coins = await self.get_removals(
+                all_removed_coins: Optional[List[Coin]] = await self.get_removals(
                     peer, block, added_coins, removed_coins, request_all_removals=True
                 )
-                return all_removed_coins, all_added_coins
-        return removed_coins, added_coins
+                all_removed_coins_dict: Dict[bytes32, Coin] = {coin.name(): coin for coin in all_removed_coins}
+                assert all_removed_coins is not None
+                keep_searching = True
+                while keep_searching:
+                    # This keeps fetching solutions for coins we are interested list, in this block, until
+                    # there are no more interested things to fetch
+                    keep_searching = False
+                    interested_ids: List[
+                        bytes32
+                    ] = await self.wallet_state_manager.interested_store.get_interested_coin_ids()
+                    for coin_id in interested_ids:
+                        if coin_id in all_removed_coins_dict:
+                            coin = all_removed_coins_dict[coin_id]
+                            cs: CoinSolution = await self.fetch_puzzle_solution(peer, block.height, coin)
+
+                            # Apply this coin solution, which might add things to interested list
+                            self.wallet_state_manager.get_next_interesting_coin_ids(cs)
+                            additional_coin_spends.append(cs)
+                            keep_searching = True
+                            all_removed_coins_dict.pop(coin_id)
+                            break
+        return additional_coin_spends
 
     async def get_additions(
         self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]]

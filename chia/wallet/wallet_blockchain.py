@@ -16,6 +16,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.coin_solution import CoinSolution
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
@@ -152,6 +153,7 @@ class WalletBlockchain(BlockchainInterface):
         pre_validation_result: Optional[PreValidationResult] = None,
         trusted: bool = False,
         fork_point_with_peak: Optional[uint32] = None,
+        additional_coin_spends: List[CoinSolution] = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -160,6 +162,8 @@ class WalletBlockchain(BlockchainInterface):
         invalid. Also returns the fork height, in the case of a new peak.
         """
 
+        if additional_coin_spends is None:
+            additional_coin_spends = []
         block = header_block_record.header
         genesis: bool = block.height == 0
 
@@ -224,7 +228,7 @@ class WalletBlockchain(BlockchainInterface):
             async with self.block_store.db_wrapper.lock:
                 try:
                     await self.block_store.db_wrapper.begin_transaction()
-                    await self.block_store.add_block_record(header_block_record, block_record)
+                    await self.block_store.add_block_record(header_block_record, block_record, additional_coin_spends)
                     self.add_block_record(block_record)
                     self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
 
@@ -262,8 +266,7 @@ class WalletBlockchain(BlockchainInterface):
                 )
                 assert block is not None
                 self.__height_to_hash[uint32(0)] = block.header_hash
-                for removed in block.removals:
-                    self.log.debug(f"Removed: {removed.name()}")
+                assert len(block.additions) == 0 and len(block.removals) == 0
                 await self.coins_of_interest_received(block.removals, block.additions, block.height)
                 self._peak_height = uint32(0)
                 return uint32(0)
@@ -292,26 +295,32 @@ class WalletBlockchain(BlockchainInterface):
                 del self.__sub_epoch_summaries[height]
 
             # Collect all blocks from fork point to new peak
-            blocks_to_add: List[Tuple[HeaderBlockRecord, BlockRecord]] = []
+            blocks_to_add: List[Tuple[HeaderBlockRecord, BlockRecord, List[CoinSolution]]] = []
             curr = block_record.header_hash
             while fork_h < 0 or curr != self.height_to_hash(uint32(fork_h)):
                 fetched_header_block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(curr)
                 fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
+                additional_coin_spends: Optional[
+                    List[CoinSolution]
+                ] = await self.block_store.get_additional_coin_spends(curr)
+                if additional_coin_spends is None:
+                    additional_coin_spends = []
                 assert fetched_header_block is not None
                 assert fetched_block_record is not None
-                blocks_to_add.append((fetched_header_block, fetched_block_record))
+                blocks_to_add.append((fetched_header_block, fetched_block_record, additional_coin_spends))
                 if fetched_header_block.height == 0:
                     # Doing a full reorg, starting at height 0
                     break
                 curr = fetched_block_record.prev_hash
 
-            for fetched_header_block, fetched_block_record in reversed(blocks_to_add):
+            for fetched_header_block, fetched_block_record, additional_coin_spends in reversed(blocks_to_add):
                 self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
                 if fetched_block_record.is_transaction_block:
                     await self.coins_of_interest_received(
                         fetched_header_block.removals,
                         fetched_header_block.additions,
                         fetched_header_block.height,
+                        additional_coin_spends,
                     )
                 if fetched_block_record.sub_epoch_summary_included is not None:
                     self.__sub_epoch_summaries[
