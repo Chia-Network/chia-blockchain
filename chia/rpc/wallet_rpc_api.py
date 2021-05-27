@@ -1061,8 +1061,8 @@ class WalletRpcApi:
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         owner_pubkey = wallet.pool_info.owner_pubkey
         target_puzzlehash = None
-        if "target_puzzlehash" in request:
-            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+        if "target_puzzle_hash" in request:
+            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzle_hash"]))
         new_target_state = create_pool_state(
             FARMING_TO_POOL,
             target_puzzlehash,
@@ -1070,11 +1070,12 @@ class WalletRpcApi:
             request["pool_url"],
             uint32(request["relative_lock_height"]),
         )
-        await wallet.set_target_state(new_target_state)
-        state = wallet.get_all_state()
-        return {
-            "pool_wallet_state": state.to_json_dict(),
-        }
+        async with self.service.wallet_state_manager.lock:
+            await wallet.join_pool(new_target_state)
+            state: PoolWalletInfo = await wallet.get_current_state()
+            return {
+                "state": state.to_json_dict(),
+            }
 
     async def pw_self_pool(self, request):
         # Leaving a pool requires two state transitions.
@@ -1088,11 +1089,12 @@ class WalletRpcApi:
         new_target_state = create_pool_state(
             SELF_POOLING, target_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=0
         )
-        await wallet.set_target_state(new_target_state)
-        state = wallet.get_all_state()
-        return {
-            "pool_wallet_state": state.to_json_dict(),
-        }
+        async with self.service.wallet_state_manager.lock:
+            await wallet.self_pool(new_target_state)
+            state: PoolWalletInfo = await wallet.get_current_state()
+            return {
+                "state": state.to_json_dict(),
+            }
 
     async def pw_collect_self_pooling_rewards(self, request):
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
