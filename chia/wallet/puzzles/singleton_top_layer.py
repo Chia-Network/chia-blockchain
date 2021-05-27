@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -6,17 +6,20 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.coin_solution import CoinSolution
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.cc_wallet.ccparent import CCParent
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
+MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 
 
-# Given the parent of the launcher coin, return the launcher coin
-def launcher_coin_from_parent(coin: Coin) -> Coin:
-    return Coin(coin.name(), SINGLETON_LAUNCHER.get_tree_hash(), coin.amount)
+# Given the parent and amount of the launcher coin, return the launcher coin
+def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
+    return Coin(coin.name(), SINGLETON_LAUNCHER_HASH, amount)
 
 
 # Wrap inner puzzles that are not singleton specific to strip away "truths"
@@ -25,97 +28,99 @@ def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     return Program.to([2, (1, inner_puzzle), [6, 1]])
 
 
-# Take a standard coin and send it to a new puzzle wrapped by a singleton
-def launch_singleton_from_standard_coin(
-    coin: Coin, inner_puzzle: Program, comment: bytes
+# Take standard coin and amount -> launch conditions & launcher coin solution
+def launch_conditions_and_coinsol(
+    coin: Coin,
+    inner_puzzle: Program,
+    comment: List[Tuple[str, str]],
+    amount: uint64,
 ) -> Tuple[Program, CoinSolution]:
-    if (coin.amount % 2) == 0:
+    if (amount % 2) == 0:
         raise ValueError("The coin amount cannot be even. Subtract one mojo.")
-    launcher_coin = launcher_coin_from_parent(coin)
+
+    launcher_coin = generate_launcher_coin(coin, amount)
     curried_singleton = SINGLETON_MOD.curry(
         SINGLETON_MOD.get_tree_hash(),
         launcher_coin.name(),
-        SINGLETON_LAUNCHER.get_tree_hash(),
+        SINGLETON_LAUNCHER_HASH,
         inner_puzzle,
     )
+
     launcher_solution = Program.to(
         [
             curried_singleton.get_tree_hash(),
-            coin.amount,
+            amount,
             comment,
         ]
     )
-    delegated_puzzle = Program.to(
-        (
-            1,
-            [
-                [
-                    ConditionOpcode.CREATE_COIN,
-                    SINGLETON_LAUNCHER.get_tree_hash(),
-                    coin.amount,
-                ],
-                [
-                    ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
-                    std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),  # noqa
-                ],
-            ],
-        )
-    )
+    condtions = [
+        [
+            ConditionOpcode.CREATE_COIN,
+            SINGLETON_LAUNCHER_HASH,
+            amount,
+        ],
+        [
+            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
+            std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),
+        ],
+    ]
+
     launcher_coin_solution = CoinSolution(
         launcher_coin,
         SINGLETON_LAUNCHER,
         launcher_solution,
     )
-    return delegated_puzzle, launcher_coin_solution
+
+    return condtions, launcher_coin_solution
 
 
-# API for spending a singleton
-def spend_singleton(
-    coin: Coin,  # coin being spent
-    launcher_id: bytes32,  # launcher_coin.name()
-    inner_puzzle: Program,  # inner_puzzle of coin being spent
-    parent_coin: Coin,  # parent of the coin being spent
-    is_eve: bool,  # is the coin being spent the child of the launcher?
-    inner_solution: Program,  # solution to inner_puzzle
-    parent_innerpuz_hash: bytes32 = None,
-) -> CoinSolution:
+# Take a coin solution, return a lineage proof for their child to use in spends
+def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> CCParent:
+    parent_name = coin_solution.coin.parent_coin_info
 
-    puzzle_reveal = SINGLETON_MOD.curry(
+    inner_puzzle_hash = None
+    if coin_solution.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
+        full_puzzle = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
+        _, args = full_puzzle.uncurry()
+        _, __, ___, inner_puzzle = list(args.as_iter())
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+
+    amount = coin_solution.coin.amount
+
+    return CCParent(
+        parent_name,
+        inner_puzzle_hash,
+        amount,
+    )
+
+
+# Return the puzzle reveal of a singleton with specific ID and innerpuz
+def puzzle_for_singleton(launcher_id: bytes32, inner_puz: Program) -> Program:
+    return SINGLETON_MOD.curry(
         SINGLETON_MOD.get_tree_hash(),
         launcher_id,
-        SINGLETON_LAUNCHER.get_tree_hash(),
-        inner_puzzle,
+        SINGLETON_LAUNCHER_HASH,
+        inner_puz,
     )
 
-    if is_eve:
-        parent_info = [parent_coin.parent_coin_info, parent_coin.amount]
-    else:
-        if parent_innerpuz_hash is None:
-            raise ValueError("Need a parent inner puzzle for non-eve spends.")
+
+# Return a solution to spend a singleton
+def solution_for_singleton(
+    lineage_proof: CCParent,
+    amount: uint64,
+    inner_solution: Program
+) -> Program:
+    if lineage_proof.inner_puzzle_hash is None:
         parent_info = [
-            parent_coin.parent_coin_info,
-            parent_innerpuz_hash,
-            parent_coin.amount,
+            lineage_proof.parent_name,
+            lineage_proof.amount,
+        ]
+    else:
+        parent_info = [
+            lineage_proof.parent_name,
+            lineage_proof.inner_puzzle_hash,
+            lineage_proof.amount,
         ]
 
-    solution = Program.to([parent_info, coin.amount, inner_solution])
+    return Program.to([parent_info, amount, inner_solution])
 
-    return CoinSolution(coin, puzzle_reveal, solution)
-
-
-# delegated puzzle that melt the singleton and create a new coin of any kind
-def delegated_puzzle_for_melting(
-    new_puzhash: bytes32,
-    new_amount: uint64,
-) -> Program:
-    if (new_amount % 2) == 1:
-        raise ValueError("The new amount cannot be odd. Try burning one mojo.")
-    return Program.to(
-        (
-            1,
-            [
-                [ConditionOpcode.CREATE_COIN, b"80", ESCAPE_VALUE],
-                [ConditionOpcode.CREATE_COIN, new_puzhash, new_amount],
-            ],
-        )
-    )
