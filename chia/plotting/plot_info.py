@@ -1,4 +1,4 @@
-import logging,sys
+import logging, sys
 from pathlib import Path
 
 from chia.plotting.plot_tools import load_plot
