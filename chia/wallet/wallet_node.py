@@ -5,7 +5,7 @@ import socket
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from blspy import PrivateKey
 
@@ -234,9 +234,9 @@ class WalletNode:
             return None
         asyncio.create_task(self._resend_queue())
 
-    async def _action_messages(self):
+    async def _action_messages(self) -> Iterable[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
-            return []
+            return ()
 
         def make_msg_from_action(action) -> Message:
             data = json.loads(action.data)
