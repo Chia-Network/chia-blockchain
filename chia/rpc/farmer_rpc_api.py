@@ -107,8 +107,8 @@ class FarmerRpcApi:
         return {"pool_state": pools_list}
 
     async def set_pool_payout_instructions(self, request: Dict) -> Dict:
-        singleton_genesis: bytes32 = hexstr_to_bytes(request["singleton_genesis"])
-        await self.service.set_pool_payout_instructions(singleton_genesis, request["pool_payout_instructions"])
+        launcher_id: bytes32 = hexstr_to_bytes(request["launcher_id"])
+        await self.service.set_pool_payout_instructions(launcher_id, request["pool_payout_instructions"])
         return {}
 
     async def get_plots(self, _: Dict):

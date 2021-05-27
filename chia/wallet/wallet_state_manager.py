@@ -172,7 +172,6 @@ class WalletStateManager:
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
-            # self.log.info(f"wallet_info {wallet_info}")
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
@@ -583,7 +582,7 @@ class WalletStateManager:
                             already_have = True
                     if not already_have:
                         await PoolWallet.create(
-                            self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, "pool_wallet"
+                            self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, True, "pool_wallet"
                         )
 
             for wallet_id, wallet in self.wallets.items():
@@ -1208,10 +1207,10 @@ class WalletStateManager:
     def get_peak(self) -> Optional[BlockRecord]:
         return self.blockchain.get_peak()
 
-    async def get_next_interesting_coin_ids(self, spend: CoinSolution) -> List[bytes32]:
+    async def get_next_interesting_coin_ids(self, spend: CoinSolution, in_transaction: bool) -> List[bytes32]:
         pool_wallet_interested: List[bytes32] = PoolWallet.get_next_interesting_coin_ids(spend)
         for coin_id in pool_wallet_interested:
-            await self.interested_store.add_interested_coin_id(coin_id)
+            await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
         return pool_wallet_interested
 
     """

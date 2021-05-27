@@ -37,7 +37,7 @@ class PartialPayload(Streamable):
     sp_hash: bytes32
     end_of_sub_slot: bool
     suggested_difficulty: uint64  # This is suggested the difficulty threshold for this account
-    singleton_genesis: bytes32  # This is what identifies the farmer's account for the pool
+    launcher_id: bytes32  # This is what identifies the farmer's account for the pool
     owner_public_key: G1Element  # Current public key specified in the singleton
     pool_payout_instructions: bytes  # The farmer can choose where to send the rewards. This can take a few minutes
     authentication_key_info: AuthenticationKeyInfo

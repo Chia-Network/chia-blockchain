@@ -179,7 +179,7 @@ class Wallet:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         return puzzle_for_pk(bytes(dr.pubkey))
 
-    async def get_puzzle_hash(self, new: bool):
+    async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
             return await self.get_new_puzzlehash()
         else:

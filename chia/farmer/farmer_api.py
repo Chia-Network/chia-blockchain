@@ -149,7 +149,7 @@ class FarmerAPI:
                     new_proof_of_space.sp_hash,
                     is_eos,
                     pool_state_dict["current_difficulty"],
-                    pool_state_dict["pool_config"].singleton_genesis,
+                    pool_state_dict["pool_config"].launcher_id,
                     pool_state_dict["pool_config"].owner_public_key,
                     pool_state_dict["pool_config"].pool_payout_instructions,
                     authentication_key_info,

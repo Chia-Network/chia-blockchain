@@ -21,8 +21,8 @@ class WalletPoolStore:
         await self.db_connection.execute("pragma synchronous=2")
 
         await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS pool_state_transitions(index int, wallet_id int "
-            f"height bigint, coin_name text, coin_spend blob, PRIMARY KEY(index, wallet_id)"
+            "CREATE TABLE IF NOT EXISTS pool_state_transitions(transition_index integer, wallet_id int "
+            f"height bigint, coin_name text, coin_spend blob, PRIMARY KEY(transition_index, wallet_id))"
         )
         await self.db_connection.commit()
         return self
@@ -35,28 +35,28 @@ class WalletPoolStore:
     async def apply_state(
         self,
         wallet_id: int,
-        spend: CoinSolution,
+        spends: List[CoinSolution],
         height: uint32,
-    ) -> None:
-        all_state_transitions = await self.get_all_state_transition(wallet_id)
-
-        # Idempotent
-        if spend in [cs for _, _, cs in all_state_transitions]:
-            return None
+    ) -> List[Tuple[int, uint32, CoinSolution]]:
+        all_state_transitions = await self.get_all_state_transitions(wallet_id)
 
         if len(all_state_transitions) > 0:
             index: int = all_state_transitions[0][0] + 1
         else:
             index = 0
-        cursor = await self.db_connection.execute(
-            "INSERT INTO pool_state_transitions VALUES (?, ?, ?, ?)",
-            (index, height, spend.coin.name(), bytes(spend)),
-        )
-        await cursor.close()
+        for i in range(len(spends)):
+            spend = spends[i]
+            cursor = await self.db_connection.execute(
+                "INSERT INTO pool_state_transitions VALUES (?, ?, ?, ?)",
+                (index + i, height, spend.coin.name(), bytes(spend)),
+            )
+            await cursor.close()
+            all_state_transitions.append((index + i, height, spend))
+        return all_state_transitions
 
-    async def get_all_state_transition(self, wallet_id: int) -> List[Tuple[int, uint32, CoinSolution]]:
+    async def get_all_state_transitions(self, wallet_id: int) -> List[Tuple[int, uint32, CoinSolution]]:
         cursor = await self.db_connection.execute(
-            "SELECT * FROM pool_state_transitions WHERE wallet_id=? ORDER BY index", (wallet_id,)
+            "SELECT * FROM pool_state_transitions WHERE wallet_id=? ORDER BY transition_index", (wallet_id,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -71,6 +71,22 @@ class WalletPoolStore:
 
         return state_transitions
 
-    async def rollback(self, height: int) -> None:
+    async def rollback(self, wallet_id: int, height: int) -> List[Tuple[int, uint32, CoinSolution]]:
         cursor = await self.db_connection.execute("DELETE FROM pool_state_transitions WHERE height>?", (height,))
         await cursor.close()
+        cursor = await self.db_connection.execute(
+            "SELECT * FROM pool_state_transitions WHERE wallet_id=? AND height<=? ORDER BY transition_index",
+            (wallet_id, height),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        state_transitions: List[Tuple[int, uint32, CoinSolution]] = []
+        max_index = -1
+        for row in rows:
+            index, wallet_id_db, height, coin_name, coin_spend = row
+            if wallet_id_db == wallet_id:
+                assert index == max_index + 1
+                max_index = index
+                state_transitions.append((index, height, CoinSolution.from_bytes(coin_spend)))
+
+        return state_transitions

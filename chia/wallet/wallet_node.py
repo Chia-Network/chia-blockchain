@@ -840,19 +840,21 @@ class WalletNode:
         solution_response = await peer.request_puzzle_solution(
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
-        if solution_response is None or isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise ValueError(f"Was not able to obtain solution {solution_response}")
         self.log.warning("Obtained solution!")
         return CoinSolution(coin, solution_response.response.puzzle, solution_response.response.solution)
 
     async def get_additional_coin_spends(
-        self, peer, block, removed_coins: List[Coin], added_coins: List[Coin]
+        self, peer, block, added_coins: List[Coin], removed_coins: List[Coin]
     ) -> List[CoinSolution]:
         assert self.wallet_state_manager is not None
         additional_coin_spends: List[CoinSolution] = []
+        self.log.info("GET ADDITIONAL COIN SPENDS")
         if len(removed_coins) > 0:
+            self.log.info(f"GET ADDITIONAL COIN SPENDS 2. NUm removals: {removed_coins}")
             removed_coin_ids = set([coin.name() for coin in removed_coins])
-            all_added_coins = await self.get_additions(peer, block, [])
+            all_added_coins = await self.get_additions(peer, block, [], get_all_additions=True)
             assert all_added_coins is not None
             if all_added_coins is not None:
 
@@ -862,7 +864,7 @@ class WalletNode:
                         cs: CoinSolution = await self.fetch_puzzle_solution(peer, block.height, coin)
                         additional_coin_spends.append(cs)
                         # Apply this coin solution, which might add things to interested list
-                        await self.wallet_state_manager.get_next_interesting_coin_ids(cs)
+                        await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
 
                 all_removed_coins: Optional[List[Coin]] = await self.get_removals(
                     peer, block, added_coins, removed_coins, request_all_removals=True
@@ -883,7 +885,7 @@ class WalletNode:
                             cs = await self.fetch_puzzle_solution(peer, block.height, coin)
 
                             # Apply this coin solution, which might add things to interested list
-                            await self.wallet_state_manager.get_next_interesting_coin_ids(cs)
+                            await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
                             additional_coin_spends.append(cs)
                             keep_searching = True
                             all_removed_coins_dict.pop(coin_id)
@@ -891,9 +893,11 @@ class WalletNode:
         return additional_coin_spends
 
     async def get_additions(
-        self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]]
+        self, peer: WSChiaConnection, block_i, additions: Optional[List[bytes32]], get_all_additions: bool = False
     ) -> Optional[List[Coin]]:
-        if additions is not None and len(additions) > 0:
+        if (additions is not None and len(additions) > 0) or get_all_additions:
+            if get_all_additions:
+                additions = None
             additions_request = RequestAdditions(block_i.height, block_i.header_hash, additions)
             additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
                 additions_request
@@ -920,8 +924,7 @@ class WalletNode:
                 return None
             return None
         else:
-            added_coins = []
-            return added_coins
+            return []
 
     async def get_removals(
         self, peer: WSChiaConnection, block_i, additions, removals, request_all_removals=False

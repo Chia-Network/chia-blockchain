@@ -160,13 +160,15 @@ class PoolWallet:
     def get_tip(self) -> bytes32:
         return self.pool_info.tip_singleton_coin_id
 
-    async def update_pool_wallet_info(self, target_state: Optional[PoolState]) -> None:
-        state_transitions = self.wallet_state_manager.pool_store.get_all_state_transitions(self.wallet_id)
-        # We must have at least the launcher spend
-        assert len(state_transitions) >= 1
+    def update_pool_config(self):
+        pass
 
-        launcher_coin: Coin = state_transitions[0][2].coin
-        additions: List[Coin] = state_transitions[-1][2].additions()
+    async def update_pool_wallet_info(self, target_state: Optional[PoolState], all_spends: List[CoinSolution]) -> None:
+        # We must have at least the launcher spend
+        assert len(all_spends) >= 1
+
+        launcher_coin: Coin = all_spends[0].coin
+        additions: List[Coin] = all_spends[-1].additions()
         tip_singleton_coin_id: Optional[bytes32] = None
         for coin in additions:
             if coin.amount % 2 == 1:
@@ -174,10 +176,10 @@ class PoolWallet:
                 break
         assert tip_singleton_coin_id is not None
 
-        curr_spend_i = len(state_transitions) - 1
+        curr_spend_i = len(all_spends) - 1
         extra_data: Optional[PoolState] = None
         while extra_data is None:
-            full_spend: CoinSolution = state_transitions[curr_spend_i][2]
+            full_spend: CoinSolution = all_spends[curr_spend_i][2]
             extra_data = solution_to_extra_data(full_spend)
 
         assert extra_data is not None
@@ -194,30 +196,35 @@ class PoolWallet:
                 return [coin.name()]
         return []
 
-    async def apply_one_state_transition(self, spend: CoinSolution, block_height: uint32) -> bool:
-        # This does not count the first transaction (launcher spend)
-        await self.wallet_state_manager.pool_store.apply_state(self.wallet_id, spend, block_height)
-        await self.update_pool_wallet_info(self.pool_info.target)
-        return True
-
     async def apply_state_transitions(self, block_spends: List[CoinSolution], block_height: uint32):
         tip: bytes32 = self.get_tip()
+        pool_wallet_history = await self.wallet_state_manager.pool_store.rollback(block_height)
+        all_spends: List[CoinSolution] = [cs for _, _, cs in pool_wallet_history]
 
-        # Applies the spends one at a time
+        # Applies the spends one at a time. We need to keep track of the new ones, so we can add them to the DB
+        # at the end. We don't add them one at a time because we cannot commit to the DB until later.
+        new_spends: List[CoinSolution] = []
         advanced_state = True
         while advanced_state:
             advanced_state = False
             for spend in block_spends:
                 if spend.coin.name() == tip:
-                    success = await self.apply_one_state_transition(spend, block_height)
-                    if success:
+                    await self.update_pool_wallet_info(self.pool_info.target, all_spends)
+                    if self.get_tip() != tip:
+                        # Updated tip
+                        self.log.info(f"Updated tip of this pool wallet to {self.get_tip()}")
                         tip = self.get_tip()
+                        all_spends.append(spend)
+                        new_spends.append(spend)
                         advanced_state = True
                         break
+        await self.wallet_state_manager.pool_store.apply_state(new_spends)
 
     async def rewind(self, block_height: int) -> None:
-        await self.wallet_state_manager.pool_store.rollback(block_height)
-        await self.update_pool_wallet_info(self.pool_info.target)
+        pool_wallet_history = await self.wallet_state_manager.pool_store.rollback(block_height)
+        # We cannot commit to the DB until later, so we need to get the non-reverted history here
+        all_spends: List[CoinSolution] = [cs for _, _, cs in pool_wallet_history]
+        await self.update_pool_wallet_info(self.pool_info.target, all_spends)
 
     @staticmethod
     async def create(
@@ -226,6 +233,7 @@ class PoolWallet:
         launcher_coin_id: bytes32,
         block_spends: List[CoinSolution],
         block_height: uint32,
+        in_transaction: bool,
         name: str = None,
     ):
         """
@@ -235,7 +243,7 @@ class PoolWallet:
         self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "Pool wallet", WalletType.POOLING_WALLET.value, ""
+            "Pool wallet", WalletType.POOLING_WALLET.value, "", in_transaction=in_transaction
         )
         self.wallet_id = self.wallet_info.id
         self.standard_wallet = wallet
@@ -251,7 +259,9 @@ class PoolWallet:
         await self.update_pool_wallet_info(None)
         await self.apply_state_transitions(block_spends, block_height)
 
+        self.log.info("ADDING POOL WALLET!")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        self.log.info("ADDED POOL WALLET!")
 
         return self
 
@@ -277,12 +287,12 @@ class PoolWallet:
         return self
 
     @staticmethod
-    async def create_new_pool_wallet_transactions(
+    async def create_new_pool_wallet_transaction(
         wallet_state_manager: Any,
         main_wallet: Wallet,
         initial_target_state: PoolState,
         fee: uint64 = uint64(0),
-    ):
+    ) -> TransactionRecord:
         """
         A "plot group" represents the idea of a set of plots that all pay to
         the same pooling puzzle. This puzzle is a `chia singleton` that is
@@ -335,6 +345,7 @@ class PoolWallet:
             name=spend_bundle.name(),
         )
         await standard_wallet.push_transaction(standard_wallet_record)
+        return standard_wallet_record
 
     @staticmethod
     async def generate_launcher_spend(

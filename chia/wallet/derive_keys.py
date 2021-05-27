@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from blspy import AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, PrivateKey, G1Element
 
 from chia.util.ints import uint32
 
@@ -51,3 +51,26 @@ def master_sk_to_pooling_authentication_sk(master: PrivateKey, wallet_id: uint32
     assert index < 10000
     assert wallet_id < 10000
     return _derive_path(master, [12381, 8444, 6, wallet_id * 10000 + index])
+
+
+async def _find_owner_sk(self, owner_pk: G1Element) -> Optional[G1Element]:
+    all_sks = self.keychain.get_all_private_keys()
+    for wallet_id in range(50):
+        for sk, _ in all_sks:
+            auth_sk = master_sk_to_singleton_owner_sk(sk, uint32(wallet_id))
+            if auth_sk.get_g1() == owner_pk:
+                return auth_sk
+    return None
+
+
+async def _find_authentication_sk(self, authentication_pk: G1Element) -> Optional[PrivateKey]:
+    # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
+    # many times.
+    all_sks = self.keychain.get_all_private_keys()
+    for wallet_id in range(20):
+        for auth_key_index in range(20):
+            for sk, _ in all_sks:
+                auth_sk = master_sk_to_pooling_authentication_sk(sk, uint32(wallet_id), uint32(auth_key_index))
+                if auth_sk.get_g1() == authentication_pk:
+                    return auth_sk
+    return None
