@@ -91,5 +91,5 @@ steps:
 
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-      cat install.txt
+      cat version.txt
     displayName: "list files in dir"
