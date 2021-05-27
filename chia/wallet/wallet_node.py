@@ -84,10 +84,7 @@ class WalletNode:
         self.config = config
         self.constants = consensus_constants
         self.root_path = root_path
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
         self.cached_blocks: Dict = {}
         self.future_block_hashes: Dict = {}

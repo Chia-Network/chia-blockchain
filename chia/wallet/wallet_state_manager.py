@@ -115,13 +115,8 @@ class WalletStateManager:
         self.config = config
         self.constants = constants
         self.server = server
-
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
         self.lock = asyncio.Lock()
-
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
         self.db_wrapper = DBWrapper(self.db_connection)
