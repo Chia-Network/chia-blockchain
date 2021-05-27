@@ -1140,17 +1140,17 @@ class WalletStateManager:
     async def puzzle_solution_received(self, response: RespondPuzzleSolution):
         unwrapped: PuzzleSolutionResponse = response.response
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
-        for action in actions:
-            if action.name == "request_puzzle_solution":
-                data = json.loads(action.data)
-                action_data = data["data"]["action_data"]
-                stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                height = uint32(action_data["height"])
-                if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
-                    if action.done:
-                        return None
-                    wallet = self.wallets[uint32(action.wallet_id)]
-                    callback_str = action.wallet_callback
-                    if callback_str is not None:
-                        callback = getattr(wallet, callback_str)
-                        await callback(unwrapped, action.id)
+        solution_actions = filter(lambda a: a.name == "request_puzzle_solution", actions)
+        for action in solution_actions:
+            data = json.loads(action.data)
+            action_data = data["data"]["action_data"]
+            stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+            height = uint32(action_data["height"])
+            if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
+                if action.done:
+                    return None
+                wallet = self.wallets[uint32(action.wallet_id)]
+                callback_str = action.wallet_callback
+                if callback_str is not None:
+                    callback = getattr(wallet, callback_str)
+                    await callback(unwrapped, action.id)
