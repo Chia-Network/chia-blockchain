@@ -2,14 +2,16 @@ import logging
 import time
 from typing import Any, Optional, Set, Tuple, List
 
-from blspy import AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
     PoolSingletonState,
     PoolState,
     POOL_PROTOCOL_VERSION,
 )
+from chia.protocols.pool_protocol import AuthenticationKeyInfo
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -29,7 +31,7 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -159,11 +161,12 @@ class PoolWallet:
         if err:
             raise ValueError(f"Invalid internal Pool State: {err}: {initial_target_state}")
 
-    async def get_current_state(self) -> PoolWalletInfo:
-        history: List[
-            Tuple[int, uint32, CoinSolution]
-        ] = await self.wallet_state_manager.pool_store.get_all_state_transitions(self.wallet_id)
-        all_spends: List[CoinSolution] = [cs for _, _, cs in history]
+    async def get_current_state(self, all_spends: Optional[List[CoinSolution]] = None) -> PoolWalletInfo:
+        if all_spends is None:
+            history: List[
+                Tuple[int, uint32, CoinSolution]
+            ] = await self.wallet_state_manager.pool_store.get_all_state_transitions(self.wallet_id)
+            all_spends: List[CoinSolution] = [cs for _, _, cs in history]
 
         # We must have at least the launcher spend
         assert len(all_spends) >= 1
@@ -184,9 +187,42 @@ class PoolWallet:
     async def get_tip(self) -> bytes32:
         return (await self.get_current_state()).tip_singleton_coin_id
 
-    async def update_pool_config(self):
-        current_state = await self.get_current_state()
-        # TODO: write to the config file in the format that the farmer nees
+    async def update_pool_config(self, spends: List[CoinSolution], make_new_authentication_key: bool):
+        current_state: PoolWalletInfo = await self.get_current_state(spends)
+        config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.wallet_node.root_path)
+
+        # found = False
+        # for config in config_list:
+        #     if config.launcher_id == current_state.launcher_coin.name():
+        #         found = True
+        #         if make_new_authentication_key:
+        #             owner_sk: PrivateKey = await find_owner_sk(
+        #                 [self.wallet_state_manager.private_key], config.owner_public_key
+        #             )
+        #             new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
+        #                 self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
+        #             )
+        #             auth_pk: G1Element = new_auth_sk.get_g1()
+        #             auth_pk_timestamp: uint64 = uint64(int(time.time()))
+        #             auth_key_signature: G2Element = AugSchemeMPL.sign(
+        #                 owner_sk, AuthenticationKeyInfo(auth_pk, auth_pk_timestamp)
+        #             )
+        #             pool_payout_instructions: bytes32 = self.standard_wallet.get_new_puzzlehash()
+        #         else:
+        #             auth_pk = config.authentication_public_key
+        #             auth_pk_timestamp = config.authentication_public_key_timestamp
+        #             auth_key_signature = config.authentication_key_info_signature
+        #             payout_instructions = config.pool_payout_instructions
+        #         new_config = PoolWalletConfig(
+        #             current_state.current.pool_url,
+        #             pool_payout_instructions,
+        #             current_state.current.target_puzzle_hash,
+        #             config.launcher_id,
+        #             current_state.current.owner_pubkey,
+        #         )
+
+        if not found and not make_new_authentication_key:
+            raise ValueError("Can't use existing authentication key because config was not found")
 
     @staticmethod
     def get_next_interesting_coin_ids(spend: CoinSolution) -> List[bytes32]:
@@ -227,6 +263,7 @@ class PoolWallet:
                         advanced_state = True
                         break
         await self.wallet_state_manager.pool_store.apply_state(self.wallet_id, new_spends, block_height)
+        await self.update_pool_config(all_spends, False)
 
     async def rewind(self, block_height: int) -> None:
         """
@@ -271,6 +308,7 @@ class PoolWallet:
         assert launcher_spend is not None
 
         await self.wallet_state_manager.pool_store.apply_state(self.wallet_id, [launcher_spend], block_height)
+        await self.update_pool_config(True)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
         return self
@@ -426,7 +464,7 @@ class PoolWallet:
         self.target_state = target_state
         current_state = await self.get_current_state()
 
-        all_sks = [sk for sk, _ in self.wallet_state_manager.keychain.get_all_private_keys()]
+        all_sks = [self.wallet_state_manager.private_key]
         owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
         # Check if we can join a pool (timelock)
         # Create the first blockchain transaction
@@ -437,7 +475,7 @@ class PoolWallet:
             raise ValueError(f"Cannot self pool when already having target state: {self.target_state}")
         self.target_state = target_state
         current_state = await self.get_current_state()
-        all_sks = [sk for sk, _ in self.wallet_state_manager.keychain.get_all_private_keys()]
+        all_sks = [self.wallet_state_manager.private_key]
         owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
         # Check if we can self pool (timelock)
         # Create the first blockchain transaction
@@ -446,6 +484,10 @@ class PoolWallet:
 
     async def new_peak(self) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
+        pass
+
+    async def new_pool_reward(self) -> None:
+        # This gets called from the WalletStateManager whenever there is a new pool reward (so we can absorb)
         pass
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
