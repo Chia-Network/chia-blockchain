@@ -493,8 +493,13 @@ class WalletRpcApi:
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
+        selected = self.service.config["selected_network"]
+        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
+        formatted = tr.to_json_dict()
+        formatted["to_address"] = encode_puzzle_hash(tr.to_puzzle_hash, prefix)
+
         return {
-            "transaction": tr,
+            "transaction": formatted,
             "transaction_id": tr.name,
         }
 
