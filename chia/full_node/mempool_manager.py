@@ -214,8 +214,13 @@ class MempoolManager:
         This runs in another process so we don't block the main thread
         """
         start_time = time.time()
+        # limit the cost of a single spendbundle to 1/10th of the full block
+        # cost. Note that the max cost we pass in here is just for the CLVM
+        # program itself, the cost of the conditions or the size of the program
+        # is not taken into account here
+        max_cost = self.constants.MAX_BLOCK_COST_CLVM / 10
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
-            self.pool, get_npc_multiprocess, bytes(new_spend), self.constants.MAX_BLOCK_COST_CLVM
+            self.pool, get_npc_multiprocess, bytes(new_spend), max_cost
         )
         end_time = time.time()
         log.info(f"It took {end_time - start_time} to pre validate transaction")
