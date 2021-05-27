@@ -81,6 +81,7 @@ def plots_cmd(ctx: click.Context):
 @click.option(
     "-x", "--exclude_final_dir", help="Skips adding [final dir] to harvester for farming", default=False, is_flag=True
 )
+@click.option("-j", "--json", help="Output JSON parameters for reproducing plots", default=False, is_flag=True)
 @click.pass_context
 def create_cmd(
     ctx: click.Context,
@@ -100,6 +101,7 @@ def create_cmd(
     plotid: str,
     memo: str,
     nobitfield: bool,
+    json: bool,
     exclude_final_dir: bool,
 ):
     from chia.plotting.create_plots import create_plots
@@ -122,6 +124,7 @@ def create_cmd(
             self.plotid = plotid
             self.memo = memo
             self.nobitfield = nobitfield
+            self.json = json
             self.exclude_final_dir = exclude_final_dir
 
     if size < 32 and not override_k:

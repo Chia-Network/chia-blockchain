@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
@@ -80,16 +81,18 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         args.size = 22
 
     if pool_public_key is not None:
-        log.info(
-            f"Creating {num} plots of size {args.size}, pool public key:  "
-            f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
-        )
+        if not args.json:
+            log.info(
+                f"Creating {num} plots of size {args.size}, pool public key:  "
+                f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
+            )
     else:
         assert pool_contract_puzzle_hash is not None
-        log.info(
-            f"Creating {num} plots of size {args.size}, pool contract address:  "
-            f"{args.pool_contract_address} farmer public key: {bytes(farmer_public_key).hex()}"
-        )
+        if not args.json:
+            log.info(
+                f"Creating {num} plots of size {args.size}, pool contract address:  "
+                f"{args.pool_contract_address} farmer public key: {bytes(farmer_public_key).hex()}"
+            )
 
     tmp_dir_created = False
     if not args.tmp_dir.exists():
@@ -134,7 +137,8 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
 
         # Uncomment next two lines if memo is needed for dev debug
         plot_memo_str: str = plot_memo.hex()
-        log.info(f"Memo: {plot_memo_str}")
+        if not args.json:
+            log.info(f"Memo: {plot_memo_str}")
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
@@ -157,27 +161,44 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
                 log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
                 config = add_plot_directory(resolved_final_dir, root_path)
 
-        if not full_path.exists():
-            log.info(f"Starting plot {i + 1}/{num}")
-            # Creates the plot. This will take a long time for larger plots.
-            plotter: DiskPlotter = DiskPlotter()
-            plotter.create_plot_disk(
-                str(args.tmp_dir),
-                str(args.tmp2_dir),
-                str(args.final_dir),
-                filename,
-                args.size,
-                plot_memo,
-                plot_id,
-                args.buffer,
-                args.buckets,
-                args.stripe_size,
-                args.num_threads,
-                args.nobitfield,
-            )
-            finished_filenames.append(filename)
+        if args.json:
+            json_params = {
+                "tmp_dir": str(args.tmp_dir),
+                "tmp2_dir": str(args.tmp2_dir),
+                "final_dir": str(args.final_dir),
+                "filename": filename,
+                "size": args.size,
+                "plot_memo": plot_memo_str,
+                "plot_id": plot_id.__str__(),
+                "buffer": args.buffer,
+                "stripe_size": args.stripe_size,
+                "num_threads": args.num_threads,
+                "nobitfield": args.nobitfield
+            }
+            print(json.dumps(json_params))
+            return
         else:
-            log.info(f"Plot {filename} already exists")
+            if not full_path.exists():
+                log.info(f"Starting plot {i + 1}/{num}")
+                # Creates the plot. This will take a long time for larger plots.
+                plotter: DiskPlotter = DiskPlotter()
+                plotter.create_plot_disk(
+                    str(args.tmp_dir),
+                    str(args.tmp2_dir),
+                    str(args.final_dir),
+                    filename,
+                    args.size,
+                    plot_memo,
+                    plot_id,
+                    args.buffer,
+                    args.buckets,
+                    args.stripe_size,
+                    args.num_threads,
+                    args.nobitfield,
+                )
+                finished_filenames.append(filename)
+            else:
+                log.info(f"Plot {filename} already exists")
 
     log.info("Summary:")
 
