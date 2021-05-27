@@ -860,10 +860,10 @@ class WalletNode:
             WalletType.COLOURED_COIN,  # TODO: Why?
             WalletType.DISTRIBUTED_ID,
         )
-        puzzle_store = self.wallet_state_manager.puzzle_store
 
         addition_requests = False
         for coin in additions:
+            puzzle_store = self.wallet_state_manager.puzzle_store
             record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
