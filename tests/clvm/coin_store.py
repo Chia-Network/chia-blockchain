@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, Set
+from typing import Dict, Iterator, Optional, Set
 
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict  # noqa
 from chia.types.blockchain_format.coin import Coin
@@ -15,6 +15,9 @@ from chia.util.condition_tools import (
 from chia.util.ints import uint32, uint64
 
 
+MAX_COST = 11000000000
+
+
 class BadSpendBundleError(Exception):
     pass
 
@@ -26,9 +29,10 @@ class CoinTimestamp:
 
 
 class CoinStore:
-    def __init__(self):
+    def __init__(self, reward_mask: int = 0):
         self._db: Dict[bytes32, CoinRecord] = dict()
         self._ph_index = defaultdict(list)
+        self._reward_mask = reward_mask
 
     def farm_coin(
         self,
@@ -54,6 +58,7 @@ class CoinStore:
 
         conditions_dicts = []
         for coin_solution in spend_bundle.coin_solutions:
+            assert isinstance(coin_solution.coin, Coin)
             err, conditions_dict, cost = conditions_dict_for_solution(
                 coin_solution.puzzle_reveal, coin_solution.solution, max_cost
             )
@@ -113,6 +118,8 @@ class CoinStore:
         err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
+        for new_coin in spend_bundle.additions():
+            self._add_coin_entry(new_coin, now)
         for spent_coin in spend_bundle.removals():
             coin_name = spent_coin.name()
             try:
@@ -163,3 +170,6 @@ class CoinStore:
             uint64(birthday.seconds),
         )
         self._ph_index[coin.puzzle_hash].append(name)
+
+    def coin_record(self, coin_id: bytes32) -> Optional[CoinRecord]:
+        return self._db.get(coin_id)
