@@ -44,11 +44,11 @@ class RpcServer:
             await self.websocket.close()
 
     async def _state_changed(self, *args):
-        change = args[0]
         if self.websocket is None:
             return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
+        change = args[0]
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
             if data is not None:
@@ -222,13 +222,10 @@ class RpcServer:
         except Exception as e:
             tb = traceback.format_exc()
             self.log.warning(f"Error while handling message: {tb}")
-            if len(e.args) > 0:
-                error = {"success": False, "error": f"{e.args[0]}"}
-            else:
-                error = {"success": False, "error": f"{e}"}
-            if message is None:
-                return None
-            await websocket.send_str(format_response(message, error))
+            if message is not None:
+                error = e.args[0] if e.args else e
+                res = {"success": False, "error": f"{error}"}
+                await websocket.send_str(format_response(message, res))
 
     async def connection(self, ws):
         data = {"service": self.service_name}
