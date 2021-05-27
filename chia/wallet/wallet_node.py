@@ -234,23 +234,23 @@ class WalletNode:
             return None
         asyncio.create_task(self._resend_queue())
 
-    async def _action_messages(self) -> List[Message]:
+    async def _action_messages(self):
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
 
-        def _make_msg(action) -> Message:
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        puzzle_actions = filter(lambda action: action.name == "request_puzzle_solution", actions)
+
+        def make_msg_from_action(action) -> Message:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
             coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
             height = uint32(action_data["height"])
             return make_msg(
-                ProtocolMessageTypes.request_puzzle_solution,
-                wallet_protocol.RequestPuzzleSolution(coin_name, height),
+                ProtocolMessageTypes.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin_name, height),
             )
 
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-
-        return [_make_msg(a) for a in actions if a.name == "request_puzzle_solution"]
+        return map(make_msg_from_action, puzzle_actions)
 
     async def _resend_queue(self):
         if (
