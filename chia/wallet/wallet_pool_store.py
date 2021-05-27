@@ -61,8 +61,6 @@ class WalletPoolStore:
         rows = await cursor.fetchall()
         await cursor.close()
 
-        log.info(f"All rows: {rows}")
-
         cursor = await self.db_connection.execute(
             "SELECT * FROM pool_state_transitions WHERE wallet_id=? ORDER BY transition_index", (wallet_id,)
         )
