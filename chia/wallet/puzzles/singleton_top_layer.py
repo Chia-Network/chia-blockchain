@@ -81,9 +81,11 @@ def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> LineageProof:
     inner_puzzle_hash = None
     if coin_solution.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
         full_puzzle = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
-        _, args = full_puzzle.uncurry()
-        _, __, ___, inner_puzzle = list(args.as_iter())
-        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        r = full_puzzle.uncurry()
+        if r is not None:
+            _, args = r
+            _, _, _, inner_puzzle = list(args.as_iter())
+            inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
     amount = coin_solution.coin.amount
 
@@ -108,7 +110,7 @@ def puzzle_for_singleton(launcher_id: bytes32, inner_puz: Program) -> Program:
 def solution_for_singleton(
     lineage_proof: LineageProof,
     amount: uint64,
-    inner_solution: Program
+    inner_solution: Program,
 ) -> Program:
     if lineage_proof.inner_puzzle_hash is None:
         parent_info = [
@@ -123,4 +125,3 @@ def solution_for_singleton(
         ]
 
     return Program.to([parent_info, amount, inner_solution])
-
