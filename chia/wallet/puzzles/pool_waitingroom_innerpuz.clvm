@@ -1,22 +1,24 @@
 (mod (POOL_PUZZLE_HASH
-      P2_SINGLETON_PUZHASH
+      P2_SINGLETON_PUZZLE_HASH
       OWNER_PUBKEY
       POOL_REWARD_PREFIX
       RELATIVE_LOCK_HEIGHT
       (my_id my_full_puzzle_hash my_inner_puzzle_hash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash)
       spend_type
-      destination_puzhash
       pool_reward_amount
       pool_reward_height
-      key_value_list)
+      key_value_list
+      destination_puzhash)
 
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
-  ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay_to_singleton puzzle
-  ; OWNER_PUBKEY is the farmer pubkey which signs the exit puzhash
+  ; P2_SINGLETON_PUZZLE_HASH is the puzzlehash for your pay_to_singleton puzzle
+  ; OWNER_PUBKEY is the farmer pubkey which signs the exit puzzle_hash
   ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
   ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
 
   ; spend_type is: 0 for absorbing money, 1 to escape
+
+  ; absorb_coin_id and my_inner_puzzle_hash are only used for absorbtion case
 
   (include condition_codes.clvm)
 
@@ -28,8 +30,8 @@
       )
   )
 
-  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH POOL_REWARD_PREFIX pool_reward_amount)
-    (sha256 (logior POOL_REWARD_PREFIX pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
+  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX pool_reward_amount)
+    (sha256 (logior POOL_REWARD_PREFIX pool_reward_height) P2_SINGLETON_PUZZLE_HASH pool_reward_amount)
   )
 
   (defun-inline absorb_pool_reward (POOL_PUZZLE_HASH my_inner_puzzle_hash my_amount pool_reward_amount pool_reward_id)
@@ -52,6 +54,6 @@
                         my_inner_puzzle_hash
                         my_amount
                         pool_reward_amount
-                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH POOL_REWARD_PREFIX pool_reward_amount))
+                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX pool_reward_amount))
   )
 )

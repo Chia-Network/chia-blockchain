@@ -1,5 +1,5 @@
 (mod (POOL_PUZZLE_HASH
-      P2_SINGLETON_PUZHASH
+      P2_SINGLETON_PUZZLE_HASH
       OWNER_PUBKEY
       POOL_REWARD_PREFIX
       WAITINGROOM_PUZHASH
@@ -11,14 +11,14 @@
 
 
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
-  ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
+  ; P2_SINGLETON_PUZZLE_HASH is the puzzle hash for your pay to singleton puzzle
   ; OWNER_PUBKEY is the farmer pubkey which authorises a travel
   ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
   ; WAITINGROOM_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
 
   ; spend_type is: 0 for absorbing money, 1 to travel
 
-  ; absorb_coin_id and my_puzzle_hash are only used for absorbtion case
+  ; absorb_coin_id and my_inner_puzzle_hash are only used for absorbtion case
 
   (include condition_codes.clvm)
 
@@ -30,8 +30,8 @@
       )
   )
 
-  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH POOL_REWARD_PREFIX pool_reward_amount)
-    (sha256 (logior POOL_REWARD_PREFIX pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
+  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX pool_reward_amount)
+    (sha256 (logior POOL_REWARD_PREFIX pool_reward_height) P2_SINGLETON_PUZZLE_HASH pool_reward_amount)
   )
 
   (defun-inline absorb_pool_reward (POOL_PUZZLE_HASH my_inner_puzzle_hash my_amount pool_reward_amount pool_reward_id)
@@ -54,6 +54,6 @@
                         my_inner_puzzle_hash
                         my_amount
                         pool_reward_amount
-                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH POOL_REWARD_PREFIX pool_reward_amount))
+                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX pool_reward_amount))
   )
 )
