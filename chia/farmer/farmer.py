@@ -29,6 +29,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
+    find_authentication_sk,
 )
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.wallet.test_singleton import P2_SINGLETON_MOD
@@ -180,8 +181,9 @@ class Farmer:
             )
             p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
             try:
-                authentication_sk: Optional[PrivateKey] = await self._find_authentication_sk(
-                    pool_config.authentication_public_key
+                all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
+                authentication_sk: Optional[PrivateKey] = await find_authentication_sk(
+                    all_sks, pool_config.authentication_public_key
                 )
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")

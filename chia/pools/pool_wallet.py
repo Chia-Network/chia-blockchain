@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, Optional, Set, Tuple, List
 
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, PrivateKey
 
 from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
@@ -29,6 +29,7 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
+from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -419,10 +420,32 @@ class PoolWallet:
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
         return full_spend, puzzle_hash
 
-    async def join_pool(self):
+    async def join_pool(self, target_state: PoolState):
+        if self.target_state is not None:
+            raise ValueError(f"Cannot join a pool when already having target state: {self.target_state}")
+        self.target_state = target_state
+        current_state = await self.get_current_state()
+
+        all_sks = [sk for sk, _ in self.wallet_state_manager.keychain.get_all_private_keys()]
+        owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+        # Check if we can join a pool (timelock)
+        # Create the first blockchain transaction
+        # Whenever we detect a new peak, potentially initiate the second blockchain transaction
+
+    async def self_pool(self, target_state: PoolState):
+        if self.target_state is not None:
+            raise ValueError(f"Cannot self pool when already having target state: {self.target_state}")
+        self.target_state = target_state
+        current_state = await self.get_current_state()
+        all_sks = [sk for sk, _ in self.wallet_state_manager.keychain.get_all_private_keys()]
+        owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+        # Check if we can self pool (timelock)
+        # Create the first blockchain transaction
+        # Whenever we detect a new peak, potentially initiate the second blockchain transaction
         pass
 
-    async def self_pool(self):
+    async def new_peak(self) -> None:
+        # This gets called from the WalletStateManager whenever there is a new peak
         pass
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
