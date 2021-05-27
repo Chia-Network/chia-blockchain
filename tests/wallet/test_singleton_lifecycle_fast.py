@@ -29,6 +29,8 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
+MAX_BLOCK_COST_CLVM = int(1e18)
+
 
 def check_coin_solution(coin_solution: CoinSolution):
     # breakpoint()
@@ -50,8 +52,8 @@ def launcher_conditions_and_spend_bundle(
     launcher_amount: uint64,
     initial_singleton_inner_puzzle: Program,
     metadata: List[Tuple[str, str]],
-    launcher_puzzle: Program = LAUNCHER_PUZZLE,
-) -> Tuple[Program, bytes32, List[Program], SpendBundle]:
+    launcher_puzzle: Program,
+) -> Tuple[bytes32, List[Program], SpendBundle]:
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
     singleton_full_puzzle = SINGLETON_MOD.curry(
@@ -74,8 +76,7 @@ def launcher_conditions_and_spend_bundle(
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     coin_solution = CoinSolution(launcher_coin, SerializedProgram.from_program(launcher_puzzle), launcher_solution)
     spend_bundle = SpendBundle([coin_solution], G2Element())
-    lineage_proof = Program.to([parent_coin_id, launcher_amount])
-    return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle
+    return launcher_coin.name(), expected_conditions, spend_bundle
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -90,12 +91,12 @@ def solution_for_singleton_puzzle(lineage_proof: Program, my_amount: int, inner_
     return Program.to([lineage_proof, my_amount, inner_solution])
 
 
-def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
-    return P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash)
+def p2_singleton_puzzle_for_launcher(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
+    return P2_SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_puzzle_hash)))
 
 
-def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32) -> bytes32:
-    return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
+def p2_singleton_puzzle_hash_for_launcher(launcher_id: Program, launcher_puzzle_hash: bytes32) -> bytes32:
+    return p2_singleton_puzzle_for_launcher(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
 def xtest_lifecycle_with_coinstore():
@@ -113,7 +114,7 @@ def xtest_lifecycle_with_coinstore():
     launcher_puzzle = LAUNCHER_PUZZLE
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     initial_singleton_puzzle = adaptor_for_singleton_inner_puzzle(ANYONE_CAN_SPEND_PUZZLE)
-    lineage_proof, launcher_id, condition_list, launcher_spend_bundle = launcher_conditions_and_spend_bundle(
+    launcher_id, condition_list, launcher_spend_bundle = launcher_conditions_and_spend_bundle(
         farmed_coin.name(), launcher_amount, initial_singleton_puzzle, metadata, launcher_puzzle
     )
 
@@ -122,7 +123,7 @@ def xtest_lifecycle_with_coinstore():
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_solution], G2Element())])
 
     debug_spend_bundle(spend_bundle)
-    coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, 11000000000)
+    coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
 
     launcher_coin = launcher_spend_bundle.coin_solutions[0].coin
 

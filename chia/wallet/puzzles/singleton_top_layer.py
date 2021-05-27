@@ -40,9 +40,9 @@ def launch_conditions_and_coinsol(
 
     launcher_coin = generate_launcher_coin(coin, amount)
     curried_singleton = SINGLETON_MOD.curry(
-        SINGLETON_MOD.get_tree_hash(),
-        launcher_coin.name(),
-        SINGLETON_LAUNCHER_HASH,
+        (SINGLETON_MOD.get_tree_hash(),
+        (launcher_coin.name(),
+        SINGLETON_LAUNCHER_HASH)),
         inner_puzzle,
     )
 
@@ -88,7 +88,7 @@ def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> LineageProof:
         r = full_puzzle.uncurry()
         if r is not None:
             _, args = r
-            _, _, _, inner_puzzle = list(args.as_iter())
+            _, inner_puzzle = list(args.as_iter())
             inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
     amount = coin_solution.coin.amount
@@ -103,9 +103,9 @@ def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> LineageProof:
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
 def puzzle_for_singleton(launcher_id: bytes32, inner_puz: Program) -> Program:
     return SINGLETON_MOD.curry(
-        SINGLETON_MOD.get_tree_hash(),
-        launcher_id,
-        SINGLETON_LAUNCHER_HASH,
+        (SINGLETON_MOD.get_tree_hash(),
+        (launcher_id,
+        SINGLETON_LAUNCHER_HASH)),
         inner_puz,
     )
 

@@ -21,7 +21,7 @@ POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
-    return SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash, inner_puzzle)
+    return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_puzzle_hash)), inner_puzzle)
 
 
 def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
@@ -41,9 +41,9 @@ def test_only_odd_coins():
     # (MOD_HASH LAUNCHER_ID INNERPUZ parent_info my_amount inner_solution)
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash,
+            (LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH)),
             Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
@@ -59,9 +59,9 @@ def test_only_odd_coins():
 
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash,
+            (LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
@@ -78,9 +78,9 @@ def test_only_one_odd_coin_created():
     did_core_hash = SINGLETON_MOD.get_tree_hash()
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash,
+            (LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -95,9 +95,9 @@ def test_only_one_odd_coin_created():
         assert False
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash,
+            (LAUNCHER_ID,
+            LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
