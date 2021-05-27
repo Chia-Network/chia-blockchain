@@ -1,7 +1,6 @@
 import asyncio
 import dataclasses
 import logging
-import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -21,6 +20,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
+from chia.util.cpus import get_available_cpus
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.wallet_block_store import WalletBlockStore
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -95,9 +95,8 @@ class WalletBlockchain(BlockchainInterface):
         self.lock = asyncio.Lock()
         self.coin_store = coin_store
         self.tx_store = tx_store
-        cpu_count = multiprocessing.cpu_count()
-        if cpu_count > 61:
-            cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
+        cpu_count = get_available_cpus()
+
         num_workers = max(cpu_count - 2, 1)
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
         log.info(f"Started {num_workers} processes for block validation")

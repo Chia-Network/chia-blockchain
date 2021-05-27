@@ -1,7 +1,6 @@
 import asyncio
 import dataclasses
 import logging
-import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -35,6 +34,8 @@ from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
+from chia.util.cpus import get_available_cpus
+
 
 log = logging.getLogger(__name__)
 
@@ -98,9 +99,8 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
         self.compact_proof_lock = asyncio.Lock()
-        cpu_count = multiprocessing.cpu_count()
-        if cpu_count > 61:
-            cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
+        cpu_count = get_available_cpus()
+
         num_workers = max(cpu_count - 2, 1)
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
         log.info(f"Started {num_workers} processes for block validation")
