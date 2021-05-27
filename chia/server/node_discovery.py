@@ -460,6 +460,9 @@ class FullNodeDiscovery:
 
 
 class FullNodePeers(FullNodeDiscovery):
+    self_advertise_task: Optional[asyncio.Task] = None
+    address_relay_task: Optional[asyncio.Task] = None
+
     def __init__(
         self,
         server,
