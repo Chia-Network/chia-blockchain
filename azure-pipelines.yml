@@ -50,8 +50,8 @@ steps:
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
       cd build_scripts
-      touch $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
-      echo python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
+      touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      echo python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
     displayName: "Install dependencies"
 
   - script: |
@@ -91,6 +91,6 @@ steps:
     displayName: "Upload MacOS DMG"
 
   - bash: |
-      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-      cat $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
+      ls $(System.DefaultWorkingDirectory)/build_scripts/
+      cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
     displayName: "list files in dir"
