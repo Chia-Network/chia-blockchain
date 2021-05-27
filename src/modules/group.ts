@@ -14,6 +14,12 @@ const mockedDetails = {
   },
 };
 
+export function updatePlotNFTs(plotNFTs: Group[]) {
+  return {
+    type: 'PLOT_NFT_UPDATE',
+    plotNFTs,
+  };
+}
 
 type GroupState = {
   groups?: Group[];
@@ -24,7 +30,7 @@ const initialState: GroupState = {
     {
       id: '1',
       self: false,
-      name: 'Group A',
+      name: 'Plot NFT A',
       poolUrl: 'http://poolin.com/info',
       state: 'FREE',
       balance: 0,
@@ -34,7 +40,7 @@ const initialState: GroupState = {
     {
       id: '2',
       self: true,
-      name: 'Group B',
+      name: 'Plot NFT B',
       state: 'POOLING',
       balance: 0,
       address: 'xch1rdgndazfzqn6qf0kt4a62k4zq6ny6altk0rfssy4xtavfysvupyq389a57',
@@ -43,7 +49,7 @@ const initialState: GroupState = {
     {
       id: '3',
       self: false,
-      name: 'Group C',
+      name: 'Plot NFT C',
       poolUrl: 'http://poolin2.com/info',
       state: 'ESCAPING',
       balance: 0,
@@ -57,13 +63,11 @@ export default function groupReducer(
   state = { ...initialState },
   action: any,
 ): GroupState {
-  const { queue } = action;
-
   switch (action.type) {
-    case 'POOL_GROUP_INIT':
+    case 'PLOT_NFT_UPDATE':
       return {
         ...state,
-        groups: action.groups,
+        groups: action.plotNFTs,
       };
     default:
       return state;

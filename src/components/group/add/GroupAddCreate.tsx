@@ -33,13 +33,13 @@ export default function GroupAddCreate() {
   return (
     <CardStep
       step="1"
-      title={<Trans>Want to Join a Pool? Create a Group</Trans>}
+      title={<Trans>Want to Join a Pool? Create a Plot NFT</Trans>}
     >
       <Typography variant="subtitle1">
         <Trans>
           Join a pool and get consistent XCH farming rewards. 
           The average returns are the same, but it is much less volatile. 
-          Assign plots to a group. When pools are released, 
+          Assign plots to a plot NFT. When pools are released, 
           you can easily switch pools without having to re-plot.
         </Trans>
       </Typography>

@@ -1,5 +1,6 @@
 import { service_farmer } from '../util/service_names';
 import { async_api } from './message';
+import { updatePlotNFTs } from './group';
 
 export const farmerMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
@@ -78,3 +79,57 @@ export const closeConnection = (node_id) => {
   action.message.data = { node_id };
   return action;
 };
+
+export const getPoolState = () => {
+  return async (dispatch) => {
+    console.log('getPoolState');
+    const { data } = await async_api(
+      dispatch,
+      farmerMessage({
+        command: 'get_pool_state',
+      }),
+      false,
+    );
+
+    const poolState = data?.pool_state;
+    console.log('poolState', poolState);
+    if (poolState) {
+      await dispatch(updatePlotNFTs(poolState));
+    }
+
+    return data?.pool_state;
+  };
+};
+
+export const setPoolPayoutInstructions = (singletonGenesis, poolPayoutInstructions) => {
+  return async (dispatch) => {
+    const { data } = await async_api(
+      dispatch,
+      farmerMessage({
+        command: 'set_pool_payout_instructions',
+        data: {
+          singleton_genesis: singletonGenesis,
+          pool_payout_instructions: poolPayoutInstructions,
+        },
+      }),
+      false,
+    );
+
+    return data;
+  };
+};
+
+export const getPlots = () => {
+  return async (dispatch) => {
+    const { data } = await async_api(
+      dispatch,
+      farmerMessage({
+        command: 'get_plots',
+      }),
+      false,
+    );
+
+    return data;
+  };
+};
+

@@ -10,7 +10,7 @@ import GroupAddCreate from './GroupAddCreate';
 import type { RootState } from '../../../modules/rootReducer';
 
 type JoinPoolFormData = {
-  type: 'SELF_POOL' | 'JOIN_POOL';
+  type: 'SELF_POOLING' | 'FARMING_TO_POOL';
   pool?: string;
 };
 
@@ -60,7 +60,7 @@ export default function GroupAdd(props: Props) {
           <Flex alignItems="center">
             <ChevronRightIcon color="secondary" />
             <Trans>
-              Add a Group
+              Add a Plot NFT
             </Trans>
           </Flex>
         </HeaderTag>

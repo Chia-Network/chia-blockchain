@@ -1,20 +1,27 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Route, Switch, useRouteMatch } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useInterval } from 'react-use';
 import { Flex, Link } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 import PoolOverview from './PoolOverview';
 import GroupAdd from '../group/add/GroupAdd';
 import { PoolHeaderTarget }  from './PoolHeader';
 import type { RootState } from '../../modules/rootReducer';
+import { getPoolState } from '../../modules/farmerMessages';
 import { PoolHeaderSource } from './PoolHeader';
 
 export default function Pool() {
   const { path } = useRouteMatch();
 
+  const dispatch = useDispatch();
   const groups = useSelector((state: RootState) => state.group.groups);
   const loading = !groups;
+
+  useInterval(() => {
+    dispatch(getPoolState());
+  }, 60000);
 
   return (
     <LayoutMain 

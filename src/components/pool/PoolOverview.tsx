@@ -124,7 +124,7 @@ export default function PoolOverview() {
         <Flex flexDirection="column" gap={1}>
           <Flex alignItems="center" justifyContent="flex-end" gap={1}>
             <Button variant="outlined" color="primary" onClick={handleAddPool}>
-              + Add a Group
+              + Add a Plot NFT
             </Button>
           </Flex>
         </Flex>
