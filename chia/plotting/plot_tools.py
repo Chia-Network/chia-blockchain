@@ -110,7 +110,9 @@ def add_plot_directory(str_path: str, root_path: Path) -> Dict:
     config = load_config(root_path, "config.yaml")
     if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+
     save_config(root_path, "config.yaml", config)
+
     return config
 
 
@@ -122,6 +124,7 @@ def get_plot_directories(root_path: Path) -> List[str]:
 def remove_plot_directory(str_path: str, root_path: Path) -> None:
     config = load_config(root_path, "config.yaml")
     str_paths: List[str] = config["harvester"]["plot_directories"]
+
     # If path str matches exactly, remove
     if str_path in str_paths:
         str_paths.remove(str_path)
@@ -132,6 +135,7 @@ def remove_plot_directory(str_path: str, root_path: Path) -> None:
         new_paths.remove(Path(str_path).resolve())
 
     config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
+
     save_config(root_path, "config.yaml", config)
 
 
