@@ -38,8 +38,16 @@ class WalletInterestedStore:
         rows_hex = await cursor.fetchall()
         return [bytes32(bytes.fromhex(row[0])) for row in rows_hex]
 
-    async def add_interested_coin_id(self, coin_id: bytes32) -> None:
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO interested_coins VALUES (?)", (coin_id.hex(),)
-        )
-        await cursor.close()
+    async def add_interested_coin_id(self, coin_id: bytes32, in_transaction: bool = False) -> None:
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO interested_coins VALUES (?)", (coin_id.hex(),)
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()

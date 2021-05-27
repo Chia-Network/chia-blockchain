@@ -231,9 +231,10 @@ class WalletBlockchain(BlockchainInterface):
                     await self.block_store.add_block_record(header_block_record, block_record, additional_coin_spends)
                     self.add_block_record(block_record)
                     self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
-
+                    if len(additional_coin_spends) > 0:
+                        log.warning("here mate")
                     fork_height: Optional[uint32] = await self._reconsider_peak(
-                        block_record, genesis, fork_point_with_peak
+                        block_record, genesis, fork_point_with_peak, additional_coin_spends
                     )
                     await self.block_store.db_wrapper.commit_transaction()
                 except BaseException as e:
@@ -250,7 +251,11 @@ class WalletBlockchain(BlockchainInterface):
                 return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
     async def _reconsider_peak(
-        self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
+        self,
+        block_record: BlockRecord,
+        genesis: bool,
+        fork_point_with_peak: Optional[uint32],
+        additional_coin_spends: List[CoinSolution],
     ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -267,7 +272,7 @@ class WalletBlockchain(BlockchainInterface):
                 assert block is not None
                 self.__height_to_hash[uint32(0)] = block.header_hash
                 assert len(block.additions) == 0 and len(block.removals) == 0
-                await self.coins_of_interest_received(block.removals, block.additions, block.height)
+                await self.coins_of_interest_received(block.removals, block.additions, block.height, [])
                 self._peak_height = uint32(0)
                 return uint32(0)
             return None
@@ -300,9 +305,8 @@ class WalletBlockchain(BlockchainInterface):
             while fork_h < 0 or curr != self.height_to_hash(uint32(fork_h)):
                 fetched_header_block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(curr)
                 fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
-                additional_coin_spends: Optional[
-                    List[CoinSolution]
-                ] = await self.block_store.get_additional_coin_spends(curr)
+                if curr != block_record.header_hash:
+                    additional_coin_spends = await self.block_store.get_additional_coin_spends(curr)
                 if additional_coin_spends is None:
                     additional_coin_spends = []
                 assert fetched_header_block is not None

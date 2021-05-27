@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 import pytest
 
@@ -16,6 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
@@ -93,39 +94,64 @@ class TestPoolWalletRpc:
             await time_out_assert(10, wallet_0.get_spendable_balance, total_block_rewards)
             assert total_block_rewards > 0
 
-            val = await client.create_new_pool_wallet(ph, "", 0, "localhost:5000", "new", "SELF_POOLING")
-            log.warning(f"Reponse: {val}")
+            summaries_response = await client.get_wallets()
+            for summary in summaries_response:
+                if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                    assert False
 
-            assert isinstance(val, dict)
-            assert val["success"]
-            assert val["wallet_id"] == 2
-            assert val["type"] == WalletType.POOLING_WALLET.value
-            log.warning(f"Current stat: {val['current_state']}")
-
-            assert val["target_state"]["state"] == SELF_POOLING.value
-
-            assert val["current_state"] == {
-                "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
-                "pool_url": None,
-                "relative_lock_height": 0,
-                "state": 1,
-                "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-                "version": 1,
-            }
-            # TODO: Put the p2_puzzle_hash in the config for the plotter
-
-            status: Dict = await client.pw_status(2)
-            log.warning(f"Initial staus: {status}")
-            await asyncio.sleep(2)
-            assert (
-                full_node_api.full_node.mempool_manager.get_mempool_item(
-                    bytes32(hexstr_to_bytes(val["pending_transaction_id"]))
-                )
-                is not None
+            creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+                ph, "", 0, "localhost:5000", "new", "SELF_POOLING"
             )
+
+            await time_out_assert(
+                10,
+                full_node_api.full_node.mempool_manager.get_spendbundle,
+                creation_tx.spend_bundle,
+                creation_tx.name,
+            )
+
             await self.farm_blocks(full_node_api, ph, 3)
-            status: Dict = await client.pw_status(2)
-            log.warning(f"New staus: {status}")
+            assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+
+            summaries_response = await client.get_wallets()
+            wallet_id: Optional[int] = None
+            for summary in summaries_response:
+                if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                    wallet_id = summary["id"]
+            assert wallet_id is not None
+
+            status: Dict = await client.pw_status(wallet_id)
+            log.warning(f"New status: {status}")
+
+            # log.warning(f"Reponse: {val}")
+            #
+            # assert isinstance(val, dict)
+            # assert val["success"]
+            # assert val["wallet_id"] == 2
+            # assert val["type"] == WalletType.POOLING_WALLET.value
+            # log.warning(f"Current stat: {val['current_state']}")
+            #
+            # assert val["target_state"]["state"] == SELF_POOLING.value
+            #
+            # assert val["current_state"] == {
+            #     "owner_pubkey": "0x844ab45b6bb8e674c8452de2a018209cf8a05ee25782fd12c6a202ffd953a28caa560f20a3838d4f31a1ad4fed573e94",
+            #     "pool_url": None,
+            #     "relative_lock_height": 0,
+            #     "state": 1,
+            #     "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+            #     "version": 1,
+            # }
+            # # TODO: Put the p2_puzzle_hash in the config for the plotter
+            #
+            # status: Dict = await client.pw_status(2)
+            # log.warning(f"Initial staus: {status}")
+            # await asyncio.sleep(2)
+            # assert (
+            #     full_node_api.full_node.mempool_manager.get_mempool_item(
+            #         bytes32(hexstr_to_bytes(val["pending_transaction_id"]))
+            #     )
+            #     is not None
+            # )
 
         finally:
             client.close()
@@ -294,7 +320,7 @@ class TestPoolWalletRpc:
                 "puzzle_hash": "0x879d46938cfe331fb3cb1ea7ac5abde72e17041a0a2208549dfac1cb18d2e073",
                 "amount": 1,
             },
-            "singleton_genesis": "0x9f2f042d178394772aa485bc59254174fceb78d111db98bb77b821c222118183",
+            "launcher_id": "0x9f2f042d178394772aa485bc59254174fceb78d111db98bb77b821c222118183",
             "parent_list": [
                 [
                     "0x9f2f042d178394772aa485bc59254174fceb78d111db98bb77b821c222118183",

@@ -29,7 +29,6 @@ from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
-    master_sk_to_pooling_authentication_sk,
 )
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.wallet.test_singleton import P2_SINGLETON_MOD
@@ -162,7 +161,7 @@ class Farmer:
                     pool_config_dict["pool_url"],
                     pool_config_dict["pool_payout_instructions"],
                     hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
-                    hexstr_to_bytes(pool_config_dict["singleton_genesis"]),
+                    hexstr_to_bytes(pool_config_dict["launcher_id"]),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
                     G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
                     pool_config_dict["authentication_public_key_timestamp"],
@@ -177,7 +176,7 @@ class Farmer:
             p2_singleton_full = P2_SINGLETON_MOD.curry(
                 singleton_mod_hash,
                 Program.to(singleton_mod_hash).get_tree_hash(),
-                pool_config.singleton_genesis,
+                pool_config.launcher_id,
             )
             p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
             try:
@@ -211,18 +210,6 @@ class Farmer:
                             self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
             except Exception as e:
                 self.log.error(f"Exception fetching pool info from {pool_config.pool_url}, {e}")
-
-    async def _find_authentication_sk(self, authentication_pk: G1Element) -> Optional[G1Element]:
-        # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
-        # many times.
-        all_sks = self.keychain.get_all_private_keys()
-        for wallet_id in range(20):
-            for auth_key_index in range(20):
-                for sk, _ in all_sks:
-                    auth_sk = master_sk_to_pooling_authentication_sk(sk, uint32(wallet_id), uint32(auth_key_index))
-                    if auth_sk.get_g1() == authentication_pk:
-                        return auth_sk
-        return None
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]
@@ -267,13 +254,13 @@ class Farmer:
             config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
-    async def set_pool_payout_instructions(self, singleton_genesis: bytes32, pool_payout_instructions: str):
+    async def set_pool_payout_instructions(self, launcher_id: bytes32, pool_payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
-            if singleton_genesis == pool_state_dict["pool_config"].singleton_genesis:
+            if launcher_id == pool_state_dict["pool_config"].launcher_id:
                 config = load_config(self._root_path, "config.yaml")
                 new_list = []
                 for list_element in config["pool"]["pool_list"]:
-                    if bytes.fromhex(list_element["singleton_genesis"]) == bytes(singleton_genesis):
+                    if bytes.fromhex(list_element["launcher_id"]) == bytes(launcher_id):
                         list_element["pool_payout_instructions"] = pool_payout_instructions
                     new_list.append(list_element)
 
@@ -282,7 +269,7 @@ class Farmer:
                 await self._update_pool_state()
                 return
 
-        self.log.warning(f"Singleton genesis: {singleton_genesis} not found")
+        self.log.warning(f"Launcher id: {launcher_id} not found")
 
     async def get_plots(self) -> Dict:
         rpc_response = {}

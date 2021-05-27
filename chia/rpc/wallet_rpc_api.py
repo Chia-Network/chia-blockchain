@@ -23,6 +23,7 @@ from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
@@ -457,19 +458,25 @@ class WalletRpcApi:
                 }
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
-                dr = await self.service.wallet_state_manager.get_unused_derivation_record(main_wallet.id())
+                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
 
-                owner_pubkey, owner_puzzlehash = dr.pubkey, dr.puzzle_hash
                 from chia.pools.pool_wallet_info import pool_state_from_dict
 
-                err, initial_target_state = pool_state_from_dict(
-                    request["initial_target_state"], owner_pubkey, owner_puzzlehash
-                )
-                if err is not None:
-                    raise ValueError(str(err))
                 async with self.service.wallet_state_manager.lock:
+                    last_wallet: WalletInfo = await self.service.wallet_state_manager.user_store.get_last_wallet()
+                    next_id = last_wallet.id + 1
+                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
+                        self.service.wallet_state_manager.private_key, next_id
+                    )
+                    owner_pk: G1Element = owner_sk.get_g1()
+
+                    err, initial_target_state = pool_state_from_dict(
+                        request["initial_target_state"], owner_pk, owner_puzzle_hash
+                    )
+                    if err is not None:
+                        raise ValueError(str(err))
                     try:
-                        pool_wallet: PoolWallet = await PoolWallet.create_new_pool_wallet_transactions(
+                        tr: TransactionRecord = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
@@ -477,9 +484,7 @@ class WalletRpcApi:
                         )
                     except Exception as e:
                         raise ValueError(str(e))
-                return {
-                    "state": pool_wallet.pool_info.to_json_dict(),
-                }
+                    return {"transaction": tr}
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
 
