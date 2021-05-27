@@ -9,7 +9,7 @@ COPY ./app /app
 RUN mkdir /root/.chia && ln -s /app/tests/test-cache/test-plots /root/.chia/test-plots && ln -s /app/tests/test-cache/blocks /root/.chia/blocks
 WORKDIR /app
 ENV PYTHON_VERSIONS="$PYTHON_VERSIONS"
-RUN echo $PYTHON_VERSIONS > /app/pyvers.txt
+RUN echo $PYTHON_VERSIONS | tr ' ' '\n' > /app/pyvers.txt
 RUN cat /app/pyvers.txt
 ENV CHIATEST=chiatest
 RUN apt-get update

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for PYVER in $(cat /app/pyvers.txt) ; do
+cat /app/pyvers.txt | while read PYVER ; do
     echo python "$PYVER"
     conda env create -f "environment$PYVER.yml"
     conda run -n "python$PYVER" sh install.sh
