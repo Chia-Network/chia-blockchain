@@ -34,18 +34,44 @@ def monkey_patch_click() -> None:
     click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore
 
 
+def supports_keyring_password() -> bool:
+    from sys import platform
+
+    return platform == "linux"
+
+
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
+@click.option("--password-file", type=click.File("r"), help="File or descriptor to read the keyring password from")
 @click.pass_context
-def cli(ctx: click.Context, root_path: str) -> None:
+def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
     from pathlib import Path
 
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
+
+    password_file = kwargs["password_file"]
+    if password_file:
+        from .password_funcs import read_password_from_file
+
+        try:
+            ctx.obj["keyring_password"] = read_password_from_file(password_file)
+        except Exception as e:
+            print(f"Failed to read password: {e}")
+
+
+if not supports_keyring_password():
+    # TODO: Click doesn't seem to have a great way of adding/removing params, and using
+    # the decorator-supported construction of options doesn't allow for conditionally
+    # including options. Once keyring password management is rolled out to all platforms
+    # this can be removed.
+    index = next((i for i in range(len(cli.params)) if cli.params[i].name == "password_file"), -1)
+    if index != -1:
+        del cli.params[index]
 
 
 @cli.command("version", short_help="Show chia version")
@@ -60,12 +86,6 @@ def run_daemon_cmd(ctx: click.Context) -> None:
     import asyncio
 
     asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))
-
-
-def supports_keyring_password() -> bool:
-    from sys import platform
-
-    return platform == "linux"
 
 
 cli.add_command(keys_cmd)
