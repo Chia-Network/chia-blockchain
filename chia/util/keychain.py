@@ -23,7 +23,10 @@ MAX_RETRIES = 3
 
 
 class _KeyringWrapper:
-    # Static instances
+    # Static members
+    __shared_instance = None
+
+    # Instance members
     __keyring = None
     __cached_password: Optional[str] = None
 
@@ -45,25 +48,26 @@ class _KeyringWrapper:
         else:
             keyring = keyring_main
 
-        _KeyringWrapper.__keyring = keyring
+        self.__keyring = keyring
+        _KeyringWrapper.__shared_instance = self
 
     @staticmethod
-    def get_keyring():
-        if not _KeyringWrapper.__keyring:
+    def get_shared_instance():
+        if not _KeyringWrapper.__shared_instance:
             _KeyringWrapper()
+        
+        return _KeyringWrapper.__shared_instance
+    
+    def get_keyring(self):
+        return self.__keyring
 
-        return _KeyringWrapper.__keyring
+    def get_cached_password(self) -> Optional[str]:
+        return self.__cached_password
 
-    @staticmethod
-    def get_cached_password() -> Optional[str]:
-        return _KeyringWrapper.__cached_password
+    def set_cached_password(self, password: Optional[str]) -> None:
+        self.__cached_password = password
 
-    @staticmethod
-    def set_cached_password(password: Optional[str]) -> None:
-        _KeyringWrapper.__cached_password = password
-
-    @staticmethod
-    def is_password_protected() -> bool:
+    def is_password_protected(self) -> bool:
         """
         Returns a bool indicating whether the underlying keyring data
         is secured by a password.
@@ -71,44 +75,42 @@ class _KeyringWrapper:
         # TODO: Inspect blob
         return False
 
-    @staticmethod
-    def password_is_valid(password: Optional[str]) -> bool:
+    def password_is_valid(self, password: Optional[str]) -> bool:
+        # TODO: Checkbytes
         return password == "asdfasdf"
 
-    @staticmethod
-    def set_password(current_password: Optional[str], new_password: str) -> None:
-        if _KeyringWrapper.is_password_protected() and not _KeyringWrapper.password_is_valid(current_password):
+    def set_password(self, current_password: Optional[str], new_password: str) -> None:
+        if self.is_password_protected() and not self.password_is_valid(current_password):
             raise ValueError("invalid current password")
         # TODO: Encrypt blob
-        _KeyringWrapper.set_cached_password(new_password)
-        print(f"setting password: {new_password}, current_password: {current_password}")
+        self.set_cached_password(new_password)
+        print(f"(TODO: remove) setting password: {new_password}, current_password: {current_password}")
 
-    @staticmethod
-    def remove_password(current_password: Optional[str]) -> None:
+    def remove_password(self, current_password: Optional[str]) -> None:
         if _KeyringWrapper.is_password_protected() and not _KeyringWrapper.password_is_valid(current_password):
             raise ValueError("invalid current password")
-        print(f"removing password: current_password: {current_password}")
+        print(f"(TODO: remove) removing password: current_password: {current_password}")
 
 
 def obtain_current_password(prompt: str = "Password: ", use_password_cache: bool = False) -> str:
-    print(f"obtain_current_password: use_password_cache: {use_password_cache}")
+    print(f"(TODO: remove) obtain_current_password: use_password_cache: {use_password_cache}")
 
     if use_password_cache:
-        password = _KeyringWrapper.get_cached_password()
+        password = _KeyringWrapper.get_shared_instance().get_cached_password()
         if password:
-            if _KeyringWrapper.password_is_valid(password):
+            if _KeyringWrapper.get_shared_instance().password_is_valid(password):
                 return password
             else:
                 # Cached password is bad, clear the cache
-                _KeyringWrapper.set_cached_password(None)
+                _KeyringWrapper.get_shared_instance().set_cached_password(None)
 
     for i in range(MAX_RETRIES):
         password = getpass(prompt)
 
-        if _KeyringWrapper.password_is_valid(password):
+        if _KeyringWrapper.get_shared_instance().password_is_valid(password):
             # If using the password cache, and the user inputted a password, update the cache
             if use_password_cache:
-                _KeyringWrapper.set_cached_password(password)
+                _KeyringWrapper.get_shared_instance().set_cached_password(password)
             return password
 
         sleep(FAILED_ATTEMPT_DELAY)
@@ -117,12 +119,12 @@ def obtain_current_password(prompt: str = "Password: ", use_password_cache: bool
 
 
 def unlock_keyring_if_necessary(use_password_cache=False) -> None:
-    if _KeyringWrapper.is_password_protected():
+    if _KeyringWrapper.get_shared_instance().is_password_protected():
         obtain_current_password(use_password_cache=use_password_cache)
 
 
 def unlocks_keyring(use_password_cache=False):
-    print(f"unlocks_keyring: use_password_cache: {use_password_cache}")
+    print(f"(TODO: remove) unlocks_keyring: use_password_cache: {use_password_cache}")
 
     def inner(func):
         """
@@ -244,7 +246,7 @@ class Keychain:
         Returns the underlying keyring wrapped by KeyringWrapper. Implementations
         differ based on the host OS.
         """
-        return _KeyringWrapper.get_keyring()
+        return _KeyringWrapper.get_shared_instance().get_keyring()
 
     def _get_service(self) -> str:
         """
@@ -467,25 +469,25 @@ class Keychain:
         Returns a bool indicating whether the underlying keyring data
         is secured by a password.
         """
-        return _KeyringWrapper.is_password_protected()
+        return _KeyringWrapper.get_shared_instance().is_password_protected()
 
     @staticmethod
     def password_is_valid(password: str) -> bool:
-        return _KeyringWrapper.password_is_valid(password)
+        return _KeyringWrapper.get_shared_instance().password_is_valid(password)
 
     @staticmethod
     def has_cached_password() -> bool:
-        password = _KeyringWrapper.get_cached_password()
+        password = _KeyringWrapper.get_shared_instance().get_cached_password()
         return password != None and len(password) > 0
 
     @staticmethod
     def set_cached_password(password: Optional[str]) -> None:
-        _KeyringWrapper.set_cached_password(password)
+        _KeyringWrapper.get_shared_instance().set_cached_password(password)
 
     @staticmethod
     def set_password(current_password: Optional[str], new_password: str) -> None:
-        _KeyringWrapper.set_password(current_password, new_password)
+        _KeyringWrapper.get_shared_instance().set_password(current_password, new_password)
 
     @staticmethod
     def remove_password(current_password: Optional[str]) -> None:
-        _KeyringWrapper.remove_password(current_password)
+        _KeyringWrapper.get_shared_instance().remove_password(current_password)
