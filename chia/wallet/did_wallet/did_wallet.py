@@ -432,8 +432,8 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
         new_puzhash = await self.get_new_inner_hash()
-        # innerpuz solution is (mode amount messages identity new_puz)
-        innersol: Program = Program.to([1, coin.amount, [], coin.name(), new_puzhash])
+        # innerpuz solution is (mode amount messages new_puz)
+        innersol: Program = Program.to([1, coin.amount, [], new_puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -498,8 +498,8 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
         amount = coin.amount - 1
-        # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol: Program = Program.to([0, amount, puzhash, coin.name(), coin.puzzle_hash])
+        # innerpuz solution is (mode amount new_puzhash)
+        innersol: Program = Program.to([0, amount, puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -568,10 +568,11 @@ class DIDWallet:
         coin = coins.pop()
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
         innermessage = message.get_tree_hash()
-        # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to([1, coin.amount, [innermessage], recovering_coin_name, coin.puzzle_hash])
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
+        # innerpuz solution is (mode, amount, message, new_inner_puzhash)
+        innersol = Program.to([1, coin.amount, [innermessage], innerpuz.get_tree_hash()])
+
+        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
@@ -594,7 +595,7 @@ class DIDWallet:
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        to_sign = Program.to([coin.puzzle_hash, coin.amount, [innermessage]]).get_tree_hash()
+        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, [innermessage]]).get_tree_hash()
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
@@ -693,13 +694,12 @@ class DIDWallet:
     ) -> SpendBundle:
         assert self.did_info.origin_coin is not None
 
-        # innersol is (mode amount new_puz my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
+        # innersol is (mode amount new_puz my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
         innersol = Program.to(
             [
                 2,
                 coin.amount,
                 puzhash,
-                coin.name(),
                 puzhash,
                 parent_innerpuzhash_amounts_for_recovery_ids,
                 bytes(pubkey),
@@ -869,8 +869,8 @@ class DIDWallet:
 
     async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
         assert self.did_info.origin_coin is not None
-        # innerpuz solution is (mode amount message my_id new_puzhash)
-        innersol = Program.to([1, coin.amount, [], coin.name(), innerpuz.get_tree_hash()])
+        # innerpuz solution is (mode amount message new_puzhash)
+        innersol = Program.to([1, coin.amount, [], innerpuz.get_tree_hash()])
         # full solution is (parent_info my_amount innersolution)
         fullsol = Program.to(
             [
