@@ -5,7 +5,6 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
-from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
