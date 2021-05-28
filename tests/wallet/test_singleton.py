@@ -171,6 +171,8 @@ def test_pool_puzzles():
     # full_sol = parent_info, my_amount, inner_solution
     full_sol = Program.to([[launcher_coin.parent_coin_info, launcher_coin.amount], singleton_amount, inner_sol])
     cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
+    """
+    Retrieves all entries for a wallet ID from the cache, works even if commit is not called yet."""
 
     conditions = result.as_python()
     assert bytes32(result.first().rest().first().as_atom()) == singleton_coin.name()

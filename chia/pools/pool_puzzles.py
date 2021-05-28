@@ -162,11 +162,12 @@ def create_absorb_spend(
     ]
 
 
-def get_most_recent_singleton_coin_from_coin_solution(coinsol: CoinSolution) -> Coin:
-    additions = coinsol.additions()
+def get_most_recent_singleton_coin_from_coin_solution(coin_sol: CoinSolution) -> Optional[Coin]:
+    additions: List[Coin] = coin_sol.additions()
     for coin in additions:
         if coin.amount % 2 == 1:
             return coin
+    return None
 
 
 def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:

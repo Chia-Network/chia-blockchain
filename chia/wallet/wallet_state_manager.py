@@ -148,6 +148,7 @@ class WalletStateManager:
             self.block_store,
             self.coin_store,
             self.tx_store,
+            self.pool_store,
             self.constants,
             self.coins_of_interest_received,
             self.reorg_rollback,
@@ -568,11 +569,9 @@ class WalletStateManager:
             await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
 
         if len(additional_coin_spends) > 0:
-            self.log.warning(f"Additional coin spends: {len(additional_coin_spends)}")
             created_pool_wallet_ids: List[int] = []
             for cs in additional_coin_spends:
                 if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
-                    self.log.warning("Found created launcher :). now make the wallet")
                     already_have = False
                     for wallet_id, wallet in self.wallets.items():
                         if (
@@ -582,12 +581,11 @@ class WalletStateManager:
                             self.log.warning("Already have, not recreating")
                             already_have = True
                     if not already_have:
+                        self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(
                             self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, True, "pool_wallet"
                         )
                         created_pool_wallet_ids.append(pool_wallet.wallet_id)
-                        self.log.warning(f"MADE WALLET ID: {pool_wallet.wallet_id}")
-                        await self.pool_store.get_all_state_transitions(pool_wallet.wallet_id)
 
             for wallet_id, wallet in self.wallets.items():
                 if wallet.type() == WalletType.POOLING_WALLET and wallet_id not in created_pool_wallet_ids:

@@ -40,6 +40,7 @@ from chia.wallet.wallet import Wallet
 
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.wallet_transaction_store import WalletTransactionStore
 
 
 class PoolWallet:
@@ -162,12 +163,11 @@ class PoolWallet:
         if err:
             raise ValueError(f"Invalid internal Pool State: {err}: {initial_target_state}")
 
-    async def get_current_state(self, all_spends: Optional[List[CoinSolution]] = None) -> PoolWalletInfo:
-        if all_spends is None:
-            history: List[
-                Tuple[int, uint32, CoinSolution]
-            ] = await self.wallet_state_manager.pool_store.get_all_state_transitions(self.wallet_id)
-            all_spends: List[CoinSolution] = [cs for _, _, cs in history]
+    async def get_current_state(self) -> PoolWalletInfo:
+        history: List[Tuple[uint32, CoinSolution]] = self.wallet_state_manager.pool_store.get_spends_for_wallet(
+            self.wallet_id
+        )
+        all_spends: List[CoinSolution] = [cs for _, cs in history]
 
         # We must have at least the launcher spend
         assert len(all_spends) >= 1
@@ -185,11 +185,12 @@ class PoolWallet:
         current_inner = pool_state_to_inner_puzzle(extra_data)
         return PoolWalletInfo(extra_data, self.target_state, launcher_coin, current_inner, tip_singleton_coin_id)
 
-    async def get_tip(self) -> bytes32:
-        return (await self.get_current_state()).tip_singleton_coin_id
+    async def get_tip(self) -> Tuple[uint32, CoinSolution]:
+        return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)[-1]
 
-    async def update_pool_config(self, spends: List[CoinSolution], make_new_authentication_key: bool):
-        current_state: PoolWalletInfo = await self.get_current_state(spends)
+    async def update_pool_config(self, make_new_authentication_key: bool):
+        pass
+        # current_state: PoolWalletInfo = await self.get_current_state(spends)
         # config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.wallet_node.root_path)
         # full_config: Dict = load_config(self.wallet_state_manager.wallet_node.root_path, "config.yaml")
         #
@@ -233,53 +234,45 @@ class PoolWallet:
     def get_next_interesting_coin_ids(spend: CoinSolution) -> List[bytes32]:
         # CoinSolution of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
         # If we return a value, it is a coin ID that we are also interested in (to support two transitions per block)
-        additions: List[Coin] = spend.additions()
-        for coin in additions:
-            if coin.amount % 2 == 1:
-                return [coin.name()]
+        coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(spend)
+        if coin is not None:
+            return [coin.name()]
         return []
 
     async def apply_state_transitions(self, block_spends: List[CoinSolution], block_height: uint32):
         """
         Updates the Pool state (including DB) with new singleton spends. The block spends can contain many spends
         that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
-        The DB must be committed after calling this method.
+        The DB must be committed after calling this method. All validation should be done here.
         """
-        history: List[
-            Tuple[int, uint32, CoinSolution]
-        ] = await self.wallet_state_manager.pool_store.get_all_state_transitions(self.wallet_id)
-        all_spends: List[CoinSolution] = [cs for _, _, cs in history]
-        tip: bytes32 = await self.get_tip()
-        # Applies the spends one at a time. We need to keep track of the new ones, so we can add them to the DB
-        # at the end. We don't add them one at a time because we cannot commit to the DB until later.
-        new_spends: List[CoinSolution] = []
-        advanced_state = True
-        while advanced_state:
-            advanced_state = False
-            for spend in block_spends:
-                if spend.coin.name() == tip:
-                    new_tip: bytes32 = get_most_recent_singleton_coin_from_coin_solution(spend).name()
-                    if new_tip != tip:
-                        # Updated tip
-                        self.log.info(f"Updated tip of this pool wallet to {self.get_tip()}")
-                        tip = new_tip
-                        all_spends.append(spend)
-                        new_spends.append(spend)
-                        advanced_state = True
-                        break
-        await self.wallet_state_manager.pool_store.apply_state(self.wallet_id, new_spends, block_height)
-        await self.update_pool_config(all_spends, False)
+        coin_name_to_spend: Dict[bytes32, CoinSolution] = {cs.coin.name(): cs for cs in block_spends}
+
+        tip: Tuple[uint32, CoinSolution] = await self.get_tip()
+
+        while get_most_recent_singleton_coin_from_coin_solution(tip[1]).name() in coin_name_to_spend:
+            assert block_height < tip[0]  # We should not have a spend with a lesser block height
+            spend: CoinSolution = coin_name_to_spend[tip]
+            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, block_height)
+            tip = await self.get_tip()
+
+        await self.update_pool_config(False)
 
     async def rewind(self, block_height: int) -> None:
         """
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
         """
+        history: List[Tuple[uint32, CoinSolution]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
+            self.wallet_id
+        ).copy()
         await self.wallet_state_manager.pool_store.rollback(block_height)
-        history: List[
-            Tuple[int, uint32, CoinSolution]
-        ] = await self.wallet_state_manager.pool_store.get_all_state_transitions(self.wallet_id)
-        if history[0][1] > block_height:
+
+        if len(history) > 0 and history[0][0] > block_height:
+            # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
+            # The PoolWallet object becomes invalid after this.
             await self.wallet_state_manager.user_store.delete_wallet(self.wallet_id)
+            await self.wallet_state_manager.wallets.pop(self.wallet_id)
+        else:
+            await self.update_pool_config(False)
 
     @staticmethod
     async def create(
@@ -312,8 +305,8 @@ class PoolWallet:
                 launcher_spend = spend
         assert launcher_spend is not None
 
-        await self.wallet_state_manager.pool_store.apply_state(self.wallet_id, [launcher_spend], block_height)
-        await self.update_pool_config([launcher_spend], True)
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
+        await self.update_pool_config(True)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
         return self
