@@ -1,4 +1,5 @@
 import click
+from chia.cmds.password_funcs import initialize_password, remove_passwords_options_from_cmd, supports_keyring_password
 
 
 @click.command("init", short_help="Create or migrate the configuration")
@@ -9,8 +10,14 @@ import click
     help="Create new SSL certificates based on CA in [directory]",
     type=click.Path(),
 )
+@click.option(
+    "--set-password",
+    "-s",
+    is_flag=True,
+    help="Password protect your keyring"
+)
 @click.pass_context
-def init_cmd(ctx: click.Context, create_certs: str):
+def init_cmd(ctx: click.Context, create_certs: str, **kwargs):
     """
     Create a new configuration or migrate from previous versions to current
 
@@ -26,7 +33,16 @@ def init_cmd(ctx: click.Context, create_certs: str):
     from pathlib import Path
     from .init_funcs import init
 
+    set_password = kwargs.get("set_password")
+    if set_password:
+      initialize_password()
+
     init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"])
+
+
+if not supports_keyring_password():
+    # TODO: Remove once keyring password management is rolled out to all platforms
+    remove_passwords_options_from_cmd(init_cmd)
 
 
 if __name__ == "__main__":
