@@ -50,8 +50,8 @@ steps:
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
       cd build_scripts
-      touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      touch $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
+      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
     displayName: "Install dependencies"
 
   - script: |
@@ -108,6 +108,7 @@ steps:
 
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-      export CHIA_VERSION= "chia-test"$(<version.txt)
-      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+      cd $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+      export CHIA_VERSION="Chia-"$(<version.txt)
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg.checksum
     displayName: "Create Checksums"
