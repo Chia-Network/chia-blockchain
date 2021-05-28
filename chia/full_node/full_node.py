@@ -68,6 +68,7 @@ class FullNode:
     mempool_manager: MempoolManager
     connection: aiosqlite.Connection
     _sync_task: Optional[asyncio.Task]
+    _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
     config: Dict
     server: Any
@@ -127,10 +128,10 @@ class FullNode:
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
-        asyncio.create_task(self.initialize_weight_proof())
+        self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
         if self.config.get("enable_profiler", False):
-            asyncio.create_task(profile_task(self.root_path, self.log))
+            asyncio.create_task(profile_task(self.root_path, "node", self.log))
 
         self._sync_task = None
         self._segment_task = None
@@ -531,6 +532,8 @@ class FullNode:
 
     def _close(self):
         self._shut_down = True
+        if self._init_weight_proof is not None:
+            self._init_weight_proof.cancel()
         if self.blockchain is not None:
             self.blockchain.shut_down()
         if self.mempool_manager is not None:
@@ -545,6 +548,8 @@ class FullNode:
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
+        if self._init_weight_proof is not None:
+            await asyncio.wait([self._init_weight_proof])
 
     async def _sync(self):
         """

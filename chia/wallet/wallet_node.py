@@ -49,6 +49,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_blockchain import ReceiveBlockResult
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.util.profiler import profile_task
 
 
 class WalletNode:
@@ -139,6 +140,9 @@ class WalletNode:
         if private_key is None:
             self.logged_in = False
             return False
+
+        if self.config.get("enable_profiler", False):
+            asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
         db_path_replaced: str = (
@@ -364,6 +368,8 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return None
         header_block_records: List[HeaderBlockRecord] = []
+        assert self.server
+        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
         async with self.wallet_state_manager.blockchain.lock:
             for block in header_blocks:
                 if block.is_transaction_block:
@@ -389,7 +395,7 @@ class WalletNode:
                     result,
                     error,
                     fork_h,
-                ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
+                ) = await self.wallet_state_manager.blockchain.receive_block(hbr, trusted=trusted)
                 if result == ReceiveBlockResult.NEW_PEAK:
                     if not self.wallet_state_manager.sync_mode:
                         self.wallet_state_manager.blockchain.clean_block_records()
