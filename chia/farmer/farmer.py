@@ -1,25 +1,42 @@
 import asyncio
+import dataclasses
+import json
 import logging
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from blspy import G1Element
+import aiohttp
+from blspy import G1Element, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+    find_authentication_sk,
+)
+from chia.wallet.puzzles.load_clvm import load_clvm
+from tests.wallet.test_singleton import P2_SINGLETON_MOD
+
+SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +95,7 @@ class Farmer:
 
         self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
-        # This is the pool configuration, which should be moved out to the pool once it exists
+        # This is the self pooling configuration, which is only used for original self-pooled plots
         self.pool_target_encoded = pool_config["xch_target_address"]
         self.pool_target = decode_puzzle_hash(self.pool_target_encoded)
         self.pool_sks_map: Dict = {}
@@ -91,8 +108,19 @@ class Farmer:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
+        # The variables below are for use with an actual pool
+
+        # List of configs from from config.yaml
+
+        # From p2_singleton_puzzle_hash to pool state dict
+        self.pool_state: Dict[bytes32, Dict] = {}
+
+        # From public key bytes to PrivateKey
+        self.authentication_keys: Dict[bytes, PrivateKey] = {}
+
     async def _start(self):
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
+        await self._update_pool_state()
 
     def _close(self):
         self._shut_down = True
@@ -123,6 +151,48 @@ class Farmer:
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
+
+    async def _update_pool_state(self):
+        pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
+        for pool_config in pool_config_list:
+            p2_singleton_full = P2_SINGLETON_MOD.curry(
+                singleton_mod_hash,
+                Program.to(singleton_mod_hash).get_tree_hash(),
+                pool_config.launcher_id,
+            )
+            p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
+            try:
+                all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
+                authentication_sk: Optional[PrivateKey] = await find_authentication_sk(
+                    all_sks, pool_config.authentication_public_key
+                )
+                if authentication_sk is None:
+                    self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")
+                    continue
+                if p2_singleton_puzzle_hash not in self.pool_state:
+                    self.authentication_keys[bytes(pool_config.authentication_public_key)] = authentication_sk
+                    self.pool_state[p2_singleton_puzzle_hash] = {
+                        "points_found_since_start": 0,
+                        "points_found_24h": [],
+                        "points_acknowledged_since_start": 0,
+                        "points_acknowledged_24h": [],
+                        "current_points_balance": 0,
+                        "current_difficulty": 10,
+                        "pool_errors_24h": [],
+                        "pool_info": {},
+                    }
+                    self.log.info(f"Added pool: {pool_config}")
+                self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
+
+                # Makes a GET request to the pool to get the updated information
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f"http://{pool_config.pool_url}/get_pool_info") as resp:
+                        if resp.ok:
+                            self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
+                        else:
+                            self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
+            except Exception as e:
+                self.log.error(f"Exception fetching pool info from {pool_config.pool_url}, {e}")
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]
@@ -167,6 +237,42 @@ class Farmer:
             config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
+    async def set_pool_payout_instructions(self, launcher_id: bytes32, pool_payout_instructions: str):
+        for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
+            if launcher_id == pool_state_dict["pool_config"].launcher_id:
+                config = load_config(self._root_path, "config.yaml")
+                new_list = []
+                for list_element in config["pool"]["pool_list"]:
+                    if bytes.fromhex(list_element["launcher_id"]) == bytes(launcher_id):
+                        list_element["pool_payout_instructions"] = pool_payout_instructions
+                    new_list.append(list_element)
+
+                config["pool"]["pool_list"] = new_list
+                save_config(self._root_path, "config.yaml", config)
+                await self._update_pool_state()
+                return
+
+        self.log.warning(f"Launcher id: {launcher_id} not found")
+
+    async def get_plots(self) -> Dict:
+        rpc_response = {}
+        for connection in self.server.get_connections():
+            if connection.connection_type == NodeType.HARVESTER:
+                peer_host = connection.peer_host
+                peer_port = connection.peer_port
+                peer_full = f"{peer_host}:{peer_port}"
+                response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
+                if response is None:
+                    self.log.error(
+                        "Harvester did not respond. You might need to update harvester to the latest version"
+                    )
+                    continue
+                if not isinstance(response, harvester_protocol.RespondPlots):
+                    self.log.error(f"Invalid response from harvester: {peer_host}:{peer_port}")
+                    continue
+                rpc_response[peer_full] = response.to_json_dict()
+        return rpc_response
+
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
         while not self._shut_down:
@@ -174,7 +280,7 @@ class Farmer:
                 now = time.time()
                 removed_keys: List[bytes32] = []
                 for key, add_time in self.cache_add_time.items():
-                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 2:
+                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
                         self.sps.pop(key, None)
                         self.proofs_of_space.pop(key, None)
                         self.quality_str_to_identifiers.pop(key, None)
@@ -187,5 +293,7 @@ class Farmer:
                     f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
                     f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
                 )
+                log.debug("Updating pool state")
+                await self._update_pool_state()
             time_slept += 1
             await asyncio.sleep(1)

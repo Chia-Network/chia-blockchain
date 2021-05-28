@@ -1,4 +1,21 @@
-def format_minutes(minutes):
+def format_bytes(bytes: int) -> str:
+
+    if not isinstance(bytes, int) or bytes < 0:
+        return "Invalid"
+
+    labels = {0: "MiB", 1: "GiB", 2: "TiB", 3: "PiB", 4: "EiB", 5: "ZiB", 6: "YiB"}
+
+    base = 1024
+    value = bytes / base ** 2
+    key = 0
+    while value >= base and key < 6:
+        value /= base
+        key += 1
+
+    return f"{value:.3f} {labels[key]}"
+
+
+def format_minutes(minutes: int) -> str:
 
     if not isinstance(minutes, int):
         return "Invalid"
@@ -18,10 +35,10 @@ def format_minutes(minutes):
     days = int(minutes / day_minutes)
     hours = int(minutes / hour_minutes)
 
-    def format_unit_string(str_unit, count):
+    def format_unit_string(str_unit: str, count: int) -> str:
         return f"{count} {str_unit}{('s' if count > 1 else '')}"
 
-    def format_unit(unit, count, unit_minutes, next_unit, next_unit_minutes):
+    def format_unit(unit: str, count: int, unit_minutes: int, next_unit: str, next_unit_minutes: int) -> str:
         formatted = format_unit_string(unit, count)
         minutes_left = minutes % unit_minutes
         if minutes_left >= next_unit_minutes:

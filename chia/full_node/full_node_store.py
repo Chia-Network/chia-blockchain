@@ -10,6 +10,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.pot_iterations import calculate_sp_interval_iters
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.server.outbound_message import Message
@@ -22,6 +23,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import CompressorArg
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -60,6 +62,10 @@ class FullNodeStore:
     # This stores the time that each key was added to the future cache, so we can clear old keys
     future_cache_key_times: Dict[bytes32, int]
 
+    # These recent caches are for pooling support
+    recent_signage_points: LRUCache
+    recent_eos: LRUCache
+
     # Partial hashes of unfinished blocks we are requesting
     requesting_unfinished_blocks: Set[bytes32]
 
@@ -79,6 +85,8 @@ class FullNodeStore:
         self.future_eos_cache = {}
         self.future_sp_cache = {}
         self.future_ip_cache = {}
+        self.recent_signage_points = LRUCache(500)
+        self.recent_eos = LRUCache(50)
         self.requesting_unfinished_blocks = set()
         self.previous_generator = None
         self.future_cache_key_times = {}
@@ -174,6 +182,17 @@ class FullNodeStore:
             self.future_ip_cache[ch] = []
         self.future_ip_cache[ch].append(infusion_point)
 
+    def in_future_sp_cache(self, signage_point: SignagePoint, index: uint8) -> bool:
+        if signage_point.rc_vdf is None:
+            return False
+
+        if signage_point.rc_vdf.challenge not in self.future_sp_cache:
+            return False
+        for cache_index, cache_sp in self.future_sp_cache[signage_point.rc_vdf.challenge]:
+            if cache_index == index and cache_sp.rc_vdf == signage_point.rc_vdf:
+                return True
+        return False
+
     def add_to_future_sp(self, signage_point: SignagePoint, index: uint8):
         # We are missing a block here
         if (
@@ -182,12 +201,14 @@ class FullNodeStore:
             or signage_point.cc_proof is None
             or signage_point.rc_proof is None
         ):
-            return
+            return None
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             self.future_sp_cache[signage_point.rc_vdf.challenge] = []
-        if (index, signage_point) not in self.future_sp_cache[signage_point.rc_vdf.challenge]:
-            self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
+        if self.in_future_sp_cache(signage_point, index):
+            return None
+
         self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
+        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
         log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge}. caching signage point {index}.")
 
     def get_future_ip(self, rc_challenge_hash: bytes32) -> List[timelord_protocol.NewInfusionPointVDF]:
@@ -412,6 +433,9 @@ class FullNodeStore:
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
+        new_cc_hash = eos.get_hash()
+        self.recent_eos.put(new_cc_hash, (eos, time.time()))
+
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
         for ip in self.future_ip_cache.get(eos.reward_chain.get_hash(), []):
             new_ips.append(ip)
@@ -552,6 +576,8 @@ class FullNodeStore:
                         return False
 
                 sp_arr[index] = signage_point
+                log.warning(f"Putting into cache: {signage_point.cc_vdf.output.get_hash()}")
+                self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
                 return True
         self.add_to_future_sp(signage_point, index)
         return False
@@ -625,7 +651,7 @@ class FullNodeStore:
         peak_full_block: FullBlock,
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
-        reorg: bool,
+        fork_block: Optional[BlockRecord],
         blocks: BlockchainInterface,
     ) -> Tuple[
         Optional[EndOfSubSlotBundle], List[Tuple[uint8, SignagePoint]], List[timelord_protocol.NewInfusionPointVDF]
@@ -645,16 +671,39 @@ class FullNodeStore:
             # This is not the first sub-slot in the chain
             sp_sub_slot_sps: List[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
             ip_sub_slot_sps: List[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
-            if not reorg:
-                # If it's not a reorg, we can keep signage points that we had before, in the cache
+
+            if fork_block is not None and fork_block.sub_slot_iters != peak.sub_slot_iters:
+                # If there was a reorg and a difficulty adjustment, just clear all the slots
+                self.clear_slots()
+            else:
+                interval_iters = calculate_sp_interval_iters(self.constants, peak.sub_slot_iters)
+                # If it's not a reorg, or there is a reorg on the same difficulty, we can keep signage points
+                # that we had before, in the cache
                 for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                     if sub_slot is None:
                         continue
 
+                    if fork_block is None:
+                        # If this is not a reorg, we still want to remove signage points after the new peak
+                        fork_block = peak
+                    replaced_sps: List[Optional[SignagePoint]] = []  # index 0 is the end of sub slot
+                    for i, sp in enumerate(sps):
+                        if (total_iters + i * interval_iters) < fork_block.total_iters:
+                            # Sps before the fork point as still valid
+                            replaced_sps.append(sp)
+                        else:
+                            if sp is not None:
+                                log.debug(
+                                    f"Reverting {i} {(total_iters + i * interval_iters)} {fork_block.total_iters}"
+                                )
+                            # Sps after the fork point should be removed
+                            replaced_sps.append(None)
+                    assert len(sps) == len(replaced_sps)
+
                     if sub_slot == sp_sub_slot:
-                        sp_sub_slot_sps = sps
+                        sp_sub_slot_sps = replaced_sps
                     if sub_slot == ip_sub_slot:
-                        ip_sub_slot_sps = sps
+                        ip_sub_slot_sps = replaced_sps
 
             self.clear_slots()
 
@@ -690,6 +739,10 @@ class FullNodeStore:
         self.future_eos_cache.pop(peak.reward_infusion_new_challenge, [])
         self.future_sp_cache.pop(peak.reward_infusion_new_challenge, [])
         self.future_ip_cache.pop(peak.reward_infusion_new_challenge, [])
+
+        for eos_op, _, _ in self.finished_sub_slots:
+            if eos_op is not None:
+                self.recent_eos.put(eos_op.get_hash(), (eos_op, time.time()))
 
         return new_eos, new_sps, new_ips
 

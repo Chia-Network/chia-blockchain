@@ -3,10 +3,10 @@ import logging
 import ssl
 import time
 import traceback
-from ipaddress import IPv6Address, ip_address
+from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
 
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
@@ -25,7 +25,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_localhost
+from chia.util.network import is_localhost, is_in_network
 
 
 def ssl_context_for_server(
@@ -145,6 +145,9 @@ class ChiaServer:
         self.banned_peers: Dict[str, float] = {}
         self.invalid_protocol_ban_seconds = 10
         self.api_exception_ban_seconds = 10
+        self.exempt_peer_networks: List[Union[IPv4Network, IPv6Network]] = [
+            ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])
+        ]
 
     def my_id(self) -> bytes32:
         """If node has public cert use that one for id, if not use private."""
@@ -185,7 +188,7 @@ class ChiaServer:
 
     async def start_server(self, on_connect: Callable = None):
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
-            return
+            return None
 
         self.app = web.Application()
         self.on_connect = on_connect
@@ -253,7 +256,9 @@ class ChiaServer:
 
             assert handshake is True
             # Limit inbound connections to config's specifications.
-            if not self.accept_inbound_connections(connection.connection_type):
+            if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
+                connection.peer_host, self.exempt_peer_networks
+            ):
                 self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
                 await connection.close()
                 close_event.set()
@@ -463,7 +468,7 @@ class ChiaServer:
 
     def cancel_tasks_from_peer(self, peer_id: bytes32):
         if peer_id not in self.tasks_from_peer:
-            return
+            return None
 
         task_ids = self.tasks_from_peer[peer_id]
         for task_id in task_ids:
@@ -484,7 +489,7 @@ class ChiaServer:
                 try:
                     if self.received_message_callback is not None:
                         await self.received_message_callback(connection)
-                    connection.log.info(
+                    connection.log.debug(
                         f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
@@ -601,6 +606,14 @@ class ChiaServer:
 
         return result
 
+    def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
+        result = []
+        connections = self.get_full_node_connections()
+        for connection in connections:
+            if connection.is_outbound:
+                result.append(connection)
+        return result
+
     def get_full_node_connections(self) -> List[WSChiaConnection]:
         return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
@@ -662,7 +675,7 @@ class ChiaServer:
             return None
         return peer
 
-    def accept_inbound_connections(self, node_type: NodeType):
+    def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
             return True
         inbound_count = len([conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound])

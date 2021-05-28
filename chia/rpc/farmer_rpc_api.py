@@ -1,6 +1,7 @@
 from typing import Callable, Dict, List
 
 from chia.farmer.farmer import Farmer
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -16,6 +17,9 @@ class FarmerRpcApi:
             "/get_signage_points": self.get_signage_points,
             "/get_reward_targets": self.get_reward_targets,
             "/set_reward_targets": self.set_reward_targets,
+            "/get_pool_state": self.get_pool_state,
+            "/set_pool_payout_instructions": self.set_pool_payout_instructions,
+            "/get_plots": self.get_plots,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -93,3 +97,19 @@ class FarmerRpcApi:
 
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
+
+    async def get_pool_state(self, _: Dict) -> Dict:
+        pools_list = []
+        for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
+            pool_state = pool_dict.copy()
+            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pools_list.append(pool_state)
+        return {"pool_state": pools_list}
+
+    async def set_pool_payout_instructions(self, request: Dict) -> Dict:
+        launcher_id: bytes32 = hexstr_to_bytes(request["launcher_id"])
+        await self.service.set_pool_payout_instructions(launcher_id, request["pool_payout_instructions"])
+        return {}
+
+    async def get_plots(self, _: Dict):
+        return await self.service.get_plots()

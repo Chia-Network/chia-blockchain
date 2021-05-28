@@ -11,6 +11,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
+from chia.util.misc import format_bytes
 from chia.util.misc import format_minutes
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
@@ -166,7 +167,7 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
 async def challenges(farmer_rpc_port: int, limit: int) -> None:
     signage_points = await get_challenges(farmer_rpc_port)
     if signage_points is None:
-        return
+        return None
 
     signage_points.reverse()
     if limit != 0:
@@ -175,7 +176,7 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
     for signage_point in signage_points:
         print(
             (
-                f"Hash: {signage_point['signage_point']['challenge_hash']}"
+                f"Hash: {signage_point['signage_point']['challenge_hash']} "
                 f"Index: {signage_point['signage_point']['signage_point_index']}"
             )
         )
@@ -217,27 +218,14 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"Plot count: {len(plots['plots'])}")
 
         print("Total size of plots: ", end="")
-        plots_space_human_readable = total_plot_size / 1024 ** 3
-        if plots_space_human_readable >= 1024 ** 2:
-            plots_space_human_readable = plots_space_human_readable / (1024 ** 2)
-            print(f"{plots_space_human_readable:.3f} PiB")
-        elif plots_space_human_readable >= 1024:
-            plots_space_human_readable = plots_space_human_readable / 1024
-            print(f"{plots_space_human_readable:.3f} TiB")
-        else:
-            print(f"{plots_space_human_readable:.3f} GiB")
+        print(format_bytes(total_plot_size))
     else:
         print("Plot count: Unknown")
         print("Total size of plots: Unknown")
 
     if blockchain_state is not None:
         print("Estimated network space: ", end="")
-        network_space_human_readable = blockchain_state["space"] / 1024 ** 4
-        if network_space_human_readable >= 1024:
-            network_space_human_readable = network_space_human_readable / 1024
-            print(f"{network_space_human_readable:.3f} PiB")
-        else:
-            print(f"{network_space_human_readable:.3f} TiB")
+        print(format_bytes(blockchain_state["space"]))
     else:
         print("Estimated network space: Unknown")
 

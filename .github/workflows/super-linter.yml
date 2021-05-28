@@ -74,6 +74,7 @@ jobs:
           DISABLE_ERRORS: false
           PYTHONPATH: ${{ github.workspace }}:$PYTHONPATH
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER_REGEX_EXCLUDE: .*github/ISSUE_TEMPLATE/config.yml
 #          ACTIONS_RUNNER_DEBUG: true
 
 ...
