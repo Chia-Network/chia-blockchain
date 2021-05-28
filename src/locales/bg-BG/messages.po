@@ -8,7 +8,7 @@ msgstr ""
 "Language: bg_BG\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-28 01:56\n"
+"PO-Revision-Date: 2021-05-28 20:47\n"
 "Last-Translator: \n"
 "Language-Team: Bulgarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -129,7 +129,7 @@ msgstr "Наистина ли искате да прекъснете?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Сигурен ли си че искаш да напуснеш? Графичният графичен интерфейс Плодът и земеделието ще спрат."
+msgstr "Сигурен ли си че искаш да напуснеш? Графичният графичен интерфейс Плотът и фарменето ще спрат."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -218,7 +218,7 @@ msgstr "Преглед"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr "Но вие в момента копаете <0/>"
+msgstr "Но вие в момента фармите <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -667,7 +667,7 @@ msgstr "Фермерите печелят блокови награди и та�
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr "Копане"
+msgstr "Фармене"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -675,7 +675,7 @@ msgstr "Копане"
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr "Статус на копането"
+msgstr "Статус на фарменето"
 
 #: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -1518,7 +1518,7 @@ msgstr "Вход"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr "Пропуска добавянето на финална директория на копача за фармене"
+msgstr "Пропуска добавянето на финална директория на Фармера за фармене"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
@@ -1703,7 +1703,7 @@ msgstr "Тази функция е налична само в графична �
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr "Това е количеството Chia, което в момента можете да използвате за извършване на транзакции. То не включва чакащи фермерски награди, чакащи входящи транзакции и Chia, които току-що сте похарчили, но все още не са в блокчейна."
+msgstr "Това е количеството Chia, което в момента можете да използвате за извършване на транзакции. То не включва чакащи фармерски награди, чакащи входящи транзакции и Chia, които току-що сте похарчили, но все още не са в блокчейна."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
@@ -1994,7 +1994,7 @@ msgstr "Няма нужда да бъдете синхронизирани ил�
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr "Имате {0}% от пространството в мрежата, което означава че копането на блок ще отнеме {expectedTimeToWin} по предположение. Истинските резултати могат да отнемат 3 до 4 пъти повече от предположението."
+msgstr "Имате {0}% от пространството в мрежата, което означава че фарменето на блок ще отнеме {expectedTimeToWin} по предположение. Истинските резултати могат да отнемат 3 до 4 пъти повече от предположението."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
