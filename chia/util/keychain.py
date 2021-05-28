@@ -69,7 +69,7 @@ class _KeyringWrapper:
         is secured by a password.
         """
         # TODO: Inspect blob
-        return True
+        return False
 
     @staticmethod
     def password_is_valid(password: Optional[str]) -> bool:
@@ -79,6 +79,8 @@ class _KeyringWrapper:
     def set_password(current_password: Optional[str], new_password: str) -> None:
         if _KeyringWrapper.is_password_protected() and not _KeyringWrapper.password_is_valid(current_password):
             raise ValueError("invalid current password")
+        # TODO: Encrypt blob
+        _KeyringWrapper.set_cached_password(new_password)
         print(f"setting password: {new_password}, current_password: {current_password}")
 
     @staticmethod
@@ -470,6 +472,11 @@ class Keychain:
     @staticmethod
     def password_is_valid(password: str) -> bool:
         return _KeyringWrapper.password_is_valid(password)
+
+    @staticmethod
+    def has_cached_password() -> bool:
+        password = _KeyringWrapper.get_cached_password()
+        return password != None and len(password) > 0
 
     @staticmethod
     def set_cached_password(password: Optional[str]) -> None:

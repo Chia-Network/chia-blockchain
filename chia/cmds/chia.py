@@ -7,6 +7,7 @@ from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
 from chia.cmds.password import password_cmd
+from chia.cmds.password_funcs import remove_passwords_options_from_cmd, supports_keyring_password
 from chia.cmds.plots import plots_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
@@ -34,12 +35,6 @@ def monkey_patch_click() -> None:
     click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore
 
 
-def supports_keyring_password() -> bool:
-    from sys import platform
-
-    return platform == "linux"
-
-
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
@@ -54,7 +49,7 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
 
-    password_file = kwargs["password_file"]
+    password_file = kwargs.get("password_file")
     if password_file:
         from .password_funcs import cache_password, read_password_from_file
 
@@ -65,13 +60,8 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
 
 
 if not supports_keyring_password():
-    # TODO: Click doesn't seem to have a great way of adding/removing params, and using
-    # the decorator-supported construction of options doesn't allow for conditionally
-    # including options. Once keyring password management is rolled out to all platforms
-    # this can be removed.
-    index = next((i for i in range(len(cli.params)) if cli.params[i].name == "password_file"), -1)
-    if index != -1:
-        del cli.params[index]
+    # TODO: Remove once keyring password management is rolled out to all platforms
+    remove_passwords_options_from_cmd(cli)
 
 
 @cli.command("version", short_help="Show chia version")
