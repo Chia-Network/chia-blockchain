@@ -110,5 +110,5 @@ steps:
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_VERSION="Chia-"$(<version.txt)
-      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg.checksum
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg.checksum
     displayName: "Create Checksums"
