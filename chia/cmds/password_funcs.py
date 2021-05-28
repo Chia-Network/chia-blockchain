@@ -87,3 +87,7 @@ def remove_password(current_password: Optional[str]) -> None:
             Keychain.remove_password(current_password)
         except Exception as e:
             print(f"Unable to remove password: {e}")
+
+
+def cache_password(password: str) -> None:
+    Keychain.set_cached_password(password)

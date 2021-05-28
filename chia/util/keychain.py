@@ -25,7 +25,7 @@ MAX_RETRIES = 3
 class _KeyringWrapper:
     # Static instances
     __keyring = None
-    __cached_password: Optional[str] = "b"
+    __cached_password: Optional[str] = None
 
     def __init__(self):
         if _KeyringWrapper.__keyring:
@@ -68,6 +68,7 @@ class _KeyringWrapper:
         Returns a bool indicating whether the underlying keyring data
         is secured by a password.
         """
+        # TODO: Inspect blob
         return True
 
     @staticmethod
@@ -469,6 +470,10 @@ class Keychain:
     @staticmethod
     def password_is_valid(password: str) -> bool:
         return _KeyringWrapper.password_is_valid(password)
+
+    @staticmethod
+    def set_cached_password(password: Optional[str]) -> None:
+        _KeyringWrapper.set_cached_password(password)
 
     @staticmethod
     def set_password(current_password: Optional[str], new_password: str) -> None:
