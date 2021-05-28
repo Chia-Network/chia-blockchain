@@ -105,3 +105,9 @@ steps:
       export AWS_SECRET_ACCESS_KEY="$(SecretKey)"
       export AWS_DEFAULT_REGION=us-west-2
     displayName: "Login to AWS"
+
+  - bash: |
+      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+      export CHIA_VERSION= "chia-test"$(<version.txt)
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+    displayName: "Create Checksums"
