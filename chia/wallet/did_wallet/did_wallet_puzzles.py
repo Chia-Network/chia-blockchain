@@ -11,6 +11,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clvm")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 
@@ -19,13 +20,13 @@ def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_ne
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
     # MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED
     return DID_INNERPUZ_MOD.curry(
-        SINGLETON_TOP_LAYER_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed
+        pubkey, backup_ids_hash, num_of_backup_ids_needed
     )
 
 
 def create_fullpuz(innerpuz, genesis_id) -> Program:
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    return SINGLETON_TOP_LAYER_MOD.curry(mod_hash, genesis_id, innerpuz)
+    return SINGLETON_TOP_LAYER_MOD.curry(mod_hash, genesis_id, LAUNCHER_PUZZLE.get_tree_hash(), innerpuz)
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
@@ -61,7 +62,7 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     if not is_did_innerpuz(inner_f):
         return None
 
-    core_mod, pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
+    pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
     return pubkey, id_list
 
 
