@@ -114,7 +114,9 @@ class TestDIDWallet:
         assert did_wallet_2.did_info.temp_coin == coin
         newpuzhash = await did_wallet_2.get_new_inner_hash()
         pubkey = bytes(
-            (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
+            (
+                await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.db_wallet_info.id)
+            ).pubkey
         )
         message_spend_bundle = await did_wallet_0.create_attestment(
             did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, "test.attest"
@@ -229,7 +231,9 @@ class TestDIDWallet:
         filename = "test.backup"
         did_wallet_3.create_backup(filename)
 
-        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node.wallet_state_manager, wallet, filename)
+        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
+            wallet_node.wallet_state_manager, wallet, filename
+        )
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
