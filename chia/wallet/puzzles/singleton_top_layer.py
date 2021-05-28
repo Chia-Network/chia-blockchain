@@ -34,7 +34,7 @@ def launch_conditions_and_coinsol(
     inner_puzzle: Program,
     comment: List[Tuple[str, str]],
     amount: uint64,
-) -> Tuple[List, CoinSolution]:
+) -> Tuple[List[Program], CoinSolution]:
     if (amount % 2) == 0:
         raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
@@ -53,17 +53,21 @@ def launch_conditions_and_coinsol(
             comment,
         ]
     )
-    condtions = [
+    create_launcher = Program.to(
         [
             ConditionOpcode.CREATE_COIN,
             SINGLETON_LAUNCHER_HASH,
             amount,
         ],
+    )
+    assert_launcher_announcement = Program.to(
         [
             ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
             std_hash(launcher_coin.name() + launcher_solution.get_tree_hash()),
         ],
-    ]
+    )
+
+    conditions = [create_launcher, assert_launcher_announcement]
 
     launcher_coin_solution = CoinSolution(
         launcher_coin,
@@ -71,7 +75,7 @@ def launch_conditions_and_coinsol(
         launcher_solution,
     )
 
-    return condtions, launcher_coin_solution
+    return conditions, launcher_coin_solution
 
 
 # Take a coin solution, return a lineage proof for their child to use in spends
