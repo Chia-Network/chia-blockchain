@@ -11,9 +11,32 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.clvm import int_from_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
+from clvm import SExp
 
 # TODO: review each `assert` and consider replacing with explicit checks
 #       since asserts can be stripped with python `-OO` flag
+
+
+def as_atom_list(obj: SExp) -> List[bytes]:
+    """
+    Pretend `obj` is a list of atoms. Return the corresponding
+    python list of atoms.
+
+    At each step, we always assume a node to be an atom or a pair.
+    If the assumption is wrong, we exit early. This way we never fail
+    and always return SOMETHING.
+    """
+    items = []
+    while True:
+        pair = obj.pair
+        if pair is None:
+            break
+        atom = pair[0].atom
+        if atom is None:
+            break
+        items.append(atom)
+        obj = pair[1]
+    return items
 
 
 def parse_sexp_to_condition(
@@ -23,7 +46,7 @@ def parse_sexp_to_condition(
     Takes a ChiaLisp sexp and returns a ConditionWithArgs.
     If it fails, returns an Error
     """
-    as_atoms = sexp.as_atom_list()
+    as_atoms = as_atom_list(sexp)
     if len(as_atoms) < 1:
         return Err.INVALID_CONDITION, None
     opcode = as_atoms[0]

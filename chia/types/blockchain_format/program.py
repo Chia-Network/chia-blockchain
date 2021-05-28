@@ -88,28 +88,6 @@ class Program(SExp):
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
 
-    def as_atom_list(self) -> List[bytes]:
-        """
-        Pretend `self` is a list of atoms. Return the corresponding
-        python list of atoms.
-
-        At each step, we always assume a node to be an atom or a pair.
-        If the assumption is wrong, we exit early. This way we never fail
-        and always return SOMETHING.
-        """
-        items = []
-        obj = self
-        while True:
-            pair = obj.pair
-            if pair is None:
-                break
-            atom = pair[0].atom
-            if atom is None:
-                break
-            items.append(atom)
-            obj = pair[1]
-        return items
-
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))
 

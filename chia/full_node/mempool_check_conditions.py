@@ -16,6 +16,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from chia.util.condition_tools import as_atom_list
 
 GENERATOR_MOD = get_generator()
 
@@ -157,7 +158,7 @@ def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mo
                     opcode = ConditionOpcode.UNKNOWN
                 else:
                     return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
-                cvl = ConditionWithArgs(opcode, cond.rest().as_atom_list())
+                cvl = ConditionWithArgs(opcode, as_atom_list(cond.rest()))
                 conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:

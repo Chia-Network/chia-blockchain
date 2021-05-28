@@ -13,6 +13,7 @@ from chia.types.generator_types import BlockGenerator, GeneratorArg
 from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint32
+from chia.util.condition_tools import as_atom_list
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
@@ -125,7 +126,7 @@ class TestROM(TestCase):
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
-            self.assertEqual(extra_data.as_atom_list(), b"extra data for coin".split())
+            self.assertEqual(as_atom_list(extra_data), b"extra data for coin".split())
 
     def test_block_extras(self):
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
@@ -133,4 +134,4 @@ class TestROM(TestCase):
         gen = block_generator()
         cost, r = run_generator(gen, max_cost=MAX_COST)
         extra_block_data = r.rest()
-        self.assertEqual(extra_block_data.as_atom_list(), b"extra data for block".split())
+        self.assertEqual(as_atom_list(extra_block_data), b"extra data for block".split())
