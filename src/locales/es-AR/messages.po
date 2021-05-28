@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-24 21:10\n"
+"PO-Revision-Date: 2021-05-28 14:32\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -883,7 +883,7 @@ msgstr "Cargando..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr "Parcelas de Cosechador Locales"
+msgstr "Cosechador de Parcelas Locales"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
