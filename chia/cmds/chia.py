@@ -56,10 +56,10 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
 
     password_file = kwargs["password_file"]
     if password_file:
-        from .password_funcs import read_password_from_file
+        from .password_funcs import cache_password, read_password_from_file
 
         try:
-            ctx.obj["keyring_password"] = read_password_from_file(password_file)
+            cache_password(read_password_from_file(password_file))
         except Exception as e:
             print(f"Failed to read password: {e}")
 
