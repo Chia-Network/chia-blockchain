@@ -1,10 +1,31 @@
+
+import sys
+from click.termui import prompt
 from chia.util.keychain import Keychain, obtain_current_password
 from getpass import getpass
 from io import TextIOWrapper
 from typing import Optional, Tuple
 
-
 MIN_PASSWORD_LEN = 8
+PASSWORD_CLI_OPTION_NAMES = [ # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-password -> 'set_password'
+    "set_password",
+    "password_file",
+    "current_password_file"
+]
+
+
+def supports_keyring_password() -> bool:
+    from sys import platform
+
+    return platform == "linux"
+
+
+def remove_passwords_options_from_cmd(cmd) -> None:
+    # TODO: Click doesn't seem to have a great way of adding/removing params using an
+    # existing command, and using the decorator-supported construction of options doesn't
+    # allow for conditionally including options. Once keyring password management is
+    # rolled out to all platforms this can be removed.
+    cmd.params = [param for param in cmd.params if not param.name in PASSWORD_CLI_OPTION_NAMES]
 
 
 def verify_password_meets_requirements(new_password: str, confirmation_password: str) -> Tuple[bool, Optional[str]]:
@@ -48,6 +69,19 @@ def read_password_from_file(password_file: TextIOWrapper) -> str:
     password = tidy_password(password_file.read())
     password_file.close()
     return password
+
+
+def initialize_password() -> None:
+    if Keychain.is_password_protected():
+        print("Keyring is already protected by a password")
+        print("\nUse 'chia password set' or 'chia password remove' to update or remove your password")
+        sys.exit(1)
+
+    # We'll rely on _Keyring initialization to leverage the cached password for
+    # bootstrapping the keyring encryption process
+    if not Keychain.has_cached_password():
+        password = prompt_for_new_password()
+        cache_password(password)
 
 
 def set_or_update_password(password: Optional[str], current_password: Optional[str]) -> None:
