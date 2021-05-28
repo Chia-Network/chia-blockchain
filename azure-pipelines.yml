@@ -50,7 +50,6 @@ steps:
       node -v
       pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
       cd build_scripts
-      touch $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
       python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/version.txt
     displayName: "Install dependencies"
 
