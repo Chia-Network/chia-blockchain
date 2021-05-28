@@ -99,3 +99,9 @@ steps:
       curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
       sudo installer -pkg AWSCLIV2.pkg -target /
     displayName: "Install AWS CLI"
+
+  - bash: |
+      export AWS_ACCESS_KEY_ID="$(AcessKey)"
+      export AWS_SECRET_ACCESS_KEY="$(SecretKey)"
+      export AWS_DEFAULT_REGION=us-west-2
+    displayName: "Login to AWS"
