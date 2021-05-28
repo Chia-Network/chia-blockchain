@@ -25,6 +25,7 @@ from chia.util.streamable import recurse_jsonify
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.wallet_block_store import WalletBlockStore
 from chia.wallet.wallet_coin_store import WalletCoinStore
+from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 
 log = logging.getLogger(__name__)
@@ -58,10 +59,10 @@ class WalletBlockchain(BlockchainInterface):
     # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
     # (height_included, SubEpochSummary). Note: ONLY for the blocks in the path to the peak
     __sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
-    # Unspent Store
+    # Stores
     coin_store: WalletCoinStore
     tx_store: WalletTransactionStore
-    # Store
+    pool_store: WalletPoolStore
     block_store: WalletBlockStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
@@ -82,6 +83,7 @@ class WalletBlockchain(BlockchainInterface):
         block_store: WalletBlockStore,
         coin_store: WalletCoinStore,
         tx_store: WalletTransactionStore,
+        pool_store: WalletPoolStore,
         consensus_constants: ConsensusConstants,
         coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
         reorg_rollback: Callable,
@@ -96,6 +98,7 @@ class WalletBlockchain(BlockchainInterface):
         self.lock = asyncio.Lock()
         self.coin_store = coin_store
         self.tx_store = tx_store
+        self.pool_store = pool_store
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
@@ -231,8 +234,6 @@ class WalletBlockchain(BlockchainInterface):
                     await self.block_store.add_block_record(header_block_record, block_record, additional_coin_spends)
                     self.add_block_record(block_record)
                     self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
-                    if len(additional_coin_spends) > 0:
-                        log.warning("here mate")
                     fork_height: Optional[uint32] = await self._reconsider_peak(
                         block_record, genesis, fork_point_with_peak, additional_coin_spends
                     )
@@ -243,6 +244,7 @@ class WalletBlockchain(BlockchainInterface):
                         await self.block_store.db_wrapper.rollback_transaction()
                         await self.coin_store.rebuild_wallet_cache()
                         await self.tx_store.rebuild_tx_cache()
+                        await self.pool_store.rebuild_cache()
                     raise
             if fork_height is not None:
                 self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")

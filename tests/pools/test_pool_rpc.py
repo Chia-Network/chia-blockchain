@@ -1,9 +1,8 @@
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 import pytest
-from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
