@@ -1,25 +1,20 @@
-from clvm_tools import binutils
-
+from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
-from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
-from chia.wallet.puzzles.load_clvm import load_clvm
+from clvm_tools import binutils
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
+SINGLETON_LAUNCHER_MOD = load_clvm("singleton_launcher.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
+POOL_COMMITED_MOD = load_clvm("pool_member_innerpuz.clvm")
 POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
+LAUNCHER_ID = bytes32(Program.to(b"launcher-id").get_tree_hash())
+LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-
-POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
-
-LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -139,7 +134,7 @@ def test_p2_singleton():
 def test_pool_puzzles():
     # create a singleton with id `launcher_id`
     launcher_parent_id = Program.to(b"launcher-parent").get_tree_hash()
-    launcher_coin = Coin(launcher_parent_id, LAUNCHER_PUZZLE.get_tree_hash(), 200)
+    launcher_coin = Coin(launcher_parent_id, SINGLETON_LAUNCHER_MOD.get_tree_hash(), 200)
     launcher_id = launcher_coin.name()
 
     # create a `p2_singleton` that's provably a block reward
@@ -152,18 +147,18 @@ def test_pool_puzzles():
     p2_singleton_coin_id = Coin(pool_reward_parent_id, p2_singleton_full_puzhash, p2_singleton_coin_amount).name()
 
     # here are some pool parameters
-    pool_puzzle_hash = 0xD34DB33F
+    pool_puzhash = 0xD34DB33F
     relative_lock_height = 600
     owner_pubkey = 0xFADEDDAB
 
+    # Only the escape puzzle has RELATIVE_LOCK_HEIGHT
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
     escape_innerpuz = POOL_ESCAPING_MOD.curry(
-        pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, relative_lock_height
+        pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash
     )
-    # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
-    escape_innerpuz_hash = escape_innerpuz.get_tree_hash()
-    committed_innerpuz = POOL_MEMBER_MOD.curry(
-        pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, escape_innerpuz_hash
+    # Curry params are POOL_PUZHASH, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
+    committed_innerpuz = POOL_COMMITED_MOD.curry(
+        pool_puzhash, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey
     )
 
     # the singleton is committed to the pool
@@ -176,6 +171,8 @@ def test_pool_puzzles():
     # full_sol = parent_info, my_amount, inner_solution
     full_sol = Program.to([[launcher_coin.parent_coin_info, launcher_coin.amount], singleton_amount, inner_sol])
     cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
+    """
+    Retrieves all entries for a wallet ID from the cache, works even if commit is not called yet."""
 
     conditions = result.as_python()
     assert bytes32(result.first().rest().first().as_atom()) == singleton_coin.name()
