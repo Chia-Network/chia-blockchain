@@ -73,20 +73,24 @@ class CoinStore:
                 )
             )
 
+        ephemeral_db = dict(self._db)
+        for coin in spend_bundle.additions():
+            name = coin.name()
+            ephemeral_db[name] = CoinRecord(
+                coin,
+                uint32(now.height),
+                uint32(0),
+                False,
+                False,
+                uint64(now.seconds)
+            )
+
         for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):  # noqa
             prev_transaction_block_height = now.height
             timestamp = now.seconds
-            try:
-                coin_record = self._db[coin_solution.coin.name()]
-            except KeyError:
-                coin_record = CoinRecord(
-                    coin_solution.coin,
-                    uint32(now.height),
-                    uint32(0),
-                    False,
-                    False,
-                    uint64(now.seconds),
-                )
+            coin_record = ephemeral_db.get(coin_solution.coin.name())
+            if coin_record is None:
+                raise BadSpendBundleError(f"coin not found for id 0x{coin_solution.coin.name().hex()}")  # noqa
             err = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements,
