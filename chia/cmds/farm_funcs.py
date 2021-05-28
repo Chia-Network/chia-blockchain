@@ -14,7 +14,8 @@ from chia.util.ints import uint16
 from chia.util.misc import format_bytes
 from chia.util.misc import format_minutes
 
-SECONDS_PER_BLOCK = (24 * 3600) / 4608
+BLOCKS_PER_DAY = 4608
+SECONDS_PER_BLOCK = (24 * 3600) / BLOCKS_PER_DAY
 
 
 async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
@@ -232,6 +233,10 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     minutes = -1
     if blockchain_state is not None and plots is not None:
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
-        minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
+        if 1 / proportion > BLOCKS_PER_DAY:
+            average_block_time = SECONDS_PER_BLOCK
+        else:
+            average_block_time = await get_average_block_time(rpc_port)
+        minutes = int((average_block_time / 60) / proportion) if proportion else -1
     print("Expected time to win: " + format_minutes(minutes))
     print("Note: log into your key using 'chia wallet show' to see rewards for each key")
