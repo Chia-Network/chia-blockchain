@@ -21,10 +21,7 @@ It's possible systemd already binds port 53. Special instructions to free port 5
 
 ## Configure
 
-In `dns.py`, modify variables `D`, `ns` and `soa_record` according to your domain.
-
-In `crawler.py`, modify `bootstrap_peers` with some reliable initial peers to contact after starting the crawler. Also, modify `minimum_height` with the minimal height
-a node must have in order to be relayed as a DNS response.
+The config file is located in `.chia/mainnet/config/config.yaml` The defaults refer to running a DNS seeder for mainnet. At the very least, in `dns` section of the config, the variables `domain_name`, `nameserver` and `soa` need to be changed. 
 
 An example how to set-up A and NS records for your domain using DigitalOcean can be found in this video, from 9:40: https://www.youtube.com/watch?v=DsaxbwwVEXk&t=580s
 
