@@ -1078,10 +1078,11 @@ class WalletRpcApi:
     async def pw_join_pool(self, request):
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        owner_pubkey = wallet.pool_info.owner_pubkey
+        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+        owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
-        if "target_puzzle_hash" in request:
-            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzle_hash"]))
+        if "target_puzzlehash" in request:
+            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
         new_target_state = create_pool_state(
             FARMING_TO_POOL,
             target_puzzlehash,
@@ -1103,8 +1104,15 @@ class WalletRpcApi:
         # or to PoolSingletonState.SELF_POOLING
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        owner_pubkey = wallet.pool_info.owner_pubkey
-        target_puzzlehash = wallet.pool_info.owner_pay_to_puzzlehash
+        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+        owner_pubkey = pool_wallet_info.current.owner_pubkey
+        # Note the implications of getting this from our local wallet right now vs.
+        # having pre-arranged the target self-pooling address
+        # target_puzzlehash = pool_wallet_info.owner_pay_to_puzzlehash
+        assert self.service.wallet_state_manager is not None
+        wallet_state_manager = self.service.wallet_state_manager
+        target_puzzlehash = wallet_state_manager.main_wallet.get_new_puzzlehash()
+
         new_target_state = create_pool_state(
             SELF_POOLING, target_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=0
         )
