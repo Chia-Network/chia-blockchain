@@ -63,6 +63,7 @@ class Crawler:
         mkdir(self.db_path.parent)
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
+        self.other_peers_port = config["other_peers_port"]
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -123,7 +124,16 @@ class Crawler:
             self.seen_nodes = set()
             tried_nodes = set()
             for peer in self.bootstrap_peers:
-                new_peer = PeerRecord(peer, peer, 8444, False, 0, 0, 0, uint64(int(time.time())))
+                new_peer = PeerRecord(
+                    peer,
+                    peer,
+                    self.other_peers_port,
+                    False,
+                    0,
+                    0,
+                    0,
+                    uint64(int(time.time())),
+                )
                 new_peer_reliability = PeerReliability(peer)
                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
 
@@ -136,7 +146,7 @@ class Crawler:
 
                 self.peer_queue = asyncio.Queue()
                 for peer in peers_to_crawl:
-                    if peer.port == 8444:
+                    if peer.port == self.other_peers_port:
                         total_nodes += 1
                         if peer.ip_address not in tried_nodes:
                             tried_nodes.add(peer.ip_address)
