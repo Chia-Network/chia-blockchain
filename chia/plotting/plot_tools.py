@@ -164,7 +164,8 @@ def load_plots(
         if len(match_strings) == 1:
             log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
         else:
-            log.info(f'Only loading plots that contain any of the {len(match_strings)} strings provided in their file or directory names')
+            log.info(f'Only loading plots that contain any of the {len(match_strings)} strings provided in their'
+                    'file or directory names')
 
     def process_file(filename: Path) -> Tuple[int, Dict]:
         new_provers: Dict[Path, PlotInfo] = {}

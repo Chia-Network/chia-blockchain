@@ -140,7 +140,8 @@ def create_cmd(
 @click.option(
     "-g",
     "--grep_string",
-    help="Check only plots that contain any of the specified strings in their file or directory name. Specify multiple match strings by using double-quotes \"\" with TEXT separated by a single space.",
+    help='Check only plots that contain any of the specified strings in their file or directory name. Specify'
+            'multiple match strings by using double-quotes "" with TEXT separated by a single space.',
     type=str,
     default=None,
 )
