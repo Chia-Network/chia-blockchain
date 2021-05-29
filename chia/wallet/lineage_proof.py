@@ -8,7 +8,7 @@ from chia.util.streamable import Streamable, streamable
 
 @dataclass(frozen=True)
 @streamable
-class CCParent(Streamable):
+class LineageProof(Streamable):
     parent_name: bytes32
     inner_puzzle_hash: Optional[bytes32]
     amount: uint64
