@@ -149,3 +149,7 @@ for os in testconfig.oses:
 out = subprocess.run(["git", "diff", args.output_dir])
 if out.stdout:
     print(out.stdout)
+
+out2 = subprocess.run(["git", "status", "../.github/workflows/"])
+if out.stdout:
+    print(out.stdout)
