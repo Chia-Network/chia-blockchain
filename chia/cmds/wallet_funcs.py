@@ -68,12 +68,23 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
                 break
 
 
+def check_unusual_transaction(amount: Decimal, fee: Decimal):
+    return fee >= amount
+
+
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
+    override = args["override"]
 
+    if not override and check_unusual_transaction(amount, fee):
+        print(
+            f"A transaction of amount {amount} and fee {fee} is unusual.\n"
+            f"Pass in --confirm if you are sure you mean to do this."
+        )
+        return
     print("Submitting transaction...")
     final_amount = uint64(int(amount * units["chia"]))
     final_fee = uint64(int(fee * units["chia"]))
