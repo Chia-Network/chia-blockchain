@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-25 09:20\n"
+"PO-Revision-Date: 2021-05-29 02:46\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -80,7 +80,7 @@ msgstr "Přidat peněženku"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "Přidat pole"
+msgstr "Přidat Pole"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
@@ -137,7 +137,7 @@ msgstr "Opravdu chcete odejít? Vytváření aktuálních polí bude ztraceno a 
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "Jste si jisti, že chcete použít k={plotSize}?"
+msgstr "Jste si jisti, že chcete použít k={velikost Pole}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -294,7 +294,7 @@ msgstr "Zavřít"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "Zavírání nodu a serveru"
+msgstr "Zavírání uzlu a serveru"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -511,7 +511,7 @@ msgstr "Zpoždění"
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
-msgstr "Smazat"
+msgstr "Odstranit"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:31
@@ -784,7 +784,7 @@ msgstr "Pomozte s překladem"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr "Skrýt pokročilé nastavení"
+msgstr "Skrýt Rozšířené Možnosti"
 
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
@@ -838,7 +838,7 @@ msgstr "Uveďte, kdy byla tato nabídka přijata"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr "Informační paket"
+msgstr "Informační Paket"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
@@ -1135,16 +1135,16 @@ msgstr "Prosím, zadejte platnou číselnou hodnotu"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr "Prosím, zadejte platnou číselnou hodnotu"
+msgstr "Zadejte prosím platnou číselnou částku, která je k dispozici"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr "Prosím, zadejte platný veřejný klíč"
+msgstr "Zadejte prosím platný pubkey"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr "Prosím dokončete synchronizaci před provedením transakcí"
+msgstr "Prosím dokončete synchronizaci před provedením transakce"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1187,7 +1187,7 @@ msgstr "ID pole"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr "Klič Pole"
+msgstr "Klíč Pole"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1434,11 +1434,11 @@ msgstr "Zvolte druhou dočasnou složku"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr "Zvolte cílový složku"
+msgstr "Zvolte cílovou složku"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr "Zvolte klíč"
+msgstr "Vyberte klíč"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
@@ -1462,7 +1462,7 @@ msgstr "Vyberte cílovou složku, kam chcete na konci vytváření výsledné po
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr "Vyberte dočasnou složku, kde budete pole tvořit. Doporučujeme použít rychlý disk."
+msgstr "Vyberte dočasnou složku, do které chcete pole uložit. Doporučujeme použít rychlý disk (SSD)."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1664,7 +1664,7 @@ msgstr "Minimální požadovaná velikost sítě je k=32"
 
 #: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
-msgstr "Node není synchronizován"
+msgstr "Uzel není synchronizován"
 
 #: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -2039,7 +2039,7 @@ msgstr "výška:"
 
 #: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
-msgstr " není synchronizováno"
+msgstr "nesynchronizováno"
 
 #: src/components/wallet/WalletStatusCard.tsx:17
 #: src/components/wallet/Wallets.tsx:100
