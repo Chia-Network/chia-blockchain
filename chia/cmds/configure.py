@@ -141,10 +141,10 @@ def configure(
 )
 @click.option(
     "--set_outbound-peer-count",
-    help="Update the target outbound peer count (default 10)",
+    help="Update the target outbound peer count (default 8)",
     type=str,
 )
-@click.option("--set-peer-count", help="Update the target peer count (default 60)", type=str)
+@click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
 @click.pass_context
 def configure_cmd(
     ctx,
