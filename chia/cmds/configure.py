@@ -45,9 +45,7 @@ def configure(
                 config["full_node"]["farmer_peer"]["port"] = int(port)
                 config["harvester"]["farmer_peer"]["host"] = host
                 config["harvester"]["farmer_peer"]["port"] = int(port)
-                print(
-                    "Farmer peer updated, make sure your harvester has the proper cert installed"
-                )
+                print("Farmer peer updated, make sure your harvester has the proper cert installed")
                 change_made = True
         except ValueError:
             print("Farmer address must be in format [IP:Port]")
@@ -120,12 +118,8 @@ def configure(
     help="configures for connection to testnet",
     type=click.Choice(["true", "t", "false", "f"]),
 )
-@click.option(
-    "--set-node-introducer", help="Set the introducer for node - IP:Port", type=str
-)
-@click.option(
-    "--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str
-)
+@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
+@click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for testing",
@@ -150,9 +144,7 @@ def configure(
     help="Update the target outbound peer count (default 10)",
     type=str,
 )
-@click.option(
-    "--set-peer-count", help="Update the target peer count (default 60)", type=str
-)
+@click.option("--set-peer-count", help="Update the target peer count (default 60)", type=str)
 @click.pass_context
 def configure_cmd(
     ctx,
