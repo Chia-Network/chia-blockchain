@@ -77,9 +77,9 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
-    confirm = args["confirm"]
+    override = args["override"]
 
-    if not confirm and check_unusual_transaction(amount, fee):
+    if not override and check_unusual_transaction(amount, fee):
         print(
             f"A transaction of amount {amount} and fee {fee} is unusual.\n"
             f"Pass in --confirm if you are sure you mean to do this."
