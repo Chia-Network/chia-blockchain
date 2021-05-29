@@ -6,7 +6,7 @@ or that they're failing for the right reason when they're invalid.
 import logging
 import time
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pytest
 
@@ -18,6 +18,7 @@ from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
+from chia.types.coin_record import CoinRecord
 from chia.types.coin_solution import CoinSolution
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
@@ -56,7 +57,7 @@ async def check_spend_bundle_validity(
     blocks: List[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
-):
+) -> Tuple[List[CoinRecord], List[CoinRecord]]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
@@ -78,6 +79,13 @@ async def check_spend_bundle_validity(
 
         received_block_result, err, fork_height = await blockchain.receive_block(newest_block)
 
+        if fork_height:
+            coins_added = await blockchain.coin_store.get_coins_added_at_height(fork_height + 1)
+            coins_removed = await blockchain.coin_store.get_coins_removed_at_height(fork_height + 1)
+        else:
+            coins_added = []
+            coins_removed = []
+
         if expected_err is None:
             assert err is None
             assert received_block_result == ReceiveBlockResult.NEW_PEAK
@@ -86,6 +94,9 @@ async def check_spend_bundle_validity(
             assert err == expected_err
             assert received_block_result == ReceiveBlockResult.INVALID_BLOCK
             assert fork_height is None
+
+        return coins_added, coins_removed
+
     finally:
         # if we don't close the connection, the test process doesn't exit cleanly
         await connection.close()

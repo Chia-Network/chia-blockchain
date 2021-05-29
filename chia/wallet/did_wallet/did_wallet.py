@@ -19,7 +19,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.util.ints import uint64, uint32, uint8
 
 from chia.wallet.did_wallet.did_info import DIDInfo
-from chia.wallet.cc_wallet.ccparent import CCParent
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -291,7 +291,7 @@ class DIDWallet:
         )
         await self.save_info(new_info, True)
 
-        future_parent = CCParent(
+        future_parent = LineageProof(
             coin.parent_coin_info,
             inner_puzzle.get_tree_hash(),
             coin.amount,
@@ -381,7 +381,7 @@ class DIDWallet:
                 if puzzle_hash == full_puzzle_hash:
                     # our coin
                     for coin in coins:
-                        future_parent = CCParent(
+                        future_parent = LineageProof(
                             coin.parent_coin_info,
                             innerpuz.get_tree_hash(),
                             coin.amount,
@@ -796,7 +796,7 @@ class DIDWallet:
         )
         return inner_puzzle
 
-    async def get_parent_for_coin(self, coin) -> Optional[CCParent]:
+    async def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
         parent_info = None
         for name, ccparent in self.did_info.parent_info:
             if name == coin.parent_coin_info:
@@ -835,12 +835,12 @@ class DIDWallet:
         launcher_cs = CoinSolution(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
-        future_parent = CCParent(
+        future_parent = LineageProof(
             eve_coin.parent_coin_info,
             did_inner_hash,
             eve_coin.amount,
         )
-        eve_parent = CCParent(
+        eve_parent = LineageProof(
             launcher_coin.parent_coin_info,
             launcher_coin.puzzle_hash,
             launcher_coin.amount,
@@ -909,7 +909,7 @@ class DIDWallet:
 
         return max_send_amount
 
-    async def add_parent(self, name: bytes32, parent: Optional[CCParent], in_transaction: bool):
+    async def add_parent(self, name: bytes32, parent: Optional[LineageProof], in_transaction: bool):
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
