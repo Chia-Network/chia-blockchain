@@ -148,6 +148,7 @@ def load_plots(
     start_time = time.time()
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
+    match_strings: List[str] = []
     no_key_filenames: Set[Path] = set()
     log.info(f'Searching directories {config_file["plot_directories"]}')
 
@@ -159,14 +160,25 @@ def load_plots(
     plot_ids_lock = threading.Lock()
 
     if match_str is not None:
-        log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
+        match_strings = match_str.split(" ")
+        if len(match_strings) == 1:
+            log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
+        else:
+            log.info(f'Only loading plots that contain any of the {len(match_strings)} strings provided in their file or directory names')
 
     def process_file(filename: Path) -> Tuple[int, Dict]:
         new_provers: Dict[Path, PlotInfo] = {}
+        got_match: bool = False
         nonlocal changed
         filename_str = str(filename)
-        if match_str is not None and match_str not in filename_str:
-            return 0, new_provers
+
+        if match_str is not None:
+            for _ms in match_strings:
+                if _ms in filename_str:
+                    got_match = True
+            if got_match is False:
+                return 0, new_provers
+
         if filename.exists():
             if filename in failed_to_open_filenames and (time.time() - failed_to_open_filenames[filename]) < 1200:
                 # Try once every 20 minutes to open the file
