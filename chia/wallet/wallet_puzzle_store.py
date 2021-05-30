@@ -77,11 +77,14 @@ class WalletPuzzleStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
+    async def add_derivation_paths(self, records: List[DerivationRecord], in_transaction=False) -> None:
         """
         Insert many derivation paths into the database.
         """
-        async with self.db_wrapper.lock:
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
             sql_records = []
             for record in records:
                 self.all_puzzle_hashes.add(record.puzzle_hash)
@@ -102,7 +105,10 @@ class WalletPuzzleStore:
             )
 
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def get_derivation_record(self, index: uint32, wallet_id: uint32) -> Optional[DerivationRecord]:
         """

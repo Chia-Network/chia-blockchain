@@ -1138,6 +1138,7 @@ class WalletRpcApi:
     async def pw_status(self, request):
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
         wallet_id = uint32(request["wallet_id"])
+        log.warning(f"Wallts: {self.service.wallet_state_manager.wallets}")
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         state: PoolWalletInfo = await wallet.get_current_state()
         return {

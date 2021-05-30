@@ -31,7 +31,6 @@ from chia.pools.pool_puzzles import (
     get_most_recent_singleton_coin_from_coin_solution,
     launcher_id_to_p2_puzzle_hash,
 )
-from chia.util.config import load_config, save_config
 
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk
@@ -41,8 +40,6 @@ from chia.wallet.wallet import Wallet
 
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.wallet_transaction_store import WalletTransactionStore
-
 
 class PoolWallet:
     MINIMUM_INITIAL_BALANCE = 1
@@ -115,7 +112,7 @@ class PoolWallet:
     @classmethod
     def _verify_self_pooled(cls, state) -> Optional[str]:
         err = ""
-        if state.pool_url is not None:
+        if state.pool_url != "":
             err += " Unneeded pool_url for self-pooling"
 
         if state.relative_lock_height != 0:
@@ -211,7 +208,6 @@ class PoolWallet:
 
         if existing_config is None and not make_new_authentication_key:
             raise ValueError("Can't use existing authentication key because config was not found")
-
         if make_new_authentication_key or existing_config is None:
             new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
                 self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
@@ -221,7 +217,7 @@ class PoolWallet:
             auth_key_signature: G2Element = AugSchemeMPL.sign(
                 owner_sk, bytes(AuthenticationKeyInfo(auth_pk, auth_pk_timestamp))
             )
-            pool_payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash()).hex()
+            pool_payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
         else:
             auth_pk = existing_config.authentication_public_key
             auth_pk_timestamp = existing_config.authentication_public_key_timestamp
@@ -239,6 +235,7 @@ class PoolWallet:
             auth_key_signature,
         )
         pool_config_dict[new_config.launcher_id] = new_config
+        self.log.warning(f"Updating pool config to {list(pool_config_dict.values())}., root {self.wallet_state_manager.root_path}")
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
     @staticmethod
@@ -272,6 +269,7 @@ class PoolWallet:
         """
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
         """
+        self.log.warning(f"REWINDING TO {block_height}")
         history: List[Tuple[uint32, CoinSolution]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
             self.wallet_id
         ).copy()
@@ -281,6 +279,7 @@ class PoolWallet:
         if len(history) > 0 and history[0][0] > block_height:
             # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
             # The PoolWallet object becomes invalid after this.
+            self.log.warning(f"DELEING WALLET {block_height}")
             await self.wallet_state_manager.user_store.delete_wallet(self.wallet_id)
             # await self.wallet_state_manager.wallets.pop(self.wallet_id)
 
@@ -317,11 +316,18 @@ class PoolWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
+        self.log.warning(f"Wallet info {self.wallet_info}")
+        try:
+            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
+            await self.update_pool_config(True)
+        except Exception as e:
+            self.log.warning("123")
+            self.log.error(f"ERRORRRR {e}")
 
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
-        await self.update_pool_config(True)
 
+        self.log.warning(f"Wallets1 {self.wallet_state_manager}")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
+        self.log.warning(f"Wallets2 {self.wallet_state_manager}")
         return self
 
     @staticmethod
