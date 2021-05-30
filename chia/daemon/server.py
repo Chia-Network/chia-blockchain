@@ -538,10 +538,13 @@ class WebSocketServer:
             }
             return response
 
+        plotter_uuids: List[str] = []
         for k in range(count):
-            id = str(uuid.uuid4())
+            plotter_uuid = str(uuid.uuid4())
+            plotter_uuids.append(plotter_uuid)
+
             config = {
-                "id": id,
+                "id": plotter_uuid,
                 "size": size,
                 "queue": queue,
                 "service_name": service_name,
@@ -558,7 +561,7 @@ class WebSocketServer:
             self.plots_queue.append(config)
 
             # notify GUI about new plot queue item
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, plotter_uuid))
 
             # only first item can start when user selected serial plotting
             can_start_serial_plotting = k == 0 and self._is_serial_plotting_running(queue) is False
@@ -566,24 +569,25 @@ class WebSocketServer:
             if parallel is True or can_start_serial_plotting:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 loop = asyncio.get_event_loop()
-                loop.create_task(self._start_plotting(id, loop, queue))
+                loop.create_task(self._start_plotting(plotter_uuid, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
         response = {
             "success": True,
             "service_name": service_name,
+            "plotter_uuids": plotter_uuids,
         }
 
         return response
 
     async def stop_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        id = request["id"]
-        config = self._get_plots_queue_item(id)
+        plotter_uuid = request["id"]
+        config = self._get_plots_queue_item(plotter_uuid)
         if config is None:
             return {"success": False}
 
-        id = config["id"]
+        plotter_uuid = config["id"]
         state = config["state"]
         process = config["process"]
         queue = config["queue"]
@@ -596,13 +600,13 @@ class WebSocketServer:
             if process is not None and state == PlotState.RUNNING:
                 run_next = True
                 config["state"] = PlotState.REMOVING
-                self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
-                await kill_process(process, self.root_path, service_plotter, id)
+                self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, plotter_uuid))
+                await kill_process(process, self.root_path, service_plotter, plotter_uuid)
 
             config["state"] = PlotState.FINISHED
             config["deleted"] = True
 
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, plotter_uuid))
 
             self.plots_queue.remove(config)
 
@@ -615,7 +619,7 @@ class WebSocketServer:
             log.error(f"Error during killing the plot process: {e}")
             config["state"] = PlotState.FINISHED
             config["error"] = str(e)
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, plotter_uuid))
             return {"success": False}
 
     async def start_service(self, request: Dict[str, Any]):
