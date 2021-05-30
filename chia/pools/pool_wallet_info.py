@@ -75,12 +75,12 @@ def pool_state_from_dict(
         return "Initial State must be SELF_POOLING or FARMING_TO_POOL", None
 
     singleton_state: PoolSingletonState = PoolSingletonState[state_str]
-    pool_url: Optional[str] = None
     relative_lock_height: Optional[uint32] = None
     target_puzzle_hash: Optional[bytes32] = None
 
     if singleton_state == SELF_POOLING:
         target_puzzle_hash = owner_puzzle_hash
+        pool_url: str = ""
         relative_lock_height = uint32(0)
     elif singleton_state == FARMING_TO_POOL:
         target_puzzle_hash = bytes32(hexstr_to_bytes(state_dict["target_puzzle_hash"]))

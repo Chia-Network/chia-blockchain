@@ -258,7 +258,7 @@ class WalletStateManager:
         pubkey = private.get_g1()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(self, from_zero: bool = False):
+    async def create_more_puzzle_hashes(self, from_zero: bool = False, in_transaction=False):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
@@ -339,9 +339,9 @@ class WalletStateManager:
                     )
                 )
 
-            await self.puzzle_store.add_derivation_paths(derivation_paths)
+            await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
         if unused > 0:
-            await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+            await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
     async def update_wallet_puzzle_hashes(self, wallet_id):
         derivation_paths: List[DerivationRecord] = []
@@ -370,7 +370,7 @@ class WalletStateManager:
             )
         await self.puzzle_store.add_derivation_paths(derivation_paths)
 
-    async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
+    async def get_unused_derivation_record(self, wallet_id: uint32, in_transaction=False) -> DerivationRecord:
         """
         Creates a puzzle hash for the given wallet, and then makes more puzzle hashes
         for every wallet to ensure we always have more in the database. Never reusue the
@@ -389,10 +389,10 @@ class WalletStateManager:
             assert record is not None
 
             # Set this key to used so we never use it again
-            await self.puzzle_store.set_used_up_to(record.index)
+            await self.puzzle_store.set_used_up_to(record.index, in_transaction=in_transaction)
 
             # Create more puzzle hashes / keys
-            await self.create_more_puzzle_hashes()
+            await self.create_more_puzzle_hashes(in_transaction=in_transaction)
             return record
 
     async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:

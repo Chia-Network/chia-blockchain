@@ -1,7 +1,7 @@
 # flake8: noqa: E501
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, List, Dict
 
 import pytest
 
@@ -14,6 +14,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -115,7 +116,7 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     wallet_id = summary["id"]
             assert wallet_id is not None
-
+            log.warning(f"Summaries response: {summaries_response}")
             status: PoolWalletInfo = await client.pw_status(wallet_id)
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -128,6 +129,13 @@ class TestPoolWalletRpc:
                 "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
                 "version": 1,
             }
+            # Check that config has been written properly
+            full_config: Dict = load_config(wallet_0.wallet_state_manager.root_path, "config.yaml")
+            pool_list: List[Dict] = full_config["pool"]["pool_list"]
+            pool_config = pool_list[0]
+            assert pool_config["authentication_public_key"] == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+            assert pool_config["launcher_id"] == "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7"
+            assert pool_config["pool_url"] == ""
 
         finally:
             client.close()
