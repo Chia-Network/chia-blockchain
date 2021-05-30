@@ -41,6 +41,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.transaction_type import TransactionType
 
+
 class PoolWallet:
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 10
@@ -235,7 +236,9 @@ class PoolWallet:
             auth_key_signature,
         )
         pool_config_dict[new_config.launcher_id] = new_config
-        self.log.warning(f"Updating pool config to {list(pool_config_dict.values())}., root {self.wallet_state_manager.root_path}")
+        self.log.warning(
+            f"Updating pool config to {list(pool_config_dict.values())}., root {self.wallet_state_manager.root_path}"
+        )
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
     @staticmethod
@@ -265,26 +268,25 @@ class PoolWallet:
 
         await self.update_pool_config(False)
 
-    async def rewind(self, block_height: int) -> None:
+    async def rewind(self, block_height: int) -> bool:
         """
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
+        Returns True if the wallet should be removed.
         """
-        self.log.warning(f"REWINDING TO {block_height}")
-        history: List[Tuple[uint32, CoinSolution]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
+        history: List[Tuple[uint32, CoinSolution]] = self.wallet_state_manager.pool_store.get_spends_for_wallet(
             self.wallet_id
         ).copy()
-        prev_state = self.get_current_state()
-        await self.wallet_state_manager.pool_store.rollback(block_height)
+        prev_state = await self.get_current_state()
+        await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
 
         if len(history) > 0 and history[0][0] > block_height:
             # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
             # The PoolWallet object becomes invalid after this.
-            self.log.warning(f"DELEING WALLET {block_height}")
-            await self.wallet_state_manager.user_store.delete_wallet(self.wallet_id)
-            # await self.wallet_state_manager.wallets.pop(self.wallet_id)
-
-        if self.get_current_state() != prev_state:
-            await self.update_pool_config(False)
+            return True
+        else:
+            if await self.get_current_state() != prev_state:
+                await self.update_pool_config(False)
+            return False
 
     @staticmethod
     async def create(
@@ -316,18 +318,10 @@ class PoolWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        self.log.warning(f"Wallet info {self.wallet_info}")
-        try:
-            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
-            await self.update_pool_config(True)
-        except Exception as e:
-            self.log.warning("123")
-            self.log.error(f"ERRORRRR {e}")
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
+        await self.update_pool_config(True)
 
-
-        self.log.warning(f"Wallets1 {self.wallet_state_manager}")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
-        self.log.warning(f"Wallets2 {self.wallet_state_manager}")
         return self
 
     @staticmethod

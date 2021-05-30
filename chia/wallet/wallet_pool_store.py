@@ -97,7 +97,7 @@ class WalletPoolStore:
                 self._state_transitions_cache[wallet_id] = []
             self._state_transitions_cache[wallet_id].append((height, coin_solution))
 
-    async def rollback(self, height: int) -> None:
+    async def rollback(self, height: int, wallet_id_arg: int) -> None:
         """
         Rollback removes all entries which have height > height passed in. Note that this is not committed to the DB
         until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
@@ -106,10 +106,12 @@ class WalletPoolStore:
         for wallet_id, items in self._state_transitions_cache.items():
             remove_index_start: Optional[int] = None
             for i, (item_block_height, _) in enumerate(items):
-                if item_block_height > height:
+                if item_block_height > height and wallet_id == wallet_id_arg:
                     remove_index_start = i
                     break
             if remove_index_start is not None:
                 del items[remove_index_start:]
-        cursor = await self.db_connection.execute("DELETE FROM pool_state_transitions WHERE height>?", (height,))
+        cursor = await self.db_connection.execute(
+            "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
+        )
         await cursor.close()

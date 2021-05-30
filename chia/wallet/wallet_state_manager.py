@@ -578,7 +578,7 @@ class WalletStateManager:
                     for wallet_id, wallet in self.wallets.items():
                         if (
                             wallet.type() == WalletType.POOLING_WALLET
-                            and wallet.pool_info.launcher_id == cs.coin.name()
+                            and (await wallet.get_current_state()).launcher_id == cs.coin.name()
                         ):
                             self.log.warning("Already have, not recreating")
                             already_have = True
@@ -999,9 +999,16 @@ class WalletStateManager:
 
         await self.retry_sending_after_reorg(reorged)
 
+        # Removes wallets that were created from a blockchain transaction which got reorged.
+        remove_ids = []
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type == WalletType.POOLING_WALLET.value:
-                await wallet.rewind(height)
+            if wallet.type() == WalletType.POOLING_WALLET.value:
+                remove: bool = await wallet.rewind(height)
+                if remove:
+                    remove_ids.append(wallet_id)
+        for wallet_id in remove_ids:
+            await self.user_store.delete_wallet(wallet_id, in_transaction=True)
+            self.wallets.pop(wallet_id)
 
     async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
         """
