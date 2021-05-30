@@ -153,7 +153,7 @@ class WalletNode:
 
         assert self.server is not None
         self.wallet_state_manager = await WalletStateManager.create(
-            private_key, self.config, path, self.constants, self.server
+            private_key, self.config, path, self.constants, self.server, self.root_path
         )
 
         self.wsm_close_task = None

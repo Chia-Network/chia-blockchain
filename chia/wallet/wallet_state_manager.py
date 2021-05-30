@@ -107,6 +107,7 @@ class WalletStateManager:
     pool_store: WalletPoolStore
     weight_proof_handler: Any
     server: ChiaServer
+    root_path: Path
 
     @staticmethod
     async def create(
@@ -115,6 +116,7 @@ class WalletStateManager:
         db_path: Path,
         constants: ConsensusConstants,
         server: ChiaServer,
+        root_path: Path,
         name: str = None,
     ):
         self = WalletStateManager()
@@ -122,6 +124,7 @@ class WalletStateManager:
         self.config = config
         self.constants = constants
         self.server = server
+        self.root_path = root_path
 
         if name:
             self.log = logging.getLogger(name)

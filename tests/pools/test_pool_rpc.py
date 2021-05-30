@@ -88,10 +88,7 @@ class TestPoolWalletRpc:
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
             total_block_rewards = await self.get_total_block_rewards(total_blocks)
 
-            await time_out_assert(10, wallet_0.get_unconfirmed_balance, total_block_rewards)
             await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-            await time_out_assert(10, wallet_0.get_spendable_balance, total_block_rewards)
-            assert total_block_rewards > 0
 
             summaries_response = await client.get_wallets()
             for summary in summaries_response:
@@ -118,10 +115,8 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     wallet_id = summary["id"]
             assert wallet_id is not None
-            log.warning(f"PW status wallet id: {wallet_id}")
 
             status: PoolWalletInfo = await client.pw_status(wallet_id)
-            log.warning(f"New status: {status}")
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
