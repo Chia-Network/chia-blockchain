@@ -58,7 +58,7 @@ export default function PlotAddSelectFinalDirectory() {
           }}
           required
         />
-        <ButtonSelected onClick={handleSelect} style={{ minWidth: '92px' }} size="large" variant="contained" selected={hasFinalLocation}>
+        <ButtonSelected onClick={handleSelect} size="large" variant="contained" selected={hasFinalLocation} nowrap>
           {hasFinalLocation ? (
             <Trans>Selected</Trans>
           ) : (

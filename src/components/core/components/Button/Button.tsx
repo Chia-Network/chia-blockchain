@@ -3,7 +3,11 @@ import styled from 'styled-components';
 import { darken } from 'polished';
 import { Button as BaseButton, ButtonProps } from '@material-ui/core';
 
-const DangerButton = styled(BaseButton)`
+const StyledBaseButton = styled(BaseButton)`
+  white-space: ${({ nowrap }) => nowrap ? 'nowrap' : 'normal'};
+`;
+
+const DangerButton = styled(StyledBaseButton)`
   color: ${({ theme }) => theme.palette.danger.contrastText};
   background-color: ${({ theme }) => theme.palette.danger.main};
 
@@ -15,6 +19,7 @@ const DangerButton = styled(BaseButton)`
 
 type Props = Omit<ButtonProps, 'color'> & {
   color?: ButtonProps['color'] | 'danger';
+  nowrap?: boolean;
 };
 
 export default function Button(props: Props) {
@@ -24,10 +29,10 @@ export default function Button(props: Props) {
     case 'danger':
       return <DangerButton {...rest} />;
     case 'primary':
-      return <BaseButton color="primary" {...rest} />;
+      return <StyledBaseButton color="primary" {...rest} />;
     case 'secondary':
-      return <BaseButton color="secondary" {...rest} />;
+      return <StyledBaseButton color="secondary" {...rest} />;
     default:
-      return <BaseButton {...rest} />;
+      return <StyledBaseButton {...rest} />;
   }
 }
