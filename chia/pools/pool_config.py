@@ -6,7 +6,7 @@ from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
+from chia.util.config import load_config, save_config
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
@@ -56,3 +56,9 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
             )
             ret_list.append(pool_config)
     return ret_list
+
+
+async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
+    full_config = load_config(root_path, "config.yaml")
+    full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
+    save_config(root_path, "config.yaml", full_config)

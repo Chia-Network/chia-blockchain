@@ -5,7 +5,7 @@ from typing import Any, Optional, Set, Tuple, List, Dict
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 
 from chia.consensus.block_record import BlockRecord
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
     PoolSingletonState,
@@ -29,6 +29,7 @@ from chia.pools.pool_puzzles import (
     solution_to_extra_data,
     pool_state_to_inner_puzzle,
     get_most_recent_singleton_coin_from_coin_solution,
+    launcher_id_to_p2_puzzle_hash,
 )
 from chia.util.config import load_config, save_config
 
@@ -183,83 +184,62 @@ class PoolWallet:
 
         assert extra_data is not None
         current_inner = pool_state_to_inner_puzzle(extra_data)
-        return PoolWalletInfo(extra_data, self.target_state, launcher_coin, current_inner, tip_singleton_coin_id)
+        launcher_id: bytes32 = launcher_coin.name()
+        p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id)
+        return PoolWalletInfo(
+            extra_data,
+            self.target_state,
+            launcher_coin,
+            launcher_id,
+            p2_singleton_puzzle_hash,
+            current_inner,
+            tip_singleton_coin_id,
+        )
 
     async def get_tip(self) -> Tuple[uint32, CoinSolution]:
         return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)[-1]
 
     async def update_pool_config(self, make_new_authentication_key: bool):
         current_state: PoolWalletInfo = await self.get_current_state()
-        full_config: Dict = load_config(self.wallet_state_manager.wallet_node.root_path, "config.yaml")
+        pool_config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
+        pool_config_dict: Dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
         owner_sk: PrivateKey = await find_owner_sk(
             [self.wallet_state_manager.private_key],
             current_state.current.owner_pubkey,
         )
-        found = False
-        if "pool_list" not in full_config["pools"]:
-            full_config["pool_list"] = []
-        new_pool_list: List[Dict] = []
-        for config in full_config["pools"]["pool_list"]:
-            if bytes32.fromhex(config["launcher_id"]) == current_state.launcher_coin.name():
-                found = True
-                if make_new_authentication_key:
-                    new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
-                        self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
-                    )
-                    auth_pk: G1Element = new_auth_sk.get_g1()
-                    auth_pk_timestamp: uint64 = uint64(int(time.time()))
-                    auth_key_signature: G2Element = AugSchemeMPL.sign(
-                        owner_sk, AuthenticationKeyInfo(auth_pk, auth_pk_timestamp)
-                    )
-                    pool_payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash()).hex()
-                else:
-                    auth_pk = G1Element.from_bytes(bytes.fromhex(config["authentication_public_key"]))
-                    auth_pk_timestamp = config["authentication_public_key_timestamp"]
-                    auth_key_signature = G2Element.from_bytes(
-                        bytes.fromhex(config["authentication_key_info_signature"])
-                    )
-                    pool_payout_instructions = config["pool_payout_instructions"]
-                new_config: PoolWalletConfig = PoolWalletConfig(
-                    current_state.current.pool_url,
-                    pool_payout_instructions,
-                    current_state.current.target_puzzle_hash,
-                    current_state.launcher_id,
-                    current_state.current.owner_pubkey,
-                    auth_pk,
-                    auth_pk_timestamp,
-                    auth_key_signature,
-                )
-                new_pool_list.append(new_config.to_json_dict())
-            else:
-                new_pool_list.append(config)
+        existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
 
-        if not found and not make_new_authentication_key:
+        if existing_config is None and not make_new_authentication_key:
             raise ValueError("Can't use existing authentication key because config was not found")
-        if not found:
-            pool_payout_instructions = (await self.standard_wallet.get_new_puzzlehash()).hex()
 
+        if make_new_authentication_key or existing_config is None:
             new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
                 self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
             )
             auth_pk: G1Element = new_auth_sk.get_g1()
             auth_pk_timestamp: uint64 = uint64(int(time.time()))
             auth_key_signature: G2Element = AugSchemeMPL.sign(
-                owner_sk, AuthenticationKeyInfo(auth_pk, auth_pk_timestamp)
+                owner_sk, bytes(AuthenticationKeyInfo(auth_pk, auth_pk_timestamp))
             )
-            new_config: PoolWalletConfig = PoolWalletConfig(
-                current_state.current.pool_url,
-                pool_payout_instructions,
-                current_state.current.target_puzzle_hash,
-                current_state.launcher_id,
-                current_state.current.owner_pubkey,
-                auth_pk,
-                auth_pk_timestamp,
-                auth_key_signature,
-            )
-            new_pool_list.append(new_config.to_json_dict())
+            pool_payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash()).hex()
+        else:
+            auth_pk = existing_config.authentication_public_key
+            auth_pk_timestamp = existing_config.authentication_public_key_timestamp
+            auth_key_signature = existing_config.authentication_key_info_signature
+            pool_payout_instructions = existing_config.pool_payout_instructions
 
-        full_config["pool"]["pool_list"] = new_pool_list
-        save_config(self.wallet_state_manager.wallet_node_root_path, "config.yaml", full_config)
+        new_config: PoolWalletConfig = PoolWalletConfig(
+            current_state.current.pool_url,
+            pool_payout_instructions,
+            current_state.current.target_puzzle_hash,
+            current_state.launcher_id,
+            current_state.current.owner_pubkey,
+            auth_pk,
+            auth_pk_timestamp,
+            auth_key_signature,
+        )
+        pool_config_dict[new_config.launcher_id] = new_config
+        await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
     @staticmethod
     def get_next_interesting_coin_ids(spend: CoinSolution) -> List[bytes32]:
@@ -295,14 +275,16 @@ class PoolWallet:
         history: List[Tuple[uint32, CoinSolution]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
             self.wallet_id
         ).copy()
+        prev_state = self.get_current_state()
         await self.wallet_state_manager.pool_store.rollback(block_height)
 
         if len(history) > 0 and history[0][0] > block_height:
             # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
             # The PoolWallet object becomes invalid after this.
             await self.wallet_state_manager.user_store.delete_wallet(self.wallet_id)
-            await self.wallet_state_manager.wallets.pop(self.wallet_id)
-        else:
+            # await self.wallet_state_manager.wallets.pop(self.wallet_id)
+
+        if self.get_current_state() != prev_state:
             await self.update_pool_config(False)
 
     @staticmethod

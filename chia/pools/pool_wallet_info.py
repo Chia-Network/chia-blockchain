@@ -10,9 +10,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint8
 from chia.util.streamable import streamable, Streamable
-from chia.wallet.cc_wallet.ccparent import CCParent
-
-from chia.wallet.transaction_record import TransactionRecord
 
 
 POOL_PROTOCOL_VERSION = uint8(1)
@@ -122,5 +119,7 @@ class PoolWalletInfo(Streamable):
     current: PoolState
     target: Optional[PoolState]
     launcher_coin: Coin
+    launcher_id: bytes32
+    p2_singleton_puzzle_hash: bytes32
     current_inner: Program  # Inner puzzle in current singleton, not revealed yet
     tip_singleton_coin_id: bytes32
