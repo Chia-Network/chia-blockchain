@@ -600,8 +600,9 @@ class WebSocketServer:
             if process is not None and state == PlotState.RUNNING:
                 run_next = True
                 config["state"] = PlotState.REMOVING
-                self.state_changed(service_plotter,
-                                   self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, plotter_uuid))
+                self.state_changed(
+                    service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, plotter_uuid)
+                )
                 await kill_process(process, self.root_path, service_plotter, plotter_uuid)
 
             config["state"] = PlotState.FINISHED
