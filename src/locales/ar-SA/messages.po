@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-25 23:24\n"
+"PO-Revision-Date: 2021-05-30 23:26\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -18,7 +18,7 @@ msgstr ""
 "X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 72\n"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:39
+#: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*هل ترغب في زيادة استكشاف Chia؟ تحقق من <0> Chia Explorer</0> التي بناها مطور مفتوح المصدر."
 
@@ -26,16 +26,16 @@ msgstr "*هل ترغب في زيادة استكشاف Chia؟ تحقق من <0> C
 #~ msgid "0 automatically chooses bucket count"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:166
 msgid "128 buckets is recommended"
 msgstr "128 قسم موصى بها"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:58
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "الحصاد هو خدمة تعمل على الحاسوب حيث يتم تخزين القطع (المساحات). المزارع و الحاصد يتحدث مع نقطة إتصال الشبكة لرؤية حالة السلسلة. عرض شبكتك من الحصاد المتصل أسفل عرض المزيد"
 
-#: src/electron/main.tsx:365
-#: src/electron/main.tsx:443
+#: src/electron/main.tsx:423
+#: src/electron/main.tsx:510
 msgid "About Chia Blockchain"
 msgstr "معلومات عن Chia Blockchain"
 
@@ -47,15 +47,15 @@ msgstr "موافقة"
 msgid "Accepted at time:"
 msgstr "تم القبول في الوقت:"
 
-#: src/components/plot/PlotsFailed.tsx:14
-#: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/PlotsFailed.tsx:17
+#: src/components/plot/PlotsNotFound.tsx:17
+#: src/components/plot/overview/PlotOverviewPlots.tsx:88
 msgid "Action"
 msgstr "إجراء"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:43
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
-#: src/components/fullNode/FullNodeConnections.tsx:57
+#: src/components/farm/FarmFullNodeConnections.tsx:57
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:61
+#: src/components/fullNode/FullNodeConnections.tsx:65
 msgid "Actions"
 msgstr "الإجراءات"
 
@@ -63,54 +63,54 @@ msgstr "الإجراءات"
 msgid "Add"
 msgstr "إضافة"
 
-#: src/components/plot/PlotHeader.tsx:51
+#: src/components/plot/PlotHeader.tsx:65
 msgid "Add Plot Directory"
 msgstr "إضافة مجلد"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:69
 msgid "Add Plot to Queue"
 msgstr "إضافة إلى قائمة الانتظار"
 
-#: src/components/wallet/Wallets.tsx:83
+#: src/components/wallet/Wallets.tsx:110
 msgid "Add Wallet"
 msgstr "إضافة محفظة"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:35
-#: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:55
-#: src/components/plot/overview/PlotOverviewHero.tsx:29
+#: src/components/farm/overview/FarmOverviewHero.tsx:47
+#: src/components/plot/PlotHeader.tsx:46
+#: src/components/plot/add/PlotAdd.tsx:77
+#: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
 msgstr "إضافة مساحة"
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:40
+#: src/components/plot/PlotAddDirectoryDialog.tsx:56
 msgid "Add a plot"
 msgstr "إضافة مساحة"
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:69
+#: src/components/plot/PlotAddDirectoryDialog.tsx:95
 msgid "Add plot directory"
 msgstr "إضافة مجلد"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:405
-#: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:375
+#: src/components/wallet/coloured/WalletColoured.tsx:569
+#: src/components/wallet/coloured/WalletColoured.tsx:672
+#: src/components/wallet/standard/WalletStandard.tsx:570
 msgid "Address"
 msgstr "العنوان"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:323
+#: src/components/wallet/standard/WalletStandard.tsx:466
 msgid "Address / Puzzle hash"
 msgstr "العنوان / العنوان المشفر"
 
 #: src/components/trading/CreateOffer.jsx:213
-#: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:49
+#: src/components/trading/TradesTable.tsx:18
+#: src/components/wallet/WalletHistory.tsx:62
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:333
+#: src/components/wallet/standard/WalletStandard.tsx:486
 msgid "Amount"
 msgstr "المبلغ"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:415
+#: src/components/wallet/coloured/WalletColoured.tsx:590
 msgid "Amount ({cc_unit})"
 msgstr "المبلغ ({cc_unit})"
 
@@ -118,16 +118,16 @@ msgstr "المبلغ ({cc_unit})"
 msgid "Amount For Initial Coin"
 msgstr "مبلغ العملات الأولية"
 
-#: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:32
+#: src/components/plot/PlotAction.tsx:41
+#: src/components/plot/queue/PlotQueueActions.tsx:44
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "هل أنت متأكد أنك تريد حذف الملف؟ لا يمكن إرجاع الملف بعد الحزف."
 
-#: src/components/fullNode/FullNodeCloseConnection.tsx:23
+#: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
 msgstr "هل أنت متأكد بأنك تريد قطع الإتصال مع السيرفر؟"
 
-#: src/electron/main.tsx:164
+#: src/electron/main.tsx:197
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "هل أنت متأكد من رغبتك في إغلاق التطبيق؟ ستتوقف عمليات إنشاء المساحات في القرص الصلب والمزرعة."
 
@@ -139,18 +139,18 @@ msgstr "هل أنت متأكد من رغبتك في إغلاق التطبيق؟ 
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "هل أنت متأكد أنك تريد استخدام K={plotSize}؟"
 
-#: src/components/selectKey/SelectKey.tsx:39
-#: src/components/selectKey/SelectKey.tsx:53
+#: src/components/selectKey/SelectKey.tsx:62
+#: src/components/selectKey/SelectKey.tsx:83
 msgid "Back"
 msgstr "رجوع"
 
-#: src/components/backup/BackupCreate.tsx:61
+#: src/components/backup/BackupCreate.tsx:66
 msgid "Backup file is used to restore smart wallets."
 msgstr "يستخدم ملف النسخ الاحتياطي لاستعادة المحافظ الذكية."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:286
+#: src/components/wallet/coloured/WalletColoured.tsx:376
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
-#: src/components/wallet/standard/WalletStandard.tsx:194
+#: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "Balance"
 msgstr "الرصيد"
 
@@ -158,12 +158,12 @@ msgstr "الرصيد"
 msgid "Base Farmer Reward Amount"
 msgstr "مبلغ مكافأة المزرعة الأساسي"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:25
-#: src/components/farm/FarmLatestBlockChallenges.tsx:31
+#: src/components/farm/FarmLatestBlockChallenges.tsx:46
+#: src/components/farm/FarmLatestBlockChallenges.tsx:55
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr "أدناه التحديات الحالية. قد يكون أو لا يكون لديك دليل على وجود قطع لهذه التحديات. لا تحتوي هذه القطع حاليا على دليل على الوقت."
 
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:20
 msgid "Best estimate over last 24 hours"
 msgstr "أفضل تقدير على مدى اخر 24 ساعة"
 
@@ -210,23 +210,23 @@ msgstr "المربعات"
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 #~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:65
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:76
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:107
 msgid "Browse"
 msgstr "تصفح"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:50
+#: src/components/farm/FarmLastAttemptedProof.tsx:70
 msgid "But you are currently farming <0/>"
 msgstr "لكنك حاليا تقوم بالزراعة <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
-#: src/components/trading/TradesTable.tsx:31
+#: src/components/trading/TradesTable.tsx:45
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
 msgstr "شراء"
 
-#: src/components/wallet/Wallets.tsx:36
+#: src/components/wallet/Wallets.tsx:59
 msgid "CC Wallet"
 msgstr "CC Wallet"
 
@@ -234,13 +234,13 @@ msgstr "CC Wallet"
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/components/selectKey/SelectKey.tsx:89
+#: src/components/selectKey/SelectKey.tsx:144
 msgid "Can be backed up to mnemonic seed"
 msgstr "يمكن الإسترجاع من النسخة الاحتياطية للكلمات السرية"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
-#: src/components/farm/FarmManageFarmingRewards.tsx:102
-#: src/components/fullNode/FullNodeAddConnection.tsx:67
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
@@ -251,48 +251,48 @@ msgstr "إلغاء"
 msgid "Cancel and Spend"
 msgstr "إلغاء وإنفاق"
 
-#: src/components/plot/PlotsNotFound.tsx:26
+#: src/components/plot/PlotsNotFound.tsx:38
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
 msgstr "تحذير، حذف هذه القطع سيؤدي إلى حذفها إلى الأبد. تأكد من أن أجهزة التخزين متصلة بشكل صحيح."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:13
+#: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
 msgstr "التحدي"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:11
+#: src/components/farm/FarmLatestBlockChallenges.tsx:17
 msgid "Challenge Hash"
 msgstr "رمز التحدي"
 
-#: src/electron/main.tsx:345
+#: src/electron/main.tsx:402
 msgid "Chat on KeyBase"
 msgstr "الدردشة على KeyBase"
 
-#: src/electron/main.tsx:362
+#: src/electron/main.tsx:420
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:312
+#: src/electron/main.tsx:359
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/Wallets.tsx:32
+#: src/components/wallet/Wallets.tsx:56
 msgid "Chia Wallet"
 msgstr "محفظة Chia"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:21
 msgid "Choose Number of Plots"
 msgstr "إختر عدد القطع"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:54
+#: src/components/plot/add/PlotAddChooseSize.tsx:59
 msgid "Choose Plot Size"
 msgstr "إختر حجم القطعة"
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:55
+#: src/components/plot/PlotAddDirectoryDialog.tsx:102
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:76
 msgid "Close"
 msgstr "إغلاق"
 
-#: src/components/app/AppRouter.tsx:18
+#: src/components/app/AppRouter.tsx:27
 msgid "Closing down node and server"
 msgstr "إغلاق نقطة إتصال الشبكة والخادم"
 
@@ -301,11 +301,11 @@ msgid "Coins:"
 msgstr "العملات:"
 
 #: src/components/trading/CreateOffer.jsx:192
-#: src/components/trading/TradesTable.tsx:19
+#: src/components/trading/TradesTable.tsx:21
 msgid "Colour"
 msgstr "اللون"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:181
+#: src/components/wallet/coloured/WalletColoured.tsx:220
 msgid "Colour Info"
 msgstr "معلومات اللون"
 
@@ -313,7 +313,7 @@ msgstr "معلومات اللون"
 msgid "Colour String"
 msgstr "إعدادات الألوان"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:186
+#: src/components/wallet/coloured/WalletColoured.tsx:226
 msgid "Colour:"
 msgstr "اللون:"
 
@@ -325,11 +325,11 @@ msgstr "عملة ملونة"
 msgid "Coloured Coin Options"
 msgstr "خيارات العملة الملونة"
 
-#: src/electron/main.tsx:162
+#: src/electron/main.tsx:195
 msgid "Confirm"
 msgstr "تأكيد"
 
-#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+#: src/components/fullNode/FullNodeCloseConnection.tsx:21
 msgid "Confirm Disconnect"
 msgstr "تأكيد قطع الاتصال"
 
@@ -337,25 +337,25 @@ msgstr "تأكيد قطع الاتصال"
 msgid "Confirmed at block:"
 msgstr "تم التأكيد علي المربع:"
 
-#: src/components/wallet/WalletHistory.tsx:40
+#: src/components/wallet/WalletHistory.tsx:52
 msgid "Confirmed at height {0}"
 msgstr "تم التأكيد في الارتفاع {0}"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:70
+#: src/components/fullNode/FullNodeAddConnection.tsx:105
 msgid "Connect"
 msgstr "إتصال"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:55
-#: src/components/fullNode/FullNodeConnections.tsx:75
+#: src/components/fullNode/FullNodeAddConnection.tsx:71
+#: src/components/fullNode/FullNodeConnections.tsx:96
 msgid "Connect to other peers"
 msgstr "الاتصال بنقاط شبكة اخري"
 
-#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:57
 #: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "متصل"
 
-#: src/components/app/AppRouter.tsx:23
+#: src/components/app/AppRouter.tsx:34
 msgid "Connecting to wallet"
 msgstr "الاتصال بالمحفظة"
 
@@ -363,40 +363,40 @@ msgstr "الاتصال بالمحفظة"
 msgid "Connection Status"
 msgstr "حالة الإتصال"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:66
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:65
+#: src/components/farm/FarmFullNodeConnections.tsx:102
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:106
 msgid "Connection Status:"
 msgstr "حالة الإتصال:"
 
-#: src/components/fullNode/FullNodeConnections.tsx:50
+#: src/components/fullNode/FullNodeConnections.tsx:58
 msgid "Connection type"
 msgstr "نوع الاتصال"
 
-#: src/components/fullNode/FullNodeConnections.tsx:73
+#: src/components/fullNode/FullNodeConnections.tsx:92
 msgid "Connections"
 msgstr "الإتصالات"
 
-#: src/electron/main.tsx:330
+#: src/electron/main.tsx:383
 msgid "Contribute on GitHub"
 msgstr "المساهمة في GitHub"
 
-#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
 msgid "Copied"
 msgstr "تم النسخ"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:461
+#: src/components/wallet/coloured/WalletColoured.tsx:686
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:379
+#: src/components/wallet/standard/WalletStandard.tsx:583
 msgid "Copy"
 msgstr "إنسخ"
 
-#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:32
 msgid "Copy to Clipboard"
 msgstr "نسخ إلى الحافظة"
 
-#: src/components/backup/BackupCreate.tsx:70
+#: src/components/backup/BackupCreate.tsx:78
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
@@ -408,11 +408,11 @@ msgstr "إنشاء"
 msgid "Create DID wallet"
 msgstr "إنشاء محفظة من النوع DID"
 
-#: src/components/trading/TradeManager.tsx:22
+#: src/components/trading/TradeManager.tsx:49
 msgid "Create Offer"
 msgstr "إنشاء عرض"
 
-#: src/components/plot/add/PlotAdd.tsx:67
+#: src/components/plot/add/PlotAdd.tsx:89
 msgid "Create Plot"
 msgstr "إنشاء قطعة"
 
@@ -432,17 +432,17 @@ msgstr "إنشاء محفظة من النوع Rate Limited Admin Wallet"
 msgid "Create Trade Offer"
 msgstr "إنشاء عرض تجاري"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:396
+#: src/components/wallet/coloured/WalletColoured.tsx:550
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
-#: src/components/wallet/standard/WalletStandard.tsx:312
+#: src/components/wallet/standard/WalletStandard.tsx:442
 msgid "Create Transaction"
 msgstr "إنشاء معاملة"
 
-#: src/components/backup/BackupCreate.tsx:58
+#: src/components/backup/BackupCreate.tsx:63
 msgid "Create a Backup"
 msgstr "إنشاء نسخة احتياطية"
 
-#: src/components/selectKey/SelectKey.tsx:109
+#: src/components/selectKey/SelectKey.tsx:182
 msgid "Create a new private key"
 msgstr "إنشاء مفتاح خاص جديد"
 
@@ -482,11 +482,11 @@ msgstr "تم إنشاؤها من قبل:"
 msgid "Current trade status"
 msgstr "الوضع التجاري الحالي"
 
-#: src/components/selectKey/SelectKey.tsx:98
+#: src/components/selectKey/SelectKey.tsx:159
 msgid "DANGER: permanently delete private key"
 msgstr "تحذير: حذف المفتاح الخاص بشكل دائم"
 
-#: src/components/wallet/Wallets.tsx:50
+#: src/components/wallet/Wallets.tsx:71
 msgid "DID Wallet"
 msgstr "محفظة DID"
 
@@ -494,52 +494,52 @@ msgstr "محفظة DID"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:29
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:36
+#: src/components/wallet/WalletHistory.tsx:47
 msgid "Date"
 msgstr "التاريخ"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:90
 msgid "Delay"
 msgstr "تأخير"
 
-#: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:31
-#: src/components/plot/queue/PlotQueueActions.tsx:65
-#: src/components/selectKey/SelectKey.tsx:39
-#: src/components/selectKey/SelectKey.tsx:53
+#: src/components/plot/PlotAction.tsx:39
+#: src/components/plot/PlotAction.tsx:63
+#: src/components/plot/queue/PlotQueueActions.tsx:41
+#: src/components/plot/queue/PlotQueueActions.tsx:86
+#: src/components/selectKey/SelectKey.tsx:61
+#: src/components/selectKey/SelectKey.tsx:82
 msgid "Delete"
 msgstr "حذف"
 
-#: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/PlotAction.tsx:38
+#: src/components/plot/queue/PlotQueueActions.tsx:40
 msgid "Delete Plot"
 msgstr "حذف قطعة"
 
-#: src/components/selectKey/SelectKey.tsx:53
-#: src/components/selectKey/SelectKey.tsx:122
+#: src/components/selectKey/SelectKey.tsx:81
+#: src/components/selectKey/SelectKey.tsx:202
 msgid "Delete all keys"
 msgstr "حذف جميع المفاتيح"
 
-#: src/components/selectKey/SelectKey.tsx:39
+#: src/components/selectKey/SelectKey.tsx:60
 msgid "Delete key"
 msgstr "حذف المفتاح"
 
-#: src/components/selectKey/SelectKey.tsx:54
+#: src/components/selectKey/SelectKey.tsx:86
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "سيؤدي حذف جميع المفاتيح إلى إزالة المفاتيح بشكل دائم من جهاز الكمبيوتر الخاص بك، تأكد من أن لديك نسخ احتياطية. هل أنت متأكد من أنك تريد المتابعة؟"
 
-#: src/components/selectKey/SelectKey.tsx:40
+#: src/components/selectKey/SelectKey.tsx:65
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "سيؤدي حذف المفتاح إلى إزالة المفتاح بشكل دائم من جهاز الكمبيوتر الخاص بك، تأكد من أن لديك نسخ احتياطية. هل أنت متأكد من أنك تريد المتابعة؟"
 
-#: src/electron/main.tsx:260
+#: src/electron/main.tsx:305
 msgid "Developer"
 msgstr "المطور"
 
-#: src/electron/main.tsx:263
+#: src/electron/main.tsx:308
 msgid "Developer Tools"
 msgstr "أدوات المطورين"
 
@@ -552,7 +552,7 @@ msgstr "مستوى الصعوبة"
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:203
 msgid "Disable bitfield plotting"
 msgstr "تعطيل إنشاء القطع بواسطة bifield"
 
@@ -568,12 +568,12 @@ msgstr "قطع الاتصال"
 msgid "Distributed Identity Options"
 msgstr "خيارات الهوية الموزعة"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:41
-#: src/components/plot/overview/PlotOverviewHero.tsx:35
+#: src/components/farm/overview/FarmOverviewHero.tsx:53
+#: src/components/plot/overview/PlotOverviewHero.tsx:46
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "هل لديك قطع موجودة على هذه الجهاز؟ <0>إضافة دليل القطع</0>"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:45
 msgid "Does your machine support parallel plotting?"
 msgstr "هل يدعم جهازك إنشاء اكثر من قطعة في نفس الوقت ؟"
 
@@ -582,34 +582,34 @@ msgstr "هل يدعم جهازك إنشاء اكثر من قطعة في نفس �
 msgid "Drag and drop offer file"
 msgstr "سحب وإسقاط ملف العرض"
 
-#: src/components/backup/BackupRestore.tsx:114
+#: src/components/backup/BackupRestore.tsx:172
 msgid "Drag and drop your backup file"
 msgstr "قم بسحب ملف النسخة الاحتياطية من جهاز الحاسوب الي هنا"
 
-#: src/electron/main.tsx:219
+#: src/electron/main.tsx:264
 msgid "Edit"
 msgstr "تعديل"
 
-#: src/components/wallet/WalletImport.tsx:67
+#: src/components/wallet/WalletImport.tsx:142
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "أدخل الـ 24 كلمة التي قمت بحفظها من أجل استعادة محفظة Chia الخاصة بك."
 
-#: src/components/farm/FarmerStatus.tsx:30
-#: src/components/farm/FarmerStatus.tsx:31
-#: src/components/farm/card/FarmCardStatus.tsx:20
-#: src/components/farm/card/FarmCardStatus.tsx:25
-#: src/components/plot/PlotStatus.tsx:17
-#: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:12
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
+#: src/components/farm/card/FarmCardStatus.tsx:41
+#: src/components/farm/card/FarmCardStatus.tsx:55
+#: src/components/plot/PlotStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:20
 msgid "Error"
 msgstr "خطأ"
 
-#: src/components/wallet/standard/WalletStandard.tsx:292
+#: src/components/wallet/standard/WalletStandard.tsx:415
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "خطأ: لا يمكن إرسال chia إلى عنوان العملات الملونة. الرجاء إدخال عنوان chia."
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:61
 msgid "Estimated Time to Win"
 msgstr "الوقت المتوقع للفوز"
 
@@ -621,7 +621,7 @@ msgstr "المساحة التقديرية للشبكة"
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "المساحة التقديرية الكلية لجميع القطع الموجودة في الشبكة"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:230
 msgid "Exclude final directory"
 msgstr "إستبعاد الملف النهائي"
 
@@ -630,13 +630,13 @@ msgstr "إستبعاد الملف النهائي"
 #~ msgid "Expected Time to Win"
 #~ msgstr ""
 
-#: src/components/plot/PlotsFailed.tsx:24
+#: src/components/plot/PlotsFailed.tsx:35
 msgid "Failed to open (invalid plots)"
 msgstr "فشل في الفتح (قطع غير صالحة)"
 
-#: src/components/dashboard/DashboardSideBar.tsx:26
-#: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:346
+#: src/components/dashboard/DashboardSideBar.tsx:54
+#: src/components/wallet/coloured/WalletColoured.tsx:622
+#: src/components/wallet/standard/WalletStandard.tsx:515
 msgid "Farm"
 msgstr "المزرعة"
 
@@ -644,46 +644,46 @@ msgstr "المزرعة"
 msgid "Farmer Puzzle Hash"
 msgstr "عناوين المزارع المشفرة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:95
+#: src/components/farm/FarmManageFarmingRewards.tsx:117
 msgid "Farmer Reward Address"
 msgstr "عنوان مكافأة المزارع"
 
-#: src/components/farm/card/FarmCardStatus.tsx:21
-#: src/components/plot/PlotStatus.tsx:28
+#: src/components/farm/card/FarmCardStatus.tsx:44
+#: src/components/plot/PlotStatus.tsx:36
 msgid "Farmer is not connected"
 msgstr "المزرعة غير متصلة"
 
-#: src/components/farm/card/FarmCardStatus.tsx:26
-#: src/components/plot/PlotStatus.tsx:29
+#: src/components/farm/card/FarmCardStatus.tsx:58
+#: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "المزارع لا يعمل"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:27
+#: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "يحصل المزارعون على مكافآت مربعات ورسوم معاملة من خلال تخصيص مساحة احتياطية للشبكة للمساعدة في تأمين المعاملات. هذا هو المكان الذي ستكون فيه مزرعتك بمجرد إضافة قطعة. <0>عرض المزيد</0>"
 
-#: src/components/farm/Farm.tsx:15
-#: src/components/farm/FarmerStatus.tsx:27
-#: src/components/farm/card/FarmCardStatus.tsx:29
-#: src/components/plot/PlotStatus.tsx:14
+#: src/components/farm/Farm.tsx:23
+#: src/components/farm/FarmerStatus.tsx:18
+#: src/components/farm/card/FarmCardStatus.tsx:68
+#: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr "المزرعة"
 
-#: src/components/farm/card/FarmCardStatus.tsx:11
-#: src/components/farm/card/FarmCardStatus.tsx:16
-#: src/components/farm/card/FarmCardStatus.tsx:19
-#: src/components/farm/card/FarmCardStatus.tsx:24
-#: src/components/farm/card/FarmCardStatus.tsx:28
+#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:29
+#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/farm/card/FarmCardStatus.tsx:65
 msgid "Farming Status"
 msgstr "حالة المزرعة"
 
-#: src/components/wallet/WalletHistory.tsx:53
+#: src/components/wallet/WalletHistory.tsx:66
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:338
+#: src/components/wallet/standard/WalletStandard.tsx:500
 msgid "Fee"
 msgstr "الرسوم"
 
@@ -695,7 +695,7 @@ msgstr "الرسوم"
 #~ msgid "Fee ({0})"
 #~ msgstr "Fee ({0})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:422
+#: src/components/wallet/coloured/WalletColoured.tsx:607
 msgid "Fee ({currencyCode})"
 msgstr "الرسوم ({currencyCode})"
 
@@ -707,18 +707,18 @@ msgstr "قيمة الرسوم"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:211
-#: src/electron/main.tsx:398
+#: src/electron/main.tsx:256
+#: src/electron/main.tsx:457
 msgid "File"
 msgstr "الملف"
 
-#: src/components/plot/PlotsFailed.tsx:10
-#: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/PlotsFailed.tsx:13
+#: src/components/plot/PlotsNotFound.tsx:13
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Filename"
 msgstr "اسم الملف"
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:40
 msgid "Final folder location"
 msgstr "موقع الملف النهائي"
 
@@ -727,15 +727,15 @@ msgstr "موقع الملف النهائي"
 msgid "Finished"
 msgstr "انتهت"
 
-#: src/electron/main.tsx:351
+#: src/electron/main.tsx:408
 msgid "Follow on Twitter"
 msgstr "تابع على تويتر"
 
-#: src/electron/main.tsx:318
+#: src/electron/main.tsx:367
 msgid "Frequently Asked Questions"
 msgstr "الأسئلة المتكررة"
 
-#: src/components/dashboard/DashboardSideBar.tsx:23
+#: src/components/dashboard/DashboardSideBar.tsx:38
 #: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "العقد المنتهية"
@@ -744,7 +744,7 @@ msgstr "العقد المنتهية"
 msgid "Full Node Status"
 msgstr "حالة العقد المكتملة"
 
-#: src/electron/main.tsx:287
+#: src/electron/main.tsx:333
 msgid "Full Screen"
 msgstr "ملء الشاشة"
 
@@ -752,7 +752,7 @@ msgstr "ملء الشاشة"
 msgid "Generate New Colour"
 msgstr "إنشاء لون جديدة"
 
-#: src/components/wallet/standard/WalletStandard.tsx:369
+#: src/components/wallet/standard/WalletStandard.tsx:559
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "مفاتيح الترميز عالية الدقة أو الهرمية هي نوع من المفاتيح العمومية/المفاتيح الخصوصية حيث يمكن أن يحتوي المفتاح الخصوصي الواحد على عدد لا نهائي تقريبا من المفاتيح العمومية المختلفة (ومن ثم تستقبل المحفظة عناوين) التي ستعود جميعها في نهاية المطاف إلى مفتاح خصوصي واحد ويمكن إنفاقها عليه."
 
@@ -770,48 +770,48 @@ msgstr "تجزئة رأس الصفحة"
 
 #: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:76
-#: src/components/fullNode/FullNodeConnections.tsx:54
+#: src/components/fullNode/FullNodeConnections.tsx:62
 msgid "Height"
 msgstr "ارتفاع"
 
-#: src/electron/main.tsx:308
+#: src/electron/main.tsx:355
 msgid "Help"
 msgstr "المساعدة"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:39
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:72
 msgid "Help translate"
 msgstr "المساعدة في الترجمة"
 
-#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:41
 msgid "Hide Advanced Options"
 msgstr "إخفاء الاختيارات المتقدمة"
 
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:88
 msgid "History"
 msgstr "السّجل"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:24
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:24
+#: src/components/farm/FarmFullNodeConnections.tsx:36
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "Host Name"
 msgstr "اسم المستضيف"
 
-#: src/components/fullNode/FullNodeConnections.tsx:27
+#: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "IP address"
 msgstr "عنوان الـ IP"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:61
+#: src/components/fullNode/FullNodeAddConnection.tsx:80
 msgid "IP address / host"
 msgstr "عنوان IP /المضيف"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:112
 msgid "If none selected, then it will default to the temporary directory."
 msgstr "إذا لم يتم اختيار أي منها, فسيكون هو الدليل الافتراضي المؤقت."
 
-#: src/components/wallet/WalletImport.tsx:64
+#: src/components/wallet/WalletImport.tsx:139
 msgid "Import Wallet from Mnemonics"
 msgstr "إستيراد المحفظة من Mnemonics"
 
-#: src/components/selectKey/SelectKey.tsx:116
+#: src/components/selectKey/SelectKey.tsx:189
 msgid "Import from Mnemonics (24 words)"
 msgstr "إستيراد من Mnemonics (24 كلمة)"
 
@@ -819,11 +819,11 @@ msgstr "إستيراد من Mnemonics (24 كلمة)"
 msgid "In Progress"
 msgstr "قيد التقدم"
 
-#: src/components/wallet/WalletHistory.tsx:20
+#: src/components/wallet/WalletHistory.tsx:24
 msgid "Incoming"
 msgstr "الوارد"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:15
+#: src/components/farm/FarmLatestBlockChallenges.tsx:22
 msgid "Index"
 msgstr "المضمن"
 
@@ -852,40 +852,40 @@ msgstr "\":\"تهيئة محفظة المستخدم ذات السعر المحد
 msgid "Interval"
 msgstr "فترة"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:37
+#: src/components/plot/overview/PlotOverviewPlots.tsx:56
 msgid "K-Size"
 msgstr "K-Size"
 
-#: src/components/dashboard/DashboardSideBar.tsx:27
+#: src/components/dashboard/DashboardSideBar.tsx:60
 msgid "Keys"
 msgstr "مفاتيح"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+#: src/components/farm/FarmFullNodeConnections.tsx:54
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "KiB Up/Down"
 msgstr "ميجابت تنزيل\\رفع"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:37
+#: src/components/farm/FarmLastAttemptedProof.tsx:46
 msgid "Last Attempted Proof"
 msgstr "آخر محاولة للإثبات"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:20
 msgid "Last Height Farmed"
 msgstr "آخر اعلى مزروعات"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:23
+#: src/components/farm/FarmLatestBlockChallenges.tsx:41
 msgid "Latest Block Challenges"
 msgstr "أحدث تحديات الكتل"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:30
 msgid "Loading..."
 msgstr "تحميل..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:103
 msgid "Local Harvester Plots"
 msgstr "حقول الحصاد المحلية"
 
-#: src/components/app/AppRouter.tsx:28
+#: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
 msgstr "تسجيل الدخول"
 
@@ -929,23 +929,23 @@ msgstr "تسجيل الدخول"
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/farm/overview/FarmOverview.tsx:34
+#: src/components/farm/overview/FarmOverview.tsx:44
 msgid "Manage Farming Rewards"
 msgstr "إدارة جوائز الزراعة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:82
+#: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "إدارة عناوين جوائز الزراعة"
 
-#: src/components/fullNode/FullNodeConnections.tsx:43
+#: src/components/fullNode/FullNodeConnections.tsx:51
 msgid "MiB Up/Down"
 msgstr "ميجابيت تنزيل\\رفع"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:95
 msgid "Minutes"
 msgstr "دقائق"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:119
 msgid "More memory slightly increases speed"
 msgstr "المزيد من الذاكرة يزيد من السرعة قليلاً"
 
@@ -965,27 +965,27 @@ msgstr "إسم الشبكة"
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:389
+#: src/components/wallet/coloured/WalletColoured.tsx:701
+#: src/components/wallet/standard/WalletStandard.tsx:598
 msgid "New Address"
 msgstr "عنوان جديد"
 
-#: src/components/wallet/WalletAdd.tsx:32
+#: src/components/wallet/WalletAdd.tsx:63
 msgid "New Wallet"
 msgstr "محفظة جديدة"
 
 #: src/components/block/Block.jsx:325
-#: src/components/wallet/WalletAdd.tsx:47
-#: src/components/wallet/WalletImport.tsx:77
+#: src/components/wallet/WalletAdd.tsx:95
+#: src/components/wallet/WalletImport.tsx:158
 msgid "Next"
 msgstr "التالي"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:200
+#: src/components/wallet/coloured/WalletColoured.tsx:247
 msgid "Nickname"
 msgstr "الإسم المستعار"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:159
+#: src/electron/main.tsx:192
 msgid "No"
 msgstr "لايوجد"
 
@@ -993,32 +993,32 @@ msgstr "لايوجد"
 msgid "No 24 word seed, since this key is imported."
 msgstr "لا يوجد بذور 24 كلمة، لأن هذا المفتاح مستورد."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:9
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:25
 msgid "No blocks farmed yet"
 msgstr "لا توجد بلوكات مزروعة بعد"
 
-#: src/components/wallet/WalletHistory.tsx:64
+#: src/components/wallet/WalletHistory.tsx:100
 msgid "No previous transactions"
 msgstr "لا توجد معاملات سابقة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#: src/components/farm/FarmManageFarmingRewards.tsx:111
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "لا يوجد مفاتيح خاصة لواحد أو لكلا العنوانين. فقط إذا كنت ترسل مكافآت إلى محفظة أخرى."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:20
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:20
-#: src/components/fullNode/FullNodeConnections.tsx:23
+#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+#: src/components/fullNode/FullNodeConnections.tsx:29
 msgid "Node ID"
 msgstr "الرمز التعريفي للشبكة"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:44
+#: src/components/farm/FarmLastAttemptedProof.tsx:63
 msgid "None of your plots have passed the plot filter yet."
 msgstr "لم تمر أي من قطعة خاصة بك بمرشح القطع حتى الآن."
 
-#: src/components/farm/FarmerStatus.tsx:29
-#: src/components/farm/card/FarmCardNotAvailable.tsx:8
-#: src/components/farm/card/FarmCardNotAvailable.tsx:9
-#: src/components/plot/PlotStatus.tsx:16
+#: src/components/farm/FarmerStatus.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:19
+#: src/components/farm/card/FarmCardNotAvailable.tsx:22
+#: src/components/plot/PlotStatus.tsx:19
 msgid "Not Available"
 msgstr "غير متاح"
 
@@ -1034,25 +1034,25 @@ msgstr "لم يتم قبوله بعد"
 msgid "Not confirmed yet"
 msgstr "لم يتم التاكيد"
 
-#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:60
 #: src/components/fullNode/FullNode.jsx:146
 #: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "غير متّصل"
 
-#: src/components/plot/PlotsNotFound.tsx:24
+#: src/components/plot/PlotsNotFound.tsx:35
 msgid "Not found Plots"
 msgstr "لم يتم العثور على القطع"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:161
 msgid "Number of buckets"
 msgstr "عدد الأجزاء"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:140
 msgid "Number of threads"
 msgstr "عدد مسارات المعالج"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:67
 msgid "OK"
 msgstr "موافق"
 
@@ -1064,11 +1064,11 @@ msgstr "عرض"
 msgid "Offers Created"
 msgstr "عروض تم إنشاؤها"
 
-#: src/components/wallet/standard/WalletStandard.tsx:312
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr "في المتوسط هناك دقيقة واحدة بين كل كتلة معاملة. ما لم يكن هناك اكتظاظ يمكنك أن تتوقع إدراج معاملتك في أقل من دقيقة."
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:23
 msgid "Outgoing"
 msgstr "الصادرة"
 
@@ -1084,22 +1084,22 @@ msgstr "أعلى ارتفاع"
 msgid "Peak Time"
 msgstr "وقت الذروة"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:55
 msgid "Pending"
 msgstr "في إنتظار المُراجعة"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
-#: src/components/wallet/standard/WalletStandard.tsx:223
+#: src/components/wallet/standard/WalletStandard.tsx:299
 msgid "Pending Balance"
 msgstr "الرصيد المعلّق"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
-#: src/components/wallet/standard/WalletStandard.tsx:228
+#: src/components/wallet/standard/WalletStandard.tsx:310
 msgid "Pending Change"
 msgstr "في إنتظار التأكيد"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
-#: src/components/wallet/standard/WalletStandard.tsx:218
+#: src/components/wallet/standard/WalletStandard.tsx:288
 msgid "Pending Total Balance"
 msgstr "الرصيد الإجمالي المعلق"
 
@@ -1117,7 +1117,7 @@ msgstr "الرجاء إدخال مبلغ صحيح"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
-#: src/components/wallet/standard/WalletStandard.tsx:278
+#: src/components/wallet/standard/WalletStandard.tsx:392
 msgid "Please enter a valid numeric amount"
 msgstr "الرجاء إدخال مبلغ صحيح"
 
@@ -1125,7 +1125,7 @@ msgstr "الرجاء إدخال مبلغ صحيح"
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
-#: src/components/wallet/standard/WalletStandard.tsx:284
+#: src/components/wallet/standard/WalletStandard.tsx:402
 msgid "Please enter a valid numeric fee"
 msgstr "الرجاء إدخال مبلغ رسوم صحيح"
 
@@ -1142,7 +1142,7 @@ msgid "Please enter a valid pubkey"
 msgstr "الرجاء إدخال المفتاح العام الصحيح"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
-#: src/components/wallet/standard/WalletStandard.tsx:268
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Please finish syncing before making a transaction"
 msgstr "الرجاء إنهاء المزامنة قبل إجراء معاملة"
 
@@ -1162,22 +1162,22 @@ msgstr "الرجاء اختيار لون العملة"
 #~ msgid "Please select coin type"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:56
 msgid "Please specify final directory"
 msgstr "الرجاء إختيار الملف النهائي"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:67
 msgid "Please specify temporary directory"
 msgstr "الرجاء إختيار الملف المؤقت"
 
-#: src/components/plot/Plot.tsx:13
+#: src/components/plot/Plot.tsx:18
 msgid "Plot"
 msgstr "قطعة"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:8
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
+#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:31
 msgid "Plot Count"
 msgstr "عدد القطع"
 
@@ -1185,7 +1185,7 @@ msgstr "عدد القطع"
 msgid "Plot Id"
 msgstr "رقم القطعة"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#: src/components/plot/overview/PlotOverviewPlots.tsx:68
 msgid "Plot Key"
 msgstr "مفتاح الكتابة"
 
@@ -1201,39 +1201,39 @@ msgstr "مفتاح الكتابة العمومي"
 #~ msgid "Plot Seed"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:66
+#: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "Plot Size"
 msgstr "حجم الكتابة"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:63
 msgid "Plot in Parallel"
 msgstr "الكتابة بالتوازي"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:26
+#: src/components/plot/overview/PlotOverviewPlots.tsx:39
 msgid "Plot is duplicate of {0}"
 msgstr "رسم مكرر من {0}"
 
-#: src/components/dashboard/DashboardSideBar.tsx:25
+#: src/components/dashboard/DashboardSideBar.tsx:49
 msgid "Plots"
 msgstr "قطعة"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:19
+#: src/components/farm/FarmLastAttemptedProof.tsx:22
 msgid "Plots Passed Filter"
 msgstr "اجتاز تصفية المؤامرات"
 
-#: src/components/plot/overview/PlotOverviewHero.tsx:23
+#: src/components/plot/overview/PlotOverviewHero.tsx:30
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "يتم تخصيص مساحة قطع الأراضي على محرك الأقراص الثابتة الخاص بك لاستخدامها في الزراعة وكسب Chia. <0> معرفة المزيد </0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:33
 msgid "Plotting"
 msgstr "التخطيط"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:50
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "يمكن أن يوفر التخطيط المتوازي الوقت. خلاف ذلك ، أضف قطعة (قطع) الأرض إلى قائمة الانتظار."
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:208
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
 msgstr "التآمر مع تمكين حقل البت لديه حوالي 30٪ أقل من عمليات الكتابة الإجمالية وهو الآن أسرع دائمًا. قد ترى متطلبات ذاكرة مخفضة مع تعطيل رسم حقل البت. إذا كان تصميم وحدة المعالجة المركزية الخاصة بك من قبل عام 2010 ، فقد تضطر إلى تعطيل رسم حقل البت."
 
@@ -1241,7 +1241,7 @@ msgstr "التآمر مع تمكين حقل البت لديه حوالي 30٪ أ
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:74
 msgid "Pool Key"
 msgstr "مفتاح التجميع"
 
@@ -1253,7 +1253,7 @@ msgstr "المفتاح العام للتجمع"
 msgid "Pool Puzzle Hash"
 msgstr "تجمع لغز تجزئة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:122
 msgid "Pool Reward Address"
 msgstr "عنوان مكافأة المجمع"
 
@@ -1261,10 +1261,10 @@ msgstr "عنوان مكافأة المجمع"
 msgid "Pool Reward Amount"
 msgstr "مبلغ مكافأة المجمع"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:30
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:30
-#: src/components/fullNode/FullNodeAddConnection.tsx:62
-#: src/components/fullNode/FullNodeConnections.tsx:33
+#: src/components/farm/FarmFullNodeConnections.tsx:42
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:46
+#: src/components/fullNode/FullNodeAddConnection.tsx:85
+#: src/components/fullNode/FullNodeConnections.tsx:39
 msgid "Port"
 msgstr "منفذ"
 
@@ -1284,7 +1284,7 @@ msgstr "تجزئة العنوان السابق"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/components/selectKey/SelectKey.tsx:87
+#: src/components/selectKey/SelectKey.tsx:139
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "مفتاح خاص ببصمة إصبع عامة {fingerprint}"
 
@@ -1300,7 +1300,7 @@ msgstr "المفتاح الخاص:"
 msgid "Proof of Space Size"
 msgstr "إثبات مساحة القرص الصلب"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:26
 msgid "Proofs Found"
 msgstr "ثم العثور على إثبات المساحة"
 
@@ -1312,15 +1312,15 @@ msgstr "المفتاح العمومي"
 msgid "Public key:"
 msgstr "المفتاح العمومي"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:186
 msgid "Queue Name"
 msgstr "نوع قائمة الانتظار"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#: src/components/plot/overview/PlotOverviewPlots.tsx:62
 msgid "Queue name"
 msgstr "نوع قائمة الانتظار"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:22
+#: src/components/plot/queue/PlotQueueIndicator.tsx:36
 msgid "Queued"
 msgstr "في قائمة الانتظار"
 
@@ -1328,11 +1328,11 @@ msgstr "في قائمة الانتظار"
 #~ msgid "Quit"
 #~ msgstr "Quit"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:117
 msgid "RAM max usage"
 msgstr "الحد الاقصى من استعمال الذاكرة العشوائية"
 
-#: src/components/wallet/Wallets.tsx:43
+#: src/components/wallet/Wallets.tsx:65
 msgid "RL Wallet"
 msgstr "محفظة RL"
 
@@ -1357,8 +1357,8 @@ msgstr "قيم خيارات محدودة"
 msgid "Rate Limited User Wallet Setup"
 msgstr "معدل إعداد محفظة المستخدم المحدود"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:369
+#: src/components/wallet/coloured/WalletColoured.tsx:663
+#: src/components/wallet/standard/WalletStandard.tsx:557
 msgid "Receive Address"
 msgstr "تلقي العنوان"
 
@@ -1366,27 +1366,27 @@ msgstr "تلقي العنوان"
 msgid "Recover DID wallet"
 msgstr "استرداد المحفظة"
 
-#: src/components/plot/PlotHeader.tsx:43
+#: src/components/plot/PlotHeader.tsx:57
 msgid "Refresh Plots"
 msgstr "تحديث القطع"
 
-#: src/electron/main.tsx:324
+#: src/electron/main.tsx:375
 msgid "Release Notes"
 msgstr "كتابة ملاحظات"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+#: src/components/plot/queue/PlotQueueIndicator.tsx:39
 msgid "Removing"
 msgstr "ال"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:206
+#: src/components/wallet/coloured/WalletColoured.tsx:263
 msgid "Rename"
 msgstr "إعادة التسمية"
 
-#: src/electron/main.tsx:339
+#: src/electron/main.tsx:394
 msgid "Report an Issue..."
 msgstr "بلغ عن خطأ..."
 
-#: src/components/backup/BackupRestore.tsx:107
+#: src/components/backup/BackupRestore.tsx:160
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
 msgstr "استعادة بيانات التعريف للعملات المعدنية الملونة والمحافظ الذكية الأخرى من النسخ الاحتياطي"
 
@@ -1399,11 +1399,11 @@ msgstr "استعادة بيانات التعريف للعملات المعدني
 #~ msgid "SB Height"
 #~ msgstr "SB Height"
 
-#: src/components/backup/BackupRestore.tsx:122
+#: src/components/backup/BackupRestore.tsx:187
 msgid "Safe To Skip"
 msgstr "التخطي الآمن"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:105
+#: src/components/farm/FarmManageFarmingRewards.tsx:135
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "حفظ"
@@ -1412,15 +1412,15 @@ msgstr "حفظ"
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNodeBlockSearch.tsx:30
+#: src/components/fullNode/FullNodeBlockSearch.tsx:44
 msgid "Search block by header hash"
 msgstr "البحث عن كتلة حسب تجزئة الترويسة"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:93
 msgid "Second temporary folder location"
 msgstr "موقع المجلد المؤقت الثاني"
 
-#: src/components/selectKey/SelectKey.tsx:93
+#: src/components/selectKey/SelectKey.tsx:150
 msgid "See private key"
 msgstr "عرض المفتاح الخاص"
 
@@ -1428,15 +1428,15 @@ msgstr "عرض المفتاح الخاص"
 msgid "Seed:"
 msgstr "توزيع الجدول:"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:84
 msgid "Select 2nd Temporary Directory"
 msgstr "حدد المجلد المؤقت الثاني"
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:26
 msgid "Select Final Directory"
 msgstr "حدد المجلد النهائي"
 
-#: src/components/selectKey/SelectKey.tsx:71
+#: src/components/selectKey/SelectKey.tsx:107
 msgid "Select Key"
 msgstr "اختر المفتاح"
 
@@ -1444,7 +1444,7 @@ msgstr "اختر المفتاح"
 msgid "Select Offer"
 msgstr "اختر العرض"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:36
 msgid "Select Temporary Directory"
 msgstr "حدد المجلد المؤقت"
 
@@ -1452,7 +1452,7 @@ msgstr "حدد المجلد المؤقت"
 msgid "Select Wallet Type"
 msgstr "أختر نوع المحفظة"
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:30
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
 msgstr "حدد الوجهة النهائية للمجلد حيث تريد تخزين القطعة. ننصحك باستخدام قرص صلب بمساحة كبيرة (مثل HDD)."
 
@@ -1460,25 +1460,25 @@ msgstr "حدد الوجهة النهائية للمجلد حيث تريد تخز
 #~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
 #~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:40
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
 msgstr "حدد الوجهة النهائية للمجلد حيث تريد تخزين القطعة. ننصحك باستخدام قرص صلب بمساحة كبيرة (مثل HDD)."
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:63
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:74
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:105
 msgid "Selected"
 msgstr "حدد"
 
 #: src/components/trading/CreateOffer.jsx:182
-#: src/components/trading/TradesTable.tsx:30
+#: src/components/trading/TradesTable.tsx:44
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
 msgstr "بيع"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:435
+#: src/components/wallet/coloured/WalletColoured.tsx:632
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:351
+#: src/components/wallet/standard/WalletStandard.tsx:526
 msgid "Send"
 msgstr "إرسال"
 
@@ -1490,7 +1490,7 @@ msgstr "أرسل حزمة المعلومات هذه إلى مستخدم المح
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
 msgstr "أرسل المحفظة الخاصة بك إلى مدير المحفظة المحدودة المعدل:"
 
-#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:48
 msgid "Show Advanced Options"
 msgstr "إظهار الخيارات المتقدمة"
 
@@ -1499,11 +1499,11 @@ msgstr "إظهار الخيارات المتقدمة"
 #~ msgstr "Show app"
 
 #: src/components/trading/CreateOffer.jsx:174
-#: src/components/trading/TradesTable.tsx:13
+#: src/components/trading/TradesTable.tsx:15
 msgid "Side"
 msgstr "الجهة"
 
-#: src/components/selectKey/SelectKey.tsx:74
+#: src/components/selectKey/SelectKey.tsx:112
 msgid "Sign In"
 msgstr "تسجيل الدخول"
 
@@ -1515,11 +1515,11 @@ msgstr "تسجيل الدخول"
 #~ msgid "Skips adding [final dir] to harvester for farming"
 #~ msgstr "Skips adding [final dir] to harvester for farming"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:235
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "تخطي إضافة دليل نهائي إلى الحصاد من أجل الزراعة"
 
-#: src/electron/main.tsx:409
+#: src/electron/main.tsx:471
 msgid "Speech"
 msgstr "خطاب"
 
@@ -1531,9 +1531,9 @@ msgstr "المبلغ القابل للإنفاق"
 msgid "Spendable Amount Per Interval"
 msgstr "المبلغ القابل للإنفاق لكل فاصل زمني"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:288
+#: src/components/wallet/coloured/WalletColoured.tsx:387
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:261
 msgid "Spendable Balance"
 msgstr "الرصيد المستهلك"
 
@@ -1559,11 +1559,11 @@ msgstr "الحالة"
 #: src/components/fullNode/FullNode.jsx:122
 #: src/components/fullNode/FullNode.jsx:130
 #: src/components/fullNode/FullNode.jsx:152
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:43
-#: src/components/wallet/WalletStatusCard.tsx:12
-#: src/components/wallet/Wallets.tsx:95
+#: src/components/wallet/WalletHistory.tsx:56
+#: src/components/wallet/WalletStatusCard.tsx:21
+#: src/components/wallet/Wallets.tsx:135
 msgid "Status"
 msgstr "الحالة"
 
@@ -1607,9 +1607,9 @@ msgstr "إرسال"
 msgid "Synced"
 msgstr "تمت المزامنة"
 
-#: src/components/farm/FarmerStatus.tsx:28
-#: src/components/farm/card/FarmCardStatus.tsx:12
-#: src/components/plot/PlotStatus.tsx:15
+#: src/components/farm/FarmerStatus.tsx:19
+#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:18
 msgid "Syncing"
 msgstr "جاري المزامنة"
 
@@ -1645,20 +1645,20 @@ msgstr "مزامنة <0/><1/>"
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
 msgid "Temporary folder location"
 msgstr "موقع المجلد المؤقت"
 
-#: src/components/app/AppTimeBomb.tsx:28
+#: src/components/app/AppTimeBomb.tsx:27
 msgid "The application will stop working at block height 193536."
 msgstr "سيتوقف التطبيق عن العمل عند ارتفاع الكتلة 193536."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:58
+#: src/components/farm/FarmFullNodeConnections.tsx:91
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "العقدة الكاملة التي تتصل بها المزارع هي أدناه. <0>اعرف المزيد</0>"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:30
-#: src/components/plot/add/PlotAddChooseSize.tsx:74
+#: src/components/plot/add/PlotAddChooseSize.tsx:27
+#: src/components/plot/add/PlotAddChooseSize.tsx:87
 msgid "The minimum required size for mainnet is k=32"
 msgstr "الحد الأدنى المطلوب لحجم القطعة هو k=32"
 
@@ -1686,29 +1686,29 @@ msgstr "العدد الإجمالي لـ VDF (وظيفة تأخير يمكن ا�
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "مجموع رسوم المعاملات في هذه الكتلة. مكافأة للمزارع."
 
-#: src/components/plot/PlotsFailed.tsx:26
+#: src/components/plot/PlotsFailed.tsx:38
 msgid "These plots are invalid, you might want to delete them."
 msgstr "هذه القطعة غير صالحة، قد ترغب في حذفها."
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:44
+#: src/components/plot/PlotAddDirectoryDialog.tsx:60
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "هذا يسمح لك بإضافة دليل يحتوي على مخططات داخلية. إذا لم تقم بإنشاء أي مخططات، انتقل إلى شاشة الرسم."
 
 #: src/components/trading/CreateOffer.jsx:132
-#: src/hooks/useSelectDirectory.tsx:26
-#: src/hooks/useSelectFile.tsx:26
+#: src/hooks/useSelectDirectory.tsx:31
+#: src/hooks/useSelectFile.tsx:21
 msgid "This feature is available only from the GUI."
 msgstr "هذه الميزة متاحة فقط من واجهة المستخدم الحاسوبية."
 
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:264
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "هذه هي كمية تشيا التي يمكنك استخدامها حاليا لإجراء المعاملات. لا تشمل مكافآت الزراعة المعلقة، والمعاملات الواردة بانتظار، وشيا التي أنفقتها للتو ولكنها ليست بعد في سلسلة الكتل."
 
-#: src/components/wallet/standard/WalletStandard.tsx:228
+#: src/components/wallet/standard/WalletStandard.tsx:313
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "هذا هو التغيير المعلق، الذي هو تغيير العملات التي أرسلتها لنفسك، ولكن لم يتم تأكيدها بعد."
 
-#: src/components/wallet/standard/WalletStandard.tsx:223
+#: src/components/wallet/standard/WalletStandard.tsx:302
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "هذا هو مجموع المعاملات المعلقة الواردة والصادرة (غير مدرجة بعد في سلسلة الكتل). هذا لا يشمل مكافآت الزراعة."
 
@@ -1720,11 +1720,11 @@ msgstr "هذا هو وقت آخر كتلة فرعية في ذروتها."
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "هذا هو الوقت الذي قام فيه المزارع بإنشاء الكتلة، وهو الوقت الذي يسبق وضعها في صيغتها النهائية بإثبات الوقت"
 
-#: src/components/wallet/standard/WalletStandard.tsx:195
+#: src/components/wallet/standard/WalletStandard.tsx:252
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "هذا هو إجمالي كمية الشيا في سلسلة الكتل في كتلة الذروة الفرعية الحالية التي تتحكم بها المفاتيح الخاصة. وتشمل مكافآت الزراعة المجمدة، ولكنها لا تنتظر المعاملات الواردة والصادرة."
 
-#: src/components/wallet/standard/WalletStandard.tsx:218
+#: src/components/wallet/standard/WalletStandard.tsx:291
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "هذا هو الرصيد الإجمالي + الرصيد المعلق: هذا هو ما سيكون عليه رصيدك بعد تأكيد جميع المعاملات المعلقة."
 
@@ -1736,7 +1736,7 @@ msgstr "هذه العقدة ملتقطة بالكامل و التحقق من ص�
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:39
+#: src/components/farm/FarmLastAttemptedProof.tsx:51
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
 msgstr "هذا الجدول يظهر لك آخر مرة حاولت فيها مزرعتك الفوز بتحدي الكتلة. <0>اعرف المزيد</0>"
 
@@ -1748,7 +1748,7 @@ msgstr "تم إنشاء هذه التجارة في هذا الوقت"
 msgid "This trade was included on blockchain at this block height"
 msgstr "تم تضمين هذه التجارة على البلوكشين في ارتفاع البلوك هذا"
 
-#: src/components/app/AppTimeBombAlert.tsx:11
+#: src/components/app/AppTimeBombAlert.tsx:18
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "هذه النسخة من تشيا لم تعد متوافقة مع سلسلة الكتل ولا يمكن زراعتها بأمان."
 
@@ -1764,13 +1764,13 @@ msgstr "وقت الإنشاء"
 msgid "Timestamp"
 msgstr "التوقيت الزمني"
 
-#: src/components/wallet/WalletHistory.tsx:32
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "To"
 msgstr "إلى"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:287
+#: src/components/wallet/coloured/WalletColoured.tsx:380
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
-#: src/components/wallet/standard/WalletStandard.tsx:195
+#: src/components/wallet/standard/WalletStandard.tsx:249
 msgid "Total Balance"
 msgstr "الرصيد الإجمالي"
 
@@ -1782,15 +1782,15 @@ msgstr "الرصيد الإجمالي"
 msgid "Total Iterations"
 msgstr "مجموع التعديلات"
 
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:16
 msgid "Total Network Space"
 msgstr "إجمالي مساحة الشبكة"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:91
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
 msgid "Total Plot Size:"
 msgstr "حجم الجداول الكلي:"
 
-#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:13
 msgid "Total Size of Plots"
 msgstr "الحجم الإجمالي للأراضي"
 
@@ -1818,7 +1818,7 @@ msgstr "رقم تعريف التجارة"
 msgid "Trade ID:"
 msgstr "رقم تعريف التجارة:"
 
-#: src/components/trading/TradeManager.tsx:17
+#: src/components/trading/TradeManager.tsx:35
 msgid "Trade Overview"
 msgstr "لمحة عامة عن التجارة"
 
@@ -1826,7 +1826,7 @@ msgstr "لمحة عامة عن التجارة"
 msgid "Trades will show up here"
 msgstr "سوف تظهر المهملات هنا"
 
-#: src/components/trading/TradeManager.tsx:13
+#: src/components/trading/TradeManager.tsx:23
 msgid "Trading"
 msgstr "التداول"
 
@@ -1838,7 +1838,7 @@ msgstr "سجل التداول"
 msgid "Transactions Filter Hash"
 msgstr "تصفية المعاملات هاش"
 
-#: src/components/wallet/WalletHistory.tsx:22
+#: src/components/wallet/WalletHistory.tsx:26
 msgid "Type"
 msgstr "النّوع"
 
@@ -1850,7 +1850,7 @@ msgstr "غير مكتمل"
 msgid "Unique identifier"
 msgstr "معرف متميز"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
 msgid "Unknown"
 msgstr "غير معروف"
 
@@ -1863,31 +1863,31 @@ msgstr "المفتاح العام للمستخدم"
 msgid "VDF Sub Slot Iterations"
 msgstr "تعديلات فتحة VDF الفرعية"
 
-#: src/electron/main.tsx:251
+#: src/electron/main.tsx:296
 msgid "View"
 msgstr "عرض"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:54
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:33
+#: src/components/plot/queue/PlotQueueActions.tsx:74
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:52
 msgid "View Log"
 msgstr "عرض السجل"
 
-#: src/components/trading/TradeManager.tsx:27
+#: src/components/trading/TradeManager.tsx:62
 msgid "View Offer"
 msgstr "عرض إقتراح"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
-#: src/components/wallet/standard/WalletStandard.tsx:213
+#: src/components/wallet/standard/WalletStandard.tsx:282
 msgid "View pending balances"
 msgstr "عرض الأرصدة المعلقة"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:296
+#: src/components/wallet/coloured/WalletColoured.tsx:399
 msgid "View pending balances..."
 msgstr "عرض الأرصدة المعلقة..."
 
-#: src/components/farm/card/FarmCardNotAvailable.tsx:9
-#: src/components/plot/PlotStatus.tsx:22
-#: src/components/plot/PlotStatus.tsx:25
+#: src/components/farm/card/FarmCardNotAvailable.tsx:25
+#: src/components/plot/PlotStatus.tsx:27
+#: src/components/plot/PlotStatus.tsx:32
 msgid "Wait for synchronization"
 msgstr "في انتظار المزامنة"
 
@@ -1928,8 +1928,8 @@ msgstr "في انتظار المزامنة"
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:133
+#: src/components/dashboard/DashboardSideBar.tsx:44
+#: src/components/wallet/Wallets.tsx:175
 msgid "Wallets"
 msgstr "المحافظ الإلكترونية"
 
@@ -1937,11 +1937,11 @@ msgstr "المحافظ الإلكترونية"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/plot/overview/PlotOverviewPlots.tsx:107
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "هل تريد كسب المزيد من شيا؟ أضف المزيد من قطع الأرض إلى مزرعتك."
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:82
 msgid "Want to have a delay before the next plot starts?"
 msgstr "هل ترغب في الحصول على تأخير قبل أن تبدأ الحزمة التالية؟"
 
@@ -1953,11 +1953,11 @@ msgstr "الوزن/الأهمية"
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "الوزن هو الصعوبة المضافة الكلية لجميع الكتل الفرعية حتى و بما في ذلك هذه"
 
-#: src/components/selectKey/SelectKey.tsx:77
+#: src/components/selectKey/SelectKey.tsx:115
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
 msgstr "مرحبا بكم في تشيا. الرجاء تسجيل الدخول باستخدام مفتاح موجود, أو إنشاء مفتاح جديد."
 
-#: src/components/wallet/WalletAdd.tsx:35
+#: src/components/wallet/WalletAdd.tsx:66
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "مرحبًا! تستخدم الكلمات التالية للنسخ الاحتياطي لمحفظتك. بدونهم، سوف تفقد الوصول إلى محفظتك، ابقائهم آمنين! اكتب كل كلمة مع رقم الطلب بجوارهم. (الطلب مهم)"
 
@@ -1965,17 +1965,17 @@ msgstr "مرحبًا! تستخدم الكلمات التالية للنسخ ال
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "عندما تتلقى حزمة معلومات الإعداد من المشرف الخاص بك، قم بإدخالها أدناه لإكمال إعداد المحفظة المحدودة المعدل:"
 
-#: src/electron/main.tsx:294
+#: src/electron/main.tsx:341
 msgid "Window"
 msgstr "نافذة"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:18
+#: src/components/farm/card/FarmCardBlockRewards.tsx:33
 msgid "Without fees"
 msgstr "بدون رسوم"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:30
+#: src/components/plot/add/PlotAddChooseSize.tsx:28
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:160
+#: src/electron/main.tsx:193
 msgid "Yes"
 msgstr "نعم"
 
@@ -1983,7 +1983,7 @@ msgstr "نعم"
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:56
+#: src/components/plot/add/PlotAddChooseSize.tsx:63
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 msgstr "أنت لست بحاجة إلى أن تكون مزامنة أو متصلاً بالقطعة. يتم إنشاء الملفات المؤقتة خلال عملية التخطيط التي تتجاوز حجم ملفات المخطط النهائي. تأكد من أن لديك مساحة كافية. <0>اعرف المزيد</0>"
 
@@ -1991,7 +1991,7 @@ msgstr "أنت لست بحاجة إلى أن تكون مزامنة أو متصل
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 #~ msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:65
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
 msgstr "لديك {0}% من المساحة على الشبكة، لذا فإن زراعة كتلة سوف تأخذ {expectedTimeToWin} متوقعة. وقد تستغرق النتائج الفعلية ثلاثة إلى أربعة أضعاف ما يستغرقه هذا التقدير."
 
@@ -2007,52 +2007,52 @@ msgstr "لديك {0}% من المساحة على الشبكة، لذا فإن ز
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
 #~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
-#: src/components/farm/overview/FarmOverview.tsx:24
+#: src/components/farm/overview/FarmOverview.tsx:33
 msgid "Your Farm Overview"
 msgstr "نظرة عامة للمزرعة"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:56
+#: src/components/farm/FarmFullNodeConnections.tsx:86
 msgid "Your Full Node Connection"
 msgstr "اتصالك الكامل بالعقد"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:56
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:91
 msgid "Your Harvester Network"
 msgstr "شبكة الحصاد الخاصة بك"
 
-#: src/util/getDescriptiveError.ts:4
+#: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[خطأ 13] تم رفض الإذن. أنت تحاول الوصول إلى ملف/مجلد دون الحصول على الأذونات اللازمة. الأكثر احتمالا أن أحد مجلدات الحزمة في config.yaml لديه مشكلة."
 
-#: src/util/getDescriptiveError.ts:7
+#: src/util/getDescriptiveError.ts:8
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[خطأ 22] لم يتم العثور على الملف. على الأرجح أن أحد مجلدات المخطط في config.yaml لديه مشكلة."
 
-#: src/components/wallet/WalletStatusCard.tsx:31
-#: src/components/wallet/Wallets.tsx:121
+#: src/components/wallet/WalletStatusCard.tsx:44
+#: src/components/wallet/Wallets.tsx:158
 msgid "connections:"
 msgstr "الإتصالات:"
 
-#: src/components/wallet/WalletStatusCard.tsx:25
-#: src/components/wallet/Wallets.tsx:115
+#: src/components/wallet/WalletStatusCard.tsx:38
+#: src/components/wallet/Wallets.tsx:152
 msgid "height:"
 msgstr "ارتفاع:"
 
-#: src/components/wallet/Wallets.tsx:109
+#: src/components/wallet/Wallets.tsx:146
 msgid "not synced"
 msgstr "لم تتم المزامنة"
 
-#: src/components/wallet/WalletStatusCard.tsx:17
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/WalletStatusCard.tsx:26
+#: src/components/wallet/Wallets.tsx:140
 msgid "status:"
 msgstr "الحالة"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/WalletStatusCard.tsx:32
+#: src/components/wallet/Wallets.tsx:145
 msgid "synced"
 msgstr "تمت المزامنة"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/Wallets.tsx:144
 msgid "syncing"
 msgstr "جاري المزامنة"
 
@@ -2064,15 +2064,15 @@ msgstr "جاري المزامنة"
 #~ msgid "{0} User Transaction Fees"
 #~ msgstr "{0} User Transaction Fees"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:18
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "{currencyCode} Block Rewards"
 msgstr "جوائز حظر {currencyCode}"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
 msgid "{currencyCode} Total Chia Farmed"
 msgstr "{currencyCode} مجموع مزارع شيا"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:17
+#: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} رسوم المعاملات للمستخدم"
 
