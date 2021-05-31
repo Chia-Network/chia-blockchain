@@ -5,14 +5,22 @@ import { useWatch, useFormContext } from "react-hook-form";
 import { Autocomplete, Flex, CardStep, RadioGroup } from '@chia/core';
 import { Grid, FormControl, FormControlLabel, Typography, Radio } from '@material-ui/core';
 import type Group from '../../../types/Group';
+import PoolDetails from '../../pool/PoolDetails';
 
 export default function GroupAddCreate() {
   const groups = useSelector<Group[] | undefined>((state: RootState) => state.group.groups);
   const { control, setValue } = useFormContext();
-  const self = useWatch({
+  const self = useWatch<boolean>({
     control,
     name: 'self',
   });
+
+  const poolUrl = useWatch<string>({
+    control,
+    name: 'poolUrl',
+  });
+
+  console.log('current pool url', poolUrl);
 
   const groupsOptions = useMemo(() => {
     if (!groups) {
@@ -57,29 +65,33 @@ export default function GroupAddCreate() {
                   label={<Trans>Self pool. When you win a block you will earn XCH rewards.</Trans>}
                   value
                 />
-                <Flex gap={2} flexWrap="nowrap">
+                <Flex gap={2} alignItems="start">
                   <FormControlLabel
                     value={false}
                     control={<Radio />}
                     label={<Trans>Connect to pool</Trans>}
                   />
-                  <Flex flexBasis={0} flexGrow={1}>
-                  <FormControl
-                    variant="filled"
-                    fullWidth
-                  >
-                    <Autocomplete
-                      name="poolUrl"
-                      label="Pool URL"
-                      variant="outlined"
-                      options={groupsOptions}
-                      onClick={handleDisableSelfPooling}
-                      onChange={handleDisableSelfPooling}
-                      forcePopupIcon
-                      fullWidth 
-                      freeSolo 
-                    />
-                  </FormControl>
+                  <Flex flexBasis={0} flexGrow={1} flexDirection="column" gap={1}>
+                    <FormControl
+                      variant="filled"
+                      fullWidth
+                    >
+                      <Autocomplete
+                        name="poolUrl"
+                        label="Pool URL"
+                        variant="outlined"
+                        options={groupsOptions}
+                        onClick={handleDisableSelfPooling}
+                        onChange={handleDisableSelfPooling}
+                        forcePopupIcon
+                        fullWidth 
+                        freeSolo 
+                      />
+                    </FormControl>
+
+                    {!self && poolUrl && (
+                      <PoolDetails poolUrl={poolUrl} />
+                    )}
                   </Flex>
                 </Flex>
               </Flex>

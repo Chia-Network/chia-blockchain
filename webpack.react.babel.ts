@@ -126,6 +126,11 @@ export default {
   ].filter(Boolean),
   module: {
     rules: [{
+      test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
+      resolve: {
+        aliasFields: ['main'],
+      },
+    }, {
       test: /\.mjs$/,
       include: /node_modules/,
       type: 'javascript/auto',

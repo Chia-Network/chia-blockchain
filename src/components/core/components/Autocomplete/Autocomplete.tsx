@@ -34,6 +34,7 @@ export default function Autocomplete(props: Props) {
     fullWidth, 
     freeSolo,
     forcePopupIcon,
+    onChange: defaultOnChange,
     ...rest 
   } = props;
   const { control, errors } = useFormContext();
@@ -58,7 +59,12 @@ export default function Autocomplete(props: Props) {
   });
 
   function handleChange(newValue: any) {
-    onChange(newValue || '');
+    const updatedValue = newValue || '';
+    onChange(updatedValue);
+
+    if (defaultOnChange) {
+      defaultOnChange(updatedValue);
+    }
   }
   
   const errorMessage = get(errors, name);
