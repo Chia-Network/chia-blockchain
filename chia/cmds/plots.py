@@ -155,6 +155,29 @@ def check_cmd(
 
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
 
+@plots_cmd.command("inventory", short_help="Inventory plots")
+@click.option(
+    "-g",
+    "--grep_string",
+    help="Shows only plots that contain the string in the filename or directory name",
+    type=str,
+    default=None,
+)
+@click.option(
+    "-p",
+    "--plot_public_key",
+    help="Shows only plots with the plot_public_key",
+    type=str,
+    default=None,
+)
+@click.pass_context
+def inventory_cmd(
+        ctx: click.Context, grep_string: str, plot_public_key : str
+):
+    from chia.plotting.inventory_plots import inventory_plots
+
+    inventory_plots(ctx.obj["root_path"], grep_string, plot_public_key)
+
 
 @plots_cmd.command("add", short_help="Adds a directory of plots")
 @click.option(

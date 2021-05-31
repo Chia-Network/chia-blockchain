@@ -257,7 +257,7 @@ def load_plots(
                 log.error(f"Failed to open file {filename}. {e} {tb}")
                 failed_to_open_filenames[filename] = int(time.time())
                 return 0, new_provers
-            log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
+            log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()} ...")
 
             if show_memo:
                 plot_memo: bytes32
