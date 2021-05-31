@@ -34,8 +34,18 @@ def inventory_plots(root_path, grep_string, plot_public_key):
         open_no_key_filenames=True,
     )
 
+    searching_for_plot_public_key = False
+
+    if plot_public_key is not None:
+        log.info(f"only looking for plot with a public key of {plot_public_key}")
+        searching_for_plot_public_key = True
+
+
     for plot_path, plot_info in provers.items():
         pr = plot_info.prover
-        log.info(f"Inventory: path={plot_path} k={pr.get_size()} pool_public_key={plot_info.pool_public_key} plot_public_key={plot_info.plot_public_key}")
-        log.info(f"\tPlot id: TODO") # https://chiaforum.com/t/does-it-matter-if-you-accidentally-delete-part-of-the-plot-filename/2719/9?u=notpeter
 
+        plot_public_key_matches = plot_public_key in str(plot_info.plot_public_key)
+
+        if not searching_for_plot_public_key or plot_public_key_matches:
+            plot_id = provers[plot_path].prover.get_id() # https://chiaforum.com/t/does-it-matter-if-you-accidentally-delete-part-of-the-plot-filename/2719/9?u=notpeter
+            log.info(f"Inventory: path={plot_path} k={pr.get_size()} pool_public_key={plot_info.pool_public_key} plot_public_key={plot_info.plot_public_key} plot_id={plot_id.hex()}")
