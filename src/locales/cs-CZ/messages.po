@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:26\n"
+"PO-Revision-Date: 2021-05-31 10:19\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -137,7 +137,7 @@ msgstr "Opravdu chcete odejít? Vytváření aktuálních polí bude ztraceno a 
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "Jste si jisti, že chcete použít k={velikost Pole}?"
+msgstr "Jste si jisti, že chcete použít k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:62
 #: src/components/selectKey/SelectKey.tsx:83
