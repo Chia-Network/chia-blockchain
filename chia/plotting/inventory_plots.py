@@ -44,7 +44,8 @@ def inventory_plots(root_path, grep_string, plot_public_key):
     for plot_path, plot_info in provers.items():
         pr = plot_info.prover
 
-        plot_public_key_matches = plot_public_key in str(plot_info.plot_public_key)
+        if searching_for_plot_public_key:
+            plot_public_key_matches = plot_public_key in str(plot_info.plot_public_key)
 
         if not searching_for_plot_public_key or plot_public_key_matches:
             plot_id = provers[plot_path].prover.get_id() # https://chiaforum.com/t/does-it-matter-if-you-accidentally-delete-part-of-the-plot-filename/2719/9?u=notpeter
