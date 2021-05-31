@@ -118,8 +118,8 @@ msgstr "المبلغ ({cc_unit})"
 msgid "Amount For Initial Coin"
 msgstr "مبلغ العملات الأولية"
 
-#: src/components/plot/PlotAction.tsx:41
-#: src/components/plot/queue/PlotQueueActions.tsx:44
+#: src/components/plot/PlotAction.tsx:36
+#: src/components/plot/queue/PlotQueueActions.tsx:43
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "هل أنت متأكد أنك تريد حذف الملف؟ لا يمكن إرجاع الملف بعد الحزف."
 
@@ -504,17 +504,17 @@ msgstr "التاريخ"
 msgid "Delay"
 msgstr "تأخير"
 
-#: src/components/plot/PlotAction.tsx:39
-#: src/components/plot/PlotAction.tsx:63
-#: src/components/plot/queue/PlotQueueActions.tsx:41
-#: src/components/plot/queue/PlotQueueActions.tsx:86
+#: src/components/plot/PlotAction.tsx:34
+#: src/components/plot/PlotAction.tsx:58
+#: src/components/plot/queue/PlotQueueActions.tsx:40
+#: src/components/plot/queue/PlotQueueActions.tsx:85
 #: src/components/selectKey/SelectKey.tsx:61
 #: src/components/selectKey/SelectKey.tsx:82
 msgid "Delete"
 msgstr "حذف"
 
-#: src/components/plot/PlotAction.tsx:38
-#: src/components/plot/queue/PlotQueueActions.tsx:40
+#: src/components/plot/PlotAction.tsx:33
+#: src/components/plot/queue/PlotQueueActions.tsx:39
 msgid "Delete Plot"
 msgstr "حذف قطعة"
 
@@ -1867,7 +1867,7 @@ msgstr "تعديلات فتحة VDF الفرعية"
 msgid "View"
 msgstr "عرض"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:74
+#: src/components/plot/queue/PlotQueueActions.tsx:73
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:52
 msgid "View Log"
 msgstr "عرض السجل"
@@ -2075,4 +2075,3 @@ msgstr "{currencyCode} مجموع مزارع شيا"
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} رسوم المعاملات للمستخدم"
-
