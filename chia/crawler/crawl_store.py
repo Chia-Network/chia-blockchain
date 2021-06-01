@@ -74,6 +74,12 @@ class CrawlStore:
         await self.unload_from_db()
         return self
 
+    def maybe_add_peer(self, peer_record: PeerRecord, peer_reliability: PeerReliability):
+        if peer_record.peer_id not in self.host_to_records:
+            self.host_to_records[peer_record.peer_id] = peer_record
+        if peer_reliability.peer_id not in self.host_to_reliability:
+            self.host_to_reliability[peer_reliability.peer_id] = peer_reliability
+
     async def add_peer(self, peer_record: PeerRecord, peer_reliability: PeerReliability, save_db: bool = False):
         if not save_db:
             self.host_to_records[peer_record.peer_id] = peer_record

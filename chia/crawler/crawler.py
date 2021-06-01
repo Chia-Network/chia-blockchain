@@ -128,7 +128,7 @@ class Crawler:
                     uint64(int(time.time())),
                 )
                 new_peer_reliability = PeerReliability(peer)
-                await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+                self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
 
             while True:
                 self.with_peak = set()
@@ -172,7 +172,7 @@ class Crawler:
                             )
                             new_peer_reliability = PeerReliability(response_peer.host)
                             if self.crawl_store is not None:
-                                await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+                                self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
                 for host, version in self.version_cache:
                     self.handshake_time[host] = int(time.time())
                     if host not in self.host_to_version:
