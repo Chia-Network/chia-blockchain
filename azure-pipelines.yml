@@ -107,10 +107,6 @@ steps:
     displayName: "Login to AWS"
 
   - bash: |
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/builds/
-    displayName: "Upload to S3"
-
-  - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_VERSION="Chia-"$(<version.txt)
@@ -118,6 +114,11 @@ steps:
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
     displayName: "Create Checksums"
 
+  - bash: |
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+    displayName: "Upload to S3"
+
+    
   - bash: |
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/releases/
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum s3://download-chia-net/releases/
