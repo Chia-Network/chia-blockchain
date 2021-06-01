@@ -208,7 +208,7 @@ class FarmerAPI:
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
                 try:
                     async with aiohttp.ClientSession() as session:
-                        async with session.post(f"http://{pool_url}/submit_partial", data=json_data) as resp:
+                        async with session.post(f"http://{pool_url}/partial", data=json_data) as resp:
                             if resp.ok:
                                 pool_response: Dict = json.loads(await resp.text())
                                 self.farmer.log.info(f"Pool response: {pool_response}")
@@ -216,7 +216,7 @@ class FarmerAPI:
                                     self.farmer.log.error(
                                         f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
                                     )
-                                    pool_state_dict["pool_errors_24"].append(pool_response)
+                                    pool_state_dict["pool_errors_24h"].append(pool_response)
                                 else:
                                     pool_state_dict["points_acknowledged_since_start"] += pool_state_dict[
                                         "current_difficulty"

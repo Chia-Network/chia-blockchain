@@ -187,7 +187,7 @@ class Farmer:
 
                 # Makes a GET request to the pool to get the updated information
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://{pool_config.pool_url}/get_pool_info") as resp:
+                    async with session.get(f"http://{pool_config.pool_url}/pool_info") as resp:
                         if resp.ok:
                             self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
                         else:
