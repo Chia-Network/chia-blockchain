@@ -72,13 +72,14 @@ def read_password_from_file(password_file: TextIOWrapper) -> str:
 
 
 def initialize_password() -> None:
-    if Keychain.is_password_protected():
+    if Keychain.has_master_password():
         print("Keyring is already protected by a password")
         print("\nUse 'chia password set' or 'chia password remove' to update or remove your password")
         sys.exit(1)
 
     # We'll rely on _Keyring initialization to leverage the cached password for
     # bootstrapping the keyring encryption process
+    print("Setting keyring password")
     if not Keychain.has_cached_password():
         password = prompt_for_new_password()
         cache_password(password)
@@ -86,7 +87,7 @@ def initialize_password() -> None:
 
 def set_or_update_password(password: Optional[str], current_password: Optional[str]) -> None:
     # Prompt for the current password, if necessary
-    if Keychain.is_password_protected() and not current_password:
+    if Keychain.has_master_password() and not current_password:
         try:
             current_password = obtain_current_password("Current Password: ")
         except Exception as e:
@@ -101,13 +102,13 @@ def set_or_update_password(password: Optional[str], current_password: Optional[s
         if new_password == current_password:
             raise ValueError("password is unchanged")
 
-        Keychain.set_password(current_password=current_password, new_password=new_password)
+        Keychain.set_master_password(current_password=current_password, new_password=new_password)
     except Exception as e:
         print(f"Unable to set or update password: {e}")
 
 
 def remove_password(current_password: Optional[str]) -> None:
-    if not Keychain.is_password_protected():
+    if not Keychain.has_master_password():
         print("Password is not currently set")
     else:
         # Prompt for the current password, if necessary
@@ -118,10 +119,10 @@ def remove_password(current_password: Optional[str]) -> None:
                 print(f"Unable to confirm current password: {e}")
 
         try:
-            Keychain.remove_password(current_password)
+            Keychain.remove_master_password(current_password)
         except Exception as e:
             print(f"Unable to remove password: {e}")
 
 
 def cache_password(password: str) -> None:
-    Keychain.set_cached_password(password)
+    Keychain.set_cached_master_password(password)

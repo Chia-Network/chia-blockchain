@@ -1,18 +1,27 @@
+from logging import root
+from chia.util.default_root import DEFAULT_ROOT_PATH
 import unicodedata
 
 # from functools import wraps
 from getpass import getpass
 from hashlib import pbkdf2_hmac
+from pathlib import Path
 from secrets import token_bytes
 from sys import platform
 from time import sleep
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, get_origin
 
 import keyring as keyring_main
+import os
 import pkg_resources
+import shutil
+import sys
+import yaml
+
 from bitstring import BitArray
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
+from secrets import token_bytes
 
 from chia.util.hash import std_hash
 
@@ -20,6 +29,84 @@ from chia.util.hash import std_hash
 FAILED_ATTEMPT_DELAY = 1
 MAX_KEYS = 100
 MAX_RETRIES = 3
+SALT_BYTES = 16
+NONCE_BYTES = 16
+
+class _FileKeyring:
+    keyring_path: Path = None
+    salt: List[bytes] = None
+    payload: dict = None
+
+    @staticmethod
+    def keyring_path_from_root(root_path: str) -> Path:
+        path_filename = Path(root_path) / "config" / "keyring.yaml"
+        return path_filename
+
+    def __init__(self, root_path: str = DEFAULT_ROOT_PATH):
+        self.keyring_path = _FileKeyring.keyring_path_from_root(root_path)
+        if self.has_content():
+            self.load_keyring()
+        else:
+            self.salt = token_bytes(SALT_BYTES)
+            self.payload = {}
+        print(f"(TODO: remove) ***** salt: {self.salt.hex()}")
+
+    def get_nonce(self) -> List[bytes]:
+        return token_bytes(NONCE_BYTES)
+
+    def has_content(self) -> bool:
+        print("(TODO: remove) ***** has_content")
+        return self.keyring_path.is_file() and self.keyring_path.stat().st_size > 0
+
+    def get_password(self, service: str, user: str) -> str:
+        print("(TODO: remove) ***** get_password")
+        keys = self.payload.get("keys") or {}
+        password = keys.get(user)
+        return password
+
+    def set_password(self, service: str, user: str, password_bytes: bytes):
+        print("(TODO: remove) ***** set_password")
+        keys = self.payload.get("keys") or {}
+        password = password_bytes.hex() if type(password_bytes) == type(bytes) else str(password_bytes)
+        keys[user] = password
+        self.write_keyring() # Updates the cached payload
+
+    def delete_password(self, service:str, user: str):
+        print("(TODO: remove) ***** delete_password")
+        keys = self.payload.get("keys") or {}
+        keys.pop(user, None)
+        self.write_keyring() # Updates the cached payload
+
+    def load_keyring(self):
+        if not self.keyring_path.is_file():
+            raise ValueError("Keyring file not found")
+        outer_payload = dict(yaml.safe_load(open(self.keyring_path, "r")))
+        version = int(outer_payload.get("version"))
+        max_supported_version = 1
+        if version > max_supported_version:
+            print(f"Keyring format is unrecognized. Found version {version}, expected a value <= {max_supported_version}")
+            sys.exit(-1)
+        self.salt = bytes.fromhex(outer_payload.get("salt"))
+        inner_payload = yaml.safe_load(outer_payload.get("data") or "")
+        self.payload = inner_payload
+
+    def write_keyring(self):
+        inner_payload = self.payload
+        inner_payload["nonce"] = self.get_nonce().hex()
+        inner_payload_yaml = yaml.safe_dump(inner_payload)
+        # TODO: encrypt payload_yaml, prepend checkbytes value
+        outer_payload = {
+            "version": 1,
+            "salt": self.salt.hex(),
+            "data": inner_payload_yaml
+        }
+        temp_path = self.keyring_path.with_suffix("." + str(os.getpid()))
+        with open(os.open(str(temp_path), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600), "w") as f:
+            outer_payload_yaml = yaml.safe_dump(outer_payload, f)
+        shutil.move(str(temp_path), self.keyring_path)
+
+        # Update our cached payload
+        self.payload = inner_payload
 
 
 class _KeyringWrapper:
@@ -27,11 +114,15 @@ class _KeyringWrapper:
     __shared_instance = None
 
     # Instance members
-    __keyring = None
-    __cached_password: Optional[str] = None
+    root_path: str = None
+    keyring = None
+    cached_password: Optional[str] = None
+    legacy_keyring = None
 
-    def __init__(self):
-        if _KeyringWrapper.__keyring:
+    def __init__(self, root_path: str = DEFAULT_ROOT_PATH):
+        self.root_path = root_path
+
+        if _KeyringWrapper.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
 
         if platform == "win32" or platform == "cygwin":
@@ -43,12 +134,23 @@ class _KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
-            keyring = CryptFileKeyring()
-            keyring.keyring_key = "your keyring password"  # type: ignore
+            # TODO: Leaving this to help debug migration scenarios
+            # keyring = CryptFileKeyring()
+            # keyring.keyring_key = "your keyring password"  # type: ignore
+
+            keyring = _FileKeyring(root_path=self.root_path)
+            # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring
+            if not keyring.has_content():
+                old_keyring = CryptFileKeyring()
+                if Path(old_keyring.file_path).is_file():
+                    print("(TODO: remove) ***** Using legacy keyring")
+                    self.legacy_keyring = old_keyring
+                    # Legacy keyring is nuked once a master password is set via 'chia password set'
+                    self.legacy_keyring.keyring_key = "your keyring password"  # type: ignore
         else:
             keyring = keyring_main
 
-        self.__keyring = keyring
+        self.keyring = keyring
         _KeyringWrapper.__shared_instance = self
 
     @staticmethod
@@ -59,58 +161,113 @@ class _KeyringWrapper:
         return _KeyringWrapper.__shared_instance
     
     def get_keyring(self):
-        return self.__keyring
+        return self.keyring if not self.using_legacy_keyring() else self.legacy_keyring
 
-    def get_cached_password(self) -> Optional[str]:
-        return self.__cached_password
+    def using_legacy_keyring(self) -> bool:
+        return self.legacy_keyring != None
 
-    def set_cached_password(self, password: Optional[str]) -> None:
-        self.__cached_password = password
+    # Master password support
 
-    def is_password_protected(self) -> bool:
+    def keyring_supports_master_password(self) -> bool:
+        return type(self.keyring) in [_FileKeyring]
+
+    def get_cached_master_password(self) -> Optional[str]:
+        return self.cached_password
+
+    def set_cached_master_password(self, password: Optional[str]) -> None:
+        self.cached_password = password
+
+    def has_master_password(self) -> bool:
         """
         Returns a bool indicating whether the underlying keyring data
-        is secured by a password.
+        is secured by a master password.
         """
         # TODO: Inspect blob
         return False
 
-    def password_is_valid(self, password: Optional[str]) -> bool:
+    def master_password_is_valid(self, password: Optional[str]) -> bool:
         # TODO: Checkbytes
         return password == "asdfasdf"
 
-    def set_password(self, current_password: Optional[str], new_password: str) -> None:
-        if self.is_password_protected() and not self.password_is_valid(current_password):
+    def set_master_password(self, current_password: Optional[str], new_password: str) -> None:
+        if self.has_master_password() and not self.master_password_is_valid(current_password):
             raise ValueError("invalid current password")
         # TODO: Encrypt blob
-        self.set_cached_password(new_password)
+        self.set_cached_master_password(new_password)
         print(f"(TODO: remove) setting password: {new_password}, current_password: {current_password}")
 
-    def remove_password(self, current_password: Optional[str]) -> None:
-        if _KeyringWrapper.is_password_protected() and not _KeyringWrapper.password_is_valid(current_password):
+    def remove_master_password(self, current_password: Optional[str]) -> None:
+        if _KeyringWrapper.has_master_password() and not _KeyringWrapper.master_password_is_valid(current_password):
             raise ValueError("invalid current password")
         print(f"(TODO: remove) removing password: current_password: {current_password}")
+    
+    # Legacy keyring migration
+    def migrate_legacy_keyring(self):
+        assert self.keyring_supports_master_password()
+        print("Migrating contents from legacy keyring")
+        keychain = Keychain()
+        all_private_keys = keychain.get_all_private_keys()
+        index = 0
+        for (private_key, key_bytes) in all_private_keys:
+            self.keyring.set_password(
+                keychain._get_service(),
+                keychain._get_private_key_user(index),
+                key_bytes)
+            index += 1
+        
+        # Stop using the legacy keyring
+        # TODO: Clear out the legacy keyring's contents?
+        self.legacy_keyring = None
+
+        print("Migration complete")
+
+    # Keyring interface
+
+    def get_password(self, service: str, user: str) -> str:
+        # Continue reading from the legacy keyring until we want to write something,
+        # at which point we'll migrate the legacy contents to the new keyring
+        if self.using_legacy_keyring():
+            print("(TODO: remove) ***** get_password is using legacy keyring")
+            return self.legacy_keyring.get_password(service, user)
+
+        return self.get_keyring().get_password(service, user)
+    
+    def set_password(self, service: str, user: str, password_bytes: bytes):
+        # On the first write while using the legacy keyring, we'll start migration
+        if self.using_legacy_keyring() and Keychain.has_cached_password():
+            print("(TODO: remove) ***** set_password called while using legacy keyring: will migrate")
+            self.migrate_legacy_keyring()
+
+        self.get_keyring().set_password(service, user, password_bytes)
+    
+    def delete_password(self, service:str, user: str):
+        # On the first write while using the legacy keyring, we'll start migration
+        if self.using_legacy_keyring() and Keychain.has_cached_password():
+            print("(TODO: remove) ***** delete_password called while using legacy keyring: will migrate")
+            self.migrate_legacy_keyring()
+
+        self.get_keyring().delete_password(service, user)
 
 
 def obtain_current_password(prompt: str = "Password: ", use_password_cache: bool = False) -> str:
     print(f"(TODO: remove) obtain_current_password: use_password_cache: {use_password_cache}")
 
     if use_password_cache:
-        password = _KeyringWrapper.get_shared_instance().get_cached_password()
+        password = _KeyringWrapper.get_shared_instance().get_cached_master_password()
         if password:
-            if _KeyringWrapper.get_shared_instance().password_is_valid(password):
+            if _KeyringWrapper.get_shared_instance().master_password_is_valid(password):
                 return password
             else:
                 # Cached password is bad, clear the cache
-                _KeyringWrapper.get_shared_instance().set_cached_password(None)
+                _KeyringWrapper.get_shared_instance().set_cached_master_password(None)
 
     for i in range(MAX_RETRIES):
         password = getpass(prompt)
 
-        if _KeyringWrapper.get_shared_instance().password_is_valid(password):
+        if _KeyringWrapper.get_shared_instance().master_password_is_valid(password):
             # If using the password cache, and the user inputted a password, update the cache
             if use_password_cache:
-                _KeyringWrapper.get_shared_instance().set_cached_password(password)
+                _KeyringWrapper.get_shared_instance().set_cached_master_password(password)
             return password
 
         sleep(FAILED_ATTEMPT_DELAY)
@@ -119,7 +276,7 @@ def obtain_current_password(prompt: str = "Password: ", use_password_cache: bool
 
 
 def unlock_keyring_if_necessary(use_password_cache=False) -> None:
-    if _KeyringWrapper.get_shared_instance().is_password_protected():
+    if _KeyringWrapper.get_shared_instance().has_master_password():
         obtain_current_password(use_password_cache=use_password_cache)
 
 
@@ -233,20 +390,14 @@ class Keychain:
     list of all keys.
     """
 
+    root_path: str
     testing: bool
     user: str
 
-    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
+    def __init__(self, root_path: str = DEFAULT_ROOT_PATH, user: str = "user-chia-1.8", testing: bool = False):
+        self.root_path = root_path
         self.testing = testing
         self.user = user
-
-    @staticmethod
-    def _get_keyring():
-        """
-        Returns the underlying keyring wrapped by KeyringWrapper. Implementations
-        differ based on the host OS.
-        """
-        return _KeyringWrapper.get_shared_instance().get_keyring()
 
     def _get_service(self) -> str:
         """
@@ -264,7 +415,7 @@ class Keychain:
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = Keychain._get_keyring().get_password(self._get_service(), user)
+        read_str = _KeyringWrapper.get_shared_instance().get_password(self._get_service(), user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
@@ -294,6 +445,7 @@ class Keychain:
                 return index
             index += 1
 
+    # @unlocks_keyring(use_password_cache=True)
     def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
@@ -310,7 +462,7 @@ class Keychain:
             # Prevents duplicate add
             return key
 
-        Keychain._get_keyring().set_password(
+        _KeyringWrapper.get_shared_instance().set_password(
             self._get_service(),
             self._get_private_key_user(index),
             bytes(key.get_g1()).hex() + entropy.hex(),
@@ -409,6 +561,7 @@ class Keychain:
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return None
 
+    # @unlocks_keyring
     def delete_key_by_fingerprint(self, fingerprint: int):
         """
         Deletes all keys which have the given public key fingerprint.
@@ -420,10 +573,11 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    Keychain._get_keyring().delete_password(self._get_service(), self._get_private_key_user(index))
+                    _KeyringWrapper.get_shared_instance().delete_password(self._get_service(), self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
+    # @unlocks_keyring
     def delete_all_keys(self):
         """
         Deletes all keys from the keychain.
@@ -435,7 +589,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                Keychain._get_keyring().delete_password(self._get_service(), self._get_private_key_user(index))
+                _KeyringWrapper.get_shared_instance().delete_password(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -453,7 +607,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                Keychain._get_keyring().delete_password(self._get_service(), self._get_private_key_user(index))
+                _KeyringWrapper.get_shared_instance().delete_password(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -464,30 +618,30 @@ class Keychain:
             index += 1
 
     @staticmethod
-    def is_password_protected() -> bool:
+    def has_master_password() -> bool:
         """
         Returns a bool indicating whether the underlying keyring data
         is secured by a password.
         """
-        return _KeyringWrapper.get_shared_instance().is_password_protected()
+        return _KeyringWrapper.get_shared_instance().has_master_password()
 
     @staticmethod
-    def password_is_valid(password: str) -> bool:
-        return _KeyringWrapper.get_shared_instance().password_is_valid(password)
+    def master_password_is_valid(password: str) -> bool:
+        return _KeyringWrapper.get_shared_instance().master_password_is_valid(password)
 
     @staticmethod
     def has_cached_password() -> bool:
-        password = _KeyringWrapper.get_shared_instance().get_cached_password()
+        password = _KeyringWrapper.get_shared_instance().get_cached_master_password()
         return password != None and len(password) > 0
 
     @staticmethod
-    def set_cached_password(password: Optional[str]) -> None:
-        _KeyringWrapper.get_shared_instance().set_cached_password(password)
+    def set_cached_master_password(password: Optional[str]) -> None:
+        _KeyringWrapper.get_shared_instance().set_cached_master_password(password)
 
     @staticmethod
-    def set_password(current_password: Optional[str], new_password: str) -> None:
+    def set_master_password(current_password: Optional[str], new_password: str) -> None:
         _KeyringWrapper.get_shared_instance().set_password(current_password, new_password)
 
     @staticmethod
-    def remove_password(current_password: Optional[str]) -> None:
-        _KeyringWrapper.get_shared_instance().remove_password(current_password)
+    def remove_master_password(current_password: Optional[str]) -> None:
+        _KeyringWrapper.get_shared_instance().remove_master_password(current_password)
