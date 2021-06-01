@@ -112,3 +112,8 @@ steps:
       export CHIA_VERSION="Chia-"$(<version.txt)
       shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg.checksum
     displayName: "Create Checksums"
+
+  - bash: |
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/releases/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/CHIA_VERSION.dmg.checksum s3://download-chia-net/releases/
+    displayName: "Upload to S3"
