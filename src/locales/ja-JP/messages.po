@@ -77,7 +77,7 @@ msgstr "ウォレットを追加"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/PlotHeader.tsx:46
-#: src/components/plot/add/PlotAdd.tsx:77
+#: src/components/plot/add/PlotAdd.tsx:80
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
 msgstr "耕地を追加"
@@ -412,7 +412,7 @@ msgstr "DID ウォレットを作成"
 msgid "Create Offer"
 msgstr "注文を作成"
 
-#: src/components/plot/add/PlotAdd.tsx:89
+#: src/components/plot/add/PlotAdd.tsx:92
 msgid "Create Plot"
 msgstr "耕地を作る"
 
@@ -639,6 +639,10 @@ msgstr "開けませんでした (耕地に問題あり)"
 #: src/components/wallet/standard/WalletStandard.tsx:515
 msgid "Farm"
 msgstr "畑"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
+msgid "Farmer Public Key"
+msgstr ""
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -1246,6 +1250,7 @@ msgid "Pool Key"
 msgstr "プール鍵"
 
 #: src/components/block/Block.jsx:248
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:268
 msgid "Pool Public Key"
 msgstr "プール公開鍵"
 

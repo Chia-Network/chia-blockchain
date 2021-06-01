@@ -77,7 +77,7 @@ msgstr "إضافة محفظة"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/PlotHeader.tsx:46
-#: src/components/plot/add/PlotAdd.tsx:77
+#: src/components/plot/add/PlotAdd.tsx:80
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
 msgstr "إضافة مساحة"
@@ -412,7 +412,7 @@ msgstr "إنشاء محفظة من النوع DID"
 msgid "Create Offer"
 msgstr "إنشاء عرض"
 
-#: src/components/plot/add/PlotAdd.tsx:89
+#: src/components/plot/add/PlotAdd.tsx:92
 msgid "Create Plot"
 msgstr "إنشاء قطعة"
 
@@ -639,6 +639,10 @@ msgstr "فشل في الفتح (قطع غير صالحة)"
 #: src/components/wallet/standard/WalletStandard.tsx:515
 msgid "Farm"
 msgstr "المزرعة"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
+msgid "Farmer Public Key"
+msgstr ""
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -1246,6 +1250,7 @@ msgid "Pool Key"
 msgstr "مفتاح التجميع"
 
 #: src/components/block/Block.jsx:248
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:268
 msgid "Pool Public Key"
 msgstr "المفتاح العام للتجمع"
 

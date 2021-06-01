@@ -77,7 +77,7 @@ msgstr "Přidat peněženku"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/PlotHeader.tsx:46
-#: src/components/plot/add/PlotAdd.tsx:77
+#: src/components/plot/add/PlotAdd.tsx:80
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
 msgstr "Přidat Pole"
@@ -412,7 +412,7 @@ msgstr "Vytvořit digitální peněženku"
 msgid "Create Offer"
 msgstr "Vytvořit nabídku"
 
-#: src/components/plot/add/PlotAdd.tsx:89
+#: src/components/plot/add/PlotAdd.tsx:92
 msgid "Create Plot"
 msgstr "Vytvořit pole"
 
@@ -639,6 +639,10 @@ msgstr "Nepodařilo se otevřít (neplatná pole)"
 #: src/components/wallet/standard/WalletStandard.tsx:515
 msgid "Farm"
 msgstr "Farma"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
+msgid "Farmer Public Key"
+msgstr ""
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -1246,6 +1250,7 @@ msgid "Pool Key"
 msgstr "Klíč poolu"
 
 #: src/components/block/Block.jsx:248
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:268
 msgid "Pool Public Key"
 msgstr "Veřejný klíč poolu"
 

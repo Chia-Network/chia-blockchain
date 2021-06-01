@@ -241,6 +241,34 @@ export default function PlotAddNumberOfPlots() {
               />
             </FormControl>
           </Grid>
+          <Grid xs={12} item>
+            <FormControl
+              variant="filled"
+              fullWidth
+            >
+              <TextField
+                name="farmerPublicKey"
+                type="text"
+                variant="filled"
+                placeholder="Hex farmer public key"
+                label={<Trans>Farmer Public Key</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} item>
+            <FormControl
+              variant="filled"
+              fullWidth
+            >
+              <TextField
+                name="poolPublicKey"
+                type="text"
+                variant="filled"
+                placeholder="Hex public key of pool"
+                label={<Trans>Pool Public Key</Trans>}
+              />
+            </FormControl>
+          </Grid>
         </Grid>
       </AdvancedOptions>
     </CardStep>

@@ -35,6 +35,8 @@ export default function PlotAdd() {
       finalLocation: '',
       workspaceLocation: '',
       workspaceLocation2: '',
+      farmerPublicKey: '',
+      poolPublicKey: '',
       delay: 0,
       parallel: false,
       disableBitfieldPlotting: false,
@@ -53,16 +55,17 @@ export default function PlotAdd() {
   }, [plotSize, setValue]);
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
-    const { delay } = data;
+    const { delay, farmerPublicKey, poolPublicKey } = data;
+    const plotAddData = {
+      ...data,
+      delay: delay * 60,
+    };
 
-    dispatch(plotQueueAdd(fingerprint ? {
-      ...data,
-      fingerprint,
-      delay: delay * 60,
-    } : {
-      ...data,
-      delay: delay * 60,
-    }));
+    if (fingerprint && !farmerPublicKey && !poolPublicKey) {
+      plotAddData.fingerprint = fingerprint;
+    }
+
+    dispatch(plotQueueAdd(plotAddData));
 
     history.push('/dashboard/plot');
   }
