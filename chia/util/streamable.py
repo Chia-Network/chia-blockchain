@@ -340,7 +340,7 @@ class Streamable:
         return parsed
 
     @classmethod
-    def fields_from_bytes(cls: Any, blob: bytes,fields_to_get:List) -> Any:
+    def fields_from_bytes(cls: Any, blob: bytes, fields_to_get: List) -> Any:
         f = io.BytesIO(blob)
         fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])

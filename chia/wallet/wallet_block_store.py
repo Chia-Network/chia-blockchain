@@ -133,17 +133,17 @@ class WalletBlockStore:
         else:
             return None
 
-    async def get_block_additions_removals(self, header_hash: bytes32) -> Optional[Tuple[List[Coin],List[Coin]]]:
+    async def get_block_additions_removals(self, header_hash: bytes32) -> Optional[Tuple[List[Coin], List[Coin]]]:
         """Gets a block record from the database, if present"""
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            return cached.additions,cached.removals
+            return cached.additions, cached.removals
         cursor = await self.db.execute("SELECT block from header_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            fields = HeaderBlockRecord.fields_from_bytes(row[0],fields_to_get=["additions","removals"])
-            return fields["additions"],fields["removals"]
+            fields = HeaderBlockRecord.fields_from_bytes(row[0], fields_to_get=["additions", "removals"])
+            return fields["additions"], fields["removals"]
         else:
             return None
 

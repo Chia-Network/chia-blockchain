@@ -846,7 +846,7 @@ class WalletStateManager:
         # Get all blocks after fork point up to but not including this block
         if new_block.height > 0:
             curr: BlockRecord = self.blockchain.block_record(new_block.prev_hash)
-            reorg_blocks_additions_removals: List[Tuple[List,List]] = []
+            reorg_blocks_additions_removals: List[Tuple[List, List]] = []
             while curr.height > fork_h:
                 block_additions_removals = await self.block_store.get_block_additions_removals(curr.header_hash)
                 assert block_additions_removals is not None

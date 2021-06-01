@@ -346,11 +346,11 @@ class TestStreamable(unittest.TestCase):
             parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
 
     def test_fields_from_bytes(self):
-        block = bt.get_consecutive_blocks(1,guarantee_transaction_block=True)[0]
+        block = bt.get_consecutive_blocks(1, guarantee_transaction_block=True)[0]
         coin = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 4)
         header = get_block_header(block, [coin], [])
-        hbr = HeaderBlockRecord(header,[coin],[])
-        res = HeaderBlockRecord.fields_from_bytes(bytes(hbr),fields_to_get = ["additions"])
+        hbr = HeaderBlockRecord(header, [coin], [])
+        res = HeaderBlockRecord.fields_from_bytes(bytes(hbr), fields_to_get=["additions"])
         assert res["additions"] == hbr.additions
 
 
