@@ -9,7 +9,6 @@ from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.pools.pool_puzzles import (
     create_full_puzzle,
-    generate_pool_eve_spend,
     create_escaping_inner_puzzle,
     create_pooling_inner_puzzle,
 )
@@ -88,15 +87,7 @@ def test_singleton_creation_with_eve_and_launcher():
     pool_reward_amount = 4000000000000
     pool_reward_height = 101
     relative_lock_height = uint32(10)
-    eve_spend: SpendBundle = generate_pool_eve_spend(
-        origin_coin,
-        launcher_coin,
-        private_key,
-        owner_pubkey,
-        our_puzzle_hash,
-        relative_lock_height,
-    )
-    assert eve_spend
+
     """
 def test_singleton_creation_with_eve_and_launcher():
     from chia.consensus.constants import ConsensusConstants
