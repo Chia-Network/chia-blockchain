@@ -32,7 +32,6 @@ class Crawler:
     _shut_down: bool
     root_path: Path
     peer_count: int
-    peer_queue: asyncio.Queue
     with_peak: set
 
     def __init__(
@@ -105,12 +104,6 @@ class Crawler:
             self.log.info(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
             await self.crawl_store.peer_failed_to_connect(peer)
 
-    async def process_peers(self):
-        while True:
-            peer = await self.peer_queue.get()
-            await self.connect_task(peer)
-            self.peer_queue.task_done()
-
     async def _start(self):
         self.task = asyncio.create_task(self.crawl())
 
@@ -143,22 +136,17 @@ class Crawler:
                     await self.crawl_store.load_to_db()
                 await self.crawl_store.load_reliable_peers_to_db()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
-
-                self.peer_queue = asyncio.Queue()
+                tasks = set()
                 for peer in peers_to_crawl:
                     if peer.port == self.other_peers_port:
                         total_nodes += 1
                         if peer.ip_address not in tried_nodes:
                             tried_nodes.add(peer.ip_address)
-                        self.peer_queue.put_nowait(peer)
-
-                tasks = []
-                for _ in range(250):
-                    task = asyncio.create_task(self.process_peers())
-                    tasks.append(task)
-                await self.peer_queue.join()
-                for task in tasks:
-                    task.cancel()
+                        task = asyncio.create_task(self.connect_task(peer))
+                        tasks.add(task)
+                        if len(tasks) >= 250:
+                            await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                        tasks = set(filter(lambda t: not t.done(), tasks))
 
                 for response in self.peers_retrieved:
                     for response_peer in response.peer_list:
