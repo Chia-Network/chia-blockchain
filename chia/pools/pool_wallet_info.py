@@ -62,7 +62,6 @@ class PoolState(Streamable):
     target_puzzle_hash: bytes32
     # owner_pubkey is set by the wallet, once
     owner_pubkey: G1Element
-    # Fields below are only valid in `FARMING_TO_POOL` state
     pool_url: Optional[str]
     relative_lock_height: uint32
 

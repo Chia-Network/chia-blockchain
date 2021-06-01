@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -174,7 +174,7 @@ class WalletRpcClient(RpcClient):
         backup_host: str,
         mode: str = "new",
         state: str = "FARMING_TO_POOL",
-    ) -> Optional[TransactionRecord]:
+    ) -> TransactionRecord:
         request = {
             "wallet_type": "pool_wallet",
             "mode": mode,
@@ -186,13 +186,7 @@ class WalletRpcClient(RpcClient):
                 "state": state,
             },
         }
-        try:
-            res = await self.fetch("create_new_wallet", request)
-        except Exception:
-            return None
-
-        log = logging.getLogger(__name__)
-        log.warning(f"REs: {res}")
+        res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
     async def pw_self_pool(self, wallet_id: str):
