@@ -1,7 +1,6 @@
 from typing import Optional, Tuple, List
 from blspy import G1Element
 
-from chia.clvm.singleton import P2_SINGLETON_MOD
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
 from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, PoolWalletInfo
@@ -16,8 +15,6 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.util.ints import uint32, uint64
 
 # "Full" is the outer singleton, with the inner puzzle filled in
-from tests.wallet.test_singleton import singleton_puzzle, LAUNCHER_PUZZLE_HASH
-
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")

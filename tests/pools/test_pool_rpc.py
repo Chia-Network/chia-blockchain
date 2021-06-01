@@ -4,6 +4,7 @@ import logging
 from typing import Optional, List, Dict
 
 import pytest
+from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
@@ -92,7 +93,7 @@ class TestPoolWalletRpc:
     async def test_create_new_pool_wallet(self, one_wallet_node_and_rpc):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        our_ph = await wallet_0.get_new_puzzlehash
+        our_ph = await wallet_0.get_new_puzzlehash()
         summaries_response = await client.get_wallets()
         for summary in summaries_response:
             if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
@@ -121,14 +122,10 @@ class TestPoolWalletRpc:
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
         assert status.target is None
-        assert status.current.to_json_dict() == {
-            "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
-            "pool_url": None,
-            "relative_lock_height": 0,
-            "state": 1,
-            "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-            "version": 1,
-        }
+        assert status.current.owner_pubkey == G1Element.from_bytes(bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"))
+        assert status.current.pool_url is None
+        assert status.current.relative_lock_height == 0
+        assert status.current.version == 1
         # Check that config has been written properly
         full_config: Dict = load_config(wallet_0.wallet_state_manager.root_path, "config.yaml")
         pool_list: List[Dict] = full_config["pool"]["pool_list"]
