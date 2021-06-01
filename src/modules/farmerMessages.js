@@ -90,6 +90,7 @@ export const getPoolState = () => {
       }),
       false,
     );
+    console.log('pool_state', data);
 
     const poolState = data?.pool_state;
     console.log('poolState', poolState);

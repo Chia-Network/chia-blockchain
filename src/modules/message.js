@@ -727,6 +727,31 @@ export const recover_did_wallet = (filename) => {
   return action;
 };
 
+export const create_pool_wallet = (initialTargetState, fee) => {
+  const action = walletMessage();
+  action.message.command = 'create_new_wallet';
+  action.message.data = {
+    wallet_type: 'pool_wallet',
+    mode: 'new',
+    fee,
+    host: backup_host,
+    initial_target_state: initialTargetState,
+  };
+  return action;
+};
+
+export const collect_self_pooling_rewards = (walletId, fee) => {
+  const action = walletMessage();
+  action.message.command = 'pw_collect_self_pooling_rewards';
+  action.message.data = {
+    wallet_id: walletId,
+    fee,
+  };
+  return action;
+};
+
+
+
 export const recover_did_action = (filename) => (dispatch) =>
   async_api(dispatch, recover_did_wallet(filename), true).then((response) => {
     dispatch(createState(true, false));

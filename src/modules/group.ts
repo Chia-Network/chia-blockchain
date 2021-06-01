@@ -1,6 +1,38 @@
 import type Group from '../types/Group';
+import { create_pool_wallet, collect_self_pooling_rewards, async_api } from './message';
+import { getPoolState } from './farmerMessages';
 
-export async function createGroup() {};
+export function createPoolNFT(initialTargetState, fee?: string) {
+  return async (dispatch) => {
+    console.log('createPoolNFT', initialTargetState, fee);
+    const { data } = await async_api(
+      dispatch,
+      create_pool_wallet(initialTargetState, fee),
+      false,
+    );
+
+    console.log('createPoolNFT response', data);
+
+    await dispatch(getPoolState());
+
+    return data;
+  };
+}
+
+export function collectSelfPoolingRewards(walletId: number, fee?: string) {
+  return async (dispatch) => {
+    console.log('collectSelfPoolingRewards', walletId, fee);
+    const { data } = await async_api(
+      dispatch,
+      collect_self_pooling_rewards(walletId, fee),
+      false,
+    );
+
+    await dispatch(getPoolState());
+
+    return data;
+  };
+}
 
 const mockedDetails = {
   p2_singleton_puzzle_hash: 'asdfsadfsadfsdfadsfaf',

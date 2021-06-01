@@ -1,0 +1,7 @@
+enum PlotNFTState {
+  SELF_POOLING = 'SELF_POOLING',
+  LEAVING_POOL = 'LEAVING_POOL',
+  FARMING_TO_POOL = 'FARMING_TO_POOL',
+}
+
+export default PlotNFTState;

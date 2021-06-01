@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import { Route, Switch, useRouteMatch } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -22,6 +22,10 @@ export default function Pool() {
   useInterval(() => {
     dispatch(getPoolState());
   }, 60000);
+
+  useEffect(() => {
+    dispatch(getPoolState());
+  }, []);
 
   return (
     <LayoutMain 

@@ -1,17 +1,21 @@
 import React, { useState, ReactNode } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Trans } from '@lingui/macro';
+import { t, Trans } from '@lingui/macro';
 import { Button, Typography } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm } from 'react-hook-form';
 import { Flex, Form, Loading } from '@chia/core';
 import GroupAddCreate from './GroupAddCreate';
+import { createPoolNFT } from '../../../modules/group';
 import type { RootState } from '../../../modules/rootReducer';
+import PlotNFTState from '../../../constants/PlotNFTState';
+import getPoolInfo from '../../../util/getPoolInfo';
 
-type JoinPoolFormData = {
-  type: 'SELF_POOLING' | 'FARMING_TO_POOL';
-  pool?: string;
+type FormData = {
+  self: boolean;
+  poolUrl?: string;
+  fee?: string | number;
 };
 
 type Props = {
@@ -24,25 +28,50 @@ export default function GroupAdd(props: Props) {
   const dispatch = useDispatch();
   const history = useHistory();
   const [loading, setLoading] = useState<boolean>(false);
-  const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
       self: true,
-      poolUrl: 'test',
+      poolUrl: 'http://127.0.0.1',
     },
   });
 
-  async function handleSubmit(data: JoinPoolFormData) {
+  async function handleSubmit(data: FormData) {
     try {
       setLoading(true);
+
+      const { self, fee, poolUrl } = data;
+      const initialTargetState = {
+        state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+      };
+
+      if (!self && poolUrl) {
+        const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(poolUrl);
+        if (!target_puzzle_hash) {
+          throw new Error(t`Pool does not provide target_puzzle_hash.`);
+        }
+        if (relative_lock_height === undefined) {
+          throw new Error(t`Pool does not provide relative_lock_height.`);
+        }
+
+        initialTargetState.pool_url = poolUrl;
+        initialTargetState.target_puzzle_hash = target_puzzle_hash;
+        initialTargetState.relative_lock_height = relative_lock_height;
+      }
+
       /*
-      dispatch(createPoolGroup({
-        ...data,
-        fingerprint,
-      }));
+      "initial_target_state": {
+        "target_puzzle_hash": target_puzzlehash.hex(),
+        "relative_lock_height": relative_lock_height,
+        "pool_url": pool_url,
+        "state": state,
       */
+
+      const { success, transaction } = await dispatch(createPoolNFT(initialTargetState, fee));
+      if (success) {
+        setTransaction
+      }
 
       history.push('/dashboard/pool');
     } finally {

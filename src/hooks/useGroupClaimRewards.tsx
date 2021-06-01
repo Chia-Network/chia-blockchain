@@ -1,16 +1,18 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import { AlertDialog, ConfirmDialog, Flex, UnitFormat } from '@chia/core';
+import { useDispatch, useSelector } from 'react-redux';
+import { AlertDialog, ConfirmDialog, UnitFormat } from '@chia/core';
 import type Group from '../types/Group';
 import type { RootState } from '../modules/rootReducer';
+import { collectSelfPoolingRewards } from '../modules/group';
 import useOpenDialog from './useOpenDialog';
 
 export default function useGroupClaimRewards(group: Group) {
-  const { state, balance, address } = group;
+  const { state, balance, address, walletId } = group;
 
   const openDialog = useOpenDialog();
 
+  const dispatch = useDispatch();
   const isWalletSyncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
@@ -48,7 +50,12 @@ export default function useGroupClaimRewards(group: Group) {
       </ConfirmDialog>,
     );
 
+    if (!walletId) {
+      throw new Error('Wallet id is not defined');
+    }
+
     if (canClaimRewards) {
+      await dispatch(collectSelfPoolingRewards(walletId, '0'));
       // TODO add claim functionality here
     }
   }
