@@ -205,6 +205,8 @@ class Crawler:
                 self.peers_retrieved = []
 
                 self.server.banned_peers = {}
+                if len(peers_to_crawl) == 0:
+                    continue
                 self.log.error("***")
                 self.log.error("Finished batch:")
                 self.log.error(f"Total connections attempted since crawler started: {total_nodes}.")
