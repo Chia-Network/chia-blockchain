@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 
 from chia.consensus.block_record import BlockRecord
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
@@ -129,6 +130,20 @@ class WalletBlockStore:
             hbr: HeaderBlockRecord = HeaderBlockRecord.from_bytes(row[0])
             self.block_cache.put(hbr.header_hash, hbr)
             return hbr
+        else:
+            return None
+
+    async def get_block_additions_removals(self, header_hash: bytes32) -> Optional[Tuple[List[Coin],List[Coin]]]:
+        """Gets a block record from the database, if present"""
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached.additions,cached.removals
+        cursor = await self.db.execute("SELECT block from header_blocks WHERE header_hash=?", (header_hash.hex(),))
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            fields = HeaderBlockRecord.fields_from_bytes(row[0],fields_to_get=["additions","removals"])
+            return fields["additions"],fields["removals"]
         else:
             return None
 
