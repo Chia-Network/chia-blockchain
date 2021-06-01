@@ -105,7 +105,7 @@ export default function PoolOverview() {
     return null;
   }
 
-  if (!groups) {
+  if (!groups || !groups.length) {
     return (
       <PoolHero />
     );

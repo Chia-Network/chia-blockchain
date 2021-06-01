@@ -32,6 +32,7 @@ export default function GroupAdd(props: Props) {
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
+      fee: '',
       self: true,
       poolUrl: 'http://127.0.0.1',
     },
@@ -60,17 +61,10 @@ export default function GroupAdd(props: Props) {
         initialTargetState.relative_lock_height = relative_lock_height;
       }
 
-      /*
-      "initial_target_state": {
-        "target_puzzle_hash": target_puzzlehash.hex(),
-        "relative_lock_height": relative_lock_height,
-        "pool_url": pool_url,
-        "state": state,
-      */
-
-      const { success, transaction } = await dispatch(createPoolNFT(initialTargetState, fee));
+      const { success, transaction } = await dispatch(createPoolNFT(initialTargetState, fee || undefined));
       if (success) {
-        setTransaction
+        console.log('transaction', transaction);
+        // setTransaction
       }
 
       history.push('/dashboard/pool');

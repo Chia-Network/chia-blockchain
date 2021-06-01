@@ -14,7 +14,7 @@ export default function PoolHero() {
   const history = useHistory();
 
   function handleJoinPool() {
-    history.push('/dashboard/pool/join');
+    history.push('/dashboard/pool/add');
   }
 
   return (
