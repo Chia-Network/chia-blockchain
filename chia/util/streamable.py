@@ -339,6 +339,23 @@ class Streamable:
         assert f.read() == b""
         return parsed
 
+    @classmethod
+    def fields_from_bytes(cls: Any, blob: bytes,fields_to_get:List) -> Any:
+        f = io.BytesIO(blob)
+        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        res = {}
+        for field, value in zip(fields, values):
+            if field in fields_to_get:
+                res[field] = value
+        # Use -1 as a sentinel value as it's not currently serializable
+        if next(fields, -1) != -1:
+            raise ValueError("Failed to parse incomplete Streamable object")
+        if next(values, -1) != -1:
+            raise ValueError("Failed to parse unknown data in Streamable object")
+        assert f.read() == b""
+        return res
+
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
         self.stream(f)

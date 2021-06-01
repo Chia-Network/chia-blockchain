@@ -12,6 +12,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32
 from chia.util.streamable import (
     Streamable,
@@ -24,6 +25,7 @@ from chia.util.streamable import (
     parse_size_hints,
     parse_str,
 )
+from chia.wallet.block_record import HeaderBlockRecord
 from tests.setup_nodes import bt, test_constants
 
 
@@ -342,6 +344,14 @@ class TestStreamable(unittest.TestCase):
         # EOF off by one
         with raises(AssertionError):
             parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
+
+    def test_fields_from_bytes(self):
+        block = bt.get_consecutive_blocks(1,guarantee_transaction_block=True)[0]
+        coin = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 4)
+        header = get_block_header(block, [coin], [])
+        hbr = HeaderBlockRecord(header,[coin],[])
+        res = HeaderBlockRecord.fields_from_bytes(bytes(hbr),fields_to_get = ["additions"])
+        assert res["additions"] == hbr.additions
 
 
 if __name__ == "__main__":
