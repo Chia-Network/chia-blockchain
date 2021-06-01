@@ -145,8 +145,8 @@ class WebSocketServer:
             self.self_hostname,
             self.daemon_port,
             max_size=50 * 1000 * 1000,
-            ping_interval=500,
-            ping_timeout=300,
+            ping_interval=25,
+            ping_timeout=20,
             ssl=self.ssl_context,
         )
         self.log.info("Waiting Daemon WebSocketServer closure")
