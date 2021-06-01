@@ -17,6 +17,8 @@ log = logging.getLogger(__name__)
 class WalletPuzzleStore:
     """
     WalletPuzzleStore keeps track of all generated puzzle_hashes and their derivation path / wallet.
+    This is only used for HD wallets where each address is derived from a public key. Otherwise, use the
+    WalletInterestedStore to keep track of puzzle hashes which we are interested in.
     """
 
     db_connection: aiosqlite.Connection

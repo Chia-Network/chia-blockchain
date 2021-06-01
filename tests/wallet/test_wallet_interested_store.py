@@ -38,6 +38,15 @@ class TestWalletInterestedStore:
             assert (await store.get_interested_coin_ids()) == [coin_1.name()]
             await store.add_interested_coin_id(coin_2.name())
             assert set(await store.get_interested_coin_ids()) == {coin_1.name(), coin_2.name()}
+            puzzle_hash = token_bytes(32)
+            assert len(await store.get_interested_puzzle_hashes()) == 0
+
+            await store.add_interested_puzzle_hash(puzzle_hash, 2)
+            assert len(await store.get_interested_puzzle_hashes()) == 1
+            await store.add_interested_puzzle_hash(puzzle_hash, 2)
+            assert len(await store.get_interested_puzzle_hashes()) == 1
+            await store.add_interested_puzzle_hash(puzzle_hash, 3)
+            assert len(await store.get_interested_puzzle_hashes()) == 2
 
         finally:
             await db_connection.close()
