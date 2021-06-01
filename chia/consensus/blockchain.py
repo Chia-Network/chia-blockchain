@@ -256,9 +256,9 @@ class Blockchain(BlockchainInterface):
         # Always add the block to the database
         async with self.block_store.db_wrapper.lock:
             try:
+                header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
-                header_hash: bytes32 = block.header_hash
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 fork_height, peak_height, records = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
