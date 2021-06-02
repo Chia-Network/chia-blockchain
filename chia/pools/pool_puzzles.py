@@ -31,7 +31,7 @@ SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 # same challenge for every P2_SINGLETON puzzle
-P2_SINGLETON_GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
+POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
 def create_escaping_inner_puzzle(
@@ -43,7 +43,10 @@ def create_escaping_inner_puzzle(
 def create_pooling_inner_puzzle(
     target_puzzle_hash: bytes, pool_escaping_inner_hash: bytes32, owner_pubkey: G1Element
 ) -> Program:
-    return POOL_MEMBER_MOD.curry(target_puzzle_hash, pool_escaping_inner_hash, P2_SINGLETON_HASH, bytes(owner_pubkey))
+    # TARGET_PUZZLE_HASH P2_SINGLETON_PUZHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZHASH
+    return POOL_MEMBER_MOD.curry(
+        target_puzzle_hash, P2_SINGLETON_HASH, bytes(owner_pubkey), POOL_REWARD_PREFIX_MAINNET, pool_escaping_inner_hash
+    )
 
 
 def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
@@ -190,10 +193,11 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Pr
     if not is_pooling_inner_puzzle(inner_f):
         return None
 
-    pool_puzzle_hash, relative_lock_height, pool_escaping_inner_hash, p2_singleton_hash, pubkey = list(args.as_iter())
+    # TARGET_PUZZLE_HASH P2_SINGLETON_PUZZLEHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZZLEHASH
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = list(args.as_iter())
     assert p2_singleton_hash == P2_SINGLETON_HASH
 
-    return pool_puzzle_hash, relative_lock_height, pubkey
+    return target_puzzle_hash, owner_pubkey
 
 
 def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
