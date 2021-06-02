@@ -282,6 +282,7 @@ class Farmer:
         while not self._shut_down:
             if time_slept > 60:
                 await self._update_pool_state()
+                time_slept = uint64(0)
             time_slept += 1
             await asyncio.sleep(1)
 
