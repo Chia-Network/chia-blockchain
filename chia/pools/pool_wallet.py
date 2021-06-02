@@ -276,8 +276,11 @@ class PoolWallet:
         history: List[Tuple[uint32, CoinSolution]] = self.wallet_state_manager.pool_store.get_spends_for_wallet(
             self.wallet_id
         ).copy()
-        prev_state = await self.get_current_state()
+        prev_state: PoolWalletInfo = await self.get_current_state()
         await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
+        await self.wallet_state_manager.interested_store.remove_interested_puzzle_hash(
+            prev_state.p2_singleton_puzzle_hash, in_transaction=True
+        )
 
         if len(history) > 0 and history[0][0] > block_height:
             # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
@@ -501,6 +504,14 @@ class PoolWallet:
 
     async def claim_pool_rewards(self) -> None:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
+        current_state: PoolWalletInfo = await self.get_current_state()
+        if (
+            current_state.current.state != PoolSingletonState.SELF_POOLING
+            and current_state.current.state != PoolSingletonState.LEAVING_POOL
+        ):
+            raise ValueError("Cannot claim rewards, invali")
+
+        # unspent_coin_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         pass
 
     async def new_peak(self, peak: BlockRecord) -> None:
@@ -508,16 +519,16 @@ class PoolWallet:
         pass
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
-        return uint64(1)
+        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.wallet_id, record_list)
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint64:
-        return uint64(1)
+        return await self.get_confirmed_balance(record_list)
 
     async def get_spendable_balance(self, record_list=None) -> uint64:
-        return uint64(1)
+        return await self.get_confirmed_balance(record_list)
 
-    async def get_pending_change_balance(self, record_list=None) -> uint64:
-        return uint64(1)
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
 
     async def get_max_send_amount(self, record_list=None) -> uint64:
-        return uint64(1)
+        return uint64(0)
