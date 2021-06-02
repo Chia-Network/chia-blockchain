@@ -29,7 +29,7 @@
   (defun-inline claim-rewards (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
     (list
         (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash) my_id))
-        (list CREATE_COIN_ANNOUNCEMENT 0x80)
+        (list CREATE_COIN_ANNOUNCEMENT '$')
         (list ASSERT_MY_COIN_ID my_id))
   )
 

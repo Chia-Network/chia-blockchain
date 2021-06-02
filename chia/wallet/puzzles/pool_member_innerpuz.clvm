@@ -23,9 +23,9 @@
   (include condition_codes.clvm)
 
   ; takes a lisp tree and returns the hash of it
-  (defun sha256tree1 (TREE)
+  (defun sha256tree (TREE)
       (if (l TREE)
-          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+          (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
           (sha256 1 TREE)
       )
   )
@@ -39,14 +39,14 @@
         (list CREATE_COIN my_inner_puzzle_hash my_amount)
         (list CREATE_COIN POOL_PUZZLE_HASH pool_reward_amount)
         (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id)
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x80))
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id '$'))
     )
   )
 
   ; main
 
   (if spend_type
-    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree1 key_value_list ()))
+    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree key_value_list ()))
           (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
 
     )
