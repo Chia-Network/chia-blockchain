@@ -1,6 +1,7 @@
 from blspy import AugSchemeMPL, PrivateKey, G1Element
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
+from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -12,7 +13,7 @@ from chia.pools.pool_puzzles import (
     create_escaping_inner_puzzle,
     create_pooling_inner_puzzle,
     uncurry_pool_member_inner_puzzle,
-    POOL_REWARD_PREFIX_MAINNET,
+    POOL_REWARD_PREFIX_MAINNET, pool_state_to_inner_puzzle, is_pool_member_inner_puzzle, is_pool_escaping_inner_puzzle,
 )
 from chia.util.ints import uint32, uint64
 from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
@@ -68,6 +69,37 @@ def test_uncurry():
     none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
     assert none is None
 
+
+def test_pool_state_to_inner_puzzle():
+    pool_state = PoolState(
+        owner_pubkey=bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"),
+        pool_url="",
+        relative_lock_height=0,
+        state=1,
+        target_puzzle_hash=bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7"),
+        version=1)
+    puzzle = pool_state_to_inner_puzzle(pool_state)
+    assert is_pool_member_inner_puzzle(puzzle)
+
+    target_puzzle_hash: bytes32 = bytes32(b"2" * 32)
+    owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
+    relative_lock_height: uint32
+    pool_state = PoolState(0, LEAVING_POOL.value, target_puzzle_hash, owner_pubkey, None, 0)
+
+    puzzle = pool_state_to_inner_puzzle(pool_state)
+    assert is_pool_escaping_inner_puzzle(puzzle)
+
+
+'''
+def test_create_escape_spend():
+    last_coin_solution: CoinSolution = {'coin': {'amount': 1,
+          'parent_coin_info': '0x7eafe79ac873ad528287f905620ee0eefb3bd1b70274a4c1a4817ca1db952007',
+          'puzzle_hash': '0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9'},
+ 'puzzle_reveal': '0xff02ffff01ff04ffff04ff04ffff04ff05ffff04ff0bff80808080ffff04ffff04ff0affff04ffff02ff0effff04ff02ffff04ffff04ff05ffff04ff0bffff04ff17ff80808080ff80808080ff808080ff808080ffff04ffff01ff33ff3cff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff0effff04ff02ffff04ff09ff80808080ffff02ff0effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080',
+ 'solution': '0xffa08eb5a4893f62881c6244604a79c36b23c06e8ae691f88322801b89c2dfaa8ae8ff01ffc05b0101738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe30401000000000000000080'}
+    pool_info: PoolWalletInfo =
+    create_escape_spend(last_coin_solution, pool_info)
+'''
 
 """
 def test_singleton_creation_with_eve_and_launcher():
