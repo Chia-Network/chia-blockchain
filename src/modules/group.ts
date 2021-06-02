@@ -58,6 +58,7 @@ type GroupState = {
 };
 
 const initialState: GroupState = {
+  /*
   groups: [
     {
       id: '1',
@@ -89,6 +90,7 @@ const initialState: GroupState = {
       ...mockedDetails,
     },
   ],
+  */
 };
 
 export default function groupReducer(
