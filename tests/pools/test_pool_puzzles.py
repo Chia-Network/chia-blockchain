@@ -65,7 +65,7 @@ def test_uncurry():
     pooling_inner_puzzle = create_pooling_inner_puzzle(
         target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey
     )
-    pool_puzzle_hash, pubkey = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
+    inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
     none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
     assert none is None
 
