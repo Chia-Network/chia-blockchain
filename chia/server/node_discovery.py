@@ -37,12 +37,19 @@ class FullNodeDiscovery:
         introducer_info: Optional[Dict],
         dns_servers: List[str],
         peer_connect_interval: int,
+        selected_network: str,
         log,
     ):
         self.server: ChiaServer = server
         self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
+        # This is a double check to make sure testnet and mainnet peer databases never mix up.
+        # If the network is not 'mainnet', it names the peer db differently, including the selected_network.
+        if selected_network != "mainnet":
+            if not peer_db_path.endswith(".sqlite"):
+                raise ValueError(f"Invalid path for peer table db: {peer_db_path}. Make the path end with .sqlite")
+            peer_db_path = peer_db_path[:-7] + "_" + selected_network + ".sqlite"
         self.peer_db_path = path_from_root(root_path, peer_db_path)
         self.dns_servers = dns_servers
         if introducer_info is not None:
@@ -470,6 +477,7 @@ class FullNodePeers(FullNodeDiscovery):
         introducer_info,
         dns_servers,
         peer_connect_interval,
+        selected_network,
         log,
     ):
         super().__init__(
@@ -480,6 +488,7 @@ class FullNodePeers(FullNodeDiscovery):
             introducer_info,
             dns_servers,
             peer_connect_interval,
+            selected_network,
             log,
         )
         self.relay_queue = asyncio.Queue()
@@ -639,6 +648,7 @@ class WalletPeers(FullNodeDiscovery):
         introducer_info,
         dns_servers,
         peer_connect_interval,
+        selected_network,
         log,
     ) -> None:
         super().__init__(
@@ -649,6 +659,7 @@ class WalletPeers(FullNodeDiscovery):
             introducer_info,
             dns_servers,
             peer_connect_interval,
+            selected_network,
             log,
         )
 

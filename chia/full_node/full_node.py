@@ -192,6 +192,7 @@ class FullNode:
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
+                self.config["selected_network"],
                 self.log,
             )
         except Exception as e:
