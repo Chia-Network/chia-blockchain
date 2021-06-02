@@ -95,7 +95,6 @@ export default function PlotAddNFT() {
             <Button
               onClick={handleJoinPool}
               variant="contained"
-              color="primary"
             >
               <Trans>Join a Pool</Trans>
             </Button>
