@@ -74,6 +74,7 @@ class Farmer:
         self.cache_add_time: Dict[bytes32, uint64] = {}
 
         self.cache_clear_task: asyncio.Task
+        self.update_pool_state_task: asyncio.Task
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
@@ -120,6 +121,7 @@ class Farmer:
 
     async def _start(self):
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
+        self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
         await self._update_pool_state()
 
     def _close(self):
@@ -127,6 +129,7 @@ class Farmer:
 
     async def _await_closed(self):
         await self.cache_clear_task
+        await self.update_pool_state_task
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -272,6 +275,14 @@ class Farmer:
                     continue
                 rpc_response[peer_full] = response.to_json_dict()
         return rpc_response
+
+    async def _periodically_update_pool_state_task(self):
+        time_slept: uint64 = uint64(0)
+        while not self._shut_down:
+            if time_slept > 60:
+                await self._update_pool_state()
+            time_slept += 1
+            await asyncio.sleep(1)
 
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
