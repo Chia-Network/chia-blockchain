@@ -45,8 +45,14 @@ class TestWalletInterestedStore:
             assert len(await store.get_interested_puzzle_hashes()) == 1
             await store.add_interested_puzzle_hash(puzzle_hash, 2)
             assert len(await store.get_interested_puzzle_hashes()) == 1
+            assert (await store.get_interested_puzzle_hash_wallet_id(puzzle_hash)) == 2
             await store.add_interested_puzzle_hash(puzzle_hash, 3)
-            assert len(await store.get_interested_puzzle_hashes()) == 2
+            assert len(await store.get_interested_puzzle_hashes()) == 1
+
+            assert (await store.get_interested_puzzle_hash_wallet_id(puzzle_hash)) == 3
+            await store.remove_interested_puzzle_hash(puzzle_hash)
+            assert (await store.get_interested_puzzle_hash_wallet_id(puzzle_hash)) is None
+            assert len(await store.get_interested_puzzle_hashes()) == 0
 
         finally:
             await db_connection.close()

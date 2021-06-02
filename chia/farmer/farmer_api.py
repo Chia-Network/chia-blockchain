@@ -217,6 +217,12 @@ class FarmerAPI:
                                         f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
                                     )
                                     pool_state_dict["pool_errors_24h"].append(pool_response)
+                                    if pool_response["error_code"] == 5:
+                                        self.farmer.log.error("Too low difficulty, adjusting")
+                                        pool_state_dict["current_difficulty"] = pool_response["current_difficulty"]
+                                    else:
+                                        self.farmer.log.error(f"error not 5. {pool_response['error_code'] == '5'}")
+
                                 else:
                                     pool_state_dict["points_acknowledged_since_start"] += pool_state_dict[
                                         "current_difficulty"
