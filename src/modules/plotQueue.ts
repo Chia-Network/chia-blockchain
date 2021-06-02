@@ -97,6 +97,7 @@ export function plotQueueAdd(
       overrideK,
       farmerPublicKey, 
       poolPublicKey,
+      c,
     } = config;
 
     return dispatch(
@@ -118,6 +119,7 @@ export function plotQueueAdd(
         overrideK,
         farmerPublicKey, 
         poolPublicKey,
+        c,
       ),
     );
   };

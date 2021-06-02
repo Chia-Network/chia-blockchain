@@ -54,8 +54,6 @@ export default function GroupCard(props: Props) {
     },
   } = props;
 
-  console.log('group', group);
-
   const [claimRewards] = usePoolClaimRewards(group);
   const [joinPool] = usePoolJoin(group);
 

@@ -42,7 +42,7 @@ export default function PlotAdd() {
       parallel: false,
       disableBitfieldPlotting: false,
       excludeFinalDir: false,
-      nft: '',
+      c: '',
     },
   });
 
