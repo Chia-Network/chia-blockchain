@@ -1072,11 +1072,8 @@ class WalletRpcApi:
             uint32(request["relative_lock_height"]),
         )
         async with self.service.wallet_state_manager.lock:
-            await wallet.join_pool(new_target_state)
-            state: PoolWalletInfo = await wallet.get_current_state()
-            return {
-                "state": state.to_json_dict(),
-            }
+            tx: TransactionRecord = await wallet.join_pool(new_target_state)
+            return {"transaction": tx}
 
     async def pw_self_pool(self, request):
         # Leaving a pool requires two state transitions.
@@ -1098,11 +1095,8 @@ class WalletRpcApi:
             SELF_POOLING, target_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=0
         )
         async with self.service.wallet_state_manager.lock:
-            await wallet.self_pool(new_target_state)
-            state: PoolWalletInfo = await wallet.get_current_state()
-            return {
-                "state": state.to_json_dict(),
-            }
+            tx: TransactionRecord = await wallet.self_pool(new_target_state)
+            return {"transaction": tx}
 
     async def pw_collect_self_pooling_rewards(self, request):
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""

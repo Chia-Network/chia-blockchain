@@ -330,7 +330,7 @@ class TestPoolWalletRpc:
         wallet_node_1, wallet_server_1 = wallets[1]
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-        ph = await wallet_0.get_new_puzzlehash()
+        our_ph = await wallet_0.get_new_puzzlehash()
         pool_ph = await wallet_1.get_new_puzzlehash()
 
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -353,7 +353,7 @@ class TestPoolWalletRpc:
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
         try:
-            total_blocks += await self.farm_blocks(full_node_api, ph, num_blocks)
+            total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
             total_block_rewards = await self.get_total_block_rewards(total_blocks)
 
             await time_out_assert(10, wallet_0.get_unconfirmed_balance, total_block_rewards)
@@ -367,7 +367,7 @@ class TestPoolWalletRpc:
                     assert False
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-                ph, "", 0, "localhost:5000", "new", "SELF_POOLING"
+                our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING"
             )
 
             await time_out_assert(
@@ -377,7 +377,7 @@ class TestPoolWalletRpc:
                 creation_tx.name,
             )
 
-            await self.farm_blocks(full_node_api, ph, 6)
+            await self.farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
             summaries_response = await client.get_wallets()
@@ -393,7 +393,7 @@ class TestPoolWalletRpc:
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
 
-            state: PoolWalletInfo = await api_user.pw_join_pool(
+            join_pool_tx: TransactionRecord = await api_user.pw_join_pool(
                 {
                     "wallet_id": wallet_id,
                     "pool_url": "https://pool.example.com",
@@ -402,6 +402,7 @@ class TestPoolWalletRpc:
                     "host": f"{self_hostname}:5000",
                 }
             )
+            assert join_pool_tx is not None
 
             status: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
@@ -424,13 +425,23 @@ class TestPoolWalletRpc:
                 "version": 1,
             }
 
-            await self.farm_blocks(full_node_api, ph, 6)
-            # assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+            await self.farm_blocks(full_node_api, our_ph, 6)
+            # join_pool_sb = full_node_api.full_node.mempool_manager.get_spendbundle(join_pool_tx.spend_bundle)
 
             status: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
 
-            assert status.current.state == PoolSingletonState.LEAVING_POOL.value
+            total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
+            total_block_rewards = await self.get_total_block_rewards(total_blocks)
+
+            async def status_is_farming_to_pool():
+                # await self.farm_blocks(full_node_api, our_ph, 1)
+                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+
+            await time_out_assert(timeout=20, function=status_is_farming_to_pool)
+            assert len(join_pool_tx.additions) > 1
+
         finally:
             client.close()
             await client.await_closed()

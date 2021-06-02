@@ -1,6 +1,7 @@
 from typing import Optional, Tuple, List
 from blspy import G1Element
 
+from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
 from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, PoolWalletInfo
@@ -20,7 +21,7 @@ POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 POOL_OUTER_MOD = SINGLETON_MOD
-SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+# SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
 P2_SINGLETON_HASH = P2_SINGLETON_MOD.get_tree_hash()
@@ -51,7 +52,7 @@ def create_pooling_inner_puzzle(
 
 
 def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
-    return POOL_OUTER_MOD.curry(POOL_OUTER_MOD_HASH, launcher_id, inner_puzzle)
+    return POOL_OUTER_MOD.curry(POOL_OUTER_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH, inner_puzzle)
 
 
 def create_p2_singleton_puzzle(singleton_mod_hash: bytes, launcher_id: bytes32) -> Program:
@@ -89,11 +90,13 @@ def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
     return inner_f in [POOL_MEMBER_MOD]
 
 
-def create_member_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, bytes32]:
+def create_member_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, Program, Program]:
+    #    -> Tuple[CoinSolution, bytes32]:
     return create_escape_spend(last_coin_solution, pool_info)
 
 
-def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, bytes32]:
+def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, Program, Program]:
+    #    -> Tuple[CoinSolution, bytes32]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
@@ -115,12 +118,13 @@ def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletI
                 get_inner_puzzle_from_puzzle(last_coin_solution.puzzle_reveal).get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
-        )
+        ).get_tree_hash()
     full_solution: Program = Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name())
+
     return CoinSolution(
         coin, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)
-    ), full_puzzle.get_tree_hash()
+    ), full_puzzle, inner_puzzle
 
 
 def create_absorb_spend(
@@ -188,7 +192,7 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     return pubkey
 
 
-def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
+def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tuple[Program, Program, Program]]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
@@ -204,7 +208,8 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Pr
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = list(args.as_iter())
     assert p2_singleton_hash == P2_SINGLETON_HASH
 
-    return target_puzzle_hash, owner_pubkey
+    # return target_puzzle_hash, owner_pubkey
+    return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
 def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:

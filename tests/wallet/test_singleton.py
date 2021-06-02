@@ -135,6 +135,7 @@ def test_p2_singleton():
 
 
 def test_pool_puzzles():
+    # See also tests/pools/test_pool_puzzles.py
     # create a singleton with id `launcher_id`
     launcher_parent_id = Program.to(b"launcher-parent").get_tree_hash()
     launcher_coin = Coin(launcher_parent_id, LAUNCHER_PUZZLE.get_tree_hash(), 200)
