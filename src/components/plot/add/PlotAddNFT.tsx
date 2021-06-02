@@ -48,7 +48,7 @@ export default function PlotAddNFT() {
         <>
           <Typography variant="subtitle1">
             <Trans>
-              Select your Plot NFT from the dropdown.
+              Select your Plot NFT from the dropdown or create a new one.
             </Trans>
           </Typography>
 
@@ -59,7 +59,7 @@ export default function PlotAddNFT() {
                 fullWidth
               >
                 <InputLabel required>
-                  <Trans>Select your Plot NFT or create a new one</Trans>
+                  <Trans>Select your Plot NFT</Trans>
                 </InputLabel>
                 <Select name="nft">
                   {groups.map((group) => (
