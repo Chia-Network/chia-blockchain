@@ -32,7 +32,8 @@ from chia.pools.pool_puzzles import (
     pool_state_to_inner_puzzle,
     get_most_recent_singleton_coin_from_coin_solution,
     launcher_id_to_p2_puzzle_hash,
-    create_member_spend, uncurry_pool_member_inner_puzzle,
+    create_member_spend,
+    uncurry_pool_member_inner_puzzle,
 )
 
 from chia.util.ints import uint8, uint32, uint64
@@ -211,8 +212,6 @@ class PoolWallet:
         )
         existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
 
-        if existing_config is None and not make_new_authentication_key:
-            raise ValueError("Can't use existing authentication key because config was not found")
         if make_new_authentication_key or existing_config is None:
             new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
                 self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
@@ -307,22 +306,26 @@ class PoolWallet:
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
         Returns True if the wallet should be removed.
         """
-        history: List[Tuple[uint32, CoinSolution]] = self.wallet_state_manager.pool_store.get_spends_for_wallet(
-            self.wallet_id
-        ).copy()
-        prev_state: PoolWalletInfo = await self.get_current_state()
-        await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
-        await self.wallet_state_manager.interested_store.remove_interested_puzzle_hash(
-            prev_state.p2_singleton_puzzle_hash, in_transaction=True
-        )
+        try:
+            history: List[Tuple[uint32, CoinSolution]] = self.wallet_state_manager.pool_store.get_spends_for_wallet(
+                self.wallet_id
+            ).copy()
+            prev_state: PoolWalletInfo = await self.get_current_state()
+            await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
+            await self.wallet_state_manager.interested_store.remove_interested_puzzle_hash(
+                prev_state.p2_singleton_puzzle_hash, in_transaction=True
+            )
 
-        if len(history) > 0 and history[0][0] > block_height:
-            # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
-            # The PoolWallet object becomes invalid after this.
-            return True
-        else:
-            if await self.get_current_state() != prev_state:
-                await self.update_pool_config(False)
+            if len(history) > 0 and history[0][0] > block_height:
+                # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
+                # The PoolWallet object becomes invalid after this.
+                return True
+            else:
+                if await self.get_current_state() != prev_state:
+                    await self.update_pool_config(False)
+                return False
+        except Exception as e:
+            self.log.error(f"Exception rewinding: {e}")
             return False
 
     @staticmethod
@@ -453,7 +456,14 @@ class PoolWallet:
         last_coin_solution: CoinSolution = spend_history[-1][1]
         member_coin_solution, full_puzzle, inner_puzzle = create_member_spend(last_coin_solution, pool_wallet_state)
         puzzle_hash = full_puzzle.get_tree_hash()
-        inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = uncurry_pool_member_inner_puzzle(inner_puzzle)
+        (
+            inner_f,
+            target_puzzle_hash,
+            p2_singleton_hash,
+            owner_pubkey,
+            pool_reward_prefix,
+            escape_puzzlehash,
+        ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
         spend_bundle: SpendBundle = SpendBundle([member_coin_solution], AugSchemeMPL.aggregate([]))
         return spend_bundle, puzzle_hash
 
@@ -485,7 +495,8 @@ class PoolWallet:
         )
         self.log.warning(f"generate_member_transaction removal_id={spend_bundle.removals()[0].name()}")
         self.log.warning(
-            f"generate_member_transaction: additions={spend_bundle.additions()}, removals={spend_bundle.removals()}")
+            f"generate_member_transaction: additions={spend_bundle.additions()}, removals={spend_bundle.removals()}"
+        )
         return tx_record
 
     @staticmethod
