@@ -200,6 +200,9 @@ class WalletBlockStore:
                 peak = header_hash
         return ret, peak
 
+    def rollback_cache_block(self, header_hash: bytes32):
+        self.block_cache.remove(header_hash)
+
     async def set_peak(self, header_hash: bytes32) -> None:
         cursor_1 = await self.db.execute("UPDATE block_records SET is_peak=0 WHERE is_peak=1")
         await cursor_1.close()

@@ -203,7 +203,7 @@ class FarmerAPI:
 
                 submit_partial: SubmitPartial = SubmitPartial(payload, agg_sig)
                 json_data = json.dumps(submit_partial.to_json_dict())
-                self.farmer.log.info(f"Data: {json_data}")
+                self.farmer.log.info(f"Submitting partial")
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
                 try:
@@ -378,7 +378,6 @@ class FarmerAPI:
                     p2_singleton_puzzle_hash,
                 )
             )
-        self.farmer.log.warning(f"Farming to: pools: {pool_difficulties}")
         message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,

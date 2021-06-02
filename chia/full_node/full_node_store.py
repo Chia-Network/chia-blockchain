@@ -576,7 +576,6 @@ class FullNodeStore:
                         return False
 
                 sp_arr[index] = signage_point
-                log.warning(f"Putting into cache: {signage_point.cc_vdf.output.get_hash()}")
                 self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
                 return True
         self.add_to_future_sp(signage_point, index)
