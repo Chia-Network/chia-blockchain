@@ -36,7 +36,7 @@ export default function GroupAdd(props: Props) {
     defaultValues: {
       fee: '',
       self: true,
-      poolUrl: 'http://127.0.0.1',
+      poolUrl: '',
     },
   });
 
