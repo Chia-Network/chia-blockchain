@@ -590,7 +590,7 @@ class WalletStateManager:
                         created_pool_wallet_ids.append(pool_wallet.wallet_id)
 
             for wallet_id, wallet in self.wallets.items():
-                if wallet.type() == WalletType.POOLING_WALLET and wallet_id not in created_pool_wallet_ids:
+                if wallet.type() == WalletType.POOLING_WALLET:  # and wallet_id not in created_pool_wallet_ids:
                     # TODO: support applying state transition in the same block. Doesn't work because we did not
                     # update the DB yet.
                     await wallet.apply_state_transitions(additional_coin_spends, height)
