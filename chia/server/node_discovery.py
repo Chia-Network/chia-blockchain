@@ -195,7 +195,9 @@ class FullNodeDiscovery:
     async def _query_dns(self, dns_address):
         try:
             if self.default_port is None:
-                self.log.error("Network id not supported in NETWORK_ID_DEFAULT_PORTS neither in config. Skipping DNS query.")
+                self.log.error(
+                    "Network id not supported in NETWORK_ID_DEFAULT_PORTS neither in config. Skipping DNS query."
+                )
                 return
             peers: List[TimestampedPeerInfo] = []
             result = await self.resolver.resolve(qname=dns_address, lifetime=30)
