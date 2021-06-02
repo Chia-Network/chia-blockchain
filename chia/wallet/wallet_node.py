@@ -319,6 +319,7 @@ class WalletNode:
             [],
             self.config["peer_connect_interval"],
             self.config["selected_network"],
+            None,
             self.log,
         )
         asyncio.create_task(self.wallet_peers.start())
