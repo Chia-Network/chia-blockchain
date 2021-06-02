@@ -31,7 +31,8 @@ SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 # same challenge for every P2_SINGLETON puzzle
-POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
+P2_SINGLETON_GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
+POOL_REWARD_PREFIX_MAINNET =     bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
 def create_escaping_inner_puzzle(
@@ -64,37 +65,43 @@ def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32) -> bytes32:
 
 ######################################
 
-
-def is_escaping_inner_puzzle(inner_f: Program) -> bool:
-    return inner_f == POOL_ESCAPING_MOD
-
-
-def is_pooling_inner_puzzle(inner_f: Program) -> bool:
-    return inner_f == POOL_MEMBER_MOD
-
-
-def is_pool_protocol_inner_puzzle(inner_f: Program) -> bool:
-    return is_pooling_inner_puzzle(inner_f) or is_escaping_inner_puzzle(inner_f)
-
-
-# Verify that a puzzle is a Pool Wallet Singleton
-def is_pool_singleton_inner_puzzle(puzzle: Program) -> bool:
+def uncurry_singleton_inner_puzzle(puzzle: Program):
     r = puzzle.uncurry()
     if r is None:
         return False
     inner_f, args = r
-    return is_escaping_inner_puzzle(inner_f) or is_pooling_inner_puzzle(inner_f)
+    return inner_f
 
 
-def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> CoinSolution:
+# Verify that a puzzle is a Pool Wallet Singleton
+def is_pool_singleton_inner_puzzle(puzzle: Program) -> bool:
+    inner_f = uncurry_singleton_inner_puzzle(puzzle)
+    return inner_f in [POOL_ESCAPING_MOD, POOL_MEMBER_MOD]
+
+
+def is_pool_escaping_inner_puzzle(puzzle: Program) -> bool:
+    inner_f = uncurry_singleton_inner_puzzle(puzzle)
+    return inner_f in [POOL_ESCAPING_MOD]
+
+
+def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
+    inner_f = uncurry_singleton_inner_puzzle(puzzle)
+    return inner_f in [POOL_MEMBER_MOD]
+
+
+def create_member_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, bytes32]:
+    return create_escape_spend(last_coin_solution, pool_info)
+
+
+def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, bytes32]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
-    if is_pooling_inner_puzzle(inner_puzzle):
+    if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(pool_info.current)])
-    elif is_escaping_inner_puzzle(inner_puzzle):
+    elif is_pool_escaping_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
         destination_inner: Program = pool_state_to_inner_puzzle(pool_info.target)
-        inner_sol: Program = Program.to([1, destination_inner, 0, 0, bytes(pool_info.target)])
+        inner_sol: Program = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(pool_info.target)])
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
@@ -109,11 +116,11 @@ def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletI
                 last_coin_solution.coin.amount,
             ]
         )
-    full_solution: Program = Program.to(parent_info, last_coin_solution.coin.amount, inner_sol)
+    full_solution: Program = Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name())
     return CoinSolution(
         coin, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)
-    )
+    ), full_puzzle.get_tree_hash()
 
 
 def create_absorb_spend(
@@ -121,10 +128,10 @@ def create_absorb_spend(
 ) -> List[CoinSolution]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
     reward_amount: uint64 = calculate_pool_reward(height)
-    if is_pooling_inner_puzzle(inner_puzzle):
+    if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([0, reward_amount, height, 0])
-    elif is_escaping_inner_puzzle(inner_puzzle):
+    elif is_pool_escaping_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([0, 0, reward_amount, height, 0])
     else:
@@ -186,12 +193,12 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Pr
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
     """
+    if not is_pool_member_inner_puzzle(inner_puzzle):
+        return None
     r = inner_puzzle.uncurry()
     if r is None:
         return r
     inner_f, args = r
-    if not is_pooling_inner_puzzle(inner_f):
-        return None
 
     # TARGET_PUZZLE_HASH P2_SINGLETON_PUZZLEHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZZLEHASH
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = list(args.as_iter())
@@ -205,7 +212,7 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     if r is None:
         return None
     inner_f, args = r
-    if not is_pool_protocol_inner_puzzle(inner_f):
+    if not is_pool_singleton_inner_puzzle(inner_f):
         return None
     mod_hash, genesis_id, inner_puzzle = list(args.as_iter())
     return inner_puzzle
