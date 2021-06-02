@@ -679,9 +679,32 @@ class WalletStateManager:
             if info is not None:
                 wallet_id, wallet_type = info
                 added_coin_record = await self.coin_added(
-                    coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, height, all_outgoing_tx[wallet_id]
+                    coin,
+                    is_coinbase,
+                    is_fee_reward,
+                    uint32(wallet_id),
+                    wallet_type,
+                    height,
+                    all_outgoing_tx.get(wallet_id, []),
                 )
                 added.append(added_coin_record)
+            else:
+                wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(
+                    puzzle_hash=coin.puzzle_hash
+                )
+                if wallet_id is not None:
+                    wallet_type = self.wallets[uint32(wallet_id)].type()
+                    added_coin_record = await self.coin_added(
+                        coin,
+                        is_coinbase,
+                        is_fee_reward,
+                        uint32(wallet_id),
+                        wallet_type,
+                        height,
+                        all_outgoing_tx.get(wallet_id, []),
+                    )
+                    added.append(added_coin_record)
+
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin.puzzle_hash)
             if derivation_index is not None:
                 await self.puzzle_store.set_used_up_to(derivation_index, True)
@@ -943,19 +966,11 @@ class WalletStateManager:
             if tx_filter.Match(bytearray(coin_id)):
                 removals_of_interest.append(coin_id)
 
+        for puzzle_hash, _ in await self.interested_store.get_interested_puzzle_hashes():
+            if tx_filter.Match(bytearray(puzzle_hash)):
+                additions_of_interest.append(puzzle_hash)
+
         return additions_of_interest, removals_of_interest
-
-    async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
-        """Returns the list of coins that are relevant to us.(We can spend them)"""
-
-        result: List[Coin] = []
-        my_puzzle_hashes: Set[bytes32] = self.puzzle_store.all_puzzle_hashes
-
-        for coin in additions:
-            if coin.puzzle_hash in my_puzzle_hashes:
-                result.append(coin)
-
-        return result
 
     async def is_addition_relevant(self, addition: Coin):
         """
@@ -972,19 +987,6 @@ class WalletStateManager:
         wallet_id = uint32(coin_record.wallet_id)
         wallet = self.wallets[wallet_id]
         return wallet
-
-    async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
-        """Returns a list of our unspent coins that are in the passed list."""
-
-        result: List[Coin] = []
-        wallet_coin_records = await self.coin_store.get_unspent_coins_at_height()
-        my_coins: Dict[bytes32, Coin] = {r.coin.name(): r.coin for r in list(wallet_coin_records)}
-
-        for coin in removals:
-            if coin.name() in my_coins:
-                result.append(coin)
-
-        return result
 
     async def reorg_rollback(self, height: int):
         """

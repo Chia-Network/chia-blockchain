@@ -1,22 +1,33 @@
 # flake8: noqa: E501
 import asyncio
 import logging
+import os
+import shutil
+import sys
+from argparse import Namespace
 from typing import Optional, List, Dict
 
 import pytest
-from blspy import G1Element
+from blspy import G1Element, AugSchemeMPL
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.plotting.create_plots import create_plots
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from chia.protocols import full_node_protocol
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.types.peer_info import PeerInfo
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.block_tools import get_plot_dir, get_plot_tmp_dir
 from chia.util.config import load_config
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
+from chia.wallet.derive_keys import master_sk_to_local_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
@@ -89,6 +100,50 @@ class TestPoolWalletRpc:
         return num_blocks
         # TODO also return calculated block rewards
 
+    def create_pool_plot(self, p2_singleton_puzzle_hash: bytes32, shuil=None) -> bytes32:
+        plot_dir = get_plot_dir()
+        temp_dir = get_plot_tmp_dir()
+        args = Namespace()
+        args.size = 22
+        args.num = 1
+        args.buffer = 100
+        args.farmer_public_key = bytes(bt.farmer_pk).hex()
+        args.pool_public_key = None
+        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "txch")
+        args.tmp_dir = temp_dir
+        args.tmp2_dir = plot_dir
+        args.final_dir = plot_dir
+        args.plotid = None
+        args.memo = None
+        args.buckets = 0
+        args.stripe_size = 2000
+        args.num_threads = 0
+        args.nobitfield = False
+        args.exclude_final_dir = False
+        args.list_duplicates = False
+        test_private_keys = [AugSchemeMPL.key_gen(std_hash(b"test_pool_rpc"))]
+        plot_public_key = ProofOfSpace.generate_plot_public_key(
+            master_sk_to_local_sk(test_private_keys[0]).get_g1(), bt.farmer_pk
+        )
+        plot_id = ProofOfSpace.calculate_plot_id_ph(p2_singleton_puzzle_hash, plot_public_key)
+        try:
+            create_plots(
+                args,
+                bt.root_path,
+                use_datetime=False,
+                test_private_keys=test_private_keys,
+            )
+        except KeyboardInterrupt:
+            shuil.rmtree(plot_dir, ignore_errors=True)
+            raise
+        bt.load_plots()
+        return plot_id
+
+    def delete_plot(self, plot_id: bytes32):
+        for child in get_plot_dir().iterdir():
+            if not child.is_dir() and plot_id.hex() in child.name:
+                os.remove(child)
+
     @pytest.mark.asyncio
     async def test_create_new_pool_wallet(self, one_wallet_node_and_rpc):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
@@ -122,7 +177,11 @@ class TestPoolWalletRpc:
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
         assert status.target is None
-        assert status.current.owner_pubkey == G1Element.from_bytes(bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"))
+        assert status.current.owner_pubkey == G1Element.from_bytes(
+            bytes.fromhex(
+                "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+            )
+        )
         assert status.current.pool_url is None
         assert status.current.relative_lock_height == 0
         assert status.current.version == 1
@@ -131,8 +190,16 @@ class TestPoolWalletRpc:
         pool_list: List[Dict] = full_config["pool"]["pool_list"]
         assert len(pool_list) == 1
         pool_config = pool_list[0]
-        assert pool_config["authentication_public_key"] == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
-        assert pool_config["launcher_id"] == "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7"
+        assert (
+            pool_config["authentication_public_key"]
+            == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+        )
+        # It can be one of multiple launcher IDs, due to selecting a different coin
+        assert pool_config["launcher_id"] in {
+            "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
+            "0x2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
+            "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
+        }
         assert pool_config["pool_url"] == ""
 
     @pytest.mark.asyncio
@@ -173,6 +240,7 @@ class TestPoolWalletRpc:
         await asyncio.sleep(3)
         status_2: PoolWalletInfo = await client.pw_status(2)
         status_3: PoolWalletInfo = await client.pw_status(3)
+
         if status_2.current.state == PoolSingletonState.SELF_POOLING.value:
             assert status_3.current.state == PoolSingletonState.FARMING_TO_POOL.value
         else:
@@ -183,6 +251,12 @@ class TestPoolWalletRpc:
         pool_list: List[Dict] = full_config["pool"]["pool_list"]
         assert len(pool_list) == 2
 
+        p2_singleton_ph: bytes32 = status_2.p2_singleton_puzzle_hash
+        assert (
+            await wallet_node_0.wallet_state_manager.interested_store.get_interested_puzzle_hash_wallet_id(
+                p2_singleton_ph
+            )
+        ) is not None
         # Doing a reorg reverts and removes the pool wallets
         await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(0, 20, our_ph_2))
         await asyncio.sleep(5)
@@ -193,9 +267,60 @@ class TestPoolWalletRpc:
             await client.pw_status(2)
         with pytest.raises(ValueError):
             await client.pw_status(3)
+        # It also removed interested PH, so we can recreated the pool wallet with another wallet_id later
+        assert (
+            await wallet_node_0.wallet_state_manager.interested_store.get_interested_puzzle_hash_wallet_id(
+                p2_singleton_ph
+            )
+        ) is None
 
     @pytest.mark.asyncio
-    async def test_self_pooling_to_pooling(self, two_wallet_nodes):
+    async def test_absorb(self, one_wallet_node_and_rpc):
+        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        our_ph = await wallet_0.get_new_puzzlehash()
+        summaries_response = await client.get_wallets()
+        for summary in summaries_response:
+            if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                assert False
+
+        creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+            our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING"
+        )
+
+        await time_out_assert(
+            10,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            creation_tx.spend_bundle,
+            creation_tx.name,
+        )
+        await self.farm_blocks(full_node_api, our_ph, 1)
+        await asyncio.sleep(2)
+        status: PoolWalletInfo = await client.pw_status(2)
+
+        assert status.current.state == PoolSingletonState.SELF_POOLING.value
+        plot_id: bytes32 = self.create_pool_plot(status.p2_singleton_puzzle_hash)
+        all_blocks = await full_node_api.get_all_full_blocks()
+        blocks = bt.get_consecutive_blocks(
+            2,
+            block_list_input=all_blocks,
+            force_plot_id=plot_id,
+            farmer_reward_puzzle_hash=our_ph,
+            guarantee_transaction_block=True,
+        )
+
+        await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
+        await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+        await asyncio.sleep(2)
+
+        bal = await client.get_wallet_balance(2)
+        assert bal["confirmed_wallet_balance"] == 1750000000000
+
+        log.warning(f"Balance{bal}")
+        self.delete_plot(plot_id)
+
+    @pytest.mark.asyncio
+    async def xtest_self_pooling_to_pooling(self, two_wallet_nodes):
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets = two_wallet_nodes

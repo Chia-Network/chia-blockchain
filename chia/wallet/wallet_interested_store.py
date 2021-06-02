@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import aiosqlite
 
@@ -26,8 +26,7 @@ class WalletInterestedStore:
         await self.db_connection.execute("CREATE TABLE IF NOT EXISTS interested_coins(coin_name text PRIMARY KEY)")
 
         await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS interested_puzzle_hashes(puzzle_hash text, wallet_id integer, "
-            f"PRIMARY KEY (puzzle_hash, wallet_id))"
+            "CREATE TABLE IF NOT EXISTS interested_puzzle_hashes(puzzle_hash text PRIMARY KEY, wallet_id integer)"
         )
         await self.db_connection.commit()
         return self
@@ -63,6 +62,15 @@ class WalletInterestedStore:
         rows_hex = await cursor.fetchall()
         return [(bytes32(bytes.fromhex(row[0])), row[1]) for row in rows_hex]
 
+    async def get_interested_puzzle_hash_wallet_id(self, puzzle_hash: bytes32) -> Optional[int]:
+        cursor = await self.db_connection.execute(
+            "SELECT wallet_id FROM interested_puzzle_hashes WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return row[0]
+
     async def add_interested_puzzle_hash(
         self, puzzle_hash: bytes32, wallet_id: int, in_transaction: bool = False
     ) -> None:
@@ -72,6 +80,19 @@ class WalletInterestedStore:
         try:
             cursor = await self.db_connection.execute(
                 "INSERT OR REPLACE INTO interested_puzzle_hashes VALUES (?, ?)", (puzzle_hash.hex(), wallet_id)
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
+
+    async def remove_interested_puzzle_hash(self, puzzle_hash: bytes32, in_transaction: bool = False) -> None:
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "DELETE FROM interested_puzzle_hashes WHERE puzzle_hash=?", (puzzle_hash.hex(),)
             )
             await cursor.close()
         finally:
