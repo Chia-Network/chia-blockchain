@@ -50,14 +50,16 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     pks = []
     msgs = []
 
-    created_announcements: List[List[bytes]] = []
-    asserted_annoucements = []
+    created_coin_announcements: List[List[bytes]] = []
+    asserted_coin_annoucements = []
+    created_puzzle_announcements: List[List[bytes]] = []
+    asserted_puzzle_annoucements = []
 
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
         coin = coin_solution.coin
-        puzzle_reveal = coin_solution.puzzle_reveal
-        solution = coin_solution.solution
+        puzzle_reveal = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
+        solution = Program.from_bytes(bytes(coin_solution.solution))
         coin_name = coin.name()
 
         print(f"consuming coin {dump_coin(coin)}")
@@ -72,7 +74,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                 pks.append(pk)
                 msgs.append(m)
             print()
-            r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+            cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
             print(disassemble(r))
             print()
             if conditions and len(conditions) > 0:
@@ -85,11 +87,18 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                         if len(c.vars) == 2:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         print(f"  {disassemble(as_prog)}")
-                created_announcements.extend(
+                created_coin_announcements.extend(
                     [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
                 )
-                asserted_annoucements.extend(
+                asserted_coin_annoucements.extend(
                     [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
+                )
+                created_puzzle_announcements.extend(
+                    [puzzle_reveal.get_tree_hash()] + _.vars
+                    for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
+                )
+                asserted_puzzle_annoucements.extend(
+                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])]
                 )
                 print()
             else:
@@ -123,25 +132,46 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
             print(f"  {dump_coin(coin)}")
             print(f"      => created coin id {coin.name()}")
 
-    created_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_announcements]
-    if created_announcements:
-        print("created announcements")
-        for announcement, hashed in sorted(created_announcement_pairs, key=lambda _: _[-1]):
+    created_coin_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_coin_announcements]
+    if created_coin_announcement_pairs:
+        print("created coin announcements")
+        for announcement, hashed in sorted(created_coin_announcement_pairs, key=lambda _: _[-1]):
             as_hex = [f"0x{_.hex()}" for _ in announcement]
             print(f"  {as_hex} =>\n      {hashed}")
 
-    eor_announcements = sorted(set(_[-1] for _ in created_announcement_pairs) ^ set(asserted_annoucements))
+    eor_coin_announcements = sorted(
+        set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_annoucements)
+    )
+
+    created_puzzle_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_puzzle_announcements]
+    if created_puzzle_announcements:
+        print("created puzzle announcements")
+        for announcement, hashed in sorted(created_puzzle_announcement_pairs, key=lambda _: _[-1]):
+            as_hex = [f"0x{_.hex()}" for _ in announcement]
+            print(f"  {as_hex} =>\n      {hashed}")
+
+    eor_puzzle_announcements = sorted(
+        set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_annoucements)
+    )
 
     print()
     print()
     print(f"zero_coin_set = {sorted(zero_coin_set)}")
     print()
-    print(f"created announcements = {sorted([_[-1] for _ in created_announcement_pairs])}")
-    print()
-    print(f"asserted announcements = {sorted(asserted_annoucements)}")
-    print()
-    print(f"symdiff of announcements = {sorted(eor_announcements)}")
-    print()
+    if created_coin_announcement_pairs or asserted_coin_annoucements:
+        print(f"created coin announcements = {sorted([_[-1] for _ in created_coin_announcement_pairs])}")
+        print()
+        print(f"asserted coin announcements = {sorted(asserted_coin_annoucements)}")
+        print()
+        print(f"symdiff of coin announcements = {sorted(eor_coin_announcements)}")
+        print()
+    if created_puzzle_announcement_pairs or asserted_puzzle_annoucements:
+        print(f"created puzzle announcements = {sorted([_[-1] for _ in created_puzzle_announcement_pairs])}")
+        print()
+        print(f"asserted puzzle announcements = {sorted(asserted_puzzle_annoucements)}")
+        print()
+        print(f"symdiff of puzzle announcements = {sorted(eor_puzzle_announcements)}")
+        print()
     print()
     print("=" * 80)
     print()

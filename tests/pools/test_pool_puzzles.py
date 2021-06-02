@@ -9,9 +9,10 @@ from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.pools.pool_puzzles import (
     create_full_puzzle,
-    generate_pool_eve_spend,
     create_escaping_inner_puzzle,
     create_pooling_inner_puzzle,
+    uncurry_pool_member_inner_puzzle,
+    POOL_REWARD_PREFIX_MAINNET,
 )
 from chia.util.ints import uint32, uint64
 from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
@@ -54,9 +55,21 @@ def test_create():
 
 
 def test_uncurry():
-    pass
+    target_puzzle_hash: bytes32 = 32 * b"3"
+    relative_lock_height = uint32(10)
+    owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
+    escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
+        target_puzzle_hash, relative_lock_height, owner_pubkey
+    )
+    pooling_inner_puzzle = create_pooling_inner_puzzle(
+        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey
+    )
+    pool_puzzle_hash, pubkey = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
+    none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
+    assert none is None
 
 
+"""
 def test_singleton_creation_with_eve_and_launcher():
     amount: uint64 = uint64(1)
     genesis_launcher_puz: Program = SINGLETON_LAUNCHER
@@ -88,16 +101,8 @@ def test_singleton_creation_with_eve_and_launcher():
     pool_reward_amount = 4000000000000
     pool_reward_height = 101
     relative_lock_height = uint32(10)
-    eve_spend: SpendBundle = generate_pool_eve_spend(
-        origin_coin,
-        launcher_coin,
-        private_key,
-        owner_pubkey,
-        our_puzzle_hash,
-        relative_lock_height,
-    )
-    assert eve_spend
-    """
+
+
 def test_singleton_creation_with_eve_and_launcher():
     from chia.consensus.constants import ConsensusConstants
 
