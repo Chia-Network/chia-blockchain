@@ -3,13 +3,20 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { Alert } from '@material-ui/lab';
 import { useWatch, useFormContext } from "react-hook-form";
-import { Autocomplete, Flex, Loading, CardStep, RadioGroup, TextField } from '@chia/core';
+import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, TextField } from '@chia/core';
 import { Grid, FormControl, FormControlLabel, Typography, Radio, Collapse } from '@material-ui/core';
 import type Group from '../../../types/Group';
 import PoolInfo from '../../pool/PoolInfo';
 import usePoolInfo from '../../../hooks/usePoolInfo';
 
-export default function GroupAddCreate() {
+type Props = {
+  step?: number;
+  onCancel?: Function;
+};
+
+export default function GroupAddCreate(props: Props) {
+  const { step, onCancel } = props;
+
   const groups = useSelector<Group[] | undefined>((state: RootState) => state.group.groups);
   const { control, setValue } = useFormContext();
   const self = useWatch<boolean>({
@@ -45,8 +52,15 @@ export default function GroupAddCreate() {
   return (
     <>
       <CardStep
-        step="1"
-        title={<Trans>Want to Join a Pool? Create a Plot NFT</Trans>}
+        step={step}
+        title={(
+          <Flex gap={1} alignItems="center">
+            <Flex flexGrow={1}>
+              <Trans>Want to Join a Pool? Create a Plot NFT</Trans>
+            </Flex>
+            {onCancel && <Button onClick={onCancel}><Trans>Cancel</Trans></Button>}
+          </Flex>
+        )}
       >
         <Typography variant="subtitle1">
           <Trans>
@@ -113,7 +127,7 @@ export default function GroupAddCreate() {
 
       <Collapse in={showPoolInfo}>
         <CardStep
-          step="2"
+          step={step + 1}
           title={<Trans>Verify Pool Details</Trans>}
         >
           {poolInfo.error && (
@@ -136,3 +150,8 @@ export default function GroupAddCreate() {
     </>
   );
 }
+
+GroupAddCreate.defaultProps = {
+  step: 1,
+  onCancel: undefined,
+};

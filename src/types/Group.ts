@@ -1,3 +1,5 @@
+import type PoolInfo from './PoolInfo';
+
 type Group = {
   id: string;
   self: boolean;
@@ -17,18 +19,24 @@ type Group = {
   points_acknowledged_24h: number[];
   current_points_balance: number;
   current_difficulty: number;
-  pool_errors_24h: string[];
-  pool_info: {
-    pool_name: string;
-    pool_description: string;
-  };
+  pool_errors_24h: {
+    current_difficulty: number;
+    error_code: number;
+    error_message: string;
+  }[];
+  pool_info: PoolInfo;
   pool_config: {
+    authentication_key_info_signature: string;
+    authentication_public_key: string;
+    authentication_public_key_timestamp: number;
     owner_public_key: string;
     pool_puzzle_hash: string;
     pool_url: string;
-    singleton_genesis: string;
+    launcher_id: string;
     target: string;
     target_signature: string;
+    pool_payout_instructions: string;
+    target_puzzle_hash: string;
   };
 };
 

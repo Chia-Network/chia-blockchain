@@ -9,7 +9,7 @@ export default function usePoolInfo(poolUrl?: string): {
   loading: boolean;
   poolInfo?: PoolInfo;
 } {
-  const isValidUrl = useMemo(() => isURL(poolUrl), [poolUrl]);
+  const isValidUrl = useMemo(() => !!poolUrl && isURL(poolUrl), [poolUrl]);
 
   const poolInfo = useAsync(async () => {
     if (!poolUrl) {

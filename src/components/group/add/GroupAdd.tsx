@@ -20,10 +20,12 @@ type FormData = {
 
 type Props = {
   headerTag?: ReactNode;
+  step?: number;
+  onCancel?: boolean;
 }
 
 export default function GroupAdd(props: Props) {
-  const { headerTag: HeaderTag } = props;
+  const { headerTag: HeaderTag, step, onCancel } = props;
 
   const dispatch = useDispatch();
   const history = useHistory();
@@ -100,17 +102,24 @@ export default function GroupAdd(props: Props) {
           </Flex>
         ) : (
           <>
-            <GroupAddCreate />
-            <Flex gap={1}>
-              <Button color="primary" type="submit" variant="contained">
-                <Trans>
-                  Create
-                </Trans>
-              </Button>
-            </Flex>
+            <GroupAddCreate step={step} onCancel={onCancel} />
+            {!onCancel && (
+              <Flex gap={1}>
+                <Button color="primary" type="submit" variant="contained">
+                  <Trans>
+                    Create
+                  </Trans>
+                </Button>
+              </Flex>
+            )}
           </>
         )}
       </Flex>
     </Form>
   );
 }
+
+GroupAdd.defaultProps = {
+  step: undefined,
+  onCancel: undefined,
+};

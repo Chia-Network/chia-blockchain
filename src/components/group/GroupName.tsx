@@ -1,5 +1,6 @@
 import { Typography } from '@material-ui/core';
 import React from 'react';
+import { get } from 'lodash';
 import type Group from '../../types/Group';
 
 type Props = {
@@ -11,16 +12,22 @@ export default function GroupName(props: Props) {
   const {
     variant,
     group: {
-      name,
-      poolUrl,
+      pool_config: {
+        pool_url,
+        launcher_id,
+      },
+      pool_info,
     }
   } = props;
 
+  const poolName = get(pool_info, 'name');
+  const showedName = poolName || launcher_id;
+
   return (
     <Typography variant={variant}>
-      {poolUrl
-        ? `${name}: ${poolUrl}`
-        : name}
+      {pool_url
+        ? `${showedName}: ${pool_url}`
+        : showedName}
     </Typography>
   );
 }

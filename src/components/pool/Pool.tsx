@@ -10,22 +10,12 @@ import GroupAdd from '../group/add/GroupAdd';
 import { PoolHeaderTarget }  from './PoolHeader';
 import type { RootState } from '../../modules/rootReducer';
 import { getPoolState } from '../../modules/farmerMessages';
+import usePlotNFT from '../../hooks/usePlotNFT';
 import { PoolHeaderSource } from './PoolHeader';
 
 export default function Pool() {
   const { path } = useRouteMatch();
-
-  const dispatch = useDispatch();
-  const groups = useSelector((state: RootState) => state.group.groups);
-  const loading = !groups;
-
-  useInterval(() => {
-    dispatch(getPoolState());
-  }, 60000);
-
-  useEffect(() => {
-    dispatch(getPoolState());
-  }, []);
+  const { groups, loading } = usePlotNFT();
 
   return (
     <LayoutMain 

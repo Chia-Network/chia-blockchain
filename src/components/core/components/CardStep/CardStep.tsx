@@ -13,13 +13,14 @@ const StyledStep = styled(Avatar)`
 `;
 
 type Props = {
-  children: ReactNode,
-  title: ReactNode,
-  step: ReactNode,
+  children: ReactNode;
+  title: ReactNode;
+  step: ReactNode;
+  action?: ReactNode;
 };
 
 export default function CardStep(props: Props) {
-  const { children, step, title } = props;
+  const { children, step, title, action } = props;
 
   return (
     <Card>
@@ -34,6 +35,7 @@ export default function CardStep(props: Props) {
             {title}
           </Typography>
         )}
+        action={action}
       />
       <Divider />
       <StyledCardContent>
