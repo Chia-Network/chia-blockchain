@@ -59,7 +59,7 @@ export default function PlotAddNFT() {
                 fullWidth
               >
                 <InputLabel required>
-                  <Trans>Select your Plot NFT</Trans>
+                  <Trans>Select your Plot NFT or create a new one</Trans>
                 </InputLabel>
                 <Select name="nft">
                   {groups.map((group) => (
@@ -69,6 +69,15 @@ export default function PlotAddNFT() {
                   ))}
                 </Select>
               </FormControl>
+            </Grid>
+
+            <Grid xs={12} md={8} lg={6} item>
+              <Button
+                onClick={handleJoinPool}
+                variant="contained"
+              >
+                <Trans>Create New</Trans>
+              </Button>
             </Grid>
           </Grid>
         </>
