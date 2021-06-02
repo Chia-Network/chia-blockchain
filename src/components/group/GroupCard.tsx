@@ -46,11 +46,15 @@ export default function GroupCard(props: Props) {
   const { 
     group,
     group: {
-      self,
       state,
-      balance,
+      balance = 0,
+      pool_config: {
+        pool_url,
+      },
     },
   } = props;
+
+  console.log('group', group);
 
   const [claimRewards] = usePoolClaimRewards(group);
   const [joinPool] = usePoolJoin(group);
@@ -60,7 +64,7 @@ export default function GroupCard(props: Props) {
   );
 
   const isPooling = state === 'FREE' || state === 'POOLING';
-  const isSelfPooling = isPooling && self;
+  const isSelfPooling = !pool_url;
 
   async function handleClaimRewards() {
     return claimRewards();
@@ -102,25 +106,55 @@ export default function GroupCard(props: Props) {
               <Grid container xs={8} lg={9} item>
                 <GroupStatus group={group} />
               </Grid>
+
+              <Grid container xs={4} lg={3} item>
+                <Typography variant="body1" color="textSecondary"> 
+                  <Trans>Current Difficulty</Trans>
+                </Typography>
+              </Grid>
+              <Grid container xs={8} lg={9} item>
+                {group.current_difficulty}
+              </Grid>
+
+              <Grid container xs={4} lg={3} item>
+                <Typography variant="body1" color="textSecondary"> 
+                  <Trans>Current Points Balance</Trans>
+                </Typography>
+              </Grid>
+              <Grid container xs={8} lg={9} item>
+                {group.current_points_balance}
+              </Grid>
+
+              <Grid container xs={4} lg={3} item>
+                <Typography variant="body1" color="textSecondary"> 
+                  <Trans>Points Found Since Start</Trans>
+                </Typography>
+              </Grid>
+              <Grid container xs={8} lg={9} item>
+                {group.points_found_since_start}
+              </Grid>
             </Grid>
           </Flex>
 
           {!isWalletSyncing && (
             <Grid container spacing={1}>
-              <Grid container xs={6} item>
-                <Button
-                  variant="contained"
-                  onClick={handleClaimRewards}
-                  fullWidth
-                >
-                  <Flex flexDirection="column" gap={0}>
-                    <Typography variant="body1">
-                      <Trans>Claim Rewards</Trans>
-                    </Typography>
-                  </Flex>
-                </Button>
-              </Grid>
-              <Grid container xs={6} item>
+              {isSelfPooling && (
+                <Grid container xs={6} item>
+                  <Button
+                    variant="contained"
+                    onClick={handleClaimRewards}
+                    fullWidth
+                  >
+                    <Flex flexDirection="column" gap={0}>
+                      <Typography variant="body1">
+                        <Trans>Claim Rewards</Trans>
+                      </Typography>
+                    </Flex>
+                  </Button>
+                </Grid>
+              )}
+
+              <Grid container xs={isSelfPooling ? 6 : 12} item>
                 <Button
                   variant="contained"
                   onClick={handleJoinPool}

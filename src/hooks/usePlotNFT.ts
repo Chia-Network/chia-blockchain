@@ -15,7 +15,7 @@ export default function usePoolState(): {
 
   useInterval(() => {
     dispatch(getPoolState());
-  }, 60000);
+  }, 10000);
 
   useEffect(() => {
     dispatch(getPoolState());

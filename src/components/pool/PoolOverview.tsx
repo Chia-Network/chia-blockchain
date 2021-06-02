@@ -36,28 +36,33 @@ const groupsCols = [
     title: <Trans>Pool Status</Trans>,
   },
   {
-    field: (group: Group) => <UnitFormat value={group.balance} />,
+    field: (group: Group) => <UnitFormat value={group.balance ?? 0} />,
     title: <Trans>Pool Winnings</Trans>,
   },
   {
     title: <Trans>Actions</Trans>,
     field(group: Group) {
+      const isSelfPooling = !group.pool_config.pool_url;
+
       return (
         <More>
           {({ onClose }) => (
             <Box>
-              <PoolClaimRewards group={group}>
-                {(claimRewards) => (
-                  <MenuItem onClick={() => { onClose(); claimRewards(); }}>
-                    <ListItemIcon>
-                      <PaymentIcon fontSize="small" />
-                    </ListItemIcon>
-                    <Typography variant="inherit" noWrap>
-                      <Trans>Claim Rewards</Trans>
-                    </Typography>
-                  </MenuItem>
-                )}
-              </PoolClaimRewards>
+              {isSelfPooling && (
+                <PoolClaimRewards group={group}>
+                  {(claimRewards) => (
+                    <MenuItem onClick={() => { onClose(); claimRewards(); }}>
+                      <ListItemIcon>
+                        <PaymentIcon fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Claim Rewards</Trans>
+                      </Typography>
+                    </MenuItem>
+                  )}
+                </PoolClaimRewards>
+              )}
+
               <PoolJoin group={group}>
                 {(join) => (
                   <MenuItem onClick={() => { onClose(); join(); }}>
@@ -88,7 +93,7 @@ export default function PoolOverview() {
 
   const totalWinning = useMemo<number>(
     () => groups && groups.length
-      ? sumBy<Group>(groups, (item) => item.balance)
+      ? sumBy<Group>(groups, (item) => item.balance ?? 0)
       : 0, 
     [groups],
   );
