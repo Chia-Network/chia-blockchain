@@ -1,12 +1,12 @@
 import click
 
 
-@click.group("poolnft", short_help="Manage your pool NFTs")
-def poolnft_cmd() -> None:
+@click.group("plotnft", short_help="Manage your plot NFTs")
+def plotnft_cmd() -> None:
     pass
 
 
-@poolnft_cmd.command("show", short_help="Show poolnft information")
+@plotnft_cmd.command("show", short_help="Show plotnft information")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -19,12 +19,12 @@ def poolnft_cmd() -> None:
 def show_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
-    from .poolnft_funcs import show
+    from .plotnft_funcs import show
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"id": id}, show))
 
 
-@poolnft_cmd.command("create", short_help="Create a pool NFT")
+@plotnft_cmd.command("create", short_help="Create a plot NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -37,7 +37,7 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
 def create_cmd(wallet_rpc_port: int, fingerprint: int, pool_url: str) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
-    from .poolnft_funcs import create
+    from .plotnft_funcs import create
 
     extra_params = {"pool_url": pool_url}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create))

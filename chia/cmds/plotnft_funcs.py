@@ -37,7 +37,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
         print("Relative lock height too high for this pool, cannot join")
         return
 
-    print(f"Will create a pool NFT and join pool: {pool_url}.")
+    print(f"Will create a plot NFT and join pool: {pool_url}.")
     pprint(json_dict)
     user_input: str = input("Confirm [n]/y: ")
     if user_input.lower() == "y" or user_input.lower() == "yes":
@@ -57,7 +57,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
                     print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
                     return None
         except Exception as e:
-            print(f"Error creating pool NFT: {e}")
+            print(f"Error creating plot NFT: {e}")
         return
     print("Aborting.")
 
