@@ -1,7 +1,13 @@
-import { Typography } from '@material-ui/core';
+import { Box, Typography } from '@material-ui/core';
 import React from 'react';
 import { get } from 'lodash';
+import styled from 'styled-components';
 import type Group from '../../types/Group';
+
+const StyledTypography = styled(Typography)`
+  text-overflow: ellipsis;
+  overflow: hidden;
+`;
 
 type Props = {
   group: Group;
@@ -24,11 +30,11 @@ export default function GroupName(props: Props) {
   const showedName = poolName || launcher_id;
 
   return (
-    <Typography variant={variant}>
+    <StyledTypography variant={variant}>
       {pool_url
         ? `${showedName}: ${pool_url}`
         : showedName}
-    </Typography>
+    </StyledTypography>
   );
 }
 

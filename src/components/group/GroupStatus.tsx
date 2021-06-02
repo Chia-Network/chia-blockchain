@@ -12,9 +12,13 @@ export default function GroupStatus(props: Props) {
   const { 
     group: {
       state, 
-      self,
+      pool_config: {
+        pool_url,
+      },
     },
   } = props;
+
+  const isSelfPooling = !pool_url;
 
   if (state === 'NOT_CREATED' || state === 'ESCAPING') {
     return (
@@ -31,7 +35,7 @@ export default function GroupStatus(props: Props) {
 
   return (
     <Typography variant="body1">
-      {self ? (
+      {isSelfPooling ? (
         <Trans>Self Pooling</Trans>
       ) : (
         <Trans>Pooling</Trans>
