@@ -477,6 +477,7 @@ class FullNodePeers(FullNodeDiscovery):
         introducer_info,
         dns_servers,
         peer_connect_interval,
+        selected_network,
         log,
     ):
         super().__init__(
@@ -487,6 +488,7 @@ class FullNodePeers(FullNodeDiscovery):
             introducer_info,
             dns_servers,
             peer_connect_interval,
+            selected_network,
             log,
         )
         self.relay_queue = asyncio.Queue()
@@ -646,6 +648,7 @@ class WalletPeers(FullNodeDiscovery):
         introducer_info,
         dns_servers,
         peer_connect_interval,
+        selected_network,
         log,
     ) -> None:
         super().__init__(
@@ -656,6 +659,7 @@ class WalletPeers(FullNodeDiscovery):
             introducer_info,
             dns_servers,
             peer_connect_interval,
+            selected_network,
             log,
         )
 
