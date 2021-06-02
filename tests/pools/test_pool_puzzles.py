@@ -7,16 +7,22 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.coin_solution import CoinSolution
 from chia.types.announcement import Announcement
 from chia.pools.pool_puzzles import (
     create_full_puzzle,
     create_escaping_inner_puzzle,
     create_pooling_inner_puzzle,
     uncurry_pool_member_inner_puzzle,
-    POOL_REWARD_PREFIX_MAINNET, pool_state_to_inner_puzzle, is_pool_member_inner_puzzle, is_pool_escaping_inner_puzzle,
+    POOL_REWARD_PREFIX_MAINNET,
+    pool_state_to_inner_puzzle,
+    is_pool_member_inner_puzzle,
+    is_pool_escaping_inner_puzzle,
+    create_absorb_spend,
+    solution_to_extra_data,
 )
 from chia.util.ints import uint32, uint64
-from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
+from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle, P2_SINGLETON_MOD
 
 
 def test_p2_singleton():
@@ -88,6 +94,62 @@ def test_pool_state_to_inner_puzzle():
 
     puzzle = pool_state_to_inner_puzzle(pool_state)
     assert is_pool_escaping_inner_puzzle(puzzle)
+
+
+def test_member_solution_to_extra_data():
+    target_puzzle_hash = bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7")
+    owner_pubkey = bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304")
+    relative_lock_height = 10
+    starting_state = PoolState(
+        owner_pubkey=owner_pubkey,
+        pool_url="",
+        relative_lock_height=relative_lock_height,
+        state=1,
+        target_puzzle_hash=target_puzzle_hash,
+        version=1)
+
+    escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
+        target_puzzle_hash, relative_lock_height, owner_pubkey
+    )
+    pooling_inner_puzzle = create_pooling_inner_puzzle(
+        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey
+    )
+    singleton_full_puzzle: Program = singleton_puzzle(LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, pooling_inner_puzzle)
+
+    coin = Coin(bytes32(b"2" * 32), singleton_full_puzzle.get_tree_hash(), 200)
+    inner_sol: Program = Program.to([1, 0, 0, bytes(starting_state)])
+    full_solution: Program = Program.to([[], 200, inner_sol])
+    coin_sol = CoinSolution(coin, singleton_full_puzzle, full_solution)
+    recovered_state: PoolState = solution_to_extra_data(coin_sol)
+
+    assert recovered_state == starting_state
+
+
+def test_escaping_solution_to_extra_data():
+    target_puzzle_hash = bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7")
+    owner_pubkey = bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304")
+    relative_lock_height = 10
+    starting_state = PoolState(
+        owner_pubkey=owner_pubkey,
+        pool_url="",
+        relative_lock_height=relative_lock_height,
+        state=1,
+        target_puzzle_hash=target_puzzle_hash,
+        version=1)
+
+    escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
+        target_puzzle_hash, relative_lock_height, owner_pubkey
+    )
+    singleton_full_puzzle: Program = singleton_puzzle(LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, escaping_inner_puzzle)
+
+    coin = Coin(bytes32(b"2" * 32), singleton_full_puzzle.get_tree_hash(), 200)
+
+    inner_sol: Program = Program.to([1, target_puzzle_hash, 0, 0, bytes(starting_state)])
+    full_solution: Program = Program.to([[], 200, inner_sol])
+    coin_sol = CoinSolution(coin, singleton_full_puzzle, full_solution)
+    recovered_state: PoolState = solution_to_extra_data(coin_sol)
+
+    assert recovered_state == starting_state
 
 
 '''
