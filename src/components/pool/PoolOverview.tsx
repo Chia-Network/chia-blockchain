@@ -16,7 +16,7 @@ import { sumBy } from 'lodash';
 import type Group from '../../types/Group';
 import PoolCard from '../group/GroupCard';
 import GroupName from '../group/GroupName';
-import GroupStatus from '../Group/GroupStatus';
+import GroupStatus from '../group/GroupStatus';
 import PoolWalletStatus from '../wallet/WalletStatus';
 import PoolClaimRewards from '../group/GroupClaimRewards';
 import PoolJoin from './PoolJoin';
