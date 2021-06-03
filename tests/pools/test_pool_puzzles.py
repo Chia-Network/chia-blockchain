@@ -162,7 +162,8 @@ def test_escaping_solution_to_extra_data():
 
     assert recovered_state == starting_state
 
-
+# This test is broken and does not work yet.
+# TODO: FIX THIS TEST
 def test_create_absorb_spend():
     launcher_coin = Coin(bytes32(b"f" * 32), LAUNCHER_PUZZLE_HASH, 201)
     owner_pubkey = bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304")
