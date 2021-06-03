@@ -1,4 +1,4 @@
-from blspy import AugSchemeMPL, PrivateKey, G1Element
+from blspy import AugSchemeMPL, G1Element#, PrivateKey
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL
@@ -13,11 +13,15 @@ from chia.pools.pool_puzzles import (
     create_escaping_inner_puzzle,
     create_pooling_inner_puzzle,
     uncurry_pool_member_inner_puzzle,
-    POOL_REWARD_PREFIX_MAINNET, pool_state_to_inner_puzzle, is_pool_member_inner_puzzle, is_pool_escaping_inner_puzzle,
+    pool_state_to_inner_puzzle, is_pool_member_inner_puzzle, is_pool_escaping_inner_puzzle,
 )
 from chia.util.ints import uint32, uint64
 from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
 
+# same challenge for every P2_SINGLETON puzzle
+# P2_SINGLETON_GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
+
+GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
 def test_p2_singleton():
     # create a singleton. This should call driver code.
@@ -27,7 +31,7 @@ def test_p2_singleton():
     pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
         owner_puzzle_hash, uint32(0), owner_pubkey
     ).get_tree_hash()
-    inner_puzzle: Program = create_pooling_inner_puzzle(owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey)
+    inner_puzzle: Program = create_pooling_inner_puzzle(GENESIS_CHALLENGE, owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey)
     singleton_full_puzzle: Program = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, inner_puzzle)
 
     # create a fake coin id for the `p2_singleton`
@@ -63,9 +67,11 @@ def test_uncurry():
         target_puzzle_hash, relative_lock_height, owner_pubkey
     )
     pooling_inner_puzzle = create_pooling_inner_puzzle(
+        GENESIS_CHALLENGE,
         target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey
     )
-    pool_puzzle_hash, pubkey = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
+    inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
+    # pool_puzzle_hash, pubkey = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
     none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
     assert none is None
 
@@ -78,7 +84,7 @@ def test_pool_state_to_inner_puzzle():
         state=1,
         target_puzzle_hash=bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7"),
         version=1)
-    puzzle = pool_state_to_inner_puzzle(pool_state)
+    puzzle = pool_state_to_inner_puzzle(GENESIS_CHALLENGE,pool_state)
     assert is_pool_member_inner_puzzle(puzzle)
 
     target_puzzle_hash: bytes32 = bytes32(b"2" * 32)
@@ -86,7 +92,7 @@ def test_pool_state_to_inner_puzzle():
     relative_lock_height: uint32
     pool_state = PoolState(0, LEAVING_POOL.value, target_puzzle_hash, owner_pubkey, None, 0)
 
-    puzzle = pool_state_to_inner_puzzle(pool_state)
+    puzzle = pool_state_to_inner_puzzle(GENESIS_CHALLENGE, pool_state)
     assert is_pool_escaping_inner_puzzle(puzzle)
 
 

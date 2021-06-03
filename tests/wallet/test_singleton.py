@@ -1,6 +1,5 @@
 from clvm_tools import binutils
 
-from chia.pools.pool_puzzles import POOL_REWARD_PREFIX_MAINNET
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -18,6 +17,7 @@ LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
+POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
