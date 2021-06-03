@@ -1,7 +1,7 @@
 from blspy import AugSchemeMPL, G1Element#, PrivateKey
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
-from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL
+from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, PoolWalletInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -22,7 +22,7 @@ from chia.pools.pool_puzzles import (
     solution_to_extra_data,
 )
 from chia.util.ints import uint32, uint64
-from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle, P2_SINGLETON_MOD
+from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle, P2_SINGLETON_MOD, SINGLETON_MOD_HASH
 
 # same challenge for every P2_SINGLETON puzzle
 # P2_SINGLETON_GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
@@ -127,9 +127,9 @@ def test_member_solution_to_extra_data():
     )
     singleton_full_puzzle: Program = singleton_puzzle(LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, pooling_inner_puzzle)
 
-    coin = Coin(bytes32(b"2" * 32), singleton_full_puzzle.get_tree_hash(), 200)
+    coin = Coin(bytes32(b"2" * 32), singleton_full_puzzle.get_tree_hash(), 201)
     inner_sol: Program = Program.to([1, 0, 0, bytes(starting_state)])
-    full_solution: Program = Program.to([[], 200, inner_sol])
+    full_solution: Program = Program.to([[], 201, inner_sol])
     coin_sol = CoinSolution(coin, singleton_full_puzzle, full_solution)
     recovered_state: PoolState = solution_to_extra_data(coin_sol)
 
@@ -153,14 +153,51 @@ def test_escaping_solution_to_extra_data():
     )
     singleton_full_puzzle: Program = singleton_puzzle(LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, escaping_inner_puzzle)
 
-    coin = Coin(bytes32(b"2" * 32), singleton_full_puzzle.get_tree_hash(), 200)
+    coin = Coin(bytes32(b"2" * 32), singleton_full_puzzle.get_tree_hash(), 201)
 
     inner_sol: Program = Program.to([1, target_puzzle_hash, 0, 0, bytes(starting_state)])
-    full_solution: Program = Program.to([[], 200, inner_sol])
+    full_solution: Program = Program.to([[], 201, inner_sol])
     coin_sol = CoinSolution(coin, singleton_full_puzzle, full_solution)
     recovered_state: PoolState = solution_to_extra_data(coin_sol)
 
     assert recovered_state == starting_state
+
+
+def test_create_absorb_spend():
+    launcher_coin = Coin(bytes32(b"f" * 32), LAUNCHER_PUZZLE_HASH, 201)
+    owner_pubkey = bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304")
+    target_puzzle_hash = bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7")
+    # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH
+    p2_singleton_puzzle = P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_coin.name(), LAUNCHER_PUZZLE_HASH)
+    current_inner = create_escaping_inner_puzzle(
+        target_puzzle_hash, 0, owner_pubkey
+    )
+    full_puz = create_full_puzzle(current_inner, launcher_coin.name())
+    parent_coin = Coin(launcher_coin.name(), full_puz.get_tree_hash(), 201)
+    current_coin = Coin(parent_coin.name(), full_puz.get_tree_hash(), 201)
+    current = PoolState(
+        owner_pubkey=owner_pubkey,
+        pool_url="",
+        relative_lock_height=0,
+        state=1,
+        target_puzzle_hash=target_puzzle_hash,
+        version=1)
+    pool_info = PoolWalletInfo(
+        current=current,
+        target=current,
+        launcher_coin=launcher_coin,
+        launcher_id=launcher_coin.name(),
+        p2_singleton_puzzle_hash=p2_singleton_puzzle.get_tree_hash(),
+        current_inner=current_inner,
+        tip_singleton_coin_id=current_coin.name()
+    )
+
+    inner_sol: Program = Program.to([1, current_inner.get_tree_hash(), 0, 0, bytes(pool_info.current)])
+    last_parent_info = [launcher_coin.parent_coin_info, launcher_coin.amount]
+    last_full_solution: Program = Program.to([last_parent_info, 201, inner_sol])
+    last_coin_solution: CoinSolution = CoinSolution(parent_coin, full_puz, last_full_solution)
+    spend_bundle: SpendBundle = create_absorb_spend(last_coin_solution, pool_info, 1000)
+    assert spend_bundle is not None
 
 
 '''
