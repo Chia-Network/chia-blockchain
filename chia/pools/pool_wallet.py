@@ -189,9 +189,12 @@ class PoolWallet:
         while extra_data is None:
             full_spend: CoinSolution = all_spends[curr_spend_i]
             extra_data = solution_to_extra_data(full_spend)
+            curr_spend_i -= 1
 
         assert extra_data is not None
-        current_inner = pool_state_to_inner_puzzle(extra_data, launcher_coin.name(), self.wallet_state_manager.constants.GENESIS_CHALLENGE)
+        current_inner = pool_state_to_inner_puzzle(
+            extra_data, launcher_coin.name(), self.wallet_state_manager.constants.GENESIS_CHALLENGE
+        )
         launcher_id: bytes32 = launcher_coin.name()
         p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id)
         return PoolWalletInfo(
@@ -264,15 +267,19 @@ class PoolWallet:
         coin_name_to_spend: Dict[bytes32, CoinSolution] = {cs.coin.name(): cs for cs in block_spends}
 
         tip: Tuple[uint32, CoinSolution] = await self.get_tip()
-        spend_height = tip[0]
+        tip_height = tip[0]
         tip_spend = tip[1]
 
-        while get_most_recent_singleton_coin_from_coin_solution(tip_spend).name() in coin_name_to_spend:
-            assert block_height < spend_height  # We should not have a spend with a lesser block height
-            spend: CoinSolution = coin_name_to_spend[tip]
+        while True:
+            spent_coin_name: bytes32 = get_most_recent_singleton_coin_from_coin_solution(tip_spend).name()
+            if spent_coin_name not in coin_name_to_spend:
+                break
+            assert block_height >= tip_height  # We should not have a spend with a lesser block height
+            spend: CoinSolution = coin_name_to_spend[spent_coin_name]
             await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, block_height)
             new_tip = await self.get_tip()
             await self.coin_spent(new_tip[1])
+            coin_name_to_spend.pop(spent_coin_name)
         await self.update_pool_config(False)
 
     async def coin_spent(self, coin_solution: CoinSolution):
@@ -294,7 +301,9 @@ class PoolWallet:
         new_current_state: Optional[PoolState] = solution_to_extra_data(
             coin_solution
         )  # TODO: Test that this works with escaping and member puzzles
-        self._verify_pool_state(new_current_state)
+
+        # TODO: uncomment
+        # self._verify_pool_state(new_current_state)
         current_state: PoolWalletInfo = await self.get_current_state()
         assert self.target_state == current_state.target
 
@@ -572,7 +581,7 @@ class PoolWallet:
             initial_target_state.target_puzzle_hash,
             initial_target_state.relative_lock_height,
             initial_target_state.owner_pubkey,
-            launcher_coin.name()
+            launcher_coin.name(),
         ).get_tree_hash()
 
         self_pooling_inner_puzzle: Program = create_pooling_inner_puzzle(
