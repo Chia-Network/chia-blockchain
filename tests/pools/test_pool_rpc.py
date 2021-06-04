@@ -316,7 +316,14 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 1750000000000
 
-        log.warning(f"Balance{bal}")
+        absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
+        await time_out_assert(
+            5,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            absorb_tx.spend_bundle,
+            absorb_tx.name,
+        )
+
         self.delete_plot(plot_id)
 
     @pytest.mark.asyncio

@@ -290,7 +290,7 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_farming_rewards(self):
+    async def get_farming_rewards(self) -> List[TransactionRecord]:
         """
         Returns the list of all farming rewards.
         """

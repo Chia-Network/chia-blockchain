@@ -1,6 +1,5 @@
 from clvm_tools import binutils
 
-from chia.pools.pool_puzzles import POOL_REWARD_PREFIX_MAINNET
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -158,12 +157,20 @@ def test_pool_puzzles():
     # Only the escape puzzle has RELATIVE_LOCK_HEIGHT
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
     escape_innerpuz = POOL_ESCAPING_MOD.curry(
-        pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, relative_lock_height
+        pool_puzzle_hash,
+        p2_singleton_full_puzhash,
+        owner_pubkey,
+        genesis_challenge[:16] + bytes([0] * 16),
+        relative_lock_height,
     )
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
     escape_innerpuz_hash = escape_innerpuz.get_tree_hash()
     committed_innerpuz = POOL_MEMBER_MOD.curry(
-        pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, escape_innerpuz_hash
+        pool_puzzle_hash,
+        p2_singleton_full_puzhash,
+        owner_pubkey,
+        genesis_challenge[:16] + bytes([0] * 16),
+        escape_innerpuz_hash,
     )
 
     # the singleton is committed to the pool

@@ -203,8 +203,10 @@ class WalletRpcClient(RpcClient):
         }
         return await self.fetch("pw_join_pool", request)
 
-    async def pw_collect_self_pooling_rewards(self, wallet_id: str, fee: uint64 = uint64(0)):
-        return await self.fetch("pw_collect_self_pooling_rewards", {"wallet_id": wallet_id, "fee": fee})
+    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> TransactionRecord:
+        return TransactionRecord.from_json_dict(
+            (await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee}))["transaction"]
+        )
 
     async def pw_status(self, wallet_id: str) -> PoolWalletInfo:
         return PoolWalletInfo.from_json_dict((await self.fetch("pw_status", {"wallet_id": wallet_id}))["state"])
