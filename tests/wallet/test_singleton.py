@@ -11,7 +11,7 @@ SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
-POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -157,7 +157,7 @@ def test_pool_puzzles():
 
     # Only the escape puzzle has RELATIVE_LOCK_HEIGHT
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
-    escape_innerpuz = POOL_ESCAPING_MOD.curry(
+    escape_innerpuz = POOL_WAITINGROOM_MOD.curry(
         pool_puzzle_hash, p2_singleton_full_puzhash, owner_pubkey, POOL_REWARD_PREFIX_MAINNET, relative_lock_height
     )
     # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY

@@ -17,7 +17,7 @@ from chia.util.ints import uint32, uint64
 
 # "Full" is the outer singleton, with the inner puzzle filled in
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 POOL_OUTER_MOD = SINGLETON_MOD
@@ -37,16 +37,16 @@ SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 def create_escaping_inner_puzzle(
     target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element
 ) -> Program:
-    return POOL_ESCAPING_MOD.curry(target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), P2_SINGLETON_HASH)
+    return POOL_WAITINGROOM_MOD.curry(target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), P2_SINGLETON_HASH)
 
 
 def create_pooling_inner_puzzle(
-    genesis_challenge: bytes32, target_puzzle_hash: bytes, pool_escaping_inner_hash: bytes32, owner_pubkey: G1Element
+    genesis_challenge: bytes32, target_puzzle_hash: bytes, pool_waitingroom_inner_hash: bytes32, owner_pubkey: G1Element
 ) -> Program:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
     # TARGET_PUZZLE_HASH P2_SINGLETON_PUZHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZHASH
     return POOL_MEMBER_MOD.curry(
-        target_puzzle_hash, P2_SINGLETON_HASH, bytes(owner_pubkey), pool_reward_prefix, pool_escaping_inner_hash
+        target_puzzle_hash, P2_SINGLETON_HASH, bytes(owner_pubkey), pool_reward_prefix, pool_waitingroom_inner_hash
     )
 
 
@@ -76,12 +76,12 @@ def uncurry_singleton_inner_puzzle(puzzle: Program):
 # Verify that a puzzle is a Pool Wallet Singleton
 def is_pool_singleton_inner_puzzle(puzzle: Program) -> bool:
     inner_f = uncurry_singleton_inner_puzzle(puzzle)
-    return inner_f in [POOL_ESCAPING_MOD, POOL_MEMBER_MOD]
+    return inner_f in [POOL_WAITINGROOM_MOD, POOL_MEMBER_MOD]
 
 
-def is_pool_escaping_inner_puzzle(puzzle: Program) -> bool:
+def is_pool_waitingroom_inner_puzzle(puzzle: Program) -> bool:
     inner_f = uncurry_singleton_inner_puzzle(puzzle)
-    return inner_f in [POOL_ESCAPING_MOD]
+    return inner_f in [POOL_WAITINGROOM_MOD]
 
 
 def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
@@ -98,7 +98,7 @@ def create_travel_spend(genesis_challenge: bytes32, last_coin_solution: CoinSolu
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(current)])
-    elif is_pool_escaping_inner_puzzle(inner_puzzle):
+    elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
         destination_inner: Program = pool_state_to_inner_puzzle(pool_reward_prefix, target)
         inner_sol: Program = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
@@ -134,7 +134,7 @@ def create_absorb_spend(
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([0, reward_amount, height, 0])
-    elif is_pool_escaping_inner_puzzle(inner_puzzle):
+    elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([0, 0, reward_amount, height, 0])
     else:
