@@ -39,7 +39,8 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk
+from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk, master_sk_to_wallet_sk, \
+    master_sk_to_singleton_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -449,6 +450,23 @@ class PoolWallet:
         await standard_wallet.push_transaction(standard_wallet_record)
         return standard_wallet_record
 
+    async def get_pool_wallet_sk(self):
+        owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
+            self.wallet_state_manager.private_key, self.wallet_id
+        )
+        assert owner_sk is not None
+        return owner_sk
+
+    async def sign_pool_spend_bundle(self, inner_puzzle_hash, owner_pubkey, spend_bundle, target):
+        private = await self.get_pool_wallet_sk()
+        message = Program(bytes(target)).get_tree_hash()
+        sigs = [AugSchemeMPL.sign(private, message)]
+        aggsig = AugSchemeMPL.aggregate(sigs)
+        assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
+        assert spend_bundle is not None
+        signed_sb = SpendBundle(spend_bundle.coin_solutions, aggsig)
+        return signed_sb
+
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
         # target_state is contained within pool_wallet_state
         pool_wallet_state: PoolWalletInfo = await self.get_current_state()
@@ -460,17 +478,21 @@ class PoolWallet:
             inner_f,
             target_puzzle_hash,
             p2_singleton_hash,
-            owner_pubkey,
+            pubkey_as_program,
             pool_reward_prefix,
             escape_puzzlehash,
         ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
+        pk_bytes = bytes(Program(pubkey_as_program).as_atom())
+        assert len(pk_bytes) == 48
+        owner_pubkey = G1Element.from_bytes(pk_bytes)
         spend_bundle: SpendBundle = SpendBundle([member_coin_solution], AugSchemeMPL.aggregate([]))
-        return spend_bundle
+        signed_spend_bundle = await self.sign_pool_spend_bundle(puzzle_hash, owner_pubkey, spend_bundle, pool_wallet_state.target)
+        return signed_spend_bundle, puzzle_hash
 
     async def generate_member_transaction(self, target_state: PoolState) -> TransactionRecord:
         singleton_amount = uint64(1)
         self.target_state = target_state  # Yuck! TODO: Fix this.
-        spend_bundle, new_singleton_puzzle_hash = await self.generate_member_spend()
+        spend_bundle, new_singleton_puzzle_hash = await self.generate_travel_spend()
         # inner_puzzle: Program = pool_state_to_inner_puzzle(target_state)
         # launcher_id = await self.get_current_state().launcher_coin.name()
         # full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_id)
