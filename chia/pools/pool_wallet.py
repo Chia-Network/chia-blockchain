@@ -37,7 +37,7 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk, master_sk_to_wallet_sk, \
+from chia.wallet.derive_keys import find_owner_sk, master_sk_to_pooling_authentication_sk, \
     master_sk_to_singleton_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -344,9 +344,9 @@ class PoolWallet:
         this method.
         """
         self = PoolWallet()
+        self.wallet_state_manager = wallet_state_manager
         log = logging.getLogger(__name__)
         log.error(f"        PoolWallet.create(genesis_challenge={self.wallet_state_manager.constants.GENESIS_CHALLENGE.hex()})")
-        self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "Pool wallet", WalletType.POOLING_WALLET.value, "", in_transaction=in_transaction
@@ -493,8 +493,9 @@ class PoolWallet:
         return signed_spend_bundle, puzzle_hash
 
     async def generate_member_transaction(self, target_state: PoolState) -> TransactionRecord:
+        # TODO: Start in the "waiting room" so we can move to first pool in one step
         singleton_amount = uint64(1)
-        self.target_state = target_state  # Yuck! TODO: Fix this.
+        self.target_state = target_state  # TODO: Fix assignment to self.target_state
         spend_bundle, new_singleton_puzzle_hash = await self.generate_travel_spend()
         # inner_puzzle: Program = pool_state_to_inner_puzzle(target_state)
         # launcher_id = await self.get_current_state().launcher_coin.name()
@@ -589,7 +590,7 @@ class PoolWallet:
         log = logging.getLogger(__name__)
         eve = launcher_cs.additions()[0]
         log.error(f"launcher_coin={launcher_coin} launcher_coin_id={launcher_coin.name()}")
-        log.error(f"eve singleton={eve} eve_coin_id={eve.name()}")
+        log.error(f"eve_singleton={eve} eve_coin_id={eve.name()}")
 
         # Current inner will be updated when state is verified on the blockchain
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])

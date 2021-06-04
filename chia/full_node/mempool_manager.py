@@ -34,6 +34,7 @@ from chia.util.errors import Err
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
+from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 
 log = logging.getLogger(__name__)
 
@@ -294,7 +295,8 @@ class MempoolManager:
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
-                log.error(f"MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT: {name}")
+                log.error(f"MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT:\nCOIN: {name}\nNPC RESULT: {npc_result}\nSPEND: {new_spend}")
+                debug_spend_bundle(new_spend)
                 return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
