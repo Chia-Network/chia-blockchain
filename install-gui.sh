@@ -35,7 +35,7 @@ if [ "$(uname)" = "Linux" ]; then
 		sudo yum install -y nodejs
 	elif type yum && [ -f /etc/rocky-release ] || [ -f /etc/fedora-release ]; then
                 # RockyLinux
-                echo "Installing on RockyLinux"
+                echo "Installing on RockyLinux/Fedora"
                 dnf module enable nodejs:12
                 sudo dnf install -y nodejs
         fi
