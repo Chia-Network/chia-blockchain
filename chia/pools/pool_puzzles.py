@@ -90,14 +90,9 @@ def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
     return inner_f in [POOL_MEMBER_MOD]
 
 
-def create_member_spend(genesis_challenge: bytes32, last_coin_solution: CoinSolution, launcher_coin: Coin, current: PoolState, target: PoolState) -> Tuple[CoinSolution, Program, Program]:
-    #    -> Tuple[CoinSolution, bytes32]:
-    return create_escape_spend(genesis_challenge, last_coin_solution, launcher_coin, current, target)
-
-
 # This spend will use the escape-type spend path for whichever state you are currently if in
 # If you are currently an escaping innerpuzzle, then it will look at your target_state to determine the next innerpuzzlehash to go to
-def create_escape_spend(genesis_challenge: bytes32, last_coin_solution: CoinSolution, launcher_coin: Coin, current: PoolState, target: PoolState) -> Tuple[CoinSolution, Program, Program]:
+def create_travel_spend(genesis_challenge: bytes32, last_coin_solution: CoinSolution, launcher_coin: Coin, current: PoolState, target: PoolState) -> Tuple[CoinSolution, Program, Program]:
     #    -> Tuple[CoinSolution, bytes32]:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
     inner_puzzle: Program = pool_state_to_inner_puzzle(pool_reward_prefix, current)
