@@ -33,7 +33,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/test_generator_deserialize.clvm",
         "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
         "chia/wallet/puzzles/p2_singleton.clvm",
-        "chia/wallet/puzzles/pool_escaping_innerpuz.clvm",
+        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
         "chia/wallet/puzzles/pool_member_innerpuz.clvm",
         "chia/wallet/puzzles/singleton_launcher.clvm",
     ]

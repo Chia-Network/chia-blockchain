@@ -41,7 +41,7 @@ from chia.types.blockchain_format.program import Program
 # from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 # from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 # from tests.wallet.cc_wallet.test_cc_wallet import tx_in_pool
-from chia.pools.pool_puzzles import POOL_MEMBER_HASH, P2_SINGLETON_HASH, POOL_ESCAPING_INNER_HASH
+from chia.pools.pool_puzzles import POOL_MEMBER_HASH, P2_SINGLETON_HASH, POOL_WAITINGROOM_INNER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, create_pool_state
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
@@ -141,7 +141,7 @@ class MockWalletStateManager:
     def _fake_farm(self):
         escaping_parent = token_bytes(32)
         fake_coins_by_puzzle_hash = {
-            POOL_ESCAPING_INNER_HASH: Coin(escaping_parent, POOL_ESCAPING_INNER_HASH, 1),
+            POOL_WAITINGROOM_INNER_HASH: Coin(escaping_parent, POOL_WAITINGROOM_INNER_HASH, 1),
             POOL_MEMBER_HASH: Coin(escaping_parent, POOL_MEMBER_HASH, 1),
             P2_SINGLETON_HASH: Coin(escaping_parent, P2_SINGLETON_HASH, 1),
         }
