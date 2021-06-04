@@ -1,0 +1,48 @@
+(mod (TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH (mod_hash launcher_id my_id my_full_puzhash my_innerpuzhash my_amount parent_info) spend_type my_puzhash pool_reward_amount pool_reward_height extra_data)
+
+  ; TARGET_PUZHASH is commitment to the pool's puzzlehash
+  ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
+  ; OWNER_PUBKEY is the farmer pubkey which signs the exit puzhash
+  ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay_to_singleton puzzle
+
+  ; spend_type is: 0 for absorbing money, 1 to travel
+
+  ; absorb_coin_id and my_puzhash are only used for absorbtion case
+
+  (include condition_codes.clvm)
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+          (sha256 1 TREE)
+      )
+  )
+
+  (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a00000000000000000000000000000000)
+
+  (defun-inline calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
+    (sha256 (logior GENESIS_CHALLENGE pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
+  )
+
+  (defun absorb_pool_reward (TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount pool_reward_id)
+    (list
+        (list CREATE_COIN my_innerpuzhash my_amount)
+        (list CREATE_COIN TARGET_PUZHASH pool_reward_amount)
+        (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id)
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x80))
+    )
+  )
+
+  ; main
+
+  (if spend_type
+    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT)
+          (list CREATE_COIN my_puzhash my_amount)
+          (list AGG_SIG_ME OWNER_PUBKEY (sha256tree1 (list my_puzhash my_amount extra_data) ()))
+    )
+    (absorb_pool_reward TARGET_PUZHASH my_innerpuzhash my_amount pool_reward_amount (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount))
+  )
+
+
+)

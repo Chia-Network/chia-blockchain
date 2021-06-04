@@ -17,7 +17,7 @@ from chia.pools.pool_puzzles import (
     POOL_REWARD_PREFIX_MAINNET,
     pool_state_to_inner_puzzle,
     is_pool_member_inner_puzzle,
-    is_pool_escaping_inner_puzzle,
+    is_pool_waitingroom_inner_puzzle,
     create_absorb_spend,
     solution_to_extra_data,
 )
@@ -37,10 +37,10 @@ def test_p2_singleton():
     launcher_id: bytes32 = LAUNCHER_ID
     owner_puzzle_hash: bytes32 = 32 * b"3"
     owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
-    pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
+    pool_waitingroom_inner_hash: bytes32 = create_escaping_inner_puzzle(
         owner_puzzle_hash, uint32(0), owner_pubkey
     ).get_tree_hash()
-    inner_puzzle: Program = create_pooling_inner_puzzle(GENESIS_CHALLENGE, owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey)
+    inner_puzzle: Program = create_pooling_inner_puzzle(GENESIS_CHALLENGE, owner_puzzle_hash, pool_waitingroom_inner_hash, owner_pubkey)
     singleton_full_puzzle: Program = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, inner_puzzle)
 
     # create a fake coin id for the `p2_singleton`
@@ -104,7 +104,7 @@ def test_pool_state_to_inner_puzzle():
     pool_state = PoolState(0, LEAVING_POOL.value, target_puzzle_hash, owner_pubkey, None, 0)
 
     puzzle = pool_state_to_inner_puzzle(GENESIS_CHALLENGE, pool_state)
-    assert is_pool_escaping_inner_puzzle(puzzle)
+    assert is_pool_waitingroom_inner_puzzle(puzzle)
 
 
 def test_member_solution_to_extra_data():
@@ -161,6 +161,7 @@ def test_escaping_solution_to_extra_data():
     recovered_state: PoolState = solution_to_extra_data(coin_sol)
 
     assert recovered_state == starting_state
+
 
 # This test is broken and does not work yet.
 # TODO: FIX THIS TEST
@@ -228,11 +229,11 @@ def test_singleton_creation_with_eve_and_launcher():
     launcher_coin: Coin = Coin(origin_coin.name(), genesis_launcher_puz.get_tree_hash(), amount)
     genesis_id: bytes32 = launcher_coin.name()
 
-    pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
+    pool_waitingroom_inner_hash: bytes32 = create_escaping_inner_puzzle(
         our_puzzle_hash, uint32(0), owner_pubkey
     ).get_tree_hash()
     self_pooling_inner_puzzle = create_self_pooling_inner_puzzle(
-        our_puzzle_hash, pool_escaping_inner_hash, owner_pubkey
+        our_puzzle_hash, pool_waitingroom_inner_hash, owner_pubkey
     )
     full_puzzle = create_full_puzzle(self_pooling_inner_puzzle, genesis_id)
     eve_coin = Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), amount)
@@ -288,7 +289,7 @@ def test_singleton_creation_with_eve_and_launcher():
             inner_puzzle.get_tree_hash(),
             coin.amount,
             current_rewards_puzzle_hash,
-            POOL_ESCAPING_INNER_HASH,
+            POOL_WAITINGROOM_INNER_HASH,
             P2_SINGLETON_HASH,
             owner_pubkey,
         ]

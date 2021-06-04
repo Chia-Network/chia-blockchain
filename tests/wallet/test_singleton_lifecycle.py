@@ -22,7 +22,7 @@ SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
-POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
