@@ -32,8 +32,6 @@ SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 # same challenge for every P2_SINGLETON puzzle
-P2_SINGLETON_GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
-POOL_REWARD_PREFIX_MAINNET =     bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
 def create_escaping_inner_puzzle(
@@ -43,11 +41,15 @@ def create_escaping_inner_puzzle(
 
 
 def create_pooling_inner_puzzle(
-    target_puzzle_hash: bytes, pool_escaping_inner_hash: bytes32, owner_pubkey: G1Element
+    target_puzzle_hash: bytes, pool_escaping_inner_hash: bytes32, owner_pubkey: G1Element, genesis_challenge: bytes32
 ) -> Program:
     # TARGET_PUZZLE_HASH P2_SINGLETON_PUZHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZHASH
     return POOL_MEMBER_MOD.curry(
-        target_puzzle_hash, P2_SINGLETON_HASH, bytes(owner_pubkey), POOL_REWARD_PREFIX_MAINNET, pool_escaping_inner_hash
+        target_puzzle_hash,
+        P2_SINGLETON_HASH,
+        bytes(owner_pubkey),
+        genesis_challenge[:16] + bytes([0] * 16),
+        pool_escaping_inner_hash,
     )
 
 
@@ -65,6 +67,7 @@ def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32) -> bytes32:
 
 
 ######################################
+
 
 def uncurry_singleton_inner_puzzle(puzzle: Program):
     r = puzzle.uncurry()
@@ -90,20 +93,24 @@ def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
     return inner_f in [POOL_MEMBER_MOD]
 
 
-def create_member_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, Program, Program]:
+def create_member_spend(
+    last_coin_solution: CoinSolution, pool_info: PoolWalletInfo, genesis_challenge: bytes32
+) -> Tuple[CoinSolution, Program, Program]:
     #    -> Tuple[CoinSolution, bytes32]:
-    return create_escape_spend(last_coin_solution, pool_info)
+    return create_escape_spend(last_coin_solution, pool_info, genesis_challenge)
 
 
-def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletInfo) -> Tuple[CoinSolution, Program, Program]:
+def create_escape_spend(
+    last_coin_solution: CoinSolution, pool_info: PoolWalletInfo, genesis_challenge: bytes32
+) -> Tuple[CoinSolution, Program, Program]:
     #    -> Tuple[CoinSolution, bytes32]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current, genesis_challenge)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(pool_info.current)])
     elif is_pool_escaping_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
-        destination_inner: Program = pool_state_to_inner_puzzle(pool_info.target)
+        destination_inner: Program = pool_state_to_inner_puzzle(pool_info.target, genesis_challenge)
         inner_sol: Program = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(pool_info.target)])
     else:
         raise ValueError
@@ -122,15 +129,17 @@ def create_escape_spend(last_coin_solution: CoinSolution, pool_info: PoolWalletI
     full_solution: Program = Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name())
 
-    return CoinSolution(
-        coin, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)
-    ), full_puzzle, inner_puzzle
+    return (
+        CoinSolution(coin, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)),
+        full_puzzle,
+        inner_puzzle,
+    )
 
 
 def create_absorb_spend(
-    last_coin_solution: CoinSolution, pool_info: PoolWalletInfo, height: uint32
+    last_coin_solution: CoinSolution, pool_info: PoolWalletInfo, height: uint32, genesis_challenge: bytes32
 ) -> List[CoinSolution]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current, genesis_challenge)
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
@@ -153,24 +162,28 @@ def create_absorb_spend(
             ]
         )
     full_solution: SerializedProgram = SerializedProgram.from_program(
-        Program.to(parent_info, last_coin_solution.coin.amount, inner_sol)
+        Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
     )
     full_puzzle: SerializedProgram = SerializedProgram.from_program(
         create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name())
     )
 
-    reward_parent: bytes32 = pool_parent_id(height, P2_SINGLETON_GENESIS_CHALLENGE)
+    reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
     p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(
         create_p2_singleton_puzzle(SINGLETON_MOD_HASH, pool_info.launcher_coin.name())
     )
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
     p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(
-        Program.to(inner_puzzle.get_tree_hash(), reward_coin.name())
+        Program.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
     )
-    return [
+    assert p2_singleton_puzzle.get_tree_hash() == reward_coin.puzzle_hash
+    # assert full_puzzle.get_tree_hash() == coin.puzzle_hash
+
+    coin_solutions = [
         CoinSolution(coin, full_puzzle, full_solution),
         CoinSolution(reward_coin, p2_singleton_puzzle, p2_singleton_solution),
     ]
+    return coin_solutions
 
 
 def get_most_recent_singleton_coin_from_coin_solution(coin_sol: CoinSolution) -> Optional[Coin]:
@@ -253,7 +266,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
     return PoolState.from_bytes(extra_data)
 
 
-def pool_state_to_inner_puzzle(pool_state: PoolState) -> Program:
+def pool_state_to_inner_puzzle(pool_state: PoolState, genesis_challenge: bytes32) -> Program:
     escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
         pool_state.target_puzzle_hash, pool_state.relative_lock_height, pool_state.owner_pubkey
     )
@@ -261,5 +274,8 @@ def pool_state_to_inner_puzzle(pool_state: PoolState) -> Program:
         return escaping_inner_puzzle
     else:
         return create_pooling_inner_puzzle(
-            pool_state.target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), pool_state.owner_pubkey
+            pool_state.target_puzzle_hash,
+            escaping_inner_puzzle.get_tree_hash(),
+            pool_state.owner_pubkey,
+            genesis_challenge,
         )

@@ -107,7 +107,6 @@ class HarvesterAPI:
                         # not the blockchain
                         for pool_difficulty in new_challenge.pool_difficulties:
                             if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
-                                self.harvester.log.warning(f"Farming plot with {pool_difficulty}")
                                 difficulty = pool_difficulty.difficulty
                                 sub_slot_iters = pool_difficulty.sub_slot_iters
 
