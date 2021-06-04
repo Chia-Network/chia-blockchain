@@ -109,12 +109,11 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
             wallet_rpc_port = config["wallet"]["rpc_port"]
         wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
         amounts = await wallet_client.get_farmed_amount()
-    #
-    # Don't catch any exceptions, the caller will handle it
-    #
-    finally:
-        wallet_client.close()
-        await wallet_client.await_closed()
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}. You can run the wallet by:\n    chia start wallet")
+        else:
+            print(f"Exception from 'wallet' {e}")
 
     return amounts
 
