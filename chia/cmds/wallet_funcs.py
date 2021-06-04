@@ -221,7 +221,7 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
         pass
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
+            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}. You can run the wallet by:\n    chia start wallet")
         else:
             print(f"Exception from 'wallet' {e}")
     wallet_client.close()
