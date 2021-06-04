@@ -2,7 +2,7 @@
       P2_SINGLETON_PUZHASH
       OWNER_PUBKEY
       POOL_REWARD_PREFIX
-      ESCAPE_MODE_PUZHASH
+      WAITINGROOM_PUZHASH
       (my_id my_full_puzzle_hash my_inner_puzzle_hash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash)
       spend_type
       pool_reward_amount
@@ -12,11 +12,11 @@
 
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
   ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
-  ; OWNER_PUBKEY is the farmer pubkey which authorises an escape attempt
+  ; OWNER_PUBKEY is the farmer pubkey which authorises a travel
   ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
-  ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
+  ; WAITINGROOM_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
 
-  ; spend_type is: 0 for absorbing money, 1 to escape
+  ; spend_type is: 0 for absorbing money, 1 to travel
 
   ; absorb_coin_id and my_puzzle_hash are only used for absorbtion case
 
@@ -47,7 +47,7 @@
 
   (if spend_type
     (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree1 key_value_list ()))
-          (list CREATE_COIN ESCAPE_MODE_PUZHASH my_amount)
+          (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
 
     )
     (absorb_pool_reward POOL_PUZZLE_HASH
