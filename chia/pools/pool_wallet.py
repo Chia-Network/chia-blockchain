@@ -34,6 +34,9 @@ from chia.pools.pool_puzzles import (
     launcher_id_to_p2_puzzle_hash,
     create_travel_spend,
     uncurry_pool_member_inner_puzzle,
+    is_pool_member_inner_puzzle,
+    is_pool_waitingroom_inner_puzzle,
+    uncurry_pool_waitingroom_inner_puzzle,
 )
 
 from chia.util.ints import uint8, uint32, uint64
@@ -460,14 +463,22 @@ class PoolWallet:
         assert owner_sk is not None
         return owner_sk
 
-    async def sign_pool_spend_bundle(self, inner_puzzle_hash, owner_pubkey, spend_bundle, target):
+    async def sign_travel_spend_waitingroom_state(self, target_puzzle_hash, owner_pubkey, coin_solution, target):
         private = await self.get_pool_wallet_sk()
-        message = Program(bytes(target)).get_tree_hash()
+        message = Program.to([target_puzzle_hash, coin_solution.coin.amount, bytes(target)]).get_tree_hash()
         sigs = [AugSchemeMPL.sign(private, message)]
         aggsig = AugSchemeMPL.aggregate(sigs)
         assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
-        assert spend_bundle is not None
-        signed_sb = SpendBundle(spend_bundle.coin_solutions, aggsig)
+        signed_sb = SpendBundle([coin_solution], aggsig)
+        return signed_sb
+
+    async def sign_travel_spend_in_member_state(self, owner_pubkey, coin_solution, target):
+        private = await self.get_pool_wallet_sk()
+        message = Program.to(bytes(target)).get_tree_hash()
+        sigs = [AugSchemeMPL.sign(private, message)]
+        aggsig = AugSchemeMPL.aggregate(sigs)
+        assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
+        signed_sb = SpendBundle([coin_solution], aggsig)
         return signed_sb
 
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
@@ -475,21 +486,33 @@ class PoolWallet:
         pool_wallet_state: PoolWalletInfo = await self.get_current_state()
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
-        member_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(self.wallet_state_manager.constants.GENESIS_CHALLENGE, last_coin_solution, pool_wallet_state.launcher_coin, pool_wallet_state.current, pool_wallet_state.target)
+        outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(self.wallet_state_manager.constants.GENESIS_CHALLENGE, last_coin_solution, pool_wallet_state.launcher_coin, pool_wallet_state.current, pool_wallet_state.target)
         puzzle_hash = full_puzzle.get_tree_hash()
-        (
-            inner_f,
-            target_puzzle_hash,
-            p2_singleton_hash,
-            pubkey_as_program,
-            pool_reward_prefix,
-            escape_puzzlehash,
-        ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
-        pk_bytes = bytes(Program(pubkey_as_program).as_atom())
-        assert len(pk_bytes) == 48
-        owner_pubkey = G1Element.from_bytes(pk_bytes)
-        spend_bundle: SpendBundle = SpendBundle([member_coin_solution], AugSchemeMPL.aggregate([]))
-        signed_spend_bundle = await self.sign_pool_spend_bundle(puzzle_hash, owner_pubkey, spend_bundle, pool_wallet_state.target)
+        if is_pool_member_inner_puzzle(inner_puzzle):
+            (
+                inner_f,
+                target_puzzle_hash,
+                p2_singleton_hash,
+                pubkey_as_program,
+                pool_reward_prefix,
+                escape_puzzlehash,
+            ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
+            pk_bytes = bytes(pubkey_as_program.as_atom())
+            assert len(pk_bytes) == 48
+            owner_pubkey = G1Element.from_bytes(pk_bytes)
+            signed_spend_bundle = await self.sign_travel_spend_in_member_state(target_puzzle_hash, owner_pubkey, outgoing_coin_solution, pool_wallet_state.target)
+        elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
+            (
+                target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
+            ) = uncurry_pool_waitingroom_inner_puzzle(inner_puzzle)
+            pk_bytes = bytes(owner_pubkey.as_atom())
+            assert len(pk_bytes) == 48
+            owner_pubkey = G1Element.from_bytes(pk_bytes)
+            signed_spend_bundle = await self.sign_travel_spend_in_waitingroom_state(target_puzzle_hash, owner_pubkey, outgoing_coin_solution, pool_wallet_state.target)
+        else:
+            raise
+
+        assert signed_spend_bundle is not None
         return signed_spend_bundle, puzzle_hash
 
     async def generate_member_transaction(self, target_state: PoolState) -> TransactionRecord:
