@@ -195,7 +195,7 @@ class PoolWallet:
             extra_data = solution_to_extra_data(full_spend)
 
         assert extra_data is not None
-        current_inner = pool_state_to_inner_puzzle(extra_data, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
+        current_inner = pool_state_to_inner_puzzle(extra_data, launcher_coin.name(), self.wallet_state_manager.constants.GENESIS_CHALLENGE)
         launcher_id: bytes32 = launcher_coin.name()
         p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id)
         return PoolWalletInfo(
@@ -590,12 +590,14 @@ class PoolWallet:
             initial_target_state.target_puzzle_hash,
             initial_target_state.relative_lock_height,
             initial_target_state.owner_pubkey,
+            launcher_coin.name()
         ).get_tree_hash()
 
         self_pooling_inner_puzzle: Program = create_pooling_inner_puzzle(
             initial_target_state.target_puzzle_hash,
             escaping_inner_puzzle_hash,
             initial_target_state.owner_pubkey,
+            launcher_coin.name(),
             genesis_challenge,
         )
         full_pooling_puzzle: Program = create_full_puzzle(self_pooling_inner_puzzle, launcher_id=launcher_coin.name())

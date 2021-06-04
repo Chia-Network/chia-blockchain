@@ -1,3 +1,4 @@
+from secrets import token_bytes
 from typing import List
 
 from blspy import AugSchemeMPL, G1Element  # , PrivateKey
@@ -39,10 +40,10 @@ def test_p2_singleton():
     owner_puzzle_hash: bytes32 = 32 * b"3"
     owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
     pool_waiting_room_inner_hash: bytes32 = create_escaping_inner_puzzle(
-        owner_puzzle_hash, uint32(0), owner_pubkey
+        owner_puzzle_hash, uint32(0), owner_pubkey, launcher_id
     ).get_tree_hash()
     inner_puzzle: Program = create_pooling_inner_puzzle(
-        owner_puzzle_hash, pool_waiting_room_inner_hash, owner_pubkey, GENESIS_CHALLENGE
+        owner_puzzle_hash, pool_waiting_room_inner_hash, owner_pubkey, launcher_id, GENESIS_CHALLENGE
     )
     singleton_full_puzzle: Program = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, inner_puzzle)
 
@@ -76,10 +77,10 @@ def test_uncurry():
     relative_lock_height = uint32(10)
     owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
     escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
-        target_puzzle_hash, relative_lock_height, owner_pubkey
+        target_puzzle_hash, relative_lock_height, owner_pubkey, token_bytes(32)
     )
     pooling_inner_puzzle = create_pooling_inner_puzzle(
-        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey, GENESIS_CHALLENGE
+        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey, token_bytes(32), GENESIS_CHALLENGE
     )
     (
         inner_f,
@@ -104,7 +105,7 @@ def test_pool_state_to_inner_puzzle():
         target_puzzle_hash=bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7"),
         version=1,
     )
-    puzzle = pool_state_to_inner_puzzle(pool_state, GENESIS_CHALLENGE)
+    puzzle = pool_state_to_inner_puzzle(pool_state, token_bytes(32), GENESIS_CHALLENGE)
     assert is_pool_member_inner_puzzle(puzzle)
 
     target_puzzle_hash: bytes32 = bytes32(b"2" * 32)
@@ -112,7 +113,7 @@ def test_pool_state_to_inner_puzzle():
     relative_lock_height: uint32
     pool_state = PoolState(0, LEAVING_POOL.value, target_puzzle_hash, owner_pubkey, None, 0)
 
-    puzzle = pool_state_to_inner_puzzle(pool_state, GENESIS_CHALLENGE)
+    puzzle = pool_state_to_inner_puzzle(pool_state, token_bytes(32), GENESIS_CHALLENGE)
     assert is_pool_waitingroom_inner_puzzle(puzzle)
 
 
@@ -132,10 +133,10 @@ def test_member_solution_to_extra_data():
     )
 
     escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
-        target_puzzle_hash, relative_lock_height, owner_pubkey
+        target_puzzle_hash, relative_lock_height, owner_pubkey, token_bytes(32)
     )
     pooling_inner_puzzle = create_pooling_inner_puzzle(
-        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey, GENESIS_CHALLENGE
+        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey, token_bytes(32), GENESIS_CHALLENGE
     )
     singleton_full_puzzle: Program = singleton_puzzle(LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, pooling_inner_puzzle)
 
@@ -164,7 +165,7 @@ def test_escaping_solution_to_extra_data():
     )
 
     escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
-        target_puzzle_hash, relative_lock_height, owner_pubkey
+        target_puzzle_hash, relative_lock_height, owner_pubkey, token_bytes(32)
     )
     singleton_full_puzzle: Program = singleton_puzzle(LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, escaping_inner_puzzle)
 
@@ -188,7 +189,7 @@ def xtest_create_absorb_spend():
     target_puzzle_hash = bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7")
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH
     p2_singleton_puzzle = P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_coin.name(), LAUNCHER_PUZZLE_HASH)
-    current_inner = create_escaping_inner_puzzle(target_puzzle_hash, 0, owner_pubkey)
+    current_inner = create_escaping_inner_puzzle(target_puzzle_hash, 0, owner_pubkey, launcher_coin.name())
     full_puz = create_full_puzzle(current_inner, launcher_coin.name())
     parent_coin = Coin(launcher_coin.name(), full_puz.get_tree_hash(), 201)
     current_coin = Coin(parent_coin.name(), full_puz.get_tree_hash(), 201)

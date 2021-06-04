@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple, List, Optional
 from blspy import G1Element
 
@@ -15,6 +16,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 
 from chia.util.ints import uint32, uint64
 
+log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
@@ -32,21 +34,23 @@ SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 
 def create_escaping_inner_puzzle(
-    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element
+    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element, launcher_id: bytes32
 ) -> Program:
-    return POOL_WAITINGROOM_MOD.curry(target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), P2_SINGLETON_HASH)
+    p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
+    return POOL_WAITINGROOM_MOD.curry(target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), p2_singleton_puzzle_hash)
 
 
 def create_pooling_inner_puzzle(
     target_puzzle_hash: bytes,
     pool_waiting_room_inner_hash: bytes32,
     owner_pubkey: G1Element,
+    launcher_id: bytes32,
     genesis_challenge: bytes32,
 ) -> Program:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
-    # TARGET_PUZZLE_HASH P2_SINGLETON_PUZHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZHASH
+    p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
     return POOL_MEMBER_MOD.curry(
-        target_puzzle_hash, P2_SINGLETON_HASH, bytes(owner_pubkey), pool_reward_prefix, pool_waiting_room_inner_hash
+        target_puzzle_hash, p2_singleton_puzzle_hash, bytes(owner_pubkey), pool_reward_prefix, pool_waiting_room_inner_hash
     )
 
 
@@ -100,15 +104,13 @@ def create_travel_spend(
     target: PoolState,
     genesis_challenge: bytes32,
 ) -> Tuple[CoinSolution, Program, Program]:
-    #    -> Tuple[CoinSolution, bytes32]:
-    pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
-    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_reward_prefix, current)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(current, launcher_coin.name(), genesis_challenge)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(current)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
-        destination_inner: Program = pool_state_to_inner_puzzle(pool_reward_prefix, target)
+        destination_inner: Program = pool_state_to_inner_puzzle(current, launcher_coin.name(), genesis_challenge)
         inner_sol: Program = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
     else:
         raise ValueError
@@ -138,7 +140,7 @@ def create_travel_spend(
 def create_absorb_spend(
     last_coin_solution: CoinSolution, pool_info: PoolWalletInfo, height: uint32, genesis_challenge: bytes32
 ) -> List[CoinSolution]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current, genesis_challenge)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current, pool_info.launcher_id, genesis_challenge)
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
@@ -173,6 +175,7 @@ def create_absorb_spend(
         create_p2_singleton_puzzle(SINGLETON_MOD_HASH, pool_info.launcher_coin.name())
     )
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
+    log.warning(f"Reward coin name: {reward_coin.name()}")
     p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(
         Program.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
     )
@@ -183,6 +186,7 @@ def create_absorb_spend(
         CoinSolution(coin, full_puzzle, full_solution),
         CoinSolution(reward_coin, p2_singleton_puzzle, p2_singleton_solution),
     ]
+    log.warning(f"Coin solution 1: {coin_solutions}")
     return coin_solutions
 
 
@@ -220,7 +224,7 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tupl
 
     # TARGET_PUZZLE_HASH P2_SINGLETON_PUZZLEHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZZLEHASH
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = list(args.as_iter())
-    assert p2_singleton_hash == P2_SINGLETON_HASH
+    # assert p2_singleton_hash == P2_SINGLETON_HASH
 
     # return target_puzzle_hash, owner_pubkey
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
@@ -240,7 +244,7 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program):  # -> Optional
 
     # TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH
     target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash = list(args.as_iter())
-    assert p2_singleton_hash == P2_SINGLETON_HASH
+    # assert p2_singleton_hash == P2_SINGLETON_HASH
 
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
@@ -289,9 +293,9 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
     return PoolState.from_bytes(extra_data)
 
 
-def pool_state_to_inner_puzzle(pool_state: PoolState, genesis_challenge: bytes32) -> Program:
+def pool_state_to_inner_puzzle(pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32) -> Program:
     escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
-        pool_state.target_puzzle_hash, pool_state.relative_lock_height, pool_state.owner_pubkey
+        pool_state.target_puzzle_hash, pool_state.relative_lock_height, pool_state.owner_pubkey, launcher_id,
     )
     if pool_state.state == LEAVING_POOL:
         return escaping_inner_puzzle
@@ -300,5 +304,6 @@ def pool_state_to_inner_puzzle(pool_state: PoolState, genesis_challenge: bytes32
             pool_state.target_puzzle_hash,
             escaping_inner_puzzle.get_tree_hash(),
             pool_state.owner_pubkey,
+            launcher_id,
             genesis_challenge,
         )
