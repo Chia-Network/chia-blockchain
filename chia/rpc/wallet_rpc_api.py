@@ -105,7 +105,7 @@ class WalletRpcApi:
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
-            "/pw_collect_self_pooling_rewards": self.pw_collect_self_pooling_rewards,
+            "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
         }
 
@@ -1098,17 +1098,19 @@ class WalletRpcApi:
             tx: TransactionRecord = await wallet.self_pool(new_target_state)
             return {"transaction": tx}
 
-    async def pw_collect_self_pooling_rewards(self, request):
+    async def pw_absorb_rewards(self, request):
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before collecting rewards")
+
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         fee = uint64(request["fee"])
-        await wallet.collect_self_pooling_rewards(fee)
-        # Return True if the SpendBundle was submitted to the Mempool
-        state = await wallet.get_all_state()
-        return {
-            "pool_wallet_state": state.to_json_dict(),
-        }
+
+        async with self.service.wallet_state_manager.lock:
+            transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
+            state: PoolWalletInfo = await wallet.get_current_state()
+        return {"state": state.to_json_dict(), "transaction": transaction}
 
     async def pw_status(self, request):
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""

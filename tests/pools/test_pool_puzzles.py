@@ -13,10 +13,15 @@ from chia.pools.pool_puzzles import (
     create_escaping_inner_puzzle,
     create_pooling_inner_puzzle,
     uncurry_pool_member_inner_puzzle,
-    POOL_REWARD_PREFIX_MAINNET, pool_state_to_inner_puzzle, is_pool_member_inner_puzzle, is_pool_escaping_inner_puzzle,
+    pool_state_to_inner_puzzle,
+    is_pool_member_inner_puzzle,
+    is_pool_escaping_inner_puzzle,
 )
 from chia.util.ints import uint32, uint64
 from tests.wallet.test_singleton import LAUNCHER_PUZZLE_HASH, LAUNCHER_ID, singleton_puzzle, p2_singleton_puzzle
+
+
+GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
 def test_p2_singleton():
@@ -27,7 +32,9 @@ def test_p2_singleton():
     pool_escaping_inner_hash: bytes32 = create_escaping_inner_puzzle(
         owner_puzzle_hash, uint32(0), owner_pubkey
     ).get_tree_hash()
-    inner_puzzle: Program = create_pooling_inner_puzzle(owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey)
+    inner_puzzle: Program = create_pooling_inner_puzzle(
+        owner_puzzle_hash, pool_escaping_inner_hash, owner_pubkey, GENESIS_CHALLENGE
+    )
     singleton_full_puzzle: Program = singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH, inner_puzzle)
 
     # create a fake coin id for the `p2_singleton`
@@ -63,22 +70,32 @@ def test_uncurry():
         target_puzzle_hash, relative_lock_height, owner_pubkey
     )
     pooling_inner_puzzle = create_pooling_inner_puzzle(
-        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey
+        target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey, GENESIS_CHALLENGE
     )
-    inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
+    (
+        inner_f,
+        target_puzzle_hash,
+        p2_singleton_hash,
+        owner_pubkey,
+        pool_reward_prefix,
+        escape_puzzlehash,
+    ) = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
     none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
     assert none is None
 
 
 def test_pool_state_to_inner_puzzle():
     pool_state = PoolState(
-        owner_pubkey=bytes.fromhex("b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"),
+        owner_pubkey=bytes.fromhex(
+            "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+        ),
         pool_url="",
         relative_lock_height=0,
         state=1,
         target_puzzle_hash=bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7"),
-        version=1)
-    puzzle = pool_state_to_inner_puzzle(pool_state)
+        version=1,
+    )
+    puzzle = pool_state_to_inner_puzzle(pool_state, GENESIS_CHALLENGE)
     assert is_pool_member_inner_puzzle(puzzle)
 
     target_puzzle_hash: bytes32 = bytes32(b"2" * 32)
@@ -86,11 +103,11 @@ def test_pool_state_to_inner_puzzle():
     relative_lock_height: uint32
     pool_state = PoolState(0, LEAVING_POOL.value, target_puzzle_hash, owner_pubkey, None, 0)
 
-    puzzle = pool_state_to_inner_puzzle(pool_state)
+    puzzle = pool_state_to_inner_puzzle(pool_state, GENESIS_CHALLENGE)
     assert is_pool_escaping_inner_puzzle(puzzle)
 
 
-'''
+"""
 def test_create_escape_spend():
     last_coin_solution: CoinSolution = {'coin': {'amount': 1,
           'parent_coin_info': '0x7eafe79ac873ad528287f905620ee0eefb3bd1b70274a4c1a4817ca1db952007',
@@ -99,7 +116,7 @@ def test_create_escape_spend():
  'solution': '0xffa08eb5a4893f62881c6244604a79c36b23c06e8ae691f88322801b89c2dfaa8ae8ff01ffc05b0101738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe30401000000000000000080'}
     pool_info: PoolWalletInfo =
     create_escape_spend(last_coin_solution, pool_info)
-'''
+"""
 
 """
 def test_singleton_creation_with_eve_and_launcher():
