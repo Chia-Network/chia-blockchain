@@ -344,6 +344,8 @@ class PoolWallet:
         this method.
         """
         self = PoolWallet()
+        log = logging.getLogger(__name__)
+        log.error(f"        PoolWallet.create(genesis_challenge={self.wallet_state_manager.constants.GENESIS_CHALLENGE.hex()})")
         self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -583,6 +585,11 @@ class PoolWallet:
             SerializedProgram.from_program(genesis_launcher_solution),
         )
         launcher_sb: SpendBundle = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+
+        log = logging.getLogger(__name__)
+        eve = launcher_cs.additions()[0]
+        log.error(f"launcher_coin={launcher_coin} launcher_coin_id={launcher_coin.name()}")
+        log.error(f"eve singleton={eve} eve_coin_id={eve.name()}")
 
         # Current inner will be updated when state is verified on the blockchain
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
