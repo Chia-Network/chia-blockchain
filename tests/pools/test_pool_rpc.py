@@ -2,8 +2,6 @@
 import asyncio
 import logging
 import os
-import shutil
-import sys
 from argparse import Namespace
 from typing import Optional, List, Dict
 
@@ -319,13 +317,15 @@ class TestPoolWalletRpc:
 
         absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
 
-        debug_spend_bundle(absorb_tx.spend_bundle)
-        # await time_out_assert(
-        #     5,
-        #     full_node_api.full_node.mempool_manager.get_spendbundle,
-        #     absorb_tx.spend_bundle,
-        #     absorb_tx.name,
-        # )
+        await time_out_assert(
+            5,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            absorb_tx.spend_bundle,
+            absorb_tx.name,
+        )
+        await self.farm_blocks(full_node_api, our_ph, 6)
+        bal = await client.get_wallet_balance(2)
+        # assert bal["confirmed_wallet_balance"] == 0
 
         self.delete_plot(plot_id)
 

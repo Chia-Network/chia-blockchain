@@ -37,7 +37,9 @@ def create_escaping_inner_puzzle(
     target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element, launcher_id: bytes32
 ) -> Program:
     p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
-    return POOL_WAITINGROOM_MOD.curry(target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), p2_singleton_puzzle_hash)
+    return POOL_WAITINGROOM_MOD.curry(
+        target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), p2_singleton_puzzle_hash
+    )
 
 
 def create_pooling_inner_puzzle(
@@ -50,7 +52,11 @@ def create_pooling_inner_puzzle(
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
     p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
     return POOL_MEMBER_MOD.curry(
-        target_puzzle_hash, p2_singleton_puzzle_hash, bytes(owner_pubkey), pool_reward_prefix, pool_waiting_room_inner_hash
+        target_puzzle_hash,
+        p2_singleton_puzzle_hash,
+        bytes(owner_pubkey),
+        pool_reward_prefix,
+        pool_waiting_room_inner_hash,
     )
 
 
@@ -60,7 +66,7 @@ def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
 
 def create_p2_singleton_puzzle(singleton_mod_hash: bytes, launcher_id: bytes32) -> Program:
     # TODO: Test these hash conversions
-    return P2_SINGLETON_MOD.curry(POOL_OUTER_MOD_HASH, Program.to(singleton_mod_hash).get_tree_hash(), launcher_id)
+    return P2_SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH)
 
 
 def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32) -> bytes32:
@@ -295,7 +301,10 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
 def pool_state_to_inner_puzzle(pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32) -> Program:
     escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
-        pool_state.target_puzzle_hash, pool_state.relative_lock_height, pool_state.owner_pubkey, launcher_id,
+        pool_state.target_puzzle_hash,
+        pool_state.relative_lock_height,
+        pool_state.owner_pubkey,
+        launcher_id,
     )
     if pool_state.state == LEAVING_POOL:
         return escaping_inner_puzzle
