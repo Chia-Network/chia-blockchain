@@ -35,7 +35,7 @@ def init_cmd(ctx: click.Context, create_certs: str, **kwargs):
 
     set_password = kwargs.get("set_password")
     if set_password:
-      initialize_password()
+        initialize_password()
 
     init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"])
 

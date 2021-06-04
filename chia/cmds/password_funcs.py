@@ -1,13 +1,14 @@
-
 import sys
-from click.termui import prompt
+
 from chia.util.keychain import Keychain, obtain_current_password
+from chia.util.keyring_wrapper import DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
 from getpass import getpass
 from io import TextIOWrapper
 from typing import Optional, Tuple
 
 MIN_PASSWORD_LEN = 8
-PASSWORD_CLI_OPTION_NAMES = [ # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-password -> 'set_password'
+# Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-password -> 'set_password'
+PASSWORD_CLI_OPTION_NAMES = [
     "set_password",
     "password_file",
     "current_password_file"
@@ -25,7 +26,7 @@ def remove_passwords_options_from_cmd(cmd) -> None:
     # existing command, and using the decorator-supported construction of options doesn't
     # allow for conditionally including options. Once keyring password management is
     # rolled out to all platforms this can be removed.
-    cmd.params = [param for param in cmd.params if not param.name in PASSWORD_CLI_OPTION_NAMES]
+    cmd.params = [param for param in cmd.params if param.name not in PASSWORD_CLI_OPTION_NAMES]
 
 
 def verify_password_meets_requirements(new_password: str, confirmation_password: str) -> Tuple[bool, Optional[str]]:
@@ -87,11 +88,17 @@ def initialize_password() -> None:
 
 def set_or_update_password(password: Optional[str], current_password: Optional[str]) -> None:
     # Prompt for the current password, if necessary
-    if Keychain.has_master_password() and not current_password:
-        try:
-            current_password = obtain_current_password("Current Password: ")
-        except Exception as e:
-            print(f"Unable to confirm current password: {e}")
+    if Keychain.has_master_password():
+        # Try the default password first
+        if Keychain.master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD):
+            current_password = DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+
+        if not current_password:
+            try:
+                current_password = obtain_current_password("Current Password: ")
+            except Exception as e:
+                print(f"Unable to confirm current password: {e}")
+                sys.exit(1)
 
     new_password = password
     try:
@@ -111,6 +118,10 @@ def remove_password(current_password: Optional[str]) -> None:
     if not Keychain.has_master_password():
         print("Password is not currently set")
     else:
+        # Try the default password first
+        if Keychain.master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD):
+            current_password = DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+
         # Prompt for the current password, if necessary
         if not current_password:
             try:
