@@ -113,7 +113,9 @@ def create_travel_spend(
     target: PoolState,
     genesis_challenge: bytes32,
 ) -> Tuple[CoinSolution, Program, Program]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(current, launcher_coin.name(), genesis_challenge)
+    #    -> Tuple[CoinSolution, bytes32]:
+    pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(current, pool_reward_prefix)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(current)])
