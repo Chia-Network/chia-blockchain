@@ -220,6 +220,25 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tupl
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
+def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tuple[Program, Program, Program]]:
+    """
+    Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
+    a triple of `mod_hash, relative_lock_height, pubkey` if it is.
+    """
+    if not is_pool_member_inner_puzzle(inner_puzzle):
+        return None
+    r = inner_puzzle.uncurry()
+    if r is None:
+        return r
+    inner_f, args = r
+
+    # TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH
+    target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash = list(args.as_iter())
+    assert p2_singleton_hash == P2_SINGLETON_HASH
+
+    return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
+
+
 def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     p = Program.from_bytes(bytes(full_puzzle))
     r = p.uncurry()

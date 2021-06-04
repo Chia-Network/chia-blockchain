@@ -7,8 +7,6 @@
 
   ; spend_type is: 0 for absorbing money, 1 to travel
 
-  ; absorb_coin_id and my_puzhash are only used for absorbtion case
-
   (include condition_codes.clvm)
 
   ; takes a lisp tree and returns the hash of it
