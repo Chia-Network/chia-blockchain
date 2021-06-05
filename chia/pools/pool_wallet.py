@@ -264,21 +264,22 @@ class PoolWallet:
         that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
         The DB must be committed after calling this method. All validation should be done here.
         """
+        self.log.warning(f"Applying state transitions: {len(block_spends)}")
         coin_name_to_spend: Dict[bytes32, CoinSolution] = {cs.coin.name(): cs for cs in block_spends}
 
         tip: Tuple[uint32, CoinSolution] = await self.get_tip()
         tip_height = tip[0]
         tip_spend = tip[1]
+        assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
         while True:
             spent_coin_name: bytes32 = get_most_recent_singleton_coin_from_coin_solution(tip_spend).name()
             if spent_coin_name not in coin_name_to_spend:
                 break
-            assert block_height >= tip_height  # We should not have a spend with a lesser block height
             spend: CoinSolution = coin_name_to_spend[spent_coin_name]
             await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, block_height)
-            new_tip = await self.get_tip()
-            await self.coin_spent(new_tip[1])
+            tip_spend = (await self.get_tip())[1]
+            await self.coin_spent(tip_spend)
             coin_name_to_spend.pop(spent_coin_name)
         await self.update_pool_config(False)
 
@@ -293,7 +294,7 @@ class PoolWallet:
         puz = coin_solution.puzzle_reveal
         amount = uint64(1)
         if self.target_state is None:
-            self.log.info("PoolWallet state updated by external event: {coin}")
+            self.log.info(f"PoolWallet state updated by external event: {coin}")
             pass
 
         # xxx
@@ -713,7 +714,6 @@ class PoolWallet:
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
 
-        self.log.warning(f"Unspents: {len(unspent_coin_records)}")
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim")
 
@@ -727,30 +727,32 @@ class PoolWallet:
 
         current_state: PoolWalletInfo = await self.get_current_state()
         last_solution: CoinSolution = history[-1][1]
-        self.log.warning(f"Length of history: {len(history)}")
 
-        # TODO: support claiming multiple blocks in one transaction
-        coin_record = unspent_coin_records[0]
-        absorb_spend: List[CoinSolution] = create_absorb_spend(
-            last_solution,
-            current_state,
-            coin_to_height_farmed[coin_record.coin],
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-        )
+        all_spends: List[CoinSolution] = []
+        total_amount = 0
+        for coin_record in unspent_coin_records:
+            absorb_spend: List[CoinSolution] = create_absorb_spend(
+                last_solution,
+                current_state.current,
+                current_state.launcher_coin,
+                coin_to_height_farmed[coin_record.coin],
+                self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            )
+            last_solution = absorb_spend[0]
+            all_spends += absorb_spend
+            total_amount += coin_record.coin.amount
+            self.log.warning(
+                f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
+            )
+
         # No signatures are required to absorb
-        spend_bundle: SpendBundle = SpendBundle(absorb_spend, G2Element())
-        self.log.warning(
-            f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
-        )
-        self.log.warning(
-            f"Spend bundle removals: {spend_bundle.removals()} {[r.name() for r in spend_bundle.removals()]}"
-        )
+        spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
 
         absorb_transaction: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=current_state.current.target_puzzle_hash,
-            amount=uint64(coin_record.coin.amount),
+            amount=uint64(total_amount),
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),

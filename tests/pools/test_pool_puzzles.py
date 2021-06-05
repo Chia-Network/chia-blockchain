@@ -201,8 +201,10 @@ def test_create_absorb_spend():
     last_parent_info = [launcher_coin.parent_coin_info, launcher_coin.amount]
     last_full_solution: Program = Program.to([last_parent_info, 201, inner_sol])
     last_coin_solution: CoinSolution = CoinSolution(parent_coin, full_puz, last_full_solution)
-    spend_bundle: SpendBundle = create_absorb_spend(last_coin_solution, pool_info, 1000)
-    assert spend_bundle is not None
+    spends: List[CoinSolution] = create_absorb_spend(
+        last_coin_solution, pool_info.current, pool_info.launcher_coin, 1000, GENESIS_CHALLENGE
+    )
+    assert len(spends) > 0
 
 
 '''
