@@ -53,7 +53,7 @@ def tidy_password(password: str) -> str:
 
 def prompt_for_new_password() -> str:
     if MIN_PASSWORD_LEN > 0:
-        print(f"\nPasswords must be {MIN_PASSWORD_LEN} characters or longer")
+        print(f"\nPasswords must be {MIN_PASSWORD_LEN} or more characters in length")
     while True:
         password = tidy_password(getpass("New Password: "))
         confirmation = tidy_password(getpass("Confirm Password: "))
@@ -78,12 +78,17 @@ def initialize_password() -> None:
         print("\nUse 'chia password set' or 'chia password remove' to update or remove your password")
         sys.exit(1)
 
-    # We'll rely on _Keyring initialization to leverage the cached password for
+    # We'll rely on Keyring initialization to leverage the cached password for
     # bootstrapping the keyring encryption process
     print("Setting keyring password")
-    if not Keychain.has_cached_password():
+    password = None
+    if Keychain.has_cached_password():
+        password = Keychain.get_cached_master_password()
+
+    if not password or password == DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD:
         password = prompt_for_new_password()
-        cache_password(password)
+
+    Keychain.set_master_password(current_password=None, new_password=password)
 
 
 def set_or_update_password(password: Optional[str], current_password: Optional[str]) -> None:
