@@ -712,6 +712,8 @@ class PoolWallet:
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
+
+        self.log.warning(f"Unspents: {len(unspent_coin_records)}")
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim")
 
@@ -725,6 +727,7 @@ class PoolWallet:
 
         current_state: PoolWalletInfo = await self.get_current_state()
         last_solution: CoinSolution = history[-1][1]
+        self.log.warning(f"Length of history: {len(history)}")
 
         # TODO: support claiming multiple blocks in one transaction
         coin_record = unspent_coin_records[0]
@@ -736,7 +739,9 @@ class PoolWallet:
         )
         # No signatures are required to absorb
         spend_bundle: SpendBundle = SpendBundle(absorb_spend, G2Element())
-        self.log.warning(f"Farmer coin: {coin_record.coin} {coin_record.coin.name()}")
+        self.log.warning(
+            f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
+        )
         self.log.warning(
             f"Spend bundle removals: {spend_bundle.removals()} {[r.name() for r in spend_bundle.removals()]}"
         )
