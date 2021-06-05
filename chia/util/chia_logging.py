@@ -39,15 +39,15 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
             )
         )
         logger.addHandler(handler)
-    
+
     if logging_config["log_syslog"]:
         log_syslog_host = logging_config.get("log_syslog_host", "localhost")
         log_syslog_port = logging_config.get("log_syslog_port", 514)
-        log_syslog_handler = SysLogHandler(address = (log_syslog_host, log_syslog_port))
+        log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
         log_syslog_handler.setFormatter(
             logging.Formatter(
-                fmt = f"{service_name} %(message)s",
-                datefmt = log_date_format
+                fmt=f"{service_name} %(message)s",
+                datefmt=log_date_format
             )
         )
         logger = logging.getLogger()
