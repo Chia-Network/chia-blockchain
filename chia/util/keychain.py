@@ -1,3 +1,4 @@
+import colorama
 import pkg_resources
 import sys
 import unicodedata
@@ -14,12 +15,13 @@ from time import sleep
 from typing import List, Optional, Tuple
 
 
+DEFAULT_PASSWORD_PROMPT = colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Password: "  # noqa: E501
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
 
 
-def obtain_current_password(prompt: str = "Keyring Password: ", use_password_cache: bool = False) -> str:
+def obtain_current_password(prompt: str = DEFAULT_PASSWORD_PROMPT, use_password_cache: bool = False) -> str:
     """
     Obtains the master password for the keyring, optionally using the cached
     value (if previously set). If the password isn't already cached, the user is
@@ -43,6 +45,8 @@ def obtain_current_password(prompt: str = "Keyring Password: ", use_password_cac
 
     # Prompt interactively with up to MAX_RETRIES attempts
     for i in range(MAX_RETRIES):
+        colorama.init()
+
         password = getpass(prompt)
 
         if KeyringWrapper.get_shared_instance().master_password_is_valid(password):
@@ -415,6 +419,14 @@ class Keychain:
         Returns whether the master password has been cached (it may need to be validated)
         """
         return KeyringWrapper.get_shared_instance().has_cached_master_password()
+
+    @staticmethod
+    def get_cached_master_password() -> str:
+        """
+        Returns the cached master password
+        """
+        password, _ = KeyringWrapper.get_shared_instance().get_cached_master_password()
+        return password
 
     @staticmethod
     def set_cached_master_password(password: Optional[str]) -> None:
