@@ -691,7 +691,7 @@ class Blockchain(BlockchainInterface):
         """
         records: List[BlockRecord] = []
         hashes = []
-
+        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
         for height in heights:
             hashes.append(self.height_to_hash(height))
             if len(hashes) > batch_size:
