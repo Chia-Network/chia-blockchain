@@ -144,9 +144,13 @@ def create_travel_spend(
 
 
 def create_absorb_spend(
-    last_coin_solution: CoinSolution, pool_info: PoolWalletInfo, height: uint32, genesis_challenge: bytes32
+    last_coin_solution: CoinSolution,
+    current_state: PoolState,
+    launcher_coin: Coin,
+    height: uint32,
+    genesis_challenge: bytes32,
 ) -> List[CoinSolution]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(pool_info.current, pool_info.launcher_id, genesis_challenge)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(current_state, launcher_coin.name(), genesis_challenge)
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
@@ -158,8 +162,8 @@ def create_absorb_spend(
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
     coin: Coin = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
-    if coin.parent_coin_info == pool_info.launcher_coin.name():
-        parent_info = Program.to([pool_info.launcher_coin.parent_coin_info, pool_info.launcher_coin.amount])
+    if coin.parent_coin_info == launcher_coin.name():
+        parent_info = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         parent_info: Program = Program.to(
@@ -173,15 +177,14 @@ def create_absorb_spend(
         Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
     )
     full_puzzle: SerializedProgram = SerializedProgram.from_program(
-        create_full_puzzle(inner_puzzle, pool_info.launcher_coin.name())
+        create_full_puzzle(inner_puzzle, launcher_coin.name())
     )
 
     reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
     p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(
-        create_p2_singleton_puzzle(SINGLETON_MOD_HASH, pool_info.launcher_coin.name())
+        create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_coin.name())
     )
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
-    log.warning(f"Reward coin name: {reward_coin.name()}")
     p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(
         Program.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
     )
@@ -194,7 +197,6 @@ def create_absorb_spend(
         CoinSolution(coin, full_puzzle, full_solution),
         CoinSolution(reward_coin, p2_singleton_puzzle, p2_singleton_solution),
     ]
-    log.warning(f"Coin solution 1: {coin_solutions}")
     return coin_solutions
 
 
@@ -263,8 +265,8 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     if r is None:
         return None
     inner_f, args = r
-    # breakpoint()
-    log.warning(f"Inner F: {inner_f}")
+
+    # TODO(adam): fix
     # if not is_pool_singleton_inner_puzzle(inner_f):
     #     return None
     mod_hash, launcher_id, launcher_puzzle_hash, inner_puzzle = list(args.as_iter())

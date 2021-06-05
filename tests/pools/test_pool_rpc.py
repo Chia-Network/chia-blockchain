@@ -316,7 +316,7 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 2 * 1750000000000
 
-        # Claim 1.75
+        # Claim 2 * 1.75, and farm a new 1.75
         absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
         await time_out_assert(
             5,
@@ -330,7 +330,7 @@ class TestPoolWalletRpc:
         assert status.current == new_status.current
         assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
         bal = await client.get_wallet_balance(2)
-        assert bal["confirmed_wallet_balance"] == 2 * 1750000000000
+        assert bal["confirmed_wallet_balance"] == 1 * 1750000000000
         self.delete_plot(plot_id)
 
         # Claim another 1.75
@@ -346,7 +346,7 @@ class TestPoolWalletRpc:
         await self.farm_blocks(full_node_api, our_ph, 2)
         await asyncio.sleep(2)
         bal = await client.get_wallet_balance(2)
-        assert bal["confirmed_wallet_balance"] == 1 * 1750000000000
+        assert bal["confirmed_wallet_balance"] == 0
 
     @pytest.mark.asyncio
     async def xtest_self_pooling_to_pooling(self, two_wallet_nodes):
