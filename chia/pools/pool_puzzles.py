@@ -128,7 +128,7 @@ def create_travel_spend(
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         parent_info: Program = Program.to(
             [
-                last_coin_solution.coin.name(),
+                last_coin_solution.coin.parent_coin_info,
                 get_inner_puzzle_from_puzzle(p).get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
@@ -164,7 +164,7 @@ def create_absorb_spend(
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         parent_info: Program = Program.to(
             [
-                last_coin_solution.coin.name(),
+                last_coin_solution.coin.parent_coin_info,
                 get_inner_puzzle_from_puzzle(p).get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
@@ -187,6 +187,8 @@ def create_absorb_spend(
     )
     assert p2_singleton_puzzle.get_tree_hash() == reward_coin.puzzle_hash
     assert full_puzzle.get_tree_hash() == coin.puzzle_hash
+    if get_inner_puzzle_from_puzzle(Program.from_bytes(bytes(full_puzzle))) is None:
+        assert get_inner_puzzle_from_puzzle(Program.from_bytes(bytes(full_puzzle))) is not None
 
     coin_solutions = [
         CoinSolution(coin, full_puzzle, full_solution),
@@ -258,14 +260,14 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program):  # -> Optional
 def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     p = Program.from_bytes(bytes(full_puzzle))
     r = p.uncurry()
-    print(f"get_inner_puzzle_from_puzzle {full_puzzle}|{p}|{r}")
     if r is None:
         return None
     inner_f, args = r
     # breakpoint()
-    if not is_pool_singleton_inner_puzzle(inner_f):
-        return None
-    mod_hash, genesis_id, inner_puzzle = list(args.as_iter())
+    log.warning(f"Inner F: {inner_f}")
+    # if not is_pool_singleton_inner_puzzle(inner_f):
+    #     return None
+    mod_hash, launcher_id, launcher_puzzle_hash, inner_puzzle = list(args.as_iter())
     return inner_puzzle
 
 
