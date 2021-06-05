@@ -685,7 +685,7 @@ class Blockchain(BlockchainInterface):
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size=900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
@@ -694,7 +694,7 @@ class Blockchain(BlockchainInterface):
 
         for height in heights:
             hashes.append(self.height_to_hash(height))
-            if len(hashes) > 900:
+            if len(hashes) > batch_size:
                 res = await self.block_store.get_block_records_by_hash(hashes)
                 records.extend(res)
                 hashes = []
