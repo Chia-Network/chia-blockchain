@@ -193,6 +193,8 @@ OG plots made before this release can continue to be farmed side by side with th
 
 ### 1.1.7 Chia Blockchain 2021-06-05
 
+## 1.1.6 Chia Blockchain 2021-06-05
+
 ### Fixed
 
 Batch process weight proof epochs in groups of 900 to fit below May 2020 sqlite limit (999 for Python 3.7 on Windows). Fixes sqlite3.OperationalError: too many SQL variables error and resulting issues with syncing wallets on Windows.
