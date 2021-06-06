@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Dict, List, Optional, Set
 
@@ -25,10 +26,14 @@ def mempool_assert_announcement(condition: ConditionWithArgs, announcements: Set
     Check if an announcement is included in the list of announcements
     """
     announcement_hash = bytes32(condition.vars[0])
+
     if announcement_hash not in announcements:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     return None
+
+
+log = logging.getLogger(__name__)
 
 
 def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
@@ -36,6 +41,7 @@ def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord)
     Checks if CoinID matches the id from the condition
     """
     if unspent.coin.name() != condition.vars[0]:
+        log.warning(f"My name: {unspent.coin.name()} got: {condition.vars[0].hex()}")
         return Err.ASSERT_MY_COIN_ID_FAILED
     return None
 

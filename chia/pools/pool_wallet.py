@@ -182,7 +182,8 @@ class PoolWallet:
         assert len(all_spends) >= 1
 
         launcher_coin: Coin = all_spends[0].coin
-        tip_singleton_coin_id: bytes32 = get_most_recent_singleton_coin_from_coin_solution(all_spends[-1]).name()
+        tip_singleton_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(all_spends[-1])
+        assert tip_singleton_coin is not None
 
         curr_spend_i = len(all_spends) - 1
         extra_data: Optional[PoolState] = None
@@ -204,7 +205,7 @@ class PoolWallet:
             launcher_id,
             p2_singleton_puzzle_hash,
             current_inner,
-            tip_singleton_coin_id,
+            tip_singleton_coin.name(),
         )
 
     async def get_tip(self) -> Tuple[uint32, CoinSolution]:
@@ -237,7 +238,7 @@ class PoolWallet:
             pool_payout_instructions = existing_config.pool_payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
-            current_state.current.pool_url,
+            current_state.current.pool_url if current_state.current.pool_url else "",
             pool_payout_instructions,
             current_state.current.target_puzzle_hash,
             current_state.launcher_id,
@@ -273,7 +274,9 @@ class PoolWallet:
         assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
         while True:
-            spent_coin_name: bytes32 = get_most_recent_singleton_coin_from_coin_solution(tip_spend).name()
+            tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(tip_spend)
+            assert tip_coin is not None
+            spent_coin_name: bytes32 = tip_coin.name()
             if spent_coin_name not in coin_name_to_spend:
                 break
             spend: CoinSolution = coin_name_to_spend[spent_coin_name]
@@ -290,9 +293,9 @@ class PoolWallet:
         or to our pool, both of which we should track.
         """
         coin = coin_solution.coin
-        sol = coin_solution.solution
-        puz = coin_solution.puzzle_reveal
-        amount = uint64(1)
+        # sol = coin_solution.solution
+        # puz = coin_solution.puzzle_reveal
+        # amount = uint64(1)
         if self.target_state is None:
             self.log.info(f"PoolWallet state updated by external event: {coin}")
             pass
@@ -356,8 +359,6 @@ class PoolWallet:
         """
         self = PoolWallet()
         self.wallet_state_manager = wallet_state_manager
-        log = logging.getLogger(__name__)
-        log.error(f"        PoolWallet.create(genesis_challenge={self.wallet_state_manager.constants.GENESIS_CHALLENGE.hex()})")
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "Pool wallet", WalletType.POOLING_WALLET.value, "", in_transaction=in_transaction
@@ -471,22 +472,26 @@ class PoolWallet:
         assert owner_sk is not None
         return owner_sk
 
-    async def sign_travel_spend_waitingroom_state(self, target_puzzle_hash, owner_pubkey, coin_solution, target):
-        private = await self.get_pool_wallet_sk()
-        message = Program.to([target_puzzle_hash, coin_solution.coin.amount, bytes(target)]).get_tree_hash()
-        sigs = [AugSchemeMPL.sign(private, message)]
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
-        signed_sb = SpendBundle([coin_solution], aggsig)
+    async def sign_travel_spend_waiting_room_state(
+        self, target_puzzle_hash: bytes32, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
+    ) -> SpendBundle:
+        private: PrivateKey = await self.get_pool_wallet_sk()
+        message: bytes32 = Program.to([target_puzzle_hash, coin_solution.coin.amount, bytes(target)]).get_tree_hash()
+        signatures: List[G2Element] = [AugSchemeMPL.sign(private, message)]
+        aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
+        assert AugSchemeMPL.verify(owner_pubkey, message, aggregate_signature)
+        signed_sb: SpendBundle = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
-    async def sign_travel_spend_in_member_state(self, owner_pubkey, coin_solution, target):
-        private = await self.get_pool_wallet_sk()
-        message = Program.to(bytes(target)).get_tree_hash()
-        sigs = [AugSchemeMPL.sign(private, message)]
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
-        signed_sb = SpendBundle([coin_solution], aggsig)
+    async def sign_travel_spend_in_member_state(
+        self, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
+    ) -> SpendBundle:
+        private: PrivateKey = await self.get_pool_wallet_sk()
+        message: bytes32 = Program.to(bytes(target)).get_tree_hash()
+        signatures: List[G2Element] = [AugSchemeMPL.sign(private, message)]
+        aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
+        assert AugSchemeMPL.verify(owner_pubkey, message, aggregate_signature)
+        signed_sb = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
@@ -494,7 +499,15 @@ class PoolWallet:
         pool_wallet_state: PoolWalletInfo = await self.get_current_state()
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
-        outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(self.wallet_state_manager.constants.GENESIS_CHALLENGE, last_coin_solution, pool_wallet_state.launcher_coin, pool_wallet_state.current, pool_wallet_state.target)
+
+        assert pool_wallet_state.target is not None
+        outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(
+            last_coin_solution,
+            pool_wallet_state.launcher_coin,
+            pool_wallet_state.current,
+            pool_wallet_state.target,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+        )
         puzzle_hash = full_puzzle.get_tree_hash()
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
@@ -669,8 +682,8 @@ class PoolWallet:
         # TODO: Do not set target state until all checks are done
         self.target_state = target_state
 
-        all_sks = [self.wallet_state_manager.private_key]
-        owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+        # all_sks = [self.wallet_state_manager.private_key]
+        # owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
 
         # Check if we can join a pool (timelock)
         # Create the first blockchain transaction
@@ -697,9 +710,9 @@ class PoolWallet:
         if self.target_state is not None:
             raise ValueError(f"Cannot self pool when already having target state: {self.target_state}")
         self.target_state = target_state
-        current_state = await self.get_current_state()
-        all_sks = [self.wallet_state_manager.private_key]
-        owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+        # current_state = await self.get_current_state()
+        # all_sks = [self.wallet_state_manager.private_key]
+        # owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
         # Check if we can self pool (timelock)
         # Create the first blockchain transaction
         # Whenever we detect a new peak, potentially initiate the second blockchain transaction
@@ -718,10 +731,13 @@ class PoolWallet:
             raise ValueError("Nothing to claim")
 
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
-        coin_to_height_farmed: Dict[Coin, uint32] = {
-            tx_record.additions[0]: tx_record.height_farmed(self.wallet_state_manager.constants.GENESIS_CHALLENGE)
-            for tx_record in farming_rewards
-        }
+        coin_to_height_farmed: Dict[Coin, uint32] = {}
+        for tx_record in farming_rewards:
+            height_farmed: Optional[uint32] = tx_record.height_farmed(
+                self.wallet_state_manager.constants.GENESIS_CHALLENGE
+            )
+            assert height_farmed is not None
+            coin_to_height_farmed[tx_record.additions[0]] = height_farmed
         history: List[Tuple[uint32, CoinSolution]] = await self.get_spend_history()
         assert len(history) > 0
 

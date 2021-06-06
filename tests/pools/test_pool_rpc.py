@@ -348,6 +348,27 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
 
+    async def test_creation_of_singleton_failure(self, two_wallet_nodes):
+        pass
+
+    async def test_sync_from_blockchain_pooling(self, two_wallet_nodes):
+        pass
+
+    async def test_sync_from_blockchain_self_pooling(self, two_wallet_nodes):
+        pass
+
+    async def test_leave_pool(self, two_wallet_nodes):
+        pass
+
+    async def test_enter_pool_with_unclaimed_rewards(self, two_wallet_nodes):
+        pass
+
+    async def test_farm_self_pool(self, two_wallet_nodes):
+        pass
+
+    async def test_farm_to_pool(self, two_wallet_nodes):
+        pass
+
     @pytest.mark.asyncio
     async def xtest_self_pooling_to_pooling(self, two_wallet_nodes):
         num_blocks = 4  # Num blocks to farm at a time

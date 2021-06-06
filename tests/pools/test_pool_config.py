@@ -1,3 +1,4 @@
+# flake8: noqa: E501
 from pathlib import Path
 
 from blspy import AugSchemeMPL, PrivateKey

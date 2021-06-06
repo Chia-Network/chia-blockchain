@@ -688,5 +688,5 @@ class RLWallet:
         await self.main_wallet.push_transaction(spend_bundle)
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
-        """ Use this API to send transactions. """
+        """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)

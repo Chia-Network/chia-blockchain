@@ -77,8 +77,9 @@ class FullNodeDiscovery:
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
         try:
-            self.resolver = dns.asyncresolver.Resolver()
+            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
         except Exception as e:
+            self.log.error(e)
             self.resolver = None
         self.pending_outbound_connections: Set = set()
 

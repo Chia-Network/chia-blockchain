@@ -24,6 +24,7 @@ def print_conditions(spend_bundle: SpendBundle):
         )
         error, result_human = parse_sexp_to_conditions(result)
         assert error is None
+        assert result_human is not None
         for cvp in result_human:
             print(f"{ConditionOpcode(cvp.opcode).name}: {[var.hex() for var in cvp.vars]}")
     print("")
@@ -72,6 +73,7 @@ async def main() -> None:
         print("\n\n\n")
         print("Farmer to spend")
         print(sb_pool)
+        print(sb_farmer)
         print("\n\n\n")
         # res = await client.push_tx(sb_farmer)
         # res = await client.push_tx(sb_pool)

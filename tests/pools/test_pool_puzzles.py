@@ -1,7 +1,8 @@
+# flake8: noqa: E501
 from secrets import token_bytes
 from typing import List
 
-from blspy import AugSchemeMPL, G1Element  # , PrivateKey
+from blspy import AugSchemeMPL, G1Element
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, PoolWalletInfo

@@ -25,6 +25,7 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.block_tools import BlockTools, test_constants
 from chia.util.errors import Err
+from chia.util.ints import uint32
 
 from .ram_db import create_ram_blockchain
 
@@ -80,8 +81,8 @@ async def check_spend_bundle_validity(
         received_block_result, err, fork_height = await blockchain.receive_block(newest_block)
 
         if fork_height:
-            coins_added = await blockchain.coin_store.get_coins_added_at_height(fork_height + 1)
-            coins_removed = await blockchain.coin_store.get_coins_removed_at_height(fork_height + 1)
+            coins_added = await blockchain.coin_store.get_coins_added_at_height(uint32(fork_height + 1))
+            coins_removed = await blockchain.coin_store.get_coins_removed_at_height(uint32(fork_height + 1))
         else:
             coins_added = []
             coins_removed = []

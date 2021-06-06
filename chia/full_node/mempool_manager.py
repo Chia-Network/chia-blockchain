@@ -298,7 +298,10 @@ class MempoolManager:
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
-                log.error(f"MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT:\nCOIN: {name}\nNPC RESULT: {npc_result}\nSPEND: {new_spend}")
+                log.error(
+                    f"MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT:\n"
+                    f"COIN: {name}\nNPC RESULT: {npc_result}\nSPEND: {new_spend}"
+                )
                 debug_spend_bundle(new_spend)
                 return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:

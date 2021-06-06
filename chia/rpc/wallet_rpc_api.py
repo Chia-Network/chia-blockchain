@@ -463,16 +463,21 @@ class WalletRpcApi:
                 from chia.pools.pool_wallet_info import pool_state_from_dict
 
                 async with self.service.wallet_state_manager.lock:
-                    last_wallet: WalletInfo = await self.service.wallet_state_manager.user_store.get_last_wallet()
+                    last_wallet: Optional[
+                        WalletInfo
+                    ] = await self.service.wallet_state_manager.user_store.get_last_wallet()
+                    assert last_wallet is not None
+
                     next_id = last_wallet.id + 1
                     owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.private_key, next_id
+                        self.service.wallet_state_manager.private_key, uint32(next_id)
                     )
                     owner_pk: G1Element = owner_sk.get_g1()
 
                     err, initial_target_state = pool_state_from_dict(
                         request["initial_target_state"], owner_pk, owner_puzzle_hash
                     )
+                    assert initial_target_state is not None
                     if err is not None:
                         raise ValueError(str(err))
                     try:
