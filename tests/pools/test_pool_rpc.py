@@ -331,7 +331,6 @@ class TestPoolWalletRpc:
         assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 1 * 1750000000000
-        self.delete_plot(plot_id)
 
         # Claim another 1.75
         absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
@@ -347,27 +346,28 @@ class TestPoolWalletRpc:
         await asyncio.sleep(2)
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
+        self.delete_plot(plot_id)
 
-    async def test_creation_of_singleton_failure(self, two_wallet_nodes):
-        pass
-
-    async def test_sync_from_blockchain_pooling(self, two_wallet_nodes):
-        pass
-
-    async def test_sync_from_blockchain_self_pooling(self, two_wallet_nodes):
-        pass
-
-    async def test_leave_pool(self, two_wallet_nodes):
-        pass
-
-    async def test_enter_pool_with_unclaimed_rewards(self, two_wallet_nodes):
-        pass
-
-    async def test_farm_self_pool(self, two_wallet_nodes):
-        pass
-
-    async def test_farm_to_pool(self, two_wallet_nodes):
-        pass
+    # async def test_creation_of_singleton_failure(self, two_wallet_nodes):
+    #     pass
+    #
+    # async def test_sync_from_blockchain_pooling(self, two_wallet_nodes):
+    #     pass
+    #
+    # async def test_sync_from_blockchain_self_pooling(self, two_wallet_nodes):
+    #     pass
+    #
+    # async def test_leave_pool(self, two_wallet_nodes):
+    #     pass
+    #
+    # async def test_enter_pool_with_unclaimed_rewards(self, two_wallet_nodes):
+    #     pass
+    #
+    # async def test_farm_self_pool(self, two_wallet_nodes):
+    #     pass
+    #
+    # async def test_farm_to_pool(self, two_wallet_nodes):
+    #     pass
 
     @pytest.mark.asyncio
     async def xtest_self_pooling_to_pooling(self, two_wallet_nodes):

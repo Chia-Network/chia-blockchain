@@ -258,7 +258,7 @@ class WalletBlockchain(BlockchainInterface):
         block_record: BlockRecord,
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
-        additional_coin_spends: List[CoinSolution],
+        additional_coin_spends: Optional[List[CoinSolution]],
     ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -309,11 +309,7 @@ class WalletBlockchain(BlockchainInterface):
                 fetched_header_block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(curr)
                 fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
                 if curr != block_record.header_hash:
-                    additional_coin_spends_op: Optional[
-                        List[CoinSolution]
-                    ] = await self.block_store.get_additional_coin_spends(curr)
-                    assert additional_coin_spends_op is not None
-                    additional_coin_spends = additional_coin_spends_op
+                    additional_coin_spends = await self.block_store.get_additional_coin_spends(curr)
                 if additional_coin_spends is None:
                     additional_coin_spends = []
                 assert fetched_header_block is not None
