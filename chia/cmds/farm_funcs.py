@@ -144,6 +144,26 @@ async def is_farmer_running(farmer_rpc_port: int) -> bool:
     return is_running
 
 
+async def get_harvester_info(farmer_rpc_port: int) -> Optional[Dict[str, Any]]:
+    harvester_info = None
+    try:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        self_hostname = config["self_hostname"]
+        if farmer_rpc_port is None:
+            farmer_rpc_port = config["farmer"]["rpc_port"]
+        farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
+        harvester_info = await farmer_client.get_harvester_info()
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            print(f"Connection error. Check if farmer is running at {farmer_rpc_port}")
+        else:
+            print(f"Exception from 'farmer' {e}")
+
+    farmer_client.close()
+    await farmer_client.await_closed()
+    return harvester_info
+
+
 async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]:
     signage_points = None
     try:
@@ -187,6 +207,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
+    harvester_info = await get_harvester_info(farmer_rpc_port)
 
     print("Farming status: ", end="")
     if blockchain_state is None:
@@ -205,32 +226,33 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
+        print(f"Connected harvesters: {harvester_info['connected_harvesters']}")
+        print(f"Total harvesting plots: {harvester_info['total_plots']} ", end="")
+        print(f"({format_bytes(harvester_info['total_plot_space'])})")
     else:
         print("Total chia farmed: Unknown")
         print("User transaction fees: Unknown")
         print("Block rewards: Unknown")
         print("Last height farmed: Unknown")
+        print("Total connected harvesters: Unknown")
+        print("Total harvesting plots: Unknown")
 
-    total_plot_size = 0
+    total_plot_size = None
     if plots is not None:
         total_plot_size = sum(map(lambda x: x["file_size"], plots["plots"]))
 
-        print(f"Plot count: {len(plots['plots'])}")
+        print(f"Local plot count: {len(plots['plots'])} ({format_bytes(total_plot_size)})")
 
-        print("Total size of plots: ", end="")
-        print(format_bytes(total_plot_size))
-    else:
-        print("Plot count: Unknown")
-        print("Total size of plots: Unknown")
+    if amounts is not None:
+        total_plot_size = harvester_info["total_plot_space"]
 
     if blockchain_state is not None:
-        print("Estimated network space: ", end="")
-        print(format_bytes(blockchain_state["space"]))
+        print(f"Estimated network space: {format_bytes(blockchain_state['space'])}")
     else:
         print("Estimated network space: Unknown")
 
     minutes = -1
-    if blockchain_state is not None and plots is not None:
+    if blockchain_state is not None and total_plot_size is not None:
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
     print("Expected time to win: " + format_minutes(minutes))

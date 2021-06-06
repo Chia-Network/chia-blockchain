@@ -16,7 +16,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request, peer_required
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
@@ -175,13 +175,15 @@ class HarvesterAPI:
 
         awaitables = []
         passed = 0
-        total = 0
+        total_plots = 0
+        total_space = 0
         for try_plot_filename, try_plot_info in self.harvester.provers.items():
             try:
                 if try_plot_filename.exists():
                     # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                     # This is being executed at the beginning of the slot
-                    total += 1
+                    total_plots += 1
+                    total_space += try_plot_info.file_size
                     if ProofOfSpace.passes_plot_filter(
                         self.harvester.constants,
                         try_plot_info.prover.get_id(),
@@ -219,7 +221,8 @@ class HarvesterAPI:
             now,
             uint32(passed),
             uint32(total_proofs_found),
-            uint32(total),
+            uint32(total_plots),
+            uint128(total_space),
         )
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)

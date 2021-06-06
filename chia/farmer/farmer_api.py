@@ -237,6 +237,8 @@ class FarmerAPI:
 
     @api_request
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
+        self.farmer.harvester_monitor.new_signage_point(new_signage_point.challenge_chain_sp)
+
         message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,
@@ -287,6 +289,7 @@ class FarmerAPI:
                     "passed_filter": request.passed,
                     "proofs": request.proofs,
                     "total_plots": request.total_plots,
+                    "total_plot_space": request.total_plot_space,
                     "timestamp": request.timestamp,
                 }
             },

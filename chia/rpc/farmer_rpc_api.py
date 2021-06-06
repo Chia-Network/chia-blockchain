@@ -16,6 +16,7 @@ class FarmerRpcApi:
             "/get_signage_points": self.get_signage_points,
             "/get_reward_targets": self.get_reward_targets,
             "/set_reward_targets": self.set_reward_targets,
+            "/get_harvester_info": self.get_harvester_info,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -31,6 +32,7 @@ class FarmerRpcApi:
                 )
             ]
         elif change == "new_farming_info":
+
             return [
                 create_payload_dict(
                     "new_farming_info",
@@ -93,3 +95,14 @@ class FarmerRpcApi:
 
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
+
+    async def get_harvester_info(self, request: Dict) -> Dict:
+        connected_harvesters, total_plots, total_plot_space = self.service.harvester_monitor.get_harvester_info()
+
+        return {
+            "harvester_info": {
+                "total_plots": total_plots,
+                "total_plot_space": total_plot_space,
+                "connected_harvesters": connected_harvesters,
+            }
+        }

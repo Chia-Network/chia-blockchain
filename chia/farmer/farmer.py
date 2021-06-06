@@ -24,6 +24,44 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 log = logging.getLogger(__name__)
 
 
+class HarvesterMonitor:
+    def __init__(self):
+        self.cur_signage_point = None
+        self.cur_sp_harvesters = []
+        self.prev_signage_point = None
+        self.prev_sp_harvesters = []
+
+    def new_signage_point(self, signage_point_hash: bytes32):
+        self.prev_signage_point = self.cur_signage_point
+        self.prev_sp_harvesters = self.cur_sp_harvesters
+        self.cur_signage_point = signage_point_hash
+        self.cur_sp_harvesters = []
+
+    def new_farming_info(self, farming_info: Dict[str, Any]):
+        if farming_info["farming_info"]["signage_point"] != self.cur_signage_point:
+            self.log.debug(
+                "{Received farming_info with old signage point {farming_info['farming_info']['signage_point']}"
+            )
+            return
+        self.cur_sp_harvesters.append(
+            {
+                "total_plots" : farming_info["farming_info"]["total_plots"],
+                "total_plot_space" : farming_info["farming_info"]["total_plot_space"],
+            }
+        )
+
+    def get_harvester_info(self) -> Tuple[int, int, int]:
+        total_plots = 0
+        total_plot_space = 0
+        connected_harvesters = 0
+        for info in self.prev_sp_harvesters:
+            connected_harvesters += 1
+            total_plots += info["total_plots"]
+            total_plot_space += info["total_plot_space"]
+
+        return connected_harvesters, total_plots, total_plot_space
+
+
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
@@ -91,6 +129,8 @@ class Farmer:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
+        self.harvester_monitor = HarvesterMonitor()
+
     async def _start(self):
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
 
@@ -117,6 +157,9 @@ class Farmer:
         self.server = server
 
     def state_changed(self, change: str, data: Dict[str, Any]):
+        if change == "new_farming_info":
+            self.harvester_monitor.new_farming_info(data)
+
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, data)
 

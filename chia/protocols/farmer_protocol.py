@@ -6,7 +6,7 @@ from blspy import G2Element
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -58,6 +58,7 @@ class FarmingInfo(Streamable):
     passed: uint32
     proofs: uint32
     total_plots: uint32
+    total_plot_space: uint128
 
 
 @dataclass(frozen=True)
