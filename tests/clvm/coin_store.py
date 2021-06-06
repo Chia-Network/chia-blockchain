@@ -31,7 +31,7 @@ class CoinTimestamp:
 class CoinStore:
     def __init__(self, reward_mask: int = 0):
         self._db: Dict[bytes32, CoinRecord] = dict()
-        self._ph_index = defaultdict(list)
+        self._ph_index: Dict = defaultdict(list)
         self._reward_mask = reward_mask
 
     def farm_coin(
@@ -81,14 +81,7 @@ class CoinStore:
         ephemeral_db = dict(self._db)
         for coin in spend_bundle.additions():
             name = coin.name()
-            ephemeral_db[name] = CoinRecord(
-                coin,
-                uint32(now.height),
-                uint32(0),
-                False,
-                False,
-                uint64(now.seconds)
-            )
+            ephemeral_db[name] = CoinRecord(coin, uint32(now.height), uint32(0), False, False, uint64(now.seconds))
 
         for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):  # noqa
             prev_transaction_block_height = now.height

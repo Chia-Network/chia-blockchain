@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import json
 import logging
 import time
@@ -7,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
-from blspy import G1Element, G2Element, PrivateKey
+from blspy import G1Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -21,7 +20,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
@@ -31,11 +29,8 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
     find_authentication_sk,
 )
-from chia.wallet.puzzles.load_clvm import load_clvm
-from tests.wallet.test_singleton import P2_SINGLETON_MOD
+from tests.wallet.test_singleton import P2_SINGLETON_MOD, SINGLETON_MOD
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
 log = logging.getLogger(__name__)

@@ -3,13 +3,14 @@ from typing import List, Tuple
 from blspy import G2Element
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import Program, INFINITE_COST, SerializedProgram
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
+from chia.util.ints import uint64
 from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.puzzles.load_clvm import load_clvm
 
@@ -45,11 +46,11 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
 
 def launcher_conditions_and_spend_bundle(
     parent_coin_id: bytes32,
-    launcher_amount: int,
+    launcher_amount: uint64,
     initial_singleton_inner_puzzle: Program,
     metadata: List[Tuple[str, str]],
     launcher_puzzle: Program = LAUNCHER_PUZZLE,
-) -> Tuple[bytes32, List[Program], SpendBundle]:
+) -> Tuple[Program, bytes32, List[Program], SpendBundle]:
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
     singleton_full_puzzle = SINGLETON_MOD.curry(
@@ -70,7 +71,7 @@ def launcher_conditions_and_spend_bundle(
         )
     )
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    coin_solution = CoinSolution(launcher_coin, launcher_puzzle, launcher_solution)
+    coin_solution = CoinSolution(launcher_coin, SerializedProgram.from_program(launcher_puzzle), launcher_solution)
     spend_bundle = SpendBundle([coin_solution], G2Element())
     lineage_proof = Program.to([parent_coin_id, launcher_amount])
     return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle
@@ -107,7 +108,7 @@ def test_lifecycle_with_coinstore():
     now.seconds += 500
     now.height += 1
 
-    launcher_amount = 1
+    launcher_amount: uint64 = uint64(1)
     launcher_puzzle = LAUNCHER_PUZZLE
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     initial_singleton_puzzle = adaptor_for_singleton_inner_puzzle(ANYONE_CAN_SPEND_PUZZLE)

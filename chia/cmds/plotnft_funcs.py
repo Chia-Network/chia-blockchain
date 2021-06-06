@@ -51,7 +51,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(1, tx_record.name)
+                tx = await wallet_client.get_transaction(str(1), tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(f"Transaction submitted to nodes: {tx.sent_to}")
                     print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
@@ -94,8 +94,10 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         pool_state_list: List = (await farmer_client.get_pool_state())["pool_state"]
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if farmer is running at {farmer_rpc_port}."
-                  f" You can run the farmer by:\n    chia start farmer-only")
+            print(
+                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
+                f" You can run the farmer by:\n    chia start farmer-only"
+            )
         else:
             print(f"Exception from 'wallet' {e}")
         farmer_client.close()
@@ -122,7 +124,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             typ = WalletType(int(summary["type"]))
             if typ == WalletType.POOLING_WALLET:
                 print(f"Wallet id {wallet_id}: ")
-                response: PoolWalletInfo = await wallet_client.pw_status(wallet_id)
+                response = await wallet_client.pw_status(wallet_id)
                 pprint_pool_wallet_state(response, address_prefix, pool_state_dict)
                 print("")
     farmer_client.close()

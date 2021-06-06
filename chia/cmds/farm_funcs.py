@@ -6,7 +6,6 @@ from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -111,7 +110,10 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
         amounts = await wallet_client.get_farmed_amount()
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}. You can run the wallet by:\n    chia start wallet")
+            print(
+                f"Connection error. Check if wallet is running at {wallet_rpc_port}. "
+                f"You can run the wallet by:\n    chia start wallet"
+            )
         else:
             print(f"Exception from 'wallet' {e}")
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Optional, Tuple, Dict, Union
+from typing import Optional, Tuple, Dict, Union
 
 from blspy import G1Element
 

@@ -74,7 +74,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                 pks.append(pk)
                 msgs.append(m)
             print()
-            cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+            cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
             print(disassemble(r))
             print()
             if conditions and len(conditions) > 0:
