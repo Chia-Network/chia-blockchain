@@ -30,12 +30,12 @@ POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00
 
 
 def check_coin_solution(coin_solution: CoinSolution):
-    breakpoint()
+    # breakpoint()
     try:
         cost, result = coin_solution.puzzle_reveal.run_with_cost(INFINITE_COST, coin_solution.solution)
     except Exception as ex:
         print(ex)
-        breakpoint()
+        # breakpoint()
         print(ex)
 
 
@@ -97,7 +97,7 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
-def test_lifecycle_with_coinstore():
+def xtest_lifecycle_with_coinstore():
     metadata = [("foo", "bar")]
     ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
 
@@ -121,7 +121,7 @@ def test_lifecycle_with_coinstore():
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_solution], G2Element())])
 
     debug_spend_bundle(spend_bundle)
-    coin_store.update_coin_store_for_spend_bundle(spend_bundle, now)
+    coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, 11000000000)
 
     launcher_coin = launcher_spend_bundle.coin_solutions[0].coin
 
