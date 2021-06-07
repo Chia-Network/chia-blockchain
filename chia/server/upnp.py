@@ -1,6 +1,7 @@
 import logging
 import threading
 from queue import Queue
+from typing import Optional
 
 try:
     import miniupnpc
@@ -12,9 +13,10 @@ log = logging.getLogger(__name__)
 
 
 class UPnP:
-    def __init__(self):
-        self.queue = Queue()
+    thread: Optional[threading.Thread] = None
+    queue: Queue = Queue()
 
+    def __init__(self):
         def run():
             try:
                 self.upnp = miniupnpc.UPnP()
@@ -35,8 +37,9 @@ class UPnP:
                         )
                     elif msg[0] == "release":
                         port = msg[1]
+                        log.info(f"UPnP, releasing port {port}")
                         self.upnp.deleteportmapping(port, "TCP")
-                        log.info(f"Port {port} closed with UPnP")
+                        log.info(f"UPnP, Port {port} closed")
                     elif msg[0] == "shutdown":
                         keep_going = False
             except Exception as e:
@@ -55,8 +58,14 @@ class UPnP:
         self.queue.put(("release", port))
 
     def shutdown(self):
+        if not self.thread:
+            return
         self.queue.put(("shutdown",))
+        log.info("UPnP, shutting down thread")
         self.thread.join()
+        self.thread = None
 
+    # this is here just in case the UPnP object is destroyed non-gracefully,
+    # e.g. via an exception before the main thread can call shutdown()
     def __del__(self):
         self.shutdown()

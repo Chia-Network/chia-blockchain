@@ -360,6 +360,8 @@ wallet:
   port: 8449
   rpc_port: 9256
 
+  enable_profiler: False
+
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0
