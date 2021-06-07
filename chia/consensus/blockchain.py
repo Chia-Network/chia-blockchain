@@ -685,14 +685,24 @@ class Blockchain(BlockchainInterface):
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size=900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
+        records: List[BlockRecord] = []
         hashes = []
+        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
         for height in heights:
             hashes.append(self.height_to_hash(height))
-        return await self.block_store.get_block_records_by_hash(hashes)
+            if len(hashes) > batch_size:
+                res = await self.block_store.get_block_records_by_hash(hashes)
+                records.extend(res)
+                hashes = []
+
+        if len(hashes) > 0:
+            res = await self.block_store.get_block_records_by_hash(hashes)
+            records.extend(res)
+        return records
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:
