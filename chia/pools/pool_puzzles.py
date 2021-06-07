@@ -34,12 +34,13 @@ SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
 SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 
-def create_escaping_inner_puzzle(
-    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element, launcher_id: bytes32
+def create_waiting_room_inner_puzzle(
+    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element, launcher_id: bytes32, genesis_challenge: bytes32,
 ) -> Program:
+    pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
     p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
     return POOL_WAITING_ROOM_MOD.curry(
-        target_puzzle_hash, relative_lock_height, bytes(owner_pubkey), p2_singleton_puzzle_hash
+        target_puzzle_hash, p2_singleton_puzzle_hash, bytes(owner_pubkey), pool_reward_prefix, relative_lock_height
     )
 
 
@@ -101,9 +102,9 @@ def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
     return inner_f in [POOL_MEMBER_MOD]
 
 
-# This spend will use the escape-type spend path for whichever state you are currently if in
-# If you are currently an escaping inner puzzle, then it will look at your target_state to determine the next
-# inner puzzle hash to go to
+# This spend will use the escape-type spend path for whichever state you are currently in
+# If you are currently a waiting inner puzzle, then it will look at your target_state to determine the next
+# inner puzzle hash to go to. The member inner puzzle is already committed to its next puzzle hash.
 def create_travel_spend(
     last_coin_solution: CoinSolution,
     launcher_coin: Coin,
@@ -312,11 +313,12 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
 
 def pool_state_to_inner_puzzle(pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32) -> Program:
-    escaping_inner_puzzle: Program = create_escaping_inner_puzzle(
+    escaping_inner_puzzle: Program = create_waiting_room_inner_puzzle(
         pool_state.target_puzzle_hash,
         pool_state.relative_lock_height,
         pool_state.owner_pubkey,
         launcher_id,
+        genesis_challenge,
     )
     if pool_state.state == LEAVING_POOL:
         return escaping_inner_puzzle
