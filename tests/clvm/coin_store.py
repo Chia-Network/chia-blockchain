@@ -122,22 +122,12 @@ class CoinStore:
             self._add_coin_entry(new_coin, now)
         for spent_coin in spend_bundle.removals():
             coin_name = spent_coin.name()
-            try:
-                coin_record = self._db[coin_name]
-                self._db[coin_name] = replace(
-                    coin_record,
-                    spent_block_index=now.height,
-                    spent=True,
-                )
-            except KeyError:
-                self._db[coin_name] = CoinRecord(
-                    spent_coin,
-                    uint32(now.height),
-                    uint32(now.height),
-                    True,
-                    False,
-                    uint64(now.seconds),
-                )
+            coin_record = self._db[coin_name]
+            self._db[coin_name] = replace(
+                coin_record,
+                spent_block_index=now.height,
+                spent=True,
+            )
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
         for coin_name in self._ph_index[puzzle_hash]:
