@@ -10,12 +10,15 @@ from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from getpass import getpass
 from hashlib import pbkdf2_hmac
+from pathlib import Path
 from secrets import token_bytes
 from time import sleep
 from typing import List, Optional, Tuple
 
 
-DEFAULT_PASSWORD_PROMPT = colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Password: "  # noqa: E501
+DEFAULT_PASSWORD_PROMPT = (
+    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Password: "
+)  # noqa: E501
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
@@ -64,6 +67,7 @@ def unlocks_keyring(use_password_cache=False):
     """
     Decorator used to unlock the keyring interactively, if necessary
     """
+
     def inner(func):
         def wrapper(*args, **kwargs):
             try:
@@ -73,7 +77,9 @@ def unlocks_keyring(use_password_cache=False):
                 print(f"Unable to unlock the keyring: {e}")
                 sys.exit(1)
             return func(*args, **kwargs)
+
         return wrapper
+
     return inner
 
 
@@ -167,11 +173,11 @@ class Keychain:
     list of all keys.
     """
 
-    root_path: str
+    root_path: Path
     testing: bool
     user: str
 
-    def __init__(self, root_path: str = DEFAULT_ROOT_PATH, user: str = "user-chia-1.8", testing: bool = False):
+    def __init__(self, root_path: Path = DEFAULT_ROOT_PATH, user: str = "user-chia-1.8", testing: bool = False):
         self.root_path = root_path
         self.testing = testing
         self.user = user
@@ -350,8 +356,8 @@ class Keychain:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
                     KeyringWrapper.get_shared_instance().delete_password(
-                        self._get_service(),
-                        self._get_private_key_user(index))
+                        self._get_service(), self._get_private_key_user(index)
+                    )
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -367,8 +373,8 @@ class Keychain:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
                 KeyringWrapper.get_shared_instance().delete_password(
-                    self._get_service(),
-                    self._get_private_key_user(index))
+                    self._get_service(), self._get_private_key_user(index)
+                )
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -387,8 +393,8 @@ class Keychain:
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
                 KeyringWrapper.get_shared_instance().delete_password(
-                    self._get_service(),
-                    self._get_private_key_user(index))
+                    self._get_service(), self._get_private_key_user(index)
+                )
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True

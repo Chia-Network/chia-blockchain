@@ -129,7 +129,7 @@ async def setup_wallet_node(
     config["initial_num_public_keys"] = 5
 
     entropy = token_bytes(32)
-    keychain = Keychain(entropy.hex(), True)
+    keychain = Keychain(user=entropy.hex(), testing=True)
     if key_seed is None:
         key_seed = entropy
     keychain.add_private_key(bytes_to_mnemonic(key_seed), "")

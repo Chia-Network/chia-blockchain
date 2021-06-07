@@ -10,13 +10,13 @@ from functools import wraps
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import List
+from typing import Optional
 
 
 SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
 HASH_ITERS = 100000  # PBKDF2 param
-CHECKBYTES_VALUE = b'5f365b8292ee505b'  # Randomly generated
+CHECKBYTES_VALUE = b"5f365b8292ee505b"  # Randomly generated
 MAX_SUPPORTED_VERSION = 1  # Max supported file format version
 
 
@@ -24,12 +24,14 @@ def loads_keyring(method):
     """
     Decorator which lazily loads the FileKeyring data
     """
+
     @wraps(method)
     def inner(self, *args, **kwargs):
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         if self.has_content() and not self.payload_cache:
             self.load_keyring()
         return method(self, *args, **kwargs)
+
     return inner
 
 
@@ -60,20 +62,21 @@ class FileKeyring:
     master password using PBKDF2. The nonce is updated each time the file is written-to.
     The salt is updated each time the master password is changed.
     """
-    keyring_path: Path = None
-    salt: List[bytes] = None  # PBKDF2 param
-    payload_cache: dict = None  # Cache of the decrypted YAML contained in outer_payload_cache['data']
-    outer_payload_cache: dict = None  # Cache of the plaintext YAML "outer" contents (never encrypted)
+
+    keyring_path: Optional[Path] = None
+    salt: Optional[bytes] = None  # PBKDF2 param
+    payload_cache: dict = {}  # Cache of the decrypted YAML contained in outer_payload_cache['data']
+    outer_payload_cache: dict = {}  # Cache of the plaintext YAML "outer" contents (never encrypted)
 
     @staticmethod
-    def keyring_path_from_root(root_path: str) -> Path:
+    def keyring_path_from_root(root_path: Path) -> Path:
         """
         Returns the path to keyring.yaml
         """
-        path_filename = Path(root_path) / "config" / "keyring.yaml"
+        path_filename = root_path / "config" / "keyring.yaml"
         return path_filename
 
-    def __init__(self, root_path: str = DEFAULT_ROOT_PATH):
+    def __init__(self, root_path: Path = DEFAULT_ROOT_PATH):
         """
         Creates a fresh keyring.yaml file if necessary. Otherwise, loads and caches the
         outer (plaintext) payload
@@ -91,12 +94,10 @@ class FileKeyring:
 
     @staticmethod
     def default_outer_payload() -> dict:
-        return {
-            "version": 1
-        }
+        return {"version": 1}
 
     @staticmethod
-    def generate_nonce() -> List[bytes]:
+    def generate_nonce() -> bytes:
         """
         Creates a nonce to be used by ChaCha20Poly1305. This should be called each time
         the payload is encrypted.
@@ -104,7 +105,7 @@ class FileKeyring:
         return token_bytes(NONCE_BYTES)
 
     @staticmethod
-    def generate_salt() -> List[bytes]:
+    def generate_salt() -> bytes:
         """
         Creates a salt to be used in combination with the master password to derive
         a symmetric key using PBKDF2
@@ -116,9 +117,11 @@ class FileKeyring:
         Quick test to determine if keyring is populated. The "data" value is expected
         to be encrypted.
         """
-        return self.outer_payload_cache.get("data") is not None
+        if self.outer_payload_cache is not None and self.outer_payload_cache.get("data"):
+            return True
+        return False
 
-    def cached_keys_dict(self) -> dict:
+    def ensure_cached_keys_dict(self) -> dict:
         """
         Returns payload_cache["keys"], ensuring that it's created if necessary
         """
@@ -127,12 +130,12 @@ class FileKeyring:
         return self.payload_cache["keys"]
 
     @loads_keyring
-    def get_password(self, service: str, user: str) -> str:
+    def get_password(self, service: str, user: str) -> Optional[str]:
         """
         Returns the password named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
-        return self.cached_keys_dict().get(user)
+        return self.ensure_cached_keys_dict().get(user)
 
     @loads_keyring
     def set_password(self, service: str, user: str, password_bytes: bytes):
@@ -140,7 +143,7 @@ class FileKeyring:
         Store the password to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
-        keys = self.cached_keys_dict()
+        keys = self.ensure_cached_keys_dict()
         # Convert the password to a string (if necessary)
         password = password_bytes.hex() if type(password_bytes) == bytes else str(password_bytes)
         keys[user] = password
@@ -153,7 +156,7 @@ class FileKeyring:
         Deletes the password named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
         """
-        keys = self.cached_keys_dict()
+        keys = self.ensure_cached_keys_dict()
         if keys.pop(user, None):
             self.payload_cache["keys"] = keys
             self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
@@ -163,13 +166,16 @@ class FileKeyring:
         Attempts to validate the password by decrypting the outer_payload_cache["data"]
         contents and checking the checkbytes value
         """
-        if not self.outer_payload_cache:
+        if len(self.outer_payload_cache) == 0:
             self.load_outer_payload()
 
-        if not self.salt or not self.outer_payload_cache:
+        if not self.salt or len(self.outer_payload_cache) == 0:
             return False
 
-        nonce = bytes.fromhex(self.outer_payload_cache.get("nonce"))
+        nonce = None
+        nonce_str = self.outer_payload_cache.get("nonce")
+        if nonce_str:
+            nonce = bytes.fromhex(nonce_str)
 
         if not nonce:
             return False
@@ -183,15 +189,16 @@ class FileKeyring:
             return False
         return self.have_valid_checkbytes(decrypted_data)
 
-    def have_valid_checkbytes(self, decrypted_data: List[bytes]) -> bool:
-        checkbytes = decrypted_data[:len(CHECKBYTES_VALUE)]
+    def have_valid_checkbytes(self, decrypted_data: bytes) -> bool:
+        checkbytes = decrypted_data[: len(CHECKBYTES_VALUE)]
         return checkbytes == CHECKBYTES_VALUE
 
     @staticmethod
-    def symmetric_key_from_password(password: str, salt: List[bytes]) -> List[bytes]:
-        return pbkdf2_hmac('sha256', password.encode(), salt, HASH_ITERS)
+    def symmetric_key_from_password(password: str, salt: bytes) -> bytes:
+        return pbkdf2_hmac("sha256", password.encode(), salt, HASH_ITERS)
 
-    def get_symmetric_key(self) -> List[bytes]:
+    @staticmethod
+    def get_symmetric_key(salt: bytes) -> bytes:
         from chia.util.keychain import obtain_current_password
 
         try:
@@ -200,14 +207,14 @@ class FileKeyring:
             print(f"Unable to unlock the keyring: {e}")
             sys.exit(1)
 
-        return FileKeyring.symmetric_key_from_password(password, self.salt)
+        return FileKeyring.symmetric_key_from_password(password, salt)
 
-    def encrypt_data(self, input_data: List[bytes], key: List[bytes], nonce: List[bytes]) -> List[bytes]:
+    def encrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         encryptor = ChaCha20Poly1305(key)
         data = encryptor.encrypt(nonce, input_data, None)
         return data
 
-    def decrypt_data(self, input_data: List[bytes], key: List[bytes], nonce: List[bytes]) -> List[bytes]:
+    def decrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         decryptor = ChaCha20Poly1305(key)
         output = decryptor.decrypt(nonce, input_data, None)
         return output
@@ -219,8 +226,10 @@ class FileKeyring:
         self.outer_payload_cache = dict(yaml.safe_load(open(self.keyring_path, "r")))
         version = int(self.outer_payload_cache.get("version"))
         if version > MAX_SUPPORTED_VERSION:
-            print(f"Keyring format is unrecognized. Found version {version}"
-                  ", expected a value <= {MAX_SUPPORTED_VERSION}")
+            print(
+                f"Keyring format is unrecognized. Found version {version}"
+                ", expected a value <= {MAX_SUPPORTED_VERSION}"
+            )
             print("Please update to a newer version")
             sys.exit(1)
 
@@ -232,23 +241,26 @@ class FileKeyring:
     def load_keyring(self, password: str = None):
         self.load_outer_payload()
 
-        # Missing the salt indicates that the keyring doesn't have any keys stored.
-        if not self.outer_payload_cache.get("salt"):
+        # Missing the salt or nonce indicates that the keyring doesn't have any keys stored.
+        salt_str = self.outer_payload_cache.get("salt")
+        nonce_str = self.outer_payload_cache.get("nonce")
+        if not salt_str or not nonce_str:
             return
 
-        nonce = bytes.fromhex(self.outer_payload_cache.get("nonce"))
+        salt = bytes.fromhex(salt_str)
+        nonce = bytes.fromhex(nonce_str)
         key = None
 
         if password:
-            key = FileKeyring.symmetric_key_from_password(password, bytes.fromhex(self.outer_payload_cache.get("salt")))
+            key = FileKeyring.symmetric_key_from_password(password, salt)
         else:
-            key = self.get_symmetric_key()
+            key = FileKeyring.get_symmetric_key(salt)
 
         encrypted_payload = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
         decrypted_data = self.decrypt_data(encrypted_payload, key, nonce)
         if not self.have_valid_checkbytes(decrypted_data):
             raise ValueError("decryption failure (checkbytes)")
-        inner_payload = decrypted_data[len(CHECKBYTES_VALUE):]
+        inner_payload = decrypted_data[len(CHECKBYTES_VALUE) :]
 
         self.payload_cache = dict(yaml.safe_load(inner_payload))
 
@@ -264,12 +276,18 @@ class FileKeyring:
         if fresh_salt:
             self.salt = FileKeyring.generate_salt()
 
+        using_default_password = False
         # If the salt is missing, we're working with an empty keyring
         if not self.salt:
             self.salt = FileKeyring.generate_salt()
+            using_default_password = True
+
+        salt = self.salt
+
+        if using_default_password:
             key = FileKeyring.symmetric_key_from_password(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD, self.salt)
         else:
-            key = self.get_symmetric_key()
+            key = FileKeyring.get_symmetric_key(salt)
 
         encrypted_inner_payload = self.encrypt_data(CHECKBYTES_VALUE + inner_payload_yaml.encode(), key, nonce)
 
@@ -277,7 +295,7 @@ class FileKeyring:
             "version": 1,
             "salt": self.salt.hex(),
             "nonce": nonce.hex(),
-            "data": base64.b64encode(encrypted_inner_payload).decode('utf-8')
+            "data": base64.b64encode(encrypted_inner_payload).decode("utf-8"),
         }
 
         self.write_data_to_keyring(outer_payload)
@@ -294,7 +312,7 @@ class FileKeyring:
 
     def prepare_for_migration(self):
         if not self.payload_cache:
-            self.payload_cache = {"keys" : {}}
+            self.payload_cache = {"keys": {}}
 
         if not self.salt:
             self.salt = FileKeyring.generate_salt()
