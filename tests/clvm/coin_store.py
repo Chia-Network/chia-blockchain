@@ -81,7 +81,14 @@ class CoinStore:
         ephemeral_db = dict(self._db)
         for coin in spend_bundle.additions():
             name = coin.name()
-            ephemeral_db[name] = CoinRecord(coin, uint32(now.height), uint32(0), False, False, uint64(now.seconds))
+            ephemeral_db[name] = CoinRecord(
+                coin,
+                uint32(now.height),
+                uint32(0),
+                False,
+                False,
+                uint64(now.seconds),
+            )
 
         for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):  # noqa
             prev_transaction_block_height = now.height
@@ -115,26 +122,12 @@ class CoinStore:
             self._add_coin_entry(new_coin, now)
         for spent_coin in spend_bundle.removals():
             coin_name = spent_coin.name()
-            try:
-                coin_record = self._db[coin_name]
-                self._db[coin_name] = replace(
-                    coin_record,
-                    spent_block_index=now.height,
-                    spent=True,
-                )
-            except KeyError:
-                self._db[coin_name] = CoinRecord(
-                    spent_coin,
-                    uint32(now.height),
-                    uint32(now.height),
-                    True,
-                    False,
-                    uint64(now.seconds),
-                )
-
-        for new_coin in spend_bundle.additions():
-            if new_coin not in spend_bundle.removals():
-                self._add_coin_entry(new_coin, now)
+            coin_record = self._db[coin_name]
+            self._db[coin_name] = replace(
+                coin_record,
+                spent_block_index=now.height,
+                spent=True,
+            )
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
         for coin_name in self._ph_index[puzzle_hash]:
