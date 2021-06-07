@@ -44,6 +44,7 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
+from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.derive_keys import (
     find_owner_sk,
     master_sk_to_pooling_authentication_sk,
@@ -518,7 +519,7 @@ class PoolWallet:
             )
 
         new_inner_puzzle = pool_state_to_inner_puzzle(
-            pool_wallet_info.current,
+            next_state,
             pool_wallet_info.launcher_coin.name(),
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
         )
@@ -564,7 +565,7 @@ class PoolWallet:
             )
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
-                target_puzzle_hash,
+                target_puzzle_hash,  # payout_puzzle_hash
                 relative_lock_height,
                 owner_pubkey,
                 p2_singleton_hash,
@@ -578,6 +579,10 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
+        print(f"NEW PUZZLE IS: {new_full_puzzle}")
+        print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
+        debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
+        print(f"brun -x signed_spend_bundle.coin_solutions[0].puzzle_reveal, signed_spend_bundle.coin_solutions[0].solution)")
         assert signed_spend_bundle is not None
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
 
