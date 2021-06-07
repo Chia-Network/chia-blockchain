@@ -87,7 +87,7 @@ class CoinStore:
                 uint32(0),
                 False,
                 False,
-                uint64(now.seconds)
+                uint64(now.seconds),
             )
 
         for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):  # noqa
