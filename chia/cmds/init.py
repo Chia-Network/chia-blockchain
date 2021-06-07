@@ -10,12 +10,7 @@ from chia.cmds.password_funcs import initialize_password, remove_passwords_optio
     help="Create new SSL certificates based on CA in [directory]",
     type=click.Path(),
 )
-@click.option(
-    "--set-password",
-    "-s",
-    is_flag=True,
-    help="Password protect your keyring"
-)
+@click.option("--set-password", "-s", is_flag=True, help="Password protect your keyring")
 @click.pass_context
 def init_cmd(ctx: click.Context, create_certs: str, **kwargs):
     """

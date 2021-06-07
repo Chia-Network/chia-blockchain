@@ -64,7 +64,7 @@ def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
     while True:
         response = str(input(prompt)).lower().strip()
         ch = response[:1]
-        if ch == 'y':
+        if ch == "y":
             return True
-        elif ch == 'n':
+        elif ch == "n":
             return False

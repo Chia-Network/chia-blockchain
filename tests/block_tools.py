@@ -132,7 +132,7 @@ class BlockTools:
 
         self.root_path = root_path
         create_default_chia_config(root_path)
-        self.keychain = Keychain("testing-1.8.0", True)
+        self.keychain = Keychain(user="testing-1.8.0", testing=True)
         self.keychain.delete_all_keys()
         self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
         self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
