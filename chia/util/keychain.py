@@ -5,7 +5,6 @@ import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from getpass import getpass
@@ -173,12 +172,10 @@ class Keychain:
     list of all keys.
     """
 
-    root_path: Path
     testing: bool
     user: str
 
-    def __init__(self, root_path: Path = DEFAULT_ROOT_PATH, user: str = "user-chia-1.8", testing: bool = False):
-        self.root_path = root_path
+    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
         self.testing = testing
         self.user = user
 
