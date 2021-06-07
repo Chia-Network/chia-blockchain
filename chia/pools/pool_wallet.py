@@ -541,6 +541,7 @@ class PoolWallet:
             next_state,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
         )
+        breakpoint()
         # current_puzzle_hash = full_puzzle.get_tree_hash()
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
@@ -568,7 +569,7 @@ class PoolWallet:
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
             signed_spend_bundle = await self.sign_travel_spend_waiting_room_state(
-                target_puzzle_hash, owner_pubkey, outgoing_coin_solution, pool_wallet_info.target
+                target_puzzle_hash, owner_pubkey, outgoing_coin_solution, next_state
             )
         else:
             raise RuntimeError("Invalid state")
@@ -576,7 +577,7 @@ class PoolWallet:
         print(f"NEW PUZZLE IS: {new_full_puzzle}")
         print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
         debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
-        print(f"brun -x signed_spend_bundle.coin_solutions[0].puzzle_reveal, signed_spend_bundle.coin_solutions[0].solution)")
+        print(f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}")
         assert signed_spend_bundle is not None
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
 
