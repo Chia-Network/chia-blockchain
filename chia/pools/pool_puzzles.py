@@ -5,7 +5,7 @@ from blspy import G1Element
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
-from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL
+from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, SELF_POOLING
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -122,8 +122,10 @@ def create_travel_spend(
     inner_puzzle: Program = pool_state_to_inner_puzzle(current, pool_reward_prefix)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([1, 0, 0, bytes(current)])
+        breakpoint()
+        inner_sol: Program = Program.to([1, 0, 0, bytes(target)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
+        #breakpoint()
         # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
         destination_inner: Program = pool_state_to_inner_puzzle(target, launcher_coin.name(), genesis_challenge)
         inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
@@ -138,14 +140,14 @@ def create_travel_spend(
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         last_coin_solution_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
         assert last_coin_solution_inner_puzzle is not None
-        parent_info = Program.to(
+        parent_info_list = Program.to(
             [
                 last_coin_solution.coin.parent_coin_info,
                 last_coin_solution_inner_puzzle.get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
         )
-    full_solution: Program = Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
+    full_solution: Program = Program.to([parent_info_list, last_coin_solution.coin.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
     return (
@@ -261,12 +263,12 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tupl
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
-def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tuple[Program, Program, Program]]:
+def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
     """
-    if not is_pool_member_inner_puzzle(inner_puzzle):
+    if not is_pool_waitingroom_inner_puzzle(inner_puzzle):
         return None
     r = inner_puzzle.uncurry()
     if r is None:
@@ -274,7 +276,17 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program):  # -> Optional
     inner_f, args = r
 
     # TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH
-    target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash = list(args.as_iter())
+    breakpoint()
+    v = args.as_iter()
+    #target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash, genesis_challenge = tuple(v)
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
+    #(mod (POOL_PUZZLE_HASH
+    #  P2_SINGLETON_PUZHASH
+    #  OWNER_PUBKEY
+    #  POOL_REWARD_PREFIX
+    #  RELATIVE_LOCK_HEIGHT
+
+
     # assert p2_singleton_hash == P2_SINGLETON_HASH
 
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
@@ -332,7 +344,7 @@ def pool_state_to_inner_puzzle(pool_state: PoolState, launcher_id: bytes32, gene
         launcher_id,
         genesis_challenge,
     )
-    if pool_state.state == LEAVING_POOL:
+    if pool_state.state in [LEAVING_POOL, SELF_POOLING]:
         return escaping_inner_puzzle
     else:
         return create_pooling_inner_puzzle(
