@@ -577,7 +577,7 @@ class PoolWallet:
                 target_puzzle_hash, owner_pubkey, outgoing_coin_solution, pool_wallet_info.target
             )
         else:
-            raise
+            raise RuntimeError("Invalid state")
 
         assert signed_spend_bundle is not None
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()

@@ -370,7 +370,7 @@ class TestPoolWalletRpc:
     #     pass
 
     @pytest.mark.asyncio
-    async def test_self_pooling_to_pooling(self, two_wallet_nodes):
+    async def xtest_self_pooling_to_pooling(self, two_wallet_nodes):
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets = two_wallet_nodes

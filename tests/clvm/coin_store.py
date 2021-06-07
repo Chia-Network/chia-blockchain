@@ -153,7 +153,7 @@ class CoinStore:
 
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
         name = coin.name()
-        assert name not in self._db
+        # assert name not in self._db
         self._db[name] = CoinRecord(
             coin,
             uint32(birthday.height),
