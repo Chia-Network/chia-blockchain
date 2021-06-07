@@ -107,7 +107,7 @@ def test_pool_state_to_inner_puzzle():
         version=1,
     )
     puzzle = pool_state_to_inner_puzzle(pool_state, token_bytes(32), GENESIS_CHALLENGE)
-    assert is_pool_member_inner_puzzle(puzzle)
+    assert is_pool_waitingroom_inner_puzzle(puzzle)
 
     target_puzzle_hash: bytes32 = bytes32(b"2" * 32)
     owner_pubkey: G1Element = AugSchemeMPL.key_gen(b"2" * 32).get_g1()
