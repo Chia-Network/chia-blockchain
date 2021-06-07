@@ -139,10 +139,6 @@ class CoinStore:
                     uint64(now.seconds),
                 )
 
-        for new_coin in spend_bundle.additions():
-            if new_coin not in spend_bundle.removals():
-                self._add_coin_entry(new_coin, now)
-
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
         for coin_name in self._ph_index[puzzle_hash]:
             coin_entry = self._db[coin_name]
