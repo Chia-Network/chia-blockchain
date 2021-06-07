@@ -507,7 +507,7 @@ class PoolWallet:
         if pool_wallet_info.current.state in [SELF_POOLING, FARMING_TO_POOL]:
             next_state = create_pool_state(
                 LEAVING_POOL,
-                pool_wallet_info.current.owner_puzzle_hash,
+                pool_wallet_info.current.target_puzzle_hash,
                 pool_wallet_info.current.owner_pubkey,
                 pool_wallet_info.current.pool_url,
                 pool_wallet_info.current.relative_lock_height,
@@ -636,6 +636,7 @@ class PoolWallet:
             initial_target_state.relative_lock_height,
             initial_target_state.owner_pubkey,
             launcher_coin.name(),
+            genesis_challenge,
         ).get_tree_hash()
 
         self_pooling_inner_puzzle: Program = create_pooling_inner_puzzle(
