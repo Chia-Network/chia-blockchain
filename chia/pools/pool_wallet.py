@@ -497,7 +497,6 @@ class PoolWallet:
         signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
         aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
         assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
-        breakpoint()
         signed_sb = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
