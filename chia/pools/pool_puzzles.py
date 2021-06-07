@@ -122,7 +122,7 @@ def create_travel_spend(
         inner_sol: Program = Program.to([1, 0, 0, bytes(current)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
-        destination_inner: Program = pool_state_to_inner_puzzle(current, launcher_coin.name(), genesis_challenge)
+        destination_inner: Program = pool_state_to_inner_puzzle(target, launcher_coin.name(), genesis_challenge)
         inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
     else:
         raise ValueError
