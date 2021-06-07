@@ -9,7 +9,6 @@ from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from getpass import getpass
 from hashlib import pbkdf2_hmac
-from pathlib import Path
 from secrets import token_bytes
 from time import sleep
 from typing import List, Optional, Tuple

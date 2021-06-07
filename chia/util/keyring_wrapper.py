@@ -120,7 +120,9 @@ class KeyringWrapper:
     def master_password_is_valid(self, password: str) -> bool:
         return self.keyring.check_password(password)
 
-    def set_master_password(self, current_password: Optional[str], new_password: str) -> None:
+    def set_master_password(
+        self, current_password: Optional[str], new_password: str, write_to_keyring: bool = True
+    ) -> None:
         """
         Sets a new master password for the keyring
         """
@@ -135,14 +137,15 @@ class KeyringWrapper:
 
         self.set_cached_master_password(new_password, validated=True)
 
-        # We'll migrate the legacy contents to the new keyring at this point
-        if self.using_legacy_keyring():
-            self.migrate_legacy_keyring()
-        else:
-            # We're reencrypting the keyring contents using the new password. Ensure that the
-            # payload has been decrypted by calling load_keyring with the current password.
-            self.keyring.load_keyring(password=current_password)
-            self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the password
+        if write_to_keyring:
+            # We'll migrate the legacy contents to the new keyring at this point
+            if self.using_legacy_keyring():
+                self.migrate_legacy_keyring()
+            else:
+                # We're reencrypting the keyring contents using the new password. Ensure that the
+                # payload has been decrypted by calling load_keyring with the current password.
+                self.keyring.load_keyring(password=current_password)
+                self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the password
 
     def remove_master_password(self, current_password: Optional[str]) -> None:
         """
@@ -172,10 +175,11 @@ class KeyringWrapper:
 
             response = prompt_yes_no("Set keyring master password? (y/n) ")
             if response:
-                from chia.cmds.password_funcs import set_or_update_password
+                from chia.cmds.password_funcs import prompt_for_new_password
 
                 # Prompt for a master password and cache it
-                set_or_update_password(password=None, current_password=DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD)
+                new_password = prompt_for_new_password()
+                self.set_master_password(current_password=None, new_password=new_password, write_to_keyring=False)
             else:
                 print("Will skip setting a master password. Use 'chia password set' to set the master password.\n")
         else:
