@@ -20,6 +20,7 @@ from tests.clvm.coin_store import CoinStore, CoinTimestamp
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+P2_SINGLETON_AND_PUZHASH = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
 POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 
