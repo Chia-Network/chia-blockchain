@@ -689,19 +689,19 @@ class WalletStateManager:
                 )
                 added.append(added_coin_record)
             else:
-                wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(
+                interested_wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(
                     puzzle_hash=coin.puzzle_hash
                 )
-                if wallet_id is not None:
-                    wallet_type = self.wallets[uint32(wallet_id)].type()
+                if interested_wallet_id is not None:
+                    wallet_type = self.wallets[uint32(interested_wallet_id)].type()
                     added_coin_record = await self.coin_added(
                         coin,
                         is_coinbase,
                         is_fee_reward,
-                        uint32(wallet_id),
+                        uint32(interested_wallet_id),
                         wallet_type,
                         height,
-                        all_outgoing_tx.get(wallet_id, []),
+                        all_outgoing_tx.get(interested_wallet_id, []),
                     )
                     added.append(added_coin_record)
 

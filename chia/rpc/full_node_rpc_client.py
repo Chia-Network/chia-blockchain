@@ -95,7 +95,7 @@ class FullNodeRpcClient(RpcClient):
             d["end_height"] = end_height
         return [
             CoinRecord.from_json_dict(coin)
-            for coin in ((await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"])
+            for coin in (await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"]
         ]
 
     async def get_coin_records_by_puzzle_hashes(
@@ -113,7 +113,7 @@ class FullNodeRpcClient(RpcClient):
             d["end_height"] = end_height
         return [
             CoinRecord.from_json_dict(coin)
-            for coin in ((await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"])
+            for coin in (await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"]
         ]
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:

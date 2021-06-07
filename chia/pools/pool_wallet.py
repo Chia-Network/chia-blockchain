@@ -13,6 +13,8 @@ from chia.pools.pool_wallet_info import (
     POOL_PROTOCOL_VERSION,
     FARMING_TO_POOL,
     SELF_POOLING,
+    LEAVING_POOL,
+    create_pool_state,
 )
 from chia.protocols.pool_protocol import AuthenticationKeyInfo
 
@@ -25,7 +27,7 @@ from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 
 from chia.pools.pool_puzzles import (
-    create_escaping_inner_puzzle,
+    create_waiting_room_inner_puzzle,
     create_full_puzzle,
     SINGLETON_LAUNCHER,
     create_pooling_inner_puzzle,
@@ -186,16 +188,20 @@ class PoolWallet:
         assert len(all_spends) >= 1
 
         launcher_coin: Coin = all_spends[0].coin
-        tip_singleton_coin_id: bytes32 = get_most_recent_singleton_coin_from_coin_solution(all_spends[-1]).name()
+        tip_singleton_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(all_spends[-1])
+        assert tip_singleton_coin is not None
 
         curr_spend_i = len(all_spends) - 1
         extra_data: Optional[PoolState] = None
         while extra_data is None:
             full_spend: CoinSolution = all_spends[curr_spend_i]
             extra_data = solution_to_extra_data(full_spend)
+            curr_spend_i -= 1
 
         assert extra_data is not None
-        current_inner = pool_state_to_inner_puzzle(extra_data, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
+        current_inner = pool_state_to_inner_puzzle(
+            extra_data, launcher_coin.name(), self.wallet_state_manager.constants.GENESIS_CHALLENGE
+        )
         launcher_id: bytes32 = launcher_coin.name()
         p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id)
         return PoolWalletInfo(
@@ -205,7 +211,7 @@ class PoolWallet:
             launcher_id,
             p2_singleton_puzzle_hash,
             current_inner,
-            tip_singleton_coin_id,
+            tip_singleton_coin.name(),
         )
 
     async def get_tip(self) -> Tuple[uint32, CoinSolution]:
@@ -238,7 +244,7 @@ class PoolWallet:
             pool_payout_instructions = existing_config.pool_payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
-            current_state.current.pool_url,
+            current_state.current.pool_url if current_state.current.pool_url else "",
             pool_payout_instructions,
             current_state.current.target_puzzle_hash,
             current_state.launcher_id,
@@ -265,18 +271,25 @@ class PoolWallet:
         that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
         The DB must be committed after calling this method. All validation should be done here.
         """
+        self.log.warning(f"Applying state transitions: {len(block_spends)}")
         coin_name_to_spend: Dict[bytes32, CoinSolution] = {cs.coin.name(): cs for cs in block_spends}
 
         tip: Tuple[uint32, CoinSolution] = await self.get_tip()
-        spend_height = tip[0]
+        tip_height = tip[0]
         tip_spend = tip[1]
+        assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
-        while get_most_recent_singleton_coin_from_coin_solution(tip_spend).name() in coin_name_to_spend:
-            assert block_height < spend_height  # We should not have a spend with a lesser block height
-            spend: CoinSolution = coin_name_to_spend[tip]
+        while True:
+            tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(tip_spend)
+            assert tip_coin is not None
+            spent_coin_name: bytes32 = tip_coin.name()
+            if spent_coin_name not in coin_name_to_spend:
+                break
+            spend: CoinSolution = coin_name_to_spend[spent_coin_name]
             await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, block_height)
-            new_tip = await self.get_tip()
-            await self.coin_spent(new_tip[1])
+            tip_spend = (await self.get_tip())[1]
+            await self.coin_spent(tip_spend)
+            coin_name_to_spend.pop(spent_coin_name)
         await self.update_pool_config(False)
 
     async def coin_spent(self, coin_solution: CoinSolution):
@@ -286,18 +299,20 @@ class PoolWallet:
         or to our pool, both of which we should track.
         """
         coin = coin_solution.coin
-        sol = coin_solution.solution
-        puz = coin_solution.puzzle_reveal
-        amount = uint64(1)
+        # sol = coin_solution.solution
+        # puz = coin_solution.puzzle_reveal
+        # amount = uint64(1)
         if self.target_state is None:
-            self.log.info("PoolWallet state updated by external event: {coin}")
+            self.log.info(f"PoolWallet state updated by external event: {coin}")
             pass
 
         # new_singleton_coin = Coin(coin.name(), puz.get_tree_hash(), amount)
         new_current_state: Optional[PoolState] = solution_to_extra_data(
             coin_solution
         )  # TODO: Test that this works with escaping and member puzzles
-        self._verify_pool_state(new_current_state)
+
+        # TODO: uncomment
+        # self._verify_pool_state(new_current_state)
         current_state: PoolWalletInfo = await self.get_current_state()
         assert self.target_state == current_state.target
 
@@ -349,10 +364,6 @@ class PoolWallet:
         """
         self = PoolWallet()
         self.wallet_state_manager = wallet_state_manager
-        log = logging.getLogger(__name__)
-        log.error(
-            f"        PoolWallet.create(genesis_challenge={self.wallet_state_manager.constants.GENESIS_CHALLENGE.hex()})"
-        )
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "Pool wallet", WalletType.POOLING_WALLET.value, "", in_transaction=in_transaction
@@ -470,10 +481,11 @@ class PoolWallet:
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
         message: bytes32 = Program.to([target_puzzle_hash, coin_solution.coin.amount, bytes(target)]).get_tree_hash()
-        signatures: List[G2Element] = [AugSchemeMPL.sign(private, message)]
-        aggsig: G2Element = AugSchemeMPL.aggregate(signatures)
-        assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
-        signed_sb: SpendBundle = SpendBundle([coin_solution], aggsig)
+        to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
+        aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
+        assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
+        signed_sb: SpendBundle = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
     async def sign_travel_spend_in_member_state(
@@ -481,25 +493,60 @@ class PoolWallet:
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
         message: bytes32 = Program.to(bytes(target)).get_tree_hash()
-        signatures: List[G2Element] = [AugSchemeMPL.sign(private, message)]
-        aggsig: G2Element = AugSchemeMPL.aggregate(signatures)
-        assert AugSchemeMPL.verify(owner_pubkey, message, aggsig)
-        signed_sb = SpendBundle([coin_solution], aggsig)
+        to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
+        aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
+        assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
+        signed_sb = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
         # target_state is contained within pool_wallet_state
-        pool_wallet_state: PoolWalletInfo = await self.get_current_state()
+        pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
-        outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(
-            last_coin_solution,
-            pool_wallet_state.launcher_coin,
-            pool_wallet_state.current,
-            pool_wallet_state.target,
+
+        assert pool_wallet_info.target is not None
+        next_state = pool_wallet_info.target
+        if pool_wallet_info.current.state in [SELF_POOLING, FARMING_TO_POOL]:
+            next_state = create_pool_state(
+                LEAVING_POOL,
+                pool_wallet_info.current.target_puzzle_hash,
+                pool_wallet_info.current.owner_pubkey,
+                pool_wallet_info.current.pool_url,
+                pool_wallet_info.current.relative_lock_height,
+            )
+
+        new_inner_puzzle = pool_state_to_inner_puzzle(
+            pool_wallet_info.current,
+            pool_wallet_info.launcher_coin.name(),
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
         )
-        puzzle_hash = full_puzzle.get_tree_hash()
+        new_full_puzzle: SerializedProgram = SerializedProgram.from_program(
+            create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name())
+        )
+
+        print("Creating Travel Spend:")
+        print(f"current state: {pool_wallet_info.current}")
+        print(f"current bytes: {bytes(pool_wallet_info.current).hex()}")
+        print(f"current hash: {Program(bytes(pool_wallet_info.current)).get_tree_hash()}")
+
+        print(f"next state: {next_state}")
+        print(f"next bytes: {bytes(next_state).hex()}")
+        print(f"next hash: {Program(bytes(next_state)).get_tree_hash()}")
+
+        print(f"target state: {pool_wallet_info.target}")
+        print(f"target bytes: {bytes(pool_wallet_info.target).hex()}")
+        print(f"target hash: {Program(bytes(pool_wallet_info.target)).get_tree_hash()}")
+
+        outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(
+            last_coin_solution,
+            pool_wallet_info.launcher_coin,
+            pool_wallet_info.current,
+            next_state,
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+        )
+        # current_puzzle_hash = full_puzzle.get_tree_hash()
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
                 inner_f,
@@ -513,7 +560,7 @@ class PoolWallet:
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
             signed_spend_bundle = await self.sign_travel_spend_in_member_state(
-                owner_pubkey, outgoing_coin_solution, pool_wallet_state.target
+                owner_pubkey, outgoing_coin_solution, next_state
             )
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
@@ -526,13 +573,13 @@ class PoolWallet:
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
             signed_spend_bundle = await self.sign_travel_spend_waiting_room_state(
-                target_puzzle_hash, owner_pubkey, outgoing_coin_solution, pool_wallet_state.target
+                target_puzzle_hash, owner_pubkey, outgoing_coin_solution, pool_wallet_info.target
             )
         else:
-            raise
+            raise RuntimeError("Invalid state")
 
         assert signed_spend_bundle is not None
-        return signed_spend_bundle, puzzle_hash
+        return signed_spend_bundle, new_full_puzzle.get_tree_hash()
 
     async def generate_member_transaction(self, target_state: PoolState) -> TransactionRecord:
         # TODO: Start in the "waiting room" so we can move to first pool in one step
@@ -543,6 +590,11 @@ class PoolWallet:
         # launcher_id = await self.get_current_state().launcher_coin.name()
         # full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_id)
         assert spend_bundle is not None
+
+        current_singleton: Coin = spend_bundle.coin_solutions[0].coin
+        new_expected_singleton = Coin(current_singleton.name(), new_singleton_puzzle_hash, uint64(1))
+        print(f"EXPECTED NEW SINGLETON COIN_ID: {new_expected_singleton.get_hash()}")
+        print(f"EXPECTED NEW SINGLETON COIN: {new_expected_singleton}")
 
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -586,16 +638,19 @@ class PoolWallet:
         genesis_launcher_puz: Program = SINGLETON_LAUNCHER
         launcher_coin: Coin = Coin(launcher_parent.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        escaping_inner_puzzle_hash: bytes32 = create_escaping_inner_puzzle(
+        escaping_inner_puzzle_hash: bytes32 = create_waiting_room_inner_puzzle(
             initial_target_state.target_puzzle_hash,
             initial_target_state.relative_lock_height,
             initial_target_state.owner_pubkey,
+            launcher_coin.name(),
+            genesis_challenge,
         ).get_tree_hash()
 
         self_pooling_inner_puzzle: Program = create_pooling_inner_puzzle(
             initial_target_state.target_puzzle_hash,
             escaping_inner_puzzle_hash,
             initial_target_state.owner_pubkey,
+            launcher_coin.name(),
             genesis_challenge,
         )
         full_pooling_puzzle: Program = create_full_puzzle(self_pooling_inner_puzzle, launcher_id=launcher_coin.name())
@@ -674,8 +729,8 @@ class PoolWallet:
         # TODO: Do not set target state until all checks are done
         self.target_state = target_state
 
-        all_sks = [self.wallet_state_manager.private_key]
-        owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+        # all_sks = [self.wallet_state_manager.private_key]
+        # owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
 
         # Check if we can join a pool (timelock)
         # Create the first blockchain transaction
@@ -702,9 +757,9 @@ class PoolWallet:
         if self.target_state is not None:
             raise ValueError(f"Cannot self pool when already having target state: {self.target_state}")
         self.target_state = target_state
-        current_state = await self.get_current_state()
-        all_sks = [self.wallet_state_manager.private_key]
-        owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
+        # current_state = await self.get_current_state()
+        # all_sks = [self.wallet_state_manager.private_key]
+        # owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
         # Check if we can self pool (timelock)
         # Create the first blockchain transaction
         # Whenever we detect a new peak, potentially initiate the second blockchain transaction
@@ -718,40 +773,49 @@ class PoolWallet:
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
+
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim")
 
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
-        coin_to_height_farmed: Dict[Coin, uint32] = {
-            tx_record.additions[0]: tx_record.height_farmed(self.wallet_state_manager.constants.GENESIS_CHALLENGE)
-            for tx_record in farming_rewards
-        }
+        coin_to_height_farmed: Dict[Coin, uint32] = {}
+        for tx_record in farming_rewards:
+            height_farmed: Optional[uint32] = tx_record.height_farmed(
+                self.wallet_state_manager.constants.GENESIS_CHALLENGE
+            )
+            assert height_farmed is not None
+            coin_to_height_farmed[tx_record.additions[0]] = height_farmed
         history: List[Tuple[uint32, CoinSolution]] = await self.get_spend_history()
         assert len(history) > 0
 
         current_state: PoolWalletInfo = await self.get_current_state()
         last_solution: CoinSolution = history[-1][1]
 
-        # TODO: support claiming multiple blocks in one transaction
-        coin_record = unspent_coin_records[0]
-        absorb_spend: List[CoinSolution] = create_absorb_spend(
-            last_solution,
-            current_state,
-            coin_to_height_farmed[coin_record.coin],
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-        )
+        all_spends: List[CoinSolution] = []
+        total_amount = 0
+        for coin_record in unspent_coin_records:
+            absorb_spend: List[CoinSolution] = create_absorb_spend(
+                last_solution,
+                current_state.current,
+                current_state.launcher_coin,
+                coin_to_height_farmed[coin_record.coin],
+                self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            )
+            last_solution = absorb_spend[0]
+            all_spends += absorb_spend
+            total_amount += coin_record.coin.amount
+            self.log.warning(
+                f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
+            )
+
         # No signatures are required to absorb
-        spend_bundle: SpendBundle = SpendBundle(absorb_spend, G2Element())
-        self.log.warning(f"Farmer coin: {coin_record.coin} {coin_record.coin.name()}")
-        self.log.warning(
-            f"Spend bundle removals: {spend_bundle.removals()} {[r.name() for r in spend_bundle.removals()]}"
-        )
+        spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
 
         absorb_transaction: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=current_state.current.target_puzzle_hash,
-            amount=uint64(coin_record.coin.amount),
+            amount=uint64(total_amount),
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),

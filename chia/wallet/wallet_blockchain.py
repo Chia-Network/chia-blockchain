@@ -258,7 +258,7 @@ class WalletBlockchain(BlockchainInterface):
         block_record: BlockRecord,
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
-        additional_coin_spends: List[CoinSolution],
+        additional_coin_spends: Optional[List[CoinSolution]],
     ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.

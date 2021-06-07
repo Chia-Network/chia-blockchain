@@ -31,7 +31,7 @@ class CoinTimestamp:
 class CoinStore:
     def __init__(self, reward_mask: int = 0):
         self._db: Dict[bytes32, CoinRecord] = dict()
-        self._ph_index = defaultdict(list)
+        self._ph_index: Dict = defaultdict(list)
         self._reward_mask = reward_mask
 
     def farm_coin(
@@ -146,7 +146,7 @@ class CoinStore:
 
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
         name = coin.name()
-        assert name not in self._db
+        # assert name not in self._db
         self._db[name] = CoinRecord(
             coin,
             uint32(birthday.height),

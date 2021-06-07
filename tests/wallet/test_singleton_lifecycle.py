@@ -12,7 +12,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
-# from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
+
+from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.full_node.test_conditions import bt, check_spend_bundle_validity, initial_blocks
@@ -31,12 +32,12 @@ POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00
 
 
 def check_coin_solution(coin_solution: CoinSolution):
-    breakpoint()
+    # breakpoint()
     try:
         cost, result = coin_solution.puzzle_reveal.run_with_cost(INFINITE_COST, coin_solution.solution)
     except Exception as ex:
         print(ex)
-        breakpoint()
+        # breakpoint()
         print(ex)
 
 
@@ -47,11 +48,11 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
 
 def launcher_conditions_and_spend_bundle(
     parent_coin_id: bytes32,
-    launcher_amount: int,
+    launcher_amount: uint64,
     initial_singleton_inner_puzzle: Program,
     metadata: List[Tuple[str, str]],
     launcher_puzzle: Program = LAUNCHER_PUZZLE,
-) -> Tuple[bytes32, List[Program], SpendBundle]:
+) -> Tuple[Program, bytes32, List[Program], SpendBundle]:
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
     singleton_full_puzzle = SINGLETON_MOD.curry(
@@ -104,7 +105,7 @@ def test_only_odd_coins_0():
 
     metadata = [("foo", "bar")]
     ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
-    launcher_amount = 1
+    launcher_amount = uint64(1)
     launcher_puzzle = LAUNCHER_PUZZLE
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     initial_singleton_puzzle = adaptor_for_singleton_inner_puzzle(ANYONE_CAN_SPEND_PUZZLE)
@@ -127,7 +128,7 @@ def test_only_odd_coins_0():
     assert launcher_coin in coin_set_removed
 
     assert farmed_coin in coin_set_removed
-    breakpoint()
+    # breakpoint()
 
     singleton_expected_puzzle_hash = singleton_puzzle_hash(launcher_id, launcher_puzzle_hash, initial_singleton_puzzle)
     expected_singleton_coin = Coin(launcher_coin.name(), singleton_expected_puzzle_hash, launcher_amount)

@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import json
 import logging
 import time
@@ -7,21 +6,20 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
-from blspy import G1Element, G2Element, PrivateKey
+from blspy import G1Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
+from chia.pools.pool_puzzles import launcher_id_to_p2_puzzle_hash
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
@@ -31,11 +29,8 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
     find_authentication_sk,
 )
-from chia.wallet.puzzles.load_clvm import load_clvm
-from tests.wallet.test_singleton import P2_SINGLETON_MOD
+from tests.wallet.test_singleton import SINGLETON_MOD
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
 log = logging.getLogger(__name__)
@@ -158,12 +153,8 @@ class Farmer:
     async def _update_pool_state(self):
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
-            p2_singleton_full = P2_SINGLETON_MOD.curry(
-                singleton_mod_hash,
-                Program.to(singleton_mod_hash).get_tree_hash(),
-                pool_config.launcher_id,
-            )
-            p2_singleton_puzzle_hash = p2_singleton_full.get_tree_hash()
+            p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(pool_config.launcher_id)
+
             try:
                 all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
                 authentication_sk: Optional[PrivateKey] = await find_authentication_sk(

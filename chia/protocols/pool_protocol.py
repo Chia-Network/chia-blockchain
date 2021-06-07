@@ -48,7 +48,8 @@ class PartialPayload(Streamable):
 @streamable
 class SubmitPartial(Streamable):
     payload: PartialPayload
-    auth_key_and_partial_aggregate_signature: G2Element  # Sig of auth key by owner key, and partial by plot key and authentication key
+    # Sig of auth key by owner key, and partial by plot key and authentication key
+    auth_key_and_partial_aggregate_signature: G2Element
 
 
 # Response in error case

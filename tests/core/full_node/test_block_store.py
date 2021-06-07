@@ -15,6 +15,7 @@ from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 
+
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()

@@ -41,7 +41,7 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
-def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
+def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data=bytes([3] * 32)) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
     its clvm.
@@ -51,9 +51,9 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     msgs = []
 
     created_coin_announcements: List[List[bytes]] = []
-    asserted_coin_annoucements = []
+    asserted_coin_announcements = []
     created_puzzle_announcements: List[List[bytes]] = []
-    asserted_puzzle_annoucements = []
+    asserted_puzzle_announcements = []
 
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
@@ -70,11 +70,11 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
-            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, bytes([3] * 32)):
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
                 pks.append(pk)
                 msgs.append(m)
             print()
-            cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+            cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
             print(disassemble(r))
             print()
             if conditions and len(conditions) > 0:
@@ -90,14 +90,14 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                 created_coin_announcements.extend(
                     [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
                 )
-                asserted_coin_annoucements.extend(
+                asserted_coin_announcements.extend(
                     [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
                 )
                 created_puzzle_announcements.extend(
                     [puzzle_reveal.get_tree_hash()] + _.vars
                     for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
                 )
-                asserted_puzzle_annoucements.extend(
+                asserted_puzzle_announcements.extend(
                     [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])]
                 )
                 print()
@@ -140,7 +140,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
             print(f"  {as_hex} =>\n      {hashed}")
 
     eor_coin_announcements = sorted(
-        set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_annoucements)
+        set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_announcements)
     )
 
     created_puzzle_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_puzzle_announcements]
@@ -151,24 +151,24 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
             print(f"  {as_hex} =>\n      {hashed}")
 
     eor_puzzle_announcements = sorted(
-        set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_annoucements)
+        set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_announcements)
     )
 
     print()
     print()
     print(f"zero_coin_set = {sorted(zero_coin_set)}")
     print()
-    if created_coin_announcement_pairs or asserted_coin_annoucements:
+    if created_coin_announcement_pairs or asserted_coin_announcements:
         print(f"created coin announcements = {sorted([_[-1] for _ in created_coin_announcement_pairs])}")
         print()
-        print(f"asserted coin announcements = {sorted(asserted_coin_annoucements)}")
+        print(f"asserted coin announcements = {sorted(asserted_coin_announcements)}")
         print()
         print(f"symdiff of coin announcements = {sorted(eor_coin_announcements)}")
         print()
-    if created_puzzle_announcement_pairs or asserted_puzzle_annoucements:
+    if created_puzzle_announcement_pairs or asserted_puzzle_announcements:
         print(f"created puzzle announcements = {sorted([_[-1] for _ in created_puzzle_announcement_pairs])}")
         print()
-        print(f"asserted puzzle announcements = {sorted(asserted_puzzle_annoucements)}")
+        print(f"asserted puzzle announcements = {sorted(asserted_puzzle_announcements)}")
         print()
         print(f"symdiff of puzzle announcements = {sorted(eor_puzzle_announcements)}")
         print()
@@ -177,6 +177,12 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print()
     validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
     print(f"aggregated signature check pass: {validates}")
+    print(f"pks: {pks}")
+    print(f"msgs: {[msg.hex() for msg in msgs]}")
+    print(f"  coin_ids: {[msg.hex()[-128:-64] for msg in msgs]}")
+    print(f"  msg_data: {[msg.hex()[-64:] for msg in msgs]}")
+    print(f"  additional data: {[msg.hex()[:-128] for msg in msgs]}")
+    print(f"signature: {spend_bundle.aggregated_signature}")
 
 
 def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:

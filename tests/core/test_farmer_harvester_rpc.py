@@ -1,3 +1,4 @@
+# flake8: noqa: E501
 import logging
 from secrets import token_bytes
 

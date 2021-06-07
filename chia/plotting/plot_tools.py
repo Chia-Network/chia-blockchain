@@ -46,7 +46,7 @@ def _get_filenames(directory: Path) -> List[Path]:
                 if child.suffix == ".plot" and not child.name.startswith("._"):
                     all_files.append(child)
             else:
-                log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
+                log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
