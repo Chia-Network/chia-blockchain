@@ -481,9 +481,10 @@ class PoolWallet:
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
         message: bytes32 = Program.to([target_puzzle_hash, coin_solution.coin.amount, bytes(target)]).get_tree_hash()
-        signatures: List[G2Element] = [AugSchemeMPL.sign(private, message)]
+        to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
         aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
-        assert AugSchemeMPL.verify(owner_pubkey, message, aggregate_signature)
+        assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
         signed_sb: SpendBundle = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
@@ -492,9 +493,11 @@ class PoolWallet:
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
         message: bytes32 = Program.to(bytes(target)).get_tree_hash()
-        signatures: List[G2Element] = [AugSchemeMPL.sign(private, message)]
+        to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
         aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
-        assert AugSchemeMPL.verify(owner_pubkey, message, aggregate_signature)
+        assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
+        breakpoint()
         signed_sb = SpendBundle([coin_solution], aggregate_signature)
         return signed_sb
 
@@ -558,7 +561,7 @@ class PoolWallet:
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
             signed_spend_bundle = await self.sign_travel_spend_in_member_state(
-                owner_pubkey, outgoing_coin_solution, pool_wallet_info.target
+                owner_pubkey, outgoing_coin_solution, next_state
             )
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
