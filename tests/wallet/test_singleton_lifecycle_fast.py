@@ -163,7 +163,7 @@ def xtest_lifecycle_with_coinstore():
 
     debug_spend_bundle(spend_bundle)
 
-    coin_store.update_coin_store_for_spend_bundle(spend_bundle, now)
+    coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, 11000000000)
 
     # spend_bundle = claim_p2_singleton(p2_singleton_coin, singleton_inner_puzzle_hash, my_id)
 
