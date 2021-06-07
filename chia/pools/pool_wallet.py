@@ -12,7 +12,9 @@ from chia.pools.pool_wallet_info import (
     PoolState,
     POOL_PROTOCOL_VERSION,
     FARMING_TO_POOL,
-    SELF_POOLING, LEAVING_POOL, create_pool_state,
+    SELF_POOLING,
+    LEAVING_POOL,
+    create_pool_state,
 )
 from chia.protocols.pool_protocol import AuthenticationKeyInfo
 
@@ -513,13 +515,16 @@ class PoolWallet:
                 pool_wallet_info.current.relative_lock_height,
             )
 
-        new_inner_puzzle = pool_state_to_inner_puzzle(pool_wallet_info.current, pool_wallet_info.launcher_coin.name(),
-                                                      self.wallet_state_manager.constants.GENESIS_CHALLENGE)
+        new_inner_puzzle = pool_state_to_inner_puzzle(
+            pool_wallet_info.current,
+            pool_wallet_info.launcher_coin.name(),
+            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+        )
         new_full_puzzle: SerializedProgram = SerializedProgram.from_program(
             create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name())
         )
 
-        print(f"Creating Travel Spend:")
+        print("Creating Travel Spend:")
         print(f"current state: {pool_wallet_info.current}")
         print(f"current bytes: {bytes(pool_wallet_info.current).hex()}")
         print(f"current hash: {Program(bytes(pool_wallet_info.current)).get_tree_hash()}")
@@ -539,7 +544,7 @@ class PoolWallet:
             next_state,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
         )
-        current_puzzle_hash = full_puzzle.get_tree_hash()
+        # current_puzzle_hash = full_puzzle.get_tree_hash()
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
                 inner_f,
@@ -585,7 +590,7 @@ class PoolWallet:
         assert spend_bundle is not None
 
         current_singleton: Coin = spend_bundle.coin_solutions[0].coin
-        new_expected_singleton = Coin(current_singleton.name(), new_singleton_puzzle_hash, 1)
+        new_expected_singleton = Coin(current_singleton.name(), new_singleton_puzzle_hash, uint64(1))
         print(f"EXPECTED NEW SINGLETON COIN_ID: {new_expected_singleton.get_hash()}")
         print(f"EXPECTED NEW SINGLETON COIN: {new_expected_singleton}")
 

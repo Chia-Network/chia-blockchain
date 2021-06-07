@@ -35,7 +35,11 @@ SINGLETON_MOD_HASH_HASH = Program.to(SINGLETON_MOD_HASH).get_tree_hash()
 
 
 def create_waiting_room_inner_puzzle(
-    target_puzzle_hash: bytes32, relative_lock_height: uint32, owner_pubkey: G1Element, launcher_id: bytes32, genesis_challenge: bytes32,
+    target_puzzle_hash: bytes32,
+    relative_lock_height: uint32,
+    owner_pubkey: G1Element,
+    launcher_id: bytes32,
+    genesis_challenge: bytes32,
 ) -> Program:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
     p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)

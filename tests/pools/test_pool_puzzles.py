@@ -190,7 +190,9 @@ def xtest_create_absorb_spend():
     target_puzzle_hash = bytes.fromhex("738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7")
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH
     p2_singleton_puzzle = P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_coin.name(), LAUNCHER_PUZZLE_HASH)
-    current_inner = create_waiting_room_inner_puzzle(target_puzzle_hash, 0, owner_pubkey, launcher_coin.name(), GENESIS_CHALLENGE)
+    current_inner = create_waiting_room_inner_puzzle(
+        target_puzzle_hash, 0, owner_pubkey, launcher_coin.name(), GENESIS_CHALLENGE
+    )
     full_puz = create_full_puzzle(current_inner, launcher_coin.name())
     parent_coin = Coin(launcher_coin.name(), full_puz.get_tree_hash(), 201)
     current_coin = Coin(parent_coin.name(), full_puz.get_tree_hash(), 201)

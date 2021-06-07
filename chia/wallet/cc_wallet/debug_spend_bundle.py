@@ -41,7 +41,7 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
-def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data = bytes([3] * 32)) -> None:
+def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data=bytes([3] * 32)) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
     its clvm.
