@@ -3,9 +3,13 @@ from typing import Any, Callable, Dict, List, Optional
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.coin_solution import CoinSolution
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -40,6 +44,7 @@ class FullNodeRpcApi:
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
             "/push_tx": self.push_tx,
+            "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
@@ -478,6 +483,31 @@ class FullNodeRpcApi:
         return {
             "status": status.name,
         }
+
+    async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
+        coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
+        height = request["height"]
+        coin_record = await self.service.coin_store.get_coin_record(coin_name)
+        if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
+            raise ValueError(f"Invalid height {height}. coin record {coin_record}")
+
+        header_hash = self.service.blockchain.height_to_hash(height)
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+
+        if block is None or block.transactions_generator is None:
+            raise ValueError("Invalid block or block generator")
+
+        block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+        assert block_generator is not None
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(
+            block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
+        )
+        if error is not None:
+            raise ValueError(f"Error: {error}")
+
+        puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
+        solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
+        return {"coin_solution": CoinSolution(coin_record.coin, puzzle_ser, solution_ser)}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:

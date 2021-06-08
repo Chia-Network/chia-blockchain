@@ -178,13 +178,14 @@ class Farmer:
                     self.log.info(f"Added pool: {pool_config}")
                 self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
 
-                # Makes a GET request to the pool to get the updated information
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://{pool_config.pool_url}/pool_info") as resp:
-                        if resp.ok:
-                            self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
-                        else:
-                            self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
+                if self.pool_state[p2_singleton_puzzle_hash]["pool_info"] == {}:
+                    # Makes a GET request to the pool to get the updated information
+                    async with aiohttp.ClientSession(trust_env=True) as session:
+                        async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
+                            if resp.ok:
+                                self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
+                            else:
+                                self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
             except Exception as e:
                 self.log.error(f"Exception fetching pool info from {pool_config.pool_url}, {e}")
 

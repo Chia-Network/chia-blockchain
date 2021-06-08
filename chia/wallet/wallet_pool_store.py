@@ -99,8 +99,8 @@ class WalletPoolStore:
 
     async def rollback(self, height: int, wallet_id_arg: int) -> None:
         """
-        Rollback removes all entries which have height > height passed in. Note that this is not committed to the DB
-        until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
+        Rollback removes all entries which have entry_height > height passed in. Note that this is not committed to the
+        DB until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
         get_all_state_transitions.
         """
         for wallet_id, items in self._state_transitions_cache.items():

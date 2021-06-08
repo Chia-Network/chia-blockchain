@@ -119,12 +119,6 @@ class PoolWallet:
     def id(self):
         return self.wallet_info.id
 
-    def _init_log(self, name):
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
-
     @classmethod
     def _verify_self_pooled(cls, state) -> Optional[str]:
         err = ""
@@ -371,7 +365,7 @@ class PoolWallet:
         self.wallet_id = self.wallet_info.id
         self.standard_wallet = wallet
         self.target_state = None
-        self._init_log(name)
+        self.log = logging.getLogger(name if name else __name__)
 
         launcher_spend: Optional[CoinSolution] = None
         for spend in block_spends:
@@ -406,7 +400,7 @@ class PoolWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.target_state = None
-        self._init_log(name)
+        self.log = logging.getLogger(name if name else __name__)
 
         return self
 
