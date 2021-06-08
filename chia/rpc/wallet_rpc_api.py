@@ -259,11 +259,11 @@ class WalletRpcApi:
             path.unlink()
         return {}
 
-#
-# Check the key for a few things
-# 1) is it used for either farm or pool rewards
-# 2) do any wallets have a non-zero balance
-#
+    #
+    # Check the key for a few things
+    # 1) is it used for either farm or pool rewards
+    # 2) do any wallets have a non-zero balance
+    #
     async def check_delete_key(self, request):
         fingerprint = request["fingerprint"]
         sk, _ = await self._get_private_key(fingerprint)
@@ -291,7 +291,7 @@ class WalletRpcApi:
             "fingerprint": fingerprint,
             "used_for_farmer_rewards": used_for_farmer,
             "used_for_pool_rewards": used_for_pool,
-            "wallet_balance": walletBalance
+            "wallet_balance": walletBalance,
         }
 
     async def delete_all_keys(self, request: Dict):
