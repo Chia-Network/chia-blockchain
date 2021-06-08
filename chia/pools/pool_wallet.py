@@ -68,6 +68,7 @@ class PoolWallet:
     target_state: Optional[PoolState]
     standard_wallet: Wallet
     wallet_id: int
+    singleton_list: List[Coin]
     """
     From the user's perspective, this is not a wallet at all, but a way to control
     whether their pooling-enabled plots are being self-farmed, or farmed by a pool,
@@ -475,8 +476,14 @@ class PoolWallet:
         self, target_puzzle_hash: bytes32, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
-        message: bytes32 = Program.to([target_puzzle_hash, coin_solution.coin.amount, bytes(target)]).get_tree_hash()
+        message_array = [target_puzzle_hash, coin_solution.coin.amount, bytes(target)]
+        message_prog = Program.to(message_array)
+        message: bytes32 = message_prog.get_tree_hash()
+        self.log.warning(f"AGG_SIG_ME WAITING message array: {message_array}")
+        self.log.warning(f"AGG_SIG_ME WAITING message prog:  {message_prog}")
+        self.log.warning(f"AGG_SIG_ME WAITING spend message: {message}")
         to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        # sign msg or hash of msg?
         signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
         aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
         assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
@@ -488,6 +495,7 @@ class PoolWallet:
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
         message: bytes32 = Program.to(bytes(target)).get_tree_hash()
+        self.log.warning(f"AGG_SIG_ME MEMBER spend message: {message}")
         to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
         aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
@@ -497,13 +505,13 @@ class PoolWallet:
 
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
         # target_state is contained within pool_wallet_state
-        pool_wallet_info: PoolWalletInfo = await self.get_current_state()
+        pool_wallet_info: PoolWalletInfo = await self.get_current_state() #remove
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
 
         assert pool_wallet_info.target is not None
         next_state = pool_wallet_info.target
-        if pool_wallet_info.current.state in [SELF_POOLING, FARMING_TO_POOL]:
+        if pool_wallet_info.current.state in [FARMING_TO_POOL]:
             next_state = create_pool_state(
                 LEAVING_POOL,
                 pool_wallet_info.current.target_puzzle_hash,
@@ -521,18 +529,18 @@ class PoolWallet:
             create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name())
         )
 
-        print("Creating Travel Spend:")
-        print(f"current state: {pool_wallet_info.current}")
-        print(f"current bytes: {bytes(pool_wallet_info.current).hex()}")
-        print(f"current hash: {Program(bytes(pool_wallet_info.current)).get_tree_hash()}")
+        self.log.warning("Creating Travel Spend:")
+        self.log.warning(f"current state: {pool_wallet_info.current}")
+        self.log.warning(f"current bytes: {bytes(pool_wallet_info.current).hex()}")
+        self.log.warning(f"current hash: {Program(bytes(pool_wallet_info.current)).get_tree_hash()}")
 
-        print(f"next state: {next_state}")
-        print(f"next bytes: {bytes(next_state).hex()}")
-        print(f"next hash: {Program(bytes(next_state)).get_tree_hash()}")
+        self.log.warning(f"next state: {next_state}")
+        self.log.warning(f"next bytes: {bytes(next_state).hex()}")
+        self.log.warning(f"next hash: {Program(bytes(next_state)).get_tree_hash()}")
 
-        print(f"target state: {pool_wallet_info.target}")
-        print(f"target bytes: {bytes(pool_wallet_info.target).hex()}")
-        print(f"target hash: {Program(bytes(pool_wallet_info.target)).get_tree_hash()}")
+        self.log.warning(f"target state: {pool_wallet_info.target}")
+        self.log.warning(f"target bytes: {bytes(pool_wallet_info.target).hex()}")
+        self.log.warning(f"target hash: {Program(bytes(pool_wallet_info.target)).get_tree_hash()}")
 
         outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(
             last_coin_solution,
@@ -541,8 +549,10 @@ class PoolWallet:
             next_state,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
         )
-        breakpoint()
+        self.log.warning(f"OUTGOING COIN SOLUTION: {outgoing_coin_solution}")
+        #breakpoint()
         # current_puzzle_hash = full_puzzle.get_tree_hash()
+        assert new_inner_puzzle != inner_puzzle
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
                 inner_f,
@@ -573,12 +583,13 @@ class PoolWallet:
             )
         else:
             raise RuntimeError("Invalid state")
-
+        assert signed_spend_bundle.coin_solutions[0].coin.parent_coin_info == pool_wallet_info.launcher_id
         print(f"NEW PUZZLE IS: {new_full_puzzle}")
         print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
         debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
         print(f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}")
         assert signed_spend_bundle is not None
+        self.log.warning(f"generate_travel_spend: {signed_spend_bundle}")
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
 
     async def generate_member_transaction(self, target_state: PoolState) -> TransactionRecord:
@@ -685,8 +696,8 @@ class PoolWallet:
 
         log = logging.getLogger(__name__)
         eve = launcher_cs.additions()[0]
-        log.error(f"launcher_coin={launcher_coin} launcher_coin_id={launcher_coin.name()}")
-        log.error(f"eve_singleton={eve} eve_coin_id={eve.name()}")
+        log.error(f"launcher_coin={launcher_coin}\nlauncher_coin_id={launcher_coin.name()}")
+        log.error(f"eve_singleton={eve}\neve_coin_id={eve.name()}")
 
         # Current inner will be updated when state is verified on the blockchain
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
