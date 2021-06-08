@@ -12,7 +12,7 @@ from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
 from chia.util.hash import std_hash
 
-MAX_KEYS = 100
+MAX_KEYS = 1
 
 if platform == "win32" or platform == "cygwin":
     import keyring.backends.Windows
