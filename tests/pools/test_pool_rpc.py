@@ -484,12 +484,12 @@ class TestPoolWalletRpc:
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
             total_block_rewards = await self.get_total_block_rewards(total_blocks)
 
-            async def status_is_farming_to_pool():
-                # await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
-                return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+            #async def status_is_farming_to_pool():
+            #    # await self.farm_blocks(full_node_api, our_ph, 1)
+            #    pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+            #    return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+            #await time_out_assert(timeout=20, function=status_is_farming_to_pool)
 
-            await time_out_assert(timeout=20, function=status_is_farming_to_pool)
             assert len(join_pool_tx.additions) > 1
 
         finally:
