@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 POOL_WAITING_ROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 POOL_OUTER_MOD = SINGLETON_MOD
 
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
@@ -70,12 +70,18 @@ def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
     return POOL_OUTER_MOD.curry(POOL_OUTER_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH, inner_puzzle)
 
 
-def create_p2_singleton_puzzle(singleton_mod_hash: bytes, launcher_id: bytes32) -> Program:
+def create_p2_singleton_puzzle(
+    singleton_mod_hash: bytes,
+    launcher_id: bytes32,
+    seconds_delay: uint64,
+    delayed_puzzle_hash: bytes32,
+) -> Program:
     # TODO: Test these hash conversions
-    return P2_SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH)
+    # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
+    return P2_SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH, seconds_delay, delayed_puzzle_hash)
 
 
-def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32) -> bytes32:
+def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32) -> bytes32:
     return create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id).get_tree_hash()
 
 

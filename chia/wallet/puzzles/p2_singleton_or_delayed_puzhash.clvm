@@ -1,76 +1,57 @@
-(mod (SINGLETON_MOD_HASH SINGLETON_ID DELAYED_PUZHASH spend_type singleton_innerpuzhash my_id)
+(mod (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH delayed_puzzle_reveal p1 p2)
+
+  ;; This puzzle has two escape conditions: the regular "claim via singleton", and the
+  ;; delayed "claim via puzzle hash", delayed by a fixed number of seconds.
 
   ; SINGLETON_MOD_HASH is the mod-hash for the singleton_top_layer puzzle
-  ; SINGLETON_ID is the genesis ID of the singleton we are commited to paying to
-  ; DELAYED_PUZHASH is the puzzle hash which we will use if we are not claimed by a pool
-  ; singleton_innerpuzhash is the innerpuzzlehash for the singleton at the current time
-    ; if we are using the delayed puzhash then this will be the puzzle reveal
-  ; my_id is the coin_id of the coin that this puzzle is locked into
-    ; if we are using the delayed puzhash then this will be the solution to the delayed puzzle
+  ; LAUNCHER_ID is the ID of the singleton we are commited to paying to
+  ; LAUNCHER_PUZZLE_HASH is the puzzle hash of the launcher
+  ; SECONDS_DELAY is the number of seconds before the coin can be spent with `DELAYED_PUZZLE_HASH`
+  ; DELAYED_PUZZLE_HASH is the puzzle hash of the delayed puzzle
+  ; delayed_puzzle_reveal is 0 for the "claim via singleton" case or the delayed puzzle reveal for the delay case
+  ; p1 and p2 are parameters whose meaning changes depending upon which case we're using
+    ; if we are paying to singleton then p1 is singleton_inner_puzzle_hash, and p2 is my_id
+    ; if we are running the delayed case then p1 is the solution for delayed puzzle
 
   (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
 
-  (defun is-in-list (atom items)
-    ;; returns 1 iff `atom` is in the list of `items`
-    (if items
-      (if (= atom (f items))
-        1
-        (is-in-list atom (r items))
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+          (sha256 1 TREE)
       )
-      0
+  )
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH inner_puzzle_hash)
+     (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
+                                      inner_puzzle_hash
+                                      (sha256tree (c SINGLETON_MOD_HASH (c LAUNCHER_ID LAUNCHER_PUZZLE_HASH)))
+     )
+  )
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline delayed-spend (SECONDS_DELAY DELAYED_PUZZLE_HASH delayed_puzzle_reveal delayed_puzzle_solution)
+    (if (= (sha256tree delayed_puzzle_reveal) DELAYED_PUZZLE_HASH)
+      (c (list ASSERT_SECONDS_RELATIVE SECONDS_DELAY) (a delayed_puzzle_reveal delayed_puzzle_solution))
+      (x)
     )
   )
 
-  ;; utility function used by `curry_args`
-  (defun fix_curry_args (items core)
-    (if items
-        (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
-        core
-    )
-  )
-
-  ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-  (defun curry_args (func list_of_args) (qq (a (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1))))))
-
-  ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
-  (defun curry (func . args) (curry_args func args))
-
-  ;; hash a tree with escape values representing already-hashed subtrees
-  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
-  ;; You probably actually want to use `curry_and_hash` though.
-  (defun sha256tree_esc_list
-         (TREE LITERALS)
-         (if (l TREE)
-             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
-             (if (is-in-list TREE LITERALS)
-                 TREE
-                 (sha256 1 TREE)
-             )
-         )
-  )
-
-  ;; hash a tree with escape values representing already-hashed subtrees
-  ;; This optimization can be useful if you know the tree hash of a sub-expression.
-  (defun sha256tree_esc
-     (TREE . LITERAL)
-     (sha256tree_esc_list TREE LITERAL)
-  )
-
-  ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
-    (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
-                    mod_hash
-                    mod_hash_hash
-                    inner_puzzle_hash)
+  (defun-inline claim-rewards (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
+    (list
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash) my_id))
+        (list CREATE_COIN_ANNOUNCEMENT 0x80)
+        (list ASSERT_MY_COIN_ID my_id))
   )
 
   ; main
-  (if spend_type
-      (list (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (create_fullpuzhash SINGLETON_MOD_HASH (sha256 1 SINGLETON_MOD_HASH) SINGLETON_ID singleton_innerpuzhash) my_id)) (list CREATE_COIN_ANNOUNCEMENT 0x80) (list ASSERT_MY_COIN_ID my_id))
-      (if (= (sha256tree_esc singleton_innerpuzhash ()) DELAYED_PUZHASH)
-        (c (list ASSERT_SECONDS_RELATIVE 3600) (a singleton_innerpuzhash my_id))
-        (x)
-      )
+  (if delayed_puzzle_reveal
+    (delayed-spend SECONDS_DELAY DELAYED_PUZZLE_HASH delayed_puzzle_reveal p1)
+    (claim-rewards SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH p1 p2)
   )
-
 )
