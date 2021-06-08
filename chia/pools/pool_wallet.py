@@ -505,7 +505,7 @@ class PoolWallet:
 
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
         # target_state is contained within pool_wallet_state
-        pool_wallet_info: PoolWalletInfo = await self.get_current_state() #remove
+        pool_wallet_info: PoolWalletInfo = await self.get_current_state()  # remove
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
 
@@ -550,7 +550,7 @@ class PoolWallet:
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
         )
         self.log.warning(f"OUTGOING COIN SOLUTION: {outgoing_coin_solution}")
-        #breakpoint()
+        # breakpoint()
         # current_puzzle_hash = full_puzzle.get_tree_hash()
         assert new_inner_puzzle != inner_puzzle
         if is_pool_member_inner_puzzle(inner_puzzle):
@@ -587,7 +587,9 @@ class PoolWallet:
         print(f"NEW PUZZLE IS: {new_full_puzzle}")
         print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
         debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
-        print(f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}")
+        print(
+            f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}"
+        )
         assert signed_spend_bundle is not None
         self.log.warning(f"generate_travel_spend: {signed_spend_bundle}")
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
