@@ -257,7 +257,7 @@ class TestPoolWalletRpc:
             )
         ) is not None
         # Doing a reorg reverts and removes the pool wallets
-        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(0, 20, our_ph_2))
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(0), uint32(20), our_ph_2))
         await asyncio.sleep(5)
         summaries_response = await client.get_wallets()
         assert len(summaries_response) == 1
