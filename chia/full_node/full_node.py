@@ -177,6 +177,12 @@ class FullNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         dns_servers = []
+        try:
+            network_name = self.config["selected_network"]
+            default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        except Exception:
+            self.log.info("Default port field not found in config.")
+            default_port = None
         if "dns_servers" in self.config:
             dns_servers = self.config["dns_servers"]
         elif self.config["port"] == 8444:
@@ -193,6 +199,7 @@ class FullNode:
                 dns_servers,
                 self.config["peer_connect_interval"],
                 self.config["selected_network"],
+                default_port,
                 self.log,
             )
         except Exception as e:

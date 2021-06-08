@@ -25,6 +25,11 @@ from chia.util.path import mkdir, path_from_root
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
 MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
+NETWORK_ID_DEFAULT_PORTS = {
+    "mainnet": 8444,
+    "testnet7": 58444,
+    "testnet8": 58445,
+}
 
 
 class FullNodeDiscovery:
@@ -38,6 +43,7 @@ class FullNodeDiscovery:
         dns_servers: List[str],
         peer_connect_interval: int,
         selected_network: str,
+        default_port: Optional[int],
         log,
     ):
         self.server: ChiaServer = server
@@ -73,6 +79,9 @@ class FullNodeDiscovery:
         self.resolver = dns.asyncresolver.Resolver()
         self.pending_outbound_connections: Set[str] = set()
         self.pending_tasks: Set[asyncio.Task] = set()
+        self.default_port: Optional[int] = default_port
+        if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
+            self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -185,13 +194,18 @@ class FullNodeDiscovery:
 
     async def _query_dns(self, dns_address):
         try:
+            if self.default_port is None:
+                self.log.error(
+                    "Network id not supported in NETWORK_ID_DEFAULT_PORTS neither in config. Skipping DNS query."
+                )
+                return
             peers: List[TimestampedPeerInfo] = []
             result = await self.resolver.resolve(qname=dns_address, lifetime=30)
             for ip in result:
                 peers.append(
                     TimestampedPeerInfo(
                         ip.to_text(),
-                        8444,
+                        self.default_port,
                         0,
                     )
                 )
@@ -478,6 +492,7 @@ class FullNodePeers(FullNodeDiscovery):
         dns_servers,
         peer_connect_interval,
         selected_network,
+        default_port,
         log,
     ):
         super().__init__(
@@ -489,6 +504,7 @@ class FullNodePeers(FullNodeDiscovery):
             dns_servers,
             peer_connect_interval,
             selected_network,
+            default_port,
             log,
         )
         self.relay_queue = asyncio.Queue()
@@ -649,6 +665,7 @@ class WalletPeers(FullNodeDiscovery):
         dns_servers,
         peer_connect_interval,
         selected_network,
+        default_port,
         log,
     ) -> None:
         super().__init__(
@@ -660,6 +677,7 @@ class WalletPeers(FullNodeDiscovery):
             dns_servers,
             peer_connect_interval,
             selected_network,
+            default_port,
             log,
         )
 
