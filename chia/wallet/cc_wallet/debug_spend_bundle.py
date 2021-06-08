@@ -179,9 +179,9 @@ def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data=bytes(
     print(f"aggregated signature check pass: {validates}")
     print(f"pks: {pks}")
     print(f"msgs: {[msg.hex() for msg in msgs]}")
+    print(f"  msg_data: {[msg.hex()[:-128] for msg in msgs]}")
     print(f"  coin_ids: {[msg.hex()[-128:-64] for msg in msgs]}")
-    print(f"  msg_data: {[msg.hex()[-128:] for msg in msgs]}")
-    print(f"  add_data: {[msg.hex()[:-64] for msg in msgs]}")
+    print(f"  add_data: {[msg.hex()[-64:] for msg in msgs]}")
     print(f"signature: {spend_bundle.aggregated_signature}")
 
 
