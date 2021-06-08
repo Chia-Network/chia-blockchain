@@ -123,9 +123,11 @@ def create_travel_spend(
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
         destination_inner: Program = pool_state_to_inner_puzzle(target, launcher_coin.name(), genesis_challenge)
-        log.warning(f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
+        log.warning(
+            f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
-            f"hash:{Program(bytes(target)).get_tree_hash()}")
+            f"hash:{Program(bytes(target)).get_tree_hash()}"
+        )
         inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
     else:
         raise ValueError
@@ -150,7 +152,11 @@ def create_travel_spend(
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
     return (
-        CoinSolution(current_singleton, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)),
+        CoinSolution(
+            current_singleton,
+            SerializedProgram.from_program(full_puzzle),
+            SerializedProgram.from_program(full_solution),
+        ),
         full_puzzle,
         inner_puzzle,
     )
@@ -248,10 +254,10 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tupl
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
     """
     if not is_pool_member_inner_puzzle(inner_puzzle):
-        return None
+        raise ValueError("Attempting to unpack a non-waitingroom inner puzzle")
     r = inner_puzzle.uncurry()
     if r is None:
-        return r
+        raise ValueError("Failed to unpack inner puzzle")
     inner_f, args = r
 
     # TARGET_PUZZLE_HASH P2_SINGLETON_PUZZLEHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZZLEHASH
@@ -262,29 +268,28 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tupl
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
-def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
+def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Program, Program, Program, Program]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
     """
     if not is_pool_waitingroom_inner_puzzle(inner_puzzle):
-        return None
+        raise ValueError("Attempting to unpack a non-waitingroom inner puzzle")
     r = inner_puzzle.uncurry()
     if r is None:
-        return r
+        raise ValueError("Failed to unpack inner puzzle")
     inner_f, args = r
 
     # TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH
-    #breakpoint()
+    # breakpoint()
     v = args.as_iter()
-    #target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash, genesis_challenge = tuple(v)
+    # target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash, genesis_challenge = tuple(v)
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
-    #(mod (POOL_PUZZLE_HASH
+    # (mod (POOL_PUZZLE_HASH
     #  P2_SINGLETON_PUZHASH
     #  OWNER_PUBKEY
     #  POOL_REWARD_PREFIX
     #  RELATIVE_LOCK_HEIGHT
-
 
     # assert p2_singleton_hash == P2_SINGLETON_HASH
 
