@@ -179,8 +179,8 @@ class Farmer:
                 self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
 
                 # Makes a GET request to the pool to get the updated information
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://{pool_config.pool_url}/pool_info") as resp:
+                async with aiohttp.ClientSession(trust_env=True) as session:
+                    async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
                         if resp.ok:
                             self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
                         else:
@@ -270,7 +270,7 @@ class Farmer:
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
         while not self._shut_down:
-            if time_slept > 60:
+            if time_slept > 600:
                 await self._update_pool_state()
                 time_slept = uint64(0)
             time_slept += 1

@@ -66,7 +66,7 @@ class FarmerAPI:
             )
             if computed_quality_string is None:
                 self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
-                return None
+                return e
 
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
@@ -115,6 +115,7 @@ class FarmerAPI:
 
             p2_singleton_puzzle_hash = new_proof_of_space.proof.pool_contract_puzzle_hash
             if p2_singleton_puzzle_hash is not None:
+                self.farmer.log.warning(f"Submitting partial for {p2_singleton_puzzle_hash}")
                 # Otherwise, send the proof of space to the pool
                 # When we win a block, we also send the partial to the pool
                 if p2_singleton_puzzle_hash not in self.farmer.pool_state:
@@ -208,7 +209,7 @@ class FarmerAPI:
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
                 try:
                     async with aiohttp.ClientSession() as session:
-                        async with session.post(f"http://{pool_url}/partial", data=json_data) as resp:
+                        async with session.post(f"{pool_url}/partial", data=json_data) as resp:
                             if resp.ok:
                                 pool_response: Dict = json.loads(await resp.text())
                                 self.farmer.log.info(f"Pool response: {pool_response}")

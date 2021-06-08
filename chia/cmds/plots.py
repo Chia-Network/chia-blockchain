@@ -128,7 +128,7 @@ def create_cmd(
         print("k=32 is the minimum size for farming.")
         print("If you are testing and you want to use smaller size please add the --override-k flag.")
         sys.exit(1)
-    elif size < 22 and override_k:
+    elif size < 20 and override_k:
         print("Error: The minimum k size allowed from the cli is k=25.")
         sys.exit(1)
 
