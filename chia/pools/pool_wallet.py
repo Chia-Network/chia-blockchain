@@ -589,7 +589,7 @@ class PoolWallet:
         print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
         debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
         print(
-            f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}"
+            f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}"  # noqa
         )
         assert signed_spend_bundle is not None
         self.log.warning(f"generate_travel_spend: {signed_spend_bundle}")
