@@ -824,8 +824,8 @@ class WalletStateManager:
         if fork_point_with_peak is not None:
             fork_h: int = fork_point_with_peak
         elif new_block.prev_header_hash != self.constants.GENESIS_CHALLENGE and self.peak is not None:
-            # TODO: handle returning of -1
             block_record = await self.blockchain.get_block_record_from_db(self.peak.header_hash)
+            # this may return -1, in case there is no shared ancestor block
             fork_h = find_fork_point_in_chain(
                 self.blockchain,
                 block_record,
@@ -835,7 +835,9 @@ class WalletStateManager:
             fork_h = 0
 
         # Get all unspent coins
-        my_coin_records: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(uint32(fork_h))
+        my_coin_records: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(
+            uint32(fork_h) if fork_h >= 0 else None
+        )
 
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()

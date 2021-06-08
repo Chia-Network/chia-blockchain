@@ -27,7 +27,7 @@ def calculate_cost_of_program(program: SerializedProgram, npc_result: NPCResult,
     # Add cost of conditions
     npc: NPC
     for npc in npc_list:
-        for condition, cvp_list in npc.condition_dict.items():
+        for condition, cvp_list in npc.conditions:
             if condition is ConditionOpcode.AGG_SIG_UNSAFE or condition is ConditionOpcode.AGG_SIG_ME:
                 total_cost += len(cvp_list) * ConditionCost.AGG_SIG.value
             elif condition is ConditionOpcode.CREATE_COIN:

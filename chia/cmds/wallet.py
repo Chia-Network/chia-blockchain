@@ -79,9 +79,9 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
     "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
 )
 def send_cmd(
-    wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str, confirm: bool
+    wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str, override: bool
 ) -> None:
-    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "confirm": confirm}
+    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
