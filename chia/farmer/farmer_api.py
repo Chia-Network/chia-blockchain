@@ -66,7 +66,7 @@ class FarmerAPI:
             )
             if computed_quality_string is None:
                 self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
-                return e
+                return None
 
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
@@ -89,19 +89,13 @@ class FarmerAPI:
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
-                    self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = [
-                        (
-                            new_proof_of_space.plot_identifier,
-                            new_proof_of_space.proof,
-                        )
-                    ]
-                else:
-                    self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
-                        (
-                            new_proof_of_space.plot_identifier,
-                            new_proof_of_space.proof,
-                        )
+                    self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = []
+                self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
+                    (
+                        new_proof_of_space.plot_identifier,
+                        new_proof_of_space.proof,
                     )
+                )
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
