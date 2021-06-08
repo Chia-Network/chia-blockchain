@@ -23,7 +23,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     pool_url = args["pool_url"]
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"http://{pool_url}/pool_info") as response:
+            async with session.get(f"{pool_url}/pool_info") as response:
                 if response.ok:
                     json_dict = json.loads(await response.text())
                 else:

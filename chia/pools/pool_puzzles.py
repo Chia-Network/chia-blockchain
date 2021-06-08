@@ -227,9 +227,14 @@ def get_most_recent_singleton_coin_from_coin_solution(coin_sol: CoinSolution) ->
 def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     args = uncurry_pool_member_inner_puzzle(inner_puzzle)
     if args is not None:
-        inner_f, target_puzzle_hash, p2_singleton_hash, pubkey_program, pool_reward_prefix, escape_puzzlehash = args
-        # pool_puzzle_hash, relative_lock_height, pubkey_program = args
-        # pubkey_program = args[0]
+        (
+            _inner_f,
+            _target_puzzle_hash,
+            _p2_singleton_hash,
+            pubkey_program,
+            _pool_reward_prefix,
+            _escape_puzzlehash,
+        ) = args
     else:
         raise ValueError("Unable to extract pubkey")
     pubkey = G1Element.from_bytes(pubkey_program.as_atom())
@@ -308,7 +313,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     # Spend which is not absorb, and is not the launcher
     num_args = len(inner_solution.as_atom_list())
-    assert num_args == 4 or num_args == 5
+    assert num_args in (4, 5)
 
     if num_args == 4:
         # pool member
