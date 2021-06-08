@@ -39,8 +39,18 @@ class CoinStore:
         puzzle_hash: bytes32,
         birthday: CoinTimestamp,
         amount: int = 1024,
+        prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),  # noqa
     ) -> Coin:
-        parent = birthday.height.to_bytes(32, "big")
+        parent = bytes32(
+            [
+                a | b
+                for a, b in zip(
+                    prefix,
+                    birthday.height.to_bytes(32, "big"),
+                )
+            ],
+        )
+        # parent = birthday.height.to_bytes(32, "big")
         coin = Coin(parent, puzzle_hash, uint64(amount))
         self._add_coin_entry(coin, birthday)
         return coin
