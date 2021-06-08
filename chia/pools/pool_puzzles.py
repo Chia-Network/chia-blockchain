@@ -122,21 +122,25 @@ def create_travel_spend(
     inner_puzzle: Program = pool_state_to_inner_puzzle(current, pool_reward_prefix)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        breakpoint()
         inner_sol: Program = Program.to([1, 0, 0, bytes(target)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
-        #breakpoint()
         # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
         destination_inner: Program = pool_state_to_inner_puzzle(target, launcher_coin.name(), genesis_challenge)
+        log.warning(f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
+            f"{target}"
+            f"hash:{Program(bytes(target)).get_tree_hash()}")
         inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
-    coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
-    assert coin is not None
-    if coin.parent_coin_info == launcher_coin.name():
-        parent_info = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
+    last_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
+    assert last_singleton is not None
+
+    if last_singleton.parent_coin_info == launcher_coin.name():
+        breakpoint()
+        parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])  # what about extra data?
     else:
+        breakpoint()
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         last_coin_solution_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
         assert last_coin_solution_inner_puzzle is not None
@@ -151,7 +155,7 @@ def create_travel_spend(
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
     return (
-        CoinSolution(coin, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)),
+        CoinSolution(last_singleton, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)),
         full_puzzle,
         inner_puzzle,
     )
@@ -276,7 +280,7 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Optional[Tup
     inner_f, args = r
 
     # TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH
-    breakpoint()
+    #breakpoint()
     v = args.as_iter()
     #target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash, genesis_challenge = tuple(v)
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
