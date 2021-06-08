@@ -130,14 +130,12 @@ def create_travel_spend(
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
-    last_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
-    assert last_singleton is not None
+    current_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
+    assert current_singleton is not None
 
-    if last_singleton.parent_coin_info == launcher_coin.name():
-        breakpoint()
+    if current_singleton.parent_coin_info == launcher_coin.name():
         parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])  # what about extra data?
     else:
-        breakpoint()
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         last_coin_solution_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
         assert last_coin_solution_inner_puzzle is not None
@@ -148,11 +146,11 @@ def create_travel_spend(
                 last_coin_solution.coin.amount,
             ]
         )
-    full_solution: Program = Program.to([parent_info_list, last_coin_solution.coin.amount, inner_sol])
+    full_solution: Program = Program.to([parent_info_list, current_singleton.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
     return (
-        CoinSolution(last_singleton, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)),
+        CoinSolution(current_singleton, SerializedProgram.from_program(full_puzzle), SerializedProgram.from_program(full_solution)),
         full_puzzle,
         inner_puzzle,
     )
