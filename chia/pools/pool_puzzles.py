@@ -144,7 +144,7 @@ def create_travel_spend(
                 last_coin_solution_inner_puzzle.get_tree_hash(),
                 last_coin_solution.coin.amount,
             ]
-        ).get_tree_hash()
+        )
     full_solution: Program = Program.to([parent_info, last_coin_solution.coin.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
 
