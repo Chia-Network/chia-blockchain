@@ -33,10 +33,6 @@ class PoolSingletonState(IntEnum):
     LEAVING_POOL = 2
     FARMING_TO_POOL = 3
 
-    # Revise this: we need to transition through the pending
-    # "claim rewards" tx, then the "leave self-pooling" tx
-    # CLAIMING_SELF_POOLED_REWARDS = 5
-
 
 SELF_POOLING = PoolSingletonState.SELF_POOLING
 LEAVING_POOL = PoolSingletonState.LEAVING_POOL
