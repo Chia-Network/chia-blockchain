@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "может быть сохранен в качестве резервной копии при помощи мнемонического зерна"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -820,9 +820,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Хеш-головоломка фермера"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "Адрес выплаты фермеру"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -1109,7 +1121,7 @@ msgstr "Вход в систему"
 msgid "Manage Farming Rewards"
 msgstr "Управление вознаграждением за фарминг"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Управление целевыми адресами для получения вознаграждений за фарминг"
 
@@ -1177,7 +1189,7 @@ msgstr "Выращенных блоков пока нет"
 msgid "No previous transactions"
 msgstr "Нет предыдущих транзакций"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Не найдено закрытых ключей для одного или обоих адресов. Безопасно только в том случае, если вы отправляете вознаграждение на другой кошелек."
 
@@ -1430,9 +1442,21 @@ msgstr "Публичный ключ пула"
 msgid "Pool Puzzle Hash"
 msgstr "Хеш-головоломка пула"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "Адрес выплаты пулу"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1580,7 +1604,7 @@ msgstr "Восстановление метаданных цветных мон�
 msgid "Safe To Skip"
 msgstr "Можно пропустить"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Сохранить"

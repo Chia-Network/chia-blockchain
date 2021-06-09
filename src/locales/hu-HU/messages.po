@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Biztonsági mentés elérhető a mnemonic maggal"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,9 +648,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Kirakós Részlet"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "Farmer jutalom címe"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -937,7 +949,7 @@ msgstr "Bejelentkezés"
 msgid "Manage Farming Rewards"
 msgstr "A gazdálkodási jutalmak kezelése"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Kezelje a gazdálkodási jutalmak célcímeit"
 
@@ -1005,7 +1017,7 @@ msgstr "Nincs kitermelt blokk"
 msgid "No previous transactions"
 msgstr "Nincs korábbi tranzakció"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Hiányoz(nak) a cím(ek)hez tartozó privát kulcs(ok). Csak akkor biztonságos, ha egy másik tárcába küldöd a jutalmakat."
 
@@ -1258,9 +1270,21 @@ msgstr "Parcella nyilvános kulcs"
 msgid "Pool Puzzle Hash"
 msgstr "Véletlenszerű Pool Hash"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "Farmer jutalom címe"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1408,7 +1432,7 @@ msgstr "Állítsa vissza a színes érmék és más intelligens pénztárcák me
 msgid "Safe To Skip"
 msgstr "Biztonságosan átugorható"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Mentés"

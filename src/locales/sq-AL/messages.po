@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Mund të ruhet ne bërthamen mnemonic"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,9 +648,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Kodi i kombinuar i Fermës"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "Adresa e perfitimeve e fermerit"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -937,7 +949,7 @@ msgstr "Duke u loguar"
 msgid "Manage Farming Rewards"
 msgstr "Menaxhoni shpërblimet e fermerit"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Menaxhoni adresat tuaja të synuara për shpërblimet tuaja të fermerit"
 
@@ -1005,7 +1017,7 @@ msgstr "Ende nuk ka blloqe të kultivuara"
 msgid "No previous transactions"
 msgstr "Nuk ka transaksione të mëparshme"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Nuk ka çelësa privatë për një ose për të dy adresat. Sigurohu vetëm nëse jeni duke dërguar shpërblime në një portofol tjetër."
 
@@ -1258,9 +1270,21 @@ msgstr "Çelësi publik i pollit"
 msgid "Pool Puzzle Hash"
 msgstr "Pazell e pollit"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "Adresa e perfitimeve të fermerit"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1408,7 +1432,7 @@ msgstr "Rivendosni të dhënat meta për monedhat me ngjyrë dhe kuletat e tjera
 msgid "Safe To Skip"
 msgstr "I sigurt për të kapërcyer"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Ruaj"

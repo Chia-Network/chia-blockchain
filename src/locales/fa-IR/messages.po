@@ -243,7 +243,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "میتواند در دانه های کمک یادآوری، پشتیبان گیری شود"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -654,9 +654,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "مزرعه دارِ جورچین در هم ریزی(هش)"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "آدرس پاداش مزرعه دار"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -943,7 +955,7 @@ msgstr "ورود"
 msgid "Manage Farming Rewards"
 msgstr "مدیریت پاداش های مزرعه داری"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "آدرس های مقصد خود را برای پاداش های مزرعه داری مدیریت کنید"
 
@@ -1011,7 +1023,7 @@ msgstr "هنوز هیچ بلاکی مزرعه داری(تولید) نشده اس
 msgid "No previous transactions"
 msgstr "بدون تراکنش های قبلی"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "بدون کلید خصوصی برای یک یا هر دو آدرس. فقط در صورت ارسال پاداش به کیف پول دیگر ، ایمن است."
 
@@ -1266,9 +1278,21 @@ msgstr "کلید عمومی استخر"
 msgid "Pool Puzzle Hash"
 msgstr "استخر جورچین هش(در هم سازی)"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "آدرس پاداش استخر"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1416,7 +1440,7 @@ msgstr "بازگردانی فراداده ها (Metadata) برای سکه های
 msgid "Safe To Skip"
 msgstr "برای رد کردن مشکلی نیست"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "ذخیره"

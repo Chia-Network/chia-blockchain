@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Možnosť zálohovať pomocou mnemotechnickej pomôcky"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,9 +648,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Hash hádaniek pre farmára"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "Adresa odmeny farmára"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -937,7 +949,7 @@ msgstr "Prihlasovanie"
 msgid "Manage Farming Rewards"
 msgstr "Spravovať farmárske odmeny"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Spravovať cieľové adresy farmárskych odmien"
 
@@ -1005,7 +1017,7 @@ msgstr "Zatiaľ neboli vyťažené žiadne bloky"
 msgid "No previous transactions"
 msgstr "Žiadne predchádzajúce transakcie"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Žiadne súkromné kľúče pre jednu alebo obidve adresy. Bezpečné iba v prípade, že posielate odmeny do inej peňaženky."
 
@@ -1258,9 +1270,21 @@ msgstr "Verejný kľúč združenia"
 msgid "Pool Puzzle Hash"
 msgstr "Hádankový klúč združenia"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "Adresa odmeny združenia"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1408,7 +1432,7 @@ msgstr "Obnoviť metadáta pre Farebné Mince a iné Smart peňaženky zo záloh
 msgid "Safe To Skip"
 msgstr "Bezpečné preskočiť"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Uložiť"

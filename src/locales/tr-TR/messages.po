@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Mnemonic seed'e yedeklenebilir"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,9 +648,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Çiftçi bulmaca hashi"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "Çiftçi ödül adresi"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -937,7 +949,7 @@ msgstr "Giriş Yapılıyor"
 msgid "Manage Farming Rewards"
 msgstr "İşleme ödüllerini yönet"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "İşleme ödülleri için gönderim adreslerini yönet"
 
@@ -1005,7 +1017,7 @@ msgstr "Herhangi bir blok işlenmedi"
 msgid "No previous transactions"
 msgstr "Daha önce yapılmış bir işlem yok"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Adreslerden biri veya her ikisi için özel bir anahtar yok. Yalnızca başka bir cüzdana ödül gönderiyorsanız bu yöntem güvenlidir."
 
@@ -1258,9 +1270,21 @@ msgstr "Herkese Açık Havuz Anahtarı"
 msgid "Pool Puzzle Hash"
 msgstr "Karma Havuz Bulmacası"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "Havuz Ödür Adresi"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1408,7 +1432,7 @@ msgstr "Renkli coinler için metaveriyi ve diğer akıllı cüzdanları yedeklem
 msgid "Safe To Skip"
 msgstr "Geçmek için Güvenli"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Kaydet"

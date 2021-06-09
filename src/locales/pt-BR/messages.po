@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Pode ser feito backup para semente mnemônica"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:180
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,9 +648,21 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Puzzle Hash do fazendeiro"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:161
 msgid "Farmer Reward Address"
 msgstr "Endereço de recompensa do fazendeiro"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:132
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:125
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -937,7 +949,7 @@ msgstr "Iniciando a sessão"
 msgid "Manage Farming Rewards"
 msgstr "Gerenciar Recompensas de Cultivo"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Gerenciar seus endereços-alvo de recompensas de cultivo"
 
@@ -1005,7 +1017,7 @@ msgstr "Nenhum bloco cultivado ainda"
 msgid "No previous transactions"
 msgstr "Sem transações anteriores"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Nenhuma chave privada para um ou ambos os endereços. Seguro apenas se você estiver enviando recompensas para outra carteira."
 
@@ -1258,9 +1270,21 @@ msgstr "Chave pública do pool"
 msgid "Pool Puzzle Hash"
 msgstr "Pool Puzzle Hash"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:168
 msgid "Pool Reward Address"
 msgstr "Endereço de recompensa do Pool"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1408,7 +1432,7 @@ msgstr "Restaurar Metadados para Moedas Coloridas e outras Carteiras Inteligente
 msgid "Safe To Skip"
 msgstr "Pular com segurança"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:183
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Salvar"
