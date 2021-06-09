@@ -486,6 +486,8 @@ class WalletRpcApi:
                             main_wallet,
                             initial_target_state,
                             fee,
+                            request["p2_singleton_delay_time"],
+                            bytes.fromhex(request["p2_singleton_delayed_ph"]),
                         )
                     except Exception as e:
                         raise ValueError(str(e))

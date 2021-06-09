@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -173,7 +173,12 @@ class WalletRpcClient(RpcClient):
         backup_host: str,
         mode: str = "new",
         state: str = "FARMING_TO_POOL",
+        p2_singleton_delay_time: uint64 = uint64(604800),
+        p2_singleton_delayed_ph: Optional[bytes32] = None,
     ) -> TransactionRecord:
+        if p2_singleton_delayed_ph is None:
+            address = await self.get_next_address(1, True)
+            p2_singleton_delayed_ph: bytes32 = decode_puzzle_hash(address)
         request = {
             "wallet_type": "pool_wallet",
             "mode": mode,
@@ -184,6 +189,8 @@ class WalletRpcClient(RpcClient):
                 "pool_url": pool_url,
                 "state": state,
             },
+            "p2_singleton_delay_time": p2_singleton_delay_time,
+            "p2_singleton_delayed_ph": p2_singleton_delayed_ph.hex(),
         }
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
