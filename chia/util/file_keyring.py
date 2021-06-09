@@ -135,7 +135,7 @@ class FileKeyring:
         Returns the password named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
-        return self.ensure_cached_keys_dict().get(user)
+        return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
     @loads_keyring
     def set_password(self, service: str, user: str, password_bytes: bytes):
@@ -146,7 +146,13 @@ class FileKeyring:
         keys = self.ensure_cached_keys_dict()
         # Convert the password to a string (if necessary)
         password = password_bytes.hex() if type(password_bytes) == bytes else str(password_bytes)
-        keys[user] = password
+
+        # Ensure a dictionary exists for the 'service'
+        if keys.get(service) is None:
+            keys[service] = {}
+        service_dict = keys[service]
+        service_dict[user] = password
+        keys[service] = service_dict
         self.payload_cache["keys"] = keys
         self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
@@ -157,7 +163,11 @@ class FileKeyring:
         (will force a write to keyring.yaml on success)
         """
         keys = self.ensure_cached_keys_dict()
-        if keys.pop(user, None):
+
+        service_dict = keys.get(service, {})
+        if service_dict.pop(user, None):
+            if len(service_dict) == 0:
+                keys.pop(service)
             self.payload_cache["keys"] = keys
             self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
