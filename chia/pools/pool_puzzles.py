@@ -128,13 +128,13 @@ def create_travel_spend(
             f"{target}"
             f"hash:{Program(bytes(target)).get_tree_hash()}"
         )
-        inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])
+        inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])  # current or target
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
     current_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
     assert current_singleton is not None
-
+    # launch_conditions_and_coinsol
     if current_singleton.parent_coin_info == launcher_coin.name():
         parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])  # what about extra data?
     else:
