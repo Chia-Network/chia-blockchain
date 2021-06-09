@@ -2,6 +2,7 @@
 from secrets import token_bytes
 from typing import List
 
+import pytest
 from blspy import AugSchemeMPL, G1Element
 
 from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, PoolWalletInfo
@@ -91,8 +92,8 @@ def test_uncurry():
         pool_reward_prefix,
         escape_puzzlehash,
     ) = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
-    none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
-    assert none is None
+    with pytest.raises(ValueError):
+        uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
 
 
 def test_pool_state_to_inner_puzzle():
