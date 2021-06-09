@@ -173,12 +173,10 @@ class WalletRpcClient(RpcClient):
         backup_host: str,
         mode: str = "new",
         state: str = "FARMING_TO_POOL",
-        p2_singleton_delay_time: uint64 = uint64(604800),
+        p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
     ) -> TransactionRecord:
-        if p2_singleton_delayed_ph is None:
-            address = await self.get_next_address(1, True)
-            p2_singleton_delayed_ph: bytes32 = decode_puzzle_hash(address)
+
         request = {
             "wallet_type": "pool_wallet",
             "mode": mode,
@@ -189,9 +187,11 @@ class WalletRpcClient(RpcClient):
                 "pool_url": pool_url,
                 "state": state,
             },
-            "p2_singleton_delay_time": p2_singleton_delay_time,
-            "p2_singleton_delayed_ph": p2_singleton_delayed_ph.hex(),
         }
+        if p2_singleton_delay_time is not None:
+            request["p2_singleton_delay_time"] = p2_singleton_delay_time
+        if p2_singleton_delayed_ph is not None:
+            request["p2_singleton_delayed_ph"] = p2_singleton_delayed_ph.hex()
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
