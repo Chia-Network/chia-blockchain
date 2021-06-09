@@ -305,6 +305,7 @@ class FileKeyring:
         self.payload_cache = inner_payload
 
     def write_data_to_keyring(self, data):
+        os.makedirs(os.path.dirname(self.keyring_path), 0o775, True)
         temp_path = self.keyring_path.with_suffix("." + str(os.getpid()))
         with open(os.open(str(temp_path), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600), "w") as f:
             _ = yaml.safe_dump(data, f)
