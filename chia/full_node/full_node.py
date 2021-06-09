@@ -343,7 +343,7 @@ class FullNode:
             peer: peer that sent the message
 
         """
-
+        self._state_changed("peer_changed_peak")
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
