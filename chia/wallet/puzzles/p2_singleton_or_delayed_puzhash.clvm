@@ -1,4 +1,4 @@
-(mod (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH delayed_puzzle_reveal p1 p2)
+(mod (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH p1 my_id)
 
   ;; This puzzle has two escape conditions: the regular "claim via singleton", and the
   ;; delayed "claim via puzzle hash", delayed by a fixed number of seconds.
@@ -8,10 +8,10 @@
   ; LAUNCHER_PUZZLE_HASH is the puzzle hash of the launcher
   ; SECONDS_DELAY is the number of seconds before the coin can be spent with `DELAYED_PUZZLE_HASH`
   ; DELAYED_PUZZLE_HASH is the puzzle hash of the delayed puzzle
-  ; delayed_puzzle_reveal is 0 for the "claim via singleton" case or the delayed puzzle reveal for the delay case
-  ; p1 and p2 are parameters whose meaning changes depending upon which case we're using
-    ; if we are paying to singleton then p1 is singleton_inner_puzzle_hash, and p2 is my_id
-    ; if we are running the delayed case then p1 is the solution for delayed puzzle
+  ; if my_id is passed in as () then this signals that we are trying to do a delayed spend case
+  ; p1's meaning changes depending upon which case we're using
+    ; if we are paying to singleton then p1 is singleton_inner_puzzle_hash
+    ; if we are running the delayed case then p1 is the amount to output
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -35,11 +35,8 @@
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
-  (defun-inline delayed-spend (SECONDS_DELAY DELAYED_PUZZLE_HASH delayed_puzzle_reveal delayed_puzzle_solution)
-    (if (= (sha256tree delayed_puzzle_reveal) DELAYED_PUZZLE_HASH)
-      (c (list ASSERT_SECONDS_RELATIVE SECONDS_DELAY) (a delayed_puzzle_reveal delayed_puzzle_solution))
-      (x)
-    )
+  (defun-inline delayed-spend (SECONDS_DELAY DELAYED_PUZZLE_HASH amount)
+    (list (list ASSERT_SECONDS_RELATIVE SECONDS_DELAY) (list CREATE_COIN DELAYED_PUZZLE_HASH amount))
   )
 
   (defun-inline claim-rewards (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
@@ -50,8 +47,8 @@
   )
 
   ; main
-  (if delayed_puzzle_reveal
-    (delayed-spend SECONDS_DELAY DELAYED_PUZZLE_HASH delayed_puzzle_reveal p1)
-    (claim-rewards SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH p1 p2)
+  (if my_id
+    (claim-rewards SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH p1 my_id)
+    (delayed-spend SECONDS_DELAY DELAYED_PUZZLE_HASH p1)
   )
 )
