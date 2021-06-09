@@ -68,6 +68,7 @@ class FullNode:
     mempool_manager: MempoolManager
     connection: aiosqlite.Connection
     _sync_task: Optional[asyncio.Task]
+    _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
     config: Dict
     server: Any
@@ -114,8 +115,8 @@ class FullNode:
 
     async def _start(self):
         self.timelord_lock = asyncio.Lock()
-        self.compact_vdf_lock = asyncio.Semaphore(4)
-        self.new_peak_lock = asyncio.Semaphore(8)
+        self.compact_vdf_sem = asyncio.Semaphore(4)
+        self.new_peak_sem = asyncio.Semaphore(8)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
@@ -127,10 +128,10 @@ class FullNode:
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
-        asyncio.create_task(self.initialize_weight_proof())
+        self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
         if self.config.get("enable_profiler", False):
-            asyncio.create_task(profile_task(self.root_path, self.log))
+            asyncio.create_task(profile_task(self.root_path, "node", self.log))
 
         self._sync_task = None
         self._segment_task = None
@@ -176,6 +177,12 @@ class FullNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         dns_servers = []
+        try:
+            network_name = self.config["selected_network"]
+            default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        except Exception:
+            self.log.info("Default port field not found in config.")
+            default_port = None
         if "dns_servers" in self.config:
             dns_servers = self.config["dns_servers"]
         elif self.config["port"] == 8444:
@@ -191,6 +198,8 @@ class FullNode:
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
+                self.config["selected_network"],
+                default_port,
                 self.log,
             )
         except Exception as e:
@@ -531,6 +540,8 @@ class FullNode:
 
     def _close(self):
         self._shut_down = True
+        if self._init_weight_proof is not None:
+            self._init_weight_proof.cancel()
         if self.blockchain is not None:
             self.blockchain.shut_down()
         if self.mempool_manager is not None:
@@ -545,6 +556,8 @@ class FullNode:
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
+        if self._init_weight_proof is not None:
+            await asyncio.wait([self._init_weight_proof])
 
     async def _sync(self):
         """
@@ -1762,11 +1775,15 @@ class FullNode:
                         new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
                         break
             if field_vdf == CompressibleVDFField.CC_SP_VDF:
-                assert block.challenge_chain_sp_proof is not None
-                new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
+                if block.reward_chain_block.challenge_chain_sp_vdf == vdf_info:
+                    assert block.challenge_chain_sp_proof is not None
+                    new_block = dataclasses.replace(block, challenge_chain_sp_proof=vdf_proof)
             if field_vdf == CompressibleVDFField.CC_IP_VDF:
-                new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
-            assert new_block is not None
+                if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
+                    new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+            if new_block is None:
+                self.log.debug("did not replace any proof, vdf does not match")
+                return
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
@@ -1777,7 +1794,7 @@ class FullNode:
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
             return None
-        async with self.blockchain.lock:
+        async with self.blockchain.compact_proof_lock:
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
@@ -1854,7 +1871,7 @@ class FullNode:
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
             return None
-        async with self.blockchain.lock:
+        async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)

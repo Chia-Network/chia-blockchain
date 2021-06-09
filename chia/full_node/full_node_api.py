@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import time
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set, Any
+from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -100,7 +100,9 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
-        async with self.full_node.new_peak_lock:
+        # this semaphore limits the number of tasks that can call new_peak() at
+        # the same time, since it can be expensive
+        async with self.full_node.new_peak_sem:
             return await self.full_node.new_peak(request, peer)
 
     @peer_required
@@ -292,7 +294,7 @@ class FullNodeAPI:
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             reject = RejectBlocks(request.start_height, request.end_height)
-            msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
+            msg: Message = make_msg(ProtocolMessageTypes.reject_blocks, reject)
             return msg
         for i in range(request.start_height, request.end_height + 1):
             if not self.full_node.blockchain.contains_height(uint32(i)):
@@ -300,8 +302,8 @@ class FullNodeAPI:
                 msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                 return msg
 
-        blocks: List[Any] = []
         if not request.include_transaction_block:
+            blocks: List[FullBlock] = []
             for i in range(request.start_height, request.end_height + 1):
                 block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
                     self.full_node.blockchain.height_to_hash(uint32(i))
@@ -312,7 +314,12 @@ class FullNodeAPI:
                     return msg
                 block = dataclasses.replace(block, transactions_generator=None)
                 blocks.append(block)
+            msg = make_msg(
+                ProtocolMessageTypes.respond_blocks,
+                full_node_protocol.RespondBlocks(request.start_height, request.end_height, blocks),
+            )
         else:
+            blocks_bytes: List[bytes] = []
             for i in range(request.start_height, request.end_height + 1):
                 block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(
                     self.full_node.blockchain.height_to_hash(uint32(i))
@@ -321,12 +328,18 @@ class FullNodeAPI:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                     return msg
-                blocks.append(block_bytes)
 
-        msg = make_msg(
-            ProtocolMessageTypes.respond_blocks,
-            full_node_protocol.RespondBlocks(request.start_height, request.end_height, blocks),
-        )
+                blocks_bytes.append(block_bytes)
+
+            respond_blocks_manually_streamed: bytes = (
+                bytes(uint32(request.start_height))
+                + bytes(uint32(request.end_height))
+                + len(blocks_bytes).to_bytes(4, "big", signed=False)
+            )
+            for block_bytes in blocks_bytes:
+                respond_blocks_manually_streamed += block_bytes
+            msg = make_msg(ProtocolMessageTypes.respond_blocks, respond_blocks_manually_streamed)
+
         return msg
 
     @api_request
@@ -454,7 +467,7 @@ class FullNodeAPI:
                     )
                     response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
                     if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
-                        self.full_node.log.warning(f"Invalid response for slot {response}")
+                        self.full_node.log.debug(f"Invalid response for slot {response}")
                         return None
                     collected_eos.append(response)
                     if (
@@ -1266,7 +1279,9 @@ class FullNodeAPI:
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
         if self.full_node.sync_store.get_sync_mode():
             return None
-        async with self.full_node.compact_vdf_lock:
+        # this semaphore will only allow a limited number of tasks call
+        # new_compact_vdf() at a time, since it can be expensive
+        async with self.full_node.compact_vdf_sem:
             await self.full_node.new_compact_vdf(request, peer)
 
     @peer_required

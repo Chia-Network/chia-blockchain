@@ -14,6 +14,8 @@ def configure(
     set_fullnode_port: str,
     set_log_level: str,
     enable_upnp: str,
+    set_outbound_peer_count: str,
+    set_peer_count: str,
     testnet: str,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -71,6 +73,14 @@ def configure(
             print("uPnP enabled")
         else:
             print("uPnP disabled")
+        change_made = True
+    if set_outbound_peer_count is not None:
+        config["full_node"]["target_outbound_peer_count"] = int(set_outbound_peer_count)
+        print("Target outbound peer count updated")
+        change_made = True
+    if set_peer_count is not None:
+        config["full_node"]["target_peer_count"] = int(set_peer_count)
+        print("Target peer count updated")
         change_made = True
     if testnet is not None:
         if testnet == "true" or testnet == "t":
@@ -133,7 +143,10 @@ def configure(
 
 @click.command("configure", short_help="Modify configuration")
 @click.option(
-    "--testnet", "-t", help="configures for connection to testnet", type=click.Choice(["true", "t", "false", "f"])
+    "--testnet",
+    "-t",
+    help="configures for connection to testnet",
+    type=click.Choice(["true", "t", "false", "f"]),
 )
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
@@ -150,10 +163,30 @@ def configure(
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]),
 )
 @click.option(
-    "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
+    "--enable-upnp",
+    "--upnp",
+    "-upnp",
+    help="Enable or disable uPnP",
+    type=click.Choice(["true", "t", "false", "f"]),
 )
+@click.option(
+    "--set_outbound-peer-count",
+    help="Update the target outbound peer count (default 8)",
+    type=str,
+)
+@click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
 @click.pass_context
-def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, testnet):
+def configure_cmd(
+    ctx,
+    set_farmer_peer,
+    set_node_introducer,
+    set_fullnode_port,
+    set_log_level,
+    enable_upnp,
+    set_outbound_peer_count,
+    set_peer_count,
+    testnet,
+):
     configure(
         ctx.obj["root_path"],
         set_farmer_peer,
@@ -161,5 +194,7 @@ def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, 
         set_fullnode_port,
         set_log_level,
         enable_upnp,
+        set_outbound_peer_count,
+        set_peer_count,
         testnet,
     )

@@ -19,9 +19,9 @@ from chia.util.path import mkdir, path_from_root
 #   python chia/utils/profiler.py ~/.chia/mainnet/profile 10 20
 
 
-async def profile_task(root_path: pathlib.Path, log: logging.Logger) -> None:
+async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
 
-    profile_dir = path_from_root(root_path, "profile")
+    profile_dir = path_from_root(root_path, f"profile-{service}")
     log.info("Starting profiler. saving to %s" % profile_dir)
     mkdir(profile_dir)
 
