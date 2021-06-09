@@ -2,6 +2,7 @@
 from secrets import token_bytes
 from typing import List
 
+import pytest
 from blspy import AugSchemeMPL, G1Element
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
@@ -84,10 +85,16 @@ def test_uncurry():
     pooling_inner_puzzle = create_pooling_inner_puzzle(
         target_puzzle_hash, escaping_inner_puzzle.get_tree_hash(), owner_pubkey, token_bytes(32), GENESIS_CHALLENGE
     )
-    inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
-    # pool_puzzle_hash, pubkey = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
-    none = uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
-    assert none is None
+    (
+        inner_f,
+        target_puzzle_hash,
+        p2_singleton_hash,
+        owner_pubkey,
+        pool_reward_prefix,
+        escape_puzzlehash,
+    ) = uncurry_pool_member_inner_puzzle(pooling_inner_puzzle)
+    with pytest.raises(ValueError):
+        uncurry_pool_member_inner_puzzle(escaping_inner_puzzle)
 
 
 def test_pool_state_to_inner_puzzle():
