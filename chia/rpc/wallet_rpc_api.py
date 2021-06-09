@@ -481,13 +481,16 @@ class WalletRpcApi:
                     if err is not None:
                         raise ValueError(str(err))
                     try:
+                        delayed_address = None
+                        if "p2_singleton_delayed_ph" in request:
+                            delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
                         tr: TransactionRecord = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
                             fee,
-                            request["p2_singleton_delay_time"],
-                            bytes.fromhex(request["p2_singleton_delayed_ph"]),
+                            request.get("p2_singleton_delay_time", None),
+                            delayed_address,
                         )
                     except Exception as e:
                         raise ValueError(str(e))
