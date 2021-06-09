@@ -462,7 +462,8 @@ class PoolWallet:
         PoolWallet._verify_initial_target_state(initial_target_state)
 
         spend_bundle, singleton_puzzle_hash = await PoolWallet.generate_launcher_spend(
-            standard_wallet, uint64(1),
+            standard_wallet,
+            uint64(1),
             initial_target_state,
             wallet_state_manager.constants.GENESIS_CHALLENGE,
             p2_singleton_delay_time,
