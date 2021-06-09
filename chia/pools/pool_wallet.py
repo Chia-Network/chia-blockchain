@@ -299,9 +299,9 @@ class PoolWallet:
             await self.coin_spent(tip_spend)
             coin_name_to_spend.pop(spent_coin_name)
         await self.update_pool_config(False)
-        #await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
+        # await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
         #    puzzle_hash, self.wallet_id, True
-        #)
+        # )
 
     async def coin_spent(self, coin_solution: CoinSolution):
         """
@@ -460,8 +460,9 @@ class PoolWallet:
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
         log = logging.getLogger()
-        log.warning(f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}")
-
+        log.warning(
+            f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}"
+        )
 
         standard_wallet_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -490,7 +491,6 @@ class PoolWallet:
         assert owner_sk is not None
         return owner_sk
 
-
     async def sign(self, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState):
         sk: PrivateKey = await self.get_pool_wallet_sk()
 
@@ -507,7 +507,6 @@ class PoolWallet:
         )
         # assert AugSchemeMPL.verify(owner_pubkey, to_sign, spend_bundle.aggregated_signature)
         return spend_bundle
-
 
     async def sign_travel_spend_waiting_room_state(
         self, target_puzzle_hash: bytes32, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
@@ -609,9 +608,9 @@ class PoolWallet:
             pk_bytes: bytes = bytes(pubkey_as_program.as_atom())
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
-            member_signed_spend_bundle = await self.sign_travel_spend_in_member_state(
-                owner_pubkey, outgoing_coin_solution, next_state
-            )
+            # member_signed_spend_bundle = await self.sign_travel_spend_in_member_state(
+            #     owner_pubkey, outgoing_coin_solution, next_state
+            # )
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
                 target_puzzle_hash,  # payout_puzzle_hash
@@ -622,9 +621,9 @@ class PoolWallet:
             pk_bytes = bytes(owner_pubkey.as_atom())
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
-            wait_signed_spend_bundle = await self.sign_travel_spend_waiting_room_state(
-                target_puzzle_hash, owner_pubkey, outgoing_coin_solution, next_state
-            )
+            # wait_signed_spend_bundle = await self.sign_travel_spend_waiting_room_state(
+            #     target_puzzle_hash, owner_pubkey, outgoing_coin_solution, next_state
+            # )
         else:
             raise RuntimeError("Invalid state")
 
@@ -658,7 +657,9 @@ class PoolWallet:
         print(f"EXPECTED NEW SINGLETON COIN_ID: {new_expected_singleton.get_hash()}")
         print(f"EXPECTED NEW SINGLETON COIN: {new_expected_singleton}")
 
-        self.log.warning(f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}")
+        self.log.warning(
+            f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}"
+        )
 
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -883,7 +884,9 @@ class PoolWallet:
         # No signatures are required to absorb
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
 
-        self.log.warning(f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}")
+        self.log.warning(
+            f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}"
+        )
         absorb_transaction: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
