@@ -9,7 +9,7 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Any
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -145,7 +145,7 @@ class BlockTools:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
         self.load_plots()
-        self.local_sk_cache: Dict[bytes32, PrivateKey] = {}
+        self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
@@ -235,16 +235,27 @@ class BlockTools:
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
                 if plot_info.prover.get_id() in self.local_sk_cache:
-                    local_master_sk = self.local_sk_cache[plot_info.prover.get_id()]
+                    local_master_sk, pool_pk_or_ph = self.local_sk_cache[plot_info.prover.get_id()]
                 else:
-                    _, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
-                    self.local_sk_cache[plot_info.prover.get_id()] = local_master_sk
+                    pool_pk_or_ph, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
+                    self.local_sk_cache[plot_info.prover.get_id()] = (local_master_sk, pool_pk_or_ph)
+                if isinstance(pool_pk_or_ph, G1Element):
+                    include_taproot = False
+                else:
+                    assert isinstance(pool_pk_or_ph, bytes32)
+                    include_taproot = True
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1())
+                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
-                return AugSchemeMPL.aggregate([harv_share, farm_share])
+                log.warning(f"Signing with taproot {include_taproot}")
+                if include_taproot:
+                    taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(local_sk.get_g1(), farmer_sk.get_g1())
+                    taproot_share: G2Element = AugSchemeMPL.sign(taproot_sk, m, agg_pk)
+                else:
+                    taproot_share = G2Element()
+                return AugSchemeMPL.aggregate([harv_share, farm_share, taproot_share])
 
         raise ValueError(f"Do not have key {plot_pk}")
 
@@ -999,9 +1010,15 @@ class BlockTools:
                             local_master_sk,
                         ) = parse_plot_info(plot_info.prover.get_memo())
                         local_sk = master_sk_to_local_sk(local_master_sk)
+
+                        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+                            include_taproot = False
+                        else:
+                            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+                            include_taproot = True
+                        log.warning(f"Making with taproot? {include_taproot}")
                         plot_pk = ProofOfSpace.generate_plot_public_key(
-                            local_sk.get_g1(),
-                            farmer_public_key,
+                            local_sk.get_g1(), farmer_public_key, include_taproot
                         )
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,

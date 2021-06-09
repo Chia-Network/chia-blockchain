@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import G1Element
+from blspy import G1Element, AugSchemeMPL, PrivateKey
 from chiapos import Verifier
 
 from chia.consensus.constants import ConsensusConstants
@@ -98,5 +98,15 @@ class ProofOfSpace(Streamable):
         return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
     @staticmethod
-    def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:
-        return local_pk + farmer_pk
+    def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
+        taproot_message: bytes = bytes(local_pk + farmer_pk) + bytes(local_pk) + bytes(farmer_pk)
+        taproot_hash: bytes32 = std_hash(taproot_message)
+        return AugSchemeMPL.key_gen(taproot_hash)
+
+    @staticmethod
+    def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element, include_taproot: bool = False) -> G1Element:
+        if include_taproot:
+            taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(local_pk, farmer_pk)
+            return local_pk + farmer_pk + taproot_sk.get_g1()
+        else:
+            return local_pk + farmer_pk

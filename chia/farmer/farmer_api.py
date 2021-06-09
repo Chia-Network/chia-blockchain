@@ -169,10 +169,15 @@ class FarmerAPI:
                 for sk in self.farmer.get_private_keys():
                     pk = sk.get_g1()
                     if pk == response.farmer_pk:
-                        agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
+                        agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk, True)
                         assert agg_pk == new_proof_of_space.proof.plot_public_key
                         sig_farmer = AugSchemeMPL.sign(sk, m_to_sign, agg_pk)
-                        plot_signature = AugSchemeMPL.aggregate([sig_farmer, response.message_signatures[0][1]])
+                        taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(response.local_pk, pk)
+                        taproot_sig: G2Element = AugSchemeMPL.sign(taproot_sk, m_to_sign, agg_pk)
+
+                        plot_signature = AugSchemeMPL.aggregate(
+                            [sig_farmer, response.message_signatures[0][1]], taproot_sig
+                        )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
                 authentication_pk = pool_state_dict["pool_config"].authentication_public_key
                 if bytes(authentication_pk) is None:
@@ -262,6 +267,7 @@ class FarmerAPI:
             if plot_identifier == response.plot_identifier:
                 pospace = candidate_pospace
         assert pospace is not None
+        include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = pospace.verify_and_get_quality_string(
             self.farmer.constants, response.challenge_hash, response.sp_hash
@@ -279,15 +285,26 @@ class FarmerAPI:
             for sk in self.farmer.get_private_keys():
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
-                    agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
+                    agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk, include_taproot)
                     assert agg_pk == pospace.plot_public_key
+                    if include_taproot:
+                        taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(response.local_pk, pk)
+                        taproot_share_cc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, challenge_chain_sp, agg_pk)
+                        taproot_share_rc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, reward_chain_sp, agg_pk)
+                    else:
+                        taproot_share_cc_sp = G2Element()
+                        taproot_share_rc_sp = G2Element()
                     farmer_share_cc_sp = AugSchemeMPL.sign(sk, challenge_chain_sp, agg_pk)
-                    agg_sig_cc_sp = AugSchemeMPL.aggregate([challenge_chain_sp_harv_sig, farmer_share_cc_sp])
+                    agg_sig_cc_sp = AugSchemeMPL.aggregate(
+                        [challenge_chain_sp_harv_sig, farmer_share_cc_sp, taproot_share_cc_sp]
+                    )
                     assert AugSchemeMPL.verify(agg_pk, challenge_chain_sp, agg_sig_cc_sp)
 
                     # This means it passes the sp filter
                     farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_sp, agg_pk)
-                    agg_sig_rc_sp = AugSchemeMPL.aggregate([reward_chain_sp_harv_sig, farmer_share_rc_sp])
+                    agg_sig_rc_sp = AugSchemeMPL.aggregate(
+                        [reward_chain_sp_harv_sig, farmer_share_rc_sp, taproot_share_rc_sp]
+                    )
                     assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
 
                     if pospace.pool_public_key is not None:
@@ -339,13 +356,30 @@ class FarmerAPI:
                 ) = response.message_signatures[1]
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
-                    agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
+                    agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk, include_taproot)
                     assert agg_pk == pospace.plot_public_key
+                    if include_taproot:
+                        taproot_sk = ProofOfSpace.generate_taproot_sk(response.local_pk, pk)
+                        foliage_sig_taproot: G2Element = AugSchemeMPL.sign(taproot_sk, foliage_block_data_hash, agg_pk)
+                        foliage_transaction_block_sig_taproot: G2Element = AugSchemeMPL.sign(
+                            taproot_sk, foliage_transaction_block_hash, agg_pk
+                        )
+                    else:
+                        foliage_sig_taproot = G2Element()
+                        foliage_transaction_block_sig_taproot = G2Element()
+
                     foliage_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_data_hash, agg_pk)
                     foliage_transaction_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_transaction_block_hash, agg_pk)
-                    foliage_agg_sig = AugSchemeMPL.aggregate([foliage_sig_harvester, foliage_sig_farmer])
+
+                    foliage_agg_sig = AugSchemeMPL.aggregate(
+                        [foliage_sig_harvester, foliage_sig_farmer, foliage_sig_taproot]
+                    )
                     foliage_block_agg_sig = AugSchemeMPL.aggregate(
-                        [foliage_transaction_block_sig_harvester, foliage_transaction_block_sig_farmer]
+                        [
+                            foliage_transaction_block_sig_harvester,
+                            foliage_transaction_block_sig_farmer,
+                            foliage_transaction_block_sig_taproot,
+                        ]
                     )
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
                     assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)
