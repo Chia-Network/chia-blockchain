@@ -83,11 +83,15 @@ def create_p2_singleton_puzzle(
 ) -> Program:
     # TODO: Test these hash conversions
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
-    return P2_SINGLETON_MOD.curry(singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH, seconds_delay, delayed_puzzle_hash)
+    return P2_SINGLETON_MOD.curry(
+        singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH, seconds_delay, delayed_puzzle_hash
+    )
 
 
 def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32) -> bytes32:
-    return create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash).get_tree_hash()
+    return create_p2_singleton_puzzle(
+        SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash
+    ).get_tree_hash()
 
 
 ######################################
@@ -195,7 +199,9 @@ def create_absorb_spend(
     delay_time: uint64,
     delay_ph: bytes32,
 ) -> List[CoinSolution]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(current_state, launcher_coin.name(), genesis_challenge, delay_time, delay_ph)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(
+        current_state, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
+    )
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
