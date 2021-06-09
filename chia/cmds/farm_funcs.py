@@ -113,13 +113,15 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
         wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
         amounts = await wallet_client.get_farmed_amount()
     except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
-        else:
-            print(f"Exception from 'wallet' {e}")
+        #
+        # Don't print anything here as errors are expected in many situations
+        # Just retrow the exception and let the caller handle it
+        #
+        raise e
+    finally:
+        wallet_client.close()
+        await wallet_client.await_closed()
 
-    wallet_client.close()
-    await wallet_client.await_closed()
     return amounts
 
 
@@ -183,10 +185,20 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
 
 
 async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
-    amounts = await get_wallets_stats(wallet_rpc_port)
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
+
+    bWalletNotReady = False
+    bWalletNotRunning = False
+    amounts = None
+    try:
+        amounts = await get_wallets_stats(wallet_rpc_port)
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            bWalletNotRunning = True
+        else:
+            bWalletNotReady = True
 
     print("Farming status: ", end="")
     if blockchain_state is None:
@@ -205,11 +217,6 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
-    else:
-        print("Total chia farmed: Unknown")
-        print("User transaction fees: Unknown")
-        print("Block rewards: Unknown")
-        print("Last height farmed: Unknown")
 
     total_plot_size = 0
     if plots is not None:
@@ -233,5 +240,16 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     if blockchain_state is not None and plots is not None:
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
-    print("Expected time to win: " + format_minutes(minutes))
-    print("Note: log into your key using 'chia wallet show' to see rewards for each key")
+
+    if plots is not None and len(plots["plots"]) == 0:
+        print("Expected time to win: Never (no plots)")
+    else:
+        print("Expected time to win: " + format_minutes(minutes))
+
+    if amounts is None:
+        if bWalletNotRunning:
+            print("For details on farmed rewards and fees you should run 'chia run wallet' and 'chia wallet show'")
+        elif bWalletNotReady:
+            print("For details on farmed rewards and fees you should run 'chia wallet show'")
+    else:
+        print("Note: log into your key using 'chia wallet show' to see rewards for each key")
