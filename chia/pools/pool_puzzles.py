@@ -141,15 +141,25 @@ def create_travel_spend(
     delay_time: uint64,
     delay_ph: bytes32,
 ) -> Tuple[CoinSolution, Program, Program]:
-    #    -> Tuple[CoinSolution, bytes32]:
-    pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
-    inner_puzzle: Program = pool_state_to_inner_puzzle(current, pool_reward_prefix)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(
+        current,
+        launcher_coin.name(),
+        genesis_challenge,
+        delay_time,
+        delay_ph,
+    )
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(target)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
-        destination_inner: Program = pool_state_to_inner_puzzle(target, launcher_coin.name(), genesis_challenge)
+        destination_inner: Program = pool_state_to_inner_puzzle(
+            target,
+            launcher_coin.name(),
+            genesis_challenge,
+            delay_time,
+            delay_ph
+        )
         log.warning(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
