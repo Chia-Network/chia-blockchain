@@ -16,6 +16,7 @@ from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
+COST_PER_BYTE = int(0)
 
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -101,7 +102,7 @@ class TestROM(TestCase):
         cost, r = run_generator(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, safe_mode=False)
+        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, safe_mode=False)
         assert npc_result.error is None
         assert npc_result.clvm_cost == EXPECTED_COST
         cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500)])

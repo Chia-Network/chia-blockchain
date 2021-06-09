@@ -246,7 +246,10 @@ class CCWallet:
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(
-                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+                program,
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
+                safe_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
