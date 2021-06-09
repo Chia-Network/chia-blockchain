@@ -315,7 +315,6 @@ class PoolWallet:
         # amount = uint64(1)
         if self.target_state is None:
             self.log.info(f"PoolWallet state updated by external event: {coin}")
-            pass
 
         # new_singleton_coin = Coin(coin.name(), puz.get_tree_hash(), amount)
         new_current_state: Optional[PoolState] = solution_to_extra_data(
@@ -441,7 +440,6 @@ class PoolWallet:
         """
         amount = 1
         standard_wallet = main_wallet
-        wallet_state_manager = wallet_state_manager
 
         unspent_records = await wallet_state_manager.coin_store.get_unspent_coins_for_wallet(standard_wallet.wallet_id)
         balance = await standard_wallet.get_confirmed_balance(unspent_records)
@@ -836,7 +834,6 @@ class PoolWallet:
         # Check if we can self pool (timelock)
         # Create the first blockchain transaction
         # Whenever we detect a new peak, potentially initiate the second blockchain transaction
-        pass
 
     async def claim_pool_rewards(self, fee: uint64) -> TransactionRecord:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
