@@ -136,7 +136,7 @@ class TestPoolPuzzles(TestCase):
             owner_pubkey=pk,
             pool_url="",
             relative_lock_height=relative_lock_height,
-            state=1,  # Self pooling
+            state=3,  # farming to pool
             target_puzzle_hash=starting_ph,
             version=1,
         )
