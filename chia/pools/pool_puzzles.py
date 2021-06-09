@@ -154,11 +154,7 @@ def create_travel_spend(
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
         destination_inner: Program = pool_state_to_inner_puzzle(
-            target,
-            launcher_coin.name(),
-            genesis_challenge,
-            delay_time,
-            delay_ph
+            target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
         log.warning(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
