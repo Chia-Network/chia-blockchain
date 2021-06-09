@@ -9,10 +9,10 @@ from chia.util.ints import uint64, uint16, uint32
 from chia.util.streamable import Streamable, streamable
 
 
-# GET /get_pool_info
+# GET /pool_info
 @dataclass(frozen=True)
 @streamable
-class PoolInfo(Streamable):
+class GetPoolInfoResponse(Streamable):
     name: str
     logo_url: str
     minimum_difficulty: uint64
@@ -32,7 +32,7 @@ class AuthenticationKeyInfo(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class PartialPayload(Streamable):
+class PostPartialPayload(Streamable):
     proof_of_space: ProofOfSpace
     sp_hash: bytes32
     end_of_sub_slot: bool
@@ -43,26 +43,25 @@ class PartialPayload(Streamable):
     authentication_key_info: AuthenticationKeyInfo
 
 
-# POST /submit_partial
+# POST /partial
 @dataclass(frozen=True)
 @streamable
-class SubmitPartial(Streamable):
-    payload: PartialPayload
+class PostPartialRequest(Streamable):
+    payload: PostPartialPayload
     # Sig of auth key by owner key, and partial by plot key and authentication key
     auth_key_and_partial_aggregate_signature: G2Element
-
-
-# Response in error case
-@dataclass(frozen=True)
-@streamable
-class RespondSubmitPartialError(Streamable):
-    error_code: uint16
-    error_message: Optional[str]
 
 
 # Response in success case
 @dataclass(frozen=True)
 @streamable
-class RespondSubmitPartialSuccess(Streamable):
+class PostPartialResponse(Streamable):
     points_balance: uint64
     current_difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer
+
+# Response in error case for all endpoints of the pool protocol
+@dataclass(frozen=True)
+@streamable
+class ErrorResponse(Streamable):
+    error_code: uint16
+    error_message: Optional[str]

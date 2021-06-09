@@ -10,7 +10,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
-from chia.protocols.pool_protocol import SubmitPartial, PartialPayload, AuthenticationKeyInfo
+from chia.protocols.pool_protocol import PostPartialRequest, PostPartialPayload, AuthenticationKeyInfo
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -139,7 +139,7 @@ class FarmerAPI:
                     pool_state_dict["pool_config"].authentication_public_key,
                     pool_state_dict["pool_config"].authentication_public_key_timestamp,
                 )
-                payload = PartialPayload(
+                payload = PostPartialPayload(
                     new_proof_of_space.proof,
                     new_proof_of_space.sp_hash,
                     is_eos,
@@ -201,7 +201,7 @@ class FarmerAPI:
                     ]
                 )
 
-                submit_partial: SubmitPartial = SubmitPartial(payload, agg_sig)
+                submit_partial: PostPartialRequest = PostPartialRequest(payload, agg_sig)
                 json_data = json.dumps(submit_partial.to_json_dict())
                 self.farmer.log.info("Submitting partial")
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
