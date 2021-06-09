@@ -370,3 +370,61 @@ class TestKeyringWrapper(unittest.TestCase):
             KeyringWrapper.get_shared_instance().master_password_is_valid("It's dangerous to go alone, take this!")
             is False
         )
+
+
+    # When: using a new empty keyring
+    @using_temp_file_keyring()
+    def test_get_password(self):
+        """
+        Simple password setting and retrieval
+        """
+        # Expect: password lookup should return None
+        assert KeyringWrapper.get_shared_instance().get_password("service-abc", "user-xyz") is None
+
+        # When: setting a password
+        KeyringWrapper.get_shared_instance().set_password("service-abc", "user-xyz", "super secret password".encode())
+
+        # Expect: password lookup should succeed
+        assert KeyringWrapper.get_shared_instance().get_password("service-abc", "user-xyz") == "super secret password".encode().hex()
+
+        # Expect: non-existent password lookup should fail
+        assert KeyringWrapper.get_shared_instance().get_password("service-123", "some non-existent password") is None
+
+
+    # When: using a new empty keyring
+    @using_temp_file_keyring()
+    def test_set_password_overwrite(self):
+        """
+        Overwriting a previously-set password should work
+        """
+        # When: initially setting the password
+        KeyringWrapper.get_shared_instance().set_password("service-xyz", "user-123", "initial password".encode())
+
+        # Expect: password lookup should succeed
+        assert KeyringWrapper.get_shared_instance().get_password("service-xyz", "user-123") == "initial password".encode().hex()
+
+        # When: updating the same password
+        KeyringWrapper.get_shared_instance().set_password("service-xyz", "user-123", "updated password".encode())
+
+        # Expect: the updated password should be retrieved
+        assert KeyringWrapper.get_shared_instance().get_password("service-xyz", "user-123") == "updated password".encode().hex()
+
+
+    @using_temp_file_keyring()
+    def test_delete_password(self):
+        """
+        """
+        # Expect: deleting a non-existent password should fail gracefully
+        KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
+
+        # When: setting a password
+        KeyringWrapper.get_shared_instance().set_password("some service", "some user", "500p3r 53cr37".encode())
+
+        # Expect: password retrieval should succeed
+        assert KeyringWrapper.get_shared_instance().get_password("some service", "some user") == "500p3r 53cr37".encode().hex()
+
+        # When: deleting the password
+        KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
+
+        # Expect: password retrieval should fail gracefully
+        assert KeyringWrapper.get_shared_instance().get_password("some service", "some user") is None
