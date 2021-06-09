@@ -41,8 +41,13 @@ class KeyringWrapper:
         the data from the legacy CryptFileKeyring (on write).
         """
         self.root_path = root_path
+        self.keyring = self._configure_backend()
+        self.legacy_keyring = self._configure_legacy_backend()
 
-        if KeyringWrapper.keyring:
+        KeyringWrapper.__shared_instance = self
+
+    def _configure_backend(self) -> Union[Any, FileKeyring]:
+        if self.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
 
         if platform == "win32" or platform == "cygwin":
@@ -54,28 +59,33 @@ class KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
-            filekeyring = FileKeyring(root_path=self.root_path)
-            # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring
-            if not filekeyring.has_content():
-                old_keyring = CryptFileKeyring()
-                if Path(old_keyring.file_path).is_file():
-                    self.legacy_keyring = old_keyring
-                    # After migrating content from legacy_keyring, we'll prompt to clear those keys
-                    self.legacy_keyring.keyring_key = "your keyring password"  # type: ignore
-
-            keyring = filekeyring  # type: ignore
+            keyring = FileKeyring(root_path=self.root_path)  # type: ignore
         else:
             keyring = keyring_main
 
-        self.keyring = keyring
-        KeyringWrapper.__shared_instance = self
+        return keyring
+
+    def _configure_legacy_backend(self) -> CryptFileKeyring:
+        # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring
+        filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
+        if filekeyring and not filekeyring.has_content():
+            old_keyring = CryptFileKeyring()
+            if Path(old_keyring.file_path).is_file():
+                # After migrating content from legacy_keyring, we'll prompt to clear those keys
+                old_keyring.keyring_key = "your keyring password"  # type: ignore
+                return old_keyring
+        return None
 
     @staticmethod
-    def get_shared_instance():
-        if not KeyringWrapper.__shared_instance:
+    def get_shared_instance(create_if_necessary=True):
+        if not KeyringWrapper.__shared_instance and create_if_necessary:
             KeyringWrapper()
 
         return KeyringWrapper.__shared_instance
+
+    @staticmethod
+    def cleanup_shared_instance():
+        KeyringWrapper.__shared_instance = None
 
     def get_keyring(self):
         """
