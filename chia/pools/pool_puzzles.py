@@ -40,9 +40,11 @@ def create_waiting_room_inner_puzzle(
     owner_pubkey: G1Element,
     launcher_id: bytes32,
     genesis_challenge: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
 ) -> Program:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
-    p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
+    p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_ph)
     return POOL_WAITING_ROOM_MOD.curry(
         target_puzzle_hash, p2_singleton_puzzle_hash, bytes(owner_pubkey), pool_reward_prefix, relative_lock_height
     )
@@ -54,9 +56,11 @@ def create_pooling_inner_puzzle(
     owner_pubkey: G1Element,
     launcher_id: bytes32,
     genesis_challenge: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
 ) -> Program:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
-    p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id)
+    p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_ph)
     return POOL_MEMBER_MOD.curry(
         target_puzzle_hash,
         p2_singleton_puzzle_hash,
@@ -82,7 +86,7 @@ def create_p2_singleton_puzzle(
 
 
 def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, delayed_puzzle_hash: bytes32) -> bytes32:
-    return create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id).get_tree_hash()
+    return create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash).get_tree_hash()
 
 
 ######################################
@@ -94,6 +98,15 @@ def uncurry_singleton_inner_puzzle(puzzle: Program):
         return False
     inner_f, args = r
     return inner_f
+
+
+def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program):
+    r = puzzle.uncurry()
+    if r is None:
+        return False
+    inner_f, args = r
+    SINGLETON_MOD_HASH, LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, SECONDS_DELAY, DELAYED_PUZZLE_HASH = list(args.as_iter())
+    return SECONDS_DELAY.as_atom(), DELAYED_PUZZLE_HASH.as_atom()
 
 
 # Verify that a puzzle is a Pool Wallet Singleton
@@ -121,6 +134,8 @@ def create_travel_spend(
     current: PoolState,
     target: PoolState,
     genesis_challenge: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
 ) -> Tuple[CoinSolution, Program, Program]:
     #    -> Tuple[CoinSolution, bytes32]:
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
@@ -176,8 +191,10 @@ def create_absorb_spend(
     launcher_coin: Coin,
     height: uint32,
     genesis_challenge: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
 ) -> List[CoinSolution]:
-    inner_puzzle: Program = pool_state_to_inner_puzzle(current_state, launcher_coin.name(), genesis_challenge)
+    inner_puzzle: Program = pool_state_to_inner_puzzle(current_state, launcher_coin.name(), genesis_challenge, delay_time, delay_ph)
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
@@ -213,7 +230,7 @@ def create_absorb_spend(
 
     reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
     p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(
-        create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_coin.name())
+        create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_coin.name(), delay_time, delay_ph)
     )
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
     p2_singleton_solution: SerializedProgram = SerializedProgram.from_program(
@@ -324,7 +341,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     if full_spend.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
         # Launcher spend
-        extra_data = full_solution.rest().rest().first().as_atom()
+        extra_data = full_solution.rest().rest().first().first().as_atom()
         return PoolState.from_bytes(extra_data)
 
     # Not launcher spend
@@ -348,13 +365,17 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
     return PoolState.from_bytes(extra_data)
 
 
-def pool_state_to_inner_puzzle(pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32) -> Program:
+def pool_state_to_inner_puzzle(
+    pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32, delay_time: uint64, delay_ph: bytes32
+) -> Program:
     escaping_inner_puzzle: Program = create_waiting_room_inner_puzzle(
         pool_state.target_puzzle_hash,
         pool_state.relative_lock_height,
         pool_state.owner_pubkey,
         launcher_id,
         genesis_challenge,
+        delay_time,
+        delay_ph,
     )
     if pool_state.state in [LEAVING_POOL, SELF_POOLING]:
         return escaping_inner_puzzle
@@ -365,4 +386,6 @@ def pool_state_to_inner_puzzle(pool_state: PoolState, launcher_id: bytes32, gene
             pool_state.owner_pubkey,
             launcher_id,
             genesis_challenge,
+            delay_time,
+            delay_ph,
         )
