@@ -249,7 +249,6 @@ class BlockTools:
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
-                log.warning(f"Signing with taproot {include_taproot}")
                 if include_taproot:
                     taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(local_sk.get_g1(), farmer_sk.get_g1())
                     taproot_share: G2Element = AugSchemeMPL.sign(taproot_sk, m, agg_pk)
@@ -1016,7 +1015,6 @@ class BlockTools:
                         else:
                             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
                             include_taproot = True
-                        log.warning(f"Making with taproot? {include_taproot}")
                         plot_pk = ProofOfSpace.generate_plot_public_key(
                             local_sk.get_g1(), farmer_public_key, include_taproot
                         )
