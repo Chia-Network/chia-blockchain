@@ -56,8 +56,8 @@ jobs:
 
     - name: Lint source with mypy
       run: |
-        mypy --install-types --exclude config.py tests
-        mypy --install-types chia
+        mypy --exclude config.py tests
+        mypy chia
 
     - name: Build source distribution
       run: |
