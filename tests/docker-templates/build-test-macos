@@ -10,4 +10,4 @@ services:
       - PYVER
     volumes:
       - CHIAHOME:/app
-    command: ["sh", "-c", "${HOME}/miniconda/bin/conda run -n python${PYVER} --no-capture-output sh -c 'source \"${HOME}/venv${PYVER}/bin/activate\" ; pytest --durations 0 TEST_DIR'"]
+    command: ["bash", "-c", ". /py/venv${PYVER}/bin/activate ; if [ -z \"${CHIAPROFILE}\" ] ; then pytest --durations 0 TEST_DIR ; else python3 -m cProfile -o profile -m pytest --durations 0 TEST_DIR ; fi"]
