@@ -33,6 +33,7 @@ class PoolWalletConfig(Streamable):
     pool_payout_instructions: str
     target_puzzle_hash: bytes32
     launcher_id: bytes32
+    p2_singleton_puzzle_hash: bytes32
     owner_public_key: G1Element
     authentication_public_key: G1Element
     authentication_public_key_timestamp: uint64
@@ -49,6 +50,7 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
                 pool_config_dict["pool_payout_instructions"],
                 hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
                 hexstr_to_bytes(pool_config_dict["launcher_id"]),
+                hexstr_to_bytes(pool_config_dict["p2_singleton_puzzle_hash"]),
                 G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
                 G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
                 pool_config_dict["authentication_public_key_timestamp"],
@@ -59,6 +61,7 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
 
 
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
+    breakpoint()
     full_config = load_config(root_path, "config.yaml")
     full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
     save_config(root_path, "config.yaml", full_config)
