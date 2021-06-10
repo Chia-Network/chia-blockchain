@@ -85,6 +85,8 @@ class TestPoolPuzzles(TestCase):
             starting_coin,
             START_AMOUNT,
         )
+        DELAY_TIME = uint64(60800)
+        DELAY_PH = starting_ph
         launcher_id = launcher_coin.name()
         relative_lock_height: uint32 = uint32(5000)
         pool_wr_inner_hash: bytes32 = create_waiting_room_inner_puzzle(
@@ -93,9 +95,17 @@ class TestPoolPuzzles(TestCase):
             pk,
             launcher_id,
             GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         ).get_tree_hash()
         pooling_innerpuz: Program = create_pooling_inner_puzzle(
-            starting_ph, pool_wr_inner_hash, pk, launcher_id, GENESIS_CHALLENGE  # Comment 1  # noqa
+            starting_ph,
+            pool_wr_inner_hash,
+            pk,
+            launcher_id,
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # Generating launcher information
         conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
@@ -125,9 +135,11 @@ class TestPoolPuzzles(TestCase):
         # HONEST ABSORB
         time = CoinTimestamp(10000030, 2)
         # create the farming reward
-        p2_singleton_puz: Program = create_p2_singleton_puzzle(  # Comment 2
+        p2_singleton_puz: Program = create_p2_singleton_puzzle(
             SINGLETON_MOD_HASH,
             launcher_id,
+            DELAY_TIME,
+            DELAY_PH,
         )
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
@@ -145,7 +157,9 @@ class TestPoolPuzzles(TestCase):
             pool_state,
             launcher_coin,
             2,  # height
-            GENESIS_CHALLENGE,  # Comment 1
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
@@ -166,7 +180,9 @@ class TestPoolPuzzles(TestCase):
             pool_state,
             launcher_coin,
             2,  # height
-            GENESIS_CHALLENGE,  # Comment 1
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # filter for only the singleton solution
         singleton_coinsol: CoinSolution = list(
@@ -227,12 +243,14 @@ class TestPoolPuzzles(TestCase):
             version=1,
         )
         # get the relevant coin solution
-        travel_coinsol, _, _ = create_travel_spend(  # Comment 3
+        travel_coinsol, _, _ = create_travel_spend(
             last_coinsol,
             launcher_coin,
             pool_state,
             target_pool_state,
-            GENESIS_CHALLENGE,  # Comment 1
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # sign the serialized state
         data = Program.to(bytes(pool_state)).get_tree_hash()
@@ -251,12 +269,14 @@ class TestPoolPuzzles(TestCase):
         # find the singleton
         singleton = get_most_recent_singleton_coin_from_coin_solution(travel_coinsol)  # noqa
         # get the relevant coin solution
-        return_coinsol, _, _ = create_travel_spend(  # Comment 3
+        return_coinsol, _, _ = create_travel_spend(
             travel_coinsol,
             launcher_coin,
             target_pool_state,
             pool_state,
-            GENESIS_CHALLENGE,  # Comment 1
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # sign the serialized target state
         sig = AugSchemeMPL.sign(
@@ -283,7 +303,9 @@ class TestPoolPuzzles(TestCase):
             target_pool_state,
             launcher_coin,
             3,  # height
-            GENESIS_CHALLENGE,  # Comment 1
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
@@ -303,12 +325,14 @@ class TestPoolPuzzles(TestCase):
         )[0]
         singleton: Coin = get_most_recent_singleton_coin_from_coin_solution(singleton_coinsol)  # noqa
         # get the relevant coin solution
-        return_coinsol, _, _ = create_travel_spend(  # Comment 3
+        return_coinsol, _, _ = create_travel_spend(
             singleton_coinsol,
             launcher_coin,
             target_pool_state,
             pool_state,
-            GENESIS_CHALLENGE,  # Comment 1
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
         )
         # sign the serialized target state
         sig = AugSchemeMPL.sign(
