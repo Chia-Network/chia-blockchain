@@ -4,7 +4,6 @@ import time
 from pprint import pprint
 from typing import List, Dict
 
-from chia.pools.pool_puzzles import launcher_id_to_p2_puzzle_hash
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -13,7 +12,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 import aiohttp
@@ -63,7 +62,9 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 
 
 def pprint_pool_wallet_state(
-    pool_wallet_info: PoolWalletInfo, address_prefix: str, pool_state_dict: Dict, delay_time: uint64, delay_ph: bytes32
+    pool_wallet_info: PoolWalletInfo,
+    address_prefix: str,
+    pool_state_dict: Dict,
 ):
     print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
@@ -76,7 +77,7 @@ def pprint_pool_wallet_state(
         print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points_balance']}")
     print(
         f"P2 singleton address (pool contract address for plotting):"
-        f"{encode_puzzle_hash(launcher_id_to_p2_puzzle_hash(pool_wallet_info.launcher_id, delay_time, delay_ph), address_prefix)}"
+        f"{encode_puzzle_hash(pool_wallet_info.p2_singleton_puzzle_hash, address_prefix)}"
     )
     if pool_wallet_info.target is not None:
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
@@ -117,7 +118,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                 return
         response: PoolWalletInfo = await wallet_client.pw_status(wallet_id_passed_in)
 
-        pprint_pool_wallet_state(response, address_prefix, pool_state_dict, delay_time, delay_ph)
+        pprint_pool_wallet_state(response, address_prefix, pool_state_dict)
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
         print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")

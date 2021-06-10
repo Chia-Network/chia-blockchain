@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -177,7 +177,7 @@ class WalletRpcClient(RpcClient):
         p2_singleton_delayed_ph: Optional[bytes32] = None,
     ) -> TransactionRecord:
 
-        request = {
+        request: Dict[str, Any] = {
             "wallet_type": "pool_wallet",
             "mode": mode,
             "host": backup_host,
