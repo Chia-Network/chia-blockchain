@@ -302,6 +302,7 @@ class PoolWallet:
         #    puzzle_hash, self.wallet_id, True
         # )
 
+    # Whenever we detect a new peak, potentially initiate the second blockchain transaction
     async def coin_spent(self, coin_solution: CoinSolution):
         """
         Our singleton being spent indicates a change to our `current_state`
@@ -630,7 +631,10 @@ class PoolWallet:
 
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert signed_spend_bundle.removals()[0].name() == singleton.name()
-        assert signed_spend_bundle.coin_solutions[0].coin.parent_coin_info == pool_wallet_info.launcher_id
+
+        # this is true for the first state change after singleton creation
+        # assert signed_spend_bundle.coin_solutions[0].coin.parent_coin_info == pool_wallet_info.launcher_id
+
         print(f"NEW PUZZLE IS: {new_full_puzzle}")
         print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
         debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
@@ -641,8 +645,7 @@ class PoolWallet:
         self.log.warning(f"generate_travel_spend: {signed_spend_bundle}")
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
 
-    async def generate_member_transaction(self, target_state: PoolState) -> TransactionRecord:
-        # TODO: Start in the "waiting room" so we can move to first pool in one step
+    async def generate_travel_transaction(self, target_state: PoolState) -> TransactionRecord:
         singleton_amount = uint64(1)
         self.target_state = target_state  # TODO: Fix assignment to self.target_state
         spend_bundle, new_singleton_puzzle_hash = await self.generate_travel_spend()
@@ -770,7 +773,7 @@ class PoolWallet:
 
     async def _try_to_farm_to_pool(self, target_state: PoolState):
 
-        tx_record = await self.generate_member_transaction(target_state)
+        tx_record = await self.generate_travel_transaction(target_state)
 
         if tx_record is None:
             raise ValueError("failed to generate transaction to farm to pool")
@@ -825,20 +828,36 @@ class PoolWallet:
         if target_state.state != FARMING_TO_POOL:
             raise ValueError(f"join_pool must be called with target_state={FARMING_TO_POOL} (FARMING_TO_POOL)")
         if self.target_state is not None:
-            raise ValueError(f"Cannot join a pool when already having target state: {self.target_state}")
+            raise ValueError(f"Cannot join a pool while waiting for target state: {self.target_state}")
 
         return await self.transition(target_state)
 
-    async def self_pool(self, target_state: PoolState):
+    async def try_leave_pool(self, target_state: PoolState):
+        # Create the LEAVING blockchain transaction
+        tx_record = await self.generate_travel_transaction(target_state)
+
+        if tx_record is None:
+            raise ValueError("failed to generate transaction to farm to pool")
+
+        await self.standard_wallet.push_transaction(tx_record)
+
+        # Check if we can self pool (timelock). If so, create the blockchain transaction for the target state
+        return tx_record
+
+    async def self_pool(self):
         if self.target_state is not None:
             raise ValueError(f"Cannot self pool when already having target state: {self.target_state}")
-        self.target_state = target_state
-        # current_state = await self.get_current_state()
-        # all_sks = [self.wallet_state_manager.private_key]
-        # owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
-        # Check if we can self pool (timelock)
-        # Create the first blockchain transaction
-        # Whenever we detect a new peak, potentially initiate the second blockchain transaction
+
+        # Note the implications of getting owner_puzzlehash from our local wallet right now
+        # vs. having pre-arranged the target self-pooling address
+        owner_puzzlehash = await self.wallet_state_manager.main_wallet.get_new_puzzlehash(in_transaction=False)
+        pool_wallet_info: PoolWalletInfo = await self.get_current_state()
+        owner_pubkey = pool_wallet_info.current.owner_pubkey
+        self.target_state = create_pool_state(
+            SELF_POOLING, owner_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=uint32(0)
+        )
+
+        return await self.try_leave_pool(self.target_state)
 
     async def claim_pool_rewards(self, fee: uint64) -> TransactionRecord:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
