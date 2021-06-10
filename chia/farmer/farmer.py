@@ -153,7 +153,7 @@ class Farmer:
     async def _update_pool_state(self):
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
-            p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(pool_config.launcher_id)
+            p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
             try:
                 all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
