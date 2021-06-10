@@ -40,7 +40,7 @@ class HarvesterMonitor:
     def new_farming_info(self, farming_info: Dict[str, Any]):
         if farming_info["farming_info"]["signage_point"] != self.cur_signage_point:
             self.log.debug(
-                f"{Received farming_info with old signage point {farming_info['farming_info']['signage_point']}"
+                f"Received farming_info with old signage point {farming_info['farming_info']['signage_point']}"
             )
             return
         self.cur_sp_harvesters.append(
