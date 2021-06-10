@@ -179,6 +179,10 @@ class WalletNode:
                 return False
 
         self.backup_initialized = True
+
+        # Start peers here after the backup initialization has finished
+        asyncio.create_task(self.wallet_peers.start())
+
         if backup_file is not None:
             json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
             if "start_height" in json_dict["data"]:
@@ -322,7 +326,6 @@ class WalletNode:
             None,
             self.log,
         )
-        asyncio.create_task(self.wallet_peers.start())
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
