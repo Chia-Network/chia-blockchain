@@ -250,6 +250,7 @@ class PoolWallet:
             pool_payout_instructions,
             current_state.current.target_puzzle_hash,
             current_state.launcher_id,
+            current_state.p2_singleton_puzzle_hash,
             current_state.current.owner_pubkey,
             auth_pk,
             auth_pk_timestamp,
