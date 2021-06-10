@@ -253,7 +253,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # sign the serialized state
-        data = Program.to(bytes(pool_state)).get_tree_hash()
+        data = Program.to(bytes(target_pool_state)).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
             sk,
             (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
@@ -335,7 +335,8 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # sign the serialized target state
-        sig = AugSchemeMPL.sign(
+        data = Program.to([pooling_innerpuz.get_tree_hash(), START_AMOUNT, bytes(pool_state)]).get_tree_hash()
+        sig: G2Element = AugSchemeMPL.sign(
             sk,
             (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
         )
