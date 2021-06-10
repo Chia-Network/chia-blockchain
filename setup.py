@@ -5,7 +5,7 @@ dependencies = [
     "chiavdf==1.0.2",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.3",  # proof of space
-    "clvm@git+https://github.com/Chia-Network/clvm.git@9254db50f318c23f211499754cab8db6fe35aa47#egg=clvm",
+    "clvm@git+https://github.com/Chia-Network/clvm.git@1a5cb17895d8707f784a85180bc97d3c6ebe71a0#egg=clvm",
     "clvm_rs@git+https://github.com/Chia-Network/clvm_rs.git@d0647f2d327c71a2ea3639dae423e2ec197ddf3d#egg=clvm_rs",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
