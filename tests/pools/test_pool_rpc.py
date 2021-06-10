@@ -370,45 +370,21 @@ class TestPoolWalletRpc:
     #     pass
 
     @pytest.mark.asyncio
-    async def test_self_pooling_to_pooling(self, two_wallet_nodes):
+    async def test_self_pooling_to_pooling(self, setup):
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
+        our_ph = receive_address[0]
+        pool_ph = receive_address[1]
         full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, wallet_server_0 = wallets[0]
-        wallet_node_1, wallet_server_1 = wallets[1]
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-        our_ph = await wallet_0.get_new_puzzlehash()
-        pool_ph = await wallet_1.get_new_puzzlehash()
-
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        api_user = WalletRpcApi(wallet_node_0)
-        config = bt.config
-        hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(21529)
-
-        rpc_cleanup = await start_rpc_server(
-            api_user,
-            hostname,
-            daemon_port,
-            test_rpc_port,
-            lambda x: None,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
         try:
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
             total_block_rewards = await self.get_total_block_rewards(total_blocks)
 
-            await time_out_assert(10, wallet_0.get_unconfirmed_balance, total_block_rewards)
-            await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-            await time_out_assert(10, wallet_0.get_spendable_balance, total_block_rewards)
+            await time_out_assert(10, wallets[0].get_unconfirmed_balance, total_block_rewards)
+            await time_out_assert(10, wallets[0].get_confirmed_balance, total_block_rewards)
+            await time_out_assert(10, wallets[0].get_spendable_balance, total_block_rewards)
             assert total_block_rewards > 0
 
             summaries_response = await client.get_wallets()
@@ -443,7 +419,7 @@ class TestPoolWalletRpc:
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
 
-            join_pool_tx: TransactionRecord = await api_user.pw_join_pool(
+            join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
                 {
                     "wallet_id": wallet_id,
                     "pool_url": "https://pool.example.com",
@@ -476,13 +452,11 @@ class TestPoolWalletRpc:
             }
 
             await self.farm_blocks(full_node_api, our_ph, 6)
-            # join_pool_sb = full_node_api.full_node.mempool_manager.get_spendbundle(join_pool_tx.spend_bundle)
 
             status: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
 
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
-            total_block_rewards = await self.get_total_block_rewards(total_blocks)
 
             async def status_is_farming_to_pool():
                 await self.farm_blocks(full_node_api, our_ph, 1)
@@ -491,12 +465,50 @@ class TestPoolWalletRpc:
 
             await time_out_assert(timeout=20, function=status_is_farming_to_pool)
 
-            # assert len(join_pool_tx.additions) > 1
-
         finally:
             client.close()
             await client.await_closed()
             await rpc_cleanup()
+
+    @pytest.fixture(scope="function")
+    async def setup(self, two_wallet_nodes):
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node_0, wallet_server_0 = wallets[0]
+        wallet_node_1, wallet_server_1 = wallets[1]
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+        our_ph = await wallet_0.get_new_puzzlehash()
+        pool_ph = await wallet_1.get_new_puzzlehash()
+
+        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        api_user = WalletRpcApi(wallet_node_0)
+        config = bt.config
+        hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+        test_rpc_port = uint16(21529)
+
+        rpc_cleanup = await start_rpc_server(
+            api_user,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            lambda x: None,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+
+        return (
+            full_nodes,
+            [wallet_0, wallet_1],
+            [our_ph, pool_ph],
+            client,  # wallet rpc client
+            rpc_cleanup,
+            [WalletRpcApi(wallet_node_0), WalletRpcApi(wallet_node_1)],
+        )
 
     # pooling -> escaping -> self pooling
     # Pool A -> Pool B
