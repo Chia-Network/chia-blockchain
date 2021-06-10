@@ -12,7 +12,6 @@ import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
-from chia.pools.pool_puzzles import launcher_id_to_p2_puzzle_hash
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
