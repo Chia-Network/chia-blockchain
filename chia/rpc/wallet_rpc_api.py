@@ -1107,24 +1107,12 @@ class WalletRpcApi:
     async def pw_self_pool(self, request):
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
-        # Then we transition to PoolSingletonState.FARMING_TO_POOL
-        # or to PoolSingletonState.SELF_POOLING
+        # Then we transition to FARMING_TO_POOL or SELF_POOLING
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
-        owner_pubkey = pool_wallet_info.current.owner_pubkey
-        # Note the implications of getting this from our local wallet right now vs.
-        # having pre-arranged the target self-pooling address
-        # target_puzzlehash = pool_wallet_info.owner_pay_to_puzzlehash
-        assert self.service.wallet_state_manager is not None
-        wallet_state_manager = self.service.wallet_state_manager
-        target_puzzlehash = wallet_state_manager.main_wallet.get_new_puzzlehash()
 
-        new_target_state = create_pool_state(
-            SELF_POOLING, target_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=0
-        )
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.self_pool(new_target_state)
+            tx: TransactionRecord = await wallet.self_pool()
             return {"transaction": tx}
 
     async def pw_absorb_rewards(self, request):
@@ -1145,6 +1133,8 @@ class WalletRpcApi:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.POOLING_WALLET.value:
+            raise ValueError(f"wallet_id {wallet_id} is not a pooling wallet")
         state: PoolWalletInfo = await wallet.get_current_state()
         return {
             "state": state.to_json_dict(),
