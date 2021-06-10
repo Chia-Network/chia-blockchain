@@ -110,8 +110,8 @@ steps:
     displayName: "Create Checksums"
 
   - bash: |
-      export AWS_ACCESS_KEY_ID=($ACCESSKEY)
-      export AWS_SECRET_ACCESS_KEY=($SECRETKEY)
+      export AWS_ACCESS_KEY_ID=($AcessKey)
+      export AWS_SECRET_ACCESS_KEY=($SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
       printenv
       aws configure list
