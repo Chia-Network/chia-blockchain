@@ -129,7 +129,7 @@ class FarmerAPI:
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
                 ):
                     self.farmer.log.info(
-                        f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['difficulty']}"
+                        f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}"
                     )
                     return
 
