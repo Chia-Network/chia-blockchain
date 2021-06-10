@@ -19,6 +19,8 @@ async def sign_coin_solutions(
     msg_list: List[bytes] = []
     for coin_solution in coin_solutions:
         # Get AGG_SIG conditions
+        print(f'solution was {coin_solution.solution}')
+        print(f'puzzle_reaveal was {coin_solution.puzzle_reveal}')
         err, conditions_dict, cost = conditions_dict_for_solution(
             coin_solution.puzzle_reveal, coin_solution.solution, max_cost
         )

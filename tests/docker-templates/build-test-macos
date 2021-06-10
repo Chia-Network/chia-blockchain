@@ -10,4 +10,4 @@ services:
       - PYVER
     volumes:
       - CHIAHOME:/app
-    command: ["sh", "-c", "conda run -n python${PYVER} --no-capture-output pytest --durations 0 TEST_DIR"]
+    command: ["sh", "-c", "${HOME}/miniconda/bin/conda run -n python${PYVER} --no-capture-output sh -c 'source \"${HOME}/venv${PYVER}/bin/activate\" ; pytest --durations 0 TEST_DIR'"]

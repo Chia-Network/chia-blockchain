@@ -42,9 +42,10 @@ if __name__ == '__main__':
 
     os.makedirs('../docker-stage')
     os.makedirs('./docker-compose')
-    shutil.copytree('..', '../docker-stage/app', ignore=shutil.ignore_patterns('.git', 'docker-stage'))
+    shutil.copytree('..', '../docker-stage/app', ignore=shutil.ignore_patterns('docker-stage'))
     shutil.copy('docker/Dockerfile', '../docker-stage/Dockerfile')
     shutil.copy('docker/create-container.sh', '../docker-stage/app/create-container.sh')
+    shutil.copy('docker/run-in-container.sh', '../docker-stage/app/run-in-container.sh')
     for pv in PYTHON_VERSIONS:
         writePythonEnv('../docker-stage/app', pv)
 
