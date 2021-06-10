@@ -54,7 +54,7 @@ def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
     )
     return AugSchemeMPL.sign(
         synthetic_secret_key,
-        (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
+        (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
     )
 
 
@@ -80,7 +80,7 @@ class TestPoolPuzzles(TestCase):
 
         # LAUNCHING
         # Create the escaping inner puzzle
-        GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")  # noqa
+        GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
         launcher_coin = singleton_top_layer.generate_launcher_coin(
             starting_coin,
             START_AMOUNT,
@@ -108,7 +108,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # Generating launcher information
-        conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
+        conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
             starting_coin, pooling_innerpuz, comment, START_AMOUNT
         )
         # Creating solution for standard transaction
@@ -199,7 +199,7 @@ class TestPoolPuzzles(TestCase):
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
         except BadSpendBundleError as e:
-            assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"  # noqa
+            assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
 
         # SPEND A NON-REWARD P2_SINGLETON (Negative test)
         # create the dummy coin
@@ -228,11 +228,11 @@ class TestPoolPuzzles(TestCase):
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
         except BadSpendBundleError as e:
-            assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"  # noqa
+            assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
 
         # ENTER WAITING ROOM
         # find the singleton
-        singleton = get_most_recent_singleton_coin_from_coin_solution(last_coinsol)  # noqa
+        singleton = get_most_recent_singleton_coin_from_coin_solution(last_coinsol)
         # create a new dummy pool state
         target_pool_state = PoolState(
             owner_pubkey=pk,
@@ -256,7 +256,7 @@ class TestPoolPuzzles(TestCase):
         data = Program.to(bytes(target_pool_state)).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
             sk,
-            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
+            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
@@ -267,7 +267,7 @@ class TestPoolPuzzles(TestCase):
 
         # ESCAPE TOO FAST (Negative test)
         # find the singleton
-        singleton = get_most_recent_singleton_coin_from_coin_solution(travel_coinsol)  # noqa
+        singleton = get_most_recent_singleton_coin_from_coin_solution(travel_coinsol)
         # get the relevant coin solution
         return_coinsol, _, _ = create_travel_spend(
             travel_coinsol,
@@ -281,7 +281,7 @@ class TestPoolPuzzles(TestCase):
         # sign the serialized target state
         sig = AugSchemeMPL.sign(
             sk,
-            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
+            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it and hope it fails!
         try:
@@ -291,7 +291,7 @@ class TestPoolPuzzles(TestCase):
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
         except BadSpendBundleError as e:
-            assert str(e) == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"  # noqa
+            assert str(e) == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
 
         # ABSORB WHILE IN WAITING ROOM
         time = CoinTimestamp(10000060, 3)
@@ -323,7 +323,7 @@ class TestPoolPuzzles(TestCase):
                 coin_sols,
             )
         )[0]
-        singleton: Coin = get_most_recent_singleton_coin_from_coin_solution(singleton_coinsol)  # noqa
+        singleton: Coin = get_most_recent_singleton_coin_from_coin_solution(singleton_coinsol)
         # get the relevant coin solution
         return_coinsol, _, _ = create_travel_spend(
             singleton_coinsol,
@@ -338,7 +338,7 @@ class TestPoolPuzzles(TestCase):
         data = Program.to([pooling_innerpuz.get_tree_hash(), START_AMOUNT, bytes(pool_state)]).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
             sk,
-            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
+            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
