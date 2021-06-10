@@ -55,6 +55,7 @@ class PoolState(Streamable):
     # `target_puzzle_hash`: A puzzle_hash we pay to
     # Either set by the main wallet in the self-pool case,
     # or sent by the pool
+    # TODO: rename target_puzzle_hash -> owner_pay_to_puzzlehash
     target_puzzle_hash: bytes32
     # owner_pubkey is set by the wallet, once
     owner_pubkey: G1Element
