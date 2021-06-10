@@ -112,12 +112,9 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
             wallet_rpc_port = config["wallet"]["rpc_port"]
         wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
         amounts = await wallet_client.get_farmed_amount()
-    except Exception as e:
-        #
-        # Don't print anything here as errors are expected in many situations
-        # Just retrow the exception and let the caller handle it
-        #
-        raise e
+    #
+    # Don't catch any exceptions, the caller will handle it
+    #
     finally:
         wallet_client.close()
         await wallet_client.await_closed()
@@ -189,16 +186,16 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
 
-    bWalletNotReady = False
-    bWalletNotRunning = False
+    wallet_not_ready: bool = False
+    wallet_not_running: bool = False
     amounts = None
     try:
         amounts = await get_wallets_stats(wallet_rpc_port)
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            bWalletNotRunning = True
+            wallet_not_running = True
         else:
-            bWalletNotReady = True
+            wallet_not_ready = True
 
     print("Farming status: ", end="")
     if blockchain_state is None:
@@ -247,9 +244,9 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Expected time to win: " + format_minutes(minutes))
 
     if amounts is None:
-        if bWalletNotRunning:
+        if wallet_not_running:
             print("For details on farmed rewards and fees you should run 'chia start wallet' and 'chia wallet show'")
-        elif bWalletNotReady:
+        elif wallet_not_ready:
             print("For details on farmed rewards and fees you should run 'chia wallet show'")
     else:
         print("Note: log into your key using 'chia wallet show' to see rewards for each key")
