@@ -10,4 +10,4 @@ services:
       - PYVER
     volumes:
       - CHIAHOME:/app
-    command: ["bash", "-c", ". /py/venv${PYVER}/bin/activate ; if [ -z \"${CHIAPROFILE}\" ] ; then pytest --durations 0 TEST_DIR ; else python3 -m cProfile -o profile -m pytest --durations 0 TEST_DIR ; fi"]
+    command: ["sudo", "bash", "-c", ". /py/venv${PYVER}/bin/activate ; if [ -z \"${CHIAPROFILE}\" ] ; then pytest --durations 0 TEST_DIR ; else python3 -m cProfile -o profile -m pytest --durations 0 TEST_DIR ; fi"]
