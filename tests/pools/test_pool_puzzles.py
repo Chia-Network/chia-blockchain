@@ -35,7 +35,7 @@ from tests.wallet.test_singleton import (
 
 GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
-
+"""
 def test_p2_singleton():
     # create a singleton. This should call driver code.
     launcher_id: bytes32 = LAUNCHER_ID
@@ -223,8 +223,7 @@ def xtest_create_absorb_spend():
         last_coin_solution, pool_info.current, pool_info.launcher_coin, 1000, GENESIS_CHALLENGE
     )
     assert len(spends) > 0
-
-
+"""
 """
 def test_create_escape_spend():
     last_coin_solution: CoinSolution = {'coin': {'amount': 1,
