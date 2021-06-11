@@ -21,7 +21,7 @@ dependencies = [
     "PyYAML==5.4.1",  # Used for config file format
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
-    "websockets==8.1.0",  # For use in wallet RPC and electron UI
+    "websockets==9.1",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
     "dnspython==2.1.0",  # Query DNS seeds
 ]
