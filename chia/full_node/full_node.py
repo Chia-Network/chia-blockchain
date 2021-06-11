@@ -351,21 +351,22 @@ class FullNode:
 
         """
 
-        # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
-        self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
-
-        if self.blockchain.contains_block(request.header_hash):
-            return None
-
         try:
+            seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
             # Updates heights in the UI. Sleeps 0.5s before, so other peers have time to update their peaks as well.
             # Limit to 5 refreshes.
-            if len(self._ui_tasks) < 5:
+            if not seen_header_hash and len(self._ui_tasks) < 5:
                 self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(0.5)))
             # Prune completed connect tasks
             self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
         except Exception as e:
             self.log.warning(f"Exception UI refresh task: {e}")
+
+        # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
+        self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
+
+        if self.blockchain.contains_block(request.header_hash):
+            return None
 
         # Not interested in less heavy peaks
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
