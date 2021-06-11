@@ -115,7 +115,7 @@ class TestDIDWallet:
         newpuzhash = await did_wallet_2.get_new_inner_hash()
         pubkey = bytes(
             (
-                await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.db_wallet_info.id)
+                await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
             ).pubkey
         )
         message_spend_bundle = await did_wallet_0.create_attestment(

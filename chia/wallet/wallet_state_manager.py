@@ -18,7 +18,7 @@ from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
 from chia.types.blockchain_format.coin import Coin
@@ -364,8 +364,8 @@ class WalletStateManager:
                     uint32(index),
                     puzzlehash,
                     pubkey,
-                    target_wallet.db_wallet_info.type,
-                    uint32(target_wallet.db_wallet_info.id),
+                    target_wallet.wallet_info.type,
+                    uint32(target_wallet.wallet_info.id),
                 )
             )
         await self.puzzle_store.add_derivation_paths(derivation_paths)
@@ -584,6 +584,11 @@ class WalletStateManager:
                             self.log.warning("Already have, not recreating")
                             already_have = True
                     if not already_have:
+                        try:
+                            solution_to_extra_data(cs)
+                        except Exception as e:
+                            self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
                         self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(
                             self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, True, "pool_wallet"
