@@ -128,16 +128,15 @@ class CoinStore:
         err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
-        for new_coin in spend_bundle.additions():
+        additions = spend_bundle.additions()
+        removals = spend_bundle.removals()
+        for new_coin in additions:
             self._add_coin_entry(new_coin, now)
-        for spent_coin in spend_bundle.removals():
+        for spent_coin in removals:
             coin_name = spent_coin.name()
             coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(
-                coin_record,
-                spent_block_index=now.height,
-                spent=True,
-            )
+            self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
+        return additions, spend_bundle.coin_solutions
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
         for coin_name in self._ph_index[puzzle_hash]:
