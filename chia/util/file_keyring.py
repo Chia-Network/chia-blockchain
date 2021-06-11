@@ -45,8 +45,6 @@ def loads_keyring(method):
             log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
             if (self.has_content() and not self.payload_cache) or self.needs_load_keyring:
                 self.load_keyring()
-        # TODO fix: we don't want to load the keyring from disk each time. Check modification time or something...
-        # self.load_keyring()
         return method(self, *args, **kwargs)
 
     return inner
@@ -184,7 +182,6 @@ class FileKeyring(FileSystemEventHandler):
         self.setup_keyring_file_watcher()
 
     def setup_keyring_file_watcher(self):
-
         log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher on thread: {threading.get_ident()}")
 
         observer = Observer()
@@ -250,7 +247,6 @@ class FileKeyring(FileSystemEventHandler):
 
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
-    @loads_keyring
     def get_password(self, service: str, user: str) -> Optional[str]:
         """
         Returns the password named by the 'user' parameter from the cached
@@ -294,7 +290,6 @@ class FileKeyring(FileSystemEventHandler):
             self.payload_cache["keys"] = keys
             self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
-    @loads_keyring
     def delete_password(self, service: str, user: str):
         """
         Deletes the password named by the 'user' parameter from the keyring data
