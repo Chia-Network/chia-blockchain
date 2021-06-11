@@ -11,7 +11,7 @@ from pathlib import Path
 from tests.core.util.test_keyring_wrapper import using_temp_file_keyring
 from time import sleep, time
 
-from chia.util.file_keyring import acquire_writer_lock, lockfile_path_for_file_path, FileKeyringLockTimeout
+from chia.util.file_keyring import acquire_writer_lock, lockfile_path_for_file_path, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
 
 log = logging.getLogger(__name__)
@@ -21,7 +21,11 @@ DUMMY_SLEEP_VALUE = 1
 
 
 def dummy_set_password(service, user, password):
-    log.warning(f"[pid:{os.getpid()}] received: {service}, {user}, {password}")
+    # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
+    # otherwise file events won't be detected in the child process
+    KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
+
+    log.warning(f"[pid:{os.getpid()}] received: {service}, {user}, {password}, keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}")
     KeyringWrapper.get_shared_instance().set_password(service=service, user=user, password_bytes=password)
 
     # Wait a short while between writing and reading. Without proper locking, this helps ensure
