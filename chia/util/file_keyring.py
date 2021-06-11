@@ -3,6 +3,7 @@ import fasteners
 import os
 import shutil
 import sys
+import threading
 import yaml
 
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -13,6 +14,8 @@ from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from typing import Optional
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 
 SALT_BYTES = 16  # PBKDF2 param
@@ -39,10 +42,12 @@ def loads_keyring(method):
     @wraps(method)
     def inner(self, *args, **kwargs):
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
-        # if self.has_content() and not self.payload_cache:
-        #     self.load_keyring()
+        with self.load_keyring_lock:
+            log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
+            if (self.has_content() and not self.payload_cache) or self.needs_load_keyring:
+                self.load_keyring()
         # TODO fix: we don't want to load the keyring from disk each time. Check modification time or something...
-        self.load_keyring()
+        # self.load_keyring()
         return method(self, *args, **kwargs)
 
     return inner
@@ -56,26 +61,26 @@ def lockfile_path_for_file_path(file_path: Path) -> Path:
 def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
     result = None
-    log.warning(f"in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
+    log.warning(f"[pid:{os.getpid()}] in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
     for i in range(0, max_iters):
         log.warning(f"attempting to acquire writer lock (attempt={i})")
         if lock.acquire_write_lock(timeout=timeout):
-            log.warning(f"lock acquired")
-            log.warning(f"calling method")
+            log.warning(f"[pid:{os.getpid()}] lock acquired")
+            log.warning(f"[pid:{os.getpid()}] calling method")
             yield  # <----
-            log.warning(f"method returned: {result}")
+            log.warning(f"[pid:{os.getpid()}] method returned: {result}")
             lock.release_write_lock()
             try:
-                log.warning(f"attempting to remove lock file")
+                log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
             except:
                 pass
             break
         else:
-            log.warning(f"Failed to acquire keyring writer lock after {timeout} seconds")
+            log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring writer lock after {timeout} seconds")
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
-                log.warning(f"Remaining attempts: {max_iters - 1 - i}")
+                log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
                 print(f" Remaining attempts: {max_iters - 1 - i}")
             else:
                 print("")
@@ -83,7 +88,7 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     return result
 
 
-class FileKeyring:
+class FileKeyring(FileSystemEventHandler):
     """
     FileKeyring provides an file-based keyring store that is encrypted to a key derived
     from the user-provided master password. The public interface is intended to align
@@ -112,6 +117,9 @@ class FileKeyring:
     """
 
     keyring_path: Optional[Path] = None
+    keyring_observer: Observer = None
+    load_keyring_lock: threading.RLock = None
+    needs_load_keyring: bool = False
     salt: Optional[bytes] = None  # PBKDF2 param
     payload_cache: dict = {}  # Cache of the decrypted YAML contained in outer_payload_cache['data']
     outer_payload_cache: dict = {}  # Cache of the plaintext YAML "outer" contents (never encrypted)
@@ -131,6 +139,7 @@ class FileKeyring:
         """
         self.keyring_path = FileKeyring.keyring_path_from_root(root_path)
         self.payload_cache = {}  # This is used as a building block for adding keys etc if the keyring is empty
+        self.load_keyring_lock = threading.RLock()
 
         if not self.keyring_path.exists():
             # Super simple payload if starting from scratch
@@ -139,6 +148,23 @@ class FileKeyring:
             self.outer_payload_cache = outer_payload
         else:
             self.load_outer_payload()
+
+        self.setup_keyring_file_watcher()
+
+    def setup_keyring_file_watcher(self):
+
+        log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher on thread: {threading.get_ident()}")
+
+        observer = Observer()
+        observer.schedule(self, self.keyring_path)
+        observer.start()
+
+        self.keyring_observer = Observer()
+
+    def on_modified(self, event):
+        log.warning(f"[pid:{os.getpid()}] on_modified called on thread: {threading.get_ident()}")
+        with self.load_keyring_lock:
+            self.needs_load_keyring = True
 
     @staticmethod
     def default_outer_payload() -> dict:
@@ -309,6 +335,9 @@ class FileKeyring:
             self.salt = bytes.fromhex(salt)
 
     def load_keyring(self, password: str = None):
+        with self.load_keyring_lock:
+            self.needs_load_keyring = False
+
         self.load_outer_payload()
 
         # Missing the salt or nonce indicates that the keyring doesn't have any keys stored.
