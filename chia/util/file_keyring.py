@@ -1,10 +1,12 @@
 import base64
+import fasteners
 import os
 import shutil
 import sys
 import yaml
 
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
 from functools import wraps
 from hashlib import pbkdf2_hmac
@@ -19,6 +21,15 @@ HASH_ITERS = 100000  # PBKDF2 param
 CHECKBYTES_VALUE = b"5f365b8292ee505b"  # Randomly generated
 MAX_SUPPORTED_VERSION = 1  # Max supported file format version
 
+# TODO remove: logging just for test debugging atm
+import logging
+
+log = logging.getLogger(__name__)
+
+
+class FileKeyringLockTimeout(Exception):
+    pass
+
 
 def loads_keyring(method):
     """
@@ -28,11 +39,48 @@ def loads_keyring(method):
     @wraps(method)
     def inner(self, *args, **kwargs):
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
-        if self.has_content() and not self.payload_cache:
-            self.load_keyring()
+        # if self.has_content() and not self.payload_cache:
+        #     self.load_keyring()
+        # TODO fix: we don't want to load the keyring from disk each time. Check modification time or something...
+        self.load_keyring()
         return method(self, *args, **kwargs)
 
     return inner
+
+
+def lockfile_path_for_file_path(file_path: Path) -> Path:
+    return file_path.with_suffix(".lock")
+
+
+@contextmanager
+def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
+    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+    result = None
+    log.warning(f"in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
+    for i in range(0, max_iters):
+        log.warning(f"attempting to acquire writer lock (attempt={i})")
+        if lock.acquire_write_lock(timeout=timeout):
+            log.warning(f"lock acquired")
+            log.warning(f"calling method")
+            yield  # <----
+            log.warning(f"method returned: {result}")
+            lock.release_write_lock()
+            try:
+                log.warning(f"attempting to remove lock file")
+                os.remove(lock_path)
+            except:
+                pass
+            break
+        else:
+            log.warning(f"Failed to acquire keyring writer lock after {timeout} seconds")
+            print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
+            if i < max_iters - 1:
+                log.warning(f"Remaining attempts: {max_iters - 1 - i}")
+                print(f" Remaining attempts: {max_iters - 1 - i}")
+            else:
+                print("")
+                raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
+    return result
 
 
 class FileKeyring:
@@ -135,17 +183,20 @@ class FileKeyring:
         Returns the password named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
+
+        log.warning(f"[pid:{os.getpid()}] get_password: service: {service}, user: {user}")
+        log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
+        log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..): {self.ensure_cached_keys_dict().get(service, {})}")
+        log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user): {self.ensure_cached_keys_dict().get(service, {}).get(user)}")
+
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
     @loads_keyring
-    def set_password(self, service: str, user: str, password_bytes: bytes):
-        """
-        Store the password to the keyring data using the name specified by the
-        'user' parameter. Will force a write to keyring.yaml on success.
-        """
+    def _inner_set_password(self, service: str, user: str, password_bytes: bytes, *args, **kwargs):
         keys = self.ensure_cached_keys_dict()
         # Convert the password to a string (if necessary)
         password = password_bytes.hex() if type(password_bytes) == bytes else str(password_bytes)
+        log.warning(f"[pid:{os.getpid()}] do_set_password: user: {user}, password: {password}")
 
         # Ensure a dictionary exists for the 'service'
         if keys.get(service) is None:
@@ -155,6 +206,15 @@ class FileKeyring:
         keys[service] = service_dict
         self.payload_cache["keys"] = keys
         self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
+
+
+    def set_password(self, service: str, user: str, password_bytes: bytes):
+        """
+        Store the password to the keyring data using the name specified by the
+        'user' parameter. Will force a write to keyring.yaml on success.
+        """
+        with acquire_writer_lock(lock_path=lockfile_path_for_file_path(self.keyring_path)):
+            self._inner_set_password(service, user, password_bytes)
 
     @loads_keyring
     def delete_password(self, service: str, user: str):
@@ -317,7 +377,7 @@ class FileKeyring:
     def write_data_to_keyring(self, data):
         os.makedirs(os.path.dirname(self.keyring_path), 0o775, True)
         temp_path = self.keyring_path.with_suffix("." + str(os.getpid()))
-        with open(os.open(str(temp_path), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600), "w") as f:
+        with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
             _ = yaml.safe_dump(data, f)
         shutil.move(str(temp_path), self.keyring_path)
 
