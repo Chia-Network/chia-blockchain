@@ -119,4 +119,3 @@ steps:
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum s3://download-chia-net/releases/
     displayName: "Upload Release Files"
     condition: contains(variables['build.sourceBranch'], 'refs/tags/')
-
