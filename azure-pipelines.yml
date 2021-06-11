@@ -97,35 +97,35 @@ steps:
 #    displayName: "list files in dir"
 
   - bash: |
-      date
-      aws --version
-      curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
-      sudo installer -pkg AWSCLIV2.pkg -target /
-      aws --version
-    displayName: "Install AWS CLI"
-
-  - bash: |
-      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-      cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
-      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum
-      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-    displayName: "Create Checksums"
-
-  - bash: |
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
-    displayName: "Upload to S3"
+      echo "testcontent" > testfile
+      aws s3 cp testfile s3://download-chia-net/builds/
+    displayName: "Test basic AWS upload"
 
-
-  - bash: |
-      export AWS_ACCESS_KEY_ID=$(AccessKey)
-      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
-      export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/releases/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum s3://download-chia-net/releases/
-    displayName: "Upload Release Files"
-    condition: contains(variables['build.sourceBranch'], 'refs/tags/')
+#  - bash: |
+#      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+#      cd $(System.DefaultWorkingDirectory)/build_scripts/
+#      export CHIA_VERSION="Chia-"$(<version.txt)
+#      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum
+#      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+#    displayName: "Create Checksums"
+#
+#  - bash: |
+#      export AWS_ACCESS_KEY_ID=$(AccessKey)
+#      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+#      export AWS_DEFAULT_REGION=us-west-2
+#      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+#    displayName: "Upload to S3"
+#
+#
+#  - bash: |
+#      export AWS_ACCESS_KEY_ID=$(AccessKey)
+#      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+#      export AWS_DEFAULT_REGION=us-west-2
+#      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/releases/
+#      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum s3://download-chia-net/releases/
+#    displayName: "Upload Release Files"
+#    condition: contains(variables['build.sourceBranch'], 'refs/tags/')
 
