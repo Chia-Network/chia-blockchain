@@ -45,8 +45,8 @@ class HarvesterMonitor:
             return
         self.cur_sp_harvesters.append(
             {
-                "total_plots" : farming_info["farming_info"]["total_plots"],
-                "total_plot_space" : farming_info["farming_info"]["total_plot_space"],
+                "total_plots": farming_info["farming_info"]["total_plots"],
+                "total_plot_space": farming_info["farming_info"]["total_plot_space"],
             }
         )
 
