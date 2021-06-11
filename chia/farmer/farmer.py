@@ -173,20 +173,19 @@ class Farmer:
                         "current_points_balance": 0,
                         "current_difficulty": 10,
                         "pool_errors_24h": [],
-                        "pool_info": {},
+                        "pool_info": None,
                     }
                     self.log.info(f"Added pool: {pool_config}")
-                self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
+                pool_state = self.pool_state[p2_singleton_puzzle_hash]
+                pool_state["pool_config"] = pool_config
 
-                if self.pool_state[p2_singleton_puzzle_hash]["pool_info"] == {}:
+                if pool_state["pool_info"] is None:
                     # Makes a GET request to the pool to get the updated information
                     async with aiohttp.ClientSession(trust_env=True) as session:
                         async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
                             if resp.ok:
-                                self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
-                                self.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] = self.pool_state[
-                                    p2_singleton_puzzle_hash
-                                ]["pool_info"]["minimum_difficulty"]
+                                pool_state["pool_info"] = json.loads(await resp.text())
+                                pool_state["current_difficulty"] = pool_state["pool_info"]["minimum_difficulty"]
                             else:
                                 self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
             except Exception as e:
