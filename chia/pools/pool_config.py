@@ -61,7 +61,6 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
 
 
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
-    breakpoint()
     full_config = load_config(root_path, "config.yaml")
     full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
     save_config(root_path, "config.yaml", full_config)

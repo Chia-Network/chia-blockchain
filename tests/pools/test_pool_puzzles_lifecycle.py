@@ -27,6 +27,11 @@ from chia.pools.pool_puzzles import (
     create_travel_spend,
     get_most_recent_singleton_coin_from_coin_solution,
     SINGLETON_MOD_HASH,
+    launcher_id_to_p2_puzzle_hash,
+    is_pool_singleton_inner_puzzle,
+    get_pubkey_from_member_inner_puzzle,
+    solution_to_extra_data,
+    uncurry_pool_waitingroom_inner_puzzle,
 )
 from tests.util.key_tool import KeyTool
 from tests.clvm.test_puzzles import (
@@ -66,7 +71,7 @@ class TestPoolPuzzles(TestCase):
         sk: PrivateKey = PrivateKey.from_bytes(
             secret_exponent_for_index(1).to_bytes(32, "big"),
         )
-        pk: G1Element = public_key_for_index(1, key_lookup)
+        pk: G1Element = G1Element.from_bytes(public_key_for_index(1, key_lookup))
         starting_puzzle: Program = puzzle_for_pk(pk)
         starting_ph: bytes32 = starting_puzzle.get_tree_hash()
 
@@ -76,7 +81,6 @@ class TestPoolPuzzles(TestCase):
         time = CoinTimestamp(10000000, 1)
         coin_db.farm_coin(starting_ph, time, START_AMOUNT)
         starting_coin: Coin = next(coin_db.all_unspent_coins())
-        comment: List[Tuple[str, str]] = [("hello", "world")]
 
         # LAUNCHING
         # Create the escaping inner puzzle
@@ -89,7 +93,18 @@ class TestPoolPuzzles(TestCase):
         DELAY_PH = starting_ph
         launcher_id = launcher_coin.name()
         relative_lock_height: uint32 = uint32(5000)
-        pool_wr_inner_hash: bytes32 = create_waiting_room_inner_puzzle(
+        # use a dummy pool state
+        pool_state = PoolState(
+            owner_pubkey=pk,
+            pool_url="",
+            relative_lock_height=relative_lock_height,
+            state=3,  # farming to pool
+            target_puzzle_hash=starting_ph,
+            version=1,
+        )
+        # Standard format comment
+        comment = Program.to([bytes(pool_state), [DELAY_TIME, DELAY_PH]])
+        pool_wr_innerpuz: bytes32 = create_waiting_room_inner_puzzle(
             starting_ph,
             relative_lock_height,
             pk,
@@ -97,7 +112,8 @@ class TestPoolPuzzles(TestCase):
             GENESIS_CHALLENGE,
             DELAY_TIME,
             DELAY_PH,
-        ).get_tree_hash()
+        )
+        pool_wr_inner_hash = pool_wr_innerpuz.get_tree_hash()
         pooling_innerpuz: Program = create_pooling_inner_puzzle(
             starting_ph,
             pool_wr_inner_hash,
@@ -107,6 +123,9 @@ class TestPoolPuzzles(TestCase):
             DELAY_TIME,
             DELAY_PH,
         )
+        assert is_pool_singleton_inner_puzzle(pooling_innerpuz)
+        assert is_pool_singleton_inner_puzzle(pool_wr_innerpuz)
+        assert get_pubkey_from_member_inner_puzzle(pooling_innerpuz) == pk
         # Generating launcher information
         conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
             starting_coin, pooling_innerpuz, comment, START_AMOUNT
@@ -131,6 +150,8 @@ class TestPoolPuzzles(TestCase):
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
+        #Test that we can retrieve the extra data
+        solution_to_extra_data(launcher_coinsol)
 
         # HONEST ABSORB
         time = CoinTimestamp(10000030, 2)
@@ -142,16 +163,11 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
-        coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
-        # use a dummy pool state
-        pool_state = PoolState(
-            owner_pubkey=pk,
-            pool_url="",
-            relative_lock_height=relative_lock_height,
-            state=3,  # farming to pool
-            target_puzzle_hash=starting_ph,
-            version=1,
+        assert uncurry_pool_waitingroom_inner_puzzle(pool_wr_innerpuz) == (
+            starting_ph, relative_lock_height, pk, p2_singleton_ph
         )
+        assert launcher_id_to_p2_puzzle_hash(launcher_id, DELAY_TIME, DELAY_PH) == p2_singleton_ph
+        coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         coin_sols: List[CoinSolution] = create_absorb_spend(
             launcher_coinsol,
             pool_state,
