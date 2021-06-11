@@ -356,12 +356,15 @@ class FullNode:
         if self.blockchain.contains_block(request.header_hash):
             return None
 
-        # Updates heights in the UI. Sleeps 0.5s before, so other peers have time to update their peaks as well.
-        # Limit to 5 refreshes.
-        if len(self._ui_tasks) < 5:
-            self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(0.5)))
-        # Prune completed connect tasks
-        self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
+        try:
+            # Updates heights in the UI. Sleeps 0.5s before, so other peers have time to update their peaks as well.
+            # Limit to 5 refreshes.
+            if len(self._ui_tasks) < 5:
+                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(0.5)))
+            # Prune completed connect tasks
+            self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
+        except Exception as e:
+            self.log.warning(f"Exception UI refresh task: {e}")
 
         # Not interested in less heavy peaks
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
