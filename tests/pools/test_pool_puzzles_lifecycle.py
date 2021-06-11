@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 from unittest import TestCase
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -150,7 +150,7 @@ class TestPoolPuzzles(TestCase):
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
-        #Test that we can retrieve the extra data
+        # Test that we can retrieve the extra data
         solution_to_extra_data(launcher_coinsol)
 
         # HONEST ABSORB
@@ -164,7 +164,10 @@ class TestPoolPuzzles(TestCase):
         )
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         assert uncurry_pool_waitingroom_inner_puzzle(pool_wr_innerpuz) == (
-            starting_ph, relative_lock_height, pk, p2_singleton_ph
+            starting_ph,
+            relative_lock_height,
+            pk,
+            p2_singleton_ph,
         )
         assert launcher_id_to_p2_puzzle_hash(launcher_id, DELAY_TIME, DELAY_PH) == p2_singleton_ph
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
