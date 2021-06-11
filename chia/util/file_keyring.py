@@ -63,7 +63,7 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     result = None
     log.warning(f"[pid:{os.getpid()}] in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
     for i in range(0, max_iters):
-        log.warning(f"attempting to acquire writer lock (attempt={i})")
+        log.warning(f"[pid:{os.getpid()} attempting to acquire writer lock (attempt={i})")
         if lock.acquire_write_lock(timeout=timeout):
             log.warning(f"[pid:{os.getpid()}] lock acquired")
             log.warning(f"[pid:{os.getpid()}] calling method")
@@ -87,6 +87,36 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
                 raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
     return result
 
+
+@contextmanager
+def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
+    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+    result = None
+    log.warning(f"[pid:{os.getpid()}] in acquire_reader_lock: lock_path: {lock_path}, max_iters: {max_iters}")
+    for i in range(0, max_iters):
+        log.warning(f"[pid:{os.getpid()} attempting to acquire reader lock (attempt={i})")
+        if lock.acquire_read_lock(timeout=timeout):
+            log.warning(f"[pid:{os.getpid()}] lock acquired")
+            log.warning(f"[pid:{os.getpid()}] calling method")
+            yield  # <----
+            log.warning(f"[pid:{os.getpid()}] method returned: {result}")
+            lock.release_read_lock()
+            try:
+                log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
+                os.remove(lock_path)
+            except:
+                pass
+            break
+        else:
+            log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring reader lock after {timeout} seconds")
+            print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
+            if i < max_iters - 1:
+                log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
+                print(f" Remaining attempts: {max_iters - 1 - i}")
+            else:
+                print("")
+                raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
+    return result
 
 class FileKeyring(FileSystemEventHandler):
     """
@@ -204,18 +234,22 @@ class FileKeyring(FileSystemEventHandler):
         return self.payload_cache["keys"]
 
     @loads_keyring
-    def get_password(self, service: str, user: str) -> Optional[str]:
-        """
-        Returns the password named by the 'user' parameter from the cached
-        keyring data (does not force a read from disk)
-        """
-
+    def _inner_get_password(self, service: str, user: str) -> Optional[str]:
         log.warning(f"[pid:{os.getpid()}] get_password: service: {service}, user: {user}")
         log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
         log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..): {self.ensure_cached_keys_dict().get(service, {})}")
         log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user): {self.ensure_cached_keys_dict().get(service, {}).get(user)}")
 
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
+
+    @loads_keyring
+    def get_password(self, service: str, user: str) -> Optional[str]:
+        """
+        Returns the password named by the 'user' parameter from the cached
+        keyring data (does not force a read from disk)
+        """
+        with acquire_reader_lock(lock_path=lockfile_path_for_file_path(self.keyring_path)):
+            return self._inner_get_password(service, user)
 
     @loads_keyring
     def _inner_set_password(self, service: str, user: str, password_bytes: bytes, *args, **kwargs):
@@ -233,7 +267,6 @@ class FileKeyring(FileSystemEventHandler):
         self.payload_cache["keys"] = keys
         self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
-
     def set_password(self, service: str, user: str, password_bytes: bytes):
         """
         Store the password to the keyring data using the name specified by the
@@ -243,11 +276,7 @@ class FileKeyring(FileSystemEventHandler):
             self._inner_set_password(service, user, password_bytes)
 
     @loads_keyring
-    def delete_password(self, service: str, user: str):
-        """
-        Deletes the password named by the 'user' parameter from the keyring data
-        (will force a write to keyring.yaml on success)
-        """
+    def _inner_delete_password(self, service: str, user: str):
         keys = self.ensure_cached_keys_dict()
 
         service_dict = keys.get(service, {})
@@ -256,6 +285,15 @@ class FileKeyring(FileSystemEventHandler):
                 keys.pop(service)
             self.payload_cache["keys"] = keys
             self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
+
+    @loads_keyring
+    def delete_password(self, service: str, user: str):
+        """
+        Deletes the password named by the 'user' parameter from the keyring data
+        (will force a write to keyring.yaml on success)
+        """
+        with acquire_writer_lock(lock_path=lockfile_path_for_file_path(self.keyring_path)):
+            self._inner_delete_password(service, user)
 
     def check_password(self, password: str) -> bool:
         """
