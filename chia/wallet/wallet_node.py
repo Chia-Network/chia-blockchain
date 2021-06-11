@@ -72,6 +72,7 @@ class WalletNode:
     full_node_peer: Optional[PeerInfo]
     peer_task: Optional[asyncio.Task]
     logged_in: bool
+    wallet_peers_initialized: bool
 
     def __init__(
         self,
@@ -111,6 +112,7 @@ class WalletNode:
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
+        self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
     def get_key_for_fingerprint(self, fingerprint: Optional[int]):
@@ -181,7 +183,12 @@ class WalletNode:
         self.backup_initialized = True
 
         # Start peers here after the backup initialization has finished
-        asyncio.create_task(self.wallet_peers.start())
+        # We only want to do this once per instantiation
+        # However, doing it earlier before backup initialization causes
+        # the wallet to spam the introducer
+        if self.wallet_peers_initialized is False:
+            asyncio.create_task(self.wallet_peers.start())
+            self.wallet_peers_initialized = True
 
         if backup_file is not None:
             json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
