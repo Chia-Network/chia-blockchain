@@ -80,6 +80,7 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
+    _ui_tasks: Set[asyncio.Task]
 
     def __init__(
         self,
@@ -100,6 +101,7 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
+        self._ui_tasks = set()
 
         if name:
             self.log = logging.getLogger(name)
@@ -333,6 +335,11 @@ class FullNode:
         self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
 
+    async def _refresh_ui_connections(self, sleep_before: float = 0):
+        if sleep_before > 0:
+            await asyncio.sleep(sleep_before)
+        self._state_changed("peer_changed_peak")
+
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         """
         We have received a notification of a new peak from a peer. This happens either when we have just connected,
@@ -343,12 +350,18 @@ class FullNode:
             peer: peer that sent the message
 
         """
-        self._state_changed("peer_changed_peak")
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
         if self.blockchain.contains_block(request.header_hash):
             return None
+
+        # Updates heights in the UI. Sleeps 0.5s before, so other peers have time to update their peaks as well.
+        # Limit to 5 refreshes.
+        if len(self._ui_tasks) < 5:
+            self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(0.5)))
+        # Prune completed connect tasks
+        self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
 
         # Not interested in less heavy peaks
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
