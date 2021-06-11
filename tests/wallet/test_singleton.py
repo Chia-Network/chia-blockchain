@@ -21,7 +21,7 @@ POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00
 
 
 def singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
-    return SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash, inner_puzzle)
+    return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_puzzle_hash)), inner_puzzle)
 
 
 def p2_singleton_puzzle(launcher_id: Program, launcher_puzzle_hash: bytes32) -> Program:
@@ -41,9 +41,7 @@ def test_only_odd_coins():
     # (MOD_HASH LAUNCHER_ID INNERPUZ parent_info my_amount inner_solution)
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
@@ -59,9 +57,7 @@ def test_only_odd_coins():
 
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
@@ -78,9 +74,7 @@ def test_only_one_odd_coin_created():
     did_core_hash = SINGLETON_MOD.get_tree_hash()
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -95,9 +89,7 @@ def test_only_one_odd_coin_created():
         assert False
     solution = Program.to(
         [
-            did_core_hash,
-            LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH,
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -187,9 +179,9 @@ def test_pool_puzzles():
     assert bytes32(result.first().rest().first().as_atom()) == singleton_coin.name()
     assert (
         bytes32(result.rest().rest().rest().rest().first().rest().first().as_atom())
-        == Announcement(p2_singleton_coin_id, bytes.fromhex("80")).name()
+        == Announcement(p2_singleton_coin_id, b"$").name()
     )
-    assert conditions[-1][1] == Announcement(p2_singleton_coin_id, bytes.fromhex("80")).name()
+    assert conditions[-1][1] == Announcement(p2_singleton_coin_id, b"$").name()
     assert bytes32(conditions[1][1]) == singleton_full.get_tree_hash()
 
     # new_result = '((70 0xe5a82aba773956ba319c74bae988ef5690d23d515d305640e963274e35ed6d44) (51 0x22e106ec75eaa42c63fa92fd36f68be0617d1200474df06cf88cb83d31b42938 3) (51 0x00d34db33f 0x77359400) (62 0xe6953e9190bdc44f47e95fbcbd56c3e444960097b9764e2b396141dff194e77c) (61 0x548607847d230749d38064b7ff43d390cafea3c51ac4cf15d86114dcd957c264))'  # noqa
