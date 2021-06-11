@@ -29,7 +29,7 @@ class UPnP:
                     if msg[0] == "remap":
                         port = msg[1]
                         log.info(f"Attempting to enable UPnP (open up port {port})")
-                        try: 
+                        try:
                             self.upnp.deleteportmapping(port, "TCP")
                         except Exception as e:
                             log.info(f"Removal of previous portmapping failed. This does not indicate an error: {e}")
