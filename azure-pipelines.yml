@@ -97,7 +97,7 @@ steps:
 #    displayName: "list files in dir"
 
   - bash: |
-      sudo sntp -sS time.apple.com
+      sudo sntp -sS time.windows.com
 
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
