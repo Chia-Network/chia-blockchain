@@ -232,7 +232,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
             assert lock.acquire_write_lock(timeout=(1)) is True
 
-
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_writer_lock_blocked_by_readers(self):
@@ -257,7 +256,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             # Expect: lock acquisition times out (raises as FileKeyringLockTimeout)
             with pytest.raises(FileKeyringLockTimeout):
                 res.get(timeout=2)
-
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
