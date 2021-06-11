@@ -113,7 +113,7 @@ class FarmerAPI:
                 # Otherwise, send the proof of space to the pool
                 # When we win a block, we also send the partial to the pool
                 if p2_singleton_puzzle_hash not in self.farmer.pool_state:
-                    self.farmer.log.error(f"Did not find pool info for {new_proof_of_space}")
+                    self.farmer.log.info(f"Did not find pool info for {p2_singleton_puzzle_hash}")
                     return
                 pool_state_dict: Dict = self.farmer.pool_state[p2_singleton_puzzle_hash]
 
