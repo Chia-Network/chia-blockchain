@@ -35,61 +35,61 @@ steps:
 
   # Install Apple certificate
   # Install an Apple certificate required to build on a macOS agent machine
-  - task: InstallAppleCertificate@2
-    inputs:
-      certSecureFile: 'chia-apple-dev-id-app.p12'
-      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
-      keychain: temp
-      deleteCert: true
-
-  - script: |
-      python -m venv venv
-      ln -s venv/bin/activate .
-      . ./activate
-      python -m pip install --upgrade pip
-      pip install wheel pep517 setuptools_scm
-      node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
-      cd build_scripts
-      touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-    displayName: "Install dependencies"
-
-  - script: |
-      . ./activate
-      clang --version
-      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
-    displayName: "Build and install wheels"
-
-  - task: NodeTool@0
-    inputs:
-      versionSpec: '12.x'
-    displayName: "Setup Node 12.x"
-
-  - bash: |
-      . ./activate
-      APPLE_NOTARIZE_USERNAME="$(APPLE_NOTARIZE_USERNAME)"
-      export APPLE_NOTARIZE_USERNAME
-      APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
-      export APPLE_NOTARIZE_PASSWORD
-      if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
-      git submodule update --init --recursive
-      cd build_scripts || exit
-      sh build_macos.sh
-    displayName: "Build DMG with build_scripts/build_macos.sh"
-
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/wheels
-      artifactName: MacOS-wheels
-    displayName: "Upload MacOS wheels"
-
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
-      artifactName: MacOS-DMG
-    displayName: "Upload MacOS DMG"
+#  - task: InstallAppleCertificate@2
+#    inputs:
+#      certSecureFile: 'chia-apple-dev-id-app.p12'
+#      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
+#      keychain: temp
+#      deleteCert: true
+#
+#  - script: |
+#      python -m venv venv
+#      ln -s venv/bin/activate .
+#      . ./activate
+#      python -m pip install --upgrade pip
+#      pip install wheel pep517 setuptools_scm
+#      node -v
+#      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
+#      cd build_scripts
+#      touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+#      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+#    displayName: "Install dependencies"
+#
+#  - script: |
+#      . ./activate
+#      clang --version
+#      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
+#      pip install --no-index --find-links=./wheels/ chia-blockchain
+#    displayName: "Build and install wheels"
+#
+#  - task: NodeTool@0
+#    inputs:
+#      versionSpec: '12.x'
+#    displayName: "Setup Node 12.x"
+#
+#  - bash: |
+#      . ./activate
+#      APPLE_NOTARIZE_USERNAME="$(APPLE_NOTARIZE_USERNAME)"
+#      export APPLE_NOTARIZE_USERNAME
+#      APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
+#      export APPLE_NOTARIZE_PASSWORD
+#      if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
+#      git submodule update --init --recursive
+#      cd build_scripts || exit
+#      sh build_macos.sh
+#    displayName: "Build DMG with build_scripts/build_macos.sh"
+#
+#  - task: PublishPipelineArtifact@1
+#    inputs:
+#      targetPath: $(System.DefaultWorkingDirectory)/wheels
+#      artifactName: MacOS-wheels
+#    displayName: "Upload MacOS wheels"
+#
+#  - task: PublishPipelineArtifact@1
+#    inputs:
+#      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+#      artifactName: MacOS-DMG
+#    displayName: "Upload MacOS DMG"
 
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/
@@ -97,8 +97,10 @@ steps:
     displayName: "list files in dir"
 
   - bash: |
+      aws --version
       curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
       sudo installer -pkg AWSCLIV2.pkg -target /
+      aws --version
     displayName: "Install AWS CLI"
 
   - bash: |
