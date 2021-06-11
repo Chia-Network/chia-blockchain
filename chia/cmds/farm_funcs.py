@@ -206,7 +206,6 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     amounts = await get_wallets_stats(wallet_rpc_port)
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
-    farmer_running = await is_farmer_running(farmer_rpc_port)
     harvester_info = await get_harvester_info(farmer_rpc_port)
 
     print("Farming status: ", end="")
@@ -216,7 +215,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Syncing")
     elif not blockchain_state["sync"]["synced"]:
         print("Not synced or not connected to peers")
-    elif not farmer_running:
+    elif not harvester_info:
         print("Not running")
     else:
         print("Farming")
@@ -226,14 +225,17 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
-        print(f"Connected harvesters: {harvester_info['connected_harvesters']}")
-        print(f"Total harvesting plots: {harvester_info['total_plots']} ", end="")
-        print(f"({format_bytes(harvester_info['total_plot_space'])})")
     else:
         print("Total chia farmed: Unknown")
         print("User transaction fees: Unknown")
         print("Block rewards: Unknown")
         print("Last height farmed: Unknown")
+
+    if harvester_info is not None:
+        print(f"Connected harvesters: {harvester_info['connected_harvesters']}")
+        print(f"Total harvesting plots: {harvester_info['total_plots']} ", end="")
+        print(f"({format_bytes(harvester_info['total_plot_space'])})")
+    else:
         print("Total connected harvesters: Unknown")
         print("Total harvesting plots: Unknown")
 
