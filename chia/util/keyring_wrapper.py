@@ -34,7 +34,6 @@ class KeyringWrapper:
     cached_password_is_validated: bool = False
     legacy_keyring = None
 
-
     def __init__(self, root_path: Path = DEFAULT_ROOT_PATH):
         """
         Initializes the keyring backend based on the OS. For Linux, we previously

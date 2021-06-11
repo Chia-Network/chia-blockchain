@@ -3,15 +3,14 @@ import logging
 import os
 import pytest
 import random
-import sys
 import unittest
 
-from multiprocessing import Pool, Process, Value, Array, TimeoutError
+from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from tests.core.util.test_keyring_wrapper import using_temp_file_keyring
-from time import sleep, time
+from time import sleep
 
-from chia.util.file_keyring import acquire_writer_lock, lockfile_path_for_file_path, FileKeyring, FileKeyringLockTimeout
+from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
 
 log = logging.getLogger(__name__)
@@ -25,7 +24,10 @@ def dummy_set_password(service, user, password):
     # otherwise file events won't be detected in the child process
     KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
 
-    log.warning(f"[pid:{os.getpid()}] received: {service}, {user}, {password}, keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}")
+    log.warning(
+        f"[pid:{os.getpid()}] received: {service}, {user}, {password}, "
+        f"keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}"
+    )
     KeyringWrapper.get_shared_instance().set_password(service=service, user=user, password_bytes=password)
 
     # Wait a short while between writing and reading. Without proper locking, this helps ensure
@@ -66,7 +68,6 @@ def child_writer_dispatch(func, lock_path: Path, timeout: int, max_iters: int):
 
 class TestFileKeyringSynchronization(unittest.TestCase):
 
-
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_multiple_writers(self):
@@ -84,7 +85,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             actual_password = KeyringWrapper.get_shared_instance().get_password(service=item[0], user=item[1])
             assert expected_password == actual_password
 
-
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_writer_lock_timeout(self):
@@ -92,12 +92,12 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         If a writer lock is already held, another process should not be able to acquire
         the same lock, failing after n attempts
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
         lock.acquire_write_lock()
-        
+
         child_proc_fn = dummy_fn_requiring_writer_lock
         timeout = 0.25
         attempts = 4
@@ -108,10 +108,10 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
             # Expect: the child to fail acquiring the writer lock (raises as FileKeyringLockTimeout)
             with pytest.raises(FileKeyringLockTimeout):
-                result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun (raises as TimeoutException)
+                # 10 second timeout to prevent a bad test from spoiling the fun (raises as TimeoutException)
+                res.get(timeout=10)
 
         lock.release_write_lock()
-
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -120,7 +120,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         If a write lock is already held, another process will be able to acquire the
         same lock once the lock is released by the current holder
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -144,7 +144,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
             assert result[0] == "A winner is you!"
 
-
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_writer_lock_reacquisition_failure(self):
@@ -152,7 +151,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         After the child process acquires the writer lock (and sleeps), the previous
         holder should not be able to quickly reacquire the lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -164,7 +163,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
         with Pool(processes=1) as pool:
             # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            res = pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
+            pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
 
             # When: the writer lock is released
             lock.release_write_lock()
@@ -175,7 +174,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             # Expect: Reacquiring the lock should fail due to the child holding the lock and sleeping
             assert lock.acquire_write_lock(timeout=0.25) is False
 
-
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_writer_lock_reacquisition_success(self):
@@ -183,7 +181,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         After the child process releases the writer lock, we should be able to
         acquire the lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -195,14 +193,13 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
         with Pool(processes=1) as pool:
             # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            res = pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
+            pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
 
             # When: the writer lock is released
             lock.release_write_lock()
 
             # Expect: Reacquiring the lock should succeed after the child finishes and releases the lock
             assert lock.acquire_write_lock(timeout=(DUMMY_SLEEP_VALUE + 0.25)) is True
-
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -211,7 +208,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         When a child process is holding the lock and aborts/crashes, we should be
         able to acquire the lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -227,10 +224,10 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
             # When: the writer lock is released
             lock.release_write_lock()
-            
+
             # When: timing out waiting for the child process (because it aborted)
             with pytest.raises(TimeoutError):
                 res.get(timeout=1)
-            
+
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
             assert lock.acquire_write_lock(timeout=(1)) is True
