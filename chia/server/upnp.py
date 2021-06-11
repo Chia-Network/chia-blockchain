@@ -32,7 +32,7 @@ class UPnP:
                         try: 
                             self.upnp.deleteportmapping(port, "TCP")
                         except Exception as e:
-                            log.info("Removal of previous portmapping failed. This does not indicate an error: {e}")
+                            log.info(f"Removal of previous portmapping failed. This does not indicate an error: {e}")
                         self.upnp.addportmapping(port, "TCP", self.upnp.lanaddr, port, "chia", "")
                         log.info(
                             f"Port {port} opened with UPnP. lanaddr {self.upnp.lanaddr} "
