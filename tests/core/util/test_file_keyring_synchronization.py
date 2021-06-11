@@ -231,3 +231,62 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
             assert lock.acquire_write_lock(timeout=(1)) is True
+
+
+    # When: using a new empty keyring
+    @using_temp_file_keyring()
+    def test_writer_lock_blocked_by_readers(self):
+        """
+        When a reader lock is already held, another thread/process should not be able
+        to acquire the lock for writing
+        """
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+
+        # When: a reader lock is already held
+        lock.acquire_read_lock()
+
+        child_proc_function = dummy_fn_requiring_writer_lock
+        timeout = 0.25
+        attempts = 4
+
+        with Pool(processes=1) as pool:
+            # When: a child process attempts to acquire the same lock for writing, failing after 1 second
+            res = pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
+
+            # Expect: lock acquisition times out (raises as FileKeyringLockTimeout)
+            with pytest.raises(FileKeyringLockTimeout):
+                res.get(timeout=2)
+
+
+    # When: using a new empty keyring
+    @using_temp_file_keyring()
+    def test_writer_lock_initially_blocked_by_readers(self):
+        """
+        When a reader lock is already held, another thread/process should not be able
+        to acquire the lock for writing until the reader releases its lock
+        """
+        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+
+        # When: a reader lock is already acquired
+        lock.acquire_read_lock()
+
+        child_proc_function = dummy_fn_requiring_writer_lock
+        timeout = 1
+        attempts = 4
+
+        with Pool(processes=1) as pool:
+            # When: a child process attempts to acquire the same lock for writing, failing after 4 seconds
+            res = pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
+
+            # When: we verify that the writer lock is not immediately acquired
+            with pytest.raises(TimeoutError):
+                res.get(timeout=1)
+
+            # When: the reader releases its lock
+            lock.release_read_lock()
+
+            # Expect: the child process to acquire the writer lock
+            result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
+            assert result[0] == "A winner is you!"
