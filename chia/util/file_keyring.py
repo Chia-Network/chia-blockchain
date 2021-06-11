@@ -1,5 +1,6 @@
 import base64
 import fasteners
+import logging  # TODO remove: logging just for test debugging atm
 import os
 import shutil
 import sys
@@ -24,8 +25,6 @@ HASH_ITERS = 100000  # PBKDF2 param
 CHECKBYTES_VALUE = b"5f365b8292ee505b"  # Randomly generated
 MAX_SUPPORTED_VERSION = 1  # Max supported file format version
 
-# TODO remove: logging just for test debugging atm
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -53,10 +52,6 @@ def loads_keyring(method):
     return inner
 
 
-def lockfile_path_for_file_path(file_path: Path) -> Path:
-    return file_path.with_suffix(".lock")
-
-
 @contextmanager
 def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
@@ -73,7 +68,7 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
             try:
                 log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
-            except:
+            except Exception:
                 pass
             break
         else:
@@ -104,7 +99,7 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
             try:
                 log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
-            except:
+            except Exception:
                 pass
             break
         else:
@@ -117,6 +112,7 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
                 print("")
                 raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
     return result
+
 
 class FileKeyring(FileSystemEventHandler):
     """
@@ -147,8 +143,9 @@ class FileKeyring(FileSystemEventHandler):
     """
 
     keyring_path: Optional[Path] = None
+    keyring_lock_path: Path
     keyring_observer: Observer = None
-    load_keyring_lock: threading.RLock = None
+    load_keyring_lock: threading.RLock  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
     salt: Optional[bytes] = None  # PBKDF2 param
     payload_cache: dict = {}  # Cache of the decrypted YAML contained in outer_payload_cache['data']
@@ -162,12 +159,17 @@ class FileKeyring(FileSystemEventHandler):
         path_filename = root_path / "config" / "keyring.yaml"
         return path_filename
 
+    @staticmethod
+    def lockfile_path_for_file_path(file_path: Path) -> Path:
+        return file_path.with_suffix(".lock")
+
     def __init__(self, root_path: Path = DEFAULT_ROOT_PATH):
         """
         Creates a fresh keyring.yaml file if necessary. Otherwise, loads and caches the
         outer (plaintext) payload
         """
         self.keyring_path = FileKeyring.keyring_path_from_root(root_path)
+        self.keyring_lock_path = FileKeyring.lockfile_path_for_file_path(self.keyring_path)
         self.payload_cache = {}  # This is used as a building block for adding keys etc if the keyring is empty
         self.load_keyring_lock = threading.RLock()
 
@@ -237,8 +239,14 @@ class FileKeyring(FileSystemEventHandler):
     def _inner_get_password(self, service: str, user: str) -> Optional[str]:
         log.warning(f"[pid:{os.getpid()}] get_password: service: {service}, user: {user}")
         log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
-        log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..): {self.ensure_cached_keys_dict().get(service, {})}")
-        log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user): {self.ensure_cached_keys_dict().get(service, {}).get(user)}")
+        log.warning(
+            f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..):"
+            f" {self.ensure_cached_keys_dict().get(service, {})}"
+        )
+        log.warning(
+            f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user):"
+            f" {self.ensure_cached_keys_dict().get(service, {}).get(user)}"
+        )
 
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
@@ -248,7 +256,7 @@ class FileKeyring(FileSystemEventHandler):
         Returns the password named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
-        with acquire_reader_lock(lock_path=lockfile_path_for_file_path(self.keyring_path)):
+        with acquire_reader_lock(lock_path=self.keyring_lock_path):
             return self._inner_get_password(service, user)
 
     @loads_keyring
@@ -272,7 +280,7 @@ class FileKeyring(FileSystemEventHandler):
         Store the password to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
-        with acquire_writer_lock(lock_path=lockfile_path_for_file_path(self.keyring_path)):
+        with acquire_writer_lock(lock_path=self.keyring_lock_path):
             self._inner_set_password(service, user, password_bytes)
 
     @loads_keyring
@@ -292,7 +300,7 @@ class FileKeyring(FileSystemEventHandler):
         Deletes the password named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
         """
-        with acquire_writer_lock(lock_path=lockfile_path_for_file_path(self.keyring_path)):
+        with acquire_writer_lock(lock_path=self.keyring_lock_path):
             self._inner_delete_password(service, user)
 
     def check_password(self, password: str) -> bool:
