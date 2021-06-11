@@ -354,9 +354,9 @@ class FullNode:
         try:
             seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
             # Updates heights in the UI. Sleeps 1s before, so other peers have time to update their peaks as well.
-            # Limit to 5 refreshes.
+            # Limit to 3 refreshes.
             if not seen_header_hash and len(self._ui_tasks) < 3:
-                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1)))
+                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.0)))
             # Prune completed connect tasks
             self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
         except Exception as e:
