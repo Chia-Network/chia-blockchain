@@ -97,8 +97,6 @@ steps:
 #    displayName: "list files in dir"
 
   - bash: |
-      sudo sntp -sS time.windows.com
-
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
