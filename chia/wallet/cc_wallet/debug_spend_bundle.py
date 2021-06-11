@@ -62,6 +62,13 @@ def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data=bytes(
         solution = Program.from_bytes(bytes(coin_solution.solution))
         coin_name = coin.name()
 
+        if puzzle_reveal.get_tree_hash() != coin_solution.coin.puzzle_hash:
+            print("*** BAD PUZZLE REVEAL")
+            print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_solution.coin.puzzle_hash.hex()}")
+            print("*" * 80)
+            breakpoint()
+            continue
+
         print(f"consuming coin {dump_coin(coin)}")
         print(f"  with id {coin_name}")
         print()
@@ -159,14 +166,14 @@ def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data=bytes(
     print(f"zero_coin_set = {sorted(zero_coin_set)}")
     print()
     if created_coin_announcement_pairs or asserted_coin_announcements:
-        print(f"created coin announcements = {sorted([_[-1] for _ in created_coin_announcement_pairs])}")
+        print(f"created  coin announcements = {sorted([_[-1] for _ in created_coin_announcement_pairs])}")
         print()
         print(f"asserted coin announcements = {sorted(asserted_coin_announcements)}")
         print()
         print(f"symdiff of coin announcements = {sorted(eor_coin_announcements)}")
         print()
     if created_puzzle_announcement_pairs or asserted_puzzle_announcements:
-        print(f"created puzzle announcements = {sorted([_[-1] for _ in created_puzzle_announcement_pairs])}")
+        print(f"created  puzzle announcements = {sorted([_[-1] for _ in created_puzzle_announcement_pairs])}")
         print()
         print(f"asserted puzzle announcements = {sorted(asserted_puzzle_announcements)}")
         print()

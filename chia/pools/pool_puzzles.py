@@ -13,6 +13,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
 
 from chia.util.ints import uint32, uint64
 
@@ -71,7 +72,7 @@ def create_pooling_inner_puzzle(
 
 
 def create_full_puzzle(inner_puzzle: Program, launcher_id: bytes32) -> Program:
-    return POOL_OUTER_MOD.curry(POOL_OUTER_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH, inner_puzzle)
+    return puzzle_for_singleton(launcher_id, inner_puzzle)
 
 
 def create_p2_singleton_puzzle(
@@ -213,7 +214,7 @@ def create_absorb_spend(
         inner_sol: Program = Program.to([0, reward_amount, height, 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol = Program.to([0, 0, reward_amount, height, 0])
+        inner_sol = Program.to([0, reward_amount, height, 0, 0])
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
@@ -343,7 +344,7 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     # TODO(adam): fix
     # if not is_pool_singleton_inner_puzzle(inner_f):
     #     return None
-    mod_hash, launcher_id, launcher_puzzle_hash, inner_puzzle = list(args.as_iter())
+    _, inner_puzzle = list(args.as_iter())
     return inner_puzzle
 
 
