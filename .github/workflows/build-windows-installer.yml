@@ -57,9 +57,9 @@ jobs:
 
 #  We can't upgrade to Python 3.8 until we have a miniupnpc binary
     - uses: actions/setup-python@v2
-      name: Install Python 3.7
+      name: Install Python 3.9
       with:
-        python-version: "3.7"
+        python-version: "3.9"
 
     - name: Test for secrets access
       id: check_secrets
