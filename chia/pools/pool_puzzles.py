@@ -95,6 +95,16 @@ def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, d
     ).get_tree_hash()
 
 
+def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSolution):
+    extra_data = Program.from_bytes(bytes(coinsol.solution)).rest().rest().first()
+    # Extra data is (pool_state delayed_puz_info)
+    delayed_puz_info = extra_data.rest().first()
+    # Delayed puz info is (seconds delayed_puzhash)
+    seconds = delayed_puz_info.first().as_atom()
+    delayed_puzhash = delayed_puz_info.rest().first().as_atom()
+    return seconds, delayed_puzhash
+
+
 ######################################
 
 
