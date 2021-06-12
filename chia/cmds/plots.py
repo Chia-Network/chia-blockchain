@@ -166,8 +166,9 @@ def check_cmd(
 @click.option(
     "-p",
     "--plot_public_key",
-    help="Shows only plots with the plot_public_key",
+    help="Shows only plots that contain the string in their plot_public_key.  Can be specified multiple times.",
     type=str,
+    multiple=True,
     default=None,
 )
 @click.pass_context
