@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+import logging
 from secrets import token_bytes
 from typing import List, Optional
 
@@ -15,18 +16,34 @@ from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
-from chia.util.block_tools import get_signage_point
+from chia.util.block_tools import get_signage_point, BlockTools
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from tests.core.fixtures import default_1000_blocks, empty_blockchain  # noqa: F401
-from tests.setup_nodes import bt, test_constants
+from tests.core.fixtures import default_1000_blocks, create_blockchain  # noqa: F401
+from tests.setup_nodes import test_constants as test_constants_original
 
+test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12})
+bt = BlockTools(test_constants)
 
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
 
+
+log = logging.getLogger(__name__)
+
+@pytest.fixture(scope="function")
+async def empty_blockchain():
+    """
+    Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
+    """
+    bc1, connection, db_path = await create_blockchain(test_constants)
+    yield bc1
+
+    await connection.close()
+    bc1.shut_down()
+    db_path.unlink()
 
 class TestFullNodeStore:
     @pytest.mark.asyncio
@@ -576,10 +593,13 @@ class TestFullNodeStore:
         # SP, B2 SP .... SP B1
         #     i2 .........  i1
         # Then do a reorg up to B2, removing all signage points after B2, but not before
+        log.warning(f"Adding blocks up to {blocks[-1]}")
         for block in blocks:
             await blockchain.receive_block(block)
 
+        log.warning(f"Starting loop")
         while True:
+            log.warning("Looping")
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             assert (await blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
             peak = blockchain.get_peak()
