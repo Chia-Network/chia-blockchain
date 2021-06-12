@@ -74,7 +74,7 @@ def pprint_pool_wallet_state(
     print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
     if pool_wallet_info.launcher_id in pool_state_dict:
         print(f"Current difficulty: {pool_state_dict[pool_wallet_info.launcher_id]['current_difficulty']}")
-        print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points_balance']}")
+        print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points']}")
     print(
         f"P2 singleton address (pool contract address for plotting):"
         f"{encode_puzzle_hash(pool_wallet_info.p2_singleton_puzzle_hash, address_prefix)}"

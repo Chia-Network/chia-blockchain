@@ -66,7 +66,7 @@ class PostPartialRequest(Streamable):
 @dataclass(frozen=True)
 @streamable
 class PostPartialResponse(Streamable):
-    points_balance: uint64
+    points: uint64
     current_difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer
 
 # Response in error case for all endpoints of the pool protocol

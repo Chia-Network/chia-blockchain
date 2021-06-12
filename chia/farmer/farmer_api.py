@@ -222,7 +222,7 @@ class FarmerAPI:
                                         (time.time(), pool_state_dict["current_difficulty"])
                                     )
                                     pool_state_dict["current_difficulty"] = pool_response["current_difficulty"]
-                                    pool_state_dict["current_points_balance"] = pool_response["points_balance"]
+                                    pool_state_dict["current_points"] = pool_response["points"]
 
                             else:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
