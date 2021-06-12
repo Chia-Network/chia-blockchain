@@ -16,7 +16,6 @@ from chia.pools.pool_wallet_info import (
     LEAVING_POOL,
     create_pool_state,
 )
-from chia.protocols.pool_protocol import AuthenticationKeyInfo
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -235,15 +234,9 @@ class PoolWallet:
                 self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
             )
             auth_pk: G1Element = new_auth_sk.get_g1()
-            auth_pk_timestamp: uint64 = uint64(int(time.time()))
-            auth_key_signature: G2Element = AugSchemeMPL.sign(
-                owner_sk, bytes(AuthenticationKeyInfo(auth_pk, auth_pk_timestamp))
-            )
             payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
         else:
             auth_pk = existing_config.authentication_public_key
-            auth_pk_timestamp = existing_config.authentication_public_key_timestamp
-            auth_key_signature = existing_config.authentication_key_info_signature
             payout_instructions = existing_config.payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -254,8 +247,6 @@ class PoolWallet:
             current_state.p2_singleton_puzzle_hash,
             current_state.current.owner_pubkey,
             auth_pk,
-            auth_pk_timestamp,
-            auth_key_signature,
         )
         pool_config_dict[new_config.launcher_id] = new_config
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))

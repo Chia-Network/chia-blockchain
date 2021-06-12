@@ -41,12 +41,6 @@ class GetPoolInfoResponse(Streamable):
     target_puzzle_hash: bytes32
 
 
-@dataclass(frozen=True)
-@streamable
-class AuthenticationKeyInfo(Streamable):
-    authentication_public_key: G1Element
-    authentication_public_key_timestamp: uint64
-
 
 @dataclass(frozen=True)
 @streamable
@@ -58,7 +52,6 @@ class PostPartialPayload(Streamable):
     launcher_id: bytes32  # This is what identifies the farmer's account for the pool
     owner_public_key: G1Element  # Current public key specified in the singleton
     payout_instructions: str  # The farmer can choose where to send the rewards. This can take a few minutes
-    authentication_key_info: AuthenticationKeyInfo
 
 
 # POST /partial
@@ -66,8 +59,7 @@ class PostPartialPayload(Streamable):
 @streamable
 class PostPartialRequest(Streamable):
     payload: PostPartialPayload
-    # Sig of auth key by owner key, and partial by plot key and authentication key
-    auth_key_and_partial_aggregate_signature: G2Element
+    aggregate_signature: G2Element
 
 
 # Response in success case
