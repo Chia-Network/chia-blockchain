@@ -1,16 +1,12 @@
 import logging
-from collections import Counter
-from pathlib import Path
 from typing import Dict, List
 
 from blspy import G1Element
-from chiapos import Verifier
 
-from chia.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots, parse_plot_info
+from chia.plotting.plot_tools import load_plots
 from chia.util.config import load_config
-from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
+from chia.wallet.derive_keys import master_sk_to_farmer_sk
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +14,6 @@ log = logging.getLogger(__name__)
 def inventory_plots(root_path, grep_string, plot_public_key):
     config = load_config(root_path, "config.yaml")
 
-    v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
     pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
