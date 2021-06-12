@@ -26,6 +26,7 @@ class KeyringWrapper:
 
     # Static members
     __shared_instance = None
+    __root_path: Path
 
     # Instance members
     root_path: Path
@@ -77,9 +78,16 @@ class KeyringWrapper:
         return None
 
     @staticmethod
+    def set_keyring_root_path(root_path: Path):
+        """
+        Used to set the root_path prior to instantiating the __shared_instance
+        """
+        KeyringWrapper.__root_path = root_path
+
+    @staticmethod
     def get_shared_instance(create_if_necessary=True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
-            KeyringWrapper()
+            KeyringWrapper(root_path=KeyringWrapper.__root_path)
 
         return KeyringWrapper.__shared_instance
 
