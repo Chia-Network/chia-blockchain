@@ -184,12 +184,7 @@ class FarmerAPI:
 
                 assert plot_signature is not None
 
-                agg_sig: G2Element = AugSchemeMPL.aggregate(
-                    [
-                        plot_signature,
-                        authentication_signature,
-                    ]
-                )
+                agg_sig: G2Element = AugSchemeMPL.aggregate([plot_signature, authentication_signature])
 
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
                 post_partial_body = json.dumps(post_partial_request.to_json_dict())
