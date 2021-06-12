@@ -45,9 +45,9 @@ class FarmerRpcClient(RpcClient):
     async def get_pool_state(self) -> Dict:
         return await self.fetch("get_pool_state", {})
 
-    async def set_pool_payout_instructions(self, launcher_id: bytes32, pool_payout_instructions: str) -> Dict:
-        request = {"launcher_id": launcher_id.hex(), "pool_payout_instructions": pool_payout_instructions}
-        return await self.fetch("set_pool_payout_instructions", request)
+    async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str) -> Dict:
+        request = {"launcher_id": launcher_id.hex(), "payout_instructions": payout_instructions}
+        return await self.fetch("set_payout_instructions", request)
 
     async def get_plots(self) -> Dict[str, Any]:
         return await self.fetch("get_plots", {})

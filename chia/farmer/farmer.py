@@ -234,14 +234,14 @@ class Farmer:
             config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
-    async def set_pool_payout_instructions(self, launcher_id: bytes32, pool_payout_instructions: str):
+    async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
                 config = load_config(self._root_path, "config.yaml")
                 new_list = []
                 for list_element in config["pool"]["pool_list"]:
                     if bytes.fromhex(list_element["launcher_id"]) == bytes(launcher_id):
-                        list_element["pool_payout_instructions"] = pool_payout_instructions
+                        list_element["payout_instructions"] = payout_instructions
                     new_list.append(list_element)
 
                 config["pool"]["pool_list"] = new_list
