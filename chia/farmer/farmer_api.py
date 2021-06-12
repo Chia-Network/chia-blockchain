@@ -10,7 +10,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
-from chia.protocols.pool_protocol import PostPartialRequest, PostPartialPayload, AuthenticationKeyInfo
+from chia.protocols.pool_protocol import PoolErrorCode, PostPartialRequest, PostPartialPayload, AuthenticationKeyInfo
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -218,7 +218,7 @@ class FarmerAPI:
                                         f"{pool_response['error_code'], pool_response['error_message']}"
                                     )
                                     pool_state_dict["pool_errors_24h"].append(pool_response)
-                                    if pool_response["error_code"] == 5:
+                                    if pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
                                         self.farmer.log.error("Too low difficulty, adjusting")
                                         pool_state_dict["current_difficulty"] = pool_response["current_difficulty"]
                                     else:
