@@ -338,6 +338,7 @@ class WalletNode:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return None
         messages_peer_ids = await self._messages_to_resend()
+        self.wallet_state_manager.state_changed("add_connection")
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
@@ -350,6 +351,8 @@ class WalletNode:
         while not self._shut_down and tries < 5:
             if self.has_full_node():
                 await self.wallet_peers.ensure_is_closed()
+                if self.wallet_state_manager is not None:
+                    self.wallet_state_manager.state_changed("add_connection")
                 break
             tries += 1
             await asyncio.sleep(self.config["peer_connect_interval"])

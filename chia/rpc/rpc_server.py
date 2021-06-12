@@ -49,7 +49,7 @@ class RpcServer:
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
         change = args[0]
-        if change == "add_connection" or change == "close_connection":
+        if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
             if data is not None:
 
