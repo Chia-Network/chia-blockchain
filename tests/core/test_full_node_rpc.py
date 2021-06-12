@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+import logging
+
 import pytest
 from blspy import AugSchemeMPL
 
@@ -305,7 +307,7 @@ class TestRpc:
             # Do another one but without sending the slot
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
-            selected_eos = blocks[-1].finished_sub_slots[0]
+            selected_eos = blocks[-1].finished_sub_slots[-1]
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
 
             res = await client.get_recent_signage_point_or_eos(None, selected_eos.get_hash())

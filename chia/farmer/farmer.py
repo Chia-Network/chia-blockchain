@@ -185,6 +185,9 @@ class Farmer:
                         async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
                             if resp.ok:
                                 self.pool_state[p2_singleton_puzzle_hash]["pool_info"] = json.loads(await resp.text())
+                                self.pool_state[p2_singleton_puzzle_hash]["current_difficulty"] = self.pool_state[
+                                    p2_singleton_puzzle_hash
+                                ]["pool_info"]["minimum_difficulty"]
                             else:
                                 self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
             except Exception as e:

@@ -122,7 +122,7 @@ class TestPoolWalletRpc:
         args.list_duplicates = False
         test_private_keys = [AugSchemeMPL.key_gen(std_hash(b"test_pool_rpc"))]
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            master_sk_to_local_sk(test_private_keys[0]).get_g1(), bt.farmer_pk
+            master_sk_to_local_sk(test_private_keys[0]).get_g1(), bt.farmer_pk, True
         )
         plot_id = ProofOfSpace.calculate_plot_id_ph(p2_singleton_puzzle_hash, plot_public_key)
         try:
