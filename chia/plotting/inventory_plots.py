@@ -36,6 +36,10 @@ def inventory_plots(root_path, grep_string, plot_public_key):
     for plot_path, plot_info in provers.items():
         pr = plot_info.prover
 
+        plot_id = provers[plot_path].prover.get_id().hex() # https://chiaforum.com/t/does-it-matter-if-you-accidentally-delete-part-of-the-plot-filename/2719/9?u=notpeter
+
         if plot_public_key is None or plot_public_key in str(plot_info.plot_public_key):
-            plot_id = provers[plot_path].prover.get_id() # https://chiaforum.com/t/does-it-matter-if-you-accidentally-delete-part-of-the-plot-filename/2719/9?u=notpeter
-            log.info(f"Inventory: path={plot_path} k={pr.get_size()} pool_public_key={plot_info.pool_public_key} plot_public_key={plot_info.plot_public_key} plot_id={plot_id.hex()}")
+            log.info(f"Inventory: path={plot_path} k={pr.get_size()} pool_public_key={plot_info.pool_public_key} plot_public_key={plot_info.plot_public_key} plot_id={plot_id}")
+
+        if plot_id not in str(plot_path):
+            log.warn(f"Inventory: file name {plot_path} does not contain internal plot_id {plot_id}")
