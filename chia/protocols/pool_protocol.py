@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 from blspy import G1Element, G2Element
@@ -7,6 +8,23 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64, uint16, uint32
 from chia.util.streamable import Streamable, streamable
+
+
+class PoolErrorCode(Enum):
+    REVERTED_SIGNAGE_POINT = 1
+    TOO_LATE = 2
+    NOT_FOUND = 3
+    INVALID_PROOF = 4
+    PROOF_NOT_GOOD_ENOUGH = 5
+    INVALID_DIFFICULTY = 6
+    INVALID_SIGNATURE = 7
+    SERVER_EXCEPTION = 8
+    INVALID_P2_SINGLETON_PUZZLE_HASH = 9
+    FARMER_NOT_KNOWN = 10
+    FARMER_ALREADY_KNOWN = 11
+    INVALID_AUTHENTICATION_TOKEN = 12
+    INVALID_PAYOUT_INSTRUCTIONS = 13
+    INVALID_SINGLETON = 14
 
 
 # GET /pool_info
