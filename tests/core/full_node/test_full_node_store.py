@@ -37,12 +37,17 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="function")
 async def empty_blockchain():
-    """
-    Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
-    """
     bc1, connection, db_path = await create_blockchain(test_constants)
     yield bc1
+    await connection.close()
+    bc1.shut_down()
+    db_path.unlink()
 
+
+@pytest.fixture(scope="function")
+async def empty_blockchain_original():
+    bc1, connection, db_path = await create_blockchain(test_constants_original)
+    yield bc1
     await connection.close()
     bc1.shut_down()
     db_path.unlink()
@@ -712,16 +717,16 @@ class TestFullNodeStore:
         await self.test_basic_store(empty_blockchain, True)
 
     @pytest.mark.asyncio
-    async def test_long_chain_slots(self, empty_blockchain, default_1000_blocks):
-        blockchain = empty_blockchain
-        store = FullNodeStore(test_constants)
+    async def test_long_chain_slots(self, empty_blockchain_original, default_1000_blocks):
+        blockchain = empty_blockchain_original
+        store = FullNodeStore(test_constants_original)
         blocks = default_1000_blocks
         peak = None
         peak_full_block = None
         for block in blocks:
             for sub_slot in block.finished_sub_slots:
                 assert store.new_finished_sub_slot(sub_slot, blockchain, peak, peak_full_block) is not None
-            res, _, _ = await blockchain.receive_block(block)
+            res, err, _ = await blockchain.receive_block(block)
             assert res == ReceiveBlockResult.NEW_PEAK
             peak = blockchain.get_peak()
             peak_full_block = await blockchain.get_full_peak()
