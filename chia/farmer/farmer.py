@@ -170,7 +170,7 @@ class Farmer:
                         "points_found_24h": [],
                         "points_acknowledged_since_start": 0,
                         "points_acknowledged_24h": [],
-                        "current_points_balance": 0,
+                        "current_points": 0,
                         "current_difficulty": 10,
                         "pool_errors_24h": [],
                         "pool_info": None,
