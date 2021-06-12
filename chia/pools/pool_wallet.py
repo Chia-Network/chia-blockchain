@@ -433,7 +433,7 @@ class PoolWallet:
         main_wallet: Wallet,
         initial_target_state: PoolState,
         fee: uint64 = uint64(0),
-        p2_singleton_delay_time: uint64 = uint64(604800),
+        p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
     ) -> TransactionRecord:
         """
@@ -453,6 +453,8 @@ class PoolWallet:
 
         if p2_singleton_delayed_ph is None:
             p2_singleton_delayed_ph = await main_wallet.get_new_puzzlehash()
+        if p2_singleton_delay_time is None:
+            p2_singleton_delay_time = uint64(604800)
 
         unspent_records = await wallet_state_manager.coin_store.get_unspent_coins_for_wallet(standard_wallet.wallet_id)
         balance = await standard_wallet.get_confirmed_balance(unspent_records)
