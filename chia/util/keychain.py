@@ -9,6 +9,7 @@ from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from getpass import getpass
 from hashlib import pbkdf2_hmac
+from pathlib import Path
 from secrets import token_bytes
 from time import sleep
 from typing import List, Optional, Tuple
@@ -20,6 +21,13 @@ DEFAULT_PASSWORD_PROMPT = (
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
+
+
+def set_keyring_root_path(root_path: Path) -> None:
+    """
+    Used to set the root_path prior to instantiating the KeyringWrapper shared instance.
+    """
+    KeyringWrapper.set_keyring_root_path(root_path)
 
 
 def obtain_current_password(prompt: str = DEFAULT_PASSWORD_PROMPT, use_password_cache: bool = False) -> str:
