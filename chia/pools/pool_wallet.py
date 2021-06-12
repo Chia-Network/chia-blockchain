@@ -41,6 +41,7 @@ from chia.pools.pool_puzzles import (
     is_pool_member_inner_puzzle,
     is_pool_waitingroom_inner_puzzle,
     uncurry_pool_waitingroom_inner_puzzle,
+    get_delayed_puz_info_from_launcher_spend,
 )
 
 from chia.util.ints import uint8, uint32, uint64
@@ -185,7 +186,7 @@ class PoolWallet:
         assert len(all_spends) >= 1
 
         launcher_coin: Coin = all_spends[0].coin
-        delayed_seconds, delayed_puzhash = self.get_delayed_puz_info_from_launcher_spend(all_spends[0])
+        delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(all_spends[0])
         tip_singleton_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(all_spends[-1])
         launcher_id: bytes32 = launcher_coin.name()
         p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id, delayed_seconds, delayed_puzhash)
@@ -566,7 +567,7 @@ class PoolWallet:
 
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
-        delayed_seconds, delayed_puzhash = self.get_delayed_puz_info_from_launcher_spend(spend_history[0][1])
+        delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(spend_history[0][1])
         assert pool_wallet_info.target is not None
         next_state = pool_wallet_info.target
         if pool_wallet_info.current.state in [FARMING_TO_POOL]:
@@ -964,7 +965,7 @@ class PoolWallet:
             coin_to_height_farmed[tx_record.additions[0]] = height_farmed
         history: List[Tuple[uint32, CoinSolution]] = await self.get_spend_history()
         assert len(history) > 0
-        delayed_seconds, delayed_puzhash = self.get_delayed_puz_info_from_launcher_spend(history[0][1])
+        delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(history[0][1])
         current_state: PoolWalletInfo = await self.get_current_state()
         last_solution: CoinSolution = history[-1][1]
 
@@ -1069,12 +1070,3 @@ class PoolWallet:
 
     async def get_max_send_amount(self, record_list=None) -> uint64:
         return uint64(0)
-
-    def get_delayed_puz_info_from_launcher_spend(self, coinsol: CoinSolution):
-        extra_data = Program.from_bytes(bytes(coinsol.solution)).rest().rest().first()
-        # Extra data is (pool_state delayed_puz_info)
-        delayed_puz_info = extra_data.rest().first()
-        # Delayed puz info is (seconds delayed_puzhash)
-        seconds = delayed_puz_info.first().as_atom()
-        delayed_puzhash = delayed_puz_info.rest().first().as_atom()
-        return seconds, delayed_puzhash
