@@ -271,6 +271,22 @@ export const handle_message = async (store, payload, errorProcessed) => {
               </StyledTypographyDD>
             </Grid>
             <Grid item>
+              <Typography component="dt" variant="subtitle2">
+                <Trans>Farmer public key: </Trans>
+              </Typography>
+              <StyledTypographyDD component="dd" variant="body2">
+                {payload.data.private_key.farmer_pk}
+              </StyledTypographyDD>
+            </Grid>
+            <Grid item>
+              <Typography component="dt" variant="subtitle2">
+                <Trans>Pool public key: </Trans>
+              </Typography>
+              <StyledTypographyDD component="dd" variant="body2">
+                {payload.data.private_key.pool_pk}
+              </StyledTypographyDD>
+            </Grid>
+            <Grid item>
               {payload.data.private_key.seed ? (
                 <>
                   <Typography component="dt" variant="subtitle2">
