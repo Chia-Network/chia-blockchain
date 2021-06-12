@@ -1487,7 +1487,8 @@ class TestFullNodeProtocol:
             )
         )
 
-        assert cc_eos_count == 3 and icc_eos_count == 3
+        # Note: the below numbers depend on the block cache, so might need to be updated
+        assert cc_eos_count == 4 and icc_eos_count == 3
         for compact_proof in timelord_protocol_finished:
             await full_node_1.full_node.respond_compact_proof_of_time(compact_proof)
         stored_blocks = await full_node_1.get_all_full_blocks()
@@ -1508,7 +1509,8 @@ class TestFullNodeProtocol:
                 has_compact_cc_sp_vdf = True
             if block.challenge_chain_ip_proof.normalized_to_identity:
                 has_compact_cc_ip_vdf = True
-        assert cc_eos_compact_count == 3
+        # Note: the below numbers depend on the block cache, so might need to be updated
+        assert cc_eos_compact_count == 4
         assert icc_eos_compact_count == 3
         assert has_compact_cc_sp_vdf
         assert has_compact_cc_ip_vdf

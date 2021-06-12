@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, G1Element
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester
@@ -140,8 +140,9 @@ class HarvesterAPI:
                                 local_master_sk,
                             ) = parse_plot_info(plot_info.prover.get_memo())
                             local_sk = master_sk_to_local_sk(local_master_sk)
+                            include_taproot = plot_info.pool_contract_puzzle_hash is not None
                             plot_public_key = ProofOfSpace.generate_plot_public_key(
-                                local_sk.get_g1(), farmer_public_key
+                                local_sk.get_g1(), farmer_public_key, include_taproot
                             )
                             responses.append(
                                 (
@@ -261,7 +262,13 @@ class HarvesterAPI:
         ) = parse_plot_info(plot_info.prover.get_memo())
         local_sk = master_sk_to_local_sk(local_master_sk)
 
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
+        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+            include_taproot = False
+        else:
+            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+            include_taproot = True
+
+        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
