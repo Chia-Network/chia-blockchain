@@ -22,8 +22,9 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.core.fixtures import default_1000_blocks, create_blockchain  # noqa: F401
 from tests.setup_nodes import test_constants as test_constants_original
 
-test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12})
+test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2 ** 12})
 bt = BlockTools(test_constants)
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -32,6 +33,7 @@ def event_loop():
 
 
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="function")
 async def empty_blockchain():
@@ -44,6 +46,7 @@ async def empty_blockchain():
     await connection.close()
     bc1.shut_down()
     db_path.unlink()
+
 
 class TestFullNodeStore:
     @pytest.mark.asyncio
