@@ -10,7 +10,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
-from chia.protocols.pool_protocol import PoolErrorCode, PostPartialRequest, PostPartialPayload, AuthenticationKeyInfo
+from chia.protocols.pool_protocol import PoolErrorCode, PostPartialRequest, PostPartialPayload
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -135,10 +135,7 @@ class FarmerAPI:
 
                 # Submit partial to pool
                 is_eos = new_proof_of_space.signage_point_index == 0
-                authentication_key_info = AuthenticationKeyInfo(
-                    pool_state_dict["pool_config"].authentication_public_key,
-                    pool_state_dict["pool_config"].authentication_public_key_timestamp,
-                )
+
                 payload = PostPartialPayload(
                     new_proof_of_space.proof,
                     new_proof_of_space.sp_hash,
@@ -147,7 +144,6 @@ class FarmerAPI:
                     pool_state_dict["pool_config"].launcher_id,
                     pool_state_dict["pool_config"].owner_public_key,
                     pool_state_dict["pool_config"].payout_instructions,
-                    authentication_key_info,
                 )
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
@@ -188,14 +184,8 @@ class FarmerAPI:
 
                 assert plot_signature is not None
 
-                assert AugSchemeMPL.verify(
-                    pool_state_dict["pool_config"].owner_public_key,
-                    bytes(authentication_key_info),
-                    pool_state_dict["pool_config"].authentication_key_info_signature,
-                )
                 agg_sig: G2Element = AugSchemeMPL.aggregate(
                     [
-                        pool_state_dict["pool_config"].authentication_key_info_signature,
                         plot_signature,
                         authentication_signature,
                     ]

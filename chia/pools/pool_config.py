@@ -14,9 +14,7 @@ from chia.util.streamable import Streamable, streamable
 Config example
 This is what goes into the user's config file, to communicate between the wallet and the farmer processes.
 pool_list:
-  - authentication_key_info_signature: 8fa411d3164d6d4fc1a5985ea474a853304fec99b93300e12e3b3e8fc16dea8834804eb3dfcee7181a59cd4e969ada0e119d7c8cc94f5c912280dc4cfdbadd9076b6393b135e35b182bcd4e13bf9216877a6033dd9f89c249981e83908c5a926
     authentication_public_key: 970e181ae45435ae696508a78012dc80548c334cf29676ea6ade7049eb9d2b9579cc30cb44c3fd68d35a250cfbc69e29
-    authentication_public_key_timestamp: 1621854388
     owner_public_key: 84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5
     payout_instructions: c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8
     pool_url: localhost
@@ -36,8 +34,6 @@ class PoolWalletConfig(Streamable):
     p2_singleton_puzzle_hash: bytes32
     owner_public_key: G1Element
     authentication_public_key: G1Element
-    authentication_public_key_timestamp: uint64
-    authentication_key_info_signature: G2Element
 
 
 def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
@@ -53,8 +49,6 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
                 hexstr_to_bytes(pool_config_dict["p2_singleton_puzzle_hash"]),
                 G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
                 G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
-                pool_config_dict["authentication_public_key_timestamp"],
-                G2Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_key_info_signature"])),
             )
             ret_list.append(pool_config)
     return ret_list

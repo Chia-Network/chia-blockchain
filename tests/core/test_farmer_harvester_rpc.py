@@ -234,9 +234,7 @@ class TestRpc:
             auth_sk = master_sk_to_pooling_authentication_sk(all_sks[0][0], 2, 1)
             pool_list = [
                 {
-                    "authentication_key_info_signature": "8fa411d3164d6d4fc1a5985ea474a853304fec99b93300e12e3b3e8fc16dea8834804eb3dfcee7181a59cd4e969ada0e119d7c8cc94f5c912280dc4cfdbadd9076b6393b135e35b182bcd4e13bf9216877a6033dd9f89c249981e83908c5a926",
                     "authentication_public_key": bytes(auth_sk.get_g1()).hex(),
-                    "authentication_public_key_timestamp": 1621854388,
                     "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",
                     "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
                     "pool_url": "localhost",
