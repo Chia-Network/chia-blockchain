@@ -123,12 +123,14 @@ jobs:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
          ls ${{ github.workspace }}/build_scripts/final_installer/
-         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_1.x86_64.rpm.checksum
-         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.checksum
+         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.checksum
+         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.checksum
+         ls ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Upload Release Files
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/releases/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/releases/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.checksum s3://download-chia-net/releases/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb s3://download-chia-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.checksum s3://download-chia-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm s3://download-chia-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.checksum s3://download-chia-net/install/
