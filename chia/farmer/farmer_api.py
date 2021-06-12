@@ -137,11 +137,11 @@ class FarmerAPI:
                 is_eos = new_proof_of_space.signage_point_index == 0
 
                 payload = PostPartialPayload(
+                    pool_state_dict["pool_config"].launcher_id,
                     new_proof_of_space.proof,
                     new_proof_of_space.sp_hash,
                     is_eos,
                     pool_state_dict["current_difficulty"],
-                    pool_state_dict["pool_config"].launcher_id,
                     pool_state_dict["pool_config"].owner_public_key,
                     pool_state_dict["pool_config"].payout_instructions,
                 )
