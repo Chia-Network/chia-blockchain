@@ -37,7 +37,7 @@ def inventory_plots(root_path, grep_string, plot_public_key):
     searching_for_plot_public_key = False
 
     if plot_public_key is not None:
-        log.info(f"only looking for plot with a public key of {plot_public_key}")
+        log.info(f"Only looking for plot with a public key of {plot_public_key}")
         searching_for_plot_public_key = True
 
 
