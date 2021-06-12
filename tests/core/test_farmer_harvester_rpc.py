@@ -238,7 +238,7 @@ class TestRpc:
                     "authentication_public_key": bytes(auth_sk.get_g1()).hex(),
                     "authentication_public_key_timestamp": 1621854388,
                     "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",
-                    "pool_payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+                    "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
                     "pool_url": "localhost",
                     "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
                     "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
@@ -252,15 +252,15 @@ class TestRpc:
             pool_state = (await client.get_pool_state())["pool_state"]
             assert len(pool_state) == 1
             assert (
-                pool_state[0]["pool_config"]["pool_payout_instructions"]
+                pool_state[0]["pool_config"]["payout_instructions"]
                 == "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8"
             )
-            await client.set_pool_payout_instructions(
+            await client.set_payout_instructions(
                 hexstr_to_bytes(pool_state[0]["pool_config"]["launcher_id"]), "1234vy"
             )
 
             pool_state = (await client.get_pool_state())["pool_state"]
-            assert pool_state[0]["pool_config"]["pool_payout_instructions"] == "1234vy"
+            assert pool_state[0]["pool_config"]["payout_instructions"] == "1234vy"
 
         finally:
             # Checks that the RPC manages to stop the node

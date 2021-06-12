@@ -239,16 +239,16 @@ class PoolWallet:
             auth_key_signature: G2Element = AugSchemeMPL.sign(
                 owner_sk, bytes(AuthenticationKeyInfo(auth_pk, auth_pk_timestamp))
             )
-            pool_payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
+            payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
         else:
             auth_pk = existing_config.authentication_public_key
             auth_pk_timestamp = existing_config.authentication_public_key_timestamp
             auth_key_signature = existing_config.authentication_key_info_signature
-            pool_payout_instructions = existing_config.pool_payout_instructions
+            payout_instructions = existing_config.payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
             current_state.current.pool_url if current_state.current.pool_url else "",
-            pool_payout_instructions,
+            payout_instructions,
             current_state.current.target_puzzle_hash,
             current_state.launcher_id,
             current_state.p2_singleton_puzzle_hash,
