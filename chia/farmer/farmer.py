@@ -187,6 +187,7 @@ class Farmer:
                         "current_points": 0,
                         "current_difficulty": None,
                         "pool_errors_24h": [],
+                        "authentication_token_timeout": None,
                     }
                     self.log.info(f"Added pool: {pool_config}")
                 pool_state = self.pool_state[p2_singleton_puzzle_hash]
@@ -197,6 +198,7 @@ class Farmer:
                     # Makes a GET request to the pool to get the updated information
                     pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
+                        pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
