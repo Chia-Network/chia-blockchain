@@ -43,20 +43,19 @@ class GetPoolInfoResponse(Streamable):
     authentication_token_timeout: uint8
 
 
+# POST /partial
+
 
 @dataclass(frozen=True)
 @streamable
 class PostPartialPayload(Streamable):
     launcher_id: bytes32
+    authentication_token: uint64
     proof_of_space: ProofOfSpace
     sp_hash: bytes32
     end_of_sub_slot: bool
-    suggested_difficulty: uint64  # This is suggested the difficulty threshold for this account
-    owner_public_key: G1Element  # Current public key specified in the singleton
-    payout_instructions: str  # The farmer can choose where to send the rewards. This can take a few minutes
 
 
-# POST /partial
 @dataclass(frozen=True)
 @streamable
 class PostPartialRequest(Streamable):
@@ -68,8 +67,7 @@ class PostPartialRequest(Streamable):
 @dataclass(frozen=True)
 @streamable
 class PostPartialResponse(Streamable):
-    points: uint64
-    current_difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer
+    current_difficulty: uint64
 
 
 # GET /farmer
