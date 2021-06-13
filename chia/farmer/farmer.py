@@ -37,6 +37,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
     find_authentication_sk,
+    find_owner_sk,
 )
 from tests.wallet.test_singleton import SINGLETON_MOD
 
@@ -45,6 +46,7 @@ singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
+UPDATE_POOL_FARMER_INFO_INTERVAL: int = 60
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
@@ -265,6 +267,7 @@ class Farmer:
                         "points_found_24h": [],
                         "points_acknowledged_since_start": 0,
                         "points_acknowledged_24h": [],
+                        "next_farmer_update": 0,
                         "next_pool_info_update": 0,
                         "current_points": 0,
                         "current_difficulty": None,
@@ -285,6 +288,49 @@ class Farmer:
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
+
+                if time.time() >= pool_state["next_farmer_update"]:
+                    authentication_token_timeout = pool_state["authentication_token_timeout"]
+
+                    async def update_pool_farmer_info() -> Optional[dict]:
+                        # Run a GET /farmer to see if the farmer is already known by the pool
+                        response = await self._pool_get_farmer(
+                            pool_config, authentication_token_timeout, authentication_sk
+                        )
+                        if response is not None and "error_code" not in response:
+                            farmer_info: GetFarmerResponse = GetFarmerResponse.from_json_dict(response)
+                            pool_state["current_difficulty"] = farmer_info.current_difficulty
+                            pool_state["current_points"] = farmer_info.current_points
+                            pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
+                        return response
+
+                    if authentication_token_timeout is not None:
+                        update_response = await update_pool_farmer_info()
+                        is_error = update_response is not None and "error_code" in update_response
+                        if is_error and update_response["error_code"] == PoolErrorCode.FARMER_NOT_KNOWN.value:
+                            # Make the farmer known on the pool with a POST /farmer
+                            owner_sk = await find_owner_sk(all_sks, pool_config.owner_public_key)
+                            post_response = await self._pool_post_farmer(
+                                pool_config, authentication_token_timeout, owner_sk
+                            )
+                            if post_response is not None and "error_code" not in post_response:
+                                self.log.info(
+                                    f"Welcome message from {pool_config.pool_url}: "
+                                    f"{post_response['welcome_message']}"
+                                )
+                                # Now we should be able to update the local farmer info
+                                update_response = await update_pool_farmer_info()
+                                if update_response is not None and "error_code" in update_response:
+                                    self.log.error(
+                                        f"Failed to update farmer info after POST /farmer: "
+                                        f"{update_response['error_code']}, "
+                                        f"{update_response['error_message']}"
+                                    )
+                    else:
+                        self.farmer.log.error(
+                            f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
+                            f", check communication with the pool."
+                        )
 
             except Exception as e:
                 tb = traceback.format_exc()
