@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+import time
 from typing import Optional
 
 from blspy import G1Element, G2Element
@@ -70,9 +71,92 @@ class PostPartialResponse(Streamable):
     points: uint64
     current_difficulty: uint64  # Current difficulty that the pool is using to give credit to this farmer
 
+
+# GET /farmer
+
+
+# Response in success case
+@dataclass(frozen=True)
+@streamable
+class GetFarmerResponse(Streamable):
+    authentication_public_key: G1Element
+    payout_instructions: str
+    current_difficulty: uint64
+    current_points: uint64
+
+
+# POST /farmer
+
+
+@dataclass(frozen=True)
+@streamable
+class PostFarmerPayload(Streamable):
+    launcher_id: bytes32
+    authentication_token: uint64
+    authentication_public_key: G1Element
+    payout_instructions: str
+    suggested_difficulty: Optional[uint64]
+
+
+@dataclass(frozen=True)
+@streamable
+class PostFarmerRequest(Streamable):
+    payload: PostFarmerPayload
+    signature: G2Element
+
+
+# Response in success case
+@dataclass(frozen=True)
+@streamable
+class PostFarmerResponse(Streamable):
+    welcome_message: str
+
+
+# PUT /farmer
+
+
+@dataclass(frozen=True)
+@streamable
+class PutFarmerPayload(Streamable):
+    launcher_id: bytes32
+    authentication_token: uint64
+    authentication_public_key: Optional[G1Element]
+    payout_instructions: Optional[str]
+    suggested_difficulty: Optional[uint64]
+
+
+@dataclass(frozen=True)
+@streamable
+class PutFarmerRequest(Streamable):
+    payload: PutFarmerPayload
+    signature: G2Element
+
+
+# Response in success case
+@dataclass(frozen=True)
+@streamable
+class PutFarmerResponse(Streamable):
+    authentication_public_key: Optional[bool]
+    payout_instructions: Optional[bool]
+    suggested_difficulty: Optional[bool]
+
+
+# Misc
+
+
 # Response in error case for all endpoints of the pool protocol
 @dataclass(frozen=True)
 @streamable
 class ErrorResponse(Streamable):
     error_code: uint16
     error_message: Optional[str]
+
+
+# Get the current authentication toke according "Farmer authentication" in SPECIFICATION.md
+def get_current_authentication_token(timeout: uint8) -> uint64:
+    return uint64(int(int(time.time() / 60) / timeout))
+
+
+# Validate a given authentication token against our local time
+def validate_authentication_token(token: uint64, timeout: uint8):
+    return abs(token - get_current_authentication_token(timeout)) <= timeout

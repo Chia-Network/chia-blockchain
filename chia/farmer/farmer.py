@@ -7,13 +7,22 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import traceback
 
 import aiohttp
-from blspy import G1Element, PrivateKey
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.pool_protocol import (
+    get_current_authentication_token,
+    GetFarmerResponse,
+    PoolErrorCode,
+    PostFarmerPayload,
+    PostFarmerRequest,
+    PutFarmerPayload,
+    PutFarmerRequest,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
@@ -21,7 +30,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config, save_config
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -162,6 +171,79 @@ class Farmer:
                 else:
                     self.log.error(f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}")
         return None
+
+    async def _pool_get_farmer(
+        self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, authentication_sk: PrivateKey
+    ) -> Optional[Dict]:
+        assert authentication_sk.get_g1() == pool_config.authentication_public_key
+        authentication_token = get_current_authentication_token(authentication_token_timeout)
+        signature: G2Element = AugSchemeMPL.sign(
+            authentication_sk, pool_config.launcher_id + bytes(authentication_token)
+        )
+        get_farmer_params = {
+            "launcher_id": pool_config.launcher_id.hex(),
+            "authentication_token": authentication_token,
+            "signature": bytes(signature).hex(),
+        }
+        async with aiohttp.ClientSession(trust_env=True) as session:
+            async with session.get(f"{pool_config.pool_url}/farmer", params=get_farmer_params) as resp:
+                if resp.ok:
+                    response: Dict = json.loads(await resp.text())
+                    self.log.info(f"GET /farmer response: {response}")
+                    return response
+                else:
+                    self.log.error(f"Error in GET /farmer {pool_config.pool_url}, {resp.status}")
+        return None
+
+    async def _pool_post_farmer(
+        self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
+    ) -> Optional[Dict]:
+        post_farmer_payload: PostFarmerPayload = PostFarmerPayload(
+            pool_config.launcher_id,
+            get_current_authentication_token(authentication_token_timeout),
+            pool_config.authentication_public_key,
+            pool_config.payout_instructions,
+            None,
+        )
+        assert owner_sk.get_g1() == pool_config.owner_public_key
+        signature: G2Element = AugSchemeMPL.sign(owner_sk, bytes(post_farmer_payload))
+        post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
+        post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{pool_config.pool_url}/farmer", data=post_farmer_body) as resp:
+                if resp.ok:
+                    response: Dict = json.loads(await resp.text())
+                    self.log.info(f"POST /farmer response: {response}")
+                    return response
+                else:
+                    self.log.error(f"Error in POST /farmer {pool_config.pool_url}, {resp.status}")
+                    return None
+
+    async def _pool_put_farmer(
+        self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
+    ) -> Optional[Dict]:
+        put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
+            pool_config.launcher_id,
+            get_current_authentication_token(authentication_token_timeout),
+            pool_config.authentication_public_key,
+            pool_config.payout_instructions,
+            None,
+        )
+        assert owner_sk.get_g1() == pool_config.owner_public_key
+        signature: G2Element = AugSchemeMPL.sign(owner_sk, bytes(put_farmer_payload))
+        put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
+        put_farmer_body = json.dumps(put_farmer_request.to_json_dict())
+
+        async with aiohttp.ClientSession() as session:
+            async with session.put(f"{pool_config.pool_url}/farmer", data=put_farmer_body) as resp:
+                if resp.ok:
+                    response: Dict = json.loads(await resp.text())
+                    self.log.info(f"PUT /farmer response: {response}")
+                    return response
+                else:
+                    self.log.error(f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}")
+                    return None
 
     async def update_pool_state(self):
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
