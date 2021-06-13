@@ -6,7 +6,7 @@ from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64, uint16, uint32
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 
@@ -39,6 +39,7 @@ class GetPoolInfoResponse(Streamable):
     fee: str
     description: str
     target_puzzle_hash: bytes32
+    authentication_token_timeout: uint8
 
 
 
