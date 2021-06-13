@@ -10,7 +10,12 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
-from chia.protocols.pool_protocol import PoolErrorCode, PostPartialRequest, PostPartialPayload
+from chia.protocols.pool_protocol import (
+    get_current_authentication_token,
+    PoolErrorCode,
+    PostPartialRequest,
+    PostPartialPayload,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -141,21 +146,27 @@ class FarmerAPI:
                     )
                     return
 
+                authentication_token_timeout = pool_state_dict["authentication_token_timeout"]
+                if authentication_token_timeout is None:
+                    self.farmer.log.error(
+                        f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
+                        f", check communication with the pool."
+                    )
+                    return
+
                 # Submit partial to pool
                 is_eos = new_proof_of_space.signage_point_index == 0
 
                 payload = PostPartialPayload(
                     pool_state_dict["pool_config"].launcher_id,
+                    get_current_authentication_token(authentication_token_timeout),
                     new_proof_of_space.proof,
                     new_proof_of_space.sp_hash,
                     is_eos,
-                    pool_state_dict["current_difficulty"],
-                    pool_state_dict["pool_config"].owner_public_key,
-                    pool_state_dict["pool_config"].payout_instructions,
                 )
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
-                m_to_sign = payload.get_hash()
+                m_to_sign = bytes(payload)
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
@@ -212,21 +223,17 @@ class FarmerAPI:
                                     )
                                     pool_state_dict["pool_errors_24h"].append(pool_response)
                                     if pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
-                                        self.farmer.log.error("Too low difficulty, adjusting")
-                                        pool_state_dict["current_difficulty"] = pool_response["current_difficulty"]
-                                    else:
-                                        self.farmer.log.error(f"error not 5. {pool_response['error_code'] == '5'}")
-
+                                        self.farmer.log.error(
+                                            "Partial not good enough, forcing pool farmer update to "
+                                            "get our current difficulty."
+                                        )
+                                        pool_state_dict["next_farmer_update"] = 0
+                                        await self.farmer.update_pool_state()
                                 else:
-                                    pool_state_dict["points_acknowledged_since_start"] += pool_state_dict[
-                                        "current_difficulty"
-                                    ]
-                                    pool_state_dict["points_acknowledged_24h"].append(
-                                        (time.time(), pool_state_dict["current_difficulty"])
-                                    )
-                                    pool_state_dict["current_difficulty"] = pool_response["current_difficulty"]
-                                    pool_state_dict["current_points"] = pool_response["points"]
-
+                                    new_difficulty = pool_response["current_difficulty"]
+                                    pool_state_dict["points_acknowledged_since_start"] += new_difficulty
+                                    pool_state_dict["points_acknowledged_24h"].append((time.time(), new_difficulty))
+                                    pool_state_dict["current_difficulty"] = new_difficulty
                             else:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
                 except Exception as e:
