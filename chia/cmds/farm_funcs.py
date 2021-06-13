@@ -232,7 +232,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Last height farmed: Unknown")
 
     if harvester_info is not None:
-        print(f"Connected harvesters: {harvester_info['connected_harvesters']}")
+        print(f"Total connected harvesters: {harvester_info['connected_harvesters']}")
         print(f"Total harvesting plots: {harvester_info['total_plots']} ", end="")
         print(f"({format_bytes(harvester_info['total_plot_space'])})")
     else:
