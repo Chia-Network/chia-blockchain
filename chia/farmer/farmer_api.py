@@ -117,6 +117,14 @@ class FarmerAPI:
                     return
                 pool_state_dict: Dict = self.farmer.pool_state[p2_singleton_puzzle_hash]
 
+                if pool_state_dict["current_difficulty"] is None:
+                    self.farmer.log.error(
+                        f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
+                        f"check communication with the pool, skipping this partial: "
+                        f"{new_proof_of_space}"
+                    )
+                    return
+
                 pool_url = pool_state_dict["pool_config"].pool_url
                 required_iters = calculate_iterations_quality(
                     self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -386,6 +394,13 @@ class FarmerAPI:
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
         pool_difficulties: List[PoolDifficulty] = []
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
+            if pool_dict["current_difficulty"] is None:
+                self.farmer.log.error(
+                    f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
+                    f"check communication with the pool, skipping this signage point: "
+                    f"{new_signage_point}"
+                )
+                continue
             pool_difficulties.append(
                 PoolDifficulty(
                     pool_dict["current_difficulty"],
