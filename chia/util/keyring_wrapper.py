@@ -26,7 +26,7 @@ class KeyringWrapper:
 
     # Static members
     __shared_instance = None
-    __root_path: Path
+    __root_path: Path = DEFAULT_ROOT_PATH
 
     # Instance members
     root_path: Path
