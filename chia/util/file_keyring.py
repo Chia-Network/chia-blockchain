@@ -7,7 +7,7 @@ import sys
 import threading
 import yaml
 
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
 from functools import wraps
@@ -150,23 +150,23 @@ class FileKeyring(FileSystemEventHandler):
     outer_payload_cache: dict = {}  # Cache of the plaintext YAML "outer" contents (never encrypted)
 
     @staticmethod
-    def keyring_path_from_root(root_path: Path) -> Path:
+    def keyring_path_from_root(keys_root_path: Path) -> Path:
         """
         Returns the path to keyring.yaml
         """
-        path_filename = root_path / "config" / "keyring.yaml"
+        path_filename = keys_root_path / "keyring.yaml"
         return path_filename
 
     @staticmethod
     def lockfile_path_for_file_path(file_path: Path) -> Path:
         return file_path.with_suffix(".lock")
 
-    def __init__(self, root_path: Path = DEFAULT_ROOT_PATH):
+    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
         """
         Creates a fresh keyring.yaml file if necessary. Otherwise, loads and caches the
         outer (plaintext) payload
         """
-        self.keyring_path = FileKeyring.keyring_path_from_root(root_path)
+        self.keyring_path = FileKeyring.keyring_path_from_root(keys_root_path)
         self.keyring_lock_path = FileKeyring.lockfile_path_for_file_path(self.keyring_path)
         self.payload_cache = {}  # This is used as a building block for adding keys etc if the keyring is empty
         self.load_keyring_lock = threading.RLock()
@@ -445,7 +445,7 @@ class FileKeyring(FileSystemEventHandler):
         self.payload_cache = inner_payload
 
     def write_data_to_keyring(self, data):
-        os.makedirs(os.path.dirname(self.keyring_path), 0o775, True)
+        os.makedirs(os.path.dirname(self.keyring_path), 0o700, True)
         temp_path = self.keyring_path.with_suffix("." + str(os.getpid()))
         with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
             _ = yaml.safe_dump(data, f)
