@@ -84,7 +84,7 @@ find_python() {
 	unset BEST_VERSION
 	for V in 37 3.7 38 3.8 39 3.9 3; do
 		if which python$V >/dev/null; then
-			if [ x"$BEST_VERSION" = x ]; then
+			if [ "$BEST_VERSION" = "" ]; then
 				BEST_VERSION=$V
 			fi
 		fi
@@ -93,7 +93,7 @@ find_python() {
 	set -e
 }
 
-if [ x"$INSTALL_PYTHON_VERSION" = x ]; then
+if [ "$INSTALL_PYTHON_VERSION" = "" ]; then
 	INSTALL_PYTHON_VERSION=$(find_python)
 fi
 
@@ -116,7 +116,7 @@ python -m pip install --upgrade pip
 python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1
+python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
 
 echo ""

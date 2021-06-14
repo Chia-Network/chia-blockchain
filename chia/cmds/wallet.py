@@ -75,8 +75,13 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
     required=True,
 )
 @click.option("-t", "--address", help="Address to send the XCH", type=str, required=True)
-def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str) -> None:
-    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address}
+@click.option(
+    "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
+)
+def send_cmd(
+    wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str, override: bool
+) -> None:
+    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
