@@ -77,11 +77,15 @@ class FullNodeDiscovery:
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
         try:
-            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
-        except Exception as e:
-            self.log.error(e)
+            self.resolver = dns.asyncresolver.Resolver()
+        except Exception:
             self.resolver = None
-        self.pending_outbound_connections: Set = set()
+            self.log.exception("Error initializing asyncresolver")
+        self.pending_outbound_connections: Set[str] = set()
+        self.pending_tasks: Set[asyncio.Task] = set()
+        self.default_port: Optional[int] = default_port
+        if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
+            self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
