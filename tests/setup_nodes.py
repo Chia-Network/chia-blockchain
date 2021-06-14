@@ -52,7 +52,8 @@ async def setup_daemon(btools):
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     assert lockfile is not None
     create_server_for_daemon(btools.root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    shutdown_event = asyncio.Event()
+    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
     await ws_server.start()
 
     yield ws_server

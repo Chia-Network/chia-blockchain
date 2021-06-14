@@ -14,8 +14,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
-from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
-
+import aiohttp
+from aiohttp.web_ws import WebSocketResponse
 from chia.cmds.init_funcs import chia_init
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
@@ -113,13 +113,15 @@ async def ping() -> Dict[str, Any]:
 
 
 class WebSocketServer:
-    def __init__(self, root_path: Path, ca_crt_path: Path, ca_key_path: Path, crt_path: Path, key_path: Path):
+    def __init__(
+        self, root_path: Path, ca_crt_path: Path, ca_key_path: Path, crt_path: Path, key_path: Path, shutdown_event
+    ):
         self.root_path = root_path
         self.log = log
         self.services: Dict = dict()
         self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, List[WebSocketServerProtocol]] = dict()  # service_name : [WebSocket]
-        self.remote_address_map: Dict[WebSocketServerProtocol, str] = dict()  # socket: service_name
+        self.connections: Dict[str, List[WebSocketResponse]] = dict()  # service_name : [WebSocket]
+        self.remote_address_map: Dict[WebSocketResponse, str] = dict()  # socket: service_name
         self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
@@ -127,6 +129,7 @@ class WebSocketServer:
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
+        self.shutdownd_event = shutdown_event
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -140,15 +143,21 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        self.websocket_server = await serve(
-            self.safe_handle,
-            self.self_hostname,
-            self.daemon_port,
-            max_size=50 * 1000 * 1000,
-            ping_interval=500,
-            ping_timeout=300,
-            ssl=self.ssl_context,
+        self.app = web.Application()
+        routes = [
+            web.get("/", self.incoming_connection),
+        ]
+        self.app.add_routes(routes)
+        self.runner = web.AppRunner(self.app, access_log=None, logger=self.log)
+        await self.runner.setup()
+
+        self.site = web.TCPSite(
+            self.runner,
+            port=self.daemon_port,
+            shutdown_timeout=3,
+            ssl_context=self.ssl_context,
         )
+        await self.site.start()
         self.log.info("Waiting Daemon WebSocketServer closure")
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
@@ -164,48 +173,43 @@ class WebSocketServer:
         await self.exit()
         if self.websocket_server is not None:
             self.websocket_server.close()
+        self.shutdownd_event.set()
         return {"success": True}
 
-    async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
-        service_name = ""
-        try:
-            async for message in websocket:
-                try:
-                    decoded = json.loads(message)
-                    if "data" not in decoded:
-                        decoded["data"] = {}
-                    response, sockets_to_use = await self.handle_message(websocket, decoded)
-                except Exception as e:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Error while handling message: {tb}")
-                    error = {"success": False, "error": f"{e}"}
-                    response = format_response(decoded, error)
-                    sockets_to_use = []
-                if len(sockets_to_use) > 0:
-                    for socket in sockets_to_use:
-                        try:
-                            await socket.send(response)
-                        except Exception as e:
-                            tb = traceback.format_exc()
-                            self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
-                            self.remove_connection(socket)
-                            await socket.close()
-        except Exception as e:
-            tb = traceback.format_exc()
-            service_name = "Unknown"
-            if websocket in self.remote_address_map:
-                service_name = self.remote_address_map[websocket]
-            if isinstance(e, ConnectionClosedOK):
-                self.log.info(f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
-            elif isinstance(e, WebSocketException):
-                self.log.info(f"Websocket exception. Closing websocket with {service_name} {e} {tb}")
-            else:
-                self.log.error(f"Unexpected exception in websocket: {e} {tb}")
-        finally:
-            self.remove_connection(websocket)
-            await websocket.close()
+    async def incoming_connection(self, request):
+        ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
+        await ws.prepare(request)
 
-    def remove_connection(self, websocket: WebSocketServerProtocol):
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                if msg.data == "close":
+                    await ws.close()
+                else:
+                    try:
+                        decoded = json.loads(msg.data)
+                        if "data" not in decoded:
+                            decoded["data"] = {}
+                        response, sockets_to_use = await self.handle_message(ws, decoded)
+                    except Exception as e:
+                        tb = traceback.format_exc()
+                        self.log.error(f"Error while handling message: {tb}")
+                        error = {"success": False, "error": f"{e}"}
+                        response = format_response(decoded, error)
+                        sockets_to_use = []
+                    if len(sockets_to_use) > 0:
+                        for socket in sockets_to_use:
+                            try:
+                                await socket.send_str(response)
+                            except Exception as e:
+                                tb = traceback.format_exc()
+                                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                                self.remove_connection(socket)
+                                await socket.close()
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                print("ws connection closed with exception %s" % ws.exception())
+                self.remove_connection(ws)
+
+    def remove_connection(self, websocket: WebSocketResponse):
         service_name = None
         if websocket in self.remote_address_map:
             service_name = self.remote_address_map[websocket]
@@ -226,7 +230,7 @@ class WebSocketServer:
             if service_name in self.connections:
                 sockets = self.connections[service_name]
                 for socket in sockets:
-                    if socket.remote_address[1] == remote_address:
+                    if socket == remote_address:
                         try:
                             self.log.info(f"About to ping: {service_name}")
                             await socket.ping()
@@ -243,7 +247,7 @@ class WebSocketServer:
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
-        self, websocket: WebSocketServerProtocol, message: WsRpcMessage
+        self, websocket: WebSocketResponse, message: WsRpcMessage
     ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
@@ -348,7 +352,7 @@ class WebSocketServer:
 
         for websocket in websockets:
             try:
-                await websocket.send(response)
+                await websocket.send_str(response)
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
@@ -697,7 +701,7 @@ class WebSocketServer:
         response = {"success": True}
         return response
 
-    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
         service = request["service"]
         if service not in self.connections:
@@ -1005,12 +1009,13 @@ async def async_run_daemon(root_path: Path) -> int:
         print("daemon: already launching")
         return 2
 
+    shutdown_event = asyncio.Event()
+
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
     await ws_server.start()
-    assert ws_server.websocket_server is not None
-    await ws_server.websocket_server.wait_closed()
+    await shutdown_event.wait()
     log.info("Daemon WebSocketServer closed")
     return 0
 
