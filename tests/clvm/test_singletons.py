@@ -27,9 +27,15 @@ from tests.clvm.test_puzzles import (
 
 from .coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 
-T1 = CoinTimestamp(1, 10000000)
-T2 = CoinTimestamp(5, 10003000)
+"""
+This test suite aims to test:
+    - chia.wallet.puzzles.singleton_top_layer.py
+    - chia.wallet.puzzles.singleton_top_layer.clvm
+    - chia.wallet.puzzles.p2_singleton.clvm
+    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
+"""
 
+T1 = CoinTimestamp(1, 10000000)
 
 # Helper function
 def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
@@ -195,7 +201,132 @@ class TestSingleton(TestCase):
             [singleton_coinsol],
         )
 
-        # MULTIPLE ODD
+        # CLAIM A P2_SINGLETON
+        singleton_child: Coin = next(coin_db.all_unspent_coins())
+        p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_puzzle(launcher_id)
+        p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
+        ARBITRARY_AMOUNT: uint64 = 1379
+        coin_db.farm_coin(p2_singleton_ph, T1, ARBITRARY_AMOUNT)
+        p2_singleton_coin: Coin = list(filter(
+            lambda e: e.amount == ARBITRARY_AMOUNT,
+            list(coin_db.all_unspent_coins()),
+        ))[0]
+        assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
+            p2_singleton_coin,
+            adapted_puzzle_hash,
+            launcher_id,
+        )
+        delegated_puzzle: Program = Program.to(
+            (1, [
+                [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount],
+                assertion,
+                announcement,
+            ])
+        )
+        inner_solution: Program = Program.to([[], delegated_puzzle, []])
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            launcher_id,
+            adapted_puzzle,
+        )
+        full_solution: Program = singleton_top_layer.solution_for_singleton(
+            lineage_proof,
+            singleton_eve.amount,
+            inner_solution,
+        )
+        singleton_claim_coinsol = CoinSolution(
+            singleton_child,
+            puzzle_reveal,
+            full_solution,
+        )
+
+        make_and_spend_bundle(
+            coin_db,
+            singleton_child,
+            delegated_puzzle,
+            [singleton_claim_coinsol, claim_coinsol]
+        )
+
+        # CLAIM A P2_SINGLETON_OR_DELAYED
+        singleton_child: Coin = next(coin_db.all_unspent_coins())
+        DELAY_TIME: uint64 = 1
+        DELAY_PH: bytes32 = adapted_puzzle_hash
+        p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_or_delay_puzzle(
+            launcher_id,
+            DELAY_TIME,
+            DELAY_PH,
+        )
+        p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
+        ARBITRARY_AMOUNT: uint64 = 1379
+        coin_db.farm_coin(p2_singleton_ph, T1, ARBITRARY_AMOUNT)
+        p2_singleton_coin: Coin = list(filter(
+            lambda e: e.amount == ARBITRARY_AMOUNT,
+            list(coin_db.all_unspent_coins()),
+        ))[0]
+        assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
+            p2_singleton_coin,
+            adapted_puzzle_hash,
+            launcher_id,
+        )
+        delegated_puzzle: Program = Program.to(
+            (1, [
+                [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, singleton_eve.amount],
+                assertion,
+                announcement,
+            ])
+        )
+        inner_solution: Program = Program.to([[], delegated_puzzle, []])
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)
+        puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            launcher_id,
+            adapted_puzzle,
+        )
+        full_solution: Program = singleton_top_layer.solution_for_singleton(
+            lineage_proof,
+            singleton_eve.amount,
+            inner_solution,
+        )
+        delay_claim_coinsol = CoinSolution(
+            singleton_child,
+            puzzle_reveal,
+            full_solution,
+        )
+
+        # Fork it so we can try the other spend types
+        fork_coin_db: CoinStore = copy.deepcopy(coin_db)
+        fork_coin_db_2: CoinStore = copy.deepcopy(coin_db)
+        make_and_spend_bundle(
+            coin_db,
+            singleton_child,
+            delegated_puzzle,
+            [delay_claim_coinsol, claim_coinsol]
+        )
+
+        # TRY TO SPEND AWAY TOO SOON (Negative Test)
+        to_delay_ph_coinsol = singleton_top_layer.spend_to_delayed_puzzle(
+            p2_singleton_coin,
+            ARBITRARY_AMOUNT,
+            launcher_id,
+            DELAY_TIME,
+            DELAY_PH,
+        )
+        try:
+            fork_coin_db.update_coin_store_for_spend_bundle(
+                SpendBundle([to_delay_ph_coinsol],G2Element()),
+                T1,
+                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            )
+        except BadSpendBundleError as e:
+            assert str(e) == "condition validation failure Err.ASSERT_SECONDS_RELATIVE_FAILED"
+
+        # SPEND TO DELAYED PUZZLE HASH
+        fork_coin_db_2.update_coin_store_for_spend_bundle(
+            SpendBundle([to_delay_ph_coinsol],G2Element()),
+            CoinTimestamp(100, 10000005),
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        )
+
+        # CREATE MULTIPLE ODD CHILDREN (Negative Test)
         singleton_child: Coin = next(coin_db.all_unspent_coins())
         delegated_puzzle: Program = Program.to(
             (
@@ -232,7 +363,7 @@ class TestSingleton(TestCase):
             fail_msg="Too many odd children were allowed",
         )
 
-        # NO ODD TEST
+        # CREATE NO ODD CHILDREN (Negative Test)
         delegated_puzzle: Program = Program.to(
             (
                 1,
@@ -268,7 +399,7 @@ class TestSingleton(TestCase):
             fail_msg="Need at least one odd child",
         )
 
-        # TEST ATTEMPTED SPOOFING
+        # ATTEMPT TO CREATE AN EVEN SINGLETON (Negative test)
         fork_coin_db: CoinStore = copy.deepcopy(coin_db)
 
         delegated_puzzle: Program = Program.to(
@@ -285,7 +416,7 @@ class TestSingleton(TestCase):
             )
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
-        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)  # noqa
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(delay_claim_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
             launcher_id,
             adapted_puzzle,
@@ -359,9 +490,9 @@ class TestSingleton(TestCase):
                 (singleton_child.amount - 1),
             ],
         ]
-        delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)  # noqa
-        inner_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)  # noqa
-        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)  # noqa
+        delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)
+        inner_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(delay_claim_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
             launcher_id,
             adapted_puzzle,
