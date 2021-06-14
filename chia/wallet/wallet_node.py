@@ -72,6 +72,7 @@ class WalletNode:
     full_node_peer: Optional[PeerInfo]
     peer_task: Optional[asyncio.Task]
     logged_in: bool
+    wallet_peers_initialized: bool
 
     def __init__(
         self,
@@ -111,6 +112,7 @@ class WalletNode:
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
+        self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
     def get_key_for_fingerprint(self, fingerprint: Optional[int]):
@@ -179,6 +181,15 @@ class WalletNode:
                 return False
 
         self.backup_initialized = True
+
+        # Start peers here after the backup initialization has finished
+        # We only want to do this once per instantiation
+        # However, doing it earlier before backup initialization causes
+        # the wallet to spam the introducer
+        if self.wallet_peers_initialized is False:
+            asyncio.create_task(self.wallet_peers.start())
+            self.wallet_peers_initialized = True
+
         if backup_file is not None:
             json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
             if "start_height" in json_dict["data"]:
@@ -319,14 +330,16 @@ class WalletNode:
             self.config["introducer_peer"],
             [],
             self.config["peer_connect_interval"],
+            self.config["selected_network"],
+            None,
             self.log,
         )
-        asyncio.create_task(self.wallet_peers.start())
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return None
         messages_peer_ids = await self._messages_to_resend()
+        self.wallet_state_manager.state_changed("add_connection")
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
                 continue
@@ -339,6 +352,8 @@ class WalletNode:
         while not self._shut_down and tries < 5:
             if self.has_full_node():
                 await self.wallet_peers.ensure_is_closed()
+                if self.wallet_state_manager is not None:
+                    self.wallet_state_manager.state_changed("add_connection")
                 break
             tries += 1
             await asyncio.sleep(self.config["peer_connect_interval"])

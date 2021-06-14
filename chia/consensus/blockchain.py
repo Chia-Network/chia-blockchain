@@ -466,6 +466,8 @@ class Blockchain(BlockchainInterface):
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
                 # Start from the most recent
                 for rc in reversed(curr.finished_reward_slot_hashes):
+                    if sub_slot_total_iters < curr.sub_slot_iters:
+                        break
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
             curr = self.try_block_record(curr.prev_hash)
@@ -617,6 +619,8 @@ class Blockchain(BlockchainInterface):
                 del self.__block_records[header_hash]  # remove from blocks
             del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
 
+            if height == 0:
+                break
             height = height - 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
@@ -685,14 +689,24 @@ class Blockchain(BlockchainInterface):
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size=900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
+        records: List[BlockRecord] = []
         hashes = []
+        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
         for height in heights:
             hashes.append(self.height_to_hash(height))
-        return await self.block_store.get_block_records_by_hash(hashes)
+            if len(hashes) > batch_size:
+                res = await self.block_store.get_block_records_by_hash(hashes)
+                records.extend(res)
+                hashes = []
+
+        if len(hashes) > 0:
+            res = await self.block_store.get_block_records_by_hash(hashes)
+            records.extend(res)
+        return records
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:

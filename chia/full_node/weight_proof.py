@@ -654,7 +654,7 @@ def _get_weights_for_sampling(
         q = 1 - delta ** u
         # todo check division and type conversions
         weight = q * float(total_weight)
-        weight_to_check.append(uint128(weight))
+        weight_to_check.append(uint128(int(weight)))
     weight_to_check.sort()
     return weight_to_check
 
