@@ -40,7 +40,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         )
         logger.addHandler(handler)
 
-    if logging_config["log_syslog"]:
+    if logging_config.get("log_syslog", False):
         log_syslog_host = logging_config.get("log_syslog_host", "localhost")
         log_syslog_port = logging_config.get("log_syslog_port", 514)
         log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
