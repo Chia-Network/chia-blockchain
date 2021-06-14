@@ -172,7 +172,7 @@ def create_travel_spend(
             f"{target}"
             f"hash:{Program(bytes(target)).get_tree_hash()}"
         )
-        inner_sol = Program.to([1, destination_inner.get_tree_hash(), bytes(target)])  # current or target
+        inner_sol = Program.to([1, bytes(target), destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
@@ -377,14 +377,14 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     # Spend which is not absorb, and is not the launcher
     num_args = len(inner_solution.as_atom_list())
-    assert num_args in (4, 5)
+    assert num_args in (2, 3)
 
-    if num_args == 4:
+    if num_args == 2:
         # pool member
-        extra_data = inner_solution.rest().rest().rest().first().as_atom()
+        extra_data = inner_solution.first().as_atom()
     else:
         # pool escaping
-        extra_data = inner_solution.rest().rest().rest().rest().first().as_atom()
+        extra_data = inner_solution.rest().first().as_atom()
     return PoolState.from_bytes(extra_data)
 
 
