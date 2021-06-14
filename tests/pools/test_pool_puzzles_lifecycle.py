@@ -1,3 +1,5 @@
+import copy
+
 from typing import List
 from unittest import TestCase
 
@@ -26,12 +28,14 @@ from chia.pools.pool_puzzles import (
     create_absorb_spend,
     create_travel_spend,
     get_most_recent_singleton_coin_from_coin_solution,
+    get_delayed_puz_info_from_launcher_spend,
     SINGLETON_MOD_HASH,
     launcher_id_to_p2_puzzle_hash,
     is_pool_singleton_inner_puzzle,
     get_pubkey_from_member_inner_puzzle,
     solution_to_extra_data,
     uncurry_pool_waitingroom_inner_puzzle,
+    get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
 )
 from tests.util.key_tool import KeyTool
 from tests.clvm.test_puzzles import (
@@ -102,6 +106,15 @@ class TestPoolPuzzles(TestCase):
             target_puzzle_hash=starting_ph,
             version=1,
         )
+        # create a new dummy pool state for travelling
+        target_pool_state = PoolState(
+            owner_pubkey=pk,
+            pool_url="",
+            relative_lock_height=relative_lock_height,
+            state=2,  # Leaving pool
+            target_puzzle_hash=starting_ph,
+            version=1,
+        )
         # Standard format comment
         comment = Program.to([bytes(pool_state), [DELAY_TIME, DELAY_PH]])
         pool_wr_innerpuz: bytes32 = create_waiting_room_inner_puzzle(
@@ -123,6 +136,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_TIME,
             DELAY_PH,
         )
+        # Driver tests
         assert is_pool_singleton_inner_puzzle(pooling_innerpuz)
         assert is_pool_singleton_inner_puzzle(pool_wr_innerpuz)
         assert get_pubkey_from_member_inner_puzzle(pooling_innerpuz) == pk
@@ -151,7 +165,27 @@ class TestPoolPuzzles(TestCase):
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
         # Test that we can retrieve the extra data
-        solution_to_extra_data(launcher_coinsol)
+        assert get_delayed_puz_info_from_launcher_spend(launcher_coinsol) == (DELAY_TIME, DELAY_PH)
+        assert solution_to_extra_data(launcher_coinsol) == pool_state
+
+        # TEST TRAVEL AFTER LAUNCH
+        # fork the state
+        fork_coin_db: CoinStore = copy.deepcopy(coin_db)
+        post_launch_coinsol, _, _ = create_travel_spend(
+            launcher_coinsol,
+            launcher_coin,
+            pool_state,
+            target_pool_state,
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
+        )
+        # Spend it!
+        fork_coin_db.update_coin_store_for_spend_bundle(
+            SpendBundle([post_launch_coinsol], G2Element()),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        )
 
         # HONEST ABSORB
         time = CoinTimestamp(10000030, 2)
@@ -170,6 +204,7 @@ class TestPoolPuzzles(TestCase):
             p2_singleton_ph,
         )
         assert launcher_id_to_p2_puzzle_hash(launcher_id, DELAY_TIME, DELAY_PH) == p2_singleton_ph
+        assert get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(p2_singleton_puz) == (DELAY_TIME, DELAY_PH)
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         coin_sols: List[CoinSolution] = create_absorb_spend(
             launcher_coinsol,
@@ -252,15 +287,6 @@ class TestPoolPuzzles(TestCase):
         # ENTER WAITING ROOM
         # find the singleton
         singleton = get_most_recent_singleton_coin_from_coin_solution(last_coinsol)
-        # create a new dummy pool state
-        target_pool_state = PoolState(
-            owner_pubkey=pk,
-            pool_url="",
-            relative_lock_height=relative_lock_height,
-            state=2,  # Leaving pool
-            target_puzzle_hash=starting_ph,
-            version=1,
-        )
         # get the relevant coin solution
         travel_coinsol, _ = create_travel_spend(
             last_coinsol,
@@ -271,6 +297,8 @@ class TestPoolPuzzles(TestCase):
             DELAY_TIME,
             DELAY_PH,
         )
+        # Test that we can retrieve the extra data
+        assert solution_to_extra_data(travel_coinsol) == target_pool_state
         # sign the serialized state
         data = Program.to(bytes(target_pool_state)).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
@@ -353,6 +381,8 @@ class TestPoolPuzzles(TestCase):
             DELAY_TIME,
             DELAY_PH,
         )
+        # Test that we can retrieve the extra data
+        assert solution_to_extra_data(return_coinsol) == pool_state
         # sign the serialized target state
         data = Program.to([pooling_innerpuz.get_tree_hash(), START_AMOUNT, bytes(pool_state)]).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
