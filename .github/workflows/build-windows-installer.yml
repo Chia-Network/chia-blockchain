@@ -1,4 +1,4 @@
-name: Windows Installer on Windows 10 and Python 3.7
+name: Windows Installer on Windows 10 and Python 3.9
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Windows Installer on Windows 10 and Python 3.7
+    name: Windows Installer on Windows 10 and Python 3.9
     runs-on: [windows-latest]
     timeout-minutes: 40
 
@@ -57,9 +57,9 @@ jobs:
 
 #  We can't upgrade to Python 3.8 until we have a miniupnpc binary
     - uses: actions/setup-python@v2
-      name: Install Python 3.7
+      name: Install Python 3.9
       with:
-        python-version: "3.7"
+        python-version: "3.9"
 
     - name: Test for secrets access
       id: check_secrets
