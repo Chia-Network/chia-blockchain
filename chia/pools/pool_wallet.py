@@ -37,6 +37,7 @@ from chia.pools.pool_puzzles import (
     launcher_id_to_p2_puzzle_hash,
     create_travel_spend,
     uncurry_pool_member_inner_puzzle,
+    create_absorb_spend,
     is_pool_member_inner_puzzle,
     is_pool_waitingroom_inner_puzzle,
     uncurry_pool_waitingroom_inner_puzzle,
@@ -316,8 +317,7 @@ class PoolWallet:
         if self.target_state is None:
             self.log.info(f"PoolWallet state updated by external event: {coin}")
 
-        # xxx
-        new_singleton_coin = Coin(coin.name(), puz.get_tree_hash(), amount)
+        # new_singleton_coin = Coin(coin.name(), puz.get_tree_hash(), amount)
         new_current_state: Optional[PoolState] = solution_to_extra_data(
             coin_solution
         )  # TODO: Test that this works with both escaping and member puzzles
@@ -490,7 +490,7 @@ class PoolWallet:
 
     async def get_pool_wallet_sk(self):
         owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-            self.wallet_state_manager.private_key, self.wallet_id
+            self.wallet_state_manager.private_key, uint32(self.wallet_id)
         )
         assert owner_sk is not None
         return owner_sk
@@ -608,9 +608,9 @@ class PoolWallet:
                 p2_singleton_hash,
                 pubkey_as_program,
                 pool_reward_prefix,
-                escape_puzzlehash,
+                escape_puzzle_hash,
             ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
-            pk_bytes = bytes(pubkey_as_program.as_atom())
+            pk_bytes: bytes = bytes(pubkey_as_program.as_atom())
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
             # member_signed_spend_bundle = await self.sign_travel_spend_in_member_state(
@@ -769,7 +769,7 @@ class PoolWallet:
             SerializedProgram.from_program(genesis_launcher_puz),
             SerializedProgram.from_program(genesis_launcher_solution),
         )
-        launcher_sb: SpendBundle = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
 
         log = logging.getLogger(__name__)
         eve = launcher_cs.additions()[0]
@@ -978,7 +978,7 @@ class PoolWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_id,
+            wallet_id=uint32(self.wallet_id),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
