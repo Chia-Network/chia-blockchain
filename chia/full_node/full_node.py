@@ -101,12 +101,10 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
-        self._ui_tasks = set()
 
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
+
+        self._ui_tasks = set()
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -731,7 +729,7 @@ class FullNode:
         if len(ses_heigths) > 2 and our_peak_height is not None:
             ses_heigths.sort()
             max_fork_ses_height = ses_heigths[-3]
-            # This is fork point in SES in case where fork was not detected
+            # This is the fork point in SES in the case where no fork was detected
             if self.blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
                 for peer in peers_with_peak:
                     # Grab a block at peak + 1 and check if fork point is actually our current height
