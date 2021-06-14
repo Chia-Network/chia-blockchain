@@ -24,7 +24,6 @@ POOL_WAITING_ROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
 POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 POOL_OUTER_MOD = SINGLETON_MOD
-# SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
 POOL_WAITING_ROOM_HASH = POOL_WAITING_ROOM_MOD.get_tree_hash()

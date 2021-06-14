@@ -414,7 +414,7 @@ class WalletNode:
                     header_block_records.append(hbr)
                     additional_coin_spends = []
                 (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    hbr, additional_coin_spends=additional_coin_spends
+                    hbr, trusted=trusted, additional_coin_spends=additional_coin_spends
                 )
                 if result == ReceiveBlockResult.NEW_PEAK:
                     if not self.wallet_state_manager.sync_mode:

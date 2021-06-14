@@ -1132,7 +1132,6 @@ class WalletRpcApi:
     async def pw_status(self, request):
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
         wallet_id = uint32(request["wallet_id"])
-        log.warning(f"Wallets: {self.service.wallet_state_manager.wallets}")
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != WalletType.POOLING_WALLET.value:
             raise ValueError(f"wallet_id {wallet_id} is not a pooling wallet")
