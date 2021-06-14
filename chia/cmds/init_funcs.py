@@ -51,7 +51,7 @@ def check_keys(new_root: Path) -> None:
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
-        return
+        return None
 
     config: Dict = load_config(new_root, "config.yaml")
     pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
@@ -222,6 +222,13 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
         generate_ca_signed_cert(ca_crt, ca_key, crt_path, key_path)
 
 
+def copy_cert_files(cert_path: Path, new_path: Path):
+    for ext in "*.crt", "*.key":
+        for old_path_child in cert_path.glob(ext):
+            new_path_child = new_path / old_path_child.name
+            copy_files_rec(old_path_child, new_path_child)
+
+
 def init(create_certs: Optional[Path], root_path: Path):
     if create_certs is not None:
         if root_path.exists():
@@ -231,13 +238,18 @@ def init(create_certs: Optional[Path], root_path: Path):
                     print(f"Deleting your OLD CA in {ca_dir}")
                     shutil.rmtree(ca_dir)
                 print(f"Copying your CA from {create_certs} to {ca_dir}")
-                copy_files_rec(create_certs, ca_dir)
+                copy_cert_files(create_certs, ca_dir)
                 create_all_ssl(root_path)
             else:
                 print(f"** Directory {create_certs} does not exist **")
         else:
-            print(f"** {root_path} does not exist **")
-            print("** Please run `chia init` to migrate or create new config files **")
+            print(f"** {root_path} does not exist. Executing core init **")
+            # sanity check here to prevent infinite recursion
+            if chia_init(root_path) == 0 and root_path.exists():
+                return init(create_certs, root_path)
+
+            print(f"** {root_path} was not created. Exiting **")
+            return -1
     else:
         return chia_init(root_path)
 
@@ -321,6 +333,6 @@ def chia_init(root_path: Path):
     create_all_ssl(root_path)
     check_keys(root_path)
     print("")
-    print("To see your keys, run 'chia keys show'")
+    print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
 
     return 0

@@ -1,26 +1,23 @@
-from setuptools_scm import get_version
-import sys
 import os
+import sys
+
+from setuptools_scm import get_version
 
 
 # example: 1.0b5.dev225
 def main():
-
-    if len(sys.argv) > 1 and "win" in sys.argv[1]:  # Special case windows to 0.1.6225
-        windows = True
-    else:
-        windows = False
+    windows = len(sys.argv) > 1 and "win" in sys.argv[1]  # Special case windows to 0.1.6225
 
     scm_full_version = get_version(root="..", relative_to=__file__)
-    #    scm_full_version = "1.0.5.dev22"
+    # scm_full_version = "1.0.5.dev22"
     os.environ["SCM_VERSION"] = scm_full_version
+
     left_full_version = scm_full_version.split("+")
-
     version = left_full_version[0].split(".")
-
     scm_major_version = version[0]
     scm_minor_version = version[1]
-    if len(version) == 3:  # if the length of the version array is more than 2
+
+    if len(version) == 3:  # If the length of the version array is more than 2
         patch_release_number = version[2]
         smc_patch_version = patch_release_number
         dev_release_number = ""
@@ -34,7 +31,7 @@ def main():
     major_release_number = scm_major_version
     minor_release_number = scm_minor_version
 
-    # If this is a beta dev release - get which beta it is
+    # If this is a beta dev release, get which beta it is
     if "0b" in scm_minor_version:
         orignial_minor_ver_list = scm_minor_version.split("0b")
         major_release_number = str(1 - int(scm_major_version))  # decrement the major release for beta

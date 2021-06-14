@@ -68,7 +68,7 @@ jobs:
             echo "Emulating install.sh" && \
             pip install --upgrade pip && \
             pip install wheel && \
-            pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1 && \
+            pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2 && \
             pip install . --extra-index-url https://pypi.chia.net/simple/ && \
             ldd --version && \
             cd build_scripts && \

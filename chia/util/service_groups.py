@@ -1,4 +1,4 @@
-from typing import KeysView
+from typing import KeysView, Generator
 
 SERVICES_FOR_GROUP = {
     "all": "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet".split(),
@@ -21,11 +21,11 @@ def all_groups() -> KeysView[str]:
     return SERVICES_FOR_GROUP.keys()
 
 
-def services_for_groups(groups):
+def services_for_groups(groups) -> Generator[str, None, None]:
     for group in groups:
         for service in SERVICES_FOR_GROUP[group]:
             yield service
 
 
-def validate_service(service) -> bool:
+def validate_service(service: str) -> bool:
     return any(service in _ for _ in SERVICES_FOR_GROUP.values())

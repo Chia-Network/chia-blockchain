@@ -48,7 +48,7 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: github/super-linter@v3.15.5
+        uses: github/super-linter@v4.0.2
 #        uses: docker://github/super-linter:v3.10.2
         env:
           VALIDATE_ALL_CODEBASE: true
@@ -74,6 +74,7 @@ jobs:
           DISABLE_ERRORS: false
           PYTHONPATH: ${{ github.workspace }}:$PYTHONPATH
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER_REGEX_EXCLUDE: .*github/ISSUE_TEMPLATE/config.yml
 #          ACTIONS_RUNNER_DEBUG: true
 
 ...

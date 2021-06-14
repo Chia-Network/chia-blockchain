@@ -58,14 +58,18 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
                 break
             print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name)
         if i + num_per_screen >= len(txs):
-            return
+            return None
         print("Press q to quit, or c to continue")
         while True:
             entered_key = sys.stdin.read(1)
             if entered_key == "q":
-                return
+                return None
             elif entered_key == "c":
                 break
+
+
+def check_unusual_transaction(amount: Decimal, fee: Decimal):
+    return fee >= amount
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -73,7 +77,14 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
+    override = args["override"]
 
+    if not override and check_unusual_transaction(amount, fee):
+        print(
+            f"A transaction of amount {amount} and fee {fee} is unusual.\n"
+            f"Pass in --override if you are sure you mean to do this."
+        )
+        return
     print("Submitting transaction...")
     final_amount = uint64(int(amount * units["chia"]))
     final_fee = uint64(int(fee * units["chia"]))
@@ -86,7 +97,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
             print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
-            return
+            return None
 
     print("Transaction not yet submitted to nodes")
     print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
@@ -180,13 +191,13 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
             if "backup_path" not in log_in_response or use_cloud is False:
                 if use_cloud is True:
                     val = input(
-                        "No online backup file found, \n Press S to skip restore from backup"
-                        " \n Press F to use your own backup file: "
+                        "No online backup file found,\n Press S to skip restore from backup"
+                        "\n Press F to use your own backup file: "
                     )
                 else:
                     val = input(
-                        "Cloud backup declined, \n Press S to skip restore from backup"
-                        " \n Press F to use your own backup file: "
+                        "Cloud backup declined,\n Press S to skip restore from backup"
+                        "\n Press F to use your own backup file: "
                     )
 
                 if val.lower() == "s":
@@ -214,7 +225,7 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
         if wallet_client_f is None:
             wallet_client.close()
             await wallet_client.await_closed()
-            return
+            return None
         wallet_client, fingerprint = wallet_client_f
         await function(extra_params, wallet_client, fingerprint)
     except KeyboardInterrupt:

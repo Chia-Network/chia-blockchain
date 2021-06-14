@@ -102,7 +102,7 @@ def created_outputs_for_conditions_dict(
         # and don't just fail with asserts
         puzzle_hash, amount_bin = cvp.vars[0], cvp.vars[1]
         amount = int_from_bytes(amount_bin)
-        coin = Coin(input_coin_name, puzzle_hash, amount)
+        coin = Coin(input_coin_name, puzzle_hash, uint64(amount))
         output_coins.append(coin)
     return output_coins
 
