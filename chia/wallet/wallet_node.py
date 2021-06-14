@@ -940,7 +940,7 @@ class WalletNode:
                 return None
             return None
         else:
-            return []
+            return []  # No added coins
 
     async def get_removals(
         self, peer: WSChiaConnection, block_i, additions, removals, request_all_removals=False

@@ -108,14 +108,12 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
             wallet_rpc_port = config["wallet"]["rpc_port"]
         wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
         amounts = await wallet_client.get_farmed_amount()
-    except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(
-                f"Connection error. Check if wallet is running at {wallet_rpc_port}. "
-                f"You can run the wallet by:\n    chia start wallet"
-            )
-        else:
-            print(f"Exception from 'wallet' {e}")
+    #
+    # Don't catch any exceptions, the caller will handle it
+    #
+    finally:
+        wallet_client.close()
+        await wallet_client.await_closed()
 
     return amounts
 
@@ -242,11 +240,11 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Estimated network space: Unknown")
 
     minutes = -1
-    if blockchain_state is not None and plots is not None:
+    if blockchain_state is not None and all_plots is not None:
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
 
-    if plots is not None and len(plots["plots"]) == 0:
+    if all_plots is not None and len(all_plots["plots"]) == 0:
         print("Expected time to win: Never (no plots)")
     else:
         print("Expected time to win: " + format_minutes(minutes))
