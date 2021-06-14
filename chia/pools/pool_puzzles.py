@@ -161,14 +161,19 @@ def create_travel_spend(
         delay_ph,
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
-        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([1, 0, 0, bytes(target)])
+        # inner sol is key_value_list ()
+        inner_sol: Program = Program.to([bytes(target), ()])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
-        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data, destination_puz hash)
+        # inner sol is (spend_type, extra_data, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
-        inner_sol = Program.to([1, 0, 0, bytes(target), destination_inner.get_tree_hash()])
+        log.warning(
+            f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
+            f"{target}"
+            f"hash:{Program(bytes(target)).get_tree_hash()}"
+        )
+        inner_sol = Program.to([1, destination_inner.get_tree_hash(), bytes(target)])  # current or target
     else:
         raise ValueError
 
@@ -216,10 +221,10 @@ def create_absorb_spend(
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([0, reward_amount, height, 0])
+        inner_sol: Program = Program.to([reward_amount, height])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol = Program.to([0, reward_amount, height, 0, 0])
+        inner_sol = Program.to([0, reward_amount, height])
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)

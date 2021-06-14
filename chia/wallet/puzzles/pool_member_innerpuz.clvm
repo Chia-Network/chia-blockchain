@@ -4,10 +4,9 @@
       POOL_REWARD_PREFIX
       WAITINGROOM_PUZHASH
       (my_id my_full_puzzle_hash my_inner_puzzle_hash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash)
-      spend_type
-      pool_reward_amount
+      p1
       pool_reward_height
-      key_value_list)
+      )
 
 
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
@@ -16,10 +15,13 @@
   ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
   ; WAITINGROOM_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
 
-  ; spend_type is: 0 for absorbing money, 1 to escape
+  ; spend_type is absorbing money if pool_reward_height exists, spend_type is escape if pool_reward_height is ()
+  ; p1 is pool_reward_amount if absorbing money
+  ; p1 is key_value_list if escaping
+
   ; pool_reward_amount is the value of the coin reward - this is passed in so that this puzzle will still work after halvenings
-  ; pool_reward_height is the block height that the reward was generated at. This is used to calculate the coin ID.
   ; key_value_list is signed extra data that the wallet may want to publicly announce for syncing purposes
+  ; pool_reward_height is the block height that the reward was generated at. This is used to calculate the coin ID.
 
   ; absorb_coin_id and my_inner_puzzle_hash are only used for absorbtion case
 
@@ -48,16 +50,16 @@
 
   ; main
 
-  (if spend_type
-    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree key_value_list ()))
+  (if pool_reward_height
+    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree p1))
           (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
 
     )
     (absorb_pool_reward POOL_PUZZLE_HASH
                         my_inner_puzzle_hash
                         my_amount
-                        pool_reward_amount
-                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX pool_reward_amount)
+                        p1
+                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
     )
   )
 )
