@@ -2589,3 +2589,17 @@ class TestReorgs:
             != blocks_without_filter[header_hash].transactions_filter
         )
         assert blocks_with_filter[header_hash].header_hash == blocks_without_filter[header_hash].header_hash
+
+    @pytest.mark.asyncio
+    async def test_get_blocks_at(self, empty_blockchain, default_1000_blocks):
+        b = empty_blockchain
+        heights = []
+        for block in default_1000_blocks[:200]:
+            heights.append(block.height)
+            result, error_code, _ = await b.receive_block(block)
+            assert error_code is None and result == ReceiveBlockResult.NEW_PEAK
+
+        blocks = await b.get_block_records_at(heights, batch_size=2)
+        assert blocks
+        assert len(blocks) == 200
+        assert blocks[-1].height == 199

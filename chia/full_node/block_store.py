@@ -127,7 +127,12 @@ class BlockStore:
         return None
 
     def rollback_cache_block(self, header_hash: bytes32):
-        self.block_cache.remove(header_hash)
+        try:
+            self.block_cache.remove(header_hash)
+        except KeyError:
+            # this is best effort. When rolling back, we may not have added the
+            # block to the cache yet
+            pass
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)
