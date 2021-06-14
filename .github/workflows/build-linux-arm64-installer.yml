@@ -34,6 +34,15 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
+    # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
+    - name: Create installer version number
+      id: version_number
+      run: |
+        python3 -m venv ../venv
+        . ../venv/bin/activate
+        pip3 install setuptools_scm
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
+        deactivate
 
     - name: Build ARM64 Installer
       run: |
@@ -65,14 +74,6 @@ jobs:
             cd build_scripts && \
             sh build_linux.sh arm64 \
           '
-
-    - name: Create installer version number
-      id: version_number
-      run: |
-        ls && pwd ${{ github.workspace }}
-        sh ${{ github.workspace }}/install.sh
-        cd ${{ github.workspace }} && . ./activate
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
