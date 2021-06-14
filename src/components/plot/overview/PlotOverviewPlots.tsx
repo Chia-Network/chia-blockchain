@@ -75,6 +75,12 @@ const cols = [
   },
   {
     minWidth: '100px',
+    field: 'pool_contract_puzzle_hash',
+    tooltip: 'pool_contract_puzzle_hash',
+    title: <Trans>Pool Contract Puzzle Hash</Trans>,
+  },
+  {
+    minWidth: '100px',
     field: 'filename',
     tooltip: 'filename',
     title: <Trans>Filename</Trans>,
@@ -132,6 +138,7 @@ export default function PlotOverviewPlots() {
                       <PlotQueueSize queueItem={item} />
                     </TableCell>
                     <TableCell>{item.queue}</TableCell>
+                    <TableCell />
                     <TableCell />
                     <TableCell />
                     <TableCell />

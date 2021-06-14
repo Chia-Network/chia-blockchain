@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
-import usePoolJoin from '../../hooks/usePoolJoin';
-import type Group from '../../types/Group';
+import useJoinPool from '../../hooks/useJoinPool';
+import type PlotNFT from '../../types/PlotNFT';
 
 type Props = {
-  group: Group;
-  children: (join) => JSX.Element,
+  nft: PlotNFT;
+  children: (joinPool) => JSX.Element,
 };
 
 export default function PoolJoin(props: Props) {
-  const { group, children } = props;
+  const { nft, children } = props;
 
-  const [join] = usePoolJoin(group);
+  const joinPool = useJoinPool(nft);
 
-  return children(join);
+  return children(joinPool);
 }

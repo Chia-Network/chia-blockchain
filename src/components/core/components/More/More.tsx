@@ -1,9 +1,12 @@
 import React, { ReactNode } from 'react';
-import { Menu } from '@material-ui/core';
+import { Menu, MenuProps } from '@material-ui/core';
 import { MoreVert as MoreVertIcon } from '@material-ui/icons';
 import IconButton from '../IconButton';
 
-type Props = {
+// anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+// transformOrigin={{ vertical: "top", horizontal: "right" }}
+
+type Props = MenuProps & {
   children: ({ onClose }: { onClose: () => void }) => ReactNode,
 };
 

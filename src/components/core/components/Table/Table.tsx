@@ -69,10 +69,11 @@ type Props = {
   caption?: ReactNode;
   onRowClick?: (e: SyntheticEvent, row: Row) => void;
   rowHover?: boolean;
+  uniqueField?: string;
 };
 
 export default function Table(props: Props) {
-  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader, caption, onRowClick, rowHover } = props;
+  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader, caption, onRowClick, rowHover, uniqueField } = props;
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(defaultRowsPerPage ?? 10);
 
@@ -96,7 +97,7 @@ export default function Table(props: Props) {
   })), [cols]);
 
   const preparedRows = useMemo<InternalTableRow[]>(() => rows.map((row, rowIndex) => ({
-    id: rowIndex,
+    $uniqueId: uniqueField ? row[uniqueField] : rowIndex,
     ...row,
   })), [rows]);
 
@@ -142,7 +143,7 @@ export default function Table(props: Props) {
           {children}
           {currentRows.map((row) => (
             <StyledTableRow 
-              key={row.id} 
+              key={row.$uniqueId} 
               onClick={(e) => handleRowClick(e, row)} 
               hover={rowHover}
             >
@@ -216,4 +217,5 @@ Table.defaultProps = {
   caption: undefined,
   children: undefined,
   rowHover: false,
+  uniqueField: undefined,
 };

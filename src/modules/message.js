@@ -33,13 +33,15 @@ export const clearSend = () => {
   return action;
 };
 
-export const walletMessage = (message) => ({
-  type: 'OUTGOING_MESSAGE',
-  message: {
-    destination: service_wallet,
-    ...message,
-  },
-});
+export function walletMessage(message) {
+  return {
+    type: 'OUTGOING_MESSAGE',
+    message: {
+      destination: service_wallet,
+      ...message,
+    },
+  };
+}
 
 export const selectFingerprint = (fingerprint) => ({
   type: 'SELECT_FINGERPRINT',
@@ -79,11 +81,64 @@ export const async_api = (dispatch, action, openSpinner, usePromiseReject) => {
   return promise;
 };
 
-export const format_message = (command, data) => {
-  const action = walletMessage();
-  action.message.command = command;
-  action.message.data = data;
-  return action;
+export function format_message(command, data) {
+  return walletMessage({
+    command,
+    data,
+  });
+}
+
+export function getWalletsMessage() {
+  return format_message('get_wallets');
+}
+
+export function getTransactionMessage(transactionId) {
+  return format_message('get_transaction', {
+    transaction_id: transactionId,
+  });
+}
+
+export function pwStatusMessage(walletId) {
+  return format_message('pw_status', {
+    wallet_id: walletId,
+  });
+}
+
+export function pwAbsorbRewardsMessage(walletId, fee) {
+  return format_message('pw_absorb_rewards', {
+    wallet_id: walletId,
+    fee,
+  });
+}
+
+export function pwJoinPoolMessage(walletId, poolUrl, relativeLockHeight, targetPuzzlehash) {
+  const data = {
+    wallet_id: walletId,
+    pool_url: poolUrl,
+    relative_lock_height: relativeLockHeight,
+  };
+
+  if (target_puzzlehash) {
+    data.target_puzzlehash = targetPuzzlehash;
+  }
+
+  return format_message('pw_join_pool', data);
+}
+
+export function pwSelfPoolMessage(walletId) {
+  return format_message('pw_self_pool', {
+    wallet_id: walletId,
+  });
+};
+
+export function createPoolWalletMessage(initialTargetState, fee) {
+  return format_message('create_new_wallet', {
+    wallet_type: 'pool_wallet',
+    mode: 'new',
+    fee,
+    host: backup_host,
+    initial_target_state: initialTargetState,
+  });
 };
 
 export const pingWallet = () => {
@@ -726,31 +781,6 @@ export const recover_did_wallet = (filename) => {
   };
   return action;
 };
-
-export const create_pool_wallet = (initialTargetState, fee) => {
-  const action = walletMessage();
-  action.message.command = 'create_new_wallet';
-  action.message.data = {
-    wallet_type: 'pool_wallet',
-    mode: 'new',
-    fee,
-    host: backup_host,
-    initial_target_state: initialTargetState,
-  };
-  return action;
-};
-
-export const collect_self_pooling_rewards = (walletId, fee) => {
-  const action = walletMessage();
-  action.message.command = 'pw_collect_self_pooling_rewards';
-  action.message.data = {
-    wallet_id: walletId,
-    fee,
-  };
-  return action;
-};
-
-
 
 export const recover_did_action = (filename) => (dispatch) =>
   async_api(dispatch, recover_did_wallet(filename), true).then((response) => {

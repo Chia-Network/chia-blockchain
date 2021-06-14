@@ -1,23 +1,26 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
 import { Alert } from '@material-ui/lab';
-import { useWatch, useFormContext } from "react-hook-form";
-import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, TextField } from '@chia/core';
+import styled from 'styled-components';
+import { useWatch, useFormContext } from 'react-hook-form';
+import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, Fee } from '@chia/core';
 import { Grid, FormControl, FormControlLabel, Typography, Radio, Collapse } from '@material-ui/core';
-import type Group from '../../../types/Group';
 import PoolInfo from '../../pool/PoolInfo';
 import usePoolInfo from '../../../hooks/usePoolInfo';
+import usePlotNFTs from '../../../hooks/usePlotNFTs';
+
+const StyledCollapse = styled(Collapse)`
+  display: ${({ in: visible }) => visible ? 'block' : 'none'};
+`;
 
 type Props = {
   step?: number;
   onCancel?: Function;
 };
 
-export default function GroupAddCreate(props: Props) {
+export default function PlotNFTAddCreate(props: Props) {
   const { step, onCancel } = props;
-
-  const groups = useSelector<Group[] | undefined>((state: RootState) => state.group.groups);
+  const { nfts } = usePlotNFTs();
   const { control, setValue } = useFormContext();
   const self = useWatch<boolean>({
     control,
@@ -32,14 +35,14 @@ export default function GroupAddCreate(props: Props) {
   const poolInfo = usePoolInfo(poolUrl);
 
   const groupsOptions = useMemo(() => {
-    if (!groups) {
+    if (!nfts) {
       return [];
     }
 
-    return groups
-      .filter((group) => !!group.poolUrl)
-      .map((group) => group.poolUrl);
-  }, [groups]);
+    return nfts
+      .filter((nft) => !!nft.poolUrl)
+      .map((nft) => nft.poolUrl);
+  }, [nfts]);
 
   function handleDisableSelfPooling() {
     if (self) {
@@ -114,7 +117,7 @@ export default function GroupAddCreate(props: Props) {
             </FormControl>
           </Grid>
           <Grid xs={12} lg={6} item>
-            <TextField
+            <Fee
               name="fee"
               type="text"
               variant="filled"
@@ -125,7 +128,7 @@ export default function GroupAddCreate(props: Props) {
         </Grid>
       </CardStep>
 
-      <Collapse in={showPoolInfo}>
+      <StyledCollapse in={showPoolInfo}>
         <CardStep
           step={step + 1}
           title={<Trans>Verify Pool Details</Trans>}
@@ -146,12 +149,12 @@ export default function GroupAddCreate(props: Props) {
             <PoolInfo poolInfo={poolInfo.poolInfo} />
           )}
         </CardStep>
-      </Collapse>
+      </StyledCollapse>
     </>
   );
 }
 
-GroupAddCreate.defaultProps = {
+PlotNFTAddCreate.defaultProps = {
   step: 1,
   onCancel: undefined,
 };

@@ -1,24 +1,21 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Route, Switch, useRouteMatch } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { useInterval } from 'react-use';
 import { Flex, Link } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 import PoolOverview from './PoolOverview';
-import GroupAdd from '../group/add/GroupAdd';
+import GroupAdd from '../plotNFT/add/PlotNFTAdd';
 import { PoolHeaderTarget }  from './PoolHeader';
-import type { RootState } from '../../modules/rootReducer';
-import { getPoolState } from '../../modules/farmerMessages';
-import usePlotNFT from '../../hooks/usePlotNFT';
+import usePlotNFTs from '../../hooks/usePlotNFTs';
 import { PoolHeaderSource } from './PoolHeader';
 
 export default function Pool() {
   const { path } = useRouteMatch();
-  const { groups, loading } = usePlotNFT();
+  const { nfts, loading } = usePlotNFTs();
 
   return (
-    <LayoutMain 
+    <LayoutMain
+      loading={loading}
       title={
         <>
           <Link to="/dashboard/pool" color="textPrimary">
@@ -26,8 +23,7 @@ export default function Pool() {
           </Link>
           <PoolHeaderTarget />
         </>
-      } 
-      loading={loading}
+      }
     >
       <Flex flexDirection="column" gap={3}>
         <Switch>

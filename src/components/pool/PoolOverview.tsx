@@ -9,49 +9,51 @@ import {
   Payment as PaymentIcon,
   Power as PowerIcon,
 } from '@material-ui/icons';
-import { useSelector } from 'react-redux';
 import { Box, Button, ListItemIcon, MenuItem, IconButton, Grid, Tooltip, Typography } from '@material-ui/core';
-import type { RootState } from '../../modules/rootReducer';
 import { sumBy } from 'lodash';
-import type Group from '../../types/Group';
-import PoolCard from '../group/GroupCard';
-import GroupName from '../group/GroupName';
-import GroupStatus from '../group/GroupStatus';
+import PlotNFTCard from '../plotNFT/PlotNFTCard';
+import PlotNFTName from '../plotNFT/PlotNFTName';
+import PlotNFTState from '../plotNFT/PlotNFTState';
 import PoolWalletStatus from '../wallet/WalletStatus';
-import PoolClaimRewards from '../group/GroupClaimRewards';
+import PlotNFTAbsorbRewards from '../plotNFT/PlotNFTAbsorbRewards';
 import PoolJoin from './PoolJoin';
 import PoolHero from './PoolHero';
+import type PlotNFT from '../../types/PlotNFT';
+import usePlotNFTs from '../../hooks/usePlotNFTs';
+import PlotNFTStateEnum from '../../constants/PlotNFTState';
+import PlotNFTUnconfirmedCard from '../plotNFT/PlotNFTUnconfirmedCard';
+import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
 
 const groupsCols = [
   {
-    field: (group: Group) => <GroupName group={group} />,
-    title: <Trans>Pool Name: URL</Trans>,
+    field: (nft: PlotNFT) => <PlotNFTName nft={nft} />,
+    title: <Trans>Plot NFT</Trans>,
   },
   {
     field: () => <PoolWalletStatus />,
     title: <Trans>Wallet Status</Trans>,
   },
   {
-    field: (group: Group) => <GroupStatus group={group} />,
-    title: <Trans>Pool Status</Trans>,
+    field: (nft: PlotNFT) => <PlotNFTState nft={nft} />,
+    title: <Trans>Status</Trans>,
   },
   {
-    field: (group: Group) => <UnitFormat value={group.balance ?? 0} />,
-    title: <Trans>Pool Winnings</Trans>,
+    field: (nft: PlotNFT) => <UnitFormat value={nft.wallet_balance.confirmed_wallet_balance ?? 0} />,
+    title: <Trans>Rewards</Trans>,
   },
   {
     title: <Trans>Actions</Trans>,
-    field(group: Group) {
-      const isSelfPooling = !group.pool_config.pool_url;
+    field(nft: PlotNFT) {
+      const isSelfPooling = nft.pool_wallet_status.current.state === PlotNFTStateEnum.SELF_POOLING;
 
       return (
         <More>
           {({ onClose }) => (
             <Box>
               {isSelfPooling && (
-                <PoolClaimRewards group={group}>
-                  {(claimRewards) => (
-                    <MenuItem onClick={() => { onClose(); claimRewards(); }}>
+                <PlotNFTAbsorbRewards nft={nft}>
+                  {(absorbRewards) => (
+                    <MenuItem onClick={() => { onClose(); absorbRewards(); }}>
                       <ListItemIcon>
                         <PaymentIcon fontSize="small" />
                       </ListItemIcon>
@@ -60,17 +62,17 @@ const groupsCols = [
                       </Typography>
                     </MenuItem>
                   )}
-                </PoolClaimRewards>
+                </PlotNFTAbsorbRewards>
               )}
 
-              <PoolJoin group={group}>
+              <PoolJoin nft={nft}>
                 {(join) => (
                   <MenuItem onClick={() => { onClose(); join(); }}>
                     <ListItemIcon>
                       <PowerIcon fontSize="small" />
                     </ListItemIcon>
                     <Typography variant="inherit" noWrap>
-                      {group.self 
+                      {isSelfPooling 
                         ? <Trans>Join Pool</Trans>
                         : <Trans>Change Pool</Trans>}
                     </Typography>
@@ -88,14 +90,14 @@ const groupsCols = [
 export default function PoolOverview() {
   const history = useHistory();
   const [showTable, toggleShowTable] = useToggle(false);
-  const groups = useSelector<Group[] | undefined>((state: RootState) => state.group.groups);
-  const loading = !groups;
+  const { nfts, loading } = usePlotNFTs();
+  const { unconfirmed } = useUnconfirmedPlotNFTs();
 
   const totalWinning = useMemo<number>(
-    () => groups && groups.length
-      ? sumBy<Group>(groups, (item) => item.balance ?? 0)
+    () => nfts && nfts.length
+      ? sumBy<PlotNFT>(nfts, (item) => item.wallet_balance.confirmed_wallet_balance ?? 0)
       : 0, 
-    [groups],
+    [nfts],
   );
 
   function handleAddPool() {
@@ -110,7 +112,7 @@ export default function PoolOverview() {
     return null;
   }
 
-  if (!groups || !groups.length) {
+  if (!nfts || !nfts.length) {
     return (
       <PoolHero />
     );
@@ -144,7 +146,7 @@ export default function PoolOverview() {
           <Flex gap={1} >
             <Typography variant="body1" color="textSecondary">
               <Trans>
-                Total Pool Winnings
+                Total Rewards
               </Trans>
             </Typography>
             <UnitFormat value={totalWinning} state={State.SUCCESS} />
@@ -152,14 +154,20 @@ export default function PoolOverview() {
         </Flex>
         {showTable ? (
           <Table
-            rows={groups} 
+            uniqueField="p2_singleton_puzzle_hash"
+            rows={nfts} 
             cols={groupsCols} 
           />
         ) : (
           <Grid spacing={3} alignItems="stretch" container>
-            {groups.map((group) => (
-              <Grid key={group.id} xs={12} md={6} item>
-                <PoolCard group={group} />
+            {unconfirmed.map((unconfirmedPlotNFT) => (
+              <Grid key={unconfirmedPlotNFT.transactionId} xs={12} md={6} item>
+                <PlotNFTUnconfirmedCard unconfirmedPlotNFT={unconfirmedPlotNFT} />
+              </Grid>
+            ))}
+            {nfts.map((nft) => (
+              <Grid key={nft.pool_state.p2_singleton_puzzle_hash} xs={12} md={6} item>
+                <PlotNFTCard nft={nft} />
               </Grid>
             ))}
           </Grid>

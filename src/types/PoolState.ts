@@ -1,17 +1,6 @@
 import type PoolInfo from './PoolInfo';
 
-type Group = {
-  id: string;
-  self: boolean;
-  name: string;
-  poolUrl?: string;
-  poolName?: string;
-  poolDescription?: string;
-  state: 'NOT_CREATED' | 'FREE' | 'POOLING' | 'ESCAPING';
-  targetState?: 'FREE' | 'POOLING' | 'ESCAPING';
-  balance: number;
-  address: string;
-
+type PoolState = {
   p2_singleton_puzzle_hash: string;
   points_found_since_start: number;
   points_found_24h: number[];
@@ -40,4 +29,4 @@ type Group = {
   };
 };
 
-export default Group;
+export default PoolState;

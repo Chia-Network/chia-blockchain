@@ -5,7 +5,7 @@ import { openDialog } from '../modules/dialog';
 export default function useOpenDialog() {
   const dispatch = useDispatch();
 
-  function handleOpen(dialog: ReactNode) {
+  function handleOpen<T>(dialog: ReactNode): Promise<T> {
     return dispatch(openDialog(dialog));
   }
 

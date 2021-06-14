@@ -2,27 +2,27 @@ import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useInterval } from 'react-use';
 import type { RootState } from '../modules/rootReducer';
-import type Group from '../types/Group';
-import { getPoolState } from '../modules/farmerMessages';
+import type PlotNFT from '../types/PlotNFT';
+import { getPlotNFTs } from '../modules/plotNFT';
 
-export default function usePoolState(): {
+export default function usePlotNFTs(): {
   loading: boolean;
-  groups?: Group[];
+  nfts?: PlotNFT[];
 } {
   const dispatch = useDispatch();
-  const groups = useSelector((state: RootState) => state.group.groups);
-  const loading = !groups;
+  const nfts = useSelector((state: RootState) => state.plot_nft.items);
+  const loading = !nfts;
 
   useInterval(() => {
-    dispatch(getPoolState());
+    dispatch(getPlotNFTs());
   }, 10000);
 
   useEffect(() => {
-    dispatch(getPoolState());
+    dispatch(getPlotNFTs());
   }, []);
 
   return {
     loading,
-    groups,
+    nfts,
   };
 }

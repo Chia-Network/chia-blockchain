@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
@@ -169,6 +169,9 @@ export default function Wallets() {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const id = useSelector((state: RootState) => state.wallet_menu.id);
   const wallet = wallets.find((wallet) => wallet && wallet.id === id);
+  const visibleWallets = useMemo(() => {
+    return wallets.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET);
+  }, [wallets]);
 
   return (
     <LayoutSidebar
@@ -180,7 +183,7 @@ export default function Wallets() {
           <Divider />
           <Flex flexGrow={1} overflow="auto">
             <StyledList disablePadding>
-              {wallets.map((wallet) => (
+              {visibleWallets.map((wallet) => (
                 <span key={wallet.id}>
                   <WalletItem wallet_id={wallet.id} key={wallet.id} />
                   <Divider />

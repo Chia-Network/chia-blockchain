@@ -1,16 +1,16 @@
 import React, { useState, ReactNode } from 'react';
 import { useHistory } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
-import { Button, Typography } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm } from 'react-hook-form';
-import { Flex, Form, Loading } from '@chia/core';
-import GroupAddCreate from './GroupAddCreate';
-import { createPoolNFT } from '../../../modules/group';
-import type { RootState } from '../../../modules/rootReducer';
+import { ButtonLoading, Flex, Form, FormBackButton } from '@chia/core';
+import GroupAddCreate from './PlotNFTAddCreate';
+import { createPlotNFT } from '../../../modules/plotNFT';
 import PlotNFTState from '../../../constants/PlotNFTState';
 import getPoolInfo from '../../../util/getPoolInfo';
+import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
+import { chia_to_mojo } from '../../../util/chia';
 
 type FormData = {
   self: boolean;
@@ -24,12 +24,13 @@ type Props = {
   onCancel?: boolean;
 }
 
-export default function GroupAdd(props: Props) {
+export default function PlotNFTAdd(props: Props) {
   const { headerTag: HeaderTag, step, onCancel } = props;
 
   const dispatch = useDispatch();
   const history = useHistory();
   const [loading, setLoading] = useState<boolean>(false);
+  const unconfirmedNFTs = useUnconfirmedPlotNFTs();
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
@@ -46,7 +47,7 @@ export default function GroupAdd(props: Props) {
 
       const { self, fee, poolUrl } = data;
       const initialTargetState = {
-        state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+        state: self ? 'SELF_POOLING' : 'FARMING_TO_POOL',
       };
 
       if (!self && poolUrl) {
@@ -63,10 +64,15 @@ export default function GroupAdd(props: Props) {
         initialTargetState.relative_lock_height = relative_lock_height;
       }
 
-      const { success, transaction } = await dispatch(createPoolNFT(initialTargetState, fee || undefined));
+      const feeMojos = chia_to_mojo(fee);
+
+      const { success, transaction } = await dispatch(createPlotNFT(initialTargetState, feeMojos));
       if (success) {
-        console.log('transaction', transaction);
-        // setTransaction
+        unconfirmedNFTs.add({
+          transactionId: transaction.name,
+          state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+          poolUrl,
+        });
       }
 
       history.push('/dashboard/pool');
@@ -91,35 +97,23 @@ export default function GroupAdd(props: Props) {
         </HeaderTag>
       )}
       <Flex flexDirection="column" gap={3}>
-        {loading ? (
-          <Flex flexDirection="column" gap={3} alignItems="center">
-            <Typography variant="h6">
+        <GroupAddCreate step={step} onCancel={onCancel} />
+        {!onCancel && (
+          <Flex gap={1}>
+            <FormBackButton variant="contained" />
+            <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
               <Trans>
-                Waiting on transaction to hit the memory pool...
+                Create
               </Trans>
-            </Typography>
-            <Loading />
+            </ButtonLoading>
           </Flex>
-        ) : (
-          <>
-            <GroupAddCreate step={step} onCancel={onCancel} />
-            {!onCancel && (
-              <Flex gap={1}>
-                <Button color="primary" type="submit" variant="contained">
-                  <Trans>
-                    Create
-                  </Trans>
-                </Button>
-              </Flex>
-            )}
-          </>
         )}
       </Flex>
     </Form>
   );
 }
 
-GroupAdd.defaultProps = {
+PlotNFTAdd.defaultProps = {
   step: undefined,
   onCancel: undefined,
 };

@@ -1,8 +1,64 @@
 import { service_wallet } from '../util/service_names';
-import type Wallet from '../types/Wallet';
 import createWallet from '../util/createWallet';
+import { async_api, pwStatusMessage, getWalletsMessage, get_balance_for_wallet, getTransactionMessage } from './message';
+import type WalletBalance from '../types/WalletBalance';
+import type Wallet from '../types/Wallet';
+import type Transaction from '../types/Transaction';
+import type PoolWalletStatus from '../types/PoolWalletStatus';
 
-type IncomingState = {
+export function getTransaction(transactionId: string) {
+  return async (dispatch): Promise<Transaction> => {
+    const { data } = await async_api(
+      dispatch,
+      getTransactionMessage(transactionId),
+      false,
+    );
+
+    return data?.transaction;
+  };
+}
+
+export function getPwStatus(walletId: number) {
+  return async (dispatch): Promise<PoolWalletStatus> => {
+    const { data } = await async_api(
+      dispatch,
+      pwStatusMessage(walletId),
+      false,
+    );
+
+    return {
+      wallet_id: walletId,
+      ...data?.state,
+    };
+  };
+}
+
+export function getWallets() {
+  return async (dispatch): Promise<Wallet[]> => {
+    const { data } = await async_api(
+      dispatch,
+      getWalletsMessage(),
+      false,
+    );
+
+    return data?.wallets;
+  };
+}
+
+export function getWalletBalance(walletId: number) {
+  return async (dispatch): Promise<WalletBalance> => {
+    const { data } = await async_api(
+      dispatch,
+      get_balance_for_wallet(walletId),
+      false,
+    );
+
+    return data?.wallet_balance;
+  };
+}
+
+
+export type IncomingState = {
   mnemonic: string[];
   public_key_fingerprints: number[];
   selected_fingerprint?: number | null;

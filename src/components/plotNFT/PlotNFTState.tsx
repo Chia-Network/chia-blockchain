@@ -2,25 +2,29 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex, State, StateTypography, TooltipIcon } from '@chia/core';
 import { Typography } from '@material-ui/core';
-import type Group from '../../types/Group';
+import type PlotNFT from '../../types/PlotNFT';
+import PlotNFTStateEnum from '../../constants/PlotNFTState';
 
 type Props = {
-  group: Group;
+  nft: PlotNFT;
 };
 
-export default function GroupStatus(props: Props) {
+export default function PlotNFTState(props: Props) {
   const { 
-    group: {
-      state, 
-      pool_config: {
-        pool_url,
+    nft: {
+      pool_wallet_status: {
+        current: {
+          state,
+        },
+        target,
       },
     },
   } = props;
 
-  const isSelfPooling = !pool_url;
+  const isPending = target && target !== state;
+  const isSelfPooling = state === PlotNFTStateEnum.SELF_POOLING;
 
-  if (state === 'NOT_CREATED' || state === 'ESCAPING') {
+  if (isPending) {
     return (
       <Flex alignItems="center" gap={1}>
         <StateTypography variant='body1' state={State.WARNING}>

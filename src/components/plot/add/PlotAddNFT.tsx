@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { Button, AdvancedOptions, CardStep, Select, Flex, Loading, Checkbox, TooltipIcon } from '@chia/core';
-import { Box, Grid, FormControl, InputLabel, MenuItem, Typography, FormControlLabel } from '@material-ui/core';
-import usePlotNFT from '../../../hooks/usePlotNFT';
-import useCurrencyCode from '../../../hooks/useCurrencyCode';
-import GroupName from '../../group/GroupName';
-import GroupAdd from '../../group/add/GroupAdd';
-import toBech32m from '../../../util/toBech32m';
+import { Button, CardStep, Select, Flex, Loading } from '@chia/core';
+import { Box, Grid, FormControl, InputLabel, MenuItem, Typography } from '@material-ui/core';
+import usePlotNFTs from '../../../hooks/usePlotNFTs';
+import PlotNFTName from '../../plotNFT/PlotNFTName';
+import PlotNFTAdd from '../../plotNFT/add/PlotNFTAdd';
 
 export default function PlotAddNFT() {
-  const { groups, loading } = usePlotNFT();
-  const currencyCode = useCurrencyCode();
+  const { nfts, loading } = usePlotNFTs();
   const [showCreatePlotNFT, setShowCreatePlotNFT] = useState<boolean>(false);
 
   function handleJoinPool() {
@@ -23,11 +20,9 @@ export default function PlotAddNFT() {
 
   if (showCreatePlotNFT) {
     return (
-      <GroupAdd step={5} onCancel={handleCancelPlotNFT} />
+      <PlotNFTAdd step={5} onCancel={handleCancelPlotNFT} />
     );
   }
-
-  const loadingForData = loading || !currencyCode;
 
   return (
     <CardStep
@@ -43,13 +38,13 @@ export default function PlotAddNFT() {
         </Flex>
       )}
     >
-      {loadingForData && (
+      {loading && (
         <Flex alignItems="center">
           <Loading />
         </Flex>
       )}
 
-      {!loadingForData && !!groups && !!groups.length && (
+      {!loading && !!nfts && !!nfts.length && (
         <>
           <Typography variant="subtitle1">
             <Trans>
@@ -66,18 +61,20 @@ export default function PlotAddNFT() {
                 <InputLabel required>
                   <Trans>Select your Plot NFT</Trans>
                 </InputLabel>
-                <Select name="c">
+                <Select name="p2_singleton_puzzle_hash">
                   <MenuItem value={''}>
                     <em><Trans>None</Trans></em>
                   </MenuItem>
-                  {groups.map((group) => {
-                    const c = currencyCode
-                      ? toBech32m(group.p2_singleton_puzzle_hash, currencyCode.toLowerCase())
-                      : '';
-                    console.log('c', c);
+                  {nfts.map((nft) => {
+                    const {
+                      pool_state: {
+                        p2_singleton_puzzle_hash,
+                      },
+                    } = nft;
+              
                     return (
-                      <MenuItem value={c} key={group.pool_config.launcher_id}>
-                        <GroupName group={group} />
+                      <MenuItem value={p2_singleton_puzzle_hash} key={p2_singleton_puzzle_hash}>
+                        <PlotNFTName nft={nft} />
                       </MenuItem>
                     );
                   })}
@@ -88,16 +85,16 @@ export default function PlotAddNFT() {
             <Grid xs={12} md={8} lg={6} item>
               <Button
                 onClick={handleJoinPool}
-                variant="contained"
+                variant="filled"
               >
-                <Trans>Create New</Trans>
+                <Trans>+ Add New Plot NFT</Trans>
               </Button>
             </Grid>
           </Grid>
         </>
       )}
 
-      {!loadingForData && groups && !groups.length && (
+      {!loading && nfts && !nfts.length && (
         <>
           <Typography variant="subtitle1">
             <Trans>

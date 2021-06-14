@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { darken } from 'polished';
-import { Button as BaseButton, ButtonProps } from '@material-ui/core';
+import { Button as BaseButton, ButtonProps as BaseButtonProps } from '@material-ui/core';
 
 const StyledBaseButton = styled(BaseButton)`
   white-space: ${({ nowrap }) => nowrap ? 'nowrap' : 'normal'};
@@ -17,12 +17,11 @@ const DangerButton = styled(StyledBaseButton)`
   }
 `;
 
-type Props = Omit<ButtonProps, 'color'> & {
-  color?: ButtonProps['color'] | 'danger';
-  nowrap?: boolean;
+export type ButtonProps = Omit<BaseButtonProps, 'color'> & {
+  color?: BaseButtonProps['color'] | 'danger';
 };
 
-export default function Button(props: Props) {
+export default function Button(props: ButtonProps) {
   const { color, ...rest } = props;
 
   switch (color) {

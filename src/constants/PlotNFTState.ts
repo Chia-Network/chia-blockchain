@@ -1,7 +1,9 @@
+// PoolSingletonState
+
 enum PlotNFTState {
-  SELF_POOLING = 'SELF_POOLING',
-  LEAVING_POOL = 'LEAVING_POOL',
-  FARMING_TO_POOL = 'FARMING_TO_POOL',
+  SELF_POOLING = 1,
+  LEAVING_POOL = 2,
+  FARMING_TO_POOL = 3,
 }
 
 export default PlotNFTState;

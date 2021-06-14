@@ -5,7 +5,7 @@ import { Tooltip } from '@material-ui/core';
 
 const StyledHelpIcon = styled(HelpIcon)`
   color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? 'white' : '#757575'};
+    theme.palette.type === 'dark' ? '#c8c8c8' : '#757575'};
   font-size: 1rem;
 `;
 

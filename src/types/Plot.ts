@@ -7,6 +7,7 @@ type Plot = {
   'plot-seed': string;
   plot_public_key: string;
   pool_public_key: string;
+  pool_contract_puzzle_hash: string;
   duplicates?: Plot[];
 };
 

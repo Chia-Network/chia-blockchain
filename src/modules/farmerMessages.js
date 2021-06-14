@@ -1,6 +1,6 @@
 import { service_farmer } from '../util/service_names';
 import { async_api } from './message';
-import { updatePlotNFTs } from './group';
+import { updatePlotNFTs } from './plotNFT';
 
 export const farmerMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
@@ -82,7 +82,6 @@ export const closeConnection = (node_id) => {
 
 export const getPoolState = () => {
   return async (dispatch) => {
-    console.log('getPoolState');
     const { data } = await async_api(
       dispatch,
       farmerMessage({
@@ -90,13 +89,6 @@ export const getPoolState = () => {
       }),
       false,
     );
-    console.log('pool_state', data);
-
-    const poolState = data?.pool_state;
-    console.log('poolState', poolState);
-    if (poolState) {
-      await dispatch(updatePlotNFTs(poolState));
-    }
 
     return data?.pool_state;
   };
