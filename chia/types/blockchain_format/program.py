@@ -54,6 +54,9 @@ class Program(SExp):
         assert f.read() == b""
         return result
 
+    def to_serialized_program(self) -> "SerializedProgram":
+        return SerializedProgram.from_bytes(bytes(self))
+
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # type: ignore # noqa
@@ -168,6 +171,12 @@ class SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(p)
         return ret
+
+    def to_program(self) -> Program:
+        return Program.from_bytes(self._buf)
+
+    def uncurry(self) -> Tuple["Program", "Program"]:
+        return self.to_program().uncurry()
 
     def __bytes__(self) -> bytes:
         return self._buf
