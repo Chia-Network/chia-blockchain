@@ -395,3 +395,23 @@ class TestPoolPuzzles(TestCase):
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
+
+        # ABSORB ONCE MORE FOR GOOD MEASURE
+        time = CoinTimestamp(20000000, 10005)
+        # create the farming  reward
+        coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
+        coin_sols: List[CoinSolution] = create_absorb_spend(
+            return_coinsol,
+            pool_state,
+            launcher_coin,
+            10005,  # height
+            GENESIS_CHALLENGE,
+            DELAY_TIME,
+            DELAY_PH,
+        )
+        # Spend it!
+        coin_db.update_coin_store_for_spend_bundle(
+            SpendBundle(coin_sols, G2Element()),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        )
