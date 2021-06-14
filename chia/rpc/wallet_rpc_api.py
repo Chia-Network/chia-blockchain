@@ -10,7 +10,7 @@ from blspy import PrivateKey, G1Element
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, SELF_POOLING, PoolWalletInfo
+from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
