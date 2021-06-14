@@ -23,11 +23,11 @@ MAX_KEYS = 100
 MAX_RETRIES = 3
 
 
-def set_keyring_root_path(root_path: Path) -> None:
+def set_keys_root_path(keys_root_path: Path) -> None:
     """
-    Used to set the root_path prior to instantiating the KeyringWrapper shared instance.
+    Used to set the keys_root_path prior to instantiating the KeyringWrapper shared instance.
     """
-    KeyringWrapper.set_keyring_root_path(root_path)
+    KeyringWrapper.set_keys_root_path(keys_root_path)
 
 
 def obtain_current_password(prompt: str = DEFAULT_PASSWORD_PROMPT, use_password_cache: bool = False) -> str:
