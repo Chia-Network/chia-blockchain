@@ -5,13 +5,13 @@ import pytest
 import random
 import unittest
 
-from multiprocessing import Pool, TimeoutError
-from pathlib import Path
-from tests.core.util.test_keyring_wrapper import using_temp_file_keyring
-from time import sleep
-
 from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
+from multiprocessing import Pool, TimeoutError
+from pathlib import Path
+from tests.util.keyring import using_temp_file_keyring
+from time import sleep
+
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ def dummy_set_password(service, user, password):
 
 
 def dummy_fn_requiring_writer_lock(*args, **kwargs):
+    log.warning(f"[pid:{os.getpid()}] in dummy_fn_requiring_writer_lock")
     return "A winner is you!"
 
 
@@ -93,6 +94,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         the same lock, failing after n attempts
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -121,6 +123,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         same lock once the lock is released by the current holder
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -152,6 +155,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         holder should not be able to quickly reacquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -182,6 +186,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         acquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -209,6 +214,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         able to acquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -240,6 +246,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         to acquire the lock for writing
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a reader lock is already held
@@ -265,10 +272,11 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         to acquire the lock for writing until the reader releases its lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a reader lock is already acquired
-        lock.acquire_read_lock()
+        assert lock.acquire_read_lock() is True
 
         child_proc_function = dummy_fn_requiring_writer_lock
         timeout = 1
