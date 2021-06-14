@@ -88,6 +88,7 @@ class WalletStateManager:
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
+    new_peak_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
     db_connection: aiosqlite.Connection
     db_wrapper: DBWrapper
@@ -421,6 +422,12 @@ class WalletStateManager:
         """
         self.puzzle_hash_created_callbacks[puzzlehash] = callback
 
+    def set_new_peak_callback(self, wallet_id: int, callback: Callable):
+        """
+        Callback to be called when blockchain adds new peak
+        """
+        self.new_peak_callbacks[wallet_id] = callback
+
     async def puzzle_hash_created(self, coin: Coin):
         callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
         if callback is None:
@@ -599,6 +606,8 @@ class WalletStateManager:
                 if wallet.type() == WalletType.POOLING_WALLET:  # and wallet_id not in created_pool_wallet_ids:
                     # TODO: support applying state transition in the same block. Doesn't work because we did not
                     # update the DB yet.
+                    # TODO: we need a test that manipulates two singleton wallets simultaneously,
+                    # TODO: to test that apply_state_transitions only processes its own spends.
                     await wallet.apply_state_transitions(additional_coin_spends, height)
 
         added_notified = set()
@@ -720,7 +729,8 @@ class WalletStateManager:
         self, coins: List[Coin], height: uint32
     ) -> Tuple[List[Coin], List[WalletCoinRecord]]:
         # This gets called when coins of our interest are spent on chain
-        self.log.info(f"Coins removed {coins} at height: {height}")
+        if len(coins) > 0:
+            self.log.info(f"Coins removed {coins} at height: {height}")
         (
             trade_removals,
             trade_additions,
@@ -1012,7 +1022,7 @@ class WalletStateManager:
                 remove: bool = await wallet.rewind(height)
                 if remove:
                     remove_ids.append(wallet_id)
-        for wallet_id in remove_ids:
+        for wallet_id in remove_ids:  # TODO: remove callback
             await self.user_store.delete_wallet(wallet_id, in_transaction=True)
             self.wallets.pop(wallet_id)
 
@@ -1235,8 +1245,10 @@ class WalletStateManager:
             await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
         return pool_wallet_interested
 
-    """
-    async def get_block_height_and_hash(self) -> Tuple[uint32, Optional[bytes32]]:
-        peak = self.blockchain.get_peak()
-        return peak, self.blockchain.height_to_hash(peak)
-"""
+    async def new_peak(self):
+        peak: Optional[BlockRecord] = self.get_peak()
+        if peak is None:
+            return
+
+        for wallet_id, callback in self.new_peak_callbacks.items():
+            await callback(peak)
