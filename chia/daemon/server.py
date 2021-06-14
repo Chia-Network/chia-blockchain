@@ -14,7 +14,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
-from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
+from websockets.exceptions import ConnectionClosedOK, WebSocketException
+from websockets.server import serve, WebSocketServerProtocol
 
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
