@@ -4,6 +4,7 @@ import logging
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+import traceback
 
 import aiohttp
 from blspy import G1Element, PrivateKey
@@ -189,7 +190,8 @@ class Farmer:
                             else:
                                 self.log.error(f"Error fetching pool info from {pool_config.pool_url}, {resp.status}")
             except Exception as e:
-                self.log.error(f"Exception in update_pool_state for {pool_config.pool_url}, {e}")
+                tb = traceback.format_exc()
+                self.log.error(f"Exception in update_pool_state for {pool_config.pool_url}, {e} {tb}")
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]
