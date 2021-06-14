@@ -27,7 +27,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
     if populate:
         # Populate the file keyring with an empty (but encrypted) data set
         file_keyring_path = FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir))
-        os.makedirs(os.path.dirname(file_keyring_path), 0o775, False)
+        os.makedirs(os.path.dirname(file_keyring_path), 0o700, True)
         with open(
             os.open(
                 FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir)),
@@ -45,7 +45,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
             )
 
     # Create the file keyring
-    mock_configure_backend.return_value = FileKeyring(root_path=Path(temp_file_keyring_dir))
+    mock_configure_backend.return_value = FileKeyring(keys_root_path=Path(temp_file_keyring_dir))
 
 
 def using_temp_keyring_dir(func):

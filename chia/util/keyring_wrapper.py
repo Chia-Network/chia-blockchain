@@ -1,6 +1,6 @@
 import keyring as keyring_main
 
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyring
 from chia.util.misc import prompt_yes_no
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
@@ -26,22 +26,22 @@ class KeyringWrapper:
 
     # Static members
     __shared_instance = None
-    __root_path: Path = DEFAULT_ROOT_PATH
+    __keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH
 
     # Instance members
-    root_path: Path
+    keys_root_path: Path
     keyring: Union[Any, FileKeyring] = None
     cached_password: Optional[str] = DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
     cached_password_is_validated: bool = False
     legacy_keyring = None
 
-    def __init__(self, root_path: Path = DEFAULT_ROOT_PATH):
+    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
         """
         Initializes the keyring backend based on the OS. For Linux, we previously
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
-        self.root_path = root_path
+        self.keys_root_path = keys_root_path
         self.keyring = self._configure_backend()
         self.legacy_keyring = self._configure_legacy_backend()
 
@@ -60,7 +60,7 @@ class KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
-            keyring = FileKeyring(root_path=self.root_path)  # type: ignore
+            keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
         else:
             keyring = keyring_main
 
@@ -78,16 +78,16 @@ class KeyringWrapper:
         return None
 
     @staticmethod
-    def set_keyring_root_path(root_path: Path):
+    def set_keys_root_path(keys_root_path: Path):
         """
-        Used to set the root_path prior to instantiating the __shared_instance
+        Used to set the keys_root_path prior to instantiating the __shared_instance
         """
-        KeyringWrapper.__root_path = root_path
+        KeyringWrapper.__keys_root_path = keys_root_path
 
     @staticmethod
     def get_shared_instance(create_if_necessary=True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
-            KeyringWrapper(root_path=KeyringWrapper.__root_path)
+            KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 

@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 
 MIN_PASSWORD_LEN = 8
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-password -> 'set_password'
-PASSWORD_CLI_OPTION_NAMES = ["set_password", "password_file", "current_password_file"]
+PASSWORD_CLI_OPTION_NAMES = ["keys_root_path", "set_password", "password_file", "current_password_file"]
 
 
 def supports_keyring_password() -> bool:
