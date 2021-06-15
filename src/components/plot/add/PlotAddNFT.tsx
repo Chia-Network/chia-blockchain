@@ -1,28 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Trans } from '@lingui/macro';
 import { Button, CardStep, Select, Flex, Loading } from '@chia/core';
 import { Box, Grid, FormControl, InputLabel, MenuItem, Typography } from '@material-ui/core';
+import { useFormContext } from "react-hook-form";
 import usePlotNFTs from '../../../hooks/usePlotNFTs';
 import PlotNFTName from '../../plotNFT/PlotNFTName';
 import PlotNFTSelectPool from '../../plotNFT/select/PlotNFTSelectPool';
 
-export default function PlotAddNFT() {
+type Props = {};
+
+const PlotAddNFT = forwardRef((props: Props, ref) => {
   const { nfts, loading } = usePlotNFTs();
   const [showCreatePlotNFT, setShowCreatePlotNFT] = useState<boolean>(false);
+  const { setValue } = useFormContext(); //
 
   function handleJoinPool() {
     setShowCreatePlotNFT(true);
+    setValue('createNFT', true);
   }
 
   function handleCancelPlotNFT() {
     setShowCreatePlotNFT(false);
+    setValue('createNFT', false);
   }
 
   if (showCreatePlotNFT) {
     return (
       <PlotNFTSelectPool 
-        step={5} 
+        step={5}
         onCancel={handleCancelPlotNFT}
+        ref={ref}
         title={<Trans>Create a Plot NFT</Trans>}
         description={(
           <Trans>
@@ -124,4 +131,6 @@ export default function PlotAddNFT() {
       )}
     </CardStep>
   );
-}
+});
+
+export default PlotAddNFT;

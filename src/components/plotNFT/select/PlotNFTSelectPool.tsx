@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from 'react';
+import React, { useState, ReactNode, forwardRef, useImperativeHandle } from 'react';
 import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton } from '@chia/core';
@@ -11,6 +11,34 @@ export type SubmitData = {
   initialTargetState: InitialTargetState;
   fee?: string;
 };
+
+async function prepareSubmitData(data: FormData): SubmitData {
+  const { self, fee, poolUrl } = data;
+  const initialTargetState = {
+    state: self ? 'SELF_POOLING' : 'FARMING_TO_POOL',
+  };
+
+  if (!self && poolUrl) {
+    const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(poolUrl);
+    if (!target_puzzle_hash) {
+      throw new Error(t`Pool does not provide target_puzzle_hash.`);
+    }
+    if (relative_lock_height === undefined) {
+      throw new Error(t`Pool does not provide relative_lock_height.`);
+    }
+
+    initialTargetState.pool_url = poolUrl;
+    initialTargetState.target_puzzle_hash = target_puzzle_hash;
+    initialTargetState.relative_lock_height = relative_lock_height;
+  }
+
+  const feeMojos = chia_to_mojo(fee);
+
+  return {
+    fee: feeMojos,
+    initialTargetState,
+  };
+}
 
 type FormData = {
   self: boolean;
@@ -33,7 +61,7 @@ type Props = {
   };
 }
 
-export default function PlotNFTSelectPool(props: Props) {
+const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   const { step, onCancel, defaultValues, onSubmit, title, description, submitTitle, hideFee } = props;
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -47,35 +75,21 @@ export default function PlotNFTSelectPool(props: Props) {
     },
   });
 
+  useImperativeHandle(ref, () => ({
+    async getSubmitData() {
+      const data = methods.getValues();
+
+      return prepareSubmitData(data);
+    },
+  }));
+
   async function handleSubmit(data: FormData) {
     try {
       setLoading(true);
 
-      const { self, fee, poolUrl } = data;
-      const initialTargetState = {
-        state: self ? 'SELF_POOLING' : 'FARMING_TO_POOL',
-      };
+      const submitData = await prepareSubmitData(data);
 
-      if (!self && poolUrl) {
-        const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(poolUrl);
-        if (!target_puzzle_hash) {
-          throw new Error(t`Pool does not provide target_puzzle_hash.`);
-        }
-        if (relative_lock_height === undefined) {
-          throw new Error(t`Pool does not provide relative_lock_height.`);
-        }
-
-        initialTargetState.pool_url = poolUrl;
-        initialTargetState.target_puzzle_hash = target_puzzle_hash;
-        initialTargetState.relative_lock_height = relative_lock_height;
-      }
-
-      const feeMojos = chia_to_mojo(fee);
-
-      await onSubmit({
-        fee: feeMojos,
-        initialTargetState,
-      });
+      await onSubmit(submitData);
     } finally {
       setLoading(false);
     }
@@ -105,7 +119,7 @@ export default function PlotNFTSelectPool(props: Props) {
       </Flex>
     </Form>
   );
-}
+});
 
 PlotNFTSelectPool.defaultProps = {
   step: undefined,
@@ -116,3 +130,5 @@ PlotNFTSelectPool.defaultProps = {
   hideFee: false,
   submitTitle: <Trans>Create</Trans>,
 };
+
+export default PlotNFTSelectPool;

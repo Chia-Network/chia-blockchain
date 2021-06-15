@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useHistory, useLocation } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
@@ -12,14 +12,18 @@ import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import PlotAddNFT from './PlotAddNFT';
 import { plotQueueAdd } from '../../../modules/plotQueue';
+import { createPlotNFT } from '../../../modules/plotNFT';
 import PlotAddConfig from '../../../types/PlotAdd';
 import plotSizes, { defaultPlotSize } from '../../../constants/plotSizes';
+import PlotNFTState from '../../../constants/PlotNFTState';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import type { RootState } from '../../../modules/rootReducer';
 import toBech32m from '../../../util/toBech32m';
+import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
 
 type FormData = PlotAddConfig & {
   p2_singleton_puzzle_hash?: string;
+  createNFT?: boolean;
 };
 
 export default function PlotAdd() {
@@ -29,6 +33,8 @@ export default function PlotAdd() {
   const [loading, setLoading] = useState<boolean>(false);
   const currencyCode = useCurrencyCode();
   const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
+  const addNFTref = useRef();
+  const unconfirmedNFTs = useUnconfirmedPlotNFTs();
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
@@ -49,6 +55,7 @@ export default function PlotAdd() {
       disableBitfieldPlotting: false,
       excludeFinalDir: false,
       p2_singleton_puzzle_hash: state?.p2_singleton_puzzle_hash ?? '',
+      createNFT: false,
     },
   });
 
@@ -65,11 +72,36 @@ export default function PlotAdd() {
   const handleSubmit: SubmitHandler<FormData> = async (data) => {
     try {
       setLoading(true);
-      const { p2_singleton_puzzle_hash, delay, ...rest } = data;
+      const { p2_singleton_puzzle_hash, delay, createNFT, ...rest } = data;
       const { farmerPublicKey, poolPublicKey } = rest;
+
+      let selectedP2SingletonPuzzleHash = p2_singleton_puzzle_hash;
 
       if (!currencyCode) {
         throw new Error('Currency code is not defined');
+      }
+
+      if (createNFT) {
+        // create nft
+        const nftData = await addNFTref.current?.getSubmitData();
+        
+        const { fee, initialTargetState } = nftData;
+        const { success, error, transaction, p2_singleton_puzzle_hash } = await dispatch(createPlotNFT(initialTargetState, fee));
+        if (!success) {
+          throw new Error(error ?? 'Unable to create plot NFT');
+        }
+
+        if (!p2_singleton_puzzle_hash) {
+          throw new Error('p2_singleton_puzzle_hash is not defined');
+        }
+
+        unconfirmedNFTs.add({
+          transactionId: transaction.name,
+          state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+          poolUrl: initialTargetState.pool_url,
+        });
+  
+        selectedP2SingletonPuzzleHash = p2_singleton_puzzle_hash;
       }
   
       const plotAddConfig = {
@@ -77,21 +109,20 @@ export default function PlotAdd() {
         delay: delay * 60,
       };
   
-      if (p2_singleton_puzzle_hash) {
-        plotAddConfig.c = toBech32m(p2_singleton_puzzle_hash, currencyCode.toLowerCase());
+      if (selectedP2SingletonPuzzleHash) {
+        plotAddConfig.c = toBech32m(selectedP2SingletonPuzzleHash, currencyCode.toLowerCase());
       }
-  
-      if (!p2_singleton_puzzle_hash && !farmerPublicKey && !poolPublicKey && fingerprint) {
+
+      if (!selectedP2SingletonPuzzleHash && !farmerPublicKey && !poolPublicKey && fingerprint) {
         plotAddConfig.fingerprint = fingerprint;
       }
-  
+
       await dispatch(plotQueueAdd(plotAddConfig));
   
       history.push('/dashboard/plot');
     } finally {
       setLoading(false);
     }
-
   }
 
   if (!currencyCode) {
@@ -119,7 +150,7 @@ export default function PlotAdd() {
         <PlotAddNumberOfPlots />
         <PlotAddSelectTemporaryDirectory />
         <PlotAddSelectFinalDirectory />
-        <PlotAddNFT />
+        <PlotAddNFT ref={addNFTref}/>
         <Flex gap={1}>
           <FormBackButton variant="contained" />
           <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
