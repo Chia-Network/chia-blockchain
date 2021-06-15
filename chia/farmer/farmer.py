@@ -280,7 +280,7 @@ class Farmer:
                 pool_state["pool_config"] = pool_config
 
                 # TODO: Improve error handling below, inform about unexpected failures
-                if time.time() >= pool_state["next_pool_info_update"]:
+                if time.time() >= pool_state["next_pool_info_update"] and pool_config.pool_url != "":
                     # Makes a GET request to the pool to get the updated information
                     pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
@@ -306,6 +306,8 @@ class Farmer:
                         return response
 
                     if authentication_token_timeout is not None:
+                        if pool_config.pool_url == "":
+                            continue
                         update_response = await update_pool_farmer_info()
                         is_error = update_response is not None and "error_code" in update_response
                         if is_error and update_response["error_code"] == PoolErrorCode.FARMER_NOT_KNOWN.value:
@@ -328,7 +330,7 @@ class Farmer:
                                         f"{update_response['error_message']}"
                                     )
                     else:
-                        self.farmer.log.error(
+                        self.log.error(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
                             f", check communication with the pool."
                         )

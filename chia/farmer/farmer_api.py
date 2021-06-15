@@ -121,6 +121,9 @@ class FarmerAPI:
                     self.farmer.log.info(f"Did not find pool info for {p2_singleton_puzzle_hash}")
                     return
                 pool_state_dict: Dict = self.farmer.pool_state[p2_singleton_puzzle_hash]
+                pool_url = pool_state_dict["pool_config"].pool_url
+                if pool_url == "":
+                    return
 
                 if pool_state_dict["current_difficulty"] is None:
                     self.farmer.log.error(
@@ -130,7 +133,6 @@ class FarmerAPI:
                     )
                     return
 
-                pool_url = pool_state_dict["pool_config"].pool_url
                 required_iters = calculate_iterations_quality(
                     self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
                     computed_quality_string,
@@ -401,6 +403,10 @@ class FarmerAPI:
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
         pool_difficulties: List[PoolDifficulty] = []
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
+            if pool_dict["pool_config"].pool_url == "":
+                # Self pooling
+                continue
+
             if pool_dict["current_difficulty"] is None:
                 self.farmer.log.error(
                     f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
