@@ -377,15 +377,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         return None
 
     # Spend which is not absorb, and is not the launcher
-    num_args = len(inner_solution.as_atom_list())
-    assert num_args in (4, 5)
-
-    if num_args == 4:
-        # pool member
-        extra_data = inner_solution.rest().rest().rest().first().as_atom()
-    else:
-        # pool escaping
-        extra_data = inner_solution.rest().rest().rest().first().as_atom()
+    extra_data = inner_solution.rest().rest().rest().first().as_atom()
     return PoolState.from_bytes(extra_data)
 
 
