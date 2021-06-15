@@ -282,8 +282,12 @@ class Farmer:
                 pool_state = self.pool_state[p2_singleton_puzzle_hash]
                 pool_state["pool_config"] = pool_config
 
+                # Skip state update when self pooling
+                if pool_config.pool_url != "":
+                    continue
+
                 # TODO: Improve error handling below, inform about unexpected failures
-                if time.time() >= pool_state["next_pool_info_update"] and pool_config.pool_url != "":
+                if time.time() >= pool_state["next_pool_info_update"]:
                     # Makes a GET request to the pool to get the updated information
                     pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
@@ -309,8 +313,6 @@ class Farmer:
                         return response
 
                     if authentication_token_timeout is not None:
-                        if pool_config.pool_url == "":
-                            continue
                         update_response = await update_pool_farmer_info()
                         is_error = update_response is not None and "error_code" in update_response
                         if is_error and update_response["error_code"] == PoolErrorCode.FARMER_NOT_KNOWN.value:
