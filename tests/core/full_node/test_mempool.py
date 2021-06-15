@@ -360,6 +360,18 @@ class TestMempoolManager:
         assert err is None
 
     @pytest.mark.asyncio
+    async def test_negative_block_index(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(-1)])
+        dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
     async def test_invalid_block_age(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -377,6 +389,19 @@ class TestMempoolManager:
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(1)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_negative_block_age(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
 
@@ -431,6 +456,20 @@ class TestMempoolManager:
         assert err is None
 
     @pytest.mark.asyncio
+    async def test_assert_time_negative(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        time_now = -1
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
     async def test_assert_time_relative_exceeds(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -451,6 +490,21 @@ class TestMempoolManager:
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
         status, err = await respond_transaction(full_node_1, tx2, peer)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_assert_time_relative_negative(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        time_relative = -3
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is spend_bundle1
@@ -827,6 +881,20 @@ class TestMempoolManager:
         assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
 
     @pytest.mark.asyncio
+    async def test_assert_fee_condition_fee_too_large(self, two_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2 ** 64)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
+        )
+        assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
+        assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
+
+    @pytest.mark.asyncio
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -1083,3 +1151,35 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
+
+    @pytest.mark.asyncio
+    async def test_negative_my_amount(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(-1)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
+
+    @pytest.mark.asyncio
+    async def test_my_amount_too_large(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
