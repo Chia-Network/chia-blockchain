@@ -73,11 +73,10 @@ def join_cmd(wallet_rpc_port: int, fingerprint: int, id: int, pool_url: str) -> 
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
 def self_pool_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import self_pool
 
-    extra_params = {"id": int}
+    extra_params = {"id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, self_pool))
