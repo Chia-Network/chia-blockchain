@@ -37,7 +37,7 @@
     (sha256 (logior POOL_REWARD_PREFIX (logand (- (lsh (q . 1) (q . 128)) (q . 1)) pool_reward_height)) P2_SINGLETON_PUZZLE_HASH pool_reward_amount)
   )
 
-  (defun-inline absorb_pool_reward (POOL_PUZZLE_HASH my_inner_puzzle_hash my_amount pool_reward_amount pool_reward_id)
+  (defun absorb_pool_reward (POOL_PUZZLE_HASH my_inner_puzzle_hash my_amount pool_reward_amount pool_reward_id)
     (list
         (list CREATE_COIN my_inner_puzzle_hash my_amount)
         (list CREATE_COIN POOL_PUZZLE_HASH pool_reward_amount)
