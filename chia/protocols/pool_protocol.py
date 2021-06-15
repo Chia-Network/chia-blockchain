@@ -55,6 +55,7 @@ class PostPartialPayload(Streamable):
     proof_of_space: ProofOfSpace
     sp_hash: bytes32
     end_of_sub_slot: bool
+    harvester_id: bytes32
 
 
 @dataclass(frozen=True)
