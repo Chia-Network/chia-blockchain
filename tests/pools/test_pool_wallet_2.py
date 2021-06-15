@@ -54,7 +54,10 @@ class TestPoolWallet2:
         await asyncio.sleep(3)
         owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(wsm.private_key, 3)
         initial_state = PoolState(1, FARMING_TO_POOL, ph, owner_sk.get_g1(), "pool.com", uint32(10))
-        tx_record: TransactionRecord = await PoolWallet.create_new_pool_wallet_transaction(wsm, wallet_0, initial_state)
+        tx_record: TransactionRecord
+        tx_record, p2_singleton_puzzle_hash, launcher_coin_id = await PoolWallet.create_new_pool_wallet_transaction(
+            wsm, wallet_0, initial_state
+        )
 
         launcher_spend: CoinSolution = tx_record.spend_bundle.coin_solutions[1]
 
