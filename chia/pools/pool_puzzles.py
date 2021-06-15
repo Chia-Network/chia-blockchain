@@ -161,7 +161,7 @@ def create_travel_spend(
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is key_value_list ()
-        inner_sol: Program = Program.to([bytes(target), ()])
+        inner_sol: Program = Program.to([bytes(target), 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, extra_data, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(

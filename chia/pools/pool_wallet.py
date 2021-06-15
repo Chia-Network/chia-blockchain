@@ -529,7 +529,7 @@ class PoolWallet:
         self, target_puzzle_hash: bytes32, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
     ) -> SpendBundle:
         private: PrivateKey = await self.get_pool_wallet_sk()
-        message_array = [target_puzzle_hash, coin_solution.coin.amount, bytes(target)]
+        message_array = [target_puzzle_hash, bytes(target)]
         message_prog = Program.to(message_array)
         message: bytes32 = message_prog.get_tree_hash()
         self.log.warning(f"AGG_SIG_ME WAITING message array: {message_array}")
