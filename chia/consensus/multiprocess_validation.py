@@ -17,6 +17,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, is_overf
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
@@ -132,6 +133,7 @@ async def pre_validate_blocks_multiprocessing(
     npc_results: Dict[uint32, NPCResult],
     get_block_generator: Optional[Callable],
     batch_size: int,
+    wp_summaries: Optional[List[SubEpochSummary]] = None,
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -221,6 +223,13 @@ async def pre_validate_blocks_multiprocessing(
             block,
             None,
         )
+
+        if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
+            idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
+            next_ses = wp_summaries[idx]
+            if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
+                log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
+                return None
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict
