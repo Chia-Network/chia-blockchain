@@ -188,14 +188,17 @@ class Farmer:
             "authentication_token": authentication_token,
             "signature": bytes(signature).hex(),
         }
-        async with aiohttp.ClientSession(trust_env=True) as session:
-            async with session.get(f"{pool_config.pool_url}/farmer", params=get_farmer_params) as resp:
-                if resp.ok:
-                    response: Dict = json.loads(await resp.text())
-                    self.log.info(f"GET /farmer response: {response}")
-                    return response
-                else:
-                    self.log.error(f"Error in GET /farmer {pool_config.pool_url}, {resp.status}")
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(f"{pool_config.pool_url}/farmer", params=get_farmer_params) as resp:
+                    if resp.ok:
+                        response: Dict = json.loads(await resp.text())
+                        self.log.info(f"GET /farmer response: {response}")
+                        return response
+                    else:
+                        self.log.error(f"Error in GET /farmer {pool_config.pool_url}, {resp.status}")
+        except Exception as e:
+            self.log.error(f"Error connecting to pool {pool_config.pool_url} {e}")
         return None
 
     async def _pool_post_farmer(
