@@ -4,6 +4,7 @@ from typing import Dict
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
+from logging.handlers import SysLogHandler
 
 from chia.util.path import mkdir, path_from_root
 
@@ -38,6 +39,14 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
             )
         )
         logger.addHandler(handler)
+
+    if logging_config.get("log_syslog", False):
+        log_syslog_host = logging_config.get("log_syslog_host", "localhost")
+        log_syslog_port = logging_config.get("log_syslog_port", 514)
+        log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
+        log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format))
+        logger = logging.getLogger()
+        logger.addHandler(log_syslog_handler)
 
     if "log_level" in logging_config:
         if logging_config["log_level"] == "CRITICAL":
