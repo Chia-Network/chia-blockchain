@@ -191,7 +191,7 @@ class FarmerAPI:
                         taproot_sig: G2Element = AugSchemeMPL.sign(taproot_sk, m_to_sign, agg_pk)
 
                         plot_signature = AugSchemeMPL.aggregate(
-                            [sig_farmer, response.message_signatures[0][1]], taproot_sig
+                            [sig_farmer, response.message_signatures[0][1], taproot_sig]
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
                 authentication_pk = pool_state_dict["pool_config"].authentication_public_key
