@@ -27,6 +27,7 @@ class PoolErrorCode(Enum):
     INVALID_PAYOUT_INSTRUCTIONS = 13
     INVALID_SINGLETON = 14
     DELAY_TIME_TOO_SHORT = 15
+    REQUEST_FAILED = 16
 
 
 # GET /pool_info
