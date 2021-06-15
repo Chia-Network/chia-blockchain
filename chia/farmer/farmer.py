@@ -198,7 +198,7 @@ class Farmer:
                     else:
                         self.log.error(f"Error in GET /farmer {pool_config.pool_url}, {resp.status}")
         except Exception as e:
-            self.log.error(f"Error connecting to pool {pool_config.pool_url} {e}")
+            self.log.error(f"Exception in GET /farmer {pool_config.pool_url}, {e}")
         return None
 
     async def _pool_post_farmer(
