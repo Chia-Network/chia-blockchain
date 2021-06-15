@@ -333,7 +333,7 @@ class Farmer:
                                         f"{update_response['error_message']}"
                                     )
                     else:
-                        self.log.error(
+                        self.log.warning(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
                             f", check communication with the pool."
                         )
