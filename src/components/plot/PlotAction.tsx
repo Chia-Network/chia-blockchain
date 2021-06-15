@@ -25,7 +25,6 @@ export default function PlotAction(props: Props) {
 
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
-  const canDelete = !isWindows;
 
   async function handleDeletePlot() {
     const deleteConfirmed = await openDialog((
@@ -50,7 +49,7 @@ export default function PlotAction(props: Props) {
     <More>
       {({ onClose }) => (
         <Box>
-          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }} disabled={!canDelete}>
+          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
             <ListItemIcon>
               <DeleteForeverIcon fontSize="small" />
             </ListItemIcon>
