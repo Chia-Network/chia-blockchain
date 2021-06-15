@@ -221,7 +221,7 @@ def create_absorb_spend(
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([reward_amount, height])
+        inner_sol: Program = Program.to([(reward_amount, height)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol = Program.to([0, reward_amount, height])
