@@ -327,7 +327,7 @@ class Farmer:
                 pool_state["pool_config"] = pool_config
 
                 # Skip state update when self pooling
-                if pool_config.pool_url != "":
+                if pool_config.pool_url == "":
                     continue
 
                 # TODO: Improve error handling below, inform about unexpected failures
