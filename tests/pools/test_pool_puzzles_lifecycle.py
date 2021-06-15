@@ -56,14 +56,10 @@ This test suite aims to test:
 # Helper function
 def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
     synthetic_secret_key: PrivateKey = calculate_synthetic_secret_key(
-        PrivateKey.from_bytes(
-            secret_exponent_for_index(1).to_bytes(32, "big"),
-        ),
-        DEFAULT_HIDDEN_PUZZLE_HASH,
+        PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"),), DEFAULT_HIDDEN_PUZZLE_HASH,
     )
     return AugSchemeMPL.sign(
-        synthetic_secret_key,
-        (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
+        synthetic_secret_key, (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
     )
 
 
@@ -72,9 +68,7 @@ class TestPoolPuzzles(TestCase):
         # START TESTS
         # Generate starting info
         key_lookup = KeyTool()
-        sk: PrivateKey = PrivateKey.from_bytes(
-            secret_exponent_for_index(1).to_bytes(32, "big"),
-        )
+        sk: PrivateKey = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"),)
         pk: G1Element = G1Element.from_bytes(public_key_for_index(1, key_lookup))
         starting_puzzle: Program = puzzle_for_pk(pk)
         starting_ph: bytes32 = starting_puzzle.get_tree_hash()
@@ -89,10 +83,7 @@ class TestPoolPuzzles(TestCase):
         # LAUNCHING
         # Create the escaping inner puzzle
         GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
-        launcher_coin = singleton_top_layer.generate_launcher_coin(
-            starting_coin,
-            START_AMOUNT,
-        )
+        launcher_coin = singleton_top_layer.generate_launcher_coin(starting_coin, START_AMOUNT,)
         DELAY_TIME = uint64(60800)
         DELAY_PH = starting_ph
         launcher_id = launcher_coin.name()
@@ -118,23 +109,11 @@ class TestPoolPuzzles(TestCase):
         # Standard format comment
         comment = Program.to([bytes(pool_state), [DELAY_TIME, DELAY_PH]])
         pool_wr_innerpuz: bytes32 = create_waiting_room_inner_puzzle(
-            starting_ph,
-            relative_lock_height,
-            pk,
-            launcher_id,
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            starting_ph, relative_lock_height, pk, launcher_id, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,
         )
         pool_wr_inner_hash = pool_wr_innerpuz.get_tree_hash()
         pooling_innerpuz: Program = create_pooling_inner_puzzle(
-            starting_ph,
-            pool_wr_inner_hash,
-            pk,
-            launcher_id,
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            starting_ph, pool_wr_inner_hash, pk, launcher_id, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,
         )
         # Driver tests
         assert is_pool_singleton_inner_puzzle(pooling_innerpuz)
@@ -147,22 +126,13 @@ class TestPoolPuzzles(TestCase):
         # Creating solution for standard transaction
         delegated_puzzle: Program = puzzle_for_conditions(conditions)
         full_solution: Program = solution_for_conditions(conditions)
-        starting_coinsol = CoinSolution(
-            starting_coin,
-            starting_puzzle,
-            full_solution,
-        )
+        starting_coinsol = CoinSolution(starting_coin, starting_puzzle, full_solution,)
         # Create the spend bundle
         sig: G2Element = sign_delegated_puz(delegated_puzzle, starting_coin)
-        spend_bundle = SpendBundle(
-            [starting_coinsol, launcher_coinsol],
-            sig,
-        )
+        spend_bundle = SpendBundle([starting_coinsol, launcher_coinsol], sig,)
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            spend_bundle,
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            spend_bundle, time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
         # Test that we can retrieve the extra data
         assert get_delayed_puz_info_from_launcher_spend(launcher_coinsol) == (DELAY_TIME, DELAY_PH)
@@ -172,29 +142,18 @@ class TestPoolPuzzles(TestCase):
         # fork the state
         fork_coin_db: CoinStore = copy.deepcopy(coin_db)
         post_launch_coinsol, _, _ = create_travel_spend(
-            launcher_coinsol,
-            launcher_coin,
-            pool_state,
-            target_pool_state,
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            launcher_coinsol, launcher_coin, pool_state, target_pool_state, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,
         )
         # Spend it!
         fork_coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle([post_launch_coinsol], G2Element()),
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            SpendBundle([post_launch_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # HONEST ABSORB
         time = CoinTimestamp(10000030, 2)
         # create the farming reward
         p2_singleton_puz: Program = create_p2_singleton_puzzle(
-            SINGLETON_MOD_HASH,
-            launcher_id,
-            DELAY_TIME,
-            DELAY_PH,
+            SINGLETON_MOD_HASH, launcher_id, DELAY_TIME, DELAY_PH,
         )
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         assert uncurry_pool_waitingroom_inner_puzzle(pool_wr_innerpuz) == (
@@ -207,79 +166,42 @@ class TestPoolPuzzles(TestCase):
         assert get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(p2_singleton_puz) == (DELAY_TIME, DELAY_PH)
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         coin_sols: List[CoinSolution] = create_absorb_spend(
-            launcher_coinsol,
-            pool_state,
-            launcher_coin,
-            2,  # height
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            launcher_coinsol, pool_state, launcher_coin, 2, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,  # height
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle(coin_sols, G2Element()),
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            SpendBundle(coin_sols, G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # ABSORB A NON EXISTENT REWARD (Negative test)
-        last_coinsol: CoinSolution = list(
-            filter(
-                lambda e: e.coin.amount == START_AMOUNT,
-                coin_sols,
-            )
-        )[0]
+        last_coinsol: CoinSolution = list(filter(lambda e: e.coin.amount == START_AMOUNT, coin_sols,))[0]
         coin_sols: List[CoinSolution] = create_absorb_spend(
-            last_coinsol,
-            pool_state,
-            launcher_coin,
-            2,  # height
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            last_coinsol, pool_state, launcher_coin, 2, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,  # height
         )
         # filter for only the singleton solution
-        singleton_coinsol: CoinSolution = list(
-            filter(
-                lambda e: e.coin.amount == START_AMOUNT,
-                coin_sols,
-            )
-        )[0]
+        singleton_coinsol: CoinSolution = list(filter(lambda e: e.coin.amount == START_AMOUNT, coin_sols,))[0]
         # Spend it and hope it fails!
         try:
             coin_db.update_coin_store_for_spend_bundle(
-                SpendBundle([singleton_coinsol], G2Element()),
-                time,
-                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                SpendBundle([singleton_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
 
         # SPEND A NON-REWARD P2_SINGLETON (Negative test)
         # create the dummy coin
-        non_reward_p2_singleton = Coin(
-            bytes32(32 * b"3"),
-            p2_singleton_ph,
-            uint64(1337),
-        )
+        non_reward_p2_singleton = Coin(bytes32(32 * b"3"), p2_singleton_ph, uint64(1337),)
         coin_db._add_coin_entry(non_reward_p2_singleton, time)
         # construct coin solution for the p2_singleton coin
         bad_coinsol = CoinSolution(
             non_reward_p2_singleton,
             p2_singleton_puz,
-            Program.to(
-                [
-                    pooling_innerpuz.get_tree_hash(),
-                    non_reward_p2_singleton.name(),
-                ]
-            ),
+            Program.to([pooling_innerpuz.get_tree_hash(), non_reward_p2_singleton.name(),]),
         )
         # Spend it and hope it fails!
         try:
             coin_db.update_coin_store_for_spend_bundle(
-                SpendBundle([singleton_coinsol, bad_coinsol], G2Element()),
-                time,
-                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                SpendBundle([singleton_coinsol, bad_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
@@ -302,14 +224,11 @@ class TestPoolPuzzles(TestCase):
         # sign the serialized state
         data = Program.to(bytes(target_pool_state)).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
-            sk,
-            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
+            sk, (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle([travel_coinsol], sig),
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            SpendBundle([travel_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # ESCAPE TOO FAST (Negative test)
@@ -326,16 +245,11 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # sign the serialized target state
-        sig = AugSchemeMPL.sign(
-            sk,
-            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
-        )
+        sig = AugSchemeMPL.sign(sk, (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),)
         # Spend it and hope it fails!
         try:
             coin_db.update_coin_store_for_spend_bundle(
-                SpendBundle([return_coinsol], sig),
-                time,
-                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
@@ -346,30 +260,17 @@ class TestPoolPuzzles(TestCase):
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         # generate relevant coin solutions
         coin_sols: List[CoinSolution] = create_absorb_spend(
-            travel_coinsol,
-            target_pool_state,
-            launcher_coin,
-            3,  # height
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            travel_coinsol, target_pool_state, launcher_coin, 3, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,  # height
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle(coin_sols, G2Element()),
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            SpendBundle(coin_sols, G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # LEAVE THE WAITING ROOM
         time = CoinTimestamp(20000000, 10000)
         # find the singleton
-        singleton_coinsol: CoinSolution = list(
-            filter(
-                lambda e: e.coin.amount == START_AMOUNT,
-                coin_sols,
-            )
-        )[0]
+        singleton_coinsol: CoinSolution = list(filter(lambda e: e.coin.amount == START_AMOUNT, coin_sols,))[0]
         singleton: Coin = get_most_recent_singleton_coin_from_coin_solution(singleton_coinsol)
         # get the relevant coin solution
         return_coinsol, _ = create_travel_spend(
@@ -386,14 +287,11 @@ class TestPoolPuzzles(TestCase):
         # sign the serialized target state
         data = Program.to([pooling_innerpuz.get_tree_hash(), START_AMOUNT, bytes(pool_state)]).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
-            sk,
-            (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
+            sk, (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle([return_coinsol], sig),
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # ABSORB ONCE MORE FOR GOOD MEASURE
@@ -401,17 +299,9 @@ class TestPoolPuzzles(TestCase):
         # create the farming  reward
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         coin_sols: List[CoinSolution] = create_absorb_spend(
-            return_coinsol,
-            pool_state,
-            launcher_coin,
-            10005,  # height
-            GENESIS_CHALLENGE,
-            DELAY_TIME,
-            DELAY_PH,
+            return_coinsol, pool_state, launcher_coin, 10005, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,  # height
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle(coin_sols, G2Element()),
-            time,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            SpendBundle(coin_sols, G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
