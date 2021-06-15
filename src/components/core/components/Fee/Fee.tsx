@@ -5,6 +5,7 @@ import { useWatch, useFormContext } from 'react-hook-form';
 import TextField, { TextFieldProps } from '../TextField';
 import { chia_to_mojo } from '../../../../util/chia';
 import useCurrencyCode from '../../../../hooks/useCurrencyCode';
+import FormatLargeNumber from '../FormatLargeNumber';
 
 type FeeProps = TextFieldProps & {
   name: string;
@@ -21,9 +22,6 @@ export default function Fee(props: FeeProps) {
   });
 
   const mojo = chia_to_mojo(fee);
-  const helperText = mojo > 1
-    ? `${mojo} mojos`
-    : `${mojo} mojo`;
 
   return (
     <FormControl
@@ -39,7 +37,12 @@ export default function Fee(props: FeeProps) {
         }}
         {...rest}
       />
-      <FormHelperText>{mojo ? helperText : ' '}</FormHelperText>
+      {mojo > 1 && (
+        <FormHelperText>
+          <FormatLargeNumber value={mojo} />
+          {mojo > 1 ? 'mojos' : 'mojo'}
+        </FormHelperText>
+      )}
     </FormControl>
   );
 }

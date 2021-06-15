@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
-import { AlertDialog, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading } from '@chia/core';
+import { AlertDialog, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber } from '@chia/core';
 import {
   Box,
   Button,
@@ -116,20 +116,20 @@ export default function PlotNFTCard(props: Props) {
   }, {
     key: 'current_difficulty',
     label: <Trans>Current Difficulty</Trans>,
-    value: nft.pool_state.current_difficulty,
+    value: <FormatLargeNumber value={nft.pool_state.current_difficulty} />,
   }, {
     key: 'current_points_balance',
     label: <Trans>Current Points Balance</Trans>,
-    value: nft.pool_state.current_points_balance,
+    value: <FormatLargeNumber value={nft.pool_state.current_points_balance} />,
   }, {
     key: 'points_found_since_start',
     label: <Trans>Points Found Since Start</Trans>,
-    value: nft.pool_state.points_found_since_start,
+    value: <FormatLargeNumber value={nft.pool_state.points_found_since_start} />,
   }, {
     key: 'plots_count',
     label: <Trans>Number of Plots</Trans>,
     value: plots
-      ? plots.length
+      ? <FormatLargeNumber value={plots.length} />
       : <Loading size="small" />,
   }].filter(row => !!row && row.value !== undefined);
 
