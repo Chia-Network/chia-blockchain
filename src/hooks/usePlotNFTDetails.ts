@@ -4,7 +4,7 @@ import seedrandom from 'seedrandom';
 import { uniqueNamesGenerator, adjectives, colors, animals } from 'unique-names-generator';
 import type PlotNFT from '../types/PlotNFT';
 import type Plot from '../types/Plot';
-import type PlotNFTState from '../constants/PlotNFTState';
+import PlotNFTState from '../constants/PlotNFTState';
 import type { RootState } from '../modules/rootReducer';
 import usePlots from './usePlots';
 
@@ -16,6 +16,8 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
   balance: number;
   humanName: string;
   plots?: Plot[];
+  canEdit: boolean;
+  isSelfPooling: boolean;
 } {
   const isWalletSynced = useSelector(
     (state: RootState) => state.wallet_state.status.synced,
@@ -42,6 +44,7 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
 
     const poolContractPuzzleHash = `0x${p2_singleton_puzzle_hash}`;
     const isPending = !!target && target !== state;
+    const isSelfPooling = state === PlotNFTState.SELF_POOLING;
 
     const generator = seedrandom(p2_singleton_puzzle_hash);
     const seed = generator.int32();
@@ -62,6 +65,7 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
       balance: confirmed_wallet_balance,
       canEdit: isWalletSynced && !isPending,
       humanName,
+      isSelfPooling,
       plots: plots && plots.filter(plot => plot.pool_contract_puzzle_hash === poolContractPuzzleHash),
     };
   }, [nft, isWalletSynced, plots]);

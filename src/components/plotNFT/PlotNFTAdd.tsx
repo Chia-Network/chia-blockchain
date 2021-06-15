@@ -58,8 +58,8 @@ export default function PlotNFTAdd(props: Props) {
           <Trans>
             Join a pool and get consistent XCH farming rewards. 
             The average returns are the same, but it is much less volatile. 
-            Assign plots to a plot NFT. When pools are released, 
-            you can easily switch pools without having to re-plot.
+            Assign plots to a plot NFT.
+            You can easily switch pools without having to re-plot.
           </Trans>
         )}
       />

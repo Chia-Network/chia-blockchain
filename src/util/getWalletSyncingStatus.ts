@@ -6,9 +6,9 @@ export default function getWalletSyncingStatus(walletState: IncomingState) {
 
   if (syncing) {
     return SyncingStatus.SYNCING;
-  } else if (!synced) {
-    return SyncingStatus.NOT_SYNCED
+  } else if (synced) {
+    return SyncingStatus.SYNCED;
   }
   
-  return SyncingStatus.SYNCED;
+  return SyncingStatus.NOT_SYNCED
 }

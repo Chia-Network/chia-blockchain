@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
-import { Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading } from '@chia/core';
+import { AlertDialog, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading } from '@chia/core';
 import {
   Box,
   Button,
@@ -14,7 +14,6 @@ import {
   ListItemIcon,
 } from '@material-ui/core';
 import type PlotNFT from '../../types/PlotNFT';
-import type { RootState } from '../../modules/rootReducer';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
 import WalletStatus from '../wallet/WalletStatus';
@@ -22,7 +21,9 @@ import useAbsorbRewards from '../../hooks/useAbsorbRewards';
 import useJoinPool from '../../hooks/useJoinPool';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
-import PlotNFTState from '../../constants/PlotNFTState';
+import useOpenDialog from '../../hooks/useOpenDialog';
+import PoolJoin from '../pool/PoolJoin';
+
 
 const StyledCard = styled(Card)`
   display: flex;
@@ -55,33 +56,40 @@ export default function PlotNFTCard(props: Props) {
       pool_state: {
         p2_singleton_puzzle_hash,
         pool_config: {
-          pool_url,
           launcher_id,
         },
-      },
-      wallet_balance: {
-        confirmed_wallet_balance: balance = 0,
       },
     },
   } = props;
 
   const history = useHistory();
+  const openDialog = useOpenDialog();
   const absorbRewards = useAbsorbRewards(nft);
-  const joinPool = useJoinPool(nft);
-  const { canEdit, isSynced, plots, state } = usePlotNFTDetails(nft);
-
-  const isSelfPooling = state === PlotNFTState.SELF_POOLING;
+  const { isSelfPooling, canEdit, isSynced, plots, state, balance } = usePlotNFTDetails(nft);
 
   async function handleClaimRewards() {
-    if (canEdit) {
-      return absorbRewards();
+    if (!canEdit) {
+      return;
     }
+
+    return absorbRewards();
   }
 
   async function handleJoinPool() {
-    if (canEdit) {
-      history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/change-pool`);
+    if (!canEdit) {
+      return;
     }
+
+    if (isSelfPooling && balance) {
+      await openDialog(
+        <AlertDialog>
+          <Trans>You need to claim your rewards first</Trans>
+        </AlertDialog>,
+      );
+      return;
+    }
+
+    history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/change-pool`);
   }
 
   function handleAddPlot() {
@@ -187,22 +195,26 @@ export default function PlotNFTCard(props: Props) {
               )}
 
               <Grid container xs={isSelfPooling ? 6 : 12} item>
-                <Button
-                  variant="contained"
-                  onClick={handleJoinPool}
-                  disabled={!canEdit}
-                  color="primary"
-                  fullWidth
-                >
-                  <Flex flexDirection="column" gap={1}>
-                    <Typography variant="body1">
-                      {isSelfPooling 
-                        ? <Trans>Join Pool</Trans>
-                        : <Trans>Change Pool</Trans>
-                      }
-                    </Typography>
-                  </Flex>
-                </Button>
+                <PoolJoin nft={nft}>
+                  {({ join, disabled }) => (
+                    <Button
+                      variant="contained"
+                      onClick={join}
+                      disabled={disabled}
+                      color="primary"
+                      fullWidth
+                    >
+                      <Flex flexDirection="column" gap={1}>
+                        <Typography variant="body1">
+                          {isSelfPooling 
+                            ? <Trans>Join Pool</Trans>
+                            : <Trans>Change Pool</Trans>
+                          }
+                        </Typography>
+                      </Flex>
+                    </Button>
+                  )}
+                </PoolJoin>
               </Grid>
             </Grid>
           )}

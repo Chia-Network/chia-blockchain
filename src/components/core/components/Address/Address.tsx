@@ -7,7 +7,7 @@ type Props = {
   value: string;
   copyToClipboard?: boolean;
   tooltip?: boolean;
-  children: (address: string) => JSX.Element;
+  children?: (address: string) => JSX.Element;
 };
 
 export default function Address(props: Props) {
@@ -17,6 +17,10 @@ export default function Address(props: Props) {
   const address = currencyCode 
     ? toBech32m(value, currencyCode.toLowerCase())
     : '';
+
+  if (!children) {
+    return address;
+  }
 
   if (tooltip) {
     return (

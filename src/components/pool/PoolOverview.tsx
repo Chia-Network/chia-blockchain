@@ -38,7 +38,23 @@ const groupsCols = [
     title: <Trans>Status</Trans>,
   },
   {
-    field: (nft: PlotNFT) => <UnitFormat value={nft.wallet_balance.confirmed_wallet_balance ?? 0} />,
+    field: (nft: PlotNFT) => {
+      const { 
+        pool_wallet_status: {
+          current: {
+            state,
+          },
+        },
+      } = nft;
+
+      if (state === PlotNFTStateEnum.SELF_POOLING) {
+        return (
+          <UnitFormat value={nft.wallet_balance.confirmed_wallet_balance ?? 0} />
+        );
+      }
+      
+      return null;
+    },
     title: <Trans>Rewards</Trans>,
   },
   {
@@ -66,8 +82,8 @@ const groupsCols = [
               )}
 
               <PoolJoin nft={nft}>
-                {(join) => (
-                  <MenuItem onClick={() => { onClose(); join(); }}>
+                {({ join, disabled }) => (
+                  <MenuItem onClick={() => { onClose(); join(); }} disabled={disabled}>
                     <ListItemIcon>
                       <PowerIcon fontSize="small" />
                     </ListItemIcon>
