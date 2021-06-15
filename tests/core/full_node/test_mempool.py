@@ -337,7 +337,7 @@ class TestMempoolManager:
         start_height = blocks[-1].height
         cvp = ConditionWithArgs(
             ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
-            [uint64(start_height + 5).to_bytes(4, "big")],
+            [int_to_bytes(start_height + 5)],
         )
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
@@ -351,7 +351,7 @@ class TestMempoolManager:
     async def test_correct_block_index(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [uint64(1).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(1)])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -363,7 +363,7 @@ class TestMempoolManager:
     async def test_invalid_block_age(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [uint64(5).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(5)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -376,7 +376,7 @@ class TestMempoolManager:
     async def test_correct_block_age(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [uint64(1).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
 
@@ -422,7 +422,7 @@ class TestMempoolManager:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         time_now = uint64(int(time()))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -436,7 +436,7 @@ class TestMempoolManager:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         time_relative = uint64(3)
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [time_relative.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
@@ -1060,7 +1060,7 @@ class TestMempoolManager:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
         coin = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [coin.amount])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
@@ -1076,7 +1076,7 @@ class TestMempoolManager:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
         coin = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [1000])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(1000)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
