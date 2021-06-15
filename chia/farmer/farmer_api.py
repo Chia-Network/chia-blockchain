@@ -166,7 +166,7 @@ class FarmerAPI:
                 )
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
-                m_to_sign = bytes(payload)
+                m_to_sign = payload.get_hash()
                 request = harvester_protocol.RequestSignatures(
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
