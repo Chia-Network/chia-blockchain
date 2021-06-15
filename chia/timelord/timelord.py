@@ -183,7 +183,7 @@ class Timelord:
             return None
         if ip_iters > block_ip_iters:
             log.warning("Too late to infuse block")
-            return
+            return None
 
         new_block_iters = uint64(block_ip_iters - ip_iters)
         if len(self.last_state.reward_challenge_cache) > found_index + 1:
