@@ -45,7 +45,7 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
+#from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.derive_keys import (
     find_owner_sk,
     master_sk_to_pooling_authentication_sk,
@@ -247,6 +247,9 @@ class PoolWallet:
             pool_payout_instructions = existing_config.pool_payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
+            # Saving pool_url as an empty string will break if we
+            # need to reconstruct a locally saved state from config instead of
+            # from the blockchain
             current_state.current.pool_url if current_state.current.pool_url else "",
             pool_payout_instructions,
             current_state.current.target_puzzle_hash,
@@ -567,7 +570,9 @@ class PoolWallet:
 
         spend_history = await self.get_spend_history()
         last_coin_solution: CoinSolution = spend_history[-1][1]
+
         delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(spend_history[0][1])
+        #delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(spend_history[0][1])
         assert pool_wallet_info.target is not None
         next_state = pool_wallet_info.target
         if pool_wallet_info.current.state in [FARMING_TO_POOL]:
@@ -662,12 +667,12 @@ class PoolWallet:
         # this is true for the first state change after singleton creation
         # assert signed_spend_bundle.coin_solutions[0].coin.parent_coin_info == pool_wallet_info.launcher_id
 
-        print(f"NEW PUZZLE IS: {new_full_puzzle}")
-        print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
-        debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
-        print(
-            f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}"  # noqa
-        )
+        #print(f"NEW PUZZLE IS: {new_full_puzzle}")
+        #print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
+        #debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
+        #print(
+        #    f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}"  # noqa
+        #)
         assert signed_spend_bundle is not None
         self.log.warning(f"generate_travel_spend: {signed_spend_bundle}")
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
@@ -682,6 +687,7 @@ class PoolWallet:
         # full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_id)
         assert spend_bundle is not None
 
+        assert len(spend_bundle.coin_solutions) == 1
         current_singleton: Coin = spend_bundle.coin_solutions[0].coin
         new_expected_singleton = Coin(current_singleton.name(), new_singleton_puzzle_hash, uint64(1))
         print(f"EXPECTED NEW SINGLETON COIN_ID: {new_expected_singleton.get_hash()}")
@@ -1022,7 +1028,7 @@ class PoolWallet:
         tip_height, tip_spend = await self.get_tip()
 
         # tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(tip_spend)
-        self.log.warning(f"new_peak {pool_wallet_info}")
+        #self.log.warning(f"new_peak {pool_wallet_info}")
 
         if self.target_state is None:
             return

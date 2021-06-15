@@ -518,7 +518,7 @@ class TestPoolWalletRpc:
         our_ph = receive_address[0]
         pool_ph = receive_address[1]
         full_node_api = full_nodes[0]
-        WAIT_SECS = 200
+        WAIT_SECS = 20
 
         try:
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
