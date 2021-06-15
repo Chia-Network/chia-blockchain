@@ -30,6 +30,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config, save_config
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
@@ -180,7 +181,7 @@ class Farmer:
         assert authentication_sk.get_g1() == pool_config.authentication_public_key
         authentication_token = get_current_authentication_token(authentication_token_timeout)
         signature: G2Element = AugSchemeMPL.sign(
-            authentication_sk, pool_config.launcher_id + bytes(authentication_token)
+            authentication_sk, std_hash(pool_config.launcher_id + bytes(authentication_token))
         )
         get_farmer_params = {
             "launcher_id": pool_config.launcher_id.hex(),
@@ -208,7 +209,7 @@ class Farmer:
             None,
         )
         assert owner_sk.get_g1() == pool_config.owner_public_key
-        signature: G2Element = AugSchemeMPL.sign(owner_sk, bytes(post_farmer_payload))
+        signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
         post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
         post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
 
@@ -233,7 +234,7 @@ class Farmer:
             None,
         )
         assert owner_sk.get_g1() == pool_config.owner_public_key
-        signature: G2Element = AugSchemeMPL.sign(owner_sk, bytes(put_farmer_payload))
+        signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
         put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
         put_farmer_body = json.dumps(put_farmer_request.to_json_dict())
 
