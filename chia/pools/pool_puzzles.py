@@ -250,6 +250,7 @@ def create_absorb_spend(
     full_puzzle: SerializedProgram = SerializedProgram.from_program(
         create_full_puzzle(inner_puzzle, launcher_coin.name())
     )
+    assert coin.puzzle_hash == full_puzzle.get_tree_hash()
 
     reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
     p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(
