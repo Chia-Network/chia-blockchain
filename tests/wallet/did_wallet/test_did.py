@@ -1,3 +1,4 @@
+"""
 import asyncio
 import time
 import pytest
@@ -26,7 +27,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
-
 
 class XTestDIDWallet:
     @pytest.fixture(scope="function")
@@ -629,3 +629,4 @@ class XTestDIDWallet:
         # Assert coin ID is failing
         await time_out_assert(15, wallet.get_confirmed_balance, 23999999999899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 23999999999899)
+"""
