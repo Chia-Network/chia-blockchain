@@ -15,6 +15,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
+    ErrorResponse,
     get_current_authentication_token,
     GetFarmerResponse,
     PoolErrorCode,
@@ -31,7 +32,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -160,6 +161,12 @@ class Farmer:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, data)
 
+    def handle_failed_pool_response(self, p2_singleton_puzzle_hash: bytes32, error_message: str):
+        self.log.error(error_message)
+        self.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"].append(
+            ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict()
+        )
+
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
@@ -173,9 +180,16 @@ class Farmer:
                         self.log.info(f"GET /pool_info response: {response}")
                         return response
                     else:
-                        self.log.error(f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}")
+                        self.handle_failed_pool_response(
+                            pool_config.p2_singleton_puzzle_hash,
+                            f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}",
+                        )
+
         except Exception as e:
-            self.log.error(f"Exception in GET /pool_info {pool_config.pool_url}, {e}")
+            self.handle_failed_pool_response(
+                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /pool_info {pool_config.pool_url}, {e}"
+            )
+
         return None
 
     async def _pool_get_farmer(
@@ -197,11 +211,18 @@ class Farmer:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"GET /farmer response: {response}")
+                        if "error_code" in response:
+                            self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
                         return response
                     else:
-                        self.log.error(f"Error in GET /farmer {pool_config.pool_url}, {resp.status}")
+                        self.handle_failed_pool_response(
+                            pool_config.p2_singleton_puzzle_hash,
+                            f"Error in GET /farmer {pool_config.pool_url}, {resp.status}",
+                        )
         except Exception as e:
-            self.log.error(f"Exception in GET /farmer {pool_config.pool_url}, {e}")
+            self.handle_failed_pool_response(
+                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /farmer {pool_config.pool_url}, {e}"
+            )
         return None
 
     async def _pool_post_farmer(
@@ -225,11 +246,18 @@ class Farmer:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"POST /farmer response: {response}")
+                        if "error_code" in response:
+                            self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
                         return response
                     else:
-                        self.log.error(f"Error in POST /farmer {pool_config.pool_url}, {resp.status}")
+                        self.handle_failed_pool_response(
+                            pool_config.p2_singleton_puzzle_hash,
+                            f"Error in POST /farmer {pool_config.pool_url}, {resp.status}",
+                        )
         except Exception as e:
-            self.log.error(f"Exception in POST /farmer {pool_config.pool_url}, {e}")
+            self.handle_failed_pool_response(
+                pool_config.p2_singleton_puzzle_hash, f"Exception in POST /farmer {pool_config.pool_url}, {e}"
+            )
         return None
 
     async def _pool_put_farmer(
@@ -253,11 +281,18 @@ class Farmer:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"PUT /farmer response: {response}")
+                        if "error_code" in response:
+                            self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
                         return response
                     else:
-                        self.log.error(f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}")
+                        self.handle_failed_pool_response(
+                            pool_config.p2_singleton_puzzle_hash,
+                            f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}",
+                        )
         except Exception as e:
-            self.log.error(f"Exception in PUT /farmer {pool_config.pool_url}, {e}")
+            self.handle_failed_pool_response(
+                pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
+            )
         return None
 
     async def update_pool_state(self):
