@@ -46,7 +46,6 @@ from chia.pools.pool_puzzles import (
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.derive_keys import (
-    find_owner_sk,
     master_sk_to_pooling_authentication_sk,
     master_sk_to_singleton_owner_sk,
 )
@@ -223,10 +222,6 @@ class PoolWallet:
         current_state: PoolWalletInfo = await self.get_current_state()
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
         pool_config_dict: Dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
-        owner_sk: PrivateKey = await find_owner_sk(
-            [self.wallet_state_manager.private_key],
-            current_state.current.owner_pubkey,
-        )
         existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
 
         if make_new_authentication_key or existing_config is None:
