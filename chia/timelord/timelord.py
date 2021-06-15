@@ -182,7 +182,7 @@ class Timelord:
             log.warning(f"Will not infuse {block.rc_prev} because its reward chain challenge is not in the chain")
             return None
         if ip_iters > block_ip_iters:
-            log.warning(f"Too late to infuse block")
+            log.warning("Too late to infuse block")
             return
 
         new_block_iters = uint64(block_ip_iters - ip_iters)
