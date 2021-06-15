@@ -11,12 +11,6 @@ MIN_PASSWORD_LEN = 8
 PASSWORD_CLI_OPTION_NAMES = ["keys_root_path", "set_password", "password_file", "current_password_file"]
 
 
-def supports_keyring_password() -> bool:
-    from sys import platform
-
-    return platform == "linux"
-
-
 def remove_passwords_options_from_cmd(cmd) -> None:
     # TODO: Click doesn't seem to have a great way of adding/removing params using an
     # existing command, and using the decorator-supported construction of options doesn't

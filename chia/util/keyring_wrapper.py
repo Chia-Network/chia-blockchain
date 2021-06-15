@@ -41,13 +41,19 @@ class KeyringWrapper:
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
+        from chia.util.keychain import supports_keyring_password
+
         self.keys_root_path = keys_root_path
         self.keyring = self._configure_backend()
-        self.legacy_keyring = self._configure_legacy_backend()
+
+        if not supports_keyring_password():
+            self.legacy_keyring = self._configure_legacy_backend()
 
         KeyringWrapper.__shared_instance = self
 
     def _configure_backend(self) -> Union[Any, FileKeyring]:
+        from chia.util.keychain import supports_keyring_password
+
         if self.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
 
@@ -60,7 +66,11 @@ class KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
-            keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
+            if supports_keyring_password():
+                keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
+            else:
+                keyring = CryptFileKeyring()
+                keyring.keyring_key = "your keyring password"  # type: ignore
         else:
             keyring = keyring_main
 

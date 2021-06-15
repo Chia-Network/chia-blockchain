@@ -7,7 +7,7 @@ from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
 from chia.cmds.password import password_cmd
-from chia.cmds.password_funcs import remove_passwords_options_from_cmd, supports_keyring_password
+from chia.cmds.password_funcs import remove_passwords_options_from_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
@@ -19,8 +19,12 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import set_keyring_root_path
 =======
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
+<<<<<<< HEAD
 from chia.util.keychain import set_keys_root_path
 >>>>>>> keyring.yaml now lives in ~/.chia_keys by default. Can be overridden with CHIA_KEYS_ROOT or --keys-root-path
+=======
+from chia.util.keychain import set_keys_root_path, supports_keyring_password
+>>>>>>> KeyringWrapper now uses supports_keyring_password to determine if a FileKeyring should be used. Patched tests to work regardless of whether supports_keyring_password return False
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
