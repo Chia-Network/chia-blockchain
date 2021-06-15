@@ -54,7 +54,7 @@
 
   ; main
 
-  (if pool_reward_height
+  (if (l p1)
     (absorb_pool_reward POOL_PUZZLE_HASH
                         my_inner_puzzle_hash
                         my_amount
