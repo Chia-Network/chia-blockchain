@@ -43,7 +43,7 @@ class HarvesterAPI:
 
         if len(self.harvester.provers) == 0:
             self.harvester.log.warning("Not farming any plots on this harvester. Check your configuration.")
-            return
+            return None
 
     @peer_required
     @api_request
@@ -64,7 +64,7 @@ class HarvesterAPI:
         """
         if len(self.harvester.pool_public_keys) == 0 or len(self.harvester.farmer_public_keys) == 0:
             # This means that we have not received the handshake yet
-            return
+            return None
 
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
@@ -200,13 +200,13 @@ class HarvesterAPI:
             time_taken = time.time() - start
             if time_taken > 5:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time.time() - start}. This should be below 5 seconds "
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds "
                     f"to minimize risk of losing rewards."
                 )
             else:
                 pass
                 # If you want additional logs, uncomment the following line
-                # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time.time() - start}")
+                # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time_taken}")
             for response in sublist:
                 total_proofs_found += 1
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
@@ -241,7 +241,7 @@ class HarvesterAPI:
             plot_info = self.harvester.provers[plot_filename]
         except KeyError:
             self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
-            return
+            return None
 
         # Look up local_sk from plot to save locked memory
         (

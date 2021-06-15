@@ -312,7 +312,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         try:
             if "testing" in self.service.config and self.service.config["testing"] is True:
-                return
+                return None
             now = time.time()
             file_name = f"backup_{now}"
             path = path_from_root(self.service.root_path, file_name)
@@ -346,6 +346,7 @@ class WalletRpcApi:
                     "colour": colour,
                     "wallet_id": cc_wallet.id(),
                 }
+
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet = await CCWallet.create_wallet_for_cc(
@@ -353,6 +354,10 @@ class WalletRpcApi:
                     )
                     asyncio.create_task(self._create_backup_and_upload(host))
                 return {"type": cc_wallet.type()}
+
+            else:  # undefined mode
+                pass
+
         elif request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
@@ -374,6 +379,7 @@ class WalletRpcApi:
                     "origin": rl_admin.rl_info.rl_origin,
                     "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
                 }
+
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
                 async with self.service.wallet_state_manager.lock:
@@ -385,6 +391,10 @@ class WalletRpcApi:
                     "type": rl_user.type(),
                     "pubkey": rl_user.rl_info.user_pubkey.hex(),
                 }
+
+            else:  # undefined rl_type
+                pass
+
         elif request["wallet_type"] == "did_wallet":
             if request["did_type"] == "new":
                 backup_dids = []
@@ -408,6 +418,7 @@ class WalletRpcApi:
                     "my_did": my_did,
                     "wallet_id": did_wallet.id(),
                 }
+
             elif request["did_type"] == "recovery":
                 async with self.service.wallet_state_manager.lock:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
@@ -434,6 +445,14 @@ class WalletRpcApi:
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
 
+            else:  # undefined did_type
+                pass
+
+        else:  # undefined wallet_type
+            pass
+
+        return None
+
     ##########################################################################################
     # Wallet
     ##########################################################################################
@@ -442,12 +461,17 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        balance = await wallet.get_confirmed_balance(unspent_records)
-        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-        spendable_balance = await wallet.get_spendable_balance(unspent_records)
-        pending_change = await wallet.get_pending_change_balance()
-        max_send_amount = await wallet.get_max_send_amount(unspent_records)
+        async with self.service.wallet_state_manager.lock:
+            unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            balance = await wallet.get_confirmed_balance(unspent_records)
+            pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+            spendable_balance = await wallet.get_spendable_balance(unspent_records)
+            pending_change = await wallet.get_pending_change_balance()
+            max_send_amount = await wallet.get_max_send_amount(unspent_records)
+
+            unconfirmed_removals: Dict[
+                bytes32, Coin
+            ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
 
         wallet_balance = {
             "wallet_id": wallet_id,
@@ -456,6 +480,8 @@ class WalletRpcApi:
             "spendable_balance": spendable_balance,
             "pending_change": pending_change,
             "max_send_amount": max_send_amount,
+            "unspent_coin_count": len(unspent_records),
+            "pending_coin_removal_count": len(unconfirmed_removals),
         }
 
         return {"wallet_balance": wallet_balance}
@@ -544,7 +570,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
+        if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
@@ -740,22 +766,22 @@ class WalletRpcApi:
         else:
             new_amount_verifications_required = len(recovery_list)
         async with self.service.wallet_state_manager.lock:
-            success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
+            update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
             updated_puz = await wallet.get_new_puzzle()
             spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
-        if spend_bundle is not None and success:
-            return {"success": True}
-        return {"success": False}
+
+        success = spend_bundle is not None and update_success
+        return {"success": success}
 
     async def did_spend(self, request):
         wallet_id = int(request["wallet_id"])
         async with self.service.wallet_state_manager.lock:
             wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
             spend_bundle = await wallet.create_spend(request["puzzlehash"])
-        if spend_bundle is not None:
-            return {"success": True}
-        return {"success": False}
+
+        success = spend_bundle is not None
+        return {"success": success}
 
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
@@ -907,8 +933,6 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
-        request["wallet_id"] = 1
-        request["puzzle_hash"] = puzzle_hash
         async with self.service.wallet_state_manager.lock:
             await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}

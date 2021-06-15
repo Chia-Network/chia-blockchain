@@ -247,6 +247,9 @@ async def validate_block_body(
         # We will not even reach here because Coins do type checking (uint64)
         for coin in additions + coinbase_additions:
             additions_dic[coin.name()] = coin
+            if coin.amount < 0:
+                return Err.COIN_AMOUNT_NEGATIVE, None
+
             if coin.amount > constants.MAX_COIN_AMOUNT:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None
 

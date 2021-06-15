@@ -15,7 +15,7 @@ def init_cmd(ctx: click.Context, create_certs: str):
     Create a new configuration or migrate from previous versions to current
 
     \b
-    Follow these steps to create new certifcates for a remote harvester:
+    Follow these steps to create new certificates for a remote harvester:
     - Make a copy of your Farming Machine CA directory: ~/.chia/[version]/config/ssl/ca
     - Shut down all chia daemon processes with `chia stop all -d`
     - Run `chia init -c [directory]` on your remote harvester,
