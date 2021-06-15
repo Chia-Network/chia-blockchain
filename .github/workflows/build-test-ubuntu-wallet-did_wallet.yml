@@ -1,4 +1,4 @@
-name: Ubuntu TEST_NAME Test
+name: Ubuntu wallet-did_wallet Test
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: Ubuntu TEST_NAME Test
+    name: Ubuntu wallet-did_wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: JOB_TIMEOUT
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -60,7 +60,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-CHECKOUT_TEST_BLOCKS_AND_PLOTS
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+        ref: '0.27.0'
+        fetch-depth: 1
 
     - name: Link home directory
       run: |
@@ -82,14 +88,18 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
       run: |
         sh install.sh
 
-INSTALL_TIMELORD
+    - name: Install timelord
+      run: |
+        . ./activate
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
 
     - name: Install developer requirements
       run: |
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test TEST_NAME code with pytest
+    - name: Test wallet-did_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test TEST_DIR -s -v --durations 0 PYTEST_PARALLEL_ARGS
+        ./venv/bin/py.test tests/wallet/did_wallet/test_did.py -s -v --durations 0 

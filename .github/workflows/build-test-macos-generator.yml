@@ -90,4 +90,4 @@ jobs:
     - name: Test generator code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/generator/test_compression.py tests/generator/test_generator_types.py tests/generator/test_scan.py -s -v --durations 0 
+        ./venv/bin/py.test tests/generator/test_compression.py tests/generator/test_generator_types.py tests/generator/test_rom.py tests/generator/test_scan.py -s -v --durations 0 
