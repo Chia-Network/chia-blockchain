@@ -165,14 +165,17 @@ class Farmer:
         self.state_changed("close_connection", {})
 
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
-        async with aiohttp.ClientSession(trust_env=True) as session:
-            async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
-                if resp.ok:
-                    response: Dict = json.loads(await resp.text())
-                    self.log.info(f"GET /pool_info response: {response}")
-                    return response
-                else:
-                    self.log.error(f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}")
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
+                    if resp.ok:
+                        response: Dict = json.loads(await resp.text())
+                        self.log.info(f"GET /pool_info response: {response}")
+                        return response
+                    else:
+                        self.log.error(f"Error in GET /pool_info {pool_config.pool_url}, {resp.status}")
+        except Exception as e:
+            self.log.error(f"Exception in GET /pool_info {pool_config.pool_url}, {e}")
         return None
 
     async def _pool_get_farmer(
@@ -216,15 +219,18 @@ class Farmer:
         post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
         post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"{pool_config.pool_url}/farmer", data=post_farmer_body) as resp:
-                if resp.ok:
-                    response: Dict = json.loads(await resp.text())
-                    self.log.info(f"POST /farmer response: {response}")
-                    return response
-                else:
-                    self.log.error(f"Error in POST /farmer {pool_config.pool_url}, {resp.status}")
-                    return None
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"{pool_config.pool_url}/farmer", data=post_farmer_body) as resp:
+                    if resp.ok:
+                        response: Dict = json.loads(await resp.text())
+                        self.log.info(f"POST /farmer response: {response}")
+                        return response
+                    else:
+                        self.log.error(f"Error in POST /farmer {pool_config.pool_url}, {resp.status}")
+        except Exception as e:
+            self.log.error(f"Exception in POST /farmer {pool_config.pool_url}, {e}")
+        return None
 
     async def _pool_put_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
@@ -241,15 +247,18 @@ class Farmer:
         put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
         put_farmer_body = json.dumps(put_farmer_request.to_json_dict())
 
-        async with aiohttp.ClientSession() as session:
-            async with session.put(f"{pool_config.pool_url}/farmer", data=put_farmer_body) as resp:
-                if resp.ok:
-                    response: Dict = json.loads(await resp.text())
-                    self.log.info(f"PUT /farmer response: {response}")
-                    return response
-                else:
-                    self.log.error(f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}")
-                    return None
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.put(f"{pool_config.pool_url}/farmer", data=put_farmer_body) as resp:
+                    if resp.ok:
+                        response: Dict = json.loads(await resp.text())
+                        self.log.info(f"PUT /farmer response: {response}")
+                        return response
+                    else:
+                        self.log.error(f"Error in PUT /farmer {pool_config.pool_url}, {resp.status}")
+        except Exception as e:
+            self.log.error(f"Exception in PUT /farmer {pool_config.pool_url}, {e}")
+        return None
 
     async def update_pool_state(self):
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
