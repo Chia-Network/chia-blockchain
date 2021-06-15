@@ -51,15 +51,15 @@
   ; main
 
   (if pool_reward_height
-    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree p1))
-          (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
-
-    )
     (absorb_pool_reward POOL_PUZZLE_HASH
                         my_inner_puzzle_hash
                         my_amount
                         p1
                         (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
+    )
+    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree p1))
+          (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
+
     )
   )
 )
