@@ -48,6 +48,12 @@
     )
   )
 
+  (defun-inline travel_to_waitingroom (OWNER_PUBKEY WAITINGROOM_PUZHASH my_amount extra_data)
+    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree extra_data))
+          (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
+    )
+  )
+
   ; main
 
   (if pool_reward_height
@@ -57,9 +63,7 @@
                         p1
                         (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
     )
-    (list (list AGG_SIG_ME OWNER_PUBKEY (sha256tree p1))
-          (list CREATE_COIN WAITINGROOM_PUZHASH my_amount)
-
+    (travel_to_waitingroom OWNER_PUBKEY WAITINGROOM_PUZHASH my_amount p1)
     )
   )
 )

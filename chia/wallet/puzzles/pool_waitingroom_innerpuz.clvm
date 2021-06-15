@@ -46,13 +46,17 @@
     )
   )
 
+  (defun-inline travel_spend (RELATIVE_LOCK_HEIGHT new_puzzle_hash my_amount extra_data)
+    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT)
+          (list CREATE_COIN new_puzzle_hash my_amount)
+          (list AGG_SIG_ME OWNER_PUBKEY (sha256tree (list new_puzzle_hash extra_data)))
+    )
+  )
+
   ; main
 
   (if spend_type
-    (list (list ASSERT_HEIGHT_RELATIVE RELATIVE_LOCK_HEIGHT)
-          (list CREATE_COIN p2 my_amount)
-          (list AGG_SIG_ME OWNER_PUBKEY (sha256tree (list p2 my_amount p1)))
-    )
+    (travel_spend RELATIVE_LOCK_HEIGHT p2 my_amount p1)
     (absorb_pool_reward POOL_PUZZLE_HASH
                         my_inner_puzzle_hash
                         my_amount
