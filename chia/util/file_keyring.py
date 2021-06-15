@@ -404,29 +404,28 @@ class FileKeyring(FileSystemEventHandler):
 
         self.payload_cache = dict(yaml.safe_load(inner_payload))
 
+    def is_first_write(self):
+        return self.outer_payload_cache == FileKeyring.default_outer_payload()
+
     def write_keyring(self, fresh_salt: bool = False):
-        from chia.util.keyring_wrapper import DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+        from chia.util.keyring_wrapper import DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD, KeyringWrapper
 
         inner_payload = self.payload_cache
         inner_payload_yaml = yaml.safe_dump(inner_payload)
         nonce = FileKeyring.generate_nonce()
         key = None
 
-        # Update the salt when changing the master password
-        if fresh_salt:
+        # Update the salt when changing the master password or when the keyring is new (empty)
+        if fresh_salt or not self.salt:
             self.salt = FileKeyring.generate_salt()
-
-        using_default_password = False
-        # If the salt is missing, we're working with an empty keyring
-        if not self.salt:
-            self.salt = FileKeyring.generate_salt()
-            using_default_password = True
 
         salt = self.salt
 
-        if using_default_password:
-            key = FileKeyring.symmetric_key_from_password(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD, self.salt)
+        # When writing for the first time, we should have a cached password which hasn't been validated (because it can't be validated yet...)
+        if self.is_first_write() and KeyringWrapper.get_shared_instance().has_cached_master_password():
+            key = FileKeyring.symmetric_key_from_password(KeyringWrapper.get_shared_instance().get_cached_master_password()[0], self.salt)
         else:
+            # Prompt for the password interactively and derive the key
             key = FileKeyring.get_symmetric_key(salt)
 
         encrypted_inner_payload = self.encrypt_data(CHECKBYTES_VALUE + inner_payload_yaml.encode(), key, nonce)
