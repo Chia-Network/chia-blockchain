@@ -37,6 +37,7 @@ This test suite aims to test:
 
 T1 = CoinTimestamp(1, 10000000)
 
+
 # Helper function
 def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
     synthetic_secret_key: PrivateKey = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(  # noqa
