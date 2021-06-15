@@ -163,7 +163,7 @@ def create_travel_spend(
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol: Program = Program.to([1, 0, 0, bytes(target)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
-        # inner sol is (spend_type, destination_puz hash, pool_reward_amount, pool_reward_height, extra_data)
+        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data, destination_puz hash)
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
@@ -172,7 +172,7 @@ def create_travel_spend(
             f"{target}"
             f"hash:{Program(bytes(target)).get_tree_hash()}"
         )
-        inner_sol = Program.to([1, destination_inner.get_tree_hash(), 0, 0, bytes(target)])  # current or target
+        inner_sol = Program.to([1, 0, 0, bytes(target), destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
@@ -384,7 +384,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         extra_data = inner_solution.rest().rest().rest().first().as_atom()
     else:
         # pool escaping
-        extra_data = inner_solution.rest().rest().rest().rest().first().as_atom()
+        extra_data = inner_solution.rest().rest().rest().first().as_atom()
     return PoolState.from_bytes(extra_data)
 
 
