@@ -425,7 +425,7 @@ class PoolWallet:
         fee: uint64 = uint64(0),
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
-    ) -> TransactionRecord:
+    ) -> Tuple[TransactionRecord, bytes32]:
         """
         A "plot group" represents the idea of a set of plots that all pay to
         the same pooling puzzle. This puzzle is a `chia singleton` that is
@@ -455,7 +455,7 @@ class PoolWallet:
         # Verify Parameters - raise if invalid
         PoolWallet._verify_initial_target_state(initial_target_state)
 
-        spend_bundle, singleton_puzzle_hash = await PoolWallet.generate_launcher_spend(
+        spend_bundle, singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
             standard_wallet,
             uint64(1),
             initial_target_state,
@@ -490,7 +490,10 @@ class PoolWallet:
             name=spend_bundle.name(),
         )
         await standard_wallet.push_transaction(standard_wallet_record)
-        return standard_wallet_record
+        p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
+            launcher_coin_id, p2_singleton_delay_time, p2_singleton_delayed_ph
+        )
+        return standard_wallet_record, p2_singleton_puzzle_hash
 
     async def get_pool_wallet_sk(self):
         owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
@@ -711,7 +714,7 @@ class PoolWallet:
         genesis_challenge: bytes32,
         delay_time: uint64,
         delay_ph: bytes32,
-    ) -> Tuple[SpendBundle, bytes32]:
+    ) -> Tuple[SpendBundle, bytes32, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         with the "pooling" inner state, which can be either self pooling or using a pool
@@ -791,7 +794,7 @@ class PoolWallet:
 
         # Current inner will be updated when state is verified on the blockchain
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
-        return full_spend, puzzle_hash
+        return full_spend, puzzle_hash, launcher_coin.name()
 
     async def _try_to_farm_to_pool(self, target_state: PoolState) -> TransactionRecord:
 
