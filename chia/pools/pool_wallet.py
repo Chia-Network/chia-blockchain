@@ -425,7 +425,7 @@ class PoolWallet:
         fee: uint64 = uint64(0),
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
-    ) -> Tuple[TransactionRecord, bytes32]:
+    ) -> Tuple[TransactionRecord, bytes32, bytes32]:
         """
         A "plot group" represents the idea of a set of plots that all pay to
         the same pooling puzzle. This puzzle is a `chia singleton` that is
@@ -493,7 +493,7 @@ class PoolWallet:
         p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
             launcher_coin_id, p2_singleton_delay_time, p2_singleton_delayed_ph
         )
-        return standard_wallet_record, p2_singleton_puzzle_hash
+        return standard_wallet_record, p2_singleton_puzzle_hash, launcher_coin_id
 
     async def get_pool_wallet_sk(self):
         owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(

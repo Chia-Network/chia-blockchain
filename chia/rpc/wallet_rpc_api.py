@@ -484,7 +484,7 @@ class WalletRpcApi:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:
                             delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
-                        tr, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
+                        tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
                             wallet_state_manager,
                             main_wallet,
                             initial_target_state,
@@ -494,7 +494,11 @@ class WalletRpcApi:
                         )
                     except Exception as e:
                         raise ValueError(str(e))
-                    return {"transaction": tr, "launcher_id": launcher_id.hex()}
+                    return {
+                        "transaction": tr,
+                        "launcher_id": launcher_id.hex(),
+                        "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
+                    }
             elif request["mode"] == "recovery":
                 raise ValueError("Need upgraded singleton for on-chain recovery")
 
