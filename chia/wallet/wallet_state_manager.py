@@ -1117,37 +1117,36 @@ class WalletStateManager:
         await self.action_store.action_done(action_id)
 
     async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
-
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
-        for action in actions:
+        generator_actions = filter(lambda a: a.name == "request_generator", actions)
+        for action in generator_actions:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
-            if action.name == "request_generator":
-                stored_header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
-                stored_height = uint32(action_data["height"])
-                if stored_header_hash == header_hash and stored_height == height:
-                    if action.done:
-                        return None
-                    wallet = self.wallets[uint32(action.wallet_id)]
-                    callback_str = action.wallet_callback
-                    if callback_str is not None:
-                        callback = getattr(wallet, callback_str)
-                        await callback(height, header_hash, program, action.id)
+            stored_header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
+            stored_height = uint32(action_data["height"])
+            if stored_header_hash == header_hash and stored_height == height:
+                if action.done:
+                    return None
+                wallet = self.wallets[uint32(action.wallet_id)]
+                callback_str = action.wallet_callback
+                if callback_str is not None:
+                    callback = getattr(wallet, callback_str)
+                    await callback(height, header_hash, program, action.id)
 
     async def puzzle_solution_received(self, response: RespondPuzzleSolution):
         unwrapped: PuzzleSolutionResponse = response.response
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
-        for action in actions:
+        solution_actions = filter(lambda a: a.name == "request_puzzle_solution", actions)
+        for action in solution_actions:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
-            if action.name == "request_puzzle_solution":
-                stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                height = uint32(action_data["height"])
-                if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
-                    if action.done:
-                        return None
-                    wallet = self.wallets[uint32(action.wallet_id)]
-                    callback_str = action.wallet_callback
-                    if callback_str is not None:
-                        callback = getattr(wallet, callback_str)
-                        await callback(unwrapped, action.id)
+            stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+            height = uint32(action_data["height"])
+            if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
+                if action.done:
+                    return None
+                wallet = self.wallets[uint32(action.wallet_id)]
+                callback_str = action.wallet_callback
+                if callback_str is not None:
+                    callback = getattr(wallet, callback_str)
+                    await callback(unwrapped, action.id)

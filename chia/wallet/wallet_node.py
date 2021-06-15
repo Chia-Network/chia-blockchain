@@ -5,7 +5,7 @@ import socket
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from blspy import PrivateKey
 
@@ -242,24 +242,21 @@ class WalletNode:
             return None
         asyncio.create_task(self._resend_queue())
 
-    async def _action_messages(self) -> List[Message]:
+    async def _action_messages(self) -> Iterable[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
-            return []
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-        result: List[Message] = []
-        for action in actions:
+            return ()
+
+        def make_msg_from_action(action) -> Message:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
-            if action.name == "request_puzzle_solution":
-                coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                height = uint32(action_data["height"])
-                msg = make_msg(
-                    ProtocolMessageTypes.request_puzzle_solution,
-                    wallet_protocol.RequestPuzzleSolution(coin_name, height),
-                )
-                result.append(msg)
+            coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+            height = uint32(action_data["height"])
+            msg_data = wallet_protocol.RequestPuzzleSolution(coin_name, height)
+            return make_msg(ProtocolMessageTypes.request_puzzle_solution, msg_data)
 
-        return result
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        solution_actions = filter(lambda a: a.name == "request_puzzle_solution", actions)
+        return map(make_msg_from_action, solution_actions)
 
     async def _resend_queue(self):
         if (
