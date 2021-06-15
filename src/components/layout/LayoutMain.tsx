@@ -20,10 +20,11 @@ type Props = {
   children?: ReactElement<any>;
   title?: ReactNode;
   loading?: boolean;
+  loadingTitle?: ReactNode;
 };
 
 export default function LayoutMain(props: Props) {
-  const { children, title, loading } = props;
+  const { children, title, loading, loadingTitle } = props;
 
   return (
     <>
@@ -34,7 +35,7 @@ export default function LayoutMain(props: Props) {
           <Flex flexDirection="column" gap={2} flexGrow="1">
             {loading ? (
               <Flex flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-                <Loading />
+                <Loading>{loadingTitle}</Loading>
               </Flex>
             ) : children}
           </Flex>

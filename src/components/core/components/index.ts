@@ -1,4 +1,5 @@
 export { default as Accordion } from './Accordion';
+export { default as Address } from './Address';
 export { default as AdvancedOptions } from './AdvancedOptions';
 export { default as AlertDialog } from './AlertDialog';
 export { default as AspectRatio } from './AspectRatio';

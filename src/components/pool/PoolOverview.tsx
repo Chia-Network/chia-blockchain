@@ -146,7 +146,7 @@ export default function PoolOverview() {
           <Flex gap={1} >
             <Typography variant="body1" color="textSecondary">
               <Trans>
-                Total Rewards
+                Total Self Pooling Rewards
               </Trans>
             </Typography>
             <UnitFormat value={totalWinning} state={State.SUCCESS} />

@@ -4,7 +4,7 @@ import { Button, CardStep, Select, Flex, Loading } from '@chia/core';
 import { Box, Grid, FormControl, InputLabel, MenuItem, Typography } from '@material-ui/core';
 import usePlotNFTs from '../../../hooks/usePlotNFTs';
 import PlotNFTName from '../../plotNFT/PlotNFTName';
-import PlotNFTAdd from '../../plotNFT/add/PlotNFTAdd';
+import PlotNFTSelectPool from '../../plotNFT/select/PlotNFTSelectPool';
 
 export default function PlotAddNFT() {
   const { nfts, loading } = usePlotNFTs();
@@ -20,7 +20,17 @@ export default function PlotAddNFT() {
 
   if (showCreatePlotNFT) {
     return (
-      <PlotNFTAdd step={5} onCancel={handleCancelPlotNFT} />
+      <PlotNFTSelectPool 
+        step={5} 
+        onCancel={handleCancelPlotNFT}
+        title={<Trans>Create a Plot NFT</Trans>}
+        description={(
+          <Trans>
+            Join a pool and get consistent XCH farming rewards. 
+            The average returns are the same, but it is much less volatile.
+          </Trans>
+        )}
+      />
     );
   }
 

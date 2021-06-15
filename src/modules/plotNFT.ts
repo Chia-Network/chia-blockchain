@@ -7,6 +7,7 @@ import type Wallet from '../types/Wallet';
 import type WalletBalance from '../types/WalletBalance';
 import type PoolState from '../types/PoolState';
 import type PoolWalletStatus from '../types/PoolWalletStatus';
+import type InitialTargetState from '../types/InitialTargetState';
 
 export function getPlotNFTs() {
   return async (dispatch) => {
@@ -53,15 +54,6 @@ export function getPlotNFTs() {
     return nfts;
   }
 }
-
-type InitialTargetState = {
-  state: 'SELF_POOLING';
-} | {
-  state: 'FARMING_TO_POOL';
-  pool_url: string;
-  relative_lock_height: number;
-  target_puzzle_hash: string;
-};
 
 export function createPlotNFT(initialTargetState: InitialTargetState, fee?: string) {
   return async (dispatch) => {

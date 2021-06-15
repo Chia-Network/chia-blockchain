@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory, useLocation } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { Button } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { Flex, Form, FormBackButton, Loading } from '@chia/core';
+import { ButtonLoading, Flex, Form, FormBackButton, Loading } from '@chia/core';
 import { PlotHeaderSource } from '../PlotHeader';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
@@ -27,10 +26,9 @@ export default function PlotAdd() {
   const history = useHistory();
   const { state } = useLocation();
   const dispatch = useDispatch();
+  const [loading, setLoading] = useState<boolean>(false);
   const currencyCode = useCurrencyCode();
   const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
-
-  console.log('state', state);
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
@@ -65,31 +63,35 @@ export default function PlotAdd() {
   }, [plotSize, setValue]);
 
   const handleSubmit: SubmitHandler<FormData> = async (data) => {
-    const { p2_singleton_puzzle_hash, delay, ...rest } = data;
-    const { farmerPublicKey, poolPublicKey } = rest;
+    try {
+      setLoading(true);
+      const { p2_singleton_puzzle_hash, delay, ...rest } = data;
+      const { farmerPublicKey, poolPublicKey } = rest;
 
-    if (!currencyCode) {
-      throw new Error('Currency code is not defined');
+      if (!currencyCode) {
+        throw new Error('Currency code is not defined');
+      }
+  
+      const plotAddConfig = {
+        ...rest,
+        delay: delay * 60,
+      };
+  
+      if (p2_singleton_puzzle_hash) {
+        plotAddConfig.c = toBech32m(p2_singleton_puzzle_hash, currencyCode.toLowerCase());
+      }
+  
+      if (!p2_singleton_puzzle_hash && !farmerPublicKey && !poolPublicKey && fingerprint) {
+        plotAddConfig.fingerprint = fingerprint;
+      }
+  
+      await dispatch(plotQueueAdd(plotAddConfig));
+  
+      history.push('/dashboard/plot');
+    } finally {
+      setLoading(false);
     }
 
-    const plotAddConfig = {
-      ...rest,
-      delay: delay * 60,
-    };
-
-    if (p2_singleton_puzzle_hash) {
-      plotAddConfig.c = toBech32m(p2_singleton_puzzle_hash, currencyCode.toLowerCase());
-    }
-
-    if (!p2_singleton_puzzle_hash && !farmerPublicKey && !poolPublicKey && fingerprint) {
-      plotAddConfig.fingerprint = fingerprint;
-    }
-
-    console.log('plotAddConfig', plotAddConfig);
-
-    await dispatch(plotQueueAdd(plotAddConfig));
-
-    history.push('/dashboard/plot');
   }
 
   if (!currencyCode) {
@@ -120,11 +122,11 @@ export default function PlotAdd() {
         <PlotAddNFT />
         <Flex gap={1}>
           <FormBackButton variant="contained" />
-          <Button color="primary" type="submit" variant="contained">
+          <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
             <Trans>
-              Create Plot
+              Create
             </Trans>
-          </Button>
+          </ButtonLoading>
         </Flex>
       </Flex>
     </Form>

@@ -26,7 +26,7 @@ export default function PlotNFTState(props: Props) {
 
   if (isPending) {
     return (
-      <Flex alignItems="center" gap={1}>
+      <Flex alignItems="center" gap={1} inline>
         <StateTypography variant='body1' state={State.WARNING}>
           <Trans>Pending</Trans>
         </StateTypography>

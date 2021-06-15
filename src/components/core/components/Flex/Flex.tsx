@@ -35,6 +35,7 @@ type Props = BoxProps & {
   gap?: GAP_SIZE;
   rowGap?: GAP_SIZE;
   columnGap?: GAP_SIZE;
+  inline?: boolean;
 };
 
 export default function Flex(props: Props) {
@@ -43,6 +44,7 @@ export default function Flex(props: Props) {
     flexDirection,
     rowGap = gap,
     columnGap = gap,
+    inline,
     ...rest
   } = props;
 
@@ -55,7 +57,7 @@ export default function Flex(props: Props) {
 
   return (
     <StyledGapBox
-      display="flex"
+      display={inline ? 'inline-flex' :'flex'}
       flexDirection={flexDirection}
       rowGap={rowGapValue}
       columnGap={columnGapValue}
@@ -63,3 +65,7 @@ export default function Flex(props: Props) {
     />
   );
 }
+
+Flex.defaultProps = {
+  inline: false,
+};

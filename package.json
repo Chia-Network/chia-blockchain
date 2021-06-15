@@ -53,6 +53,7 @@
     "make-plural": "^6.2.2",
     "match-sorter": "^6.3.0",
     "moment": "^2.29.1",
+    "@nivo/core": "^0.70.1",
     "npm-audit-resolver": "^2.3.0",
     "polished": "^4.1.2",
     "react": "^17.0.2",

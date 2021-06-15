@@ -4,18 +4,20 @@ import { Route, Switch, useRouteMatch } from 'react-router-dom';
 import { Flex, Link } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 import PoolOverview from './PoolOverview';
-import GroupAdd from '../plotNFT/add/PlotNFTAdd';
+import PlotNFTAdd from '../plotNFT/PlotNFTAdd';
+import PlotNFTChangePool from '../plotNFT/PlotNFTChangePool';
 import { PoolHeaderTarget }  from './PoolHeader';
 import usePlotNFTs from '../../hooks/usePlotNFTs';
 import { PoolHeaderSource } from './PoolHeader';
 
 export default function Pool() {
   const { path } = useRouteMatch();
-  const { nfts, loading } = usePlotNFTs();
+  const { loading } = usePlotNFTs();
 
   return (
     <LayoutMain
       loading={loading}
+      loadingTitle={<Trans>Loading Plot NFTs</Trans>}
       title={
         <>
           <Link to="/dashboard/pool" color="textPrimary">
@@ -31,7 +33,10 @@ export default function Pool() {
             <PoolOverview />
           </Route>
           <Route path={`${path}/add`}>
-            <GroupAdd headerTag={PoolHeaderSource} />
+            <PlotNFTAdd headerTag={PoolHeaderSource} />
+          </Route>
+          <Route path={`${path}/:plotNFTId/change-pool`}>
+            <PlotNFTChangePool headerTag={PoolHeaderSource} />
           </Route>
         </Switch>
       </Flex>

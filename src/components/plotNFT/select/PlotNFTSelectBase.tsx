@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import { Alert } from '@material-ui/lab';
+import { uniq } from 'lodash';
 import styled from 'styled-components';
 import { useWatch, useFormContext } from 'react-hook-form';
 import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, Fee } from '@chia/core';
@@ -15,11 +16,14 @@ const StyledCollapse = styled(Collapse)`
 
 type Props = {
   step?: number;
-  onCancel?: Function;
+  onCancel?: () => void;
+  title: ReactNode;
+  description?: ReactNode;
+  hideFee?: boolean;
 };
 
-export default function PlotNFTAddCreate(props: Props) {
-  const { step, onCancel } = props;
+export default function PlotNFTSelectBase(props: Props) {
+  const { step, onCancel, title, description, hideFee } = props;
   const { nfts } = usePlotNFTs();
   const { control, setValue } = useFormContext();
   const self = useWatch<boolean>({
@@ -39,9 +43,11 @@ export default function PlotNFTAddCreate(props: Props) {
       return [];
     }
 
-    return nfts
-      .filter((nft) => !!nft.poolUrl)
-      .map((nft) => nft.poolUrl);
+    const urls = nfts
+      .filter((nft) => !!nft.pool_state.pool_config.pool_url)
+      .map((nft) => nft.pool_state.pool_config.pool_url);
+
+    return uniq(urls);
   }, [nfts]);
 
   function handleDisableSelfPooling() {
@@ -59,20 +65,17 @@ export default function PlotNFTAddCreate(props: Props) {
         title={(
           <Flex gap={1} alignItems="center">
             <Flex flexGrow={1}>
-              <Trans>Want to Join a Pool? Create a Plot NFT</Trans>
+              {title}
             </Flex>
             {onCancel && <Button onClick={onCancel}><Trans>Cancel</Trans></Button>}
           </Flex>
         )}
       >
-        <Typography variant="subtitle1">
-          <Trans>
-            Join a pool and get consistent XCH farming rewards. 
-            The average returns are the same, but it is much less volatile. 
-            Assign plots to a plot NFT. When pools are released, 
-            you can easily switch pools without having to re-plot.
-          </Trans>
-        </Typography>
+        {description && (
+          <Typography variant="subtitle1">
+            {description}
+          </Typography>
+        )}
 
         <Grid container spacing={4}>
           <Grid xs={12} item>
@@ -116,15 +119,17 @@ export default function PlotNFTAddCreate(props: Props) {
               </RadioGroup>
             </FormControl>
           </Grid>
-          <Grid xs={12} lg={6} item>
-            <Fee
-              name="fee"
-              type="text"
-              variant="filled"
-              label={<Trans>Fee</Trans>}
-              fullWidth
-            />
-          </Grid>
+          {!hideFee && (
+            <Grid xs={12} lg={6} item>
+              <Fee
+                name="fee"
+                type="text"
+                variant="filled"
+                label={<Trans>Fee</Trans>}
+                fullWidth
+              />
+            </Grid>
+          )}
         </Grid>
       </CardStep>
 
@@ -154,7 +159,9 @@ export default function PlotNFTAddCreate(props: Props) {
   );
 }
 
-PlotNFTAddCreate.defaultProps = {
+PlotNFTSelectBase.defaultProps = {
   step: 1,
   onCancel: undefined,
+  description: undefined,
+  hideFee: false,
 };

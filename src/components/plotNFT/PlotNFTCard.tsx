@@ -22,6 +22,7 @@ import useAbsorbRewards from '../../hooks/useAbsorbRewards';
 import useJoinPool from '../../hooks/useJoinPool';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
+import PlotNFTState from '../../constants/PlotNFTState';
 
 const StyledCard = styled(Card)`
   display: flex;
@@ -67,9 +68,9 @@ export default function PlotNFTCard(props: Props) {
   const history = useHistory();
   const absorbRewards = useAbsorbRewards(nft);
   const joinPool = useJoinPool(nft);
-  const { canEdit, isSynced, plots } = usePlotNFTDetails(nft);
+  const { canEdit, isSynced, plots, state } = usePlotNFTDetails(nft);
 
-  const isSelfPooling = !pool_url;
+  const isSelfPooling = state === PlotNFTState.SELF_POOLING;
 
   async function handleClaimRewards() {
     if (canEdit) {
@@ -79,7 +80,7 @@ export default function PlotNFTCard(props: Props) {
 
   async function handleJoinPool() {
     if (canEdit) {
-      return joinPool();
+      history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/change-pool`);
     }
   }
 
@@ -92,18 +93,18 @@ export default function PlotNFTCard(props: Props) {
     });
   }
 
-  const rows = [{
+  const rows = [isSelfPooling && {
     key: 'rewards',
     label: <Trans>Rewards</Trans>,
     value: <UnitFormat value={balance} state={State.SUCCESS} />,
   }, {
-    key: 'wallet_status',
-    label: <Trans>Wallet Status</Trans>,
-    value: <WalletStatus />,
-  }, {
     key: 'status',
     label: <Trans>Status</Trans>,
     value: <PlotNFTStatus nft={nft} />,
+  }, {
+    key: 'wallet_status',
+    label: <Trans>Wallet Status</Trans>,
+    value: <WalletStatus />,
   }, {
     key: 'current_difficulty',
     label: <Trans>Current Difficulty</Trans>,
@@ -122,7 +123,7 @@ export default function PlotNFTCard(props: Props) {
     value: plots
       ? plots.length
       : <Loading size="small" />,
-  }].filter(row => row.value !== undefined);
+  }].filter(row => !!row && row.value !== undefined);
 
   return (
     <StyledCard>
@@ -148,11 +149,6 @@ export default function PlotNFTCard(props: Props) {
                 )}
               </More>
             </Flex>
-            {pool_url && (
-              <Typography variant="body2" noWrap>
-                {pool_url}
-              </Typography>
-            )}
           </Flex>
 
           <Flex flexDirection="column" flexGrow={1}>
@@ -178,6 +174,7 @@ export default function PlotNFTCard(props: Props) {
                   <Button
                     variant="contained"
                     onClick={handleClaimRewards}
+                    disabled={!canEdit}
                     fullWidth
                   >
                     <Flex flexDirection="column" gap={0}>
@@ -193,6 +190,7 @@ export default function PlotNFTCard(props: Props) {
                 <Button
                   variant="contained"
                   onClick={handleJoinPool}
+                  disabled={!canEdit}
                   color="primary"
                   fullWidth
                 >

@@ -1,16 +1,16 @@
 import React, { useState, ReactNode } from 'react';
-import { useHistory } from 'react-router';
-import { useDispatch } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
-import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton } from '@chia/core';
-import GroupAddCreate from './PlotNFTAddCreate';
-import { createPlotNFT } from '../../../modules/plotNFT';
-import PlotNFTState from '../../../constants/PlotNFTState';
+import PlotNFTSelectBase from './PlotNFTSelectBase';
 import getPoolInfo from '../../../util/getPoolInfo';
-import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
+import InitialTargetState from '../../../types/InitialTargetState';
 import { chia_to_mojo } from '../../../util/chia';
+
+export type SubmitData = {
+  initialTargetState: InitialTargetState;
+  fee?: string;
+};
 
 type FormData = {
   self: boolean;
@@ -19,18 +19,23 @@ type FormData = {
 };
 
 type Props = {
-  headerTag?: ReactNode;
   step?: number;
-  onCancel?: boolean;
+  onCancel?: () => void;
+  title: ReactNode;
+  description?: ReactNode;
+  submitTitle?: ReactNode;
+  hideFee?: boolean;
+  onSubmit: (data: SubmitData) => Promise<void>;
+  defaultValues?: {
+    fee?: string;
+    self?: boolean;
+    poolUrl?: string;
+  };
 }
 
-export default function PlotNFTAdd(props: Props) {
-  const { headerTag: HeaderTag, step, onCancel } = props;
-
-  const dispatch = useDispatch();
-  const history = useHistory();
+export default function PlotNFTSelectPool(props: Props) {
+  const { step, onCancel, defaultValues, onSubmit, title, description, submitTitle, hideFee } = props;
   const [loading, setLoading] = useState<boolean>(false);
-  const unconfirmedNFTs = useUnconfirmedPlotNFTs();
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
@@ -38,6 +43,7 @@ export default function PlotNFTAdd(props: Props) {
       fee: '',
       self: true,
       poolUrl: '',
+      ...defaultValues,
     },
   });
 
@@ -66,16 +72,10 @@ export default function PlotNFTAdd(props: Props) {
 
       const feeMojos = chia_to_mojo(fee);
 
-      const { success, transaction } = await dispatch(createPlotNFT(initialTargetState, feeMojos));
-      if (success) {
-        unconfirmedNFTs.add({
-          transactionId: transaction.name,
-          state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
-          poolUrl,
-        });
-      }
-
-      history.push('/dashboard/pool');
+      await onSubmit({
+        fee: feeMojos,
+        initialTargetState,
+      });
     } finally {
       setLoading(false);
     }
@@ -86,25 +86,19 @@ export default function PlotNFTAdd(props: Props) {
       methods={methods}
       onSubmit={handleSubmit}
     >
-      {HeaderTag && (
-        <HeaderTag>
-          <Flex alignItems="center">
-            <ChevronRightIcon color="secondary" />
-            <Trans>
-              Add a Plot NFT
-            </Trans>
-          </Flex>
-        </HeaderTag>
-      )}
       <Flex flexDirection="column" gap={3}>
-        <GroupAddCreate step={step} onCancel={onCancel} />
+        <PlotNFTSelectBase
+          step={step}
+          onCancel={onCancel}
+          title={title}
+          description={description}
+          hideFee={hideFee}
+        />
         {!onCancel && (
           <Flex gap={1}>
             <FormBackButton variant="contained" />
             <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
-              <Trans>
-                Create
-              </Trans>
+              {submitTitle}
             </ButtonLoading>
           </Flex>
         )}
@@ -113,7 +107,12 @@ export default function PlotNFTAdd(props: Props) {
   );
 }
 
-PlotNFTAdd.defaultProps = {
+PlotNFTSelectPool.defaultProps = {
   step: undefined,
   onCancel: undefined,
+  defaultValues: undefined,
+  title: undefined,
+  description: undefined,
+  hideFee: false,
+  submitTitle: <Trans>Create</Trans>,
 };

@@ -118,7 +118,7 @@ export function pwJoinPoolMessage(walletId, poolUrl, relativeLockHeight, targetP
     relative_lock_height: relativeLockHeight,
   };
 
-  if (target_puzzlehash) {
+  if (targetPuzzlehash) {
     data.target_puzzlehash = targetPuzzlehash;
   }
 
