@@ -1019,9 +1019,10 @@ class WalletStateManager:
                 remove: bool = await wallet.rewind(height)
                 if remove:
                     remove_ids.append(wallet_id)
-        for wallet_id in remove_ids:  # TODO: remove callback
+        for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id, in_transaction=True)
             self.wallets.pop(wallet_id)
+            self.new_peak_callbacks.pop(wallet_id)
 
     async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
         """
