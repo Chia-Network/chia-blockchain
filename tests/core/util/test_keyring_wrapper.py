@@ -129,7 +129,7 @@ class TestKeyringWrapper(unittest.TestCase):
         assert KeyringWrapper.get_shared_instance().has_master_password() is True
 
     # When: creating a new file keyring with a legacy keyring in place
-    @using_temp_file_keyring_and_cryptfilekeyring()
+    @using_temp_file_keyring_and_cryptfilekeyring
     def test_legacy_keyring_does_not_support_master_password(self):
         """
         CryptFileKeyring (legacy keyring) should not support setting a master password

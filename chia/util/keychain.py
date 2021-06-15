@@ -23,6 +23,13 @@ MAX_KEYS = 100
 MAX_RETRIES = 3
 
 
+def supports_keyring_password() -> bool:
+    return False
+    # from sys import platform
+
+    # return platform == "linux"
+
+
 def set_keys_root_path(keys_root_path: Path) -> None:
     """
     Used to set the keys_root_path prior to instantiating the KeyringWrapper shared instance.

@@ -1,5 +1,6 @@
 import click
-from chia.cmds.password_funcs import initialize_password, remove_passwords_options_from_cmd, supports_keyring_password
+from chia.cmds.password_funcs import initialize_password, remove_passwords_options_from_cmd
+from chia.util.keychain import supports_keyring_password
 
 
 @click.command("init", short_help="Create or migrate the configuration")

@@ -64,10 +64,22 @@ def using_temp_keyring_dir(func):
 
 def using_temp_file_keyring(populate=False):
     def outer(func):
+        @patch("chia.util.keychain.supports_keyring_password")
         @patch.object(KeyringWrapper, "_configure_backend")
         @patch.object(platform_, "data_root")
         @using_temp_keyring_dir
-        def inner(self, mock_data_root, mock_configure_backend, temp_file_keyring_dir, *args, **kwargs):
+        def inner(
+            self,
+            mock_data_root,
+            mock_configure_backend,
+            mock_supports_keyring_password,
+            temp_file_keyring_dir,
+            *args,
+            **kwargs,
+        ):
+            # Patch supports_keyring_password() to return True
+            mock_supports_keyring_password.return_value = True
+
             setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=populate)
 
             # Mock CryptFileKeyring's file_path indirectly by changing keyring.util.platform_.data_root
@@ -83,10 +95,22 @@ def using_temp_file_keyring(populate=False):
 
 def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
     def outer(func):
+        @patch("chia.util.keychain.supports_keyring_password")
         @patch.object(KeyringWrapper, "_configure_backend")
         @patch.object(platform_, "data_root")
         @using_temp_keyring_dir
-        def inner(self, mock_data_root, mock_configure_backend, temp_file_keyring_dir, *args, **kwargs):
+        def inner(
+            self,
+            mock_data_root,
+            mock_configure_backend,
+            mock_supports_keyring_password,
+            temp_file_keyring_dir,
+            *args,
+            **kwargs,
+        ):
+            # Patch supports_keyring_password() to return True
+            mock_supports_keyring_password.return_value = True
+
             setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir)
 
             # Mock CryptFileKeyring's file_path indirectly by changing keyring.util.platform_.data_root
