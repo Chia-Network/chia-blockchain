@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useHistory, useLocation } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Trans } from '@lingui/macro';
+import { t, Trans } from '@lingui/macro';
+import { Alert } from '@material-ui/lab';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton, Loading } from '@chia/core';
@@ -20,6 +21,7 @@ import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import type { RootState } from '../../../modules/rootReducer';
 import toBech32m from '../../../util/toBech32m';
 import useUnconfirmedPlotNFTs from '../../../hooks/useUnconfirmedPlotNFTs';
+import useOpenDialog from '../../../hooks/useOpenDialog';
 
 type FormData = PlotAddConfig & {
   p2_singleton_puzzle_hash?: string;
@@ -35,6 +37,7 @@ export default function PlotAdd() {
   const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
   const addNFTref = useRef();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
+  const openDialog = useOpenDialog();
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
@@ -78,21 +81,21 @@ export default function PlotAdd() {
       let selectedP2SingletonPuzzleHash = p2_singleton_puzzle_hash;
 
       if (!currencyCode) {
-        throw new Error('Currency code is not defined');
+        throw new Error(t`Currency code is not defined`);
       }
 
       if (createNFT) {
         // create nft
         const nftData = await addNFTref.current?.getSubmitData();
-        
+
         const { fee, initialTargetState } = nftData;
         const { success, error, transaction, p2_singleton_puzzle_hash } = await dispatch(createPlotNFT(initialTargetState, fee));
         if (!success) {
-          throw new Error(error ?? 'Unable to create plot NFT');
+          throw new Error(error ?? t`Unable to create plot NFT`);
         }
 
         if (!p2_singleton_puzzle_hash) {
-          throw new Error('p2_singleton_puzzle_hash is not defined');
+          throw new Error(t`p2_singleton_puzzle_hash is not defined`);
         }
 
         unconfirmedNFTs.add({
@@ -120,6 +123,12 @@ export default function PlotAdd() {
       await dispatch(plotQueueAdd(plotAddConfig));
   
       history.push('/dashboard/plot');
+    } catch(error) {
+      await openDialog((
+        <Alert severity="warning">
+          {error.message}
+        </Alert>
+      ));
     } finally {
       setLoading(false);
     }
