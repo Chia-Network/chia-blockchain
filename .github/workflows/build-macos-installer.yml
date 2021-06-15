@@ -135,7 +135,7 @@ jobs:
     - name: Rename Artifact
       run: |
           ls
-          mv ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg  ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.checksum
+          mv ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg  ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg
 
     - name: Create Checksums
       run: |
