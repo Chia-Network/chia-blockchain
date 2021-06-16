@@ -22,7 +22,9 @@ def wallet_height_at_least(wallet_node, h):
         return True
     return False
 
+
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -85,7 +87,6 @@ class TestWalletSync:
         # same tip at height num_blocks - 1.
         await time_out_assert(100, wallet_height_at_least, True, wallet_node, 19)
         # Tests a reorg with the wallet
-
 
     @pytest.mark.asyncio
     async def test_short_batch_sync_wallet(self, wallet_node, default_400_blocks):
