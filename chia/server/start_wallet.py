@@ -8,7 +8,6 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import test_constants
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
@@ -81,6 +80,8 @@ def main() -> None:
     # This is simulator
     local_test = config["testing"]
     if local_test is True:
+        from tests.block_tools import test_constants
+
         constants = test_constants
         current = config["database_path"]
         config["database_path"] = f"{current}_simulation"
