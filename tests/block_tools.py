@@ -1412,9 +1412,6 @@ def get_name_puzzle_conditions_test(generator: BlockGenerator, max_cost: int) ->
 
             for cond in res.first().as_iter():
                 condition = cond.first().as_atom()
-                if condition not in opcodes:
-                    return NPCResult(uint16(Err.INVALID_CONDITION.value), [], uint64(0))
-
                 cvl = ConditionWithArgs(ConditionOpcode(condition), cond.rest().as_atom_list())
                 conditions_list.append(cvl)
 
