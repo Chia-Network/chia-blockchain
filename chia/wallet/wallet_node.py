@@ -529,10 +529,10 @@ class WalletNode:
             if not added:
                 raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
 
-            peak = self.wallet_state_manager.blockchain.get_peak()
+            curr_peak = self.wallet_state_manager.blockchain.get_peak()
             assert peak is not None
             self.wallet_state_manager.blockchain.clean_block_record(
-                min(end_height, peak.height) - self.constants.BLOCKS_CACHE_SIZE
+                min(end_height, curr_peak.height) - self.constants.BLOCKS_CACHE_SIZE
             )
 
     def start_sync(self) -> None:
