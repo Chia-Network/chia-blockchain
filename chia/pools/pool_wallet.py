@@ -10,12 +10,12 @@ from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
     PoolSingletonState,
     PoolState,
-    POOL_PROTOCOL_VERSION,
     FARMING_TO_POOL,
     SELF_POOLING,
     LEAVING_POOL,
     create_pool_state,
 )
+from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin

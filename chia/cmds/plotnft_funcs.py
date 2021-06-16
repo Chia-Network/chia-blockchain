@@ -5,6 +5,7 @@ from pprint import pprint
 from typing import List, Dict
 
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -34,6 +35,9 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 
     if json_dict["relative_lock_height"] > 1000:
         print("Relative lock height too high for this pool, cannot join")
+        return
+    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
+        print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
         return
 
     print(f"Will create a plot NFT and join pool: {pool_url}.")
@@ -151,6 +155,9 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 
     if json_dict["relative_lock_height"] > 1000:
         print("Relative lock height too high for this pool, cannot join")
+        return
+    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
+        print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
         return
 
     print(f"Will join pool: {pool_url} with Plot NFT {fingerprint}.")
