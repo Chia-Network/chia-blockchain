@@ -112,9 +112,8 @@ def uncurry_singleton_inner_puzzle(inner_puzzle: Program):
     r = inner_puzzle.uncurry()
     if r is None:
         return False
-    inner_f, args = r
-    log.warning(f"Inner f: {inner_f}, args: {args}")
-    return inner_f
+    uncurried_inner_puzzle, args = r
+    return uncurried_inner_puzzle
 
 
 def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program):
