@@ -164,7 +164,6 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: Optional[PreValidationResult] = None,
         fork_point_with_peak: Optional[uint32] = None,
-        summaries_to_check: List[SubEpochSummary] = None,  # passed only on long sync
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         This method must be called under the blockchain lock
@@ -545,7 +544,11 @@ class Blockchain(BlockchainInterface):
         return PreValidationResult(None, required_iters, cost_result)
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock], npc_results: Dict[uint32, NPCResult], batch_size: int = 4
+        self,
+        blocks: List[FullBlock],
+        npc_results: Dict[uint32, NPCResult],
+        batch_size: int = 4,
+        wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
@@ -557,6 +560,7 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            wp_summaries,
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:

@@ -34,6 +34,15 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
+    # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
+    - name: Create installer version number
+      id: version_number
+      run: |
+        python3 -m venv ../venv
+        . ../venv/bin/activate
+        pip3 install setuptools_scm
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
+        deactivate
 
     - name: Build ARM64 Installer
       run: |
@@ -71,6 +80,37 @@ jobs:
       with:
         name: Linux-ARM-64-Installer
         path: ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Install AWS CLI
+      run: |
+          sudo apt-get install -y awscli
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      run: |
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/builds/
+
+    - name: Create Checksums
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        ls ${{ github.workspace }}/build_scripts/final_installer/
+        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_arm64.deb > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_arm64.deb.sha256
+        ls ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Upload Release Files
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          ls ${{ github.workspace }}/build_scripts/final_installer/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.sha256 s3://download-chia-net/install/
 
     - name: Clean up on self hosted runner
       run: |

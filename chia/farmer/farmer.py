@@ -129,8 +129,8 @@ class Farmer:
         self.authentication_keys: Dict[bytes, PrivateKey] = {}
 
     async def _start(self):
-        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
+        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
         await self.update_pool_state()
 
     def _close(self):
@@ -476,8 +476,9 @@ class Farmer:
             time_slept += 1
             await asyncio.sleep(1)
 
-    async def _periodically_clear_cache_task(self):
+    async def _periodically_clear_cache_and_refresh_task(self):
         time_slept: uint64 = uint64(0)
+        refresh_slept = 0
         while not self._shut_down:
             if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
                 now = time.time()
@@ -499,4 +500,9 @@ class Farmer:
                 log.debug("Updating pool state")
                 await self.update_pool_state()
             time_slept += 1
+            refresh_slept += 1
+            # Periodically refresh GUI to show the correct download/upload rate.
+            if refresh_slept >= 30:
+                self.state_changed("add_connection", {})
+                refresh_slept = 0
             await asyncio.sleep(1)
