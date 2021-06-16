@@ -30,7 +30,6 @@ type FormData = PlotAddConfig & {
 
 export default function PlotAdd() {
   const history = useHistory();
-  const { state } = useLocation();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState<boolean>(false);
   const currencyCode = useCurrencyCode();
@@ -38,6 +37,7 @@ export default function PlotAdd() {
   const addNFTref = useRef();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
   const openDialog = useOpenDialog();
+  const state = useSelector((state: RootState) => state.router.location.state);
 
   const methods = useForm<FormData>({
     shouldUnregister: false,

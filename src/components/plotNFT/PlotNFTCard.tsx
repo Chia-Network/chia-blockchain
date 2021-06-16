@@ -65,7 +65,7 @@ export default function PlotNFTCard(props: Props) {
   const history = useHistory();
   const openDialog = useOpenDialog();
   const absorbRewards = useAbsorbRewards(nft);
-  const { isSelfPooling, canEdit, isSynced, plots, state, balance } = usePlotNFTDetails(nft);
+  const { isSelfPooling, canEdit, isSynced, plots, balance } = usePlotNFTDetails(nft);
 
   async function handleClaimRewards() {
     if (!canEdit) {
@@ -131,7 +131,7 @@ export default function PlotNFTCard(props: Props) {
     ),
     value: <FormatLargeNumber value={nft.pool_state.current_difficulty} />,
   }, !isSelfPooling && {
-    key: 'current_points_balance',
+    key: 'current_points',
     label: (
       <TooltipTypography 
         title={(
@@ -144,7 +144,7 @@ export default function PlotNFTCard(props: Props) {
         <Trans>Current Points Balance</Trans>
       </TooltipTypography>
     ),
-    value: <FormatLargeNumber value={nft.pool_state.current_points_balance} />,
+    value: <FormatLargeNumber value={nft.pool_state.current_points} />,
   }, {
     key: 'points_found_since_start',
     label: (

@@ -6,7 +6,7 @@ type PoolState = {
   points_found_24h: [number, number][];
   points_acknowledged_since_start: number;
   points_acknowledged_24h: number[];
-  current_points_balance: number;
+  current_points: number;
   current_difficulty: number;
   pool_errors_24h: {
     current_difficulty: number;
