@@ -30,7 +30,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import load_config, save_config
+from chia.util.config import load_config, save_config, config_path_for_filename
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
@@ -127,6 +127,8 @@ class Farmer:
 
         # From public key bytes to PrivateKey
         self.authentication_keys: Dict[bytes, PrivateKey] = {}
+
+        self.last_config_access_time: uint64 = uint64(0)
 
     async def _start(self):
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
@@ -469,8 +471,15 @@ class Farmer:
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
+        config_path: Path = config_path_for_filename(self._root_path, "config.yaml")
         while not self._shut_down:
-            if time_slept > 60:
+            # Every time the config file changes, read it to check the pool state
+            stat_info = config_path.stat()
+            if stat_info.st_mtime > self.last_config_access_time:
+                self.last_config_access_time = stat_info.st_mtime
+                await self.update_pool_state()
+                time_slept = uint64(0)
+            elif time_slept > 60:
                 await self.update_pool_state()
                 time_slept = uint64(0)
             time_slept += 1
