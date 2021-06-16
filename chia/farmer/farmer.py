@@ -90,9 +90,10 @@ class Farmer:
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
-        all_sks = self.keychain.get_all_private_keys()
-        self._private_keys = [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [
-            master_sk_to_pool_sk(sk) for sk, _ in all_sks
+        self.all_root_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
+
+        self._private_keys = [master_sk_to_farmer_sk(sk) for sk in self.all_root_sks] + [
+            master_sk_to_pool_sk(sk) for sk in self.all_root_sks
         ]
 
         if len(self.get_public_keys()) == 0:
@@ -133,7 +134,6 @@ class Farmer:
     async def _start(self):
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
-        await self.update_pool_state()
 
     def _close(self):
         self._shut_down = True
@@ -303,9 +303,8 @@ class Farmer:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
             try:
-                all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
                 authentication_sk: Optional[PrivateKey] = await find_authentication_sk(
-                    all_sks, pool_config.authentication_public_key
+                    self.all_root_sks, pool_config.authentication_public_key
                 )
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")
@@ -363,7 +362,7 @@ class Farmer:
                         is_error = update_response is not None and "error_code" in update_response
                         if is_error and update_response["error_code"] == PoolErrorCode.FARMER_NOT_KNOWN.value:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk = await find_owner_sk(all_sks, pool_config.owner_public_key)
+                            owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             post_response = await self._pool_post_farmer(
                                 pool_config, authentication_token_timeout, owner_sk
                             )
@@ -506,8 +505,6 @@ class Farmer:
                     f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
                     f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
                 )
-                log.debug("Updating pool state")
-                await self.update_pool_state()
             time_slept += 1
             refresh_slept += 1
             # Periodically refresh GUI to show the correct download/upload rate.
