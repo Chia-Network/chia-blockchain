@@ -13,6 +13,7 @@ from chia.util.ints import uint16
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
+from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 
 
 @pytest.fixture(scope="module")
@@ -157,7 +158,7 @@ class TestRLWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 90, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 108)
-
+        await time_out_assert(15, wallet_height_at_least, True, wallet_node, 72)
         val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id, "fee": 11})
         await time_out_assert(15, is_transaction_in_mempool, True, api_admin, val["transaction_id"])
         for i in range(0, num_blocks):
