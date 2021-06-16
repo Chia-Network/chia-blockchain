@@ -108,11 +108,12 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSolution) -> Tuple[uin
 ######################################
 
 
-def uncurry_singleton_inner_puzzle(puzzle: Program):
-    r = puzzle.uncurry()
+def uncurry_singleton_inner_puzzle(inner_puzzle: Program):
+    r = inner_puzzle.uncurry()
     if r is None:
         return False
     inner_f, args = r
+    log.warning(f"Inner f: {inner_f}, args: {args}")
     return inner_f
 
 
@@ -126,18 +127,18 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program):
 
 
 # Verify that a puzzle is a Pool Wallet Singleton
-def is_pool_singleton_inner_puzzle(puzzle: Program) -> bool:
-    inner_f = uncurry_singleton_inner_puzzle(puzzle)
+def is_pool_singleton_inner_puzzle(inner_puzzle: Program) -> bool:
+    inner_f = uncurry_singleton_inner_puzzle(inner_puzzle)
     return inner_f in [POOL_WAITING_ROOM_MOD, POOL_MEMBER_MOD]
 
 
-def is_pool_waitingroom_inner_puzzle(puzzle: Program) -> bool:
-    inner_f = uncurry_singleton_inner_puzzle(puzzle)
+def is_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> bool:
+    inner_f = uncurry_singleton_inner_puzzle(inner_puzzle)
     return inner_f in [POOL_WAITING_ROOM_MOD]
 
 
-def is_pool_member_inner_puzzle(puzzle: Program) -> bool:
-    inner_f = uncurry_singleton_inner_puzzle(puzzle)
+def is_pool_member_inner_puzzle(inner_puzzle: Program) -> bool:
+    inner_f = uncurry_singleton_inner_puzzle(inner_puzzle)
     return inner_f in [POOL_MEMBER_MOD]
 
 
@@ -338,11 +339,11 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     r = p.uncurry()
     if r is None:
         return None
-    inner_f, args = r
+    _, args = r
 
-    if not is_pool_singleton_inner_puzzle(inner_f):
-        return None
     _, inner_puzzle = list(args.as_iter())
+    if not is_pool_singleton_inner_puzzle(inner_puzzle):
+        return None
     return inner_puzzle
 
 
