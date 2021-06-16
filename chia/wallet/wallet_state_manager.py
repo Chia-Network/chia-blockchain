@@ -513,7 +513,6 @@ class WalletStateManager:
         amount: uint128 = uint128(0)
         for record in unspent_coin_records:
             amount = uint128(amount + record.coin.amount)
-        self.log.info(f"Confirmed balance amount is {amount}")
         return uint128(amount)
 
     async def get_unconfirmed_balance(
