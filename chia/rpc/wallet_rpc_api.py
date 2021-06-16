@@ -460,7 +460,7 @@ class WalletRpcApi:
             if request["mode"] == "new":
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
 
-                from chia.pools.pool_wallet_info import pool_state_from_dict
+                from chia.pools.pool_wallet_info import initial_pool_state_from_dict
 
                 async with self.service.wallet_state_manager.lock:
                     last_wallet: Optional[
@@ -474,12 +474,11 @@ class WalletRpcApi:
                     )
                     owner_pk: G1Element = owner_sk.get_g1()
 
-                    err, initial_target_state = pool_state_from_dict(
+                    initial_target_state = initial_pool_state_from_dict(
                         request["initial_target_state"], owner_pk, owner_puzzle_hash
                     )
                     assert initial_target_state is not None
-                    if err is not None:
-                        raise ValueError(str(err))
+
                     try:
                         delayed_address = None
                         if "p2_singleton_delayed_ph" in request:

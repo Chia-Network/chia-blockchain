@@ -82,7 +82,6 @@ def create_p2_singleton_puzzle(
     seconds_delay: uint64,
     delayed_puzzle_hash: bytes32,
 ) -> Program:
-    # TODO: Test these hash conversions
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
     return P2_SINGLETON_MOD.curry(
         singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH, seconds_delay, delayed_puzzle_hash
@@ -108,7 +107,7 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSolution) -> Tuple[uin
 ######################################
 
 
-def uncurry_singleton_inner_puzzle(inner_puzzle: Program):
+def get_template_singleton_inner_puzzle(inner_puzzle: Program):
     r = inner_puzzle.uncurry()
     if r is None:
         return False
@@ -127,17 +126,17 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program):
 
 # Verify that a puzzle is a Pool Wallet Singleton
 def is_pool_singleton_inner_puzzle(inner_puzzle: Program) -> bool:
-    inner_f = uncurry_singleton_inner_puzzle(inner_puzzle)
+    inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
     return inner_f in [POOL_WAITING_ROOM_MOD, POOL_MEMBER_MOD]
 
 
 def is_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> bool:
-    inner_f = uncurry_singleton_inner_puzzle(inner_puzzle)
+    inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
     return inner_f in [POOL_WAITING_ROOM_MOD]
 
 
 def is_pool_member_inner_puzzle(inner_puzzle: Program) -> bool:
-    inner_f = uncurry_singleton_inner_puzzle(inner_puzzle)
+    inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
     return inner_f in [POOL_MEMBER_MOD]
 
 
@@ -261,8 +260,7 @@ def create_absorb_spend(
     )
     assert p2_singleton_puzzle.get_tree_hash() == reward_coin.puzzle_hash
     assert full_puzzle.get_tree_hash() == coin.puzzle_hash
-    if get_inner_puzzle_from_puzzle(Program.from_bytes(bytes(full_puzzle))) is None:
-        assert get_inner_puzzle_from_puzzle(Program.from_bytes(bytes(full_puzzle))) is not None
+    assert get_inner_puzzle_from_puzzle(Program.from_bytes(bytes(full_puzzle))) is not None
 
     coin_solutions = [
         CoinSolution(coin, full_puzzle, full_solution),
@@ -307,12 +305,9 @@ def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tupl
     if r is None:
         raise ValueError("Failed to unpack inner puzzle")
     inner_f, args = r
-
-    # TARGET_PUZZLE_HASH P2_SINGLETON_PUZZLEHASH OWNER_PUBKEY POOL_REWARD_PREFIX ESCAPE_MODE_PUZZLEHASH
-    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = list(args.as_iter())
-    # assert p2_singleton_hash == P2_SINGLETON_HASH
-
-    # return target_puzzle_hash, owner_pubkey
+    # p2_singleton_hash is the tree hash of the unique, curried P2_SINGLETON_MOD. See `create_p2_singleton_puzzle`
+    # escape_puzzlehash is of the unique, curried POOL_WAITING_ROOM_MOD. See `create_waiting_room_inner_puzzle`
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = tuple(args.as_iter())
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
@@ -329,7 +324,6 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Progra
     inner_f, args = r
     v = args.as_iter()
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
-    assert p2_singleton_hash == P2_SINGLETON_HASH
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
 

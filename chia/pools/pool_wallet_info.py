@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional, Tuple, Dict, Union
+from typing import Optional, Dict
 
 from blspy import G1Element
 
@@ -53,26 +53,18 @@ class PoolState(Streamable):
     version: uint8
     state: uint8  # PoolSingletonState
     # `target_puzzle_hash`: A puzzle_hash we pay to
-    # Either set by the main wallet in the self-pool case,
-    # or sent by the pool
-    # TODO: rename target_puzzle_hash -> owner_pay_to_puzzlehash
-    target_puzzle_hash: bytes32
+    # When self-farming, this is a main wallet address
+    # When farming-to-pool, the pool sends this to the farmer during pool protocol setup
+    target_puzzle_hash: bytes32  # TODO: rename target_puzzle_hash -> pay_to_address
     # owner_pubkey is set by the wallet, once
     owner_pubkey: G1Element
     pool_url: Optional[str]
     relative_lock_height: uint32
 
 
-def pool_state_from_dict(
-    state_dict: Dict, owner_pubkey: G1Element, owner_puzzle_hash: bytes32
-) -> Union[Tuple[str, None], Tuple[None, PoolState]]:
+def initial_pool_state_from_dict(state_dict: Dict, owner_pubkey: G1Element, owner_puzzle_hash: bytes32) -> PoolState:
     state_str = state_dict["state"]
-    if state_str not in ["SELF_POOLING", "FARMING_TO_POOL"]:
-        return "Initial State must be SELF_POOLING or FARMING_TO_POOL", None
-
     singleton_state: PoolSingletonState = PoolSingletonState[state_str]
-    relative_lock_height: Optional[uint32] = None
-    target_puzzle_hash: Optional[bytes32] = None
 
     if singleton_state == SELF_POOLING:
         target_puzzle_hash = owner_puzzle_hash
@@ -82,10 +74,12 @@ def pool_state_from_dict(
         target_puzzle_hash = bytes32(hexstr_to_bytes(state_dict["target_puzzle_hash"]))
         pool_url = state_dict["pool_url"]
         relative_lock_height = uint32(state_dict["relative_lock_height"])
+    else:
+        raise ValueError("Initial state must be SELF_POOLING or FARMING_TO_POOL")
 
     # TODO: change create_pool_state to return error messages, as well
     assert relative_lock_height is not None
-    return None, create_pool_state(singleton_state, target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height)
+    return create_pool_state(singleton_state, target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height)
 
 
 def create_pool_state(
