@@ -23,6 +23,7 @@ from chia.protocols.pool_protocol import (
     PostFarmerRequest,
     PutFarmerPayload,
     PutFarmerRequest,
+    AuthenticationPayload,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -199,16 +200,21 @@ class Farmer:
     ) -> Optional[Dict]:
         assert authentication_sk.get_g1() == pool_config.authentication_public_key
         authentication_token = get_current_authentication_token(authentication_token_timeout)
-        signature: G2Element = AugSchemeMPL.sign(
-            authentication_sk, std_hash(pool_config.launcher_id + bytes(authentication_token))
+        message: bytes32 = std_hash(
+            AuthenticationPayload(
+                "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+            )
         )
+        signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
         get_farmer_params = {
             "launcher_id": pool_config.launcher_id.hex(),
             "authentication_token": authentication_token,
+            "target_puzzle_hash": pool_config.target_puzzle_hash.hex(),
             "signature": bytes(signature).hex(),
         }
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
+                self.log.info(f"SENDING: {get_farmer_params}")
                 async with session.get(f"{pool_config.pool_url}/farmer", params=get_farmer_params) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
@@ -448,6 +454,34 @@ class Farmer:
                 return
 
         self.log.warning(f"Launcher id: {launcher_id} not found")
+
+    async def generate_login_link(self, launcher_id: bytes32) -> Optional[str]:
+        for pool_state in self.pool_state.values():
+            pool_config: PoolWalletConfig = pool_state["pool_config"]
+            if pool_config.launcher_id == launcher_id:
+                authentication_sk: Optional[PrivateKey] = await find_authentication_sk(
+                    self.all_root_sks, pool_config.authentication_public_key
+                )
+                if authentication_sk is None:
+                    self.log.error(f"Could not find authentication sk for pk: {pool_config.authentication_public_key}")
+                    continue
+                assert authentication_sk.get_g1() == pool_config.authentication_public_key
+                authentication_token_timeout = pool_state["authentication_token_timeout"]
+                authentication_token = get_current_authentication_token(authentication_token_timeout)
+                message: bytes32 = std_hash(
+                    AuthenticationPayload(
+                        "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+                    )
+                )
+                signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
+                target_puzzle_hash: bytes32 = pool_config.target_puzzle_hash
+                return (
+                    pool_config.pool_url
+                    + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
+                    f"&target_puzzle_hash={target_puzzle_hash.hex()}&signature={bytes(signature).hex()}"
+                )
+
+        return None
 
     async def get_plots(self) -> Dict:
         rpc_response = {}
