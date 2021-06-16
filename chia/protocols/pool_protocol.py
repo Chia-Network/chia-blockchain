@@ -32,6 +32,16 @@ class PoolErrorCode(Enum):
     REQUEST_FAILED = 16
 
 
+# Used to verify GET /farmer and GET /login
+@dataclass(frozen=True)
+@streamable
+class AuthenticationPayload(Streamable):
+    method_name: str
+    launcher_id: bytes32
+    target_puzzle_hash: bytes32
+    authentication_token: uint64
+
+
 # GET /pool_info
 @dataclass(frozen=True)
 @streamable
