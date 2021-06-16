@@ -507,9 +507,8 @@ class WalletNode:
         await self.complete_blocks(blocks, peer)
         await self.wallet_state_manager.create_more_puzzle_hashes()
 
-    async def batch_sync_to_peak(self, curr_peak_height, peak):
+    async def batch_sync_to_peak(self, fork_height, peak):
         advanced_peak = False
-        fork_height = curr_peak_height
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
         for i in range(max(0, fork_height - 1), peak.height, batch_size):
             start_height = i
@@ -529,6 +528,12 @@ class WalletNode:
                     self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
             if not added:
                 raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
+
+            peak = self.wallet_state_manager.blockchain.get_peak()
+            assert peak is not None
+            self.wallet_state_manager.blockchain.clean_block_record(
+                min(end_height, peak.height) - self.constants.BLOCKS_CACHE_SIZE
+            )
 
     def start_sync(self) -> None:
         self.log.info("self.sync_event.set()")
@@ -645,35 +650,7 @@ class WalletNode:
             if fork_height is None:
                 fork_height = uint32(0)
             await self.wallet_state_manager.blockchain.warmup(fork_height)
-            batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-            advanced_peak = False
-            for i in range(max(0, fork_height - 1), peak_height, batch_size):
-                start_height = i
-                end_height = min(peak_height, start_height + batch_size)
-                peers = self.server.get_full_node_connections()
-                added = False
-                for peer in peers:
-                    try:
-                        added, advanced_peak = await self.fetch_blocks_and_validate(
-                            peer, uint32(start_height), uint32(end_height), None if advanced_peak else fork_height
-                        )
-                        if added:
-                            break
-                    except Exception as e:
-                        await peer.close()
-                        exc = traceback.format_exc()
-                        self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
-                if not added:
-                    raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
-
-                peak = self.wallet_state_manager.blockchain.get_peak()
-                assert peak is not None
-                self.wallet_state_manager.blockchain.clean_block_record(
-                    min(
-                        end_height - self.constants.BLOCKS_CACHE_SIZE,
-                        peak.height - self.constants.BLOCKS_CACHE_SIZE,
-                    )
-                )
+            self.batch_sync_to_peak(fork_height, peak_height)
 
     async def fetch_blocks_and_validate(
         self,
