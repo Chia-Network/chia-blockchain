@@ -142,7 +142,7 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
-    solution = Program.to([0, 0, pool_reward_amount, pool_reward_height])
+    solution = Program.to([0, (pool_reward_amount, pool_reward_height)])
     return solution
 
 
@@ -155,7 +155,7 @@ def solve_pool_waiting_room(solver: Solver, puzzle_db: PuzzleDB, args: List[Prog
     if exit_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, Program]])
         destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", int)
-        return Program.to([0, 1, 0, 0, key_value_list, destination_puzzle_hash])
+        return Program.to([0, 1, key_value_list, destination_puzzle_hash])
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
