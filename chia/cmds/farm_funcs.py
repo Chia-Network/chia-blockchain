@@ -243,7 +243,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
 
-    if all_plots is not None and len(all_plots["plots"]) == 0:
+    if all_plots is not None and total_plots == 0:
         print("Expected time to win: Never (no plots)")
     else:
         print("Expected time to win: " + format_minutes(minutes))
