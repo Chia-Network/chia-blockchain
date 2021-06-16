@@ -141,7 +141,7 @@ class TestPoolPuzzles(TestCase):
         # TEST TRAVEL AFTER LAUNCH
         # fork the state
         fork_coin_db: CoinStore = copy.deepcopy(coin_db)
-        post_launch_coinsol, _, _ = create_travel_spend(
+        post_launch_coinsol, _ = create_travel_spend(
             launcher_coinsol, launcher_coin, pool_state, target_pool_state, GENESIS_CHALLENGE, DELAY_TIME, DELAY_PH,
         )
         # Spend it!
