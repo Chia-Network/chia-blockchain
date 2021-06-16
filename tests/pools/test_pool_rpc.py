@@ -480,7 +480,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     async def test_self_pooling_to_pooling(self, setup):
-        """ This tests self-pooling -> pooling """
+        """This tests self-pooling -> pooling"""
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
@@ -582,7 +582,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     async def test_leave_pool(self, setup):
-        """ This tests self-pooling -> pooling -> escaping -> self pooling"""
+        """This tests self-pooling -> pooling -> escaping -> self pooling"""
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
@@ -702,7 +702,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     async def test_change_pools(self, setup):
-        """ This tests Pool A -> escaping -> Pool B"""
+        """This tests Pool A -> escaping -> Pool B"""
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
@@ -756,6 +756,7 @@ class TestPoolWalletRpc:
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+
             await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
 
             pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
@@ -773,13 +774,6 @@ class TestPoolWalletRpc:
                 }
             )
             assert join_pool_tx is not None
-            #res_json = await client.pw_join_pool(
-            #    wallet_id, our_ph, "https://pool-b.org", 27
-            #)
-            #join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
-            #leave_pool_tx: TransactionRecord = await api_user[0].pw_self_pool({"wallet_id": wallet_id})
-            #assert leave_pool_tx["transaction"].wallet_id == wallet_id
-            #assert leave_pool_tx["transaction"].amount == 1
 
             async def status_is_leaving():
                 await self.farm_blocks(full_node_api, our_ph, 1)
@@ -800,7 +794,6 @@ class TestPoolWalletRpc:
             client.close()
             await client.await_closed()
             await rpc_cleanup()
-
 
     # @pytest.mark.asyncio
     # async def test_only_call_pw_status_on_pool_wallet(self, setup):
