@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.1",  # Allows users to open ports on their router
+    "miniupnpc==2.2.2",  # Allows users to open ports on their router
 ]
 
 dev_dependencies = [

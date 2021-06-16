@@ -20,6 +20,7 @@ strategy:
 
 variables:
   - group: Apple-Notarize-Variables
+  - group: AWS-Upload-Credentials
 
 steps:
   - checkout: self  # self represents the repo where the initial Azure Pipelines YAML file was found
@@ -48,7 +49,10 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
+      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
+      cd build_scripts
+      touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
     displayName: "Install dependencies"
 
   - script: |
@@ -86,3 +90,32 @@ steps:
       targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"
+
+  - bash: |
+      ls $(System.DefaultWorkingDirectory)/build_scripts/
+      cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+    displayName: "list files in dir"
+
+  - bash: |
+      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+      cd $(System.DefaultWorkingDirectory)/build_scripts/
+      export CHIA_VERSION="Chia-"$(<version.txt)
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256
+      ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+    displayName: "Create Checksums"
+
+  - bash: |
+      export AWS_ACCESS_KEY_ID=$(AccessKey)
+      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+      export AWS_DEFAULT_REGION=us-west-2
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+    displayName: "Upload to S3"
+
+  - bash: |
+      export AWS_ACCESS_KEY_ID=$(AccessKey)
+      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+      export AWS_DEFAULT_REGION=us-west-2
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/install/
+    displayName: "Upload Release Files"
+    condition: contains(variables['build.sourceBranch'], 'refs/tags/')

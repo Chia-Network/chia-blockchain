@@ -191,13 +191,13 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
             if "backup_path" not in log_in_response or use_cloud is False:
                 if use_cloud is True:
                     val = input(
-                        "No online backup file found, \n Press S to skip restore from backup"
-                        " \n Press F to use your own backup file: "
+                        "No online backup file found,\n Press S to skip restore from backup"
+                        "\n Press F to use your own backup file: "
                     )
                 else:
                     val = input(
-                        "Cloud backup declined, \n Press S to skip restore from backup"
-                        " \n Press F to use your own backup file: "
+                        "Cloud backup declined,\n Press S to skip restore from backup"
+                        "\n Press F to use your own backup file: "
                     )
 
                 if val.lower() == "s":

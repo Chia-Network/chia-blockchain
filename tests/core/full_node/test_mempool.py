@@ -1,11 +1,14 @@
 import asyncio
 import logging
 from time import time
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 
+import chia.server.ws_connection as ws
+
 from chia.full_node.mempool import Mempool
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
@@ -18,6 +21,9 @@ from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
 from chia.util.ints import uint64
+from chia.util.hash import std_hash
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.api_decorators import api_request, peer_required, bytes_required
 
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
@@ -95,6 +101,29 @@ class TestMempool:
         assert spend_bundle is not None
 
 
+@peer_required
+@api_request
+@bytes_required
+async def respond_transaction(
+    node: FullNodeAPI,
+    tx: full_node_protocol.RespondTransaction,
+    peer: ws.WSChiaConnection,
+    tx_bytes: bytes = b"",
+    test: bool = False,
+) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+    """
+    Receives a full transaction from peer.
+    If tx is added to mempool, send tx_id to others. (new_transaction)
+    """
+    assert tx_bytes != b""
+    spend_name = std_hash(tx_bytes)
+    if spend_name in node.full_node.full_node_store.pending_tx_request:
+        node.full_node.full_node_store.pending_tx_request.pop(spend_name)
+    if spend_name in node.full_node.full_node_store.peers_with_tx:
+        node.full_node.full_node_store.peers_with_tx.pop(spend_name)
+    return await node.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
+
+
 class TestMempoolManager:
     @pytest.mark.asyncio
     async def test_basic_mempool_manager(self, two_nodes):
@@ -149,7 +178,9 @@ class TestMempoolManager:
 
         assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
         spend_bundle2 = generate_test_spend_bundle(
             list(blocks[-1].get_included_reward_coins())[0],
@@ -157,13 +188,15 @@ class TestMempoolManager:
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
-        await full_node_1.respond_transaction(tx2, peer)
+        status, err = await respond_transaction(full_node_1, tx2, peer)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         sb2 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle2.name())
 
         assert sb1 == spend_bundle1
         assert sb2 is None
+        assert status == MempoolInclusionStatus.PENDING
+        assert err == Err.MEMPOOL_CONFLICT
 
     async def send_sb(self, node, peer, sb):
         tx = full_node_protocol.RespondTransaction(sb)
@@ -259,14 +292,20 @@ class TestMempoolManager:
         self.assert_sb_not_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb3)
 
-    @pytest.mark.asyncio
-    async def test_invalid_block_index(self, two_nodes):
+    async def condition_tester(
+        self,
+        two_nodes,
+        dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
+        fee: int = 0,
+        num_blocks: int = 3,
+        coin: Optional[Coin] = None,
+    ):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         blocks = bt.get_consecutive_blocks(
-            3,
+            num_blocks,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
@@ -276,266 +315,201 @@ class TestMempoolManager:
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        cvp = ConditionWithArgs(
-            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
-            [uint64(start_height + 5).to_bytes(4, "big")],
+        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + num_blocks)
+
+        spend_bundle1 = generate_test_spend_bundle(
+            coin or list(blocks[-num_blocks + 2].get_included_reward_coins())[0], dic, uint64(fee)
         )
-        dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
 
         assert spend_bundle1 is not None
+
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
 
+        status, err = await respond_transaction(full_node_1, tx1, peer)
+        return blocks, spend_bundle1, peer, status, err
+
+    @pytest.mark.asyncio
+    async def test_invalid_block_index(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        start_height = blocks[-1].height
+        cvp = ConditionWithArgs(
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            [int_to_bytes(start_height + 5)],
+        )
+        dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is None
+        # the transaction may become valid later
+        assert status == MempoolInclusionStatus.PENDING
+        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [uint64(1).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(1)])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
-
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_negative_block_index(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(-1)])
+        dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_block_age(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
-            3,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
-
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [uint64(5).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(5)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
-
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
+        # the transaction may become valid later
+        assert status == MempoolInclusionStatus.PENDING
+        assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_block_age(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            4,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 4)
-
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [uint64(1).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(1)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-2].get_included_reward_coins())[0], dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_negative_block_age(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(-1)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name()])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height if len(blocks) > 0 else -1
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
         coin_2 = list(blocks[-2].get_included_reward_coins())[0]
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin_2.name()])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_COIN_ID_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height if len(blocks) > 0 else -1
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         time_now = uint64(int(time()))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
-
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_assert_time_negative(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        time_now = -1
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_exceeds(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height if len(blocks) > 0 else -1
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         time_relative = uint64(3)
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [time_relative.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
-        assert spend_bundle1 is not None
-
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
         for i in range(0, 4):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx2, peer)
+
+        status, err = await respond_transaction(full_node_1, tx2, peer)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_assert_time_relative_negative(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        time_relative = -3
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_correct_coin_announcement_consumed(self, two_nodes):
@@ -575,11 +549,13 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is bundle
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_coin_announcement_too_big(self, two_nodes):
@@ -619,9 +595,11 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundle
@@ -673,11 +651,13 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_invalid_coin_announcement_rejected_two(self, two_nodes):
@@ -721,11 +701,13 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_puzzle_announcement(self, two_nodes):
@@ -765,11 +747,13 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is bundle
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_puzzle_announcement_rejected(self, two_nodes):
@@ -812,11 +796,13 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_invalid_puzzle_announcement_rejected_two(self, two_nodes):
@@ -859,118 +845,68 @@ class TestMempoolManager:
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, uint64(10))
-
-        assert spend_bundle1 is not None
-
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-
-        await full_node_1.respond_transaction(tx1, peer)
-
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is not None
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_negative_fee(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, uint64(10))
-
-        assert spend_bundle1 is not None
-
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-
-        await full_node_1.respond_transaction(tx1, peer)
-        assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
-
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
+        assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
+        assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
+
+    @pytest.mark.asyncio
+    async def test_assert_fee_condition_fee_too_large(self, two_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2 ** 64)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
+        )
+        assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
         assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, uint64(9))
-
-        assert spend_bundle1 is not None
-
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-
-        await full_node_1.respond_transaction(tx1, peer)
-
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=9)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
 
     @pytest.mark.asyncio
     async def test_stealing_fee(self, two_nodes):
@@ -1021,11 +957,13 @@ class TestMempoolManager:
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
-        await full_node_1.respond_transaction(tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
 
     @pytest.mark.asyncio
     async def test_double_spend_same_bundle(self, two_nodes):
@@ -1062,10 +1000,12 @@ class TestMempoolManager:
 
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle_combined)
 
-        await full_node_1.respond_transaction(tx, peer)
+        status, err = await respond_transaction(full_node_1, tx, peer)
 
         sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle_combined.name())
         assert sb is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.DOUBLE_SPEND
 
     @pytest.mark.asyncio
     async def test_agg_sig_condition(self, two_nodes):
@@ -1119,208 +1059,126 @@ class TestMempoolManager:
 
     @pytest.mark.asyncio
     async def test_correct_my_parent(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin.parent_coin_info])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_my_parent(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height if len(blocks) > 0 else -1
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
         coin_2 = list(blocks[-2].get_included_reward_coins())[0]
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin_2.parent_coin_info])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_PARENT_ID_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_my_puzhash(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [coin.puzzle_hash])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_my_puzhash(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height if len(blocks) > 0 else -1
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [Program.to([]).get_tree_hash()])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_PUZZLEHASH_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_my_amount(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
         coin = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [coin.amount])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_my_amount(self, two_nodes):
-        reward_ph = WALLET_A.get_new_puzzlehash()
+
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_height = blocks[-1].height if len(blocks) > 0 else -1
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-
-        coin = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [1000])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(1000)])
         dic = {cvp.opcode: [cvp]}
-
-        spend_bundle1 = generate_test_spend_bundle(coin, dic)
-
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
-        await full_node_1.respond_transaction(tx1, peer)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
+
+    @pytest.mark.asyncio
+    async def test_negative_my_amount(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(-1)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
+
+    @pytest.mark.asyncio
+    async def test_my_amount_too_large(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED

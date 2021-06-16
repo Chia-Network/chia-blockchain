@@ -158,9 +158,9 @@ class TestRLWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 90, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 108)
-        await time_out_assert(30, wallet_height_at_least, True, wallet_node, 72)
+        await time_out_assert(15, wallet_height_at_least, True, wallet_node, 72)
         val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id, "fee": 11})
-        await time_out_assert(30, is_transaction_in_mempool, True, api_admin, val["transaction_id"])
+        await time_out_assert(15, is_transaction_in_mempool, True, api_admin, val["transaction_id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)

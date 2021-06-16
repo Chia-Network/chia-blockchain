@@ -85,10 +85,7 @@ class WalletNode:
         self.config = config
         self.constants = consensus_constants
         self.root_path = root_path
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
         self.cached_blocks: Dict = {}
         self.future_block_hashes: Dict = {}
@@ -115,7 +112,7 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
-    def get_key_for_fingerprint(self, fingerprint: Optional[int]):
+    def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
@@ -128,7 +125,7 @@ class WalletNode:
                     private_key = sk
                     break
         else:
-            private_key = private_keys[0][0]
+            private_key = private_keys[0][0]  # If no fingerprint, take the first private key
         return private_key
 
     async def _start(
@@ -320,14 +317,15 @@ class WalletNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
-        # TODO: perhaps use a different set of DNS seeders for wallets, to split the traffic.
+        DNS_SERVERS_EMPTY: list = []
+        # TODO: Perhaps use a different set of DNS seeders for wallets, to split the traffic.
         self.wallet_peers = WalletPeers(
             self.server,
             self.root_path,
             self.config["target_peer_count"],
             self.config["wallet_peers_path"],
             self.config["introducer_peer"],
-            [],
+            DNS_SERVERS_EMPTY,
             self.config["peer_connect_interval"],
             self.config["selected_network"],
             None,
@@ -625,7 +623,7 @@ class WalletNode:
                 if len(ses_heigths) > 2 and our_peak_height is not None:
                     ses_heigths.sort()
                     max_fork_ses_height = ses_heigths[-3]
-                    # This is fork point in SES in case where fork was not detected
+                    # This is the fork point in SES in the case where no fork was detected
                     if (
                         self.wallet_state_manager.blockchain.get_peak_height() is not None
                         and fork_height == max_fork_ses_height
@@ -661,7 +659,6 @@ class WalletNode:
     ) -> Tuple[bool, bool]:
         """
         Returns whether the blocks validated, and whether the peak was advanced
-
         """
         if self.wallet_state_manager is None:
             return False, False
@@ -873,8 +870,7 @@ class WalletNode:
                 return None
             return None
         else:
-            added_coins = []
-            return added_coins
+            return []  # No added coins
 
     async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
         assert self.wallet_state_manager is not None

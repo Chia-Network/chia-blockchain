@@ -56,10 +56,7 @@ class Wallet:
         name: str = None,
     ):
         self = Wallet()
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
         self.secret_key_store = SecretKeyStore()
