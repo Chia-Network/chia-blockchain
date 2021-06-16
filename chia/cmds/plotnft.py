@@ -24,13 +24,15 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"id": id}, show))
 
 
-@plotnft_cmd.command("get_link", short_help="Create a login link for a pool. To get the launcher id, use plotnft show.")
+@plotnft_cmd.command(
+    "get_login_link", short_help="Create a login link for a pool. To get the launcher id, use plotnft show."
+)
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=False)
-def get_link_cmd(launcher_id: str) -> None:
+def get_login_link_cmd(launcher_id: str) -> None:
     import asyncio
-    from .plotnft_funcs import get_link
+    from .plotnft_funcs import get_login_link
 
-    asyncio.run(get_link(launcher_id))
+    asyncio.run(get_login_link(launcher_id))
 
 
 @plotnft_cmd.command("create", short_help="Create a plot NFT")

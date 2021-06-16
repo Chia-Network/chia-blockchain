@@ -138,7 +138,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     await farmer_client.await_closed()
 
 
-async def get_link(launcher_id_str: str) -> None:
+async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = hexstr_to_bytes(launcher_id_str)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
