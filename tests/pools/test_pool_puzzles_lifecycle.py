@@ -288,7 +288,7 @@ class TestPoolPuzzles(TestCase):
         # find the singleton
         singleton = get_most_recent_singleton_coin_from_coin_solution(travel_coinsol)
         # get the relevant coin solution
-        return_coinsol, _= create_travel_spend(
+        return_coinsol, _ = create_travel_spend(
             travel_coinsol,
             launcher_coin,
             target_pool_state,
@@ -344,7 +344,7 @@ class TestPoolPuzzles(TestCase):
         )[0]
         singleton: Coin = get_most_recent_singleton_coin_from_coin_solution(singleton_coinsol)
         # get the relevant coin solution
-        return_coinsol, _= create_travel_spend(
+        return_coinsol, _ = create_travel_spend(
             singleton_coinsol,
             launcher_coin,
             target_pool_state,
