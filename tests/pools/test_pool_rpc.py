@@ -184,7 +184,7 @@ class TestPoolWalletRpc:
                 os.remove(child)
 
     @pytest.mark.asyncio
-    async def test_create_new_pool_wallet(self, one_wallet_node_and_rpc):
+    async def test_create_new_pool_wallet_self_farm(self, one_wallet_node_and_rpc):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
@@ -240,6 +240,64 @@ class TestPoolWalletRpc:
             "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
         }
         assert pool_config["pool_url"] == ""
+
+    @pytest.mark.asyncio
+    async def test_create_new_pool_wallet_farm_to_pool(self, one_wallet_node_and_rpc):
+        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        our_ph = await wallet_0.get_new_puzzlehash()
+        summaries_response = await client.get_wallets()
+        for summary in summaries_response:
+            if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                assert False
+
+        creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+            our_ph, "http://pool.example.com", 10, "localhost:5000", "new", "FARMING_TO_POOL"
+        )
+        await time_out_assert(
+            10,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            creation_tx.spend_bundle,
+            creation_tx.name,
+        )
+
+        await self.farm_blocks(full_node_api, our_ph, 6)
+        assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+
+        summaries_response = await client.get_wallets()
+        wallet_id: Optional[int] = None
+        for summary in summaries_response:
+            if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                wallet_id = summary["id"]
+        assert wallet_id is not None
+        status: PoolWalletInfo = await client.pw_status(wallet_id)
+
+        assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+        assert status.target is None
+        assert status.current.owner_pubkey == G1Element.from_bytes(
+            bytes.fromhex(
+                "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+            )
+        )
+        assert status.current.pool_url == "http://pool.example.com"
+        assert status.current.relative_lock_height == 10
+        assert status.current.version == 1
+        # Check that config has been written properly
+        full_config: Dict = load_config(wallet_0.wallet_state_manager.root_path, "config.yaml")
+        pool_list: List[Dict] = full_config["pool"]["pool_list"]
+        assert len(pool_list) == 1
+        pool_config = pool_list[0]
+        assert (
+            pool_config["authentication_public_key"]
+            == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+        )
+        # It can be one of multiple launcher IDs, due to selecting a different coin
+        assert pool_config["launcher_id"] in {
+            "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
+            "0x2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
+            "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
+        }
+        assert pool_config["pool_url"] == "http://pool.example.com"
 
     @pytest.mark.asyncio
     async def test_create_multiple_pool_wallets(self, one_wallet_node_and_rpc):
