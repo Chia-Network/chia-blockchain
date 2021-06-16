@@ -121,7 +121,7 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) ->
         return False
     inner_f, args = r
     singleton_mod_hash, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash = list(args.as_iter())
-    seconds_delay = uint64(int.from_bytes(seconds_delay.as_atom(), "big"))
+    seconds_delay = uint64(seconds_delay.as_int())
     return seconds_delay, delayed_puzzle_hash.as_atom()
 
 
