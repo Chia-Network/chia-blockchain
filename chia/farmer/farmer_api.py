@@ -233,7 +233,7 @@ class FarmerAPI:
                                         pool_state_dict["next_farmer_update"] = 0
                                         await self.farmer.update_pool_state()
                                 else:
-                                    new_difficulty = pool_response["current_difficulty"]
+                                    new_difficulty = pool_response["new_difficulty"]
                                     pool_state_dict["points_acknowledged_since_start"] += new_difficulty
                                     pool_state_dict["points_acknowledged_24h"].append((time.time(), new_difficulty))
                                     pool_state_dict["current_difficulty"] = new_difficulty

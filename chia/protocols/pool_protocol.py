@@ -82,7 +82,7 @@ class PostPartialRequest(Streamable):
 @dataclass(frozen=True)
 @streamable
 class PostPartialResponse(Streamable):
-    current_difficulty: uint64
+    new_difficulty: uint64
 
 
 # GET /farmer
