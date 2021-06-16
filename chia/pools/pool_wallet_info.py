@@ -12,9 +12,6 @@ from chia.util.ints import uint32, uint8
 from chia.util.streamable import streamable, Streamable
 
 
-POOL_PROTOCOL_VERSION = uint8(1)
-
-
 class PoolSingletonState(IntEnum):
     """
     From the user's point of view, a pool group can be in these states:

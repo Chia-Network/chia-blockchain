@@ -10,6 +10,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
+POOL_PROTOCOL_VERSION = uint8(1)
+
 
 class PoolErrorCode(Enum):
     REVERTED_SIGNAGE_POINT = 1
@@ -38,7 +40,7 @@ class GetPoolInfoResponse(Streamable):
     logo_url: str
     minimum_difficulty: uint64
     relative_lock_height: uint32
-    protocol_version: str
+    protocol_version: uint8
     fee: str
     description: str
     target_puzzle_hash: bytes32
