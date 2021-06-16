@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from time import time
 from typing import Dict, List, Optional
 
 import pytest
@@ -378,7 +377,8 @@ class TestMempoolManager:
     async def test_assert_time_exceeds(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        time_now = uint64(int(time()))
+        # 5 seconds should be before the next block
+        time_now = full_node_1.full_node.blockchain.get_peak().timestamp + 5
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
@@ -391,7 +391,7 @@ class TestMempoolManager:
     async def test_assert_time_relative_exceeds(self, two_nodes):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        time_relative = uint64(3)
+        time_relative = 3
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [time_relative.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
