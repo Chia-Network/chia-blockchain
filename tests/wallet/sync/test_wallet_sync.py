@@ -2,6 +2,7 @@
 import asyncio
 
 import pytest
+from colorlog import logging
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols import full_node_protocol
@@ -21,6 +22,7 @@ def wallet_height_at_least(wallet_node, h):
         return True
     return False
 
+log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -71,6 +73,36 @@ class TestWalletSync:
         )
 
     @pytest.mark.asyncio
+    async def test_backtrack_sync_wallet(self, wallet_node, default_400_blocks):
+
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+        for block in default_400_blocks[:20]:
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1.
+        await time_out_assert(100, wallet_height_at_least, True, wallet_node, 19)
+        # Tests a reorg with the wallet
+
+
+    @pytest.mark.asyncio
+    async def test_short_batch_sync_wallet(self, wallet_node, default_400_blocks):
+
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+
+        for block in default_400_blocks[:200]:
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1.
+        await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
+        # Tests a reorg with the wallet
+
+    @pytest.mark.asyncio
     async def test_long_sync_wallet(self, wallet_node, default_1000_blocks, default_400_blocks):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
@@ -90,6 +122,7 @@ class TestWalletSync:
         for block in default_1000_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
+        log.info(f"wallet node height is {wallet_node.wallet_state_manager.blockchain._peak_height}")
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
         await disconnect_all_and_reconnect(wallet_server, full_node_server)
