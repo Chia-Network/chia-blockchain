@@ -650,7 +650,7 @@ class WalletNode:
             if fork_height is None:
                 fork_height = uint32(0)
             await self.wallet_state_manager.blockchain.warmup(fork_height)
-            self.batch_sync_to_peak(fork_height, peak_height)
+            self.batch_sync_to_peak(fork_height, peak)
 
     async def fetch_blocks_and_validate(
         self,
