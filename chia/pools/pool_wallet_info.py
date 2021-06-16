@@ -4,6 +4,7 @@ from typing import Optional, Dict
 
 from blspy import G1Element
 
+from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
