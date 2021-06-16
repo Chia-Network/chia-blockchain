@@ -121,8 +121,8 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program):
     if r is None:
         return False
     inner_f, args = r
-    SINGLETON_MOD_HASH, LAUNCHER_ID, LAUNCHER_PUZZLE_HASH, SECONDS_DELAY, DELAYED_PUZZLE_HASH = list(args.as_iter())
-    return SECONDS_DELAY.as_atom(), DELAYED_PUZZLE_HASH.as_atom()
+    singleton_mod_hash, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash = list(args.as_iter())
+    return seconds_delay.as_atom(), delayed_puzzle_hash.as_atom()
 
 
 # Verify that a puzzle is a Pool Wallet Singleton
@@ -152,7 +152,7 @@ def create_travel_spend(
     genesis_challenge: bytes32,
     delay_time: uint64,
     delay_ph: bytes32,
-) -> Tuple[CoinSolution, Program, Program]:
+) -> Tuple[CoinSolution, Program]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(
         current,
         launcher_coin.name(),
@@ -173,15 +173,15 @@ def create_travel_spend(
             f"{target}"
             f"hash:{Program(bytes(target)).get_tree_hash()}"
         )
-        inner_sol = Program.to([1, 0, 0, bytes(target), destination_inner.get_tree_hash()])  # current or target
+        inner_sol = Program.to([1, 0, 0, bytes(target), destination_inner.get_tree_hash()])
     else:
         raise ValueError
-    # full sol = (parent_info, my_amount, inner_solution)
+
     current_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_coin_solution)
     assert current_singleton is not None
-    # launch_conditions_and_coinsol
+
     if current_singleton.parent_coin_info == launcher_coin.name():
-        parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])  # what about extra data?
+        parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_solution.puzzle_reveal))
         last_coin_solution_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
@@ -202,7 +202,6 @@ def create_travel_spend(
             SerializedProgram.from_program(full_puzzle),
             SerializedProgram.from_program(full_solution),
         ),
-        full_puzzle,
         inner_puzzle,
     )
 
@@ -328,20 +327,9 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Progra
     if r is None:
         raise ValueError("Failed to unpack inner puzzle")
     inner_f, args = r
-
-    # TARGET_PUZHASH RELATIVE_LOCK_HEIGHT OWNER_PUBKEY P2_SINGLETON_PUZHASH
-    # breakpoint()
     v = args.as_iter()
-    # target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash, genesis_challenge = tuple(v)
     target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
-    # (mod (POOL_PUZZLE_HASH
-    #  P2_SINGLETON_PUZHASH
-    #  OWNER_PUBKEY
-    #  POOL_REWARD_PREFIX
-    #  RELATIVE_LOCK_HEIGHT
-
-    # assert p2_singleton_hash == P2_SINGLETON_HASH
-
+    assert p2_singleton_hash == P2_SINGLETON_HASH
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
 
@@ -352,9 +340,8 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
         return None
     inner_f, args = r
 
-    # TODO(adam): fix
-    # if not is_pool_singleton_inner_puzzle(inner_f):
-    #     return None
+    if not is_pool_singleton_inner_puzzle(inner_f):
+        return None
     _, inner_puzzle = list(args.as_iter())
     return inner_puzzle
 

@@ -515,7 +515,7 @@ class PoolWallet:
             create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name())
         )
 
-        outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(
+        outgoing_coin_solution, inner_puzzle = create_travel_spend(
             last_coin_solution,
             pool_wallet_info.launcher_coin,
             pool_wallet_info.current,
