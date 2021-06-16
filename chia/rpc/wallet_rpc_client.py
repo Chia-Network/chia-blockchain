@@ -202,8 +202,8 @@ class WalletRpcClient(RpcClient):
         self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32
     ):
         request = {
-            "wallet_id": wallet_id,
-            "target_puzzle_hash": target_puzzlehash.hex(),
+            "wallet_id": int(wallet_id),
+            "target_puzzlehash": target_puzzlehash.hex(),
             "relative_lock_height": relative_lock_height,
             "pool_url": pool_url,
         }
