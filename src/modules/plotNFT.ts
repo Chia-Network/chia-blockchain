@@ -135,6 +135,8 @@ export default function groupReducer(
   action: any,
 ): PlotNFTState {
   switch (action.type) {
+    case 'LOG_OUT':
+      return { ...initialState };
     case 'PLOT_NFT_UPDATE':
       return {
         ...state,

@@ -23,6 +23,7 @@ import usePlotNFTs from '../../hooks/usePlotNFTs';
 import PlotNFTStateEnum from '../../constants/PlotNFTState';
 import PlotNFTUnconfirmedCard from '../plotNFT/PlotNFTUnconfirmedCard';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
+import { mojo_to_chia } from '../../util/chia';
 
 const groupsCols = [
   {
@@ -49,7 +50,7 @@ const groupsCols = [
 
       if (state === PlotNFTStateEnum.SELF_POOLING) {
         return (
-          <UnitFormat value={nft.wallet_balance.confirmed_wallet_balance ?? 0} />
+          <UnitFormat value={mojo_to_chia(BigInt(nft.wallet_balance.confirmed_wallet_balance ?? 0))} />
         );
       }
       
@@ -165,7 +166,7 @@ export default function PoolOverview() {
                 Total Self Pooling Rewards
               </Trans>
             </Typography>
-            <UnitFormat value={totalWinning} state={State.SUCCESS} />
+            <UnitFormat value={mojo_to_chia(BigInt(totalWinning))} state={State.SUCCESS} />
           </Flex>
         </Flex>
         {showTable ? (

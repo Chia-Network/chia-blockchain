@@ -67,7 +67,7 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
           <Flex flexGrow={1} alignItems="center" justifyContent="center" flexDirection="column" gap={2}>
             <Loading />
             <Typography variant="body2" align="center">
-              <Trans>Waiting on transaction to hit the memory pool...</Trans>
+              <Trans>waiting for the transaction to be confirmed</Trans>
             </Typography>
           </Flex>
         </Flex>

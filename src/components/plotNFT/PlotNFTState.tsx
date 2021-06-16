@@ -39,9 +39,13 @@ export default function PlotNFTState(props: Props) {
 
   return (
     <Typography variant="body1">
-      {isSelfPooling ? (
+      {state === PlotNFTStateEnum.SELF_POOLING && (
         <Trans>Self Pooling</Trans>
-      ) : (
+      )}
+      {state === PlotNFTStateEnum.LEAVING_POOL && (
+        <Trans>Leaving Pool</Trans>
+      )}
+      {state === PlotNFTStateEnum.FARMING_TO_POOL && (
         <Trans>Pooling</Trans>
       )}
     </Typography>

@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
-import { AlertDialog, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber } from '@chia/core';
+import { TooltipTypography, AlertDialog, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber } from '@chia/core';
 import {
   Box,
   Button,
@@ -18,11 +18,11 @@ import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
 import WalletStatus from '../wallet/WalletStatus';
 import useAbsorbRewards from '../../hooks/useAbsorbRewards';
-import useJoinPool from '../../hooks/useJoinPool';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import useOpenDialog from '../../hooks/useOpenDialog';
 import PoolJoin from '../pool/PoolJoin';
+import { mojo_to_chia } from '../../util/chia';
 
 
 const StyledCard = styled(Card)`
@@ -104,7 +104,7 @@ export default function PlotNFTCard(props: Props) {
   const rows = [isSelfPooling && {
     key: 'rewards',
     label: <Trans>Rewards</Trans>,
-    value: <UnitFormat value={balance} state={State.SUCCESS} />,
+    value: <UnitFormat value={mojo_to_chia(BigInt(balance))} state={State.SUCCESS} />,
   }, {
     key: 'status',
     label: <Trans>Status</Trans>,
@@ -115,15 +115,52 @@ export default function PlotNFTCard(props: Props) {
     value: <WalletStatus />,
   }, {
     key: 'current_difficulty',
-    label: <Trans>Current Difficulty</Trans>,
+    label: (
+      <TooltipTypography 
+        title={(
+          <Trans>
+            This difficulty is an artifically lower difficulty than on the real network,
+            and is used when farming, in order to find more proofs and send them to the pool.
+            The more plots you have, the higher difficulty you will have.
+            However, the difficulty does not affect rewards.
+          </Trans>
+        )}
+      >
+        <Trans>Current Difficulty</Trans>
+      </TooltipTypography>
+    ),
     value: <FormatLargeNumber value={nft.pool_state.current_difficulty} />,
-  }, {
+  }, !isSelfPooling && {
     key: 'current_points_balance',
-    label: <Trans>Current Points Balance</Trans>,
+    label: (
+      <TooltipTypography 
+        title={(
+          <Trans>
+            This is the total number of points this plotNFT has with this pool, 
+            since the last payout. The pool will reset the points after making a payout.
+          </Trans>
+        )}
+      >
+        <Trans>Current Points Balance</Trans>
+      </TooltipTypography>
+    ),
     value: <FormatLargeNumber value={nft.pool_state.current_points_balance} />,
   }, {
     key: 'points_found_since_start',
-    label: <Trans>Points Found Since Start</Trans>,
+    label: (
+      <TooltipTypography 
+        title={(
+          <Trans>
+            This is the total number of points your farmer has found for this plot NFT. 
+            Each k32 plot will get around 10 points per day, 
+            so if you have 10TiB, should should expect around 1000 points per day, 
+            or 41 points per hour.
+          </Trans>
+        )}
+      >
+        <Trans>Points Found Since Start</Trans>
+      </TooltipTypography>
+    ),
     value: <FormatLargeNumber value={nft.pool_state.points_found_since_start} />,
   }, {
     key: 'plots_count',
@@ -131,7 +168,7 @@ export default function PlotNFTCard(props: Props) {
     value: plots
       ? <FormatLargeNumber value={plots.length} />
       : <Loading size="small" />,
-  }].filter(row => !!row && row.value !== undefined);
+  }].filter(row => !!row);
 
   return (
     <StyledCard>
