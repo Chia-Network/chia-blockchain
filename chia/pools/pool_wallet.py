@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, Optional, Set, Tuple, List, Dict
 
-from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
+from blspy import PrivateKey, G2Element, G1Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
@@ -44,7 +44,6 @@ from chia.pools.pool_puzzles import (
 )
 
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.derive_keys import (
     master_sk_to_pooling_authentication_sk,
     master_sk_to_singleton_owner_sk,
@@ -261,7 +260,6 @@ class PoolWallet:
         that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
         The DB must be committed after calling this method. All validation should be done here.
         """
-        self.log.warning(f"Applying state transitions: {len(block_spends)}")
         coin_name_to_spend: Dict[bytes32, CoinSolution] = {cs.coin.name(): cs for cs in block_spends}
 
         tip: Tuple[uint32, CoinSolution] = await self.get_tip()
@@ -269,19 +267,9 @@ class PoolWallet:
         tip_spend = tip[1]
         assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
-        self.log.warning("COIN SPENDS:")
-        for s in block_spends:
-            self.log.warning(f"    coin: {s.coin}")
-            self.log.warning(f" coin_id: {s.coin.name()}")
-            self.log.warning(f"    puzz: {s.puzzle_reveal}")
-            self.log.warning(f"    soln: {s.solution}")
-            self.log.warning(f"    adds: {s.additions()}")
-            for a in s.additions():
-                self.log.warning(f"      coin names: {a.name()}")
-        #        pool_wallet_info: PoolWalletInfo = await self.get_current_state() and
         while True:
             tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(tip_spend)
-            self.log.warning(f"tip_coin: {tip_coin}")
+            self.log.info(f"new PoolWallet singleton tip_coin: {tip_coin}")
             assert tip_coin is not None
             spent_coin_name: bytes32 = tip_coin.name()
             if spent_coin_name not in coin_name_to_spend:
@@ -292,11 +280,7 @@ class PoolWallet:
             await self.coin_spent(tip_spend)
             coin_name_to_spend.pop(spent_coin_name)
         await self.update_pool_config(False)
-        # await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-        #    puzzle_hash, self.wallet_id, True
-        # )
 
-    # Whenever we detect a new peak, potentially initiate the second blockchain transaction
     async def coin_spent(self, coin_solution: CoinSolution):
         """
         Our singleton being spent indicates a change to our `current_state`
@@ -304,28 +288,18 @@ class PoolWallet:
         or to our pool, both of which we should track.
         """
         coin = coin_solution.coin
-        # sol = coin_solution.solution
-        # puz = coin_solution.puzzle_reveal
-        # amount = uint64(1)
+
         if self.target_state is None:
             self.log.info(f"PoolWallet state updated by external event: {coin}")
 
-        # new_singleton_coin = Coin(coin.name(), puz.get_tree_hash(), amount)
         new_current_state: Optional[PoolState] = solution_to_extra_data(
             coin_solution
-        )  # TODO: Test that this works with both escaping and member puzzles
+        )
 
-        # TODO: update _verify_pool_state and move out of PoolWallet
-        # self._verify_pool_state(new_current_state)
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         assert self.target_state == pool_wallet_info.target
-        # TODO: remove self.target_state or pool_wallet_info.target
-        # Now see if we need to change target state
         if self.target_state == new_current_state:
-            # We reach!
             self.target_state = None
-
-        # Do not try to tx from state 2 here because of timelock
 
     async def rewind(self, block_height: int) -> bool:
         """
@@ -466,11 +440,6 @@ class PoolWallet:
 
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
-        log = logging.getLogger()
-        log.warning(f"FROM: None\nTO: {initial_target_state}")
-        log.warning(
-            f"PUSHING SPEND {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}"
-        )
 
         standard_wallet_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -502,7 +471,7 @@ class PoolWallet:
         assert owner_sk is not None
         return owner_sk
 
-    async def sign(self, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState):
+    async def sign(self, coin_solution: CoinSolution):
         sk: PrivateKey = await self.get_pool_wallet_sk()
 
         def pk_to_sk(pk: G1Element) -> PrivateKey:
@@ -514,41 +483,8 @@ class PoolWallet:
             pk_to_sk,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            # extra_sig=signature
         )
-        # assert AugSchemeMPL.verify(owner_pubkey, to_sign, spend_bundle.aggregated_signature)
         return spend_bundle
-
-    async def sign_travel_spend_waiting_room_state(
-        self, target_puzzle_hash: bytes32, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
-    ) -> SpendBundle:
-        private: PrivateKey = await self.get_pool_wallet_sk()
-        message_array = [target_puzzle_hash, coin_solution.coin.amount, bytes(target)]
-        message_prog = Program.to(message_array)
-        message: bytes32 = message_prog.get_tree_hash()
-        self.log.warning(f"AGG_SIG_ME WAITING message array: {message_array}")
-        self.log.warning(f"AGG_SIG_ME WAITING message prog:  {message_prog}")
-        self.log.warning(f"AGG_SIG_ME WAITING spend message: {message}")
-        to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-        # sign msg or hash of msg?
-        signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
-        aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
-        assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
-        signed_sb: SpendBundle = SpendBundle([coin_solution], aggregate_signature)
-        return signed_sb
-
-    async def sign_travel_spend_in_member_state(
-        self, owner_pubkey: G1Element, coin_solution: CoinSolution, target: PoolState
-    ) -> SpendBundle:
-        private: PrivateKey = await self.get_pool_wallet_sk()
-        message: bytes32 = Program.to(bytes(target)).get_tree_hash()
-        self.log.warning(f"AGG_SIG_ME MEMBER spend message: {message}")
-        to_sign = message + coin_solution.coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-        signatures: List[G2Element] = [AugSchemeMPL.sign(private, to_sign)]
-        aggregate_signature: G2Element = AugSchemeMPL.aggregate(signatures)
-        assert AugSchemeMPL.verify(owner_pubkey, to_sign, aggregate_signature)
-        signed_sb = SpendBundle([coin_solution], aggregate_signature)
-        return signed_sb
 
     async def generate_travel_spend(self) -> Tuple[SpendBundle, bytes32]:
         # target_state is contained within pool_wallet_state
@@ -579,19 +515,6 @@ class PoolWallet:
             create_full_puzzle(new_inner_puzzle, pool_wallet_info.launcher_coin.name())
         )
 
-        self.log.warning("Creating Travel Spend:")
-        self.log.warning(f"current state: {pool_wallet_info.current}")
-        self.log.warning(f"current bytes: {bytes(pool_wallet_info.current).hex()}")
-        self.log.warning(f"current hash: {Program(bytes(pool_wallet_info.current)).get_tree_hash()}")
-
-        self.log.warning(f"next state: {next_state}")
-        self.log.warning(f"next bytes: {bytes(next_state).hex()}")
-        self.log.warning(f"next hash: {Program(bytes(next_state)).get_tree_hash()}")
-
-        self.log.warning(f"target state: {pool_wallet_info.target}")
-        self.log.warning(f"target bytes: {bytes(pool_wallet_info.target).hex()}")
-        self.log.warning(f"target hash: {Program(bytes(pool_wallet_info.target)).get_tree_hash()}")
-
         outgoing_coin_solution, full_puzzle, inner_puzzle = create_travel_spend(
             last_coin_solution,
             pool_wallet_info.launcher_coin,
@@ -601,16 +524,13 @@ class PoolWallet:
             delayed_seconds,
             delayed_puzhash,
         )
-        self.log.warning(f"OUTGOING COIN SOLUTION: {outgoing_coin_solution}")
+
         tip = (await self.get_tip())[1]
         tip_coin = tip.coin
         singleton = tip.additions()[0]
         singleton_id = singleton.name()
         assert outgoing_coin_solution.coin.parent_coin_info == tip_coin.name()
         assert outgoing_coin_solution.coin.name() == singleton_id
-
-        # breakpoint()
-        # current_puzzle_hash = full_puzzle.get_tree_hash()
         assert new_inner_puzzle != inner_puzzle
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
@@ -624,9 +544,7 @@ class PoolWallet:
             pk_bytes: bytes = bytes(pubkey_as_program.as_atom())
             assert len(pk_bytes) == 48
             owner_pubkey = G1Element.from_bytes(pk_bytes)
-            # member_signed_spend_bundle = await self.sign_travel_spend_in_member_state(
-            #     owner_pubkey, outgoing_coin_solution, next_state
-            # )
+            assert owner_pubkey == pool_wallet_info.current.owner_pubkey
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
                 target_puzzle_hash,  # payout_puzzle_hash
@@ -636,29 +554,15 @@ class PoolWallet:
             ) = uncurry_pool_waitingroom_inner_puzzle(inner_puzzle)
             pk_bytes = bytes(owner_pubkey.as_atom())
             assert len(pk_bytes) == 48
-            owner_pubkey = G1Element.from_bytes(pk_bytes)
-            # wait_signed_spend_bundle = await self.sign_travel_spend_waiting_room_state(
-            #     target_puzzle_hash, owner_pubkey, outgoing_coin_solution, next_state
-            # )
+            assert owner_pubkey == pool_wallet_info.current.owner_pubkey
         else:
             raise RuntimeError("Invalid state")
 
-        signed_spend_bundle = await self.sign(owner_pubkey, outgoing_coin_solution, next_state)
+        signed_spend_bundle = await self.sign(outgoing_coin_solution)
 
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert signed_spend_bundle.removals()[0].name() == singleton.name()
-
-        # this is true for the first state change after singleton creation
-        # assert signed_spend_bundle.coin_solutions[0].coin.parent_coin_info == pool_wallet_info.launcher_id
-
-        print(f"NEW PUZZLE IS: {new_full_puzzle}")
-        print(f"NEW PUZZLE HASH IS: {new_full_puzzle.get_tree_hash()}")
-        debug_spend_bundle(signed_spend_bundle, self.wallet_state_manager.constants.GENESIS_CHALLENGE)
-        print(
-            f"brun -x {signed_spend_bundle.coin_solutions[0].puzzle_reveal}, {signed_spend_bundle.coin_solutions[0].solution}"  # noqa
-        )
         assert signed_spend_bundle is not None
-        self.log.warning(f"generate_travel_spend: {signed_spend_bundle}")
         return signed_spend_bundle, new_full_puzzle.get_tree_hash()
 
     async def generate_travel_transaction(self, target_state: PoolState) -> TransactionRecord:
@@ -666,22 +570,7 @@ class PoolWallet:
         self.target_state = target_state  # TODO: Fix assignment to self.target_state
 
         spend_bundle, new_singleton_puzzle_hash = await self.generate_travel_spend()
-        # inner_puzzle: Program = pool_state_to_inner_puzzle(target_state)
-        # launcher_id = await self.get_current_state().launcher_coin.name()
-        # full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_id)
         assert spend_bundle is not None
-
-        current_singleton: Coin = spend_bundle.coin_solutions[0].coin
-        new_expected_singleton = Coin(current_singleton.name(), new_singleton_puzzle_hash, uint64(1))
-        print(f"EXPECTED NEW SINGLETON COIN_ID: {new_expected_singleton.get_hash()}")
-        print(f"EXPECTED NEW SINGLETON COIN: {new_expected_singleton}")
-
-        pool_wallet_info: PoolWalletInfo = await self.get_current_state()
-        self.log.warning(f"FROM: {pool_wallet_info.current}\nTO: {target_state}")
-
-        self.log.warning(
-            f"PUSHING SPEND: {spend_bundle}\nadditions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}"
-        )
 
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -699,10 +588,6 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-        )
-        self.log.warning(f"generate_member_transaction removal_id={spend_bundle.removals()[0].name()}")
-        self.log.warning(
-            f"generate_member_transaction: additions={spend_bundle.additions()}, removals={spend_bundle.removals()}"
         )
         return tx_record
 
@@ -787,11 +672,6 @@ class PoolWallet:
         )
         launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
 
-        log = logging.getLogger(__name__)
-        eve = launcher_cs.additions()[0]
-        log.error(f"launcher_coin={launcher_coin}\nlauncher_coin_id={launcher_coin.name()}")
-        log.error(f"eve_singleton={eve}\neve_coin_id={eve.name()}")
-
         # Current inner will be updated when state is verified on the blockchain
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
         return full_spend, puzzle_hash, launcher_coin.name()
@@ -813,7 +693,6 @@ class PoolWallet:
             raise ValueError("failed to generate transaction to farm to pool")
 
         await self.wallet_state_manager.add_pending_transaction(tx_record)
-        # await self.standard_wallet.push_transaction(tx_record)
         return tx_record
 
     async def transition(self, target_state: PoolState):
@@ -835,23 +714,12 @@ class PoolWallet:
                 f"Cannot change to state {target_state} when already having target state: {self.target_state}"
             )
 
-        # TODO: Do not set target state until all checks are done
         self.target_state = target_state
-
-        # all_sks = [self.wallet_state_manager.private_key]
-        # owner_sk: PrivateKey = await find_owner_sk(all_sks, current_state.current.owner_pubkey)
-
-        # Check if we can join a pool (timelock)
-        # Create the first blockchain transaction
-        # Whenever we detect a new peak, potentially initiate the second blockchain transaction
-        # verify target state
-
         tx = None
         if target_state.state == FARMING_TO_POOL:
             tx = await self._try_to_farm_to_pool(target_state)
         elif target_state.state == SELF_POOLING:
             tx = await self._try_to_self_pool(target_state)
-
         return tx
 
     async def join_pool(self, target_state: PoolState):
@@ -863,29 +731,23 @@ class PoolWallet:
         return await self.transition(target_state)
 
     async def try_leave_pool(self, target_state: PoolState):
-        # Create the LEAVING blockchain transaction
         tx_record = await self.generate_travel_transaction(target_state)
 
         if tx_record is None:
             raise ValueError("failed to generate transaction to farm to pool")
 
         await self.wallet_state_manager.add_pending_transaction(tx_record)
-
-        # Check if we can self pool (timelock). If so, create the blockchain transaction for the target state
         return tx_record
 
     async def leaving_to_self(self) -> None:
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
-        # assert self.target_state.owner_pubkey is owned by us
         if self.target_state is None:
             return
 
         assert self.target_state.version == POOL_PROTOCOL_VERSION
         assert pool_wallet_info.current.state == LEAVING_POOL
         assert self.target_state.target_puzzle_hash is not None
-        # TODO assert current state
         assert self.target_state.state == SELF_POOLING
-        # assert self.target_state.target_puzzle_hash IS ours
         assert self.target_state.relative_lock_height == 0
         assert self.target_state.pool_url is None
 
@@ -893,16 +755,13 @@ class PoolWallet:
 
     async def leaving_to_pool(self) -> None:
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
-        # assert self.target_state.owner_pubkey is owned by us
         if self.target_state is None:
             return
 
         assert self.target_state.version == POOL_PROTOCOL_VERSION
         assert pool_wallet_info.current.state == LEAVING_POOL
         assert self.target_state.target_puzzle_hash is not None
-
         assert self.target_state.state == FARMING_TO_POOL
-        # assert self.target_state.target_puzzle_hash is NOT ours
         assert self.target_state.relative_lock_height >= self.MINIMUM_RELATIVE_LOCK_HEIGHT
         assert self.target_state.pool_url is not None
 
@@ -927,8 +786,7 @@ class PoolWallet:
         if pool_wallet_info.current.state == FARMING_TO_POOL:
             return await self.try_leave_pool(self.target_state)
         elif pool_wallet_info.current.state == LEAVING_POOL:
-            # TODO: Allow this case so that people can manually spend themselves
-            # out of the LEAVING state
+            # TODO: Allow this case so that people can manually spend themselves out of the LEAVING state
             return await self._try_to_self_pool(self.target_state)
         else:
             raise ValueError(f"Invalid State Transition {pool_wallet_info} to {self.target_state}")
@@ -973,17 +831,13 @@ class PoolWallet:
             last_solution = absorb_spend[0]
             all_spends += absorb_spend
             total_amount += coin_record.coin.amount
-            self.log.warning(
+            self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
 
         # No signatures are required to absorb
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
 
-        self.log.warning(
-            f"CLAIM REWARDS PUSHING SPEND: {spend_bundle}\n"
-            f"additions: {spend_bundle.additions()}\nremovals: {spend_bundle.removals()}"
-        )
         absorb_transaction: TransactionRecord = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -1010,9 +864,6 @@ class PoolWallet:
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         tip_height, tip_spend = await self.get_tip()
 
-        # tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(tip_spend)
-        self.log.warning(f"new_peak {pool_wallet_info}")
-
         if self.target_state is None:
             return
         if self.target_state == pool_wallet_info.current.state:
@@ -1024,20 +875,13 @@ class PoolWallet:
             and pool_wallet_info.current.state == LEAVING_POOL
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height
-            self.log.warning(f"Current block height: {peak.height} OK to leave at height {leave_height}")
+            self.log.info(f"Current block height: {peak.height} OK to leave at height {leave_height}")
             if peak.height > leave_height:
-                # TODO talk to Mariano about have_unconfirmed_transaction():
-
-                self.log.warning(f"ATTEMPTING to LEAVE from\n{pool_wallet_info.current}\nto\n{self.target_state}")
+                self.log.info(f"Attempting to leave from\n{pool_wallet_info.current}\nto\n{self.target_state}")
                 if self.target_state.state == SELF_POOLING:
-                    # TODO only send if not already awaiting a state-change transaction
                     await self.leaving_to_self()
-                    # await self.update_pool_config(False)
-
                 elif self.target_state.state == FARMING_TO_POOL:
-                    # TODO only send if not already awaiting a state-change transaction
                     await self.leaving_to_pool()
-                    # await self.update_pool_config(False)
 
     async def have_unconfirmed_transaction(self) -> bool:
         unconfirmed: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
