@@ -290,10 +290,16 @@ class TestPoolWalletRpc:
         pool_list: List[Dict] = full_config["pool"]["pool_list"]
         assert len(pool_list) == 2
 
-        p2_singleton_ph: bytes32 = status_2.p2_singleton_puzzle_hash
+        p2_singleton_ph_2: bytes32 = status_2.p2_singleton_puzzle_hash
+        p2_singleton_ph_3: bytes32 = status_3.p2_singleton_puzzle_hash
         assert (
             await wallet_node_0.wallet_state_manager.interested_store.get_interested_puzzle_hash_wallet_id(
-                p2_singleton_ph
+                p2_singleton_ph_2
+            )
+        ) is not None
+        assert (
+            await wallet_node_0.wallet_state_manager.interested_store.get_interested_puzzle_hash_wallet_id(
+                p2_singleton_ph_3
             )
         ) is not None
         # Doing a reorg reverts and removes the pool wallets
@@ -309,7 +315,12 @@ class TestPoolWalletRpc:
         # It also removed interested PH, so we can recreated the pool wallet with another wallet_id later
         assert (
             await wallet_node_0.wallet_state_manager.interested_store.get_interested_puzzle_hash_wallet_id(
-                p2_singleton_ph
+                p2_singleton_ph_2
+            )
+        ) is None
+        assert (
+            await wallet_node_0.wallet_state_manager.interested_store.get_interested_puzzle_hash_wallet_id(
+                p2_singleton_ph_3
             )
         ) is None
 

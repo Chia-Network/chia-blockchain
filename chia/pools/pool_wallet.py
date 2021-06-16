@@ -310,13 +310,13 @@ class PoolWallet:
             ).copy()
             prev_state: PoolWalletInfo = await self.get_current_state()
             await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
-            await self.wallet_state_manager.interested_store.remove_interested_puzzle_hash(
-                prev_state.p2_singleton_puzzle_hash, in_transaction=True
-            )
 
             if len(history) > 0 and history[0][0] > block_height:
                 # If we have no entries in the DB, we have no singleton, so we should not have a wallet either
                 # The PoolWallet object becomes invalid after this.
+                await self.wallet_state_manager.interested_store.remove_interested_puzzle_hash(
+                    prev_state.p2_singleton_puzzle_hash, in_transaction=True
+                )
                 return True
             else:
                 if await self.get_current_state() != prev_state:
