@@ -77,7 +77,7 @@ class FullNodeDiscovery:
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
         try:
-            self.resolver = dns.asyncresolver.Resolver()
+            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
         except Exception:
             self.resolver = None
             self.log.exception("Error initializing asyncresolver")
