@@ -11,6 +11,9 @@ from chia.util.ints import uint64
 from chia.util.hash import std_hash
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
@@ -40,7 +43,7 @@ def launch_conditions_and_coinsol(
 
     launcher_coin = generate_launcher_coin(coin, amount)
     curried_singleton = SINGLETON_MOD.curry(
-        (SINGLETON_MOD.get_tree_hash(), (launcher_coin.name(), SINGLETON_LAUNCHER_HASH)),
+        (SINGLETON_MOD_HASH, (launcher_coin.name(), SINGLETON_LAUNCHER_HASH)),
         inner_puzzle,
     )
 
@@ -101,7 +104,7 @@ def lineage_proof_for_coinsol(coin_solution: CoinSolution) -> LineageProof:
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
 def puzzle_for_singleton(launcher_id: bytes32, inner_puz: Program) -> Program:
     return SINGLETON_MOD.curry(
-        (SINGLETON_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER_HASH)),
+        (SINGLETON_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_HASH)),
         inner_puz,
     )
 
@@ -125,3 +128,61 @@ def solution_for_singleton(
         ]
 
     return Program.to([parent_info, amount, inner_solution])
+
+
+# Create a coin that a singleton can claim
+def pay_to_singleton_puzzle(launcher_id: bytes32) -> Program:
+    return P2_SINGLETON_MOD.curry(SINGLETON_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH)
+
+
+# Create a coin that a singleton can claim or that can be sent to another puzzle after a specified time
+def pay_to_singleton_or_delay_puzzle(launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32) -> Program:
+    return P2_SINGLETON_OR_DELAYED_MOD.curry(
+        SINGLETON_MOD_HASH,
+        launcher_id,
+        SINGLETON_LAUNCHER_HASH,
+        delay_time,
+        delay_ph,
+    )
+
+
+# Solution for EITHER p2_singleton or the claiming spend case for p2_singleton_or_delayed_puzhash
+def solution_for_p2_singleton(p2_singleton_coin: Coin, singleton_inner_puzhash: bytes32) -> Program:
+    return Program.to([singleton_inner_puzhash, p2_singleton_coin.name()])
+
+
+# Solution for the delayed spend case for p2_singleton_or_delayed_puzhash
+def solution_for_p2_delayed_puzzle(output_amount: uint64) -> Program:
+    return Program.to([output_amount, []])
+
+
+# Get announcement conditions for singleton solution and full CoinSolution for the claimed coin
+def claim_p2_singleton(
+    p2_singleton_coin: Coin,
+    singleton_inner_puzhash: bytes32,
+    launcher_id: bytes32,
+) -> Tuple[Program, Program, CoinSolution]:
+    assertion = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(p2_singleton_coin.name() + b"$")])
+    announcement = Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin.name()])
+    claim_coinsol = CoinSolution(
+        p2_singleton_coin,
+        pay_to_singleton_puzzle(launcher_id),
+        solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),
+    )
+    return assertion, announcement, claim_coinsol
+
+
+# Get the CoinSolution for spending to a delayed puzzle
+def spend_to_delayed_puzzle(
+    p2_singleton_coin: Coin,
+    output_amount: uint64,
+    launcher_id: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
+) -> CoinSolution:
+    claim_coinsol = CoinSolution(
+        p2_singleton_coin,
+        pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph),
+        solution_for_p2_delayed_puzzle(output_amount),
+    )
+    return claim_coinsol

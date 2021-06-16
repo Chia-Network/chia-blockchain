@@ -115,13 +115,14 @@ def get_template_singleton_inner_puzzle(inner_puzzle: Program):
     return uncurried_inner_puzzle
 
 
-def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program):
+def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) -> Tuple[uint64, bytes32]:
     r = puzzle.uncurry()
     if r is None:
         return False
     inner_f, args = r
     singleton_mod_hash, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash = list(args.as_iter())
-    return seconds_delay.as_atom(), delayed_puzzle_hash.as_atom()
+    seconds_delay = uint64(seconds_delay.as_int())
+    return seconds_delay, delayed_puzzle_hash.as_atom()
 
 
 # Verify that a puzzle is a Pool Wallet Singleton
