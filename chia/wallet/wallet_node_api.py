@@ -46,7 +46,7 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        async with self.wallet_node.new_peak_sem:
+        async with self.wallet_node.new_peak_lock:
             return await self.wallet_node.new_peak_wallet(peak, peer)
 
     @api_request

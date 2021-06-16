@@ -108,7 +108,7 @@ class WalletNode:
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
-        self.new_peak_lock: Optional[asyncio.Lock] = None
+        self.new_peak_lock = asyncio.Lock()
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
@@ -211,7 +211,6 @@ class WalletNode:
         self.sync_task = asyncio.create_task(self.sync_job())
         self.logged_in_fingerprint = fingerprint
         self.logged_in = True
-        self.new_peak_sem = asyncio.Semaphore(4)
         return True
 
     def _close(self):
