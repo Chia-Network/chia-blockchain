@@ -344,7 +344,7 @@ class TestFullSync:
         for block in default_1000_blocks[1000 - num_blocks_initial :]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
+        await time_out_assert(60, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
     async def test_block_ses_mismatch(self, three_nodes, default_1000_blocks):
@@ -371,4 +371,4 @@ class TestFullSync:
             s.new_sub_slot_iters * 2,
         )
         await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
-        await time_out_assert(180, node_height_exactly, True, full_node_2, 320)
+        await time_out_assert(60, node_height_exactly, True, full_node_2, 320)
