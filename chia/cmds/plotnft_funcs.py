@@ -2,7 +2,7 @@ import asyncio
 import json
 import time
 from pprint import pprint
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
@@ -136,6 +136,31 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                 print("")
     farmer_client.close()
     await farmer_client.await_closed()
+
+
+async def get_login_link(launcher_id_str: str) -> None:
+    launcher_id: bytes32 = hexstr_to_bytes(launcher_id_str)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    farmer_rpc_port = config["farmer"]["rpc_port"]
+    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
+    try:
+        login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
+        if login_link is None:
+            print("Was not able to get login link.")
+        else:
+            print(login_link)
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            print(
+                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
+                f" You can run the farmer by:\n    chia start farmer-only"
+            )
+        else:
+            print(f"Exception from 'farmer' {e}")
+    finally:
+        farmer_client.close()
+        await farmer_client.await_closed()
 
 
 async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

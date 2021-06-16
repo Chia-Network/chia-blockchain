@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from chia.farmer.farmer import Farmer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -20,6 +20,7 @@ class FarmerRpcApi:
             "/get_pool_state": self.get_pool_state,
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_plots": self.get_plots,
+            "/get_pool_login_link": self.get_pool_login_link,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -113,3 +114,10 @@ class FarmerRpcApi:
 
     async def get_plots(self, _: Dict):
         return await self.service.get_plots()
+
+    async def get_pool_login_link(self, request: Dict) -> Dict:
+        launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
+        login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
+        if login_link is None:
+            raise ValueError(f"Failed to generate login link for {launcher_id.hex()}")
+        return {"login_link": login_link}

@@ -51,3 +51,9 @@ class FarmerRpcClient(RpcClient):
 
     async def get_plots(self) -> Dict[str, Any]:
         return await self.fetch("get_plots", {})
+
+    async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:
+        try:
+            return (await self.fetch("get_pool_login_link", {"launcher_id": launcher_id.hex()}))["login_link"]
+        except ValueError:
+            return None
