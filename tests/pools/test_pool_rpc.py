@@ -480,6 +480,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     async def test_self_pooling_to_pooling(self, setup):
+        """ This tests self-pooling -> pooling """
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
@@ -581,6 +582,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     async def test_leave_pool(self, setup):
+        """ This tests self-pooling -> pooling -> escaping -> self pooling"""
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
         full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
@@ -697,6 +699,108 @@ class TestPoolWalletRpc:
             client.close()
             await client.await_closed()
             await rpc_cleanup()
+
+    @pytest.mark.asyncio
+    async def test_change_pools(self, setup):
+        """ This tests Pool A -> escaping -> Pool B"""
+        num_blocks = 4  # Num blocks to farm at a time
+        total_blocks = 0  # Total blocks farmed so far
+        full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
+        our_ph = receive_address[0]
+        pool_a_ph = receive_address[1]
+        pool_b_ph = await wallets[1].get_new_puzzlehash()
+
+        full_node_api = full_nodes[0]
+        WAIT_SECS = 200
+
+        try:
+            summaries_response = await client.get_wallets()
+            for summary in summaries_response:
+                if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                    assert False
+
+            async def have_chia():
+                await self.farm_blocks(full_node_api, our_ph, 1)
+                return (await wallets[0].get_confirmed_balance()) > 0
+
+            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+
+            creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+                pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL"
+            )
+
+            await time_out_assert(
+                10,
+                full_node_api.full_node.mempool_manager.get_spendbundle,
+                creation_tx.spend_bundle,
+                creation_tx.name,
+            )
+
+            await self.farm_blocks(full_node_api, our_ph, 6)
+            assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+
+            summaries_response = await client.get_wallets()
+            wallet_id: Optional[int] = None
+            for summary in summaries_response:
+                if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                    wallet_id = summary["id"]
+            assert wallet_id is not None
+            log.warning(f"PW status wallet id: {wallet_id}")
+            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            log.warning(f"New status: {status}")
+
+            assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+            assert status.target is None
+
+            async def status_is_farming_to_pool():
+                await self.farm_blocks(full_node_api, our_ph, 1)
+                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+            await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
+
+            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            assert pw_info.current.pool_url == "https://pool-a.org"
+            assert pw_info.current.relative_lock_height == 5
+            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            log.warning(f"New status: {status}")
+
+            join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
+                {
+                    "wallet_id": wallet_id,
+                    "pool_url": "https://pool-b.org",
+                    "relative_lock_height": 10,
+                    "target_puzzlehash": pool_b_ph.hex(),
+                }
+            )
+            assert join_pool_tx is not None
+            #res_json = await client.pw_join_pool(
+            #    wallet_id, our_ph, "https://pool-b.org", 27
+            #)
+            #join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
+            #leave_pool_tx: TransactionRecord = await api_user[0].pw_self_pool({"wallet_id": wallet_id})
+            #assert leave_pool_tx["transaction"].wallet_id == wallet_id
+            #assert leave_pool_tx["transaction"].amount == 1
+
+            async def status_is_leaving():
+                await self.farm_blocks(full_node_api, our_ph, 1)
+                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
+
+            await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving)
+            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            log.warning(f"New state: {pw_info.current}")
+
+            await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
+            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            assert pw_info.current.pool_url == "https://pool-b.org"
+            assert pw_info.current.relative_lock_height == 10
+            log.warning(f"New state: {pw_info.current}")
+
+        finally:
+            client.close()
+            await client.await_closed()
+            await rpc_cleanup()
+
 
     # @pytest.mark.asyncio
     # async def test_only_call_pw_status_on_pool_wallet(self, setup):
