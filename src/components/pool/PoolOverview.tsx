@@ -110,6 +110,8 @@ export default function PoolOverview() {
   const { nfts, loading } = usePlotNFTs();
   const { unconfirmed } = useUnconfirmedPlotNFTs();
 
+  const hasNFTs = (!!nfts && !!nfts.length) || unconfirmed.length;
+
   const totalWinning = useMemo<number>(
     () => nfts && nfts.length
       ? sumBy<PlotNFT>(nfts, (item) => item.wallet_balance.confirmed_wallet_balance ?? 0)
@@ -129,7 +131,7 @@ export default function PoolOverview() {
     return null;
   }
 
-  if (!nfts || !nfts.length) {
+  if (!hasNFTs) {
     return (
       <PoolHero />
     );
