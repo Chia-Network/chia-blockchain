@@ -162,7 +162,7 @@ def create_travel_spend(
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is key_value_list ()
-        inner_sol: Program = Program.to([bytes(target), 0])
+        inner_sol: Program = Program.to([bytes(target)])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, extra_data, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
@@ -361,9 +361,9 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     # Spend which is not absorb, and is not the launcher
     num_args = len(inner_solution.as_atom_list())
-    assert num_args in (2, 3)
+    assert num_args in (1, 3)
 
-    if num_args == 2:
+    if num_args == 1:
         # pool member
         extra_data = inner_solution.first().as_atom()
     else:
