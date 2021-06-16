@@ -65,8 +65,8 @@ async def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optio
 async def find_authentication_sk(all_sks: List[PrivateKey], authentication_pk: G1Element) -> Optional[PrivateKey]:
     # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
     # many times.
-    for wallet_id in range(20):
-        for auth_key_index in range(20):
+    for auth_key_index in range(20):
+        for wallet_id in range(20):
             for sk in all_sks:
                 auth_sk = master_sk_to_pooling_authentication_sk(sk, uint32(wallet_id), uint32(auth_key_index))
                 if auth_sk.get_g1() == authentication_pk:
