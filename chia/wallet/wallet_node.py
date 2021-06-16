@@ -431,15 +431,15 @@ class WalletNode:
             self.log.debug(f"known peak {peak.header_hash}")
             return
 
-        curr_peak = self.wallet_state_manager.blockchain.get_peak()
-        if curr_peak is not None and curr_peak.weight >= peak.weight:
-            return
-
         if self.wallet_state_manager.sync_mode:
             self.last_new_peak_messages.put(peer, peak)
             return
 
         async with self.new_peak_lock:
+            curr_peak = self.wallet_state_manager.blockchain.get_peak()
+            if curr_peak is not None and curr_peak.weight >= peak.weight:
+                return
+
             request = wallet_protocol.RequestBlockHeader(peak.height)
             response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
             if response is None or not isinstance(response, RespondBlockHeader) or response.header_block is None:
