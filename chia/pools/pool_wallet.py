@@ -292,9 +292,7 @@ class PoolWallet:
         if self.target_state is None:
             self.log.info(f"PoolWallet state updated by external event: {coin}")
 
-        new_current_state: Optional[PoolState] = solution_to_extra_data(
-            coin_solution
-        )
+        new_current_state: Optional[PoolState] = solution_to_extra_data(coin_solution)
 
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         assert self.target_state == pool_wallet_info.target
