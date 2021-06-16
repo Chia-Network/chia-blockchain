@@ -419,32 +419,32 @@ class WalletNode:
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
                     self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
                     await peer.close()
-                    return None
+                    return
                 else:
                     self.log.debug(f"Result: {result}")
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
-            return None
+            return
 
         if self.wallet_state_manager.blockchain.contains_block(peak.header_hash):
             self.log.debug(f"known peak {peak.header_hash}")
-            return None
+            return
 
         curr_peak = self.wallet_state_manager.blockchain.get_peak()
         if curr_peak is not None and curr_peak.weight >= peak.weight:
-            return None
+            return
 
         if self.wallet_state_manager.sync_mode:
             self.last_new_peak_messages.put(peer, peak)
-            return None
+            return
 
         async with self.new_peak_lock:
             request = wallet_protocol.RequestBlockHeader(peak.height)
             response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
             if response is None or not isinstance(response, RespondBlockHeader) or response.header_block is None:
                 self.log.warning(f"bad peak response from peer {response}")
-                return None
+                return
             header_block = response.header_block
             curr_peak_height = 0 if curr_peak is None else curr_peak.height
             if (curr_peak_height == 0 and peak.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
@@ -463,11 +463,11 @@ class WalletNode:
                     weight_request, timeout=360
                 )
                 if weight_proof_response is None:
-                    return None
+                    return
 
                 weight_proof = weight_proof_response.wp
                 if self.wallet_state_manager is None:
-                    return None
+                    return
                 if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
                     valid, fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
                         weight_proof
@@ -482,7 +482,7 @@ class WalletNode:
                             f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                         )
                         self.log.debug(f"{weight_proof}")
-                        return None
+                        return
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
                     header_block.header_hash, uint32(fork_point)
