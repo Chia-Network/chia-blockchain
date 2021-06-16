@@ -214,7 +214,6 @@ class Farmer:
         }
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                self.log.info(f"SENDING: {get_farmer_params}")
                 async with session.get(f"{pool_config.pool_url}/farmer", params=get_farmer_params) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
