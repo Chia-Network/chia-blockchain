@@ -86,7 +86,7 @@ jobs:
           if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
           echo ::set-output name=HAS_SECRET::${HAS_SECRET}
         env:
-          SECRET: "${{ secrets.test_pypi_password }
+          SECRET: "${{ secrets.TEST_PYPI_PASSWORD }
 
     - name: Run install script
       env:
