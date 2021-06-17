@@ -40,17 +40,17 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         )
         logger.addHandler(handler)
 
-    try:
-        from logging.handlers import SysLogHandler # NOQA
-        if logging_config.get("log_syslog", False):
-            log_syslog_host = logging_config.get("log_syslog_host", "localhost") # NOQA
-            log_syslog_port = logging_config.get("log_syslog_port", 514) # NOQA
-            log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
-            log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format)) # NOQA
-            logger = logging.getLogger()
-            logger.addHandler(log_syslog_handler)
-    except ImportError:
-        pass
+#    try:
+#       from logging.handlers import SysLogHandler # NOQA
+#        if logging_config.get("log_syslog", False):
+#            log_syslog_host = logging_config.get("log_syslog_host", "localhost") # NOQA
+#            log_syslog_port = logging_config.get("log_syslog_port", 514) # NOQA
+#            log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
+#            log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format)) # NOQA
+#            logger = logging.getLogger()
+#            logger.addHandler(log_syslog_handler)
+#    except ImportError:
+#        pass
 
     if "log_level" in logging_config:
         if logging_config["log_level"] == "CRITICAL":
