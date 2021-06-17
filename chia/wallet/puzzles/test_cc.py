@@ -9,14 +9,14 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import CoinSolution, SpendBundle
+from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     cc_puzzle_for_inner_puzzle,
     cc_puzzle_hash_for_inner_puzzle_hash,
     spend_bundle_for_spendable_ccs,
-    spendable_cc_list_from_coin_solution,
+    spendable_cc_list_from_coin_spend,
 )
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
 from chia.wallet.puzzles.genesis_by_puzzle_hash_with_0 import create_genesis_puzzle_or_zero_coin_checker
@@ -83,8 +83,8 @@ def issue_cc_from_farmed_coin(
     # this is just a coincidence... for more complicated puzzles, you'll likely have to do some real work
 
     solution = Program.to(output_conditions)
-    coin_solution = CoinSolution(farmed_coin, farmed_puzzle, solution)
-    spend_bundle = SpendBundle([coin_solution], NULL_SIGNATURE)
+    coin_spend = CoinSpend(farmed_coin, farmed_puzzle, solution)
+    spend_bundle = SpendBundle([coin_spend], NULL_SIGNATURE)
     return genesis_coin_checker, spend_bundle
 
 
@@ -130,8 +130,8 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
     # collect up the spendable coins
 
     spendable_cc_list = []
-    for coin_solution in spend_bundle.coin_solutions:
-        spendable_cc_list.extend(spendable_cc_list_from_coin_solution(coin_solution, hash_to_puzzle_f))
+    for coin_spend in spend_bundle.coin_spends:
+        spendable_cc_list.extend(spendable_cc_list_from_coin_spend(coin_spend, hash_to_puzzle_f))
 
     # now spend the genesis coin cc to N outputs
 
@@ -152,8 +152,8 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
     # collect up the spendable coins
 
     spendable_cc_list = []
-    for coin_solution in spend_bundle.coin_solutions:
-        spendable_cc_list.extend(spendable_cc_list_from_coin_solution(coin_solution, hash_to_puzzle_f))
+    for coin_spend in spend_bundle.coin_spends:
+        spendable_cc_list.extend(spendable_cc_list_from_coin_spend(coin_spend, hash_to_puzzle_f))
 
     # now spend N inputs to two outputs
 
@@ -192,8 +192,8 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     add_puzzles_to_puzzle_preimage_db(puzzles_for_db)
 
     eve_cc_list = []
-    for _ in spend_bundle.coin_solutions:
-        eve_cc_list.extend(spendable_cc_list_from_coin_solution(_, hash_to_puzzle_f))
+    for _ in spend_bundle.coin_spends:
+        eve_cc_list.extend(spendable_cc_list_from_coin_spend(_, hash_to_puzzle_f))
     assert len(eve_cc_list) == 1
     eve_cc_spendable = eve_cc_list[0]
 
@@ -206,8 +206,8 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     wrapped_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, eve_inner_puzzle_hash)
 
     solution = solution_for_pay_to_any([(wrapped_cc_puzzle_hash, 0)])
-    coin_solution = CoinSolution(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, solution)
-    spendable_cc_list = spendable_cc_list_from_coin_solution(coin_solution, hash_to_puzzle_f)
+    coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, solution)
+    spendable_cc_list = spendable_cc_list_from_coin_spend(coin_spend, hash_to_puzzle_f)
     assert len(spendable_cc_list) == 1
     zero_cc_spendable = spendable_cc_list[0]
 

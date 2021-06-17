@@ -11,7 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -34,7 +34,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_reserve_fee_condition,
 )
 from chia.wallet.secret_key_store import SecretKeyStore
-from chia.wallet.sign_coin_solutions import sign_coin_solutions
+from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -163,13 +163,13 @@ class Wallet:
 
         return public_key
 
-    async def hack_populate_secret_keys_for_coin_solutions(self, coin_solutions: List[CoinSolution]) -> None:
+    async def hack_populate_secret_keys_for_coin_spends(self, coin_spends: List[CoinSpend]) -> None:
         """
         This hack forces secret keys into the `_pk2sk` lookup. This should eventually be replaced
         by a persistent DB table that can do this look-up directly.
         """
-        for coin_solution in coin_solutions:
-            await self.hack_populate_secret_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
+        for coin_spend in coin_spends:
+            await self.hack_populate_secret_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
@@ -293,7 +293,7 @@ class Wallet:
         primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
-    ) -> List[CoinSolution]:
+    ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
@@ -322,7 +322,7 @@ class Wallet:
         change = spend_value - total_amount
         assert change >= 0
 
-        spends: List[CoinSolution] = []
+        spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
 
         # Check for duplicates
@@ -359,7 +359,7 @@ class Wallet:
                 solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
 
             spends.append(
-                CoinSolution(
+                CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
                 )
             )
@@ -367,9 +367,9 @@ class Wallet:
         self.log.info(f"Spends is {spends}")
         return spends
 
-    async def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
-        return await sign_coin_solutions(
-            coin_solutions,
+    async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
+        return await sign_coin_spends(
+            coin_spends,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
@@ -401,8 +401,8 @@ class Wallet:
         assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")
-        await self.hack_populate_secret_keys_for_coin_solutions(transaction)
-        spend_bundle: SpendBundle = await sign_coin_solutions(
+        await self.hack_populate_secret_keys_for_coin_spends(transaction)
+        spend_bundle: SpendBundle = await sign_coin_spends(
             transaction,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
@@ -463,10 +463,10 @@ class Wallet:
                 primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
-            list_of_solutions.append(CoinSolution(coin, puzzle, solution))
+            list_of_solutions.append(CoinSpend(coin, puzzle, solution))
 
-        await self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
-        spend_bundle = await sign_coin_solutions(
+        await self.hack_populate_secret_keys_for_coin_spends(list_of_solutions)
+        spend_bundle = await sign_coin_spends(
             list_of_solutions,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,

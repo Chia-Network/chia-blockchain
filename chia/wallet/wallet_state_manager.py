@@ -24,7 +24,7 @@ from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzle
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -567,7 +567,7 @@ class WalletStateManager:
         removals: List[Coin],
         additions: List[Coin],
         block: BlockRecord,
-        additional_coin_spends: List[CoinSolution],
+        additional_coin_spends: List[CoinSpend],
     ):
         height: uint32 = block.height
         for coin in additions:
@@ -1213,7 +1213,7 @@ class WalletStateManager:
     def get_peak(self) -> Optional[BlockRecord]:
         return self.blockchain.get_peak()
 
-    async def get_next_interesting_coin_ids(self, spend: CoinSolution, in_transaction: bool) -> List[bytes32]:
+    async def get_next_interesting_coin_ids(self, spend: CoinSpend, in_transaction: bool) -> List[bytes32]:
         pool_wallet_interested: List[bytes32] = PoolWallet.get_next_interesting_coin_ids(spend)
         for coin_id in pool_wallet_interested:
             await self.interested_store.add_interested_coin_id(coin_id, in_transaction)

@@ -9,7 +9,7 @@ from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 
@@ -31,10 +31,10 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
 
-def check_coin_solution(coin_solution: CoinSolution):
+def check_coin_spend(coin_spend: CoinSpend):
     # breakpoint()
     try:
-        cost, result = coin_solution.puzzle_reveal.run_with_cost(INFINITE_COST, coin_solution.solution)
+        cost, result = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
     except Exception as ex:
         print(ex)
         # breakpoint()
@@ -73,8 +73,8 @@ def launcher_conditions_and_spend_bundle(
         )
     )
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
-    coin_solution = CoinSolution(launcher_coin, launcher_puzzle, launcher_solution)
-    spend_bundle = SpendBundle([coin_solution], G2Element())
+    coin_spend = CoinSpend(launcher_coin, launcher_puzzle, launcher_solution)
+    spend_bundle = SpendBundle([coin_spend], G2Element())
     lineage_proof = Program.to([parent_coin_id, launcher_amount])
     return lineage_proof, launcher_coin.name(), expected_conditions, spend_bundle
 
@@ -114,15 +114,15 @@ def test_only_odd_coins_0():
     )
 
     conditions = Program.to(condition_list)
-    coin_solution = CoinSolution(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
-    spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_solution], G2Element())])
+    coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
+    spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
     run = asyncio.get_event_loop().run_until_complete
     coins_added, coins_removed = run(check_spend_bundle_validity(bt.constants, blocks, spend_bundle))
 
     coin_set_added = set([_.coin for _ in coins_added])
     coin_set_removed = set([_.coin for _ in coins_removed])
 
-    launcher_coin = launcher_spend_bundle.coin_solutions[0].coin
+    launcher_coin = launcher_spend_bundle.coin_spends[0].coin
 
     assert launcher_coin in coin_set_added
     assert launcher_coin in coin_set_removed

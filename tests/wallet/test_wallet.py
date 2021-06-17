@@ -499,8 +499,8 @@ class TestWalletSimulator:
             tx_fee,
         )
 
-        # extract coin_solution from generated spend_bundle
-        for cs in tx.spend_bundle.coin_solutions:
+        # extract coin_spend from generated spend_bundle
+        for cs in tx.spend_bundle.coin_spends:
             if cs.additions() == []:
                 stolen_cs = cs
         # get a legit signature

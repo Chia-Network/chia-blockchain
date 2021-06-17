@@ -7,7 +7,7 @@ from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -511,7 +511,7 @@ class FullNodeRpcApi:
 
         puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
         solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-        return {"coin_solution": CoinSolution(coin_record.coin, puzzle_ser, solution_ser)}
+        return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
