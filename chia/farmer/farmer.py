@@ -209,7 +209,6 @@ class Farmer:
         get_farmer_params = {
             "launcher_id": pool_config.launcher_id.hex(),
             "authentication_token": authentication_token,
-            "target_puzzle_hash": pool_config.target_puzzle_hash.hex(),
             "signature": bytes(signature).hex(),
         }
         try:
@@ -473,11 +472,10 @@ class Farmer:
                     )
                 )
                 signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
-                target_puzzle_hash: bytes32 = pool_config.target_puzzle_hash
                 return (
                     pool_config.pool_url
                     + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
-                    f"&target_puzzle_hash={target_puzzle_hash.hex()}&signature={bytes(signature).hex()}"
+                    f"&signature={bytes(signature).hex()}"
                 )
 
         return None
