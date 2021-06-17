@@ -92,7 +92,7 @@ def run_daemon_cmd(ctx: click.Context) -> None:
     from chia.daemon.server import async_run_daemon
     import asyncio
 
-    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))
+    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"], have_gui=False))
 
 
 cli.add_command(keys_cmd)

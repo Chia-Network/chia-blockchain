@@ -974,7 +974,7 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
     return f
 
 
-async def async_run_daemon(root_path: Path) -> int:
+async def async_run_daemon(root_path: Path, have_gui: bool = False) -> int:
     chia_init(root_path)
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
@@ -1010,15 +1010,16 @@ async def async_run_daemon(root_path: Path) -> int:
     return 0
 
 
-def run_daemon(root_path: Path) -> int:
-    return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path))
+def run_daemon(root_path: Path, have_gui: bool = False) -> int:
+    return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, have_gui))
 
 
-def main() -> int:
+def main(argv) -> int:
     from chia.util.default_root import DEFAULT_ROOT_PATH
 
-    return run_daemon(DEFAULT_ROOT_PATH)
+    have_gui = "--have-gui" in argv
+    return run_daemon(DEFAULT_ROOT_PATH, have_gui)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
