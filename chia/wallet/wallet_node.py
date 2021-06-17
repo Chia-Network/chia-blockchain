@@ -663,15 +663,9 @@ class WalletNode:
         advanced_peak = False
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
-        if (
-            self.full_node_peer is not None
-            and peer.peer_host == self.full_node_peer.host
-            or peer.peer_host == "127.0.0.1"
-        ):
-            trusted = True
-            pre_validation_results: Optional[List[PreValidationResult]] = None
-        else:
-            trusted = False
+        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        pre_validation_results: Optional[List[PreValidationResult]] = None
+        if not trusted:
             pre_validation_results = await self.wallet_state_manager.blockchain.pre_validate_blocks_multiprocessing(
                 header_blocks
             )

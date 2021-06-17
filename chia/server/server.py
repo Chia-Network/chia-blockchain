@@ -689,6 +689,9 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
+        if peer.peer_host == "127.0.0.1":
+            self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
+            return True
         for trusted_peer in trusted_peers:
             cert = self.root_path / trusted_peers[trusted_peer]
             pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
