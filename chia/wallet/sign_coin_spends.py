@@ -28,9 +28,7 @@ async def sign_coin_spends(
             raise ValueError(error_msg)
 
         # Create signature
-        for pk, msg in pkm_pairs_for_conditions_dict(
-            conditions_dict, bytes(coin_spend.coin.name()), additional_data
-        ):
+        for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_spend.coin.name()), additional_data):
             pk_list.append(pk)
             msg_list.append(msg)
             if inspect.iscoroutinefunction(secret_key_for_public_key_f):

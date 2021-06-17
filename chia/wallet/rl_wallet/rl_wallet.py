@@ -578,9 +578,7 @@ class RLWallet:
         spends.append((puzzle, CoinSpend(coin, puzzle, solution)))
         return spends
 
-    async def sign_clawback_transaction(
-        self, spends: List[Tuple[Program, CoinSpend]], clawback_pubkey
-    ) -> SpendBundle:
+    async def sign_clawback_transaction(self, spends: List[Tuple[Program, CoinSpend]], clawback_pubkey) -> SpendBundle:
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
