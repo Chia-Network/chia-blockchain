@@ -14,7 +14,7 @@ def plotnft_cmd() -> None:
     type=int,
     default=None,
 )
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=None, show_default=True, required=False)
+@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
     import asyncio
@@ -44,13 +44,19 @@ def get_login_link_cmd(launcher_id: str) -> None:
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
-def create_cmd(wallet_rpc_port: int, fingerprint: int, pool_url: str) -> None:
+@click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=False)
+@click.option("-s", "--state", help="Initial state of Plot NFT: local or pool", type=str, required=True)
+def create_cmd(wallet_rpc_port: int, fingerprint: int, pool_url: str, state: str) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import create
 
-    extra_params = {"pool_url": pool_url}
+    if pool_url is not None and state == "local":
+        raise ValueError("No pool_url argument required with local pooling")
+    if pool_url in [None, ""] and state == "pool":
+        raise ValueError("pool_url argument is required pool starting state")
+    valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
+    extra_params = {"pool_url": pool_url, "state": valid_initial_states[state]}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create))
 
 
@@ -62,7 +68,7 @@ def create_cmd(wallet_rpc_port: int, fingerprint: int, pool_url: str) -> None:
     type=int,
     default=None,
 )
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
 def join_cmd(wallet_rpc_port: int, fingerprint: int, id: int, pool_url: str) -> None:
@@ -82,7 +88,7 @@ def join_cmd(wallet_rpc_port: int, fingerprint: int, id: int, pool_url: str) -> 
     type=int,
     default=None,
 )
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def self_pool_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
     import asyncio

@@ -1,3 +1,4 @@
+import aiohttp
 import asyncio
 import json
 import time
@@ -9,47 +10,68 @@ from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-import aiohttp
 
 
-async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    pool_url = args["pool_url"]
+async def create_pool_args(pool_url: str) -> Dict:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{pool_url}/pool_info") as response:
                 if response.ok:
                     json_dict = json.loads(await response.text())
                 else:
-                    print(f"Response not OK: {response.status}")
-                    return
+                    raise ValueError(f"Response from {pool_url} not OK: {response.status}")
     except Exception as e:
-        print(f"Error connecting to pool {pool_url}: {e}")
-        return
+        raise ValueError(f"Error connecting to pool {pool_url}: {e}")
 
     if json_dict["relative_lock_height"] > 1000:
-        print("Relative lock height too high for this pool, cannot join")
-        return
+        raise ValueError("Relative lock height too high for this pool, cannot join")
     if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
-        print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
-        return
+        raise ValueError(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
 
-    print(f"Will create a plot NFT and join pool: {pool_url}.")
+    header_msg = f"\n---- Pool parameters fetched from {pool_url} ----"
+    print(header_msg)
     pprint(json_dict)
+    print("-" * len(header_msg))
+    return json_dict
+
+
+async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    state = args["state"]
+
+    # Could use initial_pool_state_from_dict to simplify
+    if state == "SELF_POOLING":
+        pool_url: Optional[str] = None
+        relative_lock_height = uint32(0)
+        new_address = await wallet_client.get_next_address("1", True)
+        target_puzzle_hash: bytes32 = decode_puzzle_hash(new_address)
+    elif state == "FARMING_TO_POOL":
+        pool_url = str(args["pool_url"])
+        json_dict = await create_pool_args(pool_url)
+        relative_lock_height = json_dict["relative_lock_height"]
+        target_puzzle_hash = hexstr_to_bytes(json_dict["target_puzzle_hash"])
+    else:
+        raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
+
+    pool_msg = f" and join pool: {pool_url}" if pool_url else ""
+    print(f"Will create a plot NFT{pool_msg}.")
+
     user_input: str = input("Confirm [n]/y: ")
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
             tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
-                hexstr_to_bytes(json_dict["target_puzzle_hash"]),
+                target_puzzle_hash,
                 pool_url,
-                json_dict["relative_lock_height"],
+                relative_lock_height,
                 "localhost:5000",
+                "new",
+                state,
             )
             start = time.time()
             while time.time() - start < 10:
