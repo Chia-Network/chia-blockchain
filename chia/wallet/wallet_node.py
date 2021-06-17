@@ -663,6 +663,7 @@ class WalletNode:
         advanced_peak = False
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
+        assert self.server
         trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
         pre_validation_results: Optional[List[PreValidationResult]] = None
         if not trusted:
