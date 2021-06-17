@@ -142,7 +142,7 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
     # it's an "absorb_pool_reward" type
     pool_reward_amount = from_kwargs(kwargs, "pool_reward_amount", int)
     pool_reward_height = from_kwargs(kwargs, "pool_reward_height", int)
-    solution = Program.to([0, (pool_reward_amount, pool_reward_height)])
+    solution = Program.to([0, pool_reward_amount, pool_reward_height])
     return solution
 
 
