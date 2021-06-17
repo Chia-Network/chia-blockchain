@@ -109,6 +109,21 @@ async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     print(res)
 
 
+def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
+    if typ == WalletType.COLOURED_COIN:
+        return "", units["colouredcoin"]
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+        return address_prefix, units["chia"]
+    return "", units["mojo"]
+
+
+def print_balance(amount: int, scale: int, address_prefix: str) -> str:
+    ret = f"{amount/scale} {address_prefix} "
+    if scale > 1:
+        ret += f"({amount} mojo)"
+    return ret
+
+
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -120,26 +135,14 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     for summary in summaries_response:
         wallet_id = summary["id"]
         balances = await wallet_client.get_wallet_balance(wallet_id)
-        typ = WalletType(int(summary["type"])).name
-        if typ != "STANDARD_WALLET":
-            print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(f"   -Total Balance: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Spendable Balance: {balances['spendable_balance']/units['colouredcoin']}")
-        else:
-            print(f"Wallet ID {wallet_id} type {typ}")
-            print(
-                f"   -Total Balance: {balances['confirmed_wallet_balance']/units['chia']} {address_prefix} "
-                f"({balances['confirmed_wallet_balance']} mojo)"
-            )
-            print(
-                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix} "
-                f"({balances['unconfirmed_wallet_balance']} mojo)"
-            )
-            print(
-                f"   -Spendable: {balances['spendable_balance']/units['chia']} {address_prefix} "
-                f"({balances['spendable_balance']} mojo)"
-            )
+        typ = WalletType(int(summary["type"]))
+        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
+        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
+        print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
+        print(
+            f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
+        )
+        print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
