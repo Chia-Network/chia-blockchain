@@ -4,7 +4,6 @@ from typing import Dict
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
-from logging.handlers import SysLogHandler # NOQA
 
 from chia.util.path import mkdir, path_from_root
 
