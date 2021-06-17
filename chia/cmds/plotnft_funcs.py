@@ -1,9 +1,11 @@
 import aiohttp
 import asyncio
+import functools
 import json
 import time
+
 from pprint import pprint
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
@@ -184,6 +186,27 @@ async def get_login_link(launcher_id_str: str) -> None:
         await farmer_client.await_closed()
 
 
+async def submit_tx_with_confirmantion(message: str, func: Callable, wallet_client: WalletRpcClient, fingerprint: int):
+    print(message)
+    user_input: str = input("Confirm [n]/y: ")
+    if user_input.lower() == "y" or user_input.lower() == "yes":
+        try:
+            tx_record: Dict = await func()
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx_id = hexstr_to_bytes(tx_record["transaction"]["name"])
+                tx = await wallet_client.get_transaction(str(1), tx_id)
+                if len(tx.sent_to) > 0:
+                    print(f"Transaction submitted to nodes: {tx.sent_to}")
+                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id.hex()} to get status")
+                    return None
+        except Exception as e:
+            print(f"Error joining pool with Plot NFT {fingerprint}: {e}")
+        return
+    print("Aborting.")
+
+
 async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     pool_url = args["pool_url"]
     wallet_id = args.get("id", None)
@@ -206,48 +229,20 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
         return
 
-    print(f"Will join pool: {pool_url} with Plot NFT {fingerprint}.")
     pprint(json_dict)
-    user_input: str = input("Confirm [n]/y: ")
-    if user_input.lower() == "y" or user_input.lower() == "yes":
-        try:
-            tx_record: TransactionRecord = await wallet_client.pw_join_pool(
-                wallet_id,
-                hexstr_to_bytes(json_dict["target_puzzle_hash"]),
-                pool_url,
-                json_dict["relative_lock_height"],
-            )
-            start = time.time()
-            while time.time() - start < 10:
-                await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(str(1), tx_record.name)
-                if len(tx.sent_to) > 0:
-                    print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
-                    return None
-        except Exception as e:
-            print(f"Error joining pool {pool_url} with Plot NFT {fingerprint}: {e}")
-        return
-    print("Aborting.")
+    msg = f"\nWill join pool: {pool_url} with Plot NFT {fingerprint}."
+    func = functools.partial(
+        wallet_client.pw_join_pool,
+        wallet_id,
+        hexstr_to_bytes(json_dict["target_puzzle_hash"]),
+        pool_url,
+        json_dict["relative_lock_height"],
+    )
+    await submit_tx_with_confirmantion(msg, func, wallet_client, fingerprint)
 
 
 async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
-
-    print(f"Will start self-farming with Plot NFT {fingerprint}.")
-    user_input: str = input("Confirm [n]/y: ")
-    if user_input.lower() == "y" or user_input.lower() == "yes":
-        try:
-            tx_record: TransactionRecord = await wallet_client.pw_self_pool(wallet_id)
-            start = time.time()
-            while time.time() - start < 10:
-                await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(str(1), tx_record.name)
-                if len(tx.sent_to) > 0:
-                    print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
-                    return None
-        except Exception as e:
-            print(f"Error attempting to self-farm with Plot NFT {fingerprint}: {e}")
-        return
-    print("Aborting.")
+    msg = f"Will start self-farming with Plot NFT {fingerprint}."
+    func = functools.partial(wallet_client.pw_self_pool, wallet_id)
+    await submit_tx_with_confirmantion(msg, func, wallet_client, fingerprint)
