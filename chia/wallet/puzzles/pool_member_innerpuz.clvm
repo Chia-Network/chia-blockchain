@@ -5,6 +5,7 @@
       WAITINGROOM_PUZHASH
       (my_id my_full_puzzle_hash my_inner_puzzle_hash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash)
       p1
+      pool_reward_height
       )
 
 
@@ -16,7 +17,7 @@
 
   ; spend_type is absorbing money if p1 is a cons box, spend_type is escape if p1 is an atom
 
-  ; p1 is (pool_reward_amount . pool_reward_height) if absorbing money
+  ; p1 is pool_reward_amount if absorbing money
   ; p1 is key_value_list if escaping
 
   ; pool_reward_amount is the value of the coin reward - this is passed in so that this puzzle will still work after halvenings
@@ -54,12 +55,12 @@
 
   ; main
 
-  (if (l p1)
+  (if pool_reward_height
     (absorb_pool_reward POOL_PUZZLE_HASH
                         my_inner_puzzle_hash
                         my_amount
-                        (f p1)
-                        (calculate_pool_reward (r p1) P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX (f p1))
+                        p1
+                        (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
     )
     (travel_to_waitingroom OWNER_PUBKEY WAITINGROOM_PUZHASH my_amount p1)
     )

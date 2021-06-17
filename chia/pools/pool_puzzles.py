@@ -162,7 +162,7 @@ def create_travel_spend(
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is key_value_list ()
-        inner_sol: Program = Program.to([bytes(target)])
+        inner_sol: Program = Program.to([[("ps", bytes(target))], 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, extra_data, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
@@ -173,7 +173,7 @@ def create_travel_spend(
             f"{target}"
             f"hash:{Program(bytes(target)).get_tree_hash()}"
         )
-        inner_sol = Program.to([1, bytes(target), destination_inner.get_tree_hash()])  # current or target
+        inner_sol = Program.to([1, [("ps", bytes(target))], destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
 
@@ -221,7 +221,7 @@ def create_absorb_spend(
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([(reward_amount, height)])
+        inner_sol: Program = Program.to([reward_amount, height])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
         inner_sol = Program.to([0, reward_amount, height])
@@ -353,22 +353,21 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     # Not launcher spend
     inner_solution: Program = full_solution.rest().rest().first()
-    inner_spend_type: int = inner_solution.first().as_int()
-
-    if inner_spend_type == 0:
-        # Absorb
-        return None
 
     # Spend which is not absorb, and is not the launcher
-    num_args = len(inner_solution.as_atom_list())
-    assert num_args in (1, 3)
+    num_args = len(inner_solution.as_python())
+    assert num_args in (2, 3)
 
-    if num_args == 1:
+    if num_args == 2:
         # pool member
-        extra_data = inner_solution.first().as_atom()
+        if inner_solution.rest().first().as_int() == 1:
+            return None
+        extra_data = inner_solution.first().first().rest().as_atom()
     else:
-        # pool escaping
-        extra_data = inner_solution.rest().first().as_atom()
+        # pool waitingroom
+        if inner_solution.first().as_int() == 0:
+            return None
+        extra_data = inner_solution.rest().first().first().rest().as_atom()
     return PoolState.from_bytes(extra_data)
 
 
