@@ -14,7 +14,7 @@ export default function Address(props: Props) {
   const { value, copyToClipboard, tooltip, children } = props;
 
   const currencyCode = useCurrencyCode();
-  const address = currencyCode 
+  const address = currencyCode && value
     ? toBech32m(value, currencyCode.toLowerCase())
     : '';
 
