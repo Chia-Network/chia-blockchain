@@ -8,7 +8,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 
@@ -41,7 +40,7 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
-def debug_spend_bundle(spend_bundle: SpendBundle, agg_sig_additional_data=bytes([3] * 32)) -> None:
+def debug_spend_bundle(spend_bundle: 'SpendBundle', agg_sig_additional_data=bytes([3] * 32)) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
     its clvm.

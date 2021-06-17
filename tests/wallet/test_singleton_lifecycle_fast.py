@@ -12,7 +12,6 @@ from chia.types.coin_solution import CoinSolution as CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint64
-from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
@@ -634,7 +633,7 @@ def test_lifecycle_with_coinstore_as_wallet():
             pool_reward_height=now.height - 1,
         )
         spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
-        debug_spend_bundle(spend_bundle)
+        spend_bundle.debug()
 
         additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
@@ -738,7 +737,7 @@ def test_lifecycle_with_coinstore_as_wallet():
         PUZZLE_DB, conditions=[[ConditionOpcode.CREATE_COIN, 0, -113]]
     )
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    debug_spend_bundle(spend_bundle)
+    spend_bundle.debug()
 
     additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
     update_count = SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
