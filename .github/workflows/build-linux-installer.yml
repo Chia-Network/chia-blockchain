@@ -78,6 +78,16 @@ jobs:
         echo "::set-output name=CHIA_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
         deactivate
 
+    - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_SECRET
+          if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        env:
+          SECRET: "${{ secrets.test_pypi_password }
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -107,6 +117,7 @@ jobs:
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Configure AWS Credentials
+      if: steps.check_secrets.outputs.HAS_SECRET
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
@@ -114,6 +125,7 @@ jobs:
         aws-region: us-west-2
 
     - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_SECRET
       env:
           CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -133,7 +145,7 @@ jobs:
          ls ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Upload Release Files
-      if: startsWith(github.ref, 'refs/tags/')
+      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
       run: |
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb s3://download-chia-net/install/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.sha256 s3://download-chia-net/install/

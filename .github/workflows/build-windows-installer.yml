@@ -113,10 +113,12 @@ jobs:
 
 
     - name: Install AWS CLI
+      if: steps.check_secrets.outputs.HAS_SECRET
       run: |
           msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
 
     - name: Configure AWS Credentials
+      if: steps.check_secrets.outputs.HAS_SECRET
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
@@ -124,6 +126,7 @@ jobs:
         aws-region: us-west-2
 
     - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_SECRET
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -139,7 +142,7 @@ jobs:
          ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
 
     - name: Upload Release Files
-      if: startsWith(github.ref, 'refs/tags/')
+      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
