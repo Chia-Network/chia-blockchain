@@ -10,7 +10,7 @@ from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -49,8 +49,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     if state == "SELF_POOLING":
         pool_url: Optional[str] = None
         relative_lock_height = uint32(0)
-        new_address = await wallet_client.get_next_address("1", True)
-        target_puzzle_hash: bytes32 = decode_puzzle_hash(new_address)
+        target_puzzle_hash = None  # wallet will fill this in
     elif state == "FARMING_TO_POOL":
         pool_url = str(args["pool_url"])
         json_dict = await create_pool_args(pool_url)
