@@ -19,7 +19,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
@@ -197,8 +197,14 @@ class WalletRpcApi:
         return {"success": False, "error": "Unknown Error"}
 
     async def get_public_keys(self, request: Dict):
-        fingerprints = [sk.get_g1().get_fingerprint() for (sk, seed) in self.service.keychain.get_all_private_keys()]
-        return {"public_key_fingerprints": fingerprints}
+        try:
+            fingerprints = [
+                sk.get_g1().get_fingerprint() for (sk, seed) in self.service.keychain.get_all_private_keys()
+            ]
+        except KeyringIsLocked:
+            return {"keyring_is_locked": True}
+        else:
+            return {"public_key_fingerprints": fingerprints}
 
     async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
         for sk, seed in self.service.keychain.get_all_private_keys():
