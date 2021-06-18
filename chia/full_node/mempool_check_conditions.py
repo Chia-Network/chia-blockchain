@@ -13,7 +13,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes, int_to_bytes
-from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
+from chia.util.condition_tools import ConditionOpcode
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
@@ -309,7 +309,8 @@ def get_name_puzzle_conditions(
         npc_list: List[NPC] = []
 
         for res in result.first().as_iter():
-            conditions_list: List[ConditionWithArgs] = []
+            # use a set to deduplicate conditions
+            conditions_dict: Dict[ConditionOpcode, Set[ConditionWithArgs]] = {}
 
             if len(res.first().atom) != 32:
                 raise ValidationError(Err.INVALID_CONDITION)
@@ -329,13 +330,18 @@ def get_name_puzzle_conditions(
                 if max_cost < 0:
                     return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
                 if cvl is not None:
-                    conditions_list.append(cvl)
+                    if cvl.opcode not in conditions_dict:
+                        conditions_dict[cvl.opcode] = set()
+                    elif cvl.opcode == ConditionOpcode.CREATE_COIN and cvl in conditions_dict[cvl.opcode]:
+                        # CREATE_COIN conditions are special. We don't allow
+                        # duplicate coins. Attempting to create two identical
+                        # coins is a consensus failure.
+                        return NPCResult(uint16(Err.DUPLICATE_OUTPUT.value), [], uint64(0))
 
-            conditions_dict = conditions_by_opcode(conditions_list)
-            if conditions_dict is None:
-                conditions_dict = {}
+                    conditions_dict[cvl.opcode].add(cvl)
+
             npc_list.append(
-                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()])
+                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, list(b)) for a, b in conditions_dict.items()])
             )
         return NPCResult(None, npc_list, uint64(clvm_cost))
     except ValidationError as e:
