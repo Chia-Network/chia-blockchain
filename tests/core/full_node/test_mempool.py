@@ -26,7 +26,7 @@ from chia.util.ints import uint64
 from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
-from chia.full_node.mempool_check_conditions import parse_condition_args
+from chia.full_node.mempool_check_conditions import parse_condition_args, parse_condition
 
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
@@ -1932,6 +1932,22 @@ class TestConditionParser:
 
             with pytest.raises(ValidationError):
                 cost, args = parse_condition_args(SExp.to([]), opcode, False)
+
+    def test_parse_condition(self):
+
+        for opcode in [129, 0, 1, 1000, 74]:
+            with pytest.raises(ValidationError):
+                cost, args = parse_condition(SExp.to([int_to_bytes(opcode), b"test"]), safe_mode=True)
+
+            with pytest.raises(ValidationError):
+                cost, args = parse_condition(SExp.to([int_to_bytes(opcode), b"foo", b"bar"]), safe_mode=True)
+
+            with pytest.raises(ValidationError):
+                cost, args = parse_condition(SExp.to([int_to_bytes(opcode)]), safe_mode=True)
+
+            assert (0, None) == parse_condition(SExp.to([int_to_bytes(opcode), b"test"]), safe_mode=False)
+            assert (0, None) == parse_condition(SExp.to([int_to_bytes(opcode), b"foo", b"bar"]), safe_mode=False)
+            assert (0, None) == parse_condition(SExp.to([int_to_bytes(opcode)]), safe_mode=False)
 
 
 # the following tests generate generator programs and run them through get_name_puzzle_conditions()
