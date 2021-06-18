@@ -2049,7 +2049,7 @@ class TestBodyValidation:
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
-        assert (await b.receive_block(blocks[-1]))[1] == Err.INVALID_BLOCK_COST
+        assert (await b.receive_block(blocks[-1]))[1] == Err.BLOCK_COST_EXCEEDS_MAX
 
     @pytest.mark.asyncio
     async def test_clvm_must_not_fail(self, empty_blockchain):
