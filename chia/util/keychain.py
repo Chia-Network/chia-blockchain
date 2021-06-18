@@ -1,3 +1,4 @@
+from ssl import ALERT_DESCRIPTION_CERTIFICATE_EXPIRED
 import colorama
 import pkg_resources
 import sys
@@ -23,11 +24,14 @@ MAX_KEYS = 100
 MAX_RETRIES = 3
 
 
-def supports_keyring_password() -> bool:
-    return False
-    # from sys import platform
+class KeyringIsLocked(Exception):
+    pass
 
-    # return platform == "linux"
+
+def supports_keyring_password() -> bool:
+    from sys import platform
+
+    return platform == "linux"
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:
@@ -414,6 +418,21 @@ class Keychain:
             if (pkent is None or delete_exception) and index > MAX_KEYS:
                 break
             index += 1
+
+    @staticmethod
+    def is_keyring_locked() -> bool:
+        """
+        Returns whether the keyring is in a locked state. If the keyring doesn't have a master password set,
+        or if a master password is set and the cached password is valid, the keyring is "unlocked"
+        """
+        # Unlocked: If a master password isn't set, or if the cached password is valid
+        if not Keychain.has_master_password() or (
+            Keychain.has_cached_password() and Keychain.master_password_is_valid(Keychain.get_cached_master_password())
+        ):
+            return False
+
+        # Locked: Everything else
+        return True
 
     @staticmethod
     def has_master_password() -> bool:
