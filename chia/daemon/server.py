@@ -23,6 +23,7 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
+from chia.util.keychain import Keychain
 from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -282,6 +283,8 @@ class WebSocketServer:
             response = await self.stop_service(cast(Dict[str, Any], data))
         elif command == "is_running":
             response = await self.is_running(cast(Dict[str, Any], data))
+        elif command == "is_keyring_locked":
+            response = await self.is_keyring_locked()
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
@@ -294,6 +297,11 @@ class WebSocketServer:
 
         full_response = format_response(message, response)
         return full_response, [websocket]
+
+    async def is_keyring_locked(self) -> Dict[str, Any]:
+        locked = Keychain.is_keyring_locked()
+        response = {"success": True, "is_keyring_locked": locked}
+        return response
 
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
@@ -975,7 +983,7 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
 
 
 async def async_run_daemon(root_path: Path, have_gui: bool = False) -> int:
-    chia_init(root_path)
+    chia_init(root_path, skip_check_keys=have_gui)
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
