@@ -49,7 +49,7 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
+      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
       cd build_scripts
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
       python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
@@ -100,7 +100,7 @@ steps:
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_VERSION="Chia-"$(<version.txt)
-      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
     displayName: "Create Checksums"
 
@@ -113,7 +113,8 @@ steps:
 
   - bash: |
       pip3 install py3createtorrent
-      py3createtorrent -t torrent.chia.net $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent
+      py3createtorrent -f -t https://torrent.chia.net $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/$CHIA_VERSION.dmg
+      ls
     displayName: "Create torrent file"
     condition: contains(variables['build.sourceBranch'], 'refs/tags/')
 
@@ -122,7 +123,7 @@ steps:
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent s3://download-chia-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.checksum s3://download-chia-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent s3://download-chia-net/torrents/
     displayName: "Upload Release Files"
     condition: contains(variables['build.sourceBranch'], 'refs/tags/')
