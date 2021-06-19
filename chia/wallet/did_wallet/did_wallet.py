@@ -49,14 +49,15 @@ class DIDWallet:
         num_of_backup_ids_needed: uint64 = None,
         name: str = None,
     ):
+        """
+        This must be called under the wallet state manager lock
+        """
         self = DIDWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
+
         if amount & 1 == 0:
             raise ValueError("DID amount must be odd number")
         self.wallet_state_manager = wallet_state_manager
@@ -134,11 +135,7 @@ class DIDWallet:
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
-
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None)
         info_as_string = json.dumps(self.did_info.to_json_dict())
@@ -162,12 +159,7 @@ class DIDWallet:
         name: str = None,
     ):
         self = DIDWallet()
-
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
-
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.wallet_id = wallet_info.id
@@ -238,54 +230,53 @@ class DIDWallet:
         return uint64(result)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
-        """ Returns a set of coins that can be used for generating a new transaction. """
-        async with self.wallet_state_manager.lock:
-            if exclude is None:
-                exclude = []
+        """Returns a set of coins that can be used for generating a new transaction."""
+        if exclude is None:
+            exclude = []
 
-            spendable_amount = await self.get_spendable_balance()
-            if amount > spendable_amount:
-                self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
-                return None
+        spendable_amount = await self.get_spendable_balance()
+        if amount > spendable_amount:
+            self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
+            return None
 
-            self.log.info(f"About to select coins for amount {amount}")
-            unspent: List[WalletCoinRecord] = list(
-                await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
+        self.log.info(f"About to select coins for amount {amount}")
+        unspent: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
+        )
+        sum_value = 0
+        used_coins: Set = set()
+
+        # Use older coins first
+        unspent.sort(key=lambda r: r.confirmed_block_height)
+
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.wallet_info.id
+        )
+        for coinrecord in unspent:
+            if sum_value >= amount and len(used_coins) > 0:
+                break
+            if coinrecord.coin.name() in unconfirmed_removals:
+                continue
+            if coinrecord.coin in exclude:
+                continue
+            sum_value += coinrecord.coin.amount
+            used_coins.add(coinrecord.coin)
+
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        if sum_value < amount:
+            raise ValueError(
+                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
             )
-            sum_value = 0
-            used_coins: Set = set()
-
-            # Use older coins first
-            unspent.sort(key=lambda r: r.confirmed_block_height)
-
-            # Try to use coins from the store, if there isn't enough of "unused"
-            # coins use change coins that are not confirmed yet
-            unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-                self.wallet_info.id
-            )
-            for coinrecord in unspent:
-                if sum_value >= amount and len(used_coins) > 0:
-                    break
-                if coinrecord.coin.name() in unconfirmed_removals:
-                    continue
-                if coinrecord.coin in exclude:
-                    continue
-                sum_value += coinrecord.coin.amount
-                used_coins.add(coinrecord.coin)
-
-            # This happens when we couldn't use one of the coins because it's already used
-            # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-            if sum_value < amount:
-                raise ValueError(
-                    "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-                )
 
         self.log.info(f"Successfully selected coins: {used_coins}")
         return used_coins
 
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], height: int):
-        """ Notification from wallet state manager that wallet has been received. """
+        """Notification from wallet state manager that wallet has been received."""
         self.log.info("DID wallet has been notified that coin was added")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         new_info = DIDInfo(
@@ -326,7 +317,7 @@ class DIDWallet:
             f.close()
         except Exception as e:
             raise e
-        return
+        return None
 
     async def load_backup(self, filename: str):
         try:
@@ -410,7 +401,7 @@ class DIDWallet:
                         )
                         await self.save_info(did_info, False)
 
-            return
+            return None
         except Exception as e:
             raise e
 
@@ -680,7 +671,7 @@ class DIDWallet:
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         message = bytes(puzhash)
         sigs = [AugSchemeMPL.sign(private, message)]
-        for c in spend_bundle.coin_solutions:
+        for _ in spend_bundle.coin_solutions:
             sigs.append(AugSchemeMPL.sign(private, message))
         aggsig = AugSchemeMPL.aggregate(sigs)
         # assert AugSchemeMPL.verify(pubkey, message, aggsig)
@@ -752,6 +743,9 @@ class DIDWallet:
         return parent_info
 
     async def generate_new_decentralised_id(self, amount: uint64) -> Optional[SpendBundle]:
+        """
+        This must be called under the wallet state manager lock
+        """
 
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:

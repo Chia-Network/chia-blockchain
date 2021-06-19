@@ -46,7 +46,7 @@ def _get_filenames(directory: Path) -> List[Path]:
                 if child.suffix == ".plot" and not child.name.startswith("._"):
                     all_files.append(child)
             else:
-                log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
+                log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
@@ -178,9 +178,12 @@ def load_plots(
                     log.error(f"Failed to open file {filename}. {e}")
                     return 0, new_provers
                 if stat_info.st_mtime == provers[filename].time_modified:
-                    new_provers[filename] = provers[filename]
                     with plot_ids_lock:
+                        if provers[filename].prover.get_id() in plot_ids:
+                            log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                            return 0, new_provers
                         plot_ids.add(provers[filename].prover.get_id())
+                    new_provers[filename] = provers[filename]
                     return stat_info.st_size, new_provers
             try:
                 prover = DiskProver(str(filename))

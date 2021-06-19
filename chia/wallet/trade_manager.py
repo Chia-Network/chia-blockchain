@@ -189,7 +189,7 @@ class TradeManager:
         result = {}
         removals = bundle.removals()
         for coin in removals:
-            coin_record = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(coin.name())
+            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin.name())
             if coin_record is None:
                 continue
             result[coin_record.name()] = coin_record
@@ -224,7 +224,7 @@ class TradeManager:
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL, False)
-        return
+        return None
 
     async def save_trade(self, trade: TradeRecord):
         await self.trade_store.add_trade_record(trade, False)

@@ -2,13 +2,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.wallet_types import WalletType
 
 
 @dataclass(frozen=True)
-@streamable
-class WalletAction(Streamable):
+class WalletAction:
     """
     This object represents the wallet action as it is stored in the database.
 

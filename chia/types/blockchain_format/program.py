@@ -6,8 +6,8 @@ from clvm import run_program as default_run_program
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
-from clvm.serialize import sexp_buffer_from_stream, sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE, deserialize_and_run_program
+from clvm.serialize import sexp_from_stream, sexp_to_stream
+from clvm_rs import STRICT_MODE, deserialize_and_run_program, serialized_length
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -148,8 +148,8 @@ class SerializedProgram:
 
     @classmethod
     def parse(cls, f) -> "SerializedProgram":
-        tmp = sexp_buffer_from_stream(f)
-        return SerializedProgram.from_bytes(tmp)
+        length = serialized_length(f.getvalue()[f.tell() :])
+        return SerializedProgram.from_bytes(f.read(length))
 
     def stream(self, f):
         f.write(self._buf)

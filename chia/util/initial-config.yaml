@@ -58,9 +58,21 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
+    testnet7:
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      GENESIS_CHALLENGE: 117816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      INITIAL_FREEZE_END_TIMESTAMP: 1619661600  # Wed Apr 28 2021 22:00:00 GMT-0400 (Eastern Daylight Time)
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+      MEMPOOL_BLOCK_BUFFER: 10
+      EPOCH_BLOCKS: 768
+      DIFFICULTY_STARTING: 30
   config:
     mainnet:
       address_prefix: "xch"
+      default_full_node_port: 8444
     testnet0:
       address_prefix: "txch"
     testnet1:
@@ -71,8 +83,9 @@ network_overrides: &network_overrides
       address_prefix: "txch"
     testnet4:
       address_prefix: "txch"
-    testnet5:
+    testnet7:
       address_prefix: "txch"
+      default_full_node_port: 58444
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
@@ -100,6 +113,9 @@ logging: &logging
   log_filename: "log/debug.log"
   log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
+  log_syslog: False  # If True, outputs to SysLog host and port specified
+  log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
+  log_syslog_port: 514  # UDP port of the remote or local Unix syslog
 
 harvester:
   # The harvester server (if run) will run on this port
@@ -112,6 +128,7 @@ harvester:
   start_rpc_server: True
   rpc_port: 8560
   num_threads: 30
+  plot_loading_frequency_seconds: 120
 
   logging: *logging
   network_overrides: *network_overrides
@@ -254,9 +271,12 @@ full_node:
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
   # Accept peers until this number of connections
-  target_peer_count: 60
+  target_peer_count: 80
   # Initiate outbound connections until this number is hit.
-  target_outbound_peer_count: 10
+  target_outbound_peer_count: 8
+  # IPv4/IPv6 network addresses and CIDR blocks allowed to connect even when target_peer_count has been hit.
+  # exempt_peer_networks: ["192.168.0.3", "192.168.1.0/24", "fe80::/10", "2606:4700:4700::64/128"]
+  exempt_peer_networks: []
   # Accept at most # of inbound connections for different node types.
   max_inbound_wallet: 20
   max_inbound_farmer: 10
@@ -275,6 +295,14 @@ full_node:
   # timeout for weight proof request
   weight_proof_timeout: 360
 
+  # when enabled, the full node will print a pstats profile to the root_dir/profile every second
+  # analyze with chia/utils/profiler.py
+  enable_profiler: False
+
+  # List of trusted DNS seeders to bootstrap from.
+  # If you modify this, please change the hardcode as well from FullNode.set_server()
+  dns_servers:
+    - "dns-introducer.chia.net"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -336,6 +364,8 @@ introducer:
 wallet:
   port: 8449
   rpc_port: 9256
+
+  enable_profiler: False
 
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.

@@ -19,7 +19,7 @@ from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerPr
 from chia.cmds.init_funcs import chia_init
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
-from chia.ssl.create_ssl import get_mozzila_ca_crt
+from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
@@ -51,8 +51,8 @@ service_plotter = "chia plots create"
 async def fetch(url: str):
     async with ClientSession() as session:
         try:
-            mozzila_root = get_mozzila_ca_crt()
-            ssl_context = ssl_context_for_root(mozzila_root)
+            mozilla_root = get_mozilla_ca_crt()
+            ssl_context = ssl_context_for_root(mozilla_root)
             response = await session.get(url, ssl=ssl_context)
             if not response.ok:
                 log.warning("Response not OK.")
@@ -337,12 +337,12 @@ class WebSocketServer:
     async def _state_changed(self, service: str, message: Dict[str, Any]):
         """If id is None, send the whole state queue"""
         if service not in self.connections:
-            return
+            return None
 
         websockets = self.connections[service]
 
         if message is None:
-            return
+            return None
 
         response = create_payload("state_changed", message, service, "wallet_ui")
 
@@ -366,7 +366,7 @@ class WebSocketServer:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
 
             if config["state"] is not PlotState.RUNNING:
-                return
+                return None
 
             if new_data not in (None, ""):
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
@@ -376,7 +376,7 @@ class WebSocketServer:
             if new_data:
                 for word in final_words:
                     if word in new_data:
-                        return
+                        return None
             else:
                 time.sleep(0.5)
 
@@ -396,6 +396,9 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
+        f = request.get("f")
+        p = request.get("p")
+        c = request.get("c")
         a = request.get("a")
         e = request["e"]
         x = request["x"]
@@ -414,6 +417,15 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
+
+        if f is not None:
+            command_args.append(f"-f{f}")
+
+        if p is not None:
+            command_args.append(f"-p{p}")
+
+        if c is not None:
+            command_args.append(f"-c{c}")
 
         if e is True:
             command_args.append("-e")
@@ -443,7 +455,7 @@ class WebSocketServer:
         next_plot_id = None
 
         if self._is_serial_plotting_running(queue) is True:
-            return
+            return None
 
         for item in self.plots_queue:
             if item["queue"] == queue and item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
@@ -470,7 +482,7 @@ class WebSocketServer:
             await asyncio.sleep(delay)
 
             if config["state"] is not PlotState.SUBMITTED:
-                return
+                return None
 
             service_name = config["service_name"]
             command_args = config["command_args"]
@@ -506,6 +518,7 @@ class WebSocketServer:
         finally:
             if current_process is not None:
                 self.services[service_name].remove(current_process)
+                current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
     async def start_plotting(self, request: Dict[str, Any]):
@@ -516,6 +529,14 @@ class WebSocketServer:
         size = request.get("k")
         count = request.get("n", 1)
         queue = request.get("queue", "default")
+
+        if ("p" in request) and ("c" in request):
+            response = {
+                "success": False,
+                "service_name": service_name,
+                "error": "Choose one of pool_contract_address and pool_public_key",
+            }
+            return response
 
         for k in range(count):
             id = str(uuid.uuid4())
@@ -707,6 +728,14 @@ def daemon_launch_lock_path(root_path: Path) -> Path:
     return root_path / "run" / "start-daemon.launching"
 
 
+def service_launch_lock_path(root_path: Path, service: str) -> Path:
+    """
+    A path to a file that is lock when a service is running.
+    """
+    service_name = service.replace(" ", "-").replace("/", "-")
+    return root_path / "run" / f"{service_name}.lock"
+
+
 def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
     """
     Generate a path for a PID file for the given service name.
@@ -731,6 +760,13 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
+    # Windows-specific.
+    # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
+    try:
+        creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore
+    except AttributeError:  # Not on Windows.
+        creationflags = 0
+
     plotter_path = plotter_log_path(root_path, id)
 
     if plotter_path.parent.exists():
@@ -740,7 +776,14 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(service_array, shell=False, stderr=outfile, stdout=outfile, startupinfo=startupinfo)
+    process = subprocess.Popen(
+        service_array,
+        shell=False,
+        stderr=outfile,
+        stdout=outfile,
+        startupinfo=startupinfo,
+        creationflags=creationflags,
+    )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
@@ -764,6 +807,11 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     os.environ["CHIA_ROOT"] = str(root_path)
 
     log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
+
+    lockfile = singleton(service_launch_lock_path(root_path, service_command))
+    if lockfile is None:
+        logging.error(f"{service_command}: already running")
+        raise subprocess.SubprocessError
 
     # Insert proper e
     service_array = service_command.split()

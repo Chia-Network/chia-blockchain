@@ -82,6 +82,7 @@ class Blockchain(BlockchainInterface):
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
+    compact_proof_lock: asyncio.Lock
 
     @staticmethod
     async def create(
@@ -96,6 +97,7 @@ class Blockchain(BlockchainInterface):
         """
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
+        self.compact_proof_lock = asyncio.Lock()
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
@@ -132,7 +134,7 @@ class Blockchain(BlockchainInterface):
         if len(block_records) == 0:
             assert peak is None
             self._peak_height = None
-            return
+            return None
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
@@ -162,7 +164,6 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: Optional[PreValidationResult] = None,
         fork_point_with_peak: Optional[uint32] = None,
-        summaries_to_check: List[SubEpochSummary] = None,  # passed only on long sync
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         This method must be called under the blockchain lock
@@ -172,7 +173,6 @@ class Blockchain(BlockchainInterface):
         invalid. Also returns the fork height, in the case of a new peak.
         """
         genesis: bool = block.height == 0
-
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -255,36 +255,27 @@ class Blockchain(BlockchainInterface):
         # Always add the block to the database
         async with self.block_store.db_wrapper.lock:
             try:
+                header_hash: bytes32 = block.header_hash
+                # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_full_block(block, block_record)
+                await self.block_store.add_full_block(header_hash, block, block_record)
                 fork_height, peak_height, records = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
                 await self.block_store.db_wrapper.commit_transaction()
+
+                # Then update the memory cache. It is important that this task is not cancelled and does not throw
                 self.add_block_record(block_record)
                 for fetched_block_record in records:
                     self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
                     if fetched_block_record.sub_epoch_summary_included is not None:
-                        if summaries_to_check is not None:
-                            # make sure this matches the summary list we got
-                            ses_n = len(self.get_ses_heights())
-                            if (
-                                fetched_block_record.sub_epoch_summary_included.get_hash()
-                                != summaries_to_check[ses_n].get_hash()
-                            ):
-                                log.error(
-                                    f"block ses does not match list, "
-                                    f"got {fetched_block_record.sub_epoch_summary_included} "
-                                    f"expected {summaries_to_check[ses_n]}"
-                                )
-                                return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_SUB_EPOCH_SUMMARY, None
                         self.__sub_epoch_summaries[
                             fetched_block_record.height
                         ] = fetched_block_record.sub_epoch_summary_included
                 if peak_height is not None:
                     self._peak_height = peak_height
-                self.block_store.cache_block(block)
             except BaseException:
+                self.block_store.rollback_cache_block(header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
         if fork_height is not None:
@@ -311,14 +302,12 @@ class Blockchain(BlockchainInterface):
                 block: Optional[FullBlock] = await self.block_store.get_full_block(block_record.header_hash)
                 assert block is not None
 
-                # Begins a transaction, because we want to ensure that the coin store and block store are only updated
-                # in sync.
                 if npc_result is not None:
                     tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
                     tx_removals, tx_additions = [], []
                 await self.coin_store.new_block(block, tx_additions, tx_removals)
-                await self.block_store.set_peak(block.header_hash)
+                await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record]
             return None, None, []
 
@@ -476,6 +465,8 @@ class Blockchain(BlockchainInterface):
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
                 # Start from the most recent
                 for rc in reversed(curr.finished_reward_slot_hashes):
+                    if sub_slot_total_iters < curr.sub_slot_iters:
+                        break
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
             curr = self.try_block_record(curr.prev_hash)
@@ -553,7 +544,11 @@ class Blockchain(BlockchainInterface):
         return PreValidationResult(None, required_iters, cost_result)
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock], npc_results: Dict[uint32, NPCResult], batch_size: int = 4
+        self,
+        blocks: List[FullBlock],
+        npc_results: Dict[uint32, NPCResult],
+        batch_size: int = 4,
+        wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
@@ -565,6 +560,7 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            wp_summaries,
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:
@@ -606,7 +602,7 @@ class Blockchain(BlockchainInterface):
 
         """
         if self._peak_height is None:
-            return
+            return None
         block_records = await self.block_store.get_block_records_in_range(
             max(fork_point - self.constants.BLOCKS_CACHE_SIZE, uint32(0)), fork_point
         )
@@ -620,13 +616,15 @@ class Blockchain(BlockchainInterface):
             height: Minimum height that we need to keep in the cache
         """
         if height < 0:
-            return
+            return None
         blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
         while blocks_to_remove is not None and height >= 0:
             for header_hash in blocks_to_remove:
                 del self.__block_records[header_hash]  # remove from blocks
             del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
 
+            if height == 0:
+                break
             height = height - 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
@@ -638,57 +636,81 @@ class Blockchain(BlockchainInterface):
         """
 
         if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:
-            return
+            return None
 
         peak = self.get_peak()
         assert peak is not None
         if peak.height - self.constants.BLOCKS_CACHE_SIZE < 0:
-            return
+            return None
         self.clean_block_record(peak.height - self.constants.BLOCKS_CACHE_SIZE)
 
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
         return await self.block_store.get_block_records_in_range(start, stop)
 
-    async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
+    async def get_header_blocks_in_range(
+        self, start: int, stop: int, tx_filter: bool = True
+    ) -> Dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
             if self.contains_height(uint32(height)):
                 header_hash: bytes32 = self.height_to_hash(uint32(height))
                 hashes.append(header_hash)
 
-        blocks: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
+        blocks: List[FullBlock] = []
+        for hash in hashes.copy():
+            block = self.block_store.block_cache.get(hash)
+            if block is not None:
+                blocks.append(block)
+                hashes.remove(hash)
+        blocks_on_disk: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
+        blocks.extend(blocks_on_disk)
         header_blocks: Dict[bytes32, HeaderBlock] = {}
 
         for block in blocks:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
-            tx_additions: List[CoinRecord] = [
-                c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
-            ]
-            removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
-            header = get_block_header(
-                block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
-            )
+            if tx_filter is False:
+                header = get_block_header(block, [], [])
+            else:
+                tx_additions: List[CoinRecord] = [
+                    c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
+                ]
+                removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
+                header = get_block_header(
+                    block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
+                )
             header_blocks[header.header_hash] = header
 
         return header_blocks
 
-    async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
-        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height)
+    async def get_header_block_by_height(
+        self, height: int, header_hash: bytes32, tx_filter: bool = True
+    ) -> Optional[HeaderBlock]:
+        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height, tx_filter)
         if len(header_dict) == 0:
             return None
         if header_hash not in header_dict:
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size=900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
+        records: List[BlockRecord] = []
         hashes = []
+        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
         for height in heights:
             hashes.append(self.height_to_hash(height))
-        return await self.block_store.get_block_records_by_hash(hashes)
+            if len(hashes) > batch_size:
+                res = await self.block_store.get_block_records_by_hash(hashes)
+                records.extend(res)
+                hashes = []
+
+        if len(hashes) > 0:
+            res = await self.block_store.get_block_records_by_hash(hashes)
+            records.extend(res)
+        return records
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:

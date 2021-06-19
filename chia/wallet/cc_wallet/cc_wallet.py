@@ -281,7 +281,7 @@ class CCWallet:
         return bytes(self.cc_info.my_genesis_checker).hex()
 
     async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], height: uint32):
-        """ Notification from wallet state manager that wallet has been received. """
+        """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CC wallet has been notified that {coin} was added")
 
         search_for_parent: bool = True
@@ -493,47 +493,50 @@ class CCWallet:
         return result
 
     async def select_coins(self, amount: uint64) -> Set[Coin]:
-        """ Returns a set of coins that can be used for generating a new transaction. """
-        async with self.wallet_state_manager.lock:
-            spendable_am = await self.get_confirmed_balance()
+        """
+        Returns a set of coins that can be used for generating a new transaction.
+        Note: Must be called under wallet state manager lock
+        """
 
-            if amount > spendable_am:
-                error_msg = f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
-                self.log.warning(error_msg)
-                raise ValueError(error_msg)
+        spendable_am = await self.get_confirmed_balance()
 
-            self.log.info(f"About to select coins for amount {amount}")
-            spendable: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
+        if amount > spendable_am:
+            error_msg = f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+            self.log.warning(error_msg)
+            raise ValueError(error_msg)
 
-            sum = 0
-            used_coins: Set = set()
+        self.log.info(f"About to select coins for amount {amount}")
+        spendable: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
 
-            # Use older coins first
-            spendable.sort(key=lambda r: r.confirmed_block_height)
+        sum = 0
+        used_coins: Set = set()
 
-            # Try to use coins from the store, if there isn't enough of "unused"
-            # coins use change coins that are not confirmed yet
-            unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-                self.id()
+        # Use older coins first
+        spendable.sort(key=lambda r: r.confirmed_block_height)
+
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.id()
+        )
+        for coinrecord in spendable:
+            if sum >= amount and len(used_coins) > 0:
+                break
+            if coinrecord.coin.name() in unconfirmed_removals:
+                continue
+            sum += coinrecord.coin.amount
+            used_coins.add(coinrecord.coin)
+            self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        if sum < amount:
+            raise ValueError(
+                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
             )
-            for coinrecord in spendable:
-                if sum >= amount and len(used_coins) > 0:
-                    break
-                if coinrecord.coin.name() in unconfirmed_removals:
-                    continue
-                sum += coinrecord.coin.amount
-                used_coins.add(coinrecord.coin)
-                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
 
-            # This happens when we couldn't use one of the coins because it's already used
-            # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-            if sum < amount:
-                raise ValueError(
-                    "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-                )
-
-            self.log.info(f"Successfully selected coins: {used_coins}")
-            return used_coins
+        self.log.info(f"Successfully selected coins: {used_coins}")
+        return used_coins
 
     async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name: bytes32) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()

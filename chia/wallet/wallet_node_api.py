@@ -79,7 +79,7 @@ class WalletNodeAPI:
         name = peer.peer_node_id.hex()
         status = MempoolInclusionStatus(ack.status)
         if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
-            return
+            return None
         if status == MempoolInclusionStatus.SUCCESS:
             self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
         elif status == MempoolInclusionStatus.PENDING:
@@ -118,12 +118,12 @@ class WalletNodeAPI:
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
         if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
-            return
+            return None
         await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
 
     @api_request
-    async def reject_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
-        pass
+    async def reject_puzzle_solution(self, request: wallet_protocol.RejectPuzzleSolution):
+        self.log.warning(f"Reject puzzle solution: {request}")
 
     @api_request
     async def respond_header_blocks(self, request: wallet_protocol.RespondHeaderBlocks):
@@ -131,4 +131,4 @@ class WalletNodeAPI:
 
     @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
-        pass
+        self.log.warning(f"Reject header blocks: {request}")

@@ -56,10 +56,7 @@ class Wallet:
         name: str = None,
     ):
         self = Wallet()
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
         self.secret_key_store = SecretKeyStore()
@@ -127,6 +124,7 @@ class Wallet:
 
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
+                self.log.warning(f"Record: {record} not in mempool")
                 continue
             our_spend = False
             for coin in record.removals:
@@ -229,60 +227,60 @@ class Wallet:
         return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
-        """Returns a set of coins that can be used for generating a new transaction."""
-        async with self.wallet_state_manager.lock:
-            if exclude is None:
-                exclude = []
+        """
+        Returns a set of coins that can be used for generating a new transaction.
+        Note: This must be called under a wallet state manager lock
+        """
+        if exclude is None:
+            exclude = []
 
-            spendable_amount = await self.get_spendable_balance()
+        spendable_amount = await self.get_spendable_balance()
 
-            if amount > spendable_amount:
-                error_msg = (
-                    f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
-                    f" {spendable_amount}"
-                )
-                self.log.warning(error_msg)
-                raise ValueError(error_msg)
-
-            self.log.info(f"About to select coins for amount {amount}")
-            unspent: List[WalletCoinRecord] = list(
-                await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
+        if amount > spendable_amount:
+            error_msg = (
+                f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
+                f" {spendable_amount}"
             )
-            sum_value = 0
-            used_coins: Set = set()
+            self.log.warning(error_msg)
+            raise ValueError(error_msg)
 
-            # Use older coins first
-            unspent.sort(reverse=True, key=lambda r: r.coin.amount)
+        self.log.info(f"About to select coins for amount {amount}")
+        unspent: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
+        )
+        sum_value = 0
+        used_coins: Set = set()
 
-            # Try to use coins from the store, if there isn't enough of "unused"
-            # coins use change coins that are not confirmed yet
-            unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-                self.id()
+        # Use older coins first
+        unspent.sort(reverse=True, key=lambda r: r.coin.amount)
+
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.id()
+        )
+        for coinrecord in unspent:
+            if sum_value >= amount and len(used_coins) > 0:
+                break
+            if coinrecord.coin.name() in unconfirmed_removals:
+                continue
+            if coinrecord.coin in exclude:
+                continue
+            sum_value += coinrecord.coin.amount
+            used_coins.add(coinrecord.coin)
+            self.log.debug(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        if sum_value < amount:
+            raise ValueError(
+                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
             )
-            for coinrecord in unspent:
-                if sum_value >= amount and len(used_coins) > 0:
-                    break
-                if coinrecord.coin.name() in unconfirmed_removals:
-                    continue
-                if coinrecord.coin in exclude:
-                    continue
-                sum_value += coinrecord.coin.amount
-                used_coins.add(coinrecord.coin)
-                self.log.debug(
-                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!"
-                )
-
-            # This happens when we couldn't use one of the coins because it's already used
-            # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-            if sum_value < amount:
-                raise ValueError(
-                    "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-                )
 
         self.log.debug(f"Successfully selected coins: {used_coins}")
         return used_coins
 
-    async def generate_unsigned_transaction(
+    async def _generate_unsigned_transaction(
         self,
         amount: uint64,
         newpuzzlehash: bytes32,
@@ -294,6 +292,7 @@ class Wallet:
     ) -> List[CoinSolution]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
+        Note: this must be called under a wallet state manager lock
         """
         if primaries_input is None:
             primaries: Optional[List[Dict]] = None
@@ -377,13 +376,16 @@ class Wallet:
         primaries: Optional[List[Dict[str, bytes32]]] = None,
         ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
-        """Use this to generate transaction."""
+        """
+        Use this to generate transaction.
+        Note: this must be called under a wallet state manager lock
+        """
         if primaries is None:
             non_change_amount = amount
         else:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
-        transaction = await self.generate_unsigned_transaction(
+        transaction = await self._generate_unsigned_transaction(
             amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount
         )
         assert len(transaction) > 0
