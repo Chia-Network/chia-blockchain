@@ -8,15 +8,15 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:26\n"
+"PO-Revision-Date: 2021-06-21 17:51\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: de\n"
-"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -529,15 +529,13 @@ msgstr "Lösche Schlüssel"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
-"Alle Schlüssel löschen entfernt alle Schlüssel unwiederbringlich vom Computer. \n"
+msgstr "Alle Schlüssel löschen entfernt alle Schlüssel unwiederbringlich vom Computer. \n"
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
 #: src/components/selectKey/SelectKey.tsx:65
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
-"Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich vom Computer. \n"
+msgstr "Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich vom Computer. \n"
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
@@ -648,7 +646,7 @@ msgstr "Farm"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
 msgid "Farmer Public Key"
-msgstr ""
+msgstr "Öffentlicher Schlüssel des Farmers"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -664,7 +662,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr ""
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
@@ -1261,8 +1259,7 @@ msgstr "Paralleles plotten kann Zeit sparen. Andernfalls kannst du Plots der War
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:208
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
-"Das Plotten mit aktiviertem Bitfeld benötigt etwa 30 % weniger Schreibvorgänge und ist jetzt fast immer schneller. Möglicherweise ist der Speicherbedarf reduziert, wenn das Bitfeld-Plotten deaktiviert ist. Es wird empfohlen das Bitfeld-Plotten zu deaktivieren, wenn ihre CPU-Architektur\n"
+msgstr "Das Plotten mit aktiviertem Bitfeld benötigt etwa 30 % weniger Schreibvorgänge und ist jetzt fast immer schneller. Möglicherweise ist der Speicherbedarf reduziert, wenn das Bitfeld-Plotten deaktiviert ist. Es wird empfohlen das Bitfeld-Plotten zu deaktivieren, wenn ihre CPU-Architektur\n"
 "vor 2010 entwickelt wurde."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
@@ -1292,7 +1289,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr ""
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
@@ -2120,3 +2117,4 @@ msgstr "{currencyCode} Gesamtes Chia gefarmt"
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Benutzer Transaktionsgebühren"
+
