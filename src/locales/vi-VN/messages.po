@@ -8,15 +8,15 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:25\n"
+"PO-Revision-Date: 2021-06-21 17:50\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: vi\n"
-"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -77,7 +77,7 @@ msgstr "Thêm ví"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/PlotHeader.tsx:46
-#: src/components/plot/add/PlotAdd.tsx:77
+#: src/components/plot/add/PlotAdd.tsx:80
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
 msgstr "Thêm một Plot"
@@ -118,8 +118,8 @@ msgstr "Số lượng ({cc_unit})"
 msgid "Amount For Initial Coin"
 msgstr "Số lượng Coin Khởi Tạo"
 
-#: src/components/plot/PlotAction.tsx:41
-#: src/components/plot/queue/PlotQueueActions.tsx:44
+#: src/components/plot/PlotAction.tsx:36
+#: src/components/plot/queue/PlotQueueActions.tsx:43
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Bạn có muốn xoá plot? Plot này sẽ không thể khôi phục."
 
@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Có thể được sao lưu vào mnemonic seed"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -412,7 +412,7 @@ msgstr "Thêm ví DID"
 msgid "Create Offer"
 msgstr "Tạo đề nghị"
 
-#: src/components/plot/add/PlotAdd.tsx:89
+#: src/components/plot/add/PlotAdd.tsx:92
 msgid "Create Plot"
 msgstr "Thêm Plot"
 
@@ -504,17 +504,17 @@ msgstr "Ngày"
 msgid "Delay"
 msgstr "Độ trễ"
 
-#: src/components/plot/PlotAction.tsx:39
-#: src/components/plot/PlotAction.tsx:63
-#: src/components/plot/queue/PlotQueueActions.tsx:41
-#: src/components/plot/queue/PlotQueueActions.tsx:86
+#: src/components/plot/PlotAction.tsx:34
+#: src/components/plot/PlotAction.tsx:58
+#: src/components/plot/queue/PlotQueueActions.tsx:40
+#: src/components/plot/queue/PlotQueueActions.tsx:85
 #: src/components/selectKey/SelectKey.tsx:61
 #: src/components/selectKey/SelectKey.tsx:82
 msgid "Delete"
 msgstr "Xoá"
 
-#: src/components/plot/PlotAction.tsx:38
-#: src/components/plot/queue/PlotQueueActions.tsx:40
+#: src/components/plot/PlotAction.tsx:33
+#: src/components/plot/queue/PlotQueueActions.tsx:39
 msgid "Delete Plot"
 msgstr "Xoá Plot"
 
@@ -640,13 +640,29 @@ msgstr "Không mở được (plot không hợp lệ)"
 msgid "Farm"
 msgstr "Farm"
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
+msgid "Farmer Public Key"
+msgstr ""
+
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "Địa chỉ ví nhận phần thưởng farm"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -657,6 +673,10 @@ msgstr "Farmer không được kết nối"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "Farmer không hoạt động"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -933,7 +953,7 @@ msgstr "Đăng nhập"
 msgid "Manage Farming Rewards"
 msgstr "Quản lý phần thưởng farm"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Quản lý địa chỉ nhận phần thưởng farm của bạn"
 
@@ -989,7 +1009,7 @@ msgstr "Biệt danh"
 msgid "No"
 msgstr "Không"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "Không có chuỗi 24 từ bí mật, vì khóa này đã được nhập."
 
@@ -1001,7 +1021,7 @@ msgstr "Chưa có khối được farm"
 msgid "No previous transactions"
 msgstr "Không có giao dịch trước đó"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Không có khóa riêng cho một hoặc cả hai địa chỉ. Chỉ an toàn nếu bạn đang gửi phần thưởng đến một ví khác."
 
@@ -1246,6 +1266,7 @@ msgid "Pool Key"
 msgstr "Khoá của Pool"
 
 #: src/components/block/Block.jsx:248
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:268
 msgid "Pool Public Key"
 msgstr "Khoá công khai của Pool"
 
@@ -1253,13 +1274,29 @@ msgstr "Khoá công khai của Pool"
 msgid "Pool Puzzle Hash"
 msgstr "Puzzle Hash của Pool"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "Địa chỉ Pool nhận phần thưởng"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Số lượng phần thưởng Pool"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1403,7 +1440,7 @@ msgstr "Khôi phục siêu dữ liệu cho  coin sắc màu và các ví thông 
 msgid "Safe To Skip"
 msgstr "An toàn để bỏ qua"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Lưu"
@@ -1424,7 +1461,7 @@ msgstr "Vị trí thư mục tạm thời thứ hai"
 msgid "See private key"
 msgstr "Xem khoá bí mật"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "Cụm khoá:"
 
@@ -1867,7 +1904,7 @@ msgstr "Lặp lại vùng phụ VDF"
 msgid "View"
 msgstr "Xem"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:74
+#: src/components/plot/queue/PlotQueueActions.tsx:73
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:52
 msgid "View Log"
 msgstr "Xem bản ghi"
