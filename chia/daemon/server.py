@@ -285,6 +285,8 @@ class WebSocketServer:
             response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "is_keyring_locked":
             response = await self.is_keyring_locked()
+        elif command == "unlock_keyring":
+            response = await self.unlock_keyring(cast(Dict[str, Any], data))
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
@@ -301,6 +303,28 @@ class WebSocketServer:
     async def is_keyring_locked(self) -> Dict[str, Any]:
         locked = Keychain.is_keyring_locked()
         response = {"success": True, "is_keyring_locked": locked}
+        return response
+
+    async def unlock_keyring(self, request: Dict[str, Any]):
+        success = False
+        error = None
+        key = request.get("key", None)
+        if type(key) is not str:
+            error = "missing key"
+
+        if error is None:
+            try:
+                if Keychain.master_password_is_valid(key):
+                    Keychain.set_cached_master_password(key)
+                    success = True
+                else:
+                    error = "bad password"
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Keyring password validation failed: {e} {tb}")
+                error = "validation exception"
+
+        response = {"success": success, "error": error}
         return response
 
     def get_status(self) -> Dict[str, Any]:
