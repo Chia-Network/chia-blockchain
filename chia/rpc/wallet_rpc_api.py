@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey, G1Element
 
-from chia.cmds.init_funcs import check_keys
+from chia.cmds.init_funcs import check_keys, check_key_used_for_rewards
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -54,6 +54,7 @@ class WalletRpcApi:
             "/generate_mnemonic": self.generate_mnemonic,
             "/add_key": self.add_key,
             "/delete_key": self.delete_key,
+            "/check_delete_key": self.check_delete_key,
             "/delete_all_keys": self.delete_all_keys,
             # Wallet node
             "/get_sync_status": self.get_sync_status,
@@ -259,6 +260,41 @@ class WalletRpcApi:
         if path.exists():
             path.unlink()
         return {}
+
+    #
+    # Check the key for a few things
+    # 1) is it used for either farm or pool rewards
+    # 2) do any wallets have a non-zero balance
+    #
+    async def check_delete_key(self, request):
+        fingerprint = request["fingerprint"]
+        sk, _ = await self._get_private_key(fingerprint)
+
+        used_for_farmer, used_for_pool = check_key_used_for_rewards(self.service.root_path, sk, 100)
+
+        if self.service.logged_in_fingerprint != fingerprint:
+            await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
+
+        walletBalance: bool = False
+        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+
+        for w in wallets:
+            wallet = self.service.wallet_state_manager.wallets[w.id]
+            async with self.service.wallet_state_manager.lock:
+                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
+                balance = await wallet.get_confirmed_balance(unspent_records)
+                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+
+                if (balance + pending_balance) > 0:
+                    walletBalance = True
+                    break
+
+        return {
+            "fingerprint": fingerprint,
+            "used_for_farmer_rewards": used_for_farmer,
+            "used_for_pool_rewards": used_for_pool,
+            "wallet_balance": walletBalance,
+        }
 
     async def delete_all_keys(self, request: Dict):
         await self._stop_wallet()

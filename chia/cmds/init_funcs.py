@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from blspy import PrivateKey
 
 import yaml
 
@@ -105,6 +106,38 @@ def check_keys(new_root: Path) -> None:
 
     config["farmer"]["pool_public_keys"] = pool_pubkeys_hex
     save_config(new_root, "config.yaml", config)
+
+
+#
+# Checks if the given key is used for either the farmer rewards or pool rewards
+# returns a tuple of two booleans
+# The first is true if the key is used as the Farmer rewards, otherwise false
+# The second is true if the key is used as the Pool rewards, otherwise false
+# Returns both false if the key cannot be found with the given fingerprint
+#
+def check_key_used_for_rewards(new_root: Path, sk: PrivateKey, max_ph_to_search: int) -> Tuple[bool, bool]:
+    if sk is None:
+        return False, False
+
+    config: Dict = load_config(new_root, "config.yaml")
+    farmer_target = config["farmer"].get("xch_target_address")
+    pool_target = config["pool"].get("xch_target_address")
+    found_farmer = False
+    found_pool = False
+    selected = config["selected_network"]
+    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+    for i in range(max_ph_to_search):
+        if found_farmer and found_pool:
+            break
+
+        ph = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
+
+        if ph == farmer_target:
+            found_farmer = True
+        if ph == pool_target:
+            found_pool = True
+
+    return found_farmer, found_pool
 
 
 def copy_files_rec(old_path: Path, new_path: Path):
