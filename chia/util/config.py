@@ -12,7 +12,7 @@ from chia.util.path import mkdir
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
-    return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
+    return pkg_resources.resource_string(__name__, f"initial-{filename}").decode('utf-8')
 
 
 def create_default_chia_config(root_path: Path) -> None:
@@ -20,7 +20,7 @@ def create_default_chia_config(root_path: Path) -> None:
         default_config_file_data = initial_config_file(filename)
         path = config_path_for_filename(root_path, filename)
         mkdir(path.parent)
-        with open(path, "w") as f:
+        with open(path, "w", -1, 'utf-8') as f:
             f.write(default_config_file_data)
 
 
