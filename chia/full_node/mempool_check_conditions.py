@@ -193,13 +193,6 @@ def parse_fee(args: SExp) -> List[bytes]:
     return [int_to_bytes(fee_int)]
 
 
-def parse_coin_id(args: SExp, error_code: Err) -> List[bytes]:
-    coin = args.first().atom
-    if len(coin) != 32:
-        raise ValidationError(error_code)
-    return [coin]
-
-
 def parse_hash(args: SExp, error_code: Err) -> List[bytes]:
     h = args.first().atom
     if len(h) != 32:
@@ -247,7 +240,7 @@ def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, O
     elif condition is op.ASSERT_HEIGHT_RELATIVE:
         return cc.ASSERT_HEIGHT_RELATIVE.value, parse_height(args, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
     elif condition is op.ASSERT_MY_COIN_ID:
-        return cc.ASSERT_MY_COIN_ID.value, parse_coin_id(args, Err.ASSERT_MY_COIN_ID_FAILED)
+        return cc.ASSERT_MY_COIN_ID.value, parse_hash(args, Err.ASSERT_MY_COIN_ID_FAILED)
     elif condition is op.RESERVE_FEE:
         return cc.RESERVE_FEE.value, parse_fee(args)
     elif condition is op.CREATE_COIN_ANNOUNCEMENT:
@@ -259,7 +252,7 @@ def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, O
     elif condition is op.ASSERT_PUZZLE_ANNOUNCEMENT:
         return cc.ASSERT_PUZZLE_ANNOUNCEMENT.value, parse_hash(args, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
     elif condition is op.ASSERT_MY_PARENT_ID:
-        return cc.ASSERT_MY_PARENT_ID.value, parse_coin_id(args, Err.ASSERT_MY_PARENT_ID_FAILED)
+        return cc.ASSERT_MY_PARENT_ID.value, parse_hash(args, Err.ASSERT_MY_PARENT_ID_FAILED)
     elif condition is op.ASSERT_MY_PUZZLEHASH:
         return cc.ASSERT_MY_PUZZLEHASH.value, parse_hash(args, Err.ASSERT_MY_PUZZLEHASH_FAILED)
     elif condition is op.ASSERT_MY_AMOUNT:
