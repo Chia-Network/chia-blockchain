@@ -101,11 +101,7 @@ export default function PlotNFTCard(props: Props) {
     });
   }
 
-  const rows = [isSelfPooling && {
-    key: 'rewards',
-    label: <Trans>Rewards</Trans>,
-    value: <UnitFormat value={mojo_to_chia(BigInt(balance))} state={State.SUCCESS} />,
-  }, {
+  const rows = [{
     key: 'status',
     label: <Trans>Status</Trans>,
     value: <PlotNFTStatus nft={nft} />,
@@ -113,7 +109,17 @@ export default function PlotNFTCard(props: Props) {
     key: 'wallet_status',
     label: <Trans>Wallet Status</Trans>,
     value: <WalletStatus />,
+  }, isSelfPooling && {
+    key: 'rewards',
+    label: <Trans>Rewards</Trans>,
+    value: <UnitFormat value={mojo_to_chia(BigInt(balance))} state={State.SUCCESS} />,
   }, {
+    key: 'plots_count',
+    label: <Trans>Number of Plots</Trans>,
+    value: plots
+      ? <FormatLargeNumber value={plots.length} />
+      : <Loading size="small" />,
+  }, !isSelfPooling && {
     key: 'current_difficulty',
     label: (
       <TooltipTypography 
@@ -145,7 +151,7 @@ export default function PlotNFTCard(props: Props) {
       </TooltipTypography>
     ),
     value: <FormatLargeNumber value={nft.pool_state.current_points} />,
-  }, {
+  }, !isSelfPooling && {
     key: 'points_found_since_start',
     label: (
       <TooltipTypography 
@@ -162,12 +168,6 @@ export default function PlotNFTCard(props: Props) {
       </TooltipTypography>
     ),
     value: <FormatLargeNumber value={nft.pool_state.points_found_since_start} />,
-  }, {
-    key: 'plots_count',
-    label: <Trans>Number of Plots</Trans>,
-    value: plots
-      ? <FormatLargeNumber value={plots.length} />
-      : <Loading size="small" />,
   }].filter(row => !!row);
 
   return (

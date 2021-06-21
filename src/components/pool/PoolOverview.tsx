@@ -31,12 +31,12 @@ const groupsCols = [
     title: <Trans>Plot NFT</Trans>,
   },
   {
-    field: () => <PoolWalletStatus />,
-    title: <Trans>Wallet Status</Trans>,
-  },
-  {
     field: (nft: PlotNFT) => <PlotNFTState nft={nft} />,
     title: <Trans>Status</Trans>,
+  },
+  {
+    field: () => <PoolWalletStatus />,
+    title: <Trans>Wallet Status</Trans>,
   },
   {
     field: (nft: PlotNFT) => {
@@ -112,12 +112,20 @@ export default function PoolOverview() {
 
   const hasNFTs = (!!nfts && !!nfts.length) || unconfirmed.length;
 
-  const totalWinning = useMemo<number>(
-    () => nfts && nfts.length
-      ? sumBy<PlotNFT>(nfts, (item) => item.wallet_balance.confirmed_wallet_balance ?? 0)
-      : 0, 
-    [nfts],
-  );
+  const totalWinning = useMemo<number>(() => {
+    const selfPoolingNFTs = nfts && nfts.filter(
+      (nft) => nft.pool_wallet_status.current.state === PlotNFTStateEnum.SELF_POOLING,
+    );
+
+    if (selfPoolingNFTs && selfPoolingNFTs.length) {
+      return sumBy<PlotNFT>(
+        selfPoolingNFTs, 
+        (item) => item.wallet_balance.confirmed_wallet_balance ?? 0,
+      );
+    }
+
+    return 0;
+  }, [nfts]);
 
   function handleAddPool() {
     history.push('/dashboard/pool/add');
