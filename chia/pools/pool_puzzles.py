@@ -162,9 +162,11 @@ def create_travel_spend(
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is key_value_list ()
+        # key_value_list is:
+            # "ps" -> poolstate as bytes
         inner_sol: Program = Program.to([[("ps", bytes(target))], 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
-        # inner sol is (spend_type, extra_data, pool_reward_height)
+        # inner sol is (spend_type, key_value_list, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
@@ -173,6 +175,8 @@ def create_travel_spend(
             f"{target}"
             f"hash:{Program(bytes(target)).get_tree_hash()}"
         )
+        # key_value_list is:
+            # "ps" -> poolstate as bytes
         inner_sol = Program.to([1, [("ps", bytes(target))], destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
