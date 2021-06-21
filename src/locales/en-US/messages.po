@@ -8,15 +8,15 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:26\n"
+"PO-Revision-Date: 2021-06-21 17:50\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: en\n"
-"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -28,7 +28,7 @@ msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0>
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:166
 msgid "128 buckets is recommended"
-msgstr "128 buckets is recommended"
+msgstr "128 buckets is recommended 256 is better"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -654,7 +654,7 @@ msgstr "Farmer Reward Address"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
-msgstr "Farmer Reward Address is not properly formatted."
+msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -662,7 +662,7 @@ msgstr "Farmer Reward Address is not properly formatted."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
-msgstr "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -676,7 +676,7 @@ msgstr "Farmer is not running"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1280,7 +1280,7 @@ msgstr "Pool Reward Address"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
-msgstr "Pool Reward Address is not properly formatted."
+msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1288,7 +1288,7 @@ msgstr "Pool Reward Address is not properly formatted."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
-msgstr "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1296,7 +1296,7 @@ msgstr "Pool Reward Amount"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -2112,3 +2112,4 @@ msgstr "{currencyCode} Total Chia Farmed"
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} User Transaction Fees"
+
