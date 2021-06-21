@@ -31,7 +31,7 @@ class KeyringIsLocked(Exception):
 def supports_keyring_password() -> bool:
     from sys import platform
 
-    return platform == "linux"
+    return platform == "linux" or platform == "darwin"
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:

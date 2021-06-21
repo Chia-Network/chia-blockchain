@@ -62,9 +62,12 @@ class KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
         elif platform == "darwin":
-            import keyring.backends.macOS
+            if supports_keyring_password():
+                keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
+            else:
+                import keyring.backends.macOS
 
-            keyring.set_keyring(keyring.backends.macOS.Keyring())
+                keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
             if supports_keyring_password():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
