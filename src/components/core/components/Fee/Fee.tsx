@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trans } from '@lingui/macro';
+import { Trans, Plural } from '@lingui/macro';
 import { InputAdornment, FormControl, FormHelperText } from '@material-ui/core';
 import { useWatch, useFormContext } from 'react-hook-form';
 import TextField, { TextFieldProps } from '../TextField';
@@ -37,10 +37,11 @@ export default function Fee(props: FeeProps) {
         }}
         {...rest}
       />
-      {mojo > 1 && (
+      {!!mojo && (
         <FormHelperText>
           <FormatLargeNumber value={mojo} />
-          {mojo > 1 ? 'mojos' : 'mojo'}
+          {' '}
+          <Plural value={mojo} one="mojo" other="mojos" />
         </FormHelperText>
       )}
     </FormControl>
