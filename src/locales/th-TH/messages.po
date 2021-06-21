@@ -8,15 +8,15 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:26\n"
+"PO-Revision-Date: 2021-06-21 17:50\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: th\n"
-"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -77,7 +77,7 @@ msgstr "เพิ่มวอลเล็ต"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/PlotHeader.tsx:46
-#: src/components/plot/add/PlotAdd.tsx:77
+#: src/components/plot/add/PlotAdd.tsx:80
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
 msgstr "เพิ่มพล็อต"
@@ -118,8 +118,8 @@ msgstr "จำนวน ({cc_unit})"
 msgid "Amount For Initial Coin"
 msgstr "จำนวนเหรียญเริ่มต้น"
 
-#: src/components/plot/PlotAction.tsx:41
-#: src/components/plot/queue/PlotQueueActions.tsx:44
+#: src/components/plot/PlotAction.tsx:36
+#: src/components/plot/queue/PlotQueueActions.tsx:43
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "พล็อตที่ถูกลบจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่ว่าต้องการลบพล็อตนี้?"
 
@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "สามารถสำรองข้อมูลเป็นรหัสนีโมนิคได้"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -412,7 +412,7 @@ msgstr "สร้าง DID wallet"
 msgid "Create Offer"
 msgstr "สร้างข้อเสนอ"
 
-#: src/components/plot/add/PlotAdd.tsx:89
+#: src/components/plot/add/PlotAdd.tsx:92
 msgid "Create Plot"
 msgstr "สร้างพล็อต"
 
@@ -504,17 +504,17 @@ msgstr "วันที่"
 msgid "Delay"
 msgstr "หน่วงเวลา"
 
-#: src/components/plot/PlotAction.tsx:39
-#: src/components/plot/PlotAction.tsx:63
-#: src/components/plot/queue/PlotQueueActions.tsx:41
-#: src/components/plot/queue/PlotQueueActions.tsx:86
+#: src/components/plot/PlotAction.tsx:34
+#: src/components/plot/PlotAction.tsx:58
+#: src/components/plot/queue/PlotQueueActions.tsx:40
+#: src/components/plot/queue/PlotQueueActions.tsx:85
 #: src/components/selectKey/SelectKey.tsx:61
 #: src/components/selectKey/SelectKey.tsx:82
 msgid "Delete"
 msgstr "ลบ"
 
-#: src/components/plot/PlotAction.tsx:38
-#: src/components/plot/queue/PlotQueueActions.tsx:40
+#: src/components/plot/PlotAction.tsx:33
+#: src/components/plot/queue/PlotQueueActions.tsx:39
 msgid "Delete Plot"
 msgstr "ลบพล็อต"
 
@@ -640,13 +640,29 @@ msgstr "ไม่สามารถเปิดได้ (พล็อตไม�
 msgid "Farm"
 msgstr "ฟาร์ม"
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
+msgid "Farmer Public Key"
+msgstr "คีย์สาธารณะของผู้ฟาร์ม"
+
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
 msgstr "แฮชปริศนาของผู้ฟาร์ม"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "ที่อยู่รางวัลผู้ฟาร์ม"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -657,6 +673,10 @@ msgstr "ผู้ฟาร์มไม่ได้เชื่อมต่อ"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "ผู้ฟาร์มไม่ทำงาน"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -933,7 +953,7 @@ msgstr "กำลังเข้าสู่ระบบ"
 msgid "Manage Farming Rewards"
 msgstr "จัดการรางวัลการฟาร์ม"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:96
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "จัดการที่อยู่เป้าหมายของรางวัลการฟาร์มของคุณ"
 
@@ -989,7 +1009,7 @@ msgstr "ชื่อ​เล่น"
 msgid "No"
 msgstr "ไม่"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "ไม่มีรหัสนีโมนิค 24 คำ เนื่องจากคีย์นี้ได้ถูกนำเข้ามา"
 
@@ -1001,7 +1021,7 @@ msgstr "ยังไม่มีบล็อกที่ถูกฟาร์ม
 msgid "No previous transactions"
 msgstr "ไม่มีธุรกรรมก่อนหน้า"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "ไม่พบ private keys ในบัญชีที่กรอก แต่ไม่ต้องกังวลหากคุณกำลังจะส่ง rewards ไปให้กระเป๋าอื่น"
 
@@ -1246,6 +1266,7 @@ msgid "Pool Key"
 msgstr "คีย์ของพูล"
 
 #: src/components/block/Block.jsx:248
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:268
 msgid "Pool Public Key"
 msgstr "คีย์สาธารณะของพูล"
 
@@ -1253,13 +1274,29 @@ msgstr "คีย์สาธารณะของพูล"
 msgid "Pool Puzzle Hash"
 msgstr "แฮชปริศนาของพูล"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "ที่อยู่ของรางวัลที่ได้จากการขุด"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
+msgid "Pool Reward Address must not be empty."
+msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Pool Reward จำนวน"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1403,7 +1440,7 @@ msgstr "กู้คืน Metadata สำหรับ Colored Coins และ S
 msgid "Safe To Skip"
 msgstr "ข้ามได้อย่างปลอดภัย"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "บันทึก"
@@ -1424,7 +1461,7 @@ msgstr "ตำแหน่งโฟลเดอร์ของไฟล์พล
 msgid "See private key"
 msgstr "ดูคีย์ส่วนตัว"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "Seed:"
 
@@ -1867,7 +1904,7 @@ msgstr "VDF Sub Slot Iterations"
 msgid "View"
 msgstr "แสดง"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:74
+#: src/components/plot/queue/PlotQueueActions.tsx:73
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:52
 msgid "View Log"
 msgstr "ดู Log"
