@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:51\n"
+"PO-Revision-Date: 2021-06-21 23:53\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -606,7 +606,7 @@ msgstr "Chyba"
 
 #: src/components/wallet/standard/WalletStandard.tsx:415
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr "Chyba: Prosím zadajte platnú adresu."
+msgstr "Chyba: Chia nie je možné odoslať na farebnú adresu. Zadajte prosím Chia adresu."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:61
@@ -654,7 +654,7 @@ msgstr "Adresa odmeny farmára"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
-msgstr ""
+msgstr "Adresa odmeny farmára nemá správny formát."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -662,7 +662,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
-msgstr ""
+msgstr "Adresa odmeny farmára nesmie byť prázdna."
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -676,7 +676,7 @@ msgstr "Nebeží farmer"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Verejný kľúč farmára:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1280,7 +1280,7 @@ msgstr "Adresa odmeny združenia"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "Adresa odmeny združenia nemá správny formát."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1288,7 +1288,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "Adresa odmeny združenia nesmie byť prázdna."
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1296,7 +1296,7 @@ msgstr "Čiastka odmeny združenia"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Verejný kľúč združenia:"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
