@@ -49,7 +49,7 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
+      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
       cd build_scripts
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
       python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
@@ -100,7 +100,7 @@ steps:
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_VERSION="Chia-"$(<version.txt)
-      shasum -a 256 $(System.DefaultWo1rkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256
+      shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
     displayName: "Create Checksums"
 
