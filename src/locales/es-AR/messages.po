@@ -8,19 +8,19 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:26\n"
+"PO-Revision-Date: 2021-06-21 17:50\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: es-AR\n"
-"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "*¿Quieres explorar más los bloques de Chia? Échale un vistazo a <0>Chia Explorer</0> construido en código abierto."
+msgstr "¿Querés explorar más, los bloques de Chia? Mirá <0>Chia Explorer</0> hecho por un desarrollador de código abierto."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,16 +28,16 @@ msgstr "*¿Quieres explorar más los bloques de Chia? Échale un vistazo a <0>Ch
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:166
 msgid "128 buckets is recommended"
-msgstr "128 bloques es lo recomendado"
+msgstr "Se recomiendan 128 cubos"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Un cosechador es un servidor ejecutado en una maquina donde se almacena(n) la(s) parcela(s). El agricultor y el cosechador hablan con un nodo completo para ver el estado de la cadena. Revise su red de cosechadores a continuación Más información"
+msgstr "Un cosechador es un servicio ejecutado en una maquina donde se almacena(n) la(s) parcela(s). El agricultor y el cosechador hablan con un nodo completo para ver el estado de la cadena. Revise su red de cosechadores a continuación Más información"
 
 #: src/electron/main.tsx:423
 #: src/electron/main.tsx:510
 msgid "About Chia Blockchain"
-msgstr "Sobre la Blockchain de Chia"
+msgstr "Acerca de Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -137,12 +137,12 @@ msgstr "¿Está seguro que quiere salir? El Sembrado y Cultivado de las parcelas
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "¿Está seguro de querer usar k={plotSize}?"
+msgstr "¿Está seguro que querés usar k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:62
 #: src/components/selectKey/SelectKey.tsx:83
 msgid "Back"
-msgstr "atras"
+msgstr "Atrás"
 
 #: src/components/backup/BackupCreate.tsx:66
 msgid "Backup file is used to restore smart wallets."
@@ -161,11 +161,11 @@ msgstr "Recompensa base del agricultor"
 #: src/components/farm/FarmLatestBlockChallenges.tsx:46
 #: src/components/farm/FarmLatestBlockChallenges.tsx:55
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "A continuación se encuentran los desafios de bloque actuales. Puede que tengas o no un prueba de espacio para estos desafios. Estos bloques no tienen una prueba de tiempo actualmente."
+msgstr "A continuación se muestran los desafíos de bloques actuales. Puede que tenga o no una prueba de espacio para estos desafíos. Estos bloques no contienen actualmente una prueba de tiempo."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:20
 msgid "Best estimate over last 24 hours"
-msgstr "La mejor estimación de las últimas 24 horas"
+msgstr "Mejor estimación de las ultimas 24 horas"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -188,7 +188,7 @@ msgstr "Iteraciones de Bloque VDF"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Bloque a la altura {0} en la Blockchain de Chia"
+msgstr "Bloque en la altura {0} en la Blockchain de Chia"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,7 +196,7 @@ msgstr "Bloque a la altura {0} en la Blockchain de Chia"
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr "Bloque con el hash {headerHash}"
+msgstr "Bloque con hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exist."
@@ -228,7 +228,7 @@ msgstr "Comprar"
 
 #: src/components/wallet/Wallets.tsx:59
 msgid "CC Wallet"
-msgstr "Billetera CC"
+msgstr "Monedero CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -253,7 +253,7 @@ msgstr "Cancelar y Gastar"
 
 #: src/components/plot/PlotsNotFound.tsx:38
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "¡Cuidado! Cuando elimines estos plots, lo estás haciendo para siempre. Revisa que tengas conectados correctamente los dispositivos de almacenamiento."
+msgstr "¡Cuidado! Cuando elimines estas parcelas, se van a eliminar para siempre. Revisa que tengas conectados correctamente los dispositivos de almacenamiento."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
@@ -261,7 +261,7 @@ msgstr "Desafío"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:17
 msgid "Challenge Hash"
-msgstr "Hash de desafío"
+msgstr "Hash del desafío"
 
 #: src/electron/main.tsx:402
 msgid "Chat on KeyBase"
@@ -273,7 +273,7 @@ msgstr "Chia"
 
 #: src/electron/main.tsx:359
 msgid "Chia Blockchain Wiki"
-msgstr "Wiki de Chia"
+msgstr "Wiki de la Blockchain de Chia"
 
 #: src/components/wallet/Wallets.tsx:56
 msgid "Chia Wallet"
@@ -611,15 +611,15 @@ msgstr "Error: No se puede enviar chia a la dirección de color. Ingresa una dir
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:61
 msgid "Estimated Time to Win"
-msgstr "Tiempo estimado para ganar una copa"
+msgstr "Tiempo Estimado para Ganar"
 
 #: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
-msgstr "Inflación de la red"
+msgstr "Espacio estimado de red"
 
 #: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr "Suma estimada de los plots de todos los laburantes en la red"
+msgstr "Suma estimada de todo el espacio en disco cultivado de todos los granjeros de la red"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:230
 msgid "Exclude final directory"
@@ -642,7 +642,7 @@ msgstr "Granja"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
 msgid "Farmer Public Key"
-msgstr ""
+msgstr "Clave Pública del Granjero"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -658,7 +658,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr ""
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
@@ -695,7 +695,7 @@ msgstr "Cultivando"
 #: src/components/farm/card/FarmCardStatus.tsx:52
 #: src/components/farm/card/FarmCardStatus.tsx:65
 msgid "Farming Status"
-msgstr "Estado de tu granja"
+msgstr "Estado de Cultivo"
 
 #: src/components/wallet/WalletHistory.tsx:66
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -891,7 +891,7 @@ msgstr "Última prueba intentada"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:20
 msgid "Last Height Farmed"
-msgstr "Ultima altura que tuviste una copa"
+msgstr "Última Altura Cultivada"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:41
 msgid "Latest Block Challenges"
@@ -1015,7 +1015,7 @@ msgstr "No hay semilla de 24 palabras, ya que esta llave es importada."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:25
 msgid "No blocks farmed yet"
-msgstr "No tenes copas papa"
+msgstr "Aún no hay bloques cultivados"
 
 #: src/components/wallet/WalletHistory.tsx:100
 msgid "No previous transactions"
@@ -1284,7 +1284,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr ""
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
@@ -1499,7 +1499,7 @@ msgstr "Seleccione el destino final de la carpeta donde desea que se almacene la
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:40
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr ""
+msgstr "Seleccione el destino temporal de la carpeta en la que desea que se almacene la parcela.  Le recomendamos que utilice una unidad rápida."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:74
@@ -1652,7 +1652,7 @@ msgstr "Sincronizando"
 
 #: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing <0/>/<1/>"
-msgstr ""
+msgstr "Sincronizando <0/>/<1/>"
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
@@ -2107,8 +2107,9 @@ msgstr "{currencyCode} Recompensas de Bloque"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
 msgid "{currencyCode} Total Chia Farmed"
-msgstr "{currencyCode} Copas de chia ganadas"
+msgstr "{currencyCode} Total de Chia Cultivada"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Tarifas de Transacción del Usuario"
+
