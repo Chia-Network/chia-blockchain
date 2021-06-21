@@ -243,7 +243,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "میتواند در دانه های کمک یادآوری، پشتیبان گیری شود"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:180
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -654,11 +654,11 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "مزرعه دارِ جورچین در هم ریزی(هش)"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:161
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "آدرس پاداش مزرعه دار"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
 msgstr ""
 
@@ -666,7 +666,7 @@ msgstr ""
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:125
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
@@ -679,6 +679,10 @@ msgstr "مزرعه‌دار متصل نیست"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "مزرعه دار درحال اجرا نیست"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -955,7 +959,7 @@ msgstr "ورود"
 msgid "Manage Farming Rewards"
 msgstr "مدیریت پاداش های مزرعه داری"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "آدرس های مقصد خود را برای پاداش های مزرعه داری مدیریت کنید"
 
@@ -1011,7 +1015,7 @@ msgstr "نام مستعار"
 msgid "No"
 msgstr "خیر"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "هیچ بذر ۲۴ کلمه‌ای نیست، از هنگامی که این کلید را وارد کرده اید."
 
@@ -1023,7 +1027,7 @@ msgstr "هنوز هیچ بلاکی مزرعه داری(تولید) نشده اس
 msgid "No previous transactions"
 msgstr "بدون تراکنش های قبلی"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:155
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "بدون کلید خصوصی برای یک یا هر دو آدرس. فقط در صورت ارسال پاداش به کیف پول دیگر ، ایمن است."
 
@@ -1278,11 +1282,11 @@ msgstr "کلید عمومی استخر"
 msgid "Pool Puzzle Hash"
 msgstr "استخر جورچین هش(در هم سازی)"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:168
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "آدرس پاداش استخر"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
 msgstr ""
 
@@ -1290,13 +1294,17 @@ msgstr ""
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "مقدار پاداش استخر"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1440,7 +1448,7 @@ msgstr "بازگردانی فراداده ها (Metadata) برای سکه های
 msgid "Safe To Skip"
 msgstr "برای رد کردن مشکلی نیست"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:183
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "ذخیره"
@@ -1461,7 +1469,7 @@ msgstr "مکان ثانویه پوشه موقت"
 msgid "See private key"
 msgstr "دیدن کلید خصوصی"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "بذر:"
 

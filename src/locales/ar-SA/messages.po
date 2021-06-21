@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "يمكن الإسترجاع من النسخة الاحتياطية للكلمات السرية"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:180
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,11 +648,11 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "عناوين المزارع المشفرة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:161
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "عنوان مكافأة المزارع"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
 msgstr ""
 
@@ -660,7 +660,7 @@ msgstr ""
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:125
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
@@ -673,6 +673,10 @@ msgstr "المزرعة غير متصلة"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "المزارع لا يعمل"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -949,7 +953,7 @@ msgstr "تسجيل الدخول"
 msgid "Manage Farming Rewards"
 msgstr "إدارة جوائز الزراعة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "إدارة عناوين جوائز الزراعة"
 
@@ -1005,7 +1009,7 @@ msgstr "الإسم المستعار"
 msgid "No"
 msgstr "لايوجد"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "لا يوجد بذور 24 كلمة، لأن هذا المفتاح مستورد."
 
@@ -1017,7 +1021,7 @@ msgstr "لا توجد بلوكات مزروعة بعد"
 msgid "No previous transactions"
 msgstr "لا توجد معاملات سابقة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:155
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "لا يوجد مفاتيح خاصة لواحد أو لكلا العنوانين. فقط إذا كنت ترسل مكافآت إلى محفظة أخرى."
 
@@ -1270,11 +1274,11 @@ msgstr "المفتاح العام للتجمع"
 msgid "Pool Puzzle Hash"
 msgstr "تجمع لغز تجزئة"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:168
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "عنوان مكافأة المجمع"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
 msgstr ""
 
@@ -1282,13 +1286,17 @@ msgstr ""
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "مبلغ مكافأة المجمع"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1432,7 +1440,7 @@ msgstr "استعادة بيانات التعريف للعملات المعدني
 msgid "Safe To Skip"
 msgstr "التخطي الآمن"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:183
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "حفظ"
@@ -1453,7 +1461,7 @@ msgstr "موقع المجلد المؤقت الثاني"
 msgid "See private key"
 msgstr "عرض المفتاح الخاص"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "توزيع الجدول:"
 

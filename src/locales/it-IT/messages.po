@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Può essere eseguito il backup su seed mnemonico"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:180
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,11 +648,11 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Puzzle Hash Farmer"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:161
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "Indirizzo Ricompensa del Farmer"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
 msgstr ""
 
@@ -660,7 +660,7 @@ msgstr ""
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:125
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
@@ -673,6 +673,10 @@ msgstr "Il farmer non è connesso"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "Il farmer non è in esecuzione"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -949,7 +953,7 @@ msgstr "Accesso in corso"
 msgid "Manage Farming Rewards"
 msgstr "Gestisci Ricompense Farming"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Gestisci gli Indirizzi di Destinazione delle Tue Ricompense da Farming"
 
@@ -1005,7 +1009,7 @@ msgstr "Nickname"
 msgid "No"
 msgstr "No"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "Nessun seed di 24 parole, dato che la chiave è importata."
 
@@ -1017,7 +1021,7 @@ msgstr "Ancora nessun blocco coltivato"
 msgid "No previous transactions"
 msgstr "Nessuna transazione precedente"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:155
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Nessuna chiave privata per uno o entrambi gli indirizzi. Sicuro solo se stai inviando ricompense ad un altro wallet."
 
@@ -1270,11 +1274,11 @@ msgstr "Chiave Pubblica Pool"
 msgid "Pool Puzzle Hash"
 msgstr "Hash Puzzle della Pool"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:168
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "Indirizzo Ricompensa della Pool"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
 msgstr ""
 
@@ -1282,13 +1286,17 @@ msgstr ""
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Ammontare della Ricompensa della Pool"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1432,7 +1440,7 @@ msgstr "Ripristinare i Metadati per le Monete Colorate e altri Wallet Intelligen
 msgid "Safe To Skip"
 msgstr "Sicuro da Saltare"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:183
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Salva"
@@ -1453,7 +1461,7 @@ msgstr "Posizione seconda cartella temporanea"
 msgid "See private key"
 msgstr "Vedi chiave privata"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "Seed:"
 

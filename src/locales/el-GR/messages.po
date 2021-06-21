@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Μπορεί να δημιουργηθεί αντίγραφο ασφαλείας σε μνημονικό seed"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:180
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,11 +648,11 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:161
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "Διεύθυνση Ανταμοιβής Farmer"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
 msgstr ""
 
@@ -660,7 +660,7 @@ msgstr ""
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:125
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
@@ -673,6 +673,10 @@ msgstr "Ο Farmer δεν είναι συνδεδεμένος"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "Διακομιστής δεν λειτουργεί"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -949,7 +953,7 @@ msgstr "Σύνδεση..."
 msgid "Manage Farming Rewards"
 msgstr "Διαχείριση Ανταμοιβών Συγκομιδής"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Διαχείριση Διευθύνσεων Επιβραβεύσεων Συγκομιδής"
 
@@ -1005,7 +1009,7 @@ msgstr "Ψευδώνυμο"
 msgid "No"
 msgstr "Όχι"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "Κανένα seed 24 λέξεων, καθώς αυτό το κλειδί έχει εισαχθεί."
 
@@ -1017,7 +1021,7 @@ msgstr "Κανένα block δεν έχει συγκομιστεί ακόμη"
 msgid "No previous transactions"
 msgstr "Δεν υπάρχουν προηγούμενες συναλλαγές"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:155
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Δεν υπάρχουν ιδιωτικά κλειδιά για μία ή και για τις δύο διευθύνσεις. Ασφαλής μόνο αν στέλνετε ανταμοιβές σε άλλο πορτοφόλιο."
 
@@ -1270,11 +1274,11 @@ msgstr "Public Key Πισίνας"
 msgid "Pool Puzzle Hash"
 msgstr "Puzzle Hash Πισίνας"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:168
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "Διεύθυνση Ανταμοιβής Ομίλου"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
 msgstr ""
 
@@ -1282,13 +1286,17 @@ msgstr ""
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Ποσό Ανταμοιβής Ομίλου"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1432,7 +1440,7 @@ msgstr "Επαναφορά μεταδεδομένων για έγχρωμα νο
 msgid "Safe To Skip"
 msgstr "Ασφαλής Παράλειψη"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:183
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Αποθήκευση"
@@ -1453,7 +1461,7 @@ msgstr "Δεύτερη τοποθεσία προσωρινού φακέλου"
 msgid "See private key"
 msgstr "Προβολή ιδιωτικού κλειδιού"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "Seed:"
 

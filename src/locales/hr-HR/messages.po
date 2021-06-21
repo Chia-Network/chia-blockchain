@@ -239,7 +239,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Može biti sigurnosno kopirano na \"mnemonic seed\""
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:180
+#: src/components/farm/FarmManageFarmingRewards.tsx:178
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -648,11 +648,11 @@ msgstr ""
 msgid "Farmer Puzzle Hash"
 msgstr "Zagonetni hash farmera"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:161
+#: src/components/farm/FarmManageFarmingRewards.tsx:159
 msgid "Farmer Reward Address"
 msgstr "Nagradna adresa farmera"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:132
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
 msgstr ""
 
@@ -660,7 +660,7 @@ msgstr ""
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:125
+#: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
@@ -673,6 +673,10 @@ msgstr "Farmer nije povezan"
 #: src/components/plot/PlotStatus.tsx:37
 msgid "Farmer is not running"
 msgstr "Farmer nije pokrenut"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -949,7 +953,7 @@ msgstr "Prijavljivanje"
 msgid "Manage Farming Rewards"
 msgstr "Upravljaj nagradama uzgoja"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Upravljaj odredišnim adresama za nagrade uzgoja"
 
@@ -1005,7 +1009,7 @@ msgstr "Nadimak"
 msgid "No"
 msgstr "Ne"
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:301
 msgid "No 24 word seed, since this key is imported."
 msgstr "Nema sjemena od 24 riječi, pošto je ovaj ključ uvezen."
 
@@ -1017,7 +1021,7 @@ msgstr "Još nema uzgojenih blokova"
 msgid "No previous transactions"
 msgstr "Nema prethodnih transakcija"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:155
+#: src/components/farm/FarmManageFarmingRewards.tsx:152
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Nema privatnih ključeva za jedno ili obje adrese. Sigurno je jedino ako šalješ nagrade na drugi novčanik."
 
@@ -1270,11 +1274,11 @@ msgstr "Javni ključ bazena"
 msgid "Pool Puzzle Hash"
 msgstr "Zagonetni hash bazena"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:168
+#: src/components/farm/FarmManageFarmingRewards.tsx:166
 msgid "Pool Reward Address"
 msgstr "Adresa za nagradu Bazena"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
 msgstr ""
 
@@ -1282,13 +1286,17 @@ msgstr ""
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Iznos nagrade Bazena"
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
@@ -1432,7 +1440,7 @@ msgstr "Povrati Meta podatke za Obojane Novčiće i druge Pametne Novčanike iz 
 msgid "Safe To Skip"
 msgstr "Sigurno za preskok"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:183
+#: src/components/farm/FarmManageFarmingRewards.tsx:181
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Spremi"
@@ -1453,7 +1461,7 @@ msgstr "Lokacija drugog privremenog direktorija"
 msgid "See private key"
 msgstr "Pogledaj privatni ključ"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
 msgstr "Sjeme:"
 

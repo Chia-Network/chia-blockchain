@@ -47,11 +47,10 @@ export default function FarmManageFarmingRewards(props: Props) {
   function checkAddress(stringToCheck: string) : boolean {
     try {
       bech32m.decode(stringToCheck);
-    }
-    catch(err) {
+      return true;
+    } catch(err) {
       return false;
-    } 
-    return true;
+    }
   }
 
   async function getCurrentValues() {
@@ -121,39 +120,38 @@ export default function FarmManageFarmingRewards(props: Props) {
                   <Alert severity="error">{error.message}</Alert>
                 )}
                 {errors.farmer_target && errors.farmer_target.type === "required" && (
-                  <Alert severity="error">"
+                  <Alert severity="error">
                     <Trans>
                       Farmer Reward Address must not be empty.
                     </Trans>
                   </Alert>
                 )}
                 {errors.farmer_target && errors.farmer_target.type === "validate" && (
-                  <Alert severity="error">"
+                  <Alert severity="error">
                     <Trans>
                       Farmer Reward Address is not properly formatted.
                     </Trans>
                   </Alert>
                 )}
-
                 {errors.pool_target && errors.pool_target.type === "required" && (
-                  <Alert severity="error">"
+                  <Alert severity="error">
                     <Trans>
                       Pool Reward Address must not be empty.
                     </Trans>
                   </Alert>
                 )}
                 {errors.pool_target && errors.pool_target.type === "validate" && (
-                  <Alert severity="error">"
+                  <Alert severity="error">
                     <Trans>
                       Pool Reward Address is not properly formatted.
                     </Trans>
                   </Alert>
                 )}
-
                 {showWarning && (
                   <Alert severity="warning">
                     <Trans>
-                      No private keys for one or both addresses. Safe only if you are sending rewards to another wallet.
+                      No private keys for one or both addresses.
+                      Safe only if you are sending rewards to another wallet.
                     </Trans>
                   </Alert>
                 )}
