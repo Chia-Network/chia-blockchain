@@ -8,15 +8,15 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-30 23:26\n"
+"PO-Revision-Date: 2021-06-21 17:51\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: hu\n"
-"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -65,11 +65,11 @@ msgstr "Hozzáadás"
 
 #: src/components/plot/PlotHeader.tsx:65
 msgid "Add Plot Directory"
-msgstr "Parcella könyvtár hozzáadása"
+msgstr "Plot könyvtár hozzáadása"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:69
 msgid "Add Plot to Queue"
-msgstr "Parcella hozzáadása a sorhoz"
+msgstr "Plot hozzáadása a sorhoz"
 
 #: src/components/wallet/Wallets.tsx:110
 msgid "Add Wallet"
@@ -80,7 +80,7 @@ msgstr "Tárca hozzáadása"
 #: src/components/plot/add/PlotAdd.tsx:80
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
 msgid "Add a Plot"
-msgstr "Parcella hozzáadása"
+msgstr "Plot hozzáadása"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:56
 msgid "Add a plot"
@@ -218,7 +218,7 @@ msgstr "Tallózás"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:70
 msgid "But you are currently farming <0/>"
-msgstr "De te jelenleg betakarítasz <0/>"
+msgstr "De te jelenleg farmolsz <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:45
@@ -642,7 +642,7 @@ msgstr "Farm"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
 msgid "Farmer Public Key"
-msgstr ""
+msgstr "Farmer nyilvános kulcsa"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -658,7 +658,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr ""
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
@@ -1284,7 +1284,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr ""
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
@@ -1577,11 +1577,11 @@ msgstr "Elérhető egyenleg"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr "Kiadási mennyiség (blokkok száma): {interval}"
+msgstr "Költési időszak (blokkok száma): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr "Kiadási mennyiség hossza (blokkok száma)"
+msgstr "Költési időszak hossza (blokkok száma)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
@@ -1590,7 +1590,7 @@ msgstr "Költési limit (chia / intervallum): {0}"
 
 #: src/components/fullNode/FullNode.jsx:95
 msgid "State"
-msgstr "Állapot"
+msgstr "Megye"
 
 #: src/components/fullNode/FullNode.jsx:105
 #: src/components/fullNode/FullNode.jsx:122
@@ -1638,7 +1638,7 @@ msgstr "Állapot:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
-msgstr "Küldés"
+msgstr "Elküldés"
 
 #: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
@@ -1648,7 +1648,7 @@ msgstr "Szinkronizálva"
 #: src/components/farm/card/FarmCardStatus.tsx:18
 #: src/components/plot/PlotStatus.tsx:18
 msgid "Syncing"
-msgstr "Szinkronizálás"
+msgstr "Szinkronizálás folyamatban"
 
 #: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing <0/>/<1/>"
@@ -1684,7 +1684,7 @@ msgstr "Szinkronizálás <0/>/<1/>"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
 msgid "Temporary folder location"
-msgstr "Az ideiglenes könyvtár helye"
+msgstr "Átmeneti könyvtár helye"
 
 #: src/components/app/AppTimeBomb.tsx:27
 msgid "The application will stop working at block height 193536."
@@ -1692,7 +1692,7 @@ msgstr "Az alkalmazás le fog állni 193536-os block magasságnál."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:91
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "Alább látható az összes csomópont, amelyhez a bányász csatlakozik. <0>További információ</0>"
+msgstr "A teljes node, melyhez a farmer csatlakozik. <0>További információ</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:27
 #: src/components/plot/add/PlotAddChooseSize.tsx:87
@@ -1701,15 +1701,15 @@ msgstr "A mainnet legkisebb megengedett mérete k=32"
 
 #: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
-msgstr "A csomópont nincs szinkronizálva"
+msgstr "A node nincs szinkronizálva"
 
 #: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "A csomópont szinkronizálás alatt van, ez azt jelenti, hogy más csomópontokról tölt le blokkokat, hogy elérje a láncolat utolsó blokkját"
+msgstr "A node szinkronizál, azaz más csomópontokról tölt le blokkokat amíg eléri a legfrissebb blokkot a blokkláncon"
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr "A cselekmény létrehozásához használt kód. Ez a \"pool\" pk-jától és a \"plot\" pk-jától függ."
+msgstr "A plot létrehozásához használt kulcskód. Ez a \"pool\" pk-jától és a \"plot\" pk-jától függ."
 
 #: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
@@ -1721,11 +1721,11 @@ msgstr "A VDF (ellenőrizhető késleltetési függvény) teljes száma vagy az 
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr "Az összes tranzakciós díjak ebben a blokkban. Bányászási jutalmak."
+msgstr "A tranzakciós díjak összesítve ebben a blokkban, mely a farmer jutalma."
 
 #: src/components/plot/PlotsFailed.tsx:38
 msgid "These plots are invalid, you might want to delete them."
-msgstr "Ezek a parcellák érvénytelenek, lehet, hogy törölni kellene ôket."
+msgstr "Ezek a plotok érvénytelenek, lehet, hogy törölni kellene ôket."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:60
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
@@ -1747,8 +1747,7 @@ msgstr "Ez a függőben lévő változás, amely olyan pénzérme, amelyet Ön k
 
 #: src/components/wallet/standard/WalletStandard.tsx:302
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
-"Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
+msgstr "Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
 "Nem tartalmazza a termesztési díjakat."
 
 #: src/components/fullNode/FullNode.jsx:174
@@ -1871,7 +1870,7 @@ msgstr "Kereskedés"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr "Korábbi kereskedések"
+msgstr "Kereskedési előzmények"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
@@ -2114,3 +2113,4 @@ msgstr "Teljes farmolt Chia mennyiség {currencyCode}"
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 msgid "{currencyCode} User Transaction Fees"
 msgstr "Felhasználói tranzakciós díjak {currencyCode}"
+
