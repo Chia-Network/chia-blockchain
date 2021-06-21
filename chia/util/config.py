@@ -33,7 +33,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path = config_path_for_filename(root_path, filename)
-    with open(path.with_suffix("." + str(os.getpid())), "w") as f:
+    with open(path.with_suffix("." + str(os.getpid())), "w", -1, 'utf-8') as f:
         yaml.safe_dump(config_data, f)
     shutil.move(str(path.with_suffix("." + str(os.getpid()))), path)
 
@@ -52,7 +52,7 @@ def load_config(
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
-    r = yaml.safe_load(open(path, "r"))
+    r = yaml.safe_load(open(path, "r", -1, 'utf-8'))
     if sub_config is not None:
         r = r.get(sub_config)
     return r
