@@ -1761,10 +1761,9 @@ class FullNode:
         vdf_proof: VDFProof,
         height: uint32,
         field_vdf: CompressibleVDFField,
-    ) -> bool:
+    ):
         full_blocks = await self.block_store.get_full_blocks_at([height])
         assert len(full_blocks) > 0
-        replaced = False
         for block in full_blocks:
             new_block = None
             block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
@@ -1799,12 +1798,11 @@ class FullNode:
                 if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
                     new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             if new_block is None:
-                continue
+                self.log.debug("did not replace any proof, vdf does not match")
+                return
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
-                replaced = True
-        return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
@@ -1813,10 +1811,7 @@ class FullNode:
         ):
             return None
         async with self.blockchain.compact_proof_lock:
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
-        if not replaced:
-            self.log.error(f"Could not replace compact proof: {request.height}")
-            return None
+            await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
@@ -1895,10 +1890,7 @@ class FullNode:
         async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
-            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
-        if not replaced:
-            self.log.error(f"Could not replace compact proof: {request.height}")
-            return None
+            await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),

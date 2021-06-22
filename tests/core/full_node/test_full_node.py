@@ -30,14 +30,14 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from tests.block_tools import get_signage_point
+from chia.util.block_tools import get_signage_point
 from chia.util.clvm import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.wallet_tools import WalletTool
+from chia.util.wallet_tools import WalletTool
 from tests.core.fixtures import empty_blockchain  # noqa: F401
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.transaction_record import TransactionRecord

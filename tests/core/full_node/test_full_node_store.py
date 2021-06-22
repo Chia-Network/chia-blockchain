@@ -16,7 +16,7 @@ from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
-from tests.block_tools import get_signage_point, BlockTools
+from chia.util.block_tools import get_signage_point, BlockTools
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.core.fixtures import default_1000_blocks, create_blockchain  # noqa: F401

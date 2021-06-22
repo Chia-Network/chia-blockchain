@@ -16,7 +16,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_tools import get_signage_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
-from tests.wallet_tools import WalletTool
+from chia.util.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert

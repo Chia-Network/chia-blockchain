@@ -18,7 +18,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint64, uint32
-from tests.wallet_tools import WalletTool
+from chia.util.wallet_tools import WalletTool
 from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
 

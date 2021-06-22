@@ -65,7 +65,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.wallet_tools import WalletTool
+from chia.util.wallet_tools import WalletTool
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,

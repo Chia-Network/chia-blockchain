@@ -370,5 +370,5 @@ class TestFullSync:
             s.new_sub_slot_iters * 2,
         )
         await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
-        log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
-        assert node_height_exactly(full_node_2, 320)
+        log.warning(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
+        assert node_height_between(full_node_2, 320, 400)
