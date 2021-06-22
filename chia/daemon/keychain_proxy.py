@@ -1,12 +1,12 @@
 import logging
 import ssl
 
-from blspy import G1Element, PrivateKey
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import KEYCHAIN_ERR_LOCKED, KEYCHAIN_ERR_NO_KEYS
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
-from chia.util.keychain import Keychain, KeyringIsLocked, supports_keyring_password
+from chia.util.keychain import Keychain, KeyringIsLocked, bytes_to_mnemonic, mnemonic_to_seed, supports_keyring_password
 from pathlib import Path
 from typing import Optional
 
@@ -16,7 +16,7 @@ class KeyringIsEmpty(Exception):
 
 
 class KeychainProxy(DaemonProxy):
-    keychain: Keychain  # If the keyring doesn't support a master password, we'll proxy calls locally
+    keychain: Keychain = None  # If the keyring doesn't support a master password, we'll proxy calls locally
     log: logging.Logger
 
     def __init__(self, uri: str, ssl_context: Optional[ssl.SSLContext], log: logging.Logger):
@@ -25,28 +25,52 @@ class KeychainProxy(DaemonProxy):
             self.keychain = Keychain()  # Proxy locally, don't use RPC
         super().__init__(uri, ssl_context)
 
+    def use_local_keychain(self) -> bool:
+        return self.keychain is not None
+
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
-        data = {"fingerprint": fingerprint}
-        request = self.format_request("get_key_for_fingerprint", data)
-        response = await self._get(request)
         key: Optional[PrivateKey] = None
-        success = response["data"].get("success", False)
-        if success:
-            pk = response["data"].get("private_key", None)
-            if not pk:
-                self.log.error("Missing pk in get_key_for_fingerprint response")
-                return None
-            key = G1Element.from_bytes(bytes.fromhex(pk))
-        else:
-            error = response["data"].get("error", None)
-            if error:
-                if error == KEYCHAIN_ERR_LOCKED:
-                    raise KeyringIsLocked()
-                elif error == KEYCHAIN_ERR_NO_KEYS:
-                    raise KeyringIsEmpty()
+        if self.use_local_keychain():
+            private_keys = self.keychain.get_all_private_keys()
+            if len(private_keys) == 0:
+                self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
+            else:
+                if fingerprint is not None:
+                    for sk, _ in private_keys:
+                        if sk.get_g1().get_fingerprint() == fingerprint:
+                            key = sk
+                            break
                 else:
-                    self.log.error(f"get_key_for_fingerprint failed with error: {error}")
-                    raise Exception(error)
+                    key = private_keys[0][0]
+        else:
+            data = {"fingerprint": fingerprint}
+            request = self.format_request("get_key_for_fingerprint", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if success:
+                pk = response["data"].get("private_key", None)
+                ent = response["data"].get("entropy", None)
+                if not pk or not ent:
+                    self.log.error("Missing pk and/or ent in get_key_for_fingerprint response")
+                else:
+                    mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
+                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    private_key = AugSchemeMPL.key_gen(seed)
+                    if bytes(private_key.get_g1()).hex() == pk:
+                        key = private_key
+                    else:
+                        self.log.error("G1Elements don't match")
+                        raise Exception("G1Elements don't match")
+            else:
+                error = response["data"].get("error", None)
+                if error:
+                    if error == KEYCHAIN_ERR_LOCKED:
+                        raise KeyringIsLocked()
+                    elif error == KEYCHAIN_ERR_NO_KEYS:
+                        raise KeyringIsEmpty()
+                    else:
+                        self.log.error(f"get_key_for_fingerprint failed with error: {error}")
+                        raise Exception(error)
 
         return key
 

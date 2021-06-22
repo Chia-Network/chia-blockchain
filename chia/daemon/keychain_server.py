@@ -31,12 +31,13 @@ class KeychainServer:
 
         fingerprint = request.get("fingerprint", None)
         private_key: Optional[PrivateKey] = None
+        entropy: Optional[bytes] = None
         if fingerprint is not None:
-            for sk, _ in private_keys:
+            for sk, entropy in private_keys:
                 if sk.get_g1().get_fingerprint() == fingerprint:
                     private_key = sk
                     break
         else:
-            private_key = private_keys[0][0]
+            private_key, entropy = private_keys[0]
 
-        return {"success": True, "private_key": bytes(private_key.get_g1()).hex()}
+        return {"success": True, "private_key": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
