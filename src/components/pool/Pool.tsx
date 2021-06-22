@@ -6,6 +6,7 @@ import LayoutMain from '../layout/LayoutMain';
 import PoolOverview from './PoolOverview';
 import PlotNFTAdd from '../plotNFT/PlotNFTAdd';
 import PlotNFTChangePool from '../plotNFT/PlotNFTChangePool';
+import PlotNFTAbsorbRewards from '../plotNFT/PlotNFTAbsorbRewards';
 import { PoolHeaderTarget }  from './PoolHeader';
 import usePlotNFTs from '../../hooks/usePlotNFTs';
 import { PoolHeaderSource } from './PoolHeader';
@@ -32,11 +33,14 @@ export default function Pool() {
           <Route path={path} exact>
             <PoolOverview />
           </Route>
-          <Route path={`${path}/add`}>
+          <Route path={`${path}/add`} exact>
             <PlotNFTAdd headerTag={PoolHeaderSource} />
           </Route>
-          <Route path={`${path}/:plotNFTId/change-pool`}>
+          <Route path={`${path}/:plotNFTId/change-pool`} exact>
             <PlotNFTChangePool headerTag={PoolHeaderSource} />
+          </Route>
+          <Route path={`${path}/:plotNFTId/absorb-rewards`} exact>
+            <PlotNFTAbsorbRewards headerTag={PoolHeaderSource} />
           </Route>
         </Switch>
       </Flex>

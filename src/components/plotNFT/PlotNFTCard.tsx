@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
-import { TooltipTypography, AlertDialog, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber } from '@chia/core';
+import { TooltipTypography, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber } from '@chia/core';
 import {
   Box,
   Button,
@@ -17,13 +17,11 @@ import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
 import WalletStatus from '../wallet/WalletStatus';
-import useAbsorbRewards from '../../hooks/useAbsorbRewards';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
-import useOpenDialog from '../../hooks/useOpenDialog';
 import PoolJoin from '../pool/PoolJoin';
+import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
 import { mojo_to_chia } from '../../util/chia';
-
 
 const StyledCard = styled(Card)`
   display: flex;
@@ -63,34 +61,7 @@ export default function PlotNFTCard(props: Props) {
   } = props;
 
   const history = useHistory();
-  const openDialog = useOpenDialog();
-  const absorbRewards = useAbsorbRewards(nft);
-  const { isSelfPooling, canEdit, isSynced, plots, balance } = usePlotNFTDetails(nft);
-
-  async function handleClaimRewards() {
-    if (!canEdit) {
-      return;
-    }
-
-    return absorbRewards();
-  }
-
-  async function handleJoinPool() {
-    if (!canEdit) {
-      return;
-    }
-
-    if (isSelfPooling && balance) {
-      await openDialog(
-        <AlertDialog>
-          <Trans>You need to claim your rewards first</Trans>
-        </AlertDialog>,
-      );
-      return;
-    }
-
-    history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/change-pool`);
-  }
+  const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
 
   function handleAddPlot() {
     history.push({
@@ -216,18 +187,22 @@ export default function PlotNFTCard(props: Props) {
             <Grid container spacing={1}>
               {isSelfPooling && (
                 <Grid container xs={6} item>
-                  <Button
-                    variant="contained"
-                    onClick={handleClaimRewards}
-                    disabled={!canEdit}
-                    fullWidth
-                  >
-                    <Flex flexDirection="column" gap={0}>
-                      <Typography variant="body1">
-                        <Trans>Claim Rewards</Trans>
-                      </Typography>
-                    </Flex>
-                  </Button>
+                  <PoolAbsorbRewards nft={nft}>
+                    {({ absorb, disabled }) => (
+                      <Button
+                        variant="contained"
+                        onClick={absorb}
+                        disabled={disabled}
+                        fullWidth
+                      >
+                        <Flex flexDirection="column" gap={0}>
+                          <Typography variant="body1">
+                            <Trans>Claim Rewards</Trans>
+                          </Typography>
+                        </Flex>
+                      </Button>
+                    )}
+                  </PoolAbsorbRewards>
                 </Grid>
               )}
 

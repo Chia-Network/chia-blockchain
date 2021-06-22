@@ -196,7 +196,7 @@ export default function CreateOffer() {
                   wallet_id = input;
                 }}
               >
-                {wallets.map((wallet) => (
+                {!!wallets && wallets.map((wallet) => (
                   <MenuItem value={wallet.id} key={wallet.id}>{wallet.name}</MenuItem>
                 ))}
               </Select>

@@ -3,6 +3,7 @@ import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton } from '@chia/core';
 import PlotNFTSelectBase from './PlotNFTSelectBase';
+import normalizeUrl from '../../../util/normalizeUrl';
 import getPoolInfo from '../../../util/getPoolInfo';
 import InitialTargetState from '../../../types/InitialTargetState';
 import { chia_to_mojo } from '../../../util/chia';
@@ -19,7 +20,8 @@ async function prepareSubmitData(data: FormData): SubmitData {
   };
 
   if (!self && poolUrl) {
-    const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(poolUrl);
+    const normalizedPoolUrl = normalizeUrl(poolUrl);
+    const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(normalizedPoolUrl);
     if (!target_puzzle_hash) {
       throw new Error(t`Pool does not provide target_puzzle_hash.`);
     }
@@ -27,7 +29,7 @@ async function prepareSubmitData(data: FormData): SubmitData {
       throw new Error(t`Pool does not provide relative_lock_height.`);
     }
 
-    initialTargetState.pool_url = poolUrl;
+    initialTargetState.pool_url = normalizedPoolUrl;
     initialTargetState.target_puzzle_hash = target_puzzle_hash;
     initialTargetState.relative_lock_height = relative_lock_height;
   }

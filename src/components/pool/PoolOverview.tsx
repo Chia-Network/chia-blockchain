@@ -15,7 +15,7 @@ import PlotNFTCard from '../plotNFT/PlotNFTCard';
 import PlotNFTName from '../plotNFT/PlotNFTName';
 import PlotNFTState from '../plotNFT/PlotNFTState';
 import PoolWalletStatus from '../wallet/WalletStatus';
-import PlotNFTAbsorbRewards from '../plotNFT/PlotNFTAbsorbRewards';
+import PoolAbsorbRewards from './PoolAbsorbRewards';
 import PoolJoin from './PoolJoin';
 import PoolHero from './PoolHero';
 import type PlotNFT from '../../types/PlotNFT';
@@ -68,9 +68,9 @@ const groupsCols = [
           {({ onClose }) => (
             <Box>
               {isSelfPooling && (
-                <PlotNFTAbsorbRewards nft={nft}>
-                  {(absorbRewards) => (
-                    <MenuItem onClick={() => { onClose(); absorbRewards(); }}>
+                <PoolAbsorbRewards nft={nft}>
+                  {({ absorb, disabled }) => (
+                    <MenuItem onClick={() => { onClose(); absorb(); }} disabled={disabled}>
                       <ListItemIcon>
                         <PaymentIcon fontSize="small" />
                       </ListItemIcon>
@@ -79,7 +79,7 @@ const groupsCols = [
                       </Typography>
                     </MenuItem>
                   )}
-                </PlotNFTAbsorbRewards>
+                </PoolAbsorbRewards>
               )}
 
               <PoolJoin nft={nft}>

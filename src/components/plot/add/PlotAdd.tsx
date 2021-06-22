@@ -88,7 +88,13 @@ export default function PlotAdd() {
         // create nft
         const nftData = await addNFTref.current?.getSubmitData();
 
-        const { fee, initialTargetState } = nftData;
+        const { 
+          fee, 
+          initialTargetState,
+          initialTargetState: {
+            state,
+          },
+         } = nftData;
         const { success, error, transaction, p2_singleton_puzzle_hash } = await dispatch(createPlotNFT(initialTargetState, fee));
         if (!success) {
           throw new Error(error ?? t`Unable to create plot NFT`);
@@ -100,7 +106,7 @@ export default function PlotAdd() {
 
         unconfirmedNFTs.add({
           transactionId: transaction.name,
-          state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+          state: state === 'SELF_POOLING' ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
           poolUrl: initialTargetState.pool_url,
         });
   

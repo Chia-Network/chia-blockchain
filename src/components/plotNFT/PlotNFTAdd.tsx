@@ -9,12 +9,6 @@ import PlotNFTState from '../../constants/PlotNFTState';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
 import PlotNFTSelectPool, { SubmitData } from './select/PlotNFTSelectPool';
 
-type FormData = {
-  self: boolean;
-  poolUrl?: string;
-  fee?: string | number;
-};
-
 type Props = {
   headerTag?: ReactNode;
 }
@@ -26,12 +20,18 @@ export default function PlotNFTAdd(props: Props) {
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
 
   async function handleSubmit(data: SubmitData) {
-    const { fee, initialTargetState } = data;
+    const { 
+      fee, 
+      initialTargetState,
+      initialTargetState: {
+        state,
+      },
+    } = data;
     const { success, transaction } = await dispatch(createPlotNFT(initialTargetState, fee));
     if (success) {
       unconfirmedNFTs.add({
         transactionId: transaction.name,
-        state: self ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+        state: state === 'SELF_POOLING' ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
         poolUrl: initialTargetState.pool_url,
       });
 

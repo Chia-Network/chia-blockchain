@@ -226,21 +226,19 @@ type BalanceCardProps = {
 };
 
 function BalanceCard(props: BalanceCardProps) {
-  const id = props.wallet_id;
-  const balance = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].balance_total,
-  );
-  const balance_spendable = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].balance_spendable,
-  );
-  const balance_pending = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].balance_pending,
+  const { wallet_id } = props;
+
+  const wallet = useSelector(
+    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
 
-  const balance_change = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].balance_change,
-  );
+  const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
+  const balance_spendable = wallet?.wallet_balance?.spendable_balance;
+  const balance_pending = wallet?.wallet_balance?.pending_balance;
+  const pending_change = wallet?.wallet_balance?.pending_change;
+
   const balance_ptotal = balance + balance_pending;
+
   const classes = useStyles();
 
   return (
@@ -308,7 +306,7 @@ function BalanceCard(props: BalanceCardProps) {
                   />
                   <BalanceCardSubSection
                     title={<Trans>Pending Change</Trans>}
-                    balance={balance_change}
+                    balance={pending_change}
                     tooltip={
                       <Trans>
                         This is the pending change, which are change coins which
@@ -332,24 +330,26 @@ type SendCardProps = {
 };
 
 function SendCard(props: SendCardProps) {
-  const id = props.wallet_id;
+  const { wallet_id } = props;
   const classes = useStyles();
   let address_input: HTMLInputElement;
   let amount_input: HTMLInputElement;
   let fee_input: HTMLInputElement;
   const dispatch = useDispatch();
 
-  const sending_transaction = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].sending_transaction,
-  );
-
-  const send_transaction_result = useSelector(
-    (state: RootState) =>
-      state.wallet_state.wallets[id].send_transaction_result,
-  );
   const syncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
+
+  const wallet = useSelector(
+    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
+  );
+
+  if (!wallet) {
+    return null;
+  }
+
+  const { sending_transaction, send_transaction_result } = wallet;
 
   const result = get_transaction_result(send_transaction_result);
   const result_message = result.message;
@@ -431,7 +431,7 @@ function SendCard(props: SendCardProps) {
     const amount_value = Number.parseFloat(amount);
     const fee_value = Number.parseFloat(fee);
 
-    dispatch(send_transaction(id, amount_value, fee_value, address));
+    dispatch(send_transaction(wallet_id, amount_value, fee_value, address));
     address_input.value = '';
     amount_input.value = '';
     fee_input.value = '';
@@ -537,15 +537,22 @@ type AddressCardProps = {
 };
 
 function AddressCard(props: AddressCardProps) {
-  const id = props.wallet_id;
-  const address = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].address,
-  );
+  const { wallet_id } = props;
+
   const classes = useStyles();
   const dispatch = useDispatch();
+  const wallet = useSelector(
+    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
+  );
+
+  if (!wallet) {
+    return null;
+  }
+
+  const { address } = wallet;
 
   function newAddress() {
-    dispatch(get_address(id, true));
+    dispatch(get_address(wallet_id, true));
   }
 
   function copy() {
@@ -609,19 +616,14 @@ type StandardWalletProps = {
 };
 
 export default function StandardWallet(props: StandardWalletProps) {
-  const id = props.wallet_id;
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const { wallet_id } = props;
 
-  if (wallets.length > props.wallet_id) {
-    return (
-      <Flex flexDirection="column" gap={3}>
-        <BalanceCard wallet_id={id} />
-        <SendCard wallet_id={id} />
-        <AddressCard wallet_id={id} />
-        <WalletHistory walletId={id} />
-      </Flex>
-    );
-  }
-
-  return null;
+  return (
+    <Flex flexDirection="column" gap={3}>
+      <BalanceCard wallet_id={wallet_id} />
+      <SendCard wallet_id={wallet_id} />
+      <AddressCard wallet_id={wallet_id} />
+      <WalletHistory walletId={wallet_id} />
+    </Flex>
+  );
 }

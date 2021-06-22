@@ -51,7 +51,11 @@ export default function PlotNFTChangePool(props: Props) {
       await dispatch(pwJoinPool(walletId, pool_url, relative_lock_height, target_puzzle_hash));
     }
 
-    history.push('/dashboard/pool');
+    if (history.length) {
+      history.goBack();
+    } else {
+      history.push('/dashboard/pool');
+    }
   }
 
   if (loading) {

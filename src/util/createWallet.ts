@@ -1,13 +1,13 @@
 import type WalletType from '../constants/WalletType';
 import type Wallet from '../types/Wallet';
 
-// export const initial_wallet = createWallet(0, "Chia Wallet", "STANDARD_WALLET", "");
-
+// deprecated
 export default function createWallet(
   id: number,
   name: string,
   type: WalletType,
   data: Object,
+  details?: Object,
 ): Wallet {
   return {
     id,
@@ -29,5 +29,6 @@ export default function createWallet(
     did_attest: '',
     sending_transaction: false,
     send_transaction_result: '',
+    ...details,
   };
 }

@@ -198,20 +198,25 @@ type ColourCardProps = {
 };
 
 function ColourCard(props: ColourCardProps) {
-  const id = props.wallet_id;
+  const { wallet_id } = props;
 
   const dispatch = useDispatch();
-  const colour = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].colour,
+
+  const wallet = useSelector(
+    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
-  const name = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].name,
-  );
+
+  if (!wallet) {
+    return null
+  }
+
+  const { name, colour } = wallet;
+
 
   let name_input: HTMLInputElement;
 
   function rename() {
-    dispatch(rename_cc_wallet(id, name_input.value));
+    dispatch(rename_cc_wallet(wallet_id, name_input.value));
   }
 
   const classes = useStyles();
@@ -713,7 +718,7 @@ type ColouredWalletProps = {
 
 export default function ColouredWallet(props: ColouredWalletProps) {
   const id = useSelector((state: RootState) => state.wallet_menu.id);
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets ?? []);
 
   if (wallets.length > props.wallet_id) {
     return (

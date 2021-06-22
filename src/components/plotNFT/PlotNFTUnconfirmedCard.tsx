@@ -48,6 +48,8 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
     }
   }, [transaction?.confirmed]);
 
+  console.log('state', state);
+
   return (
     <StyledCard>
       <StyledCardContent>
@@ -56,7 +58,7 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
             <Typography variant="h6" align="center">
               {state === PlotNFTState.SELF_POOLING
                 ? <Trans>Creating Plot NFT for Self Pooling</Trans>
-                : <Trans>Creating Plot NFT and Joining the Pool {poolUrl}</Trans>}
+                : <Trans>Creating Plot NFT and Joining the Pool</Trans>}
             </Typography>
             {state === PlotNFTState.FARMING_TO_POOL && (
               <Typography variant="body1" align="center">

@@ -986,7 +986,7 @@ const HistoryCard = (props) => {
 export default function DistributedWallet(props) {
   const classes = useStyles();
   const id = useSelector((state) => state.wallet_menu.id);
-  const wallets = useSelector((state) => state.wallet_state.wallets);
+  const wallets = useSelector((state) => state.wallet_state.wallets ?? []);
   const data = useSelector((state) => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
   console.log('DID DATA PARSED');

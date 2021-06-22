@@ -73,14 +73,23 @@ type Props = {
 
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
-  const type = useSelector(
-    (state: RootState) => state.wallet_state.wallets[walletId].type,
+  const wallet = useSelector(
+    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === walletId),
   );
-  const transactions = useSelector(
-    (state: RootState) => state.wallet_state.wallets[walletId].transactions,
-  );
-  const cols = useMemo(() => getCols(type), [type]);
 
+  const cols = useMemo(() => {
+    if (!wallet) {
+      return [];
+    }
+
+    return getCols(wallet.type) 
+  }, [wallet?.type]);
+
+  if (!wallet) {
+    return null;
+  }
+
+  const { transactions } = wallet;
   const sortedTransactions = transactions && orderBy(transactions, (row) => row.created_at_time, 'desc');
 
   return (

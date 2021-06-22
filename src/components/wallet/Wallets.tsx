@@ -39,51 +39,40 @@ const StyledList = styled(List)`
 const WalletItem = (props: any) => {
   const dispatch = useDispatch();
   const history = useHistory();
-  const id = props.wallet_id;
+  const { wallet_id } = props;
 
   const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets[Number(id)],
+    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
-  let name = useSelector(
-    (state: RootState) => state.wallet_state.wallets[Number(id)].name,
-  );
-  if (!name) {
-    name = '';
+
+  if (!wallet) {
+    return null;
   }
 
+  let { name = '' } = wallet;
+  const { id, type } = wallet;
+
   let mainLabel = <></>;
-  if (wallet.type === WalletType.STANDARD_WALLET) {
+  if (type === WalletType.STANDARD_WALLET) {
     mainLabel = <Trans>Chia Wallet</Trans>;
     name = 'Chia';
-  } else if (wallet.type === WalletType.COLOURED_COIN) {
+  } else if (type === WalletType.COLOURED_COIN) {
     mainLabel = <Trans>CC Wallet</Trans>;
-    if (name.length > 18) {
-      name = name.slice(0, 18);
-      name = name.concat('...');
-    }
-  } else if (wallet.type === WalletType.RATE_LIMITED) {
+  } else if (type === WalletType.RATE_LIMITED) {
     mainLabel = <Trans>RL Wallet</Trans>;
-    if (name.length > 18) {
-      name = name.slice(0, 18);
-      name = name.concat('...');
-    }
-  } else if (wallet.type === WalletType.DISTRIBUTED_ID) {
+  } else if (wtype === WalletType.DISTRIBUTED_ID) {
     mainLabel = <Trans>DID Wallet</Trans>;
-    if (name.length > 18) {
-      name = name.slice(0, 18);
-      name = name.concat('...');
-    }
   }
 
   function presentWallet() {
-    if (wallet.type === WalletType.STANDARD_WALLET) {
-      dispatch(changeWalletMenu(standardWallet, wallet.id));
-    } else if (wallet.type === WalletType.COLOURED_COIN) {
-      dispatch(changeWalletMenu(CCWallet, wallet.id));
-    } else if (wallet.type === WalletType.RATE_LIMITED) {
-      dispatch(changeWalletMenu(RLWallet, wallet.id));
-    } else if (wallet.type === WalletType.DISTRIBUTED_ID) {
-      dispatch(changeWalletMenu(DIDWallet, wallet.id));
+    if (type === WalletType.STANDARD_WALLET) {
+      dispatch(changeWalletMenu(standardWallet, id));
+    } else if (type === WalletType.COLOURED_COIN) {
+      dispatch(changeWalletMenu(CCWallet, id));
+    } else if (type === WalletType.RATE_LIMITED) {
+      dispatch(changeWalletMenu(RLWallet, id));
+    } else if (type === WalletType.DISTRIBUTED_ID) {
+      dispatch(changeWalletMenu(DIDWallet, id));
     }
 
     history.push('/dashboard/wallets');
@@ -168,9 +157,9 @@ export default function Wallets() {
   const { path } = useRouteMatch();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const id = useSelector((state: RootState) => state.wallet_menu.id);
-  const wallet = wallets.find((wallet) => wallet && wallet.id === id);
+  const wallet = wallets?.find((wallet) => wallet && wallet.id === id);
   const visibleWallets = useMemo(() => {
-    return wallets.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET);
+    return wallets?.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET) ?? [];
   }, [wallets]);
 
   return (

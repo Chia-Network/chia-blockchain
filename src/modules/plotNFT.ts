@@ -20,7 +20,7 @@ export function getPlotNFTs() {
     ]);
 
     // filter pool wallets
-    const poolWallets = wallets.filter((wallet) => wallet.type === WalletType.POOLING_WALLET);
+    const poolWallets = wallets?.filter((wallet) => wallet.type === WalletType.POOLING_WALLET) ?? [];
 
     const [
       poolWalletStates,
@@ -76,8 +76,6 @@ export function pwAbsorbRewards(walletId: number, fee?: string) {
       pwAbsorbRewardsMessage(walletId, fee),
       false,
     );
-
-    console.log('pwAbsorbRewards response', data);
 
     await dispatch(getPlotNFTs());
 
