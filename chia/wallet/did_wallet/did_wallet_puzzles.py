@@ -22,9 +22,11 @@ def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_ne
     return DID_INNERPUZ_MOD.curry(pubkey, backup_ids_hash, num_of_backup_ids_needed)
 
 
-def create_fullpuz(innerpuz, genesis_id) -> Program:
+def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    return SINGLETON_TOP_LAYER_MOD.curry(mod_hash, genesis_id, LAUNCHER_PUZZLE.get_tree_hash(), innerpuz)
+    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+    singleton_struct = Program.to((mod_hash, (genesis_id, LAUNCHER_PUZZLE.get_tree_hash())))
+    return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:

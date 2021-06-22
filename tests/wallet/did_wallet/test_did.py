@@ -1,4 +1,3 @@
-"""
 import asyncio
 import time
 import pytest
@@ -28,7 +27,8 @@ def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
 
-class XTestDIDWallet:
+
+class TestDIDWallet:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
@@ -629,4 +629,3 @@ class XTestDIDWallet:
         # Assert coin ID is failing
         await time_out_assert(15, wallet.get_confirmed_balance, 23999999999899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 23999999999899)
-"""

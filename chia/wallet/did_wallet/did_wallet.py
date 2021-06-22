@@ -755,15 +755,15 @@ class DIDWallet:
     async def recovery_spend(
         self,
         coin: Coin,
-        puzhash: bytes,
+        puzhash: bytes32,
         parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
         pubkey: G1Element,
         spend_bundle: SpendBundle,
     ) -> SpendBundle:
         assert self.did_info.origin_coin is not None
 
-        # innersol is (mode amount new_puz my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
-        innersol = Program.to(
+        # innersol is mode new_amount message new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
+        innersol: Program = Program.to(
             [
                 2,
                 coin.amount,
@@ -775,7 +775,7 @@ class DIDWallet:
             ]
         )
         # full solution is (parent_info my_amount solution)
-        innerpuz = self.did_info.current_inner
+        innerpuz: Program = self.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
@@ -939,7 +939,7 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         # innerpuz solution is (mode amount message new_puzhash)
         innersol = Program.to([1, coin.amount, [], innerpuz.get_tree_hash()])
-        # full solution is (parent_info my_amount innersolution)
+        # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [
                 [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
