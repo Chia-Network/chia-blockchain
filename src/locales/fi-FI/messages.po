@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:51\n"
+"PO-Revision-Date: 2021-06-22 17:52\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -642,7 +642,7 @@ msgstr "Farmi"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:254
 msgid "Farmer Public Key"
-msgstr ""
+msgstr "Farmarin Julkinen Avain"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
@@ -654,7 +654,7 @@ msgstr "Farmaripalkkio-osoite"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
-msgstr ""
+msgstr "Farmarin palkkio-osoitteen formaatti on väärä."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -662,7 +662,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
-msgstr ""
+msgstr "Farmarin Palkkio-osoite on pakollinen."
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -676,7 +676,7 @@ msgstr "Farmari ei ole käynnissä"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Farmarin julkinen avain:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1280,7 +1280,7 @@ msgstr "Poolin Palkkio-osoite"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "Poolin palkkio-osoitteen formaatti on väärä."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1288,7 +1288,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "Poolin Palkkio-osoite on pakollinen."
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1296,7 +1296,7 @@ msgstr "Poolin Palkkiosumma"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Poolin julkinen avain:"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
