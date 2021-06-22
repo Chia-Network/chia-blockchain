@@ -23,7 +23,7 @@ from chia.types.coin_solution import CoinSolution
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
-from chia.util.block_tools import BlockTools, test_constants
+from tests.block_tools import BlockTools, test_constants
 from chia.util.errors import Err
 from chia.util.ints import uint32
 
