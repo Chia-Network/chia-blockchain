@@ -171,4 +171,11 @@ jobs:
     - name: Mark installer complete
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/chia-blockchain/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows
+        $headers = @{
+            Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
+        }
+        $data = @{
+            chia_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
+        }
+        $json = $data | ConvertTo-Json
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/chia-blockchain/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
