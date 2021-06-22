@@ -16,7 +16,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -257,7 +257,7 @@ async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     wallet_id = args.get("id", None)
     prompt = args.get("yes", False)
 
-    msg = f"Will start self-farming with Plot NFT {fingerprint}."
+    msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
     func = functools.partial(wallet_client.pw_self_pool, wallet_id)
     await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint)
 
@@ -266,3 +266,13 @@ async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     wallet_id = args.get("id", None)
     pool_wallet_info: PoolWalletInfo = await wallet_client.pw_status(wallet_id)
     print(pool_wallet_info)
+
+
+async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args.get("id", None)
+    msg = f"\nWill claim rewards for wallet ID: {wallet_id}."
+    func = functools.partial(
+        wallet_client.pw_absorb_rewards,
+        wallet_id,
+    )
+    await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint)

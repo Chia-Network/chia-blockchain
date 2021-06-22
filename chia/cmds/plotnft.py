@@ -121,3 +121,22 @@ def inspect(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
 
     extra_params = {"id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, inspect_cmd))
+
+
+@plotnft_cmd.command("claim", short_help="Claim rewards from a plot NFT")
+@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+def claim(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet
+    from .plotnft_funcs import claim_cmd
+
+    extra_params = {"id": id}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, claim_cmd))
