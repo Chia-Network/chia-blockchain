@@ -33,20 +33,16 @@
       )
     )
 
-    (defun-inline mod-hash-for-singleton-struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
-    (defun-inline launcher-id-for-singleton-struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
-    (defun-inline launcher-puzzle-hash-for-singleton-struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
-
-    (defun-inline tree-hash-of-singleton-struct (SINGLETON_STRUCT)
-        (sha256tree1 SINGLETON_STRUCT)
-    )
+    (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
+    (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
+    (defun-inline launcher_puzzle_hash_for_singleton_struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-     (puzzle-hash-of-curried-function (mod-hash-for-singleton-struct SINGLETON_STRUCT)
+     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
                                       inner_puzzle_hash
-                                      (tree-hash-of-singleton-struct SINGLETON_STRUCT)
+                                      (sha256tree1 SINGLETON_STRUCT)
      )
   )
 
@@ -138,8 +134,8 @@
   (defun stager_two (SINGLETON_STRUCT lineage_proof full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
     (if (r (r lineage_proof))
       (stager_three SINGLETON_STRUCT lineage_proof (create_my_ID SINGLETON_STRUCT full_puzhash (f lineage_proof) (f (r lineage_proof)) (f (r (r lineage_proof))) my_amount) full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
-      (if (= (launcher-id-for-singleton-struct SINGLETON_STRUCT) (sha256 (f lineage_proof) (launcher-puzzle-hash-for-singleton-struct SINGLETON_STRUCT) (f (r lineage_proof))))
-        (stager_three SINGLETON_STRUCT lineage_proof (sha256 (launcher-id-for-singleton-struct SINGLETON_STRUCT) full_puzhash my_amount) full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
+      (if (= (launcher_id_for_singleton_struct SINGLETON_STRUCT) (sha256 (f lineage_proof) (launcher_puzzle_hash_for_singleton_struct SINGLETON_STRUCT) (f (r lineage_proof))))
+        (stager_three SINGLETON_STRUCT lineage_proof (sha256 (launcher_id_for_singleton_struct SINGLETON_STRUCT) full_puzhash my_amount) full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
         (x)
       )
     )
