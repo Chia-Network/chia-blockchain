@@ -148,10 +148,9 @@ def parse_aggsig(args: SExp) -> List[bytes]:
 def parse_create_coin(args: SExp) -> List[bytes]:
     puzzle_hash = args.first().atom
     args = args.rest()
-    amount = args.first().atom
     if len(puzzle_hash) != 32:
         raise ValidationError(Err.INVALID_CONDITION)
-    amount_int = int_from_bytes(amount)
+    amount_int = args.first().as_int()
     if amount_int >= 2 ** 64:
         raise ValidationError(Err.COIN_AMOUNT_EXCEEDS_MAXIMUM)
     if amount_int < 0:
@@ -162,8 +161,7 @@ def parse_create_coin(args: SExp) -> List[bytes]:
 
 
 def parse_seconds(args: SExp, error_code: Err) -> Optional[List[bytes]]:
-    seconds = args.first().atom
-    seconds_int = int_from_bytes(seconds)
+    seconds_int = args.first().as_int()
     # this condition is inherently satisified, there is no need to keep it
     if seconds_int <= 0:
         return None
@@ -175,8 +173,7 @@ def parse_seconds(args: SExp, error_code: Err) -> Optional[List[bytes]]:
 
 
 def parse_height(args: SExp, error_code: Err) -> Optional[List[bytes]]:
-    height = args.first().atom
-    height_int = int_from_bytes(height)
+    height_int = args.first().as_int()
     # this condition is inherently satisified, there is no need to keep it
     if height_int <= 0:
         return None
@@ -188,8 +185,7 @@ def parse_height(args: SExp, error_code: Err) -> Optional[List[bytes]]:
 
 
 def parse_fee(args: SExp) -> List[bytes]:
-    fee = args.first().atom
-    fee_int = int_from_bytes(fee)
+    fee_int = args.first().as_int()
     if fee_int >= 2 ** 64 or fee_int < 0:
         raise ValidationError(Err.RESERVE_FEE_CONDITION_FAILED)
     # note that this may change the representation of the fee. If the original
@@ -212,8 +208,7 @@ def parse_hash(args: SExp, error_code: Err) -> List[bytes]:
 
 
 def parse_amount(args: SExp) -> List[bytes]:
-    amount = args.first().atom
-    amount_int = int_from_bytes(amount)
+    amount_int = args.first().as_int()
     if amount_int < 0:
         raise ValidationError(Err.ASSERT_MY_AMOUNT_FAILED)
     if amount_int >= 2 ** 64:
