@@ -64,7 +64,7 @@
     )
   )
 
-  (defun morph_condition (condition SINGLETON_STRUCT)
+  (defun-inline morph_condition (condition SINGLETON_STRUCT)
     (list (f condition) (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r condition))) (f (r (r condition))))
   )
 
