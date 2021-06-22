@@ -7,6 +7,7 @@ import time
 from pprint import pprint
 from typing import List, Dict, Optional, Callable
 
+from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -92,7 +93,9 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
     print("Aborting.")
 
 
-def pprint_pool_wallet_state(
+async def pprint_pool_wallet_state(
+    wallet_client: WalletRpcClient,
+    wallet_id: int,
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
     pool_state_dict: Dict,
@@ -113,6 +116,12 @@ def pprint_pool_wallet_state(
     if pool_wallet_info.target is not None:
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Pool URL: {pool_wallet_info.target.pool_url}")
+    if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
+        balances: Dict = await wallet_client.get_wallet_balance(str(wallet_id))
+        balance = balances["confirmed_wallet_balance"]
+        typ = WalletType(int(WalletType.POOLING_WALLET))
+        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
+        print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -149,7 +158,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                 return
         response: PoolWalletInfo = await wallet_client.pw_status(wallet_id_passed_in)
 
-        pprint_pool_wallet_state(response, address_prefix, pool_state_dict)
+        await pprint_pool_wallet_state(wallet_client, wallet_id_passed_in, response, address_prefix, pool_state_dict)
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
         print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
@@ -159,7 +168,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             if typ == WalletType.POOLING_WALLET:
                 print(f"Wallet id {wallet_id}: ")
                 response = await wallet_client.pw_status(wallet_id)
-                pprint_pool_wallet_state(response, address_prefix, pool_state_dict)
+                await pprint_pool_wallet_state(wallet_client, wallet_id, response, address_prefix, pool_state_dict)
                 print("")
     farmer_client.close()
     await farmer_client.await_closed()
@@ -191,7 +200,7 @@ async def get_login_link(launcher_id_str: str) -> None:
 
 
 async def submit_tx_with_confirmation(
-    message: str, prompt: bool, func: Callable, wallet_client: WalletRpcClient, fingerprint: int
+    message: str, prompt: bool, func: Callable, wallet_client: WalletRpcClient, fingerprint: int, wallet_id: int
 ):
     print(message)
     if prompt:
@@ -201,18 +210,17 @@ async def submit_tx_with_confirmation(
 
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
-            tx_record: Dict = await func()
+            tx_record: TransactionRecord = await func()
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx_id = hexstr_to_bytes(tx_record["transaction"]["name"])
-                tx = await wallet_client.get_transaction(str(1), tx_id)
+                tx = await wallet_client.get_transaction(str(1), tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id.hex()} to get status")
+                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
                     return None
         except Exception as e:
-            print(f"Error joining pool with Plot NFT {fingerprint}: {e}")
+            print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
         return
     print("Aborting.")
 
@@ -250,7 +258,7 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         json_dict["relative_lock_height"],
     )
 
-    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint)
+    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
 async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -259,7 +267,7 @@ async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 
     msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
     func = functools.partial(wallet_client.pw_self_pool, wallet_id)
-    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint)
+    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
 async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -275,4 +283,4 @@ async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         wallet_client.pw_absorb_rewards,
         wallet_id,
     )
-    await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint)
+    await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
