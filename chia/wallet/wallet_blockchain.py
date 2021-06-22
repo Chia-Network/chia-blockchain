@@ -278,7 +278,7 @@ class WalletBlockchain(BlockchainInterface):
                 )
                 assert block is not None
                 assert len(block.additions) == 0 and len(block.removals) == 0
-                await self.coins_of_interest_received(block.removals, block.additions, block.height, [])
+                await self.coins_of_interest_received(block.removals, block.additions, block_record, [])
                 self._peak_height = uint32(0)
                 return uint32(0), [block_record]
             return None, []
@@ -332,7 +332,7 @@ class WalletBlockchain(BlockchainInterface):
                     await self.coins_of_interest_received(
                         fetched_header_block.removals,
                         fetched_header_block.additions,
-                        fetched_header_block.height,
+                        fetched_block_record,
                         additional_coin_spends,
                     )
 

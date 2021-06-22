@@ -563,11 +563,16 @@ class WalletStateManager:
         return removals
 
     async def coins_of_interest_received(
-        self, removals: List[Coin], additions: List[Coin], height: uint32, additional_coin_spends: List[CoinSolution]
+        self,
+        removals: List[Coin],
+        additions: List[Coin],
+        block: BlockRecord,
+        additional_coin_spends: List[CoinSolution],
     ):
+        height: uint32 = block.height
         for coin in additions:
             await self.puzzle_hash_created(coin)
-        trade_additions, added = await self.coins_of_interest_added(additions, height)
+        trade_additions, added = await self.coins_of_interest_added(additions, block)
         trade_removals, removed = await self.coins_of_interest_removed(removals, height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
             await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
@@ -618,17 +623,14 @@ class WalletStateManager:
             self.state_changed("coin_removed", coin_record.wallet_id)
 
     async def coins_of_interest_added(
-        self, coins: List[Coin], height: uint32
+        self, coins: List[Coin], block: BlockRecord
     ) -> Tuple[List[Coin], List[WalletCoinRecord]]:
         (
             trade_removals,
             trade_additions,
         ) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
-        block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(
-            self.blockchain.height_to_hash(height)
-        )
-        assert block is not None
+        height = block.height
 
         pool_rewards = set()
         farmer_rewards = set()
