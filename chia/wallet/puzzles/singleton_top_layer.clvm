@@ -69,7 +69,7 @@
   )
 
   ;; return the value of the coin created if this is a `CREATE_COIN` condition, or 0 otherwise
-  (defun created_coin_value_or_0 (condition)
+  (defun-inline created_coin_value_or_0 (condition)
     (if (= (f condition) CREATE_COIN)
         (f (r (r condition)))
         0
