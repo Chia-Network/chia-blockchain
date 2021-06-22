@@ -1,7 +1,15 @@
 import React from 'react';
+import { Box } from '@material-ui/core';
+import styled from 'styled-components';
 import toBech32m from '../../../../util/toBech32m';
 import useCurrencyCode from '../../../../hooks/useCurrencyCode';
 import Tooltip from '../Tooltip';
+import CopyToClipboard from '../CopyToClipboard';
+import Flex from '../Flex';
+
+const StyledValue = styled(Box)`
+  word-break: break-all;
+`;
 
 type Props = {
   value: string;
@@ -19,6 +27,17 @@ export default function Address(props: Props) {
     : '';
 
   if (!children) {
+    if (copyToClipboard) {
+      return (
+        <Flex alignItems="center" gap={1}>
+          <StyledValue>
+            {address}
+          </StyledValue>
+          <CopyToClipboard value={address} fontSize="small" />
+        </Flex>
+      );
+    }
+
     return address;
   }
 
@@ -27,6 +46,15 @@ export default function Address(props: Props) {
       <Tooltip title={address} copyToClipboard={copyToClipboard}>
         {children(address)}
       </Tooltip>
+    );
+  }
+
+  if (copyToClipboard) {
+    return (
+      <Flex alignItems="center" gap={1}>
+        {children(address)} asdf
+        <CopyToClipboard value={address} fontSize="small" />
+      </Flex>
     );
   }
 
