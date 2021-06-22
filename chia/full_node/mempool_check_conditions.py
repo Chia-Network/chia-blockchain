@@ -232,36 +232,38 @@ def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, O
     the list, raise a RuntimeError. If the condition is inherently true (such as
     a time- or height lock with a negative time or height, the returned list is None
     """
-    if condition is ConditionOpcode.AGG_SIG_UNSAFE or condition is ConditionOpcode.AGG_SIG_ME:
-        return ConditionCost.AGG_SIG.value, parse_aggsig(args)
-    elif condition is ConditionOpcode.CREATE_COIN:
-        return ConditionCost.CREATE_COIN.value, parse_create_coin(args)
-    elif condition is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
-        return ConditionCost.ASSERT_SECONDS_ABSOLUTE.value, parse_seconds(args, Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
-    elif condition is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
-        return ConditionCost.ASSERT_SECONDS_RELATIVE.value, parse_seconds(args, Err.ASSERT_SECONDS_RELATIVE_FAILED)
-    elif condition is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
-        return ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value, parse_height(args, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED)
-    elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-        return ConditionCost.ASSERT_HEIGHT_RELATIVE.value, parse_height(args, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
-    elif condition is ConditionOpcode.ASSERT_MY_COIN_ID:
-        return ConditionCost.ASSERT_MY_COIN_ID.value, parse_coin_id(args, Err.ASSERT_MY_COIN_ID_FAILED)
-    elif condition is ConditionOpcode.RESERVE_FEE:
-        return ConditionCost.RESERVE_FEE.value, parse_fee(args)
-    elif condition is ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
-        return ConditionCost.CREATE_COIN_ANNOUNCEMENT.value, parse_announcement(args)
-    elif condition is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
-        return ConditionCost.ASSERT_COIN_ANNOUNCEMENT.value, parse_hash(args, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-    elif condition is ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
-        return ConditionCost.CREATE_PUZZLE_ANNOUNCEMENT.value, parse_announcement(args)
-    elif condition is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
-        return ConditionCost.ASSERT_PUZZLE_ANNOUNCEMENT.value, parse_hash(args, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-    elif condition is ConditionOpcode.ASSERT_MY_PARENT_ID:
-        return ConditionCost.ASSERT_MY_PARENT_ID.value, parse_coin_id(args, Err.ASSERT_MY_PARENT_ID_FAILED)
-    elif condition is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
-        return ConditionCost.ASSERT_MY_PUZZLEHASH.value, parse_hash(args, Err.ASSERT_MY_PUZZLEHASH_FAILED)
-    elif condition is ConditionOpcode.ASSERT_MY_AMOUNT:
-        return ConditionCost.ASSERT_MY_AMOUNT.value, parse_amount(args)
+    op = ConditionOpcode
+    cc = ConditionCost
+    if condition is op.AGG_SIG_UNSAFE or condition is op.AGG_SIG_ME:
+        return cc.AGG_SIG.value, parse_aggsig(args)
+    elif condition is op.CREATE_COIN:
+        return cc.CREATE_COIN.value, parse_create_coin(args)
+    elif condition is op.ASSERT_SECONDS_ABSOLUTE:
+        return cc.ASSERT_SECONDS_ABSOLUTE.value, parse_seconds(args, Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
+    elif condition is op.ASSERT_SECONDS_RELATIVE:
+        return cc.ASSERT_SECONDS_RELATIVE.value, parse_seconds(args, Err.ASSERT_SECONDS_RELATIVE_FAILED)
+    elif condition is op.ASSERT_HEIGHT_ABSOLUTE:
+        return cc.ASSERT_HEIGHT_ABSOLUTE.value, parse_height(args, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED)
+    elif condition is op.ASSERT_HEIGHT_RELATIVE:
+        return cc.ASSERT_HEIGHT_RELATIVE.value, parse_height(args, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
+    elif condition is op.ASSERT_MY_COIN_ID:
+        return cc.ASSERT_MY_COIN_ID.value, parse_coin_id(args, Err.ASSERT_MY_COIN_ID_FAILED)
+    elif condition is op.RESERVE_FEE:
+        return cc.RESERVE_FEE.value, parse_fee(args)
+    elif condition is op.CREATE_COIN_ANNOUNCEMENT:
+        return cc.CREATE_COIN_ANNOUNCEMENT.value, parse_announcement(args)
+    elif condition is op.ASSERT_COIN_ANNOUNCEMENT:
+        return cc.ASSERT_COIN_ANNOUNCEMENT.value, parse_hash(args, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+    elif condition is op.CREATE_PUZZLE_ANNOUNCEMENT:
+        return cc.CREATE_PUZZLE_ANNOUNCEMENT.value, parse_announcement(args)
+    elif condition is op.ASSERT_PUZZLE_ANNOUNCEMENT:
+        return cc.ASSERT_PUZZLE_ANNOUNCEMENT.value, parse_hash(args, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+    elif condition is op.ASSERT_MY_PARENT_ID:
+        return cc.ASSERT_MY_PARENT_ID.value, parse_coin_id(args, Err.ASSERT_MY_PARENT_ID_FAILED)
+    elif condition is op.ASSERT_MY_PUZZLEHASH:
+        return cc.ASSERT_MY_PUZZLEHASH.value, parse_hash(args, Err.ASSERT_MY_PUZZLEHASH_FAILED)
+    elif condition is op.ASSERT_MY_AMOUNT:
+        return cc.ASSERT_MY_AMOUNT.value, parse_amount(args)
     else:
         raise ValidationError(Err.INVALID_CONDITION)
 
