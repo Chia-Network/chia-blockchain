@@ -367,12 +367,20 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
 
-        # DID Wallet 2 recovers into itself with new innerpuz
-        new_ph = await did_wallet_2.get_new_inner_hash()
+        # DID Wallet 2 recovers into DID Wallet 3 with new innerpuz
+        filename = "test.backup"
+        did_wallet_2.create_backup(filename)
+
+        did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(
+            wallet_node.wallet_state_manager,
+            wallet,
+            filename,
+        )
+        new_ph = await did_wallet_3.get_new_inner_hash()
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
         pubkey = (
-            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
+            await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
         message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
         for i in range(1, num_blocks):
@@ -381,34 +389,43 @@ class TestDIDWallet:
         (
             info,
             message_spend_bundle,
-        ) = await did_wallet_2.load_attest_files_for_recovery_spend(["test.attest"])
-        await did_wallet_2.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
+        ) = await did_wallet_3.load_attest_files_for_recovery_spend(["test.attest"])
+        await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, did_wallet_2.get_confirmed_balance, 101)
-        await time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 101)
+        await time_out_assert(15, did_wallet_3.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 101)
 
-        # Recovery spend
+        # DID Wallet 1 recovery spends into DID Wallet 4
+        filename = "test.backup"
+        did_wallet.create_backup(filename)
+
+        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
+            wallet_node_2.wallet_state_manager,
+            wallet2,
+            filename,
+        )
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
 
-        pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        await did_wallet_2.create_attestment(coin.name(), ph, pubkey, "test.attest")
+        new_ph = await did_wallet_4.get_new_inner_hash()
+        pubkey = (await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)).pubkey
+        await did_wallet_3.create_attestment(coin.name(), ph, pubkey, "test.attest")
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         (
             test_info_list,
             test_message_spend_bundle,
-        ) = await did_wallet.load_attest_files_for_recovery_spend(["test.attest"])
-        await did_wallet.recovery_spend(coin, ph, test_info_list, pubkey, test_message_spend_bundle)
+        ) = await did_wallet_4.load_attest_files_for_recovery_spend(["test.attest"])
+        await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, 30000000000000)
-        await time_out_assert(15, wallet.get_unconfirmed_balance, 30000000000000)
+        await time_out_assert(15, did_wallet_4.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
 
