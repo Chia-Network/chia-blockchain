@@ -168,11 +168,6 @@ def create_travel_spend(
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
-        log.warning(
-            f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
-            f"{target}"
-            f"hash:{Program(bytes(target)).get_tree_hash()}"
-        )
         inner_sol = Program.to([1, 0, 0, bytes(target), destination_inner.get_tree_hash()])
     else:
         raise ValueError
