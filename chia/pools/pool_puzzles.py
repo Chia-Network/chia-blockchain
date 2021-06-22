@@ -164,7 +164,7 @@ def create_travel_spend(
         # inner sol is key_value_list ()
         # key_value_list is:
         # "ps" -> poolstate as bytes
-        inner_sol: Program = Program.to([[("ps", bytes(target))], 0])
+        inner_sol: Program = Program.to([[("p", bytes(target))], 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, key_value_list, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
@@ -177,7 +177,7 @@ def create_travel_spend(
         )
         # key_value_list is:
         # "ps" -> poolstate as bytes
-        inner_sol = Program.to([1, [("ps", bytes(target))], destination_inner.get_tree_hash()])  # current or target
+        inner_sol = Program.to([1, [("p", bytes(target))], destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
 
@@ -366,13 +366,22 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         # pool member
         if inner_solution.rest().first().as_int() == 1:
             return None
-        extra_data = inner_solution.first().first().rest().as_atom()
+        extra_data: Program = inner_solution.first()
+        state_bytes: Optional[bytes] = None
+        for key, value in extra_data.as_python():
+            if key == b"p":
+                state_bytes = value
     else:
         # pool waitingroom
         if inner_solution.first().as_int() == 0:
             return None
-        extra_data = inner_solution.rest().first().first().rest().as_atom()
-    return PoolState.from_bytes(extra_data)
+        extra_data = inner_solution.rest().first()
+        for key, value in extra_data.as_python():
+            if key == b"p":
+                state_bytes = value
+    if state_bytes is None:
+        return None
+    return PoolState.from_bytes(state_bytes)
 
 
 def pool_state_to_inner_puzzle(
