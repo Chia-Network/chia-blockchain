@@ -46,6 +46,7 @@ async def create_pool_args(pool_url: str) -> Dict:
 
 async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     state = args["state"]
+    prompt = not args.get("yes", False)
 
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
@@ -62,8 +63,11 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 
     pool_msg = f" and join pool: {pool_url}" if pool_url else ""
     print(f"Will create a plot NFT{pool_msg}.")
+    if prompt:
+        user_input: str = input("Confirm [n]/y: ")
+    else:
+        user_input = "yes"
 
-    user_input: str = input("Confirm [n]/y: ")
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
             tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
@@ -186,9 +190,15 @@ async def get_login_link(launcher_id_str: str) -> None:
         await farmer_client.await_closed()
 
 
-async def submit_tx_with_confirmation(message: str, func: Callable, wallet_client: WalletRpcClient, fingerprint: int):
+async def submit_tx_with_confirmation(
+    message: str, prompt: bool, func: Callable, wallet_client: WalletRpcClient, fingerprint: int
+):
     print(message)
-    user_input: str = input("Confirm [n]/y: ")
+    if prompt:
+        user_input: str = input("Confirm [n]/y: ")
+    else:
+        user_input = "yes"
+
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
             tx_record: Dict = await func()
@@ -210,6 +220,7 @@ async def submit_tx_with_confirmation(message: str, func: Callable, wallet_clien
 async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     pool_url = args["pool_url"]
     wallet_id = args.get("id", None)
+    prompt = not args.get("yes", False)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{pool_url}/pool_info") as response:
@@ -238,11 +249,20 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         pool_url,
         json_dict["relative_lock_height"],
     )
-    await submit_tx_with_confirmation(msg, func, wallet_client, fingerprint)
+
+    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint)
 
 
 async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
+    prompt = args.get("yes", False)
+
     msg = f"Will start self-farming with Plot NFT {fingerprint}."
     func = functools.partial(wallet_client.pw_self_pool, wallet_id)
-    await submit_tx_with_confirmation(msg, func, wallet_client, fingerprint)
+    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint)
+
+
+async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args.get("id", None)
+    pool_wallet_info: PoolWalletInfo = await wallet_client.pw_status(wallet_id)
+    print(pool_wallet_info)
