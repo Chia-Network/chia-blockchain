@@ -360,6 +360,8 @@ class TestPoolWalletRpc:
                 p2_singleton_ph_3
             )
         ) is not None
+        assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
+        assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(3)) == 0
         # Doing a reorg reverts and removes the pool wallets
         await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(0), uint32(20), our_ph_2))
         await asyncio.sleep(5)
@@ -456,6 +458,8 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
         self.delete_plot(plot_id)
+
+        assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
     # async def test_creation_of_singleton_failure(self, two_wallet_nodes):
     #     pass
@@ -574,6 +578,7 @@ class TestPoolWalletRpc:
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
             await time_out_assert(timeout=20, function=status_is_farming_to_pool)
+            assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
         finally:
             client.close()
@@ -694,6 +699,7 @@ class TestPoolWalletRpc:
             await time_out_assert(timeout=WAIT_SECS, function=status_is_self_pooling)
             pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New state: {pw_info.current}")
+            assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
         finally:
             client.close()
@@ -789,6 +795,7 @@ class TestPoolWalletRpc:
             assert pw_info.current.pool_url == "https://pool-b.org"
             assert pw_info.current.relative_lock_height == 10
             log.warning(f"New state: {pw_info.current}")
+            assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
         finally:
             client.close()
