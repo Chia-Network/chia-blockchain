@@ -91,9 +91,9 @@ class WalletTransactionStore:
         for record in all_records:
             self.tx_record_cache[record.name] = record
             if record.wallet_id not in self.unconfirmed_for_wallet:
-                self.unconfirmed_for_wallet[record.name] = {}
+                self.unconfirmed_for_wallet[record.wallet_id] = {}
             if not record.confirmed:
-                self.unconfirmed_for_wallet[record.name] = record
+                self.unconfirmed_for_wallet[record.wallet_id][record.name] = record
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM transaction_record")
