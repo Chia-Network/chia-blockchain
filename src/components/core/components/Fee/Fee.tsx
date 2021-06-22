@@ -1,11 +1,18 @@
 import React from 'react';
 import { Trans, Plural } from '@lingui/macro';
-import { InputAdornment, FormControl, FormHelperText } from '@material-ui/core';
+import { Box, InputAdornment, FormControl, FormHelperText } from '@material-ui/core';
 import { useWatch, useFormContext } from 'react-hook-form';
+import styled from 'styled-components';
 import TextField, { TextFieldProps } from '../TextField';
 import { chia_to_mojo } from '../../../../util/chia';
 import useCurrencyCode from '../../../../hooks/useCurrencyCode';
+import StateColor from '../../constants/StateColor';
 import FormatLargeNumber from '../FormatLargeNumber';
+import Flex from '../Flex';
+
+const StyledWarning = styled(Box)`
+  color: ${StateColor.WARNING};
+`;
 
 type FeeProps = TextFieldProps & {
   name: string;
@@ -23,6 +30,9 @@ export default function Fee(props: FeeProps) {
 
   const mojo = chia_to_mojo(fee);
 
+  const isHigh = mojo >= 1000;
+  const isLow = mojo !== 0 && mojo < 1;
+
   return (
     <FormControl
       variant={variant}
@@ -39,9 +49,24 @@ export default function Fee(props: FeeProps) {
       />
       {!!mojo && (
         <FormHelperText>
-          <FormatLargeNumber value={mojo} />
-          {' '}
-          <Plural value={mojo} one="mojo" other="mojos" />
+          <Flex alignItems="center" gap={2}>
+            <Flex flexGrow={1} gap={1}>
+              <FormatLargeNumber value={mojo} />
+              <Box>
+                <Plural value={mojo} one="mojo" other="mojos" />
+              </Box>
+            </Flex>
+            {isHigh && (
+              <StyledWarning>
+                <Trans>Value is too high</Trans>
+              </StyledWarning>
+            )}
+            {isLow && (
+              <StyledWarning>
+                <Trans>Incorrect value</Trans>
+              </StyledWarning>
+            )}
+          </Flex>
         </FormHelperText>
       )}
     </FormControl>
