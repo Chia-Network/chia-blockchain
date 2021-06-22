@@ -119,14 +119,14 @@ logging: &logging
 
 harvester:
   # The harvester server (if run) will run on this port
-  port: 8448
+  port: 9448
   farmer_peer:
     host: *self_hostname
     port: 9447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8560
+  rpc_port: 9560
   num_threads: 30
   plot_loading_frequency_seconds: 120
 
@@ -166,7 +166,7 @@ farmer:
     port: 9444
   harvester_peer:
     host: *self_hostname
-    port: 8448
+    port: 9448
 
   pool_public_keys: []
 
