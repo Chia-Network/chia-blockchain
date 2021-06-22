@@ -1508,6 +1508,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
         assert err == Err.INVALID_CONDITION
 
+
+class TestConditionParser:
     def test_parse_condition_agg_sig(self):
 
         valid_pubkey = b"b" * 48
