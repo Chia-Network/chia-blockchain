@@ -245,4 +245,4 @@ async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     wallet_id = args.get("id", None)
     msg = f"Will start self-farming with Plot NFT {fingerprint}."
     func = functools.partial(wallet_client.pw_self_pool, wallet_id)
-    await submit_tx_with_confirmantion(msg, func, wallet_client, fingerprint)
+    await submit_tx_with_confirmation(msg, func, wallet_client, fingerprint)
