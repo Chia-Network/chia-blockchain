@@ -20,7 +20,7 @@ def create_default_chia_config(root_path: Path) -> None:
         default_config_file_data = initial_config_file(filename)
         path = config_path_for_filename(root_path, filename)
         mkdir(path.parent)
-        with open(path, "w", -1, "utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(default_config_file_data)
 
 
@@ -33,7 +33,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path = config_path_for_filename(root_path, filename)
-    with open(path.with_suffix("." + str(os.getpid())), "w", -1, "utf-8") as f:
+    with open(path.with_suffix("." + str(os.getpid())), "w", encoding="utf-8") as f:
         yaml.safe_dump(config_data, f)
     shutil.move(str(path.with_suffix("." + str(os.getpid()))), path)
 
@@ -52,7 +52,7 @@ def load_config(
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
-    r = yaml.safe_load(open(path, "r", -1, "utf-8"))
+    r = yaml.safe_load(open(path, "r", encoding="utf-8"))
     if sub_config is not None:
         r = r.get(sub_config)
     return r
