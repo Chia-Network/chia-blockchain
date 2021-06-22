@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -22,6 +23,8 @@ pool_list:
     target_puzzle_hash: 344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58
 """  # noqa
 
+log = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 @streamable
@@ -40,16 +43,20 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     ret_list: List[PoolWalletConfig] = []
     if "pool_list" in config["pool"]:
         for pool_config_dict in config["pool"]["pool_list"]:
-            pool_config = PoolWalletConfig(
-                hexstr_to_bytes(pool_config_dict["launcher_id"]),
-                pool_config_dict["pool_url"],
-                pool_config_dict["payout_instructions"],
-                hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
-                hexstr_to_bytes(pool_config_dict["p2_singleton_puzzle_hash"]),
-                G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
-                G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
-            )
-            ret_list.append(pool_config)
+            try:
+                pool_config = PoolWalletConfig(
+                    hexstr_to_bytes(pool_config_dict["launcher_id"]),
+                    pool_config_dict["pool_url"],
+                    pool_config_dict["payout_instructions"],
+                    hexstr_to_bytes(pool_config_dict["target_puzzle_hash"]),
+                    hexstr_to_bytes(pool_config_dict["p2_singleton_puzzle_hash"]),
+                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
+                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["authentication_public_key"])),
+                )
+                ret_list.append(pool_config)
+            except Exception as e:
+                log.error(f"Exception loading config: {pool_config_dict} {e}")
+
     return ret_list
 
 
