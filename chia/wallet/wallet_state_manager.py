@@ -597,11 +597,7 @@ class WalletStateManager:
                         created_pool_wallet_ids.append(pool_wallet.wallet_id)
 
             for wallet_id, wallet in self.wallets.items():
-                if wallet.type() == WalletType.POOLING_WALLET:  # and wallet_id not in created_pool_wallet_ids:
-                    # TODO: support applying state transition in the same block. Doesn't work because we did not
-                    # update the DB yet.
-                    # TODO: we need a test that manipulates two singleton wallets simultaneously,
-                    # TODO: to test that apply_state_transitions only processes its own spends.
+                if wallet.type() == WalletType.POOLING_WALLET:
                     await wallet.apply_state_transitions(additional_coin_spends, height)
 
         added_notified = set()
@@ -740,15 +736,15 @@ class WalletStateManager:
                 trade_coin_removed.append(coin)
             if record is None:
                 self.log.info(f"Record for removed coin {coin.name()} is None. (ephemeral)")
-                continue
-            await self.coin_store.set_spent(coin.name(), height)
+            else:
+                await self.coin_store.set_spent(coin.name(), height)
             for unconfirmed_record in all_unconfirmed:
                 for rem_coin in unconfirmed_record.removals:
                     if rem_coin.name() == coin.name():
                         self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                         await self.tx_store.set_confirmed(unconfirmed_record.name, height)
-
-            removed.append(record)
+            if record is not None:
+                removed.append(record)
 
         return trade_coin_removed, removed
 
