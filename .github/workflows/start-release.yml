@@ -1,0 +1,23 @@
+# Starts a release for the given ref on the Glue API
+name: Start Release
+on:
+  workflow_dispatch:
+  push:
+    tags:
+        - '**'
+
+jobs:
+  start_release:
+    name: Starts release process in Glue API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get tag name
+        id: tag-name
+        run: |
+          echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
+      - name: Debug tag name
+        run: echo "${{ steps.tag-name.outputs.TAG_NAME }}"
+      - name: Start release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/chia-blockchain/${{ steps.tag-name.outputs.TAG_NAME }}/start
