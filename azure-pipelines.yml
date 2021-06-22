@@ -113,6 +113,9 @@ steps:
     displayName: "Upload to S3"
 
   - bash: |
+      cd $(System.DefaultWorkingDirectory)/build_scripts/
+      export CHIA_VERSION="Chia-"$(<version.txt)
+
       pip3 install py3createtorrent
       py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/$CHIA_VERSION.dmg
       ls
