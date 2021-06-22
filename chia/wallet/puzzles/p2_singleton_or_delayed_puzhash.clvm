@@ -27,7 +27,11 @@
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
   (defun-inline delayed_spend (SECONDS_DELAY DELAYED_PUZZLE_HASH amount)
-    (list (list ASSERT_SECONDS_RELATIVE SECONDS_DELAY) (list CREATE_COIN DELAYED_PUZZLE_HASH amount))
+    (list
+      (list ASSERT_SECONDS_RELATIVE SECONDS_DELAY)
+      (list CREATE_COIN DELAYED_PUZZLE_HASH amount)
+      (list ASSERT_MY_AMOUNT amount)
+    )
   )
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
