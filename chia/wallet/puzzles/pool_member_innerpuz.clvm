@@ -3,7 +3,7 @@
       OWNER_PUBKEY
       POOL_REWARD_PREFIX
       WAITINGROOM_PUZHASH
-      (my_id my_full_puzzle_hash my_inner_puzzle_hash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash)
+      Truths
       p1
       pool_reward_height
       )
@@ -25,6 +25,7 @@
   ; key_value_list is signed extra data that the wallet may want to publicly announce for syncing purposes
 
   (include condition_codes.clvm)
+  (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree (TREE)
@@ -57,12 +58,12 @@
 
   (if pool_reward_height
     (absorb_pool_reward POOL_PUZZLE_HASH
-                        my_inner_puzzle_hash
-                        my_amount
+                        (my_inner_puzzle_hash_truth Truths)
+                        (my_amount_truth Truths)
                         p1
                         (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
     )
-    (travel_to_waitingroom OWNER_PUBKEY WAITINGROOM_PUZHASH my_amount p1)
+    (travel_to_waitingroom OWNER_PUBKEY WAITINGROOM_PUZHASH (my_amount_truth Truths) p1)
     )
   )
 )

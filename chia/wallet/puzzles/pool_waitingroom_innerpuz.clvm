@@ -3,7 +3,7 @@
       OWNER_PUBKEY
       POOL_REWARD_PREFIX
       RELATIVE_LOCK_HEIGHT
-      (my_id my_full_puzzle_hash my_inner_puzzle_hash my_amount parent_info mod_hash launcher_id launcher_puzzle_hash)
+      Truths
       spend_type
       p1
       p2
@@ -24,6 +24,7 @@
     ; p2 is destination_puzhash - the location that the escape spend wants to create itself to
 
   (include condition_codes.clvm)
+  (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree (TREE)
@@ -56,10 +57,10 @@
   ; main
 
   (if spend_type
-    (travel_spend RELATIVE_LOCK_HEIGHT p2 my_amount p1)
+    (travel_spend RELATIVE_LOCK_HEIGHT p2 (my_amount_truth Truths) p1)
     (absorb_pool_reward POOL_PUZZLE_HASH
-                        my_inner_puzzle_hash
-                        my_amount
+                        (my_inner_puzzle_hash_truth Truths)
+                        (my_amount_truth Truths)
                         p1
                         (calculate_pool_reward p2 P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
     )

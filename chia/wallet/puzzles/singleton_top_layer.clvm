@@ -12,6 +12,7 @@
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+  (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
@@ -119,14 +120,6 @@
           )
       )
    )
-
-  ; Some inline functions for lineage proofs
-  (defun-inline parent_info_for_lineage_proof (lineage_proof) (f lineage_proof))
-  (defun-inline puzzle_hash_for_lineage_proof (lineage_proof) (f (r lineage_proof)))
-  (defun-inline amount_for_lineage_proof (lineage_proof) (f (r (r lineage_proof))))
-  (defun-inline is_eve_proof (lineage_proof) (r (r lineage_proof)))
-  (defun-inline parent_info_for_eve_proof (lineage_proof) (f lineage_proof))
-  (defun-inline amount_for_eve_proof (lineage_proof) (f (r lineage_proof)))
 
   ; this final stager asserts our ID
   ; it also runs the innerpuz with the innersolution with the "truths" added
