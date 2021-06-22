@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:51\n"
+"PO-Revision-Date: 2021-06-22 11:56\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -654,7 +654,7 @@ msgstr "Farmer jutalom címe"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
-msgstr ""
+msgstr "A farmoláshoz használt cím nincs megfelelően formázva."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -662,7 +662,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
-msgstr ""
+msgstr "A farmoláshoz használt cím nem lehet üres."
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -676,7 +676,7 @@ msgstr "A farmer nem fut"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Farmer nyilvános kulcsa:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1280,7 +1280,7 @@ msgstr "Farmer jutalom címe"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "A pool-hoz használt cím nincs megfelelően formázva."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1288,7 +1288,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "A pool-hoz használt cím nem lehet üres."
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1296,7 +1296,7 @@ msgstr "Pool jutalom"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Pool nyilvános kulcsa:"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
