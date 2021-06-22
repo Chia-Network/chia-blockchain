@@ -371,6 +371,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         for key, value in extra_data.as_python():
             if key == b"p":
                 state_bytes = value
+                break
     else:
         # pool waitingroom
         if inner_solution.first().as_int() == 0:
@@ -379,6 +380,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         for key, value in extra_data.as_python():
             if key == b"p":
                 state_bytes = value
+                break
     if state_bytes is None:
         return None
     return PoolState.from_bytes(state_bytes)
