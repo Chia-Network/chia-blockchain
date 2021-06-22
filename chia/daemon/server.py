@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
 from chia.cmds.init_funcs import chia_init
+from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -128,6 +129,7 @@ class WebSocketServer:
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
+        self.keychain_server = KeychainServer()
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -271,6 +273,8 @@ class WebSocketServer:
         ]
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
+        elif command in keychain_commands:
+            response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()
         elif command == "start_service":
