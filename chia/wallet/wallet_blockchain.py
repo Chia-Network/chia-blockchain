@@ -340,7 +340,7 @@ class WalletBlockchain(BlockchainInterface):
             await self.block_store.set_peak(block_record.header_hash)
             self._peak_height = block_record.height
             if fork_h < 0:
-                return None, []
+                return None, records_to_add
             return uint32(fork_h), records_to_add
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
