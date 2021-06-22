@@ -137,6 +137,6 @@ steps:
   - bash: |
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_TAG=$(<version.txt)
-      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data '{"chia_ref": "${CHIA_TAG}"}' $(GLUE_API_URL)/api/v1/chia-blockchain/${CHIA_TAG}/success/build-macos
+      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data '{"chia_ref": "$CHIA_TAG"}' $(GLUE_API_URL)/api/v1/chia-blockchain/${CHIA_TAG}/success/build-macos
     displayName: "Mark installer complete"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
