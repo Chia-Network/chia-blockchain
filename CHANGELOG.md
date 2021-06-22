@@ -1381,7 +1381,7 @@ relic. We will make a patch available for these systems shortly.
 - You can now provide an index to create_plots using the -i flag to create an arbitrary new plot derived from an existing plot key. Thanks @xorinox.
 - There is a new restart_harvester.sh in scripts/ to easily restart a harvester when you want to add a newly completed plot to the farm without restarting farmer, fullnode, timelord, etc.
 - Harvesters now log errors if they encounter a malformed or corrupted plot file. Again thanks @xorinox.
-- New AJAX based full node UI. To access go to [http://127.0.0.1:8555/index.html](http://127.0.0.1:8555/index.html) with any modern web browser on the same machine as the full node.
+- New AJAX based full node UI. To access go to [http://127.0.0.1:9555/index.html](http://127.0.0.1:9555/index.html) with any modern web browser on the same machine as the full node.
 - If you want to benchmark your CPU as a VDF you can use vdf_bench square_asm 500000 for the assembly optimized test or just vdf_bench square 500000 for the plain C++ code path. This tool is found in lib/chiavdf/fast_vdf/.
 - Improvements to shutting down services in all of the scripts in scripts/. Another @xorinox HT.
 
@@ -1433,7 +1433,7 @@ relic. We will make a patch available for these systems shortly.
 
 - FullNode performance improvements - Syncing up to the blockchain by importing all blocks is faster due to improvements in VDF verification speed and multithreading block verification.
 - VDF improvements - VDF verification and generation speed has increased and dependence on flint2 has been removed. We wish to thank Dr. William Hart (@wbhart) for dual licensing parts of his contributions in FLINT and Antic for inclusion in the Chia blockchain.
-- Implemented an RPC interface with JSON serialization for streamables - currently on port 8555.
+- Implemented an RPC interface with JSON serialization for streamables - currently on port 9555.
 - Added details on how to contribute in CONTRIBUTING.md. Thanks @RichardLitt.
 - Added color logging
 - Now chia_harvester will periodically announce which plots it is currently farming and their k sizes.
