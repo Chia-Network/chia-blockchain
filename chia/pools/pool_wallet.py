@@ -386,7 +386,7 @@ class PoolWallet:
         self.wallet_info = wallet_info
         self.target_state = None
         self.log = logging.getLogger(name if name else __name__)
-
+        self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
         return self
 
     @staticmethod
