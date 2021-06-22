@@ -12,11 +12,10 @@ jobs:
     runs-on: [ARM64]
     steps:
       - name: Get tag name
+        if: startsWith(github.ref, 'refs/tags/')
         id: tag-name
         run: |
           echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
-      - name: Debug tag name
-        run: echo "${{ steps.tag-name.outputs.TAG_NAME }}"
       - name: Start release
         if: startsWith(github.ref, 'refs/tags/')
         run: |

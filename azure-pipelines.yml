@@ -21,6 +21,7 @@ strategy:
 variables:
   - group: Apple-Notarize-Variables
   - group: AWS-Upload-Credentials
+  - group: GlueVariables
 
 steps:
   - checkout: self  # self represents the repo where the initial Azure Pipelines YAML file was found
@@ -126,4 +127,10 @@ steps:
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/install/
       aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent s3://download-chia-net/torrents/
     displayName: "Upload Release Files"
+    condition: contains(variables['build.sourceBranch'], 'refs/tags/')
+
+  - bash: |
+      export CHIA_TAG=$(<version.txt)
+      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data '{"chia_ref": "${CHIA_TAG}"}' $(GLUE_API_URL)/api/v1/chia-blockchain/${CHIA_TAG}/success/build-macos
+    displayName: "Mark installer complete"
     condition: contains(variables['build.sourceBranch'], 'refs/tags/')
