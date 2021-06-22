@@ -10,7 +10,7 @@ from blspy import PrivateKey, G1Element
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo
+from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -1099,7 +1099,7 @@ class WalletRpcApi:
         target_puzzlehash = None
         if "target_puzzlehash" in request:
             target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
-        new_target_state = create_pool_state(
+        new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
             target_puzzlehash,
             owner_pubkey,

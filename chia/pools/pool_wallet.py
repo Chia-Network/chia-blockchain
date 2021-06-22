@@ -658,11 +658,9 @@ class PoolWallet:
         if self.target_state is not None:
             raise ValueError(f"Cannot join a pool while waiting for target state: {self.target_state}")
 
-        if target_state is None:
-            raise ValueError(f"invalid target_state {target_state}")
-        current_state = await self.get_current_state()
+        current_state: PoolWalletInfo = await self.get_current_state()
 
-        if current_state == target_state:
+        if current_state.current == target_state:
             self.target_state = None
             self.log.info("Asked to change to current state. Target = {target_state}")
             return
@@ -672,6 +670,13 @@ class PoolWallet:
                 f"Cannot change to state {target_state} when already having target state: {self.target_state}"
             )
         PoolWallet._verify_initial_target_state(target_state)
+        if current_state.current.state == LEAVING_POOL:
+            history: List[Tuple[uint32, CoinSolution]] = await self.get_spend_history()
+            last_height: uint32 = history[-1][0]
+            if self.wallet_state_manager.get_peak().height <= last_height + current_state.current.relative_lock_height:
+                raise ValueError(
+                    f"Cannot join a pool until height {last_height + current_state.current.relative_lock_height}"
+                )
 
         self.target_state = target_state
         tx_record: TransactionRecord = await self.generate_travel_transaction(target_state)
@@ -691,6 +696,15 @@ class PoolWallet:
         # vs. having pre-arranged the target self-pooling address
         owner_puzzlehash = await self.standard_wallet.get_new_puzzlehash()
         owner_pubkey = pool_wallet_info.current.owner_pubkey
+        current_state: PoolWalletInfo = await self.get_current_state()
+
+        if current_state.current.state == LEAVING_POOL:
+            history: List[Tuple[uint32, CoinSolution]] = await self.get_spend_history()
+            last_height: uint32 = history[-1][0]
+            if self.wallet_state_manager.get_peak().height <= last_height + current_state.current.relative_lock_height:
+                raise ValueError(
+                    f"Cannot self pool until height {last_height + current_state.current.relative_lock_height}"
+                )
         self.target_state = create_pool_state(
             SELF_POOLING, owner_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=uint32(0)
         )
