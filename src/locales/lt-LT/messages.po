@@ -8,7 +8,7 @@ msgstr ""
 "Language: lt_LT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:51\n"
+"PO-Revision-Date: 2021-06-22 17:52\n"
 "Last-Translator: \n"
 "Language-Team: Lithuanian\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && (n%100>19 || n%100<11) ? 0 : (n%10>=2 && n%10<=9) && (n%100>19 || n%100<11) ? 1 : n%1!=0 ? 2: 3);\n"
@@ -394,7 +394,7 @@ msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:32
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Kopijuoti į Iškarpinę"
 
 #: src/components/backup/BackupCreate.tsx:78
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -402,19 +402,19 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Sukurti"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Sukurti DID piniginę"
 
 #: src/components/trading/TradeManager.tsx:49
 msgid "Create Offer"
-msgstr ""
+msgstr "Sukurti pasiūlymą"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 msgid "Create Plot"
-msgstr ""
+msgstr "Sukurti Plotą"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -436,11 +436,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:442
 msgid "Create Transaction"
-msgstr ""
+msgstr "Sukurti Pavedimą"
 
 #: src/components/backup/BackupCreate.tsx:63
 msgid "Create a Backup"
-msgstr ""
+msgstr "Sukurti atsarginę kopiją"
 
 #: src/components/selectKey/SelectKey.tsx:182
 msgid "Create a new private key"
@@ -472,7 +472,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr ""
+msgstr "Sukurta:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
@@ -498,11 +498,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:137
 #: src/components/wallet/WalletHistory.tsx:47
 msgid "Date"
-msgstr ""
+msgstr "Data"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:90
 msgid "Delay"
-msgstr ""
+msgstr "Vėlavimas"
 
 #: src/components/plot/PlotAction.tsx:34
 #: src/components/plot/PlotAction.tsx:58
@@ -511,7 +511,7 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:61
 #: src/components/selectKey/SelectKey.tsx:82
 msgid "Delete"
-msgstr ""
+msgstr "Ištrinti"
 
 #: src/components/plot/PlotAction.tsx:33
 #: src/components/plot/queue/PlotQueueActions.tsx:39
@@ -654,7 +654,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address is not properly formatted."
-msgstr ""
+msgstr "Fermerio Prizo Adresas nėra tinkamai formatuotas."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -662,7 +662,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:124
 msgid "Farmer Reward Address must not be empty."
-msgstr ""
+msgstr "Fermerio Prizo Adresas negali būti tuščias."
 
 #: src/components/farm/card/FarmCardStatus.tsx:44
 #: src/components/plot/PlotStatus.tsx:36
@@ -676,7 +676,7 @@ msgstr ""
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Fermerio viešas raktas:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1280,7 +1280,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:145
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "Baseino Prizo adresas nėra gerai suformatuotas."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1288,7 +1288,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:138
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "Baseino Prizo Adresas negali būti tuščias."
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
@@ -1296,7 +1296,7 @@ msgstr ""
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Viešo baseino raktas:"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:46
