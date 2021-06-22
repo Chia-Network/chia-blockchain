@@ -234,9 +234,13 @@ class WalletBlockchain(BlockchainInterface):
                     await self.block_store.add_block_record(header_block_record, block_record, additional_coin_spends)
                     self.add_block_record(block_record)
                     self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
-                    fork_height: Optional[uint32] = await self._reconsider_peak(
+                    fork_height, records_to_add = await self._reconsider_peak(
                         block_record, genesis, fork_point_with_peak, additional_coin_spends
                     )
+                    for record in records_to_add:
+                        self.__height_to_hash[record.height] = record.header_hash
+                        if record.sub_epoch_summary_included is not None:
+                            self.__sub_epoch_summaries[record.height] = record.sub_epoch_summary_included
                     await self.block_store.db_wrapper.commit_transaction()
                 except BaseException as e:
                     self.log.error(f"Error during db transaction: {e}")
@@ -259,7 +263,7 @@ class WalletBlockchain(BlockchainInterface):
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
         additional_coin_spends_from_wallet: Optional[List[CoinSolution]],
-    ) -> Optional[uint32]:
+    ) -> Tuple[Optional[uint32], List[BlockRecord]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -273,12 +277,11 @@ class WalletBlockchain(BlockchainInterface):
                     block_record.header_hash
                 )
                 assert block is not None
-                self.__height_to_hash[uint32(0)] = block.header_hash
                 assert len(block.additions) == 0 and len(block.removals) == 0
                 await self.coins_of_interest_received(block.removals, block.additions, block.height, [])
                 self._peak_height = uint32(0)
-                return uint32(0)
-            return None
+                return uint32(0), [block_record]
+            return None, []
 
         assert peak is not None
         if block_record.weight > peak.weight:
@@ -322,8 +325,9 @@ class WalletBlockchain(BlockchainInterface):
                     break
                 curr = fetched_block_record.prev_hash
 
+            records_to_add: List[BlockRecord] = []
             for fetched_header_block, fetched_block_record, additional_coin_spends in reversed(blocks_to_add):
-                self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
+                records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
                     await self.coins_of_interest_received(
                         fetched_header_block.removals,
@@ -331,20 +335,16 @@ class WalletBlockchain(BlockchainInterface):
                         fetched_header_block.height,
                         additional_coin_spends,
                     )
-                if fetched_block_record.sub_epoch_summary_included is not None:
-                    self.__sub_epoch_summaries[
-                        fetched_block_record.height
-                    ] = fetched_block_record.sub_epoch_summary_included
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
             self._peak_height = block_record.height
             if fork_h < 0:
-                return None
-            return uint32(fork_h)
+                return None, []
+            return uint32(fork_h), records_to_add
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-        return None
+        return None, []
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_block(header_hash)
