@@ -266,12 +266,12 @@ def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, O
         raise ValidationError(Err.INVALID_CONDITION)
 
 
-opcodes: Set[bytes] = set(item.value for item in ConditionOpcode)
+CONDITION_OPCODES: Set[bytes] = set(item.value for item in ConditionOpcode)
 
 
 def parse_condition(cond: SExp, safe_mode: bool) -> Tuple[int, Optional[ConditionWithArgs]]:
     condition = cond.first().as_atom()
-    if condition in opcodes:
+    if condition in CONDITION_OPCODES:
         opcode: ConditionOpcode = ConditionOpcode(condition)
         cost, args = parse_condition_args(cond.rest(), opcode)
         cvl = ConditionWithArgs(opcode, args) if args is not None else None
