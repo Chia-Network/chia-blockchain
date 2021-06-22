@@ -16,7 +16,7 @@ from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
-COST_PER_BYTE = int(0)
+COST_PER_BYTE = int(12000)
 
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
