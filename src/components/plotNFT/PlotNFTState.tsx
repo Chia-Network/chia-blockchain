@@ -21,9 +21,15 @@ export default function PlotNFTState(props: Props) {
     },
   } = props;
 
-  const isPending = target && target !== state;
-  const isSelfPooling = state === PlotNFTStateEnum.SELF_POOLING;
+  if (!target && state === PlotNFTStateEnum.LEAVING_POOL) {
+    return (
+      <StateTypography variant="body1" state={State.ERROR}>
+        <Trans>Invalid state</Trans>
+      </StateTypography>
+    );
+  }
 
+  const isPending = target && target !== state;
   if (isPending) {
     return (
       <Flex alignItems="center" gap={1} inline>
@@ -31,7 +37,7 @@ export default function PlotNFTState(props: Props) {
           <Trans>Pending</Trans>
         </StateTypography>
         <TooltipIcon>
-          <Trans>Unconfirmed transaction</Trans>
+          <Trans>PlotNFT is transitioning to (new state)</Trans>
         </TooltipIcon>
       </Flex>
     );
