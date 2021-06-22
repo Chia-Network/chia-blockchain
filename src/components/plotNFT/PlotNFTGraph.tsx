@@ -1,7 +1,8 @@
 import React from 'react';
 import { linearGradientDef } from '@nivo/core';
+import { t } from '@lingui/macro';
 import { ResponsiveLine } from '@nivo/line';
-import { Typography } from '@material-ui/core';
+import { Typography, Paper } from '@material-ui/core';
 import { Flex } from '@chia/core';
 import styled from 'styled-components';
 
@@ -15,6 +16,10 @@ const StyledGraphContainer = styled.div`
   height: 100px;
 `;
 
+const StyledTooltip = styled(Paper)`
+  padding: 0.25rem 0.5rem;
+`;
+
 const HOUR_SECONDS = 60 * 60;
 
 function aggregatePoints(points, hours: number = 2, totalHours: number = 24) {
@@ -23,15 +28,15 @@ function aggregatePoints(points, hours: number = 2, totalHours: number = 24) {
 
   const items = [];
 
-  for (let i = -totalHours; i <= 0; i += hours) {
+  for (let i = -totalHours; i < 0; i += hours) {
     const start = current + i * stepSeconds;
     const end = current + (i + hours) * stepSeconds;
 
     const item = {
       start,
       end,
+      x: -i,
       y: 0,
-      x: `${-i + hours}h - ${-i}h`,
     };
 
     points.forEach((pointItem) => {
@@ -64,6 +69,7 @@ export default function PlotNFTGraph(props: Props) {
       "data": aggregated.map(item => ({
         x: item.x,
         y: item.y,
+        tooltip: t`${item.y} points ${item.x - 2} - ${item.x} hours ago`
       })),
   }];
 
@@ -98,6 +104,11 @@ export default function PlotNFTGraph(props: Props) {
             min: 0,
             max,
           }}
+          tooltip={({ point }) => (
+            <StyledTooltip>
+              {point?.data?.tooltip}
+            </StyledTooltip>
+          )}
           colors={{ scheme: 'accent' }}
           axisTop={null}
           axisRight={null}
