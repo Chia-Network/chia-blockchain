@@ -122,7 +122,7 @@ harvester:
   port: 8448
   farmer_peer:
     host: *self_hostname
-    port: 8447
+    port: 9447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -159,7 +159,7 @@ pool:
 
 farmer:
   # The farmer server (if run) will run on this port
-  port: 8447
+  port: 9447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
@@ -200,7 +200,7 @@ timelord_launcher:
 
 timelord:
   # The timelord server (if run) will run on this port
-  port: 8446
+  port: 9446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -305,16 +305,16 @@ full_node:
     - "dns-introducer.chivescoin.org"
   farmer_peer:
       host: *self_hostname
-      port: 8447
+      port: 9447
   timelord_peer:
       host: *self_hostname
-      port: 8446
+      port: 9446
   introducer_peer:
       host: introducer.chivescoin.org  # Chia AWS introducer IPv4/IPv6
       port: 9444
   wallet_peer:
     host: *self_hostname
-    port: 8449
+    port: 9449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -348,7 +348,7 @@ ui:
 
 introducer:
   host: *self_hostname
-  port: 8445
+  port: 9445
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
@@ -362,7 +362,7 @@ introducer:
     public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 8449
+  port: 9449
   rpc_port: 9256
 
   enable_profiler: False
