@@ -9,7 +9,7 @@ on:
 jobs:
   start_release:
     name: Starts release process in Glue API
-    runs-on: ubuntu-latest
+    runs-on: [ARM64]
     steps:
       - name: Get tag name
         id: tag-name
