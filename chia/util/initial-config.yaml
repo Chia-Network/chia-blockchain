@@ -302,7 +302,7 @@ full_node:
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer.chivescoin.org"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -310,7 +310,7 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer.chivescoin.org  # Chia AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
     host: *self_hostname
@@ -394,7 +394,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
+    host: introducer.chivescoin.org # Chia AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:
