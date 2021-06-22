@@ -93,28 +93,28 @@
   ;; The special case where the output value is -113 means a child singleton is intentionally
   ;; *NOT* being created, thus forever ending this singleton's existence
 
-  (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions odd_output_found)
+  (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions has_odd_output_been_found)
     (if conditions
-        (morph_next_condition SINGLETON_STRUCT conditions odd_output_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
-          (if (odd_output_found)
+        (morph_next_condition SINGLETON_STRUCT conditions has_odd_output_been_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
+          (if has_odd_output_been_found
               0
               (x)  ;; no odd output found
           )
         )
    )
 
-   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `output_odd` and `output_m113`
+   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `output_m113`
    ;; precalculated
-   (defun morph_next_condition (SINGLETON_STRUCT conditions odd_output_found (output_odd . output_m113))
+   (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . output_m113))
        (assert
-          (not (all output_odd odd_output_found))
+          (not (all is_output_odd has_odd_output_been_found))
           (strip_first_condition_if
              output_m113
-             (c (if output_odd
+             (c (if is_output_odd
                     (morph_condition (f conditions) SINGLETON_STRUCT)
                     (f conditions)
                 )
-                (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) (any output_odd odd_output_found))
+                (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) (any is_output_odd has_odd_output_been_found))
              )
           )
       )
