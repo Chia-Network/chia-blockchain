@@ -275,7 +275,7 @@ class DIDWallet:
         return used_coins
 
     # This will be used in the recovery case where we don't have the parent info already
-    async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], height: int):
+    async def coin_added(self, coin: Coin, _: uint32):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info("DID wallet has been notified that coin was added")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)

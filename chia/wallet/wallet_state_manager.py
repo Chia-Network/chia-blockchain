@@ -835,11 +835,7 @@ class WalletStateManager:
 
         if wallet_type == WalletType.COLOURED_COIN or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet = self.wallets[wallet_id]
-            header_hash: bytes32 = self.blockchain.height_to_hash(height)
-            block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
-            assert block is not None
-            assert block.removals is not None
-            await wallet.coin_added(coin, header_hash, block.removals, height)
+            await wallet.coin_added(coin, height)
 
         return coin_record
 

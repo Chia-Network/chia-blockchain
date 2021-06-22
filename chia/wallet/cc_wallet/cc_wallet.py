@@ -280,7 +280,7 @@ class CCWallet:
         assert self.cc_info.my_genesis_checker is not None
         return bytes(self.cc_info.my_genesis_checker).hex()
 
-    async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], height: uint32):
+    async def coin_added(self, coin: Coin, height: uint32):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CC wallet has been notified that {coin} was added")
 
