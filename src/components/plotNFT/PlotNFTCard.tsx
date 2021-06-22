@@ -2,17 +2,20 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
-import { TooltipTypography, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber } from '@chia/core';
+import { TooltipTypography, Flex, State, UnitFormat, CardKeyValue, Tooltip, TooltipIcon, More, Loading, FormatLargeNumber, Link } from '@chia/core';
 import {
   Box,
   Button,
   Grid,
+  IconButton,
   Card,
   CardContent,
   Typography,
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
@@ -22,6 +25,8 @@ import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import PoolJoin from '../pool/PoolJoin';
 import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
 import { mojo_to_chia } from '../../util/chia';
+import { useToggle } from 'react-use';
+import PoolInfo from '../pool/PoolInfo';
 
 const StyledCard = styled(Card)`
   display: flex;
@@ -43,6 +48,10 @@ const StyledSyncingFooter = styled(CardContent)`
   borer-top: 1px solid #D8D6D6;
 `;
 
+const StyledInvisibleContainer = styled(Box)`
+  height: 0;
+`;
+
 type Props = {
   nft: PlotNFT;
 };
@@ -55,12 +64,14 @@ export default function PlotNFTCard(props: Props) {
         p2_singleton_puzzle_hash,
         pool_config: {
           launcher_id,
+          pool_url,
         },
       },
     },
   } = props;
 
   const history = useHistory();
+  const [showPoolDetails, togglePoolDetails] = useToggle(false);
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
 
   function handleAddPlot() {
@@ -144,8 +155,8 @@ export default function PlotNFTCard(props: Props) {
   return (
     <StyledCard>
       <StyledCardContent>
-        <Flex flexDirection="column" gap={4} flexGrow={1}>
-          <Flex flexDirection="column" gap={1}>
+        <Flex flexDirection="column" gap={4.5} flexGrow={1}>
+          <Flex flexDirection="column" gap={0}>
             <Flex gap={1}>
               <Box flexGrow={1}>
                 <PlotNFTName nft={nft} variant="h6" />
@@ -165,6 +176,18 @@ export default function PlotNFTCard(props: Props) {
                 )}
               </More>
             </Flex>
+            <StyledInvisibleContainer>
+              <Typography variant="body2" noWrap>
+                {!!pool_url && (
+                  <Flex alignItems="center" gap={1}>
+                    <Typography variant="body2" color="textSecondary">
+                      <Trans>Pool:</Trans>
+                    </Typography>
+                    <Link target="_blank" href={pool_url}>{pool_url}</Link>
+                  </Flex>
+                )}
+              </Typography>
+            </StyledInvisibleContainer>
           </Flex>
 
           <Flex flexDirection="column" flexGrow={1}>

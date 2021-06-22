@@ -131,7 +131,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
             </Typography>
 
             <Grid container spacing={4}>
-              <Grid xs={12} lg={6} item>
+              <Grid xs={12} md={6} item>
                 <Fee
                   name="fee"
                   type="text"

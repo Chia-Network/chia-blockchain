@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@material-ui/core';
 import type PoolInfoType from '../../types/PoolInfo';
-import { CardKeyValue, Flex } from '@chia/core';
+import { CardKeyValue, Flex, Link } from '@chia/core';
 
 const StyledLogo = styled.img`
   max-height: 300px;
@@ -58,8 +58,8 @@ export default function PoolInfo(props: Props) {
         <Typography gutterBottom variant="h5" component="h2">
           {poolInfo.name}
         </Typography>
-        <Typography gutterBottom variant="body1" color="textSecondary" component="p">
-          {poolInfo.pool_url}
+        <Typography gutterBottom variant="body2" color="textSecondary" component="p">
+          <Link href={poolInfo.pool_url} target="_blank">{poolInfo.pool_url}</Link>
         </Typography>
         <Typography variant="body2" color="textSecondary" component="p">
           {poolInfo.description}
