@@ -124,7 +124,6 @@ class TestPoolWalletRpc:
             [our_ph, pool_ph],
             client,  # wallet rpc client
             rpc_cleanup,
-            [WalletRpcApi(wallet_node_0), WalletRpcApi(wallet_node_1)],
         )
 
     async def get_total_block_rewards(self, num_blocks):
@@ -487,7 +486,7 @@ class TestPoolWalletRpc:
         """This tests self-pooling -> pooling"""
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
+        full_nodes, wallets, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]
         pool_ph = receive_address[1]
         full_node_api = full_nodes[0]
@@ -533,14 +532,11 @@ class TestPoolWalletRpc:
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
 
-            join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
-                {
-                    "wallet_id": wallet_id,
-                    "pool_url": "https://pool.example.com",
-                    "relative_lock_height": 10,
-                    "target_puzzlehash": pool_ph.hex(),
-                    "host": f"{self_hostname}:5000",
-                }
+            join_pool_tx: TransactionRecord = await client.pw_join_pool(
+                wallet_id,
+                pool_ph,
+                "https://pool.example.com",
+                10,
             )
             assert join_pool_tx is not None
 
@@ -588,9 +584,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     async def test_leave_pool(self, setup):
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
-        num_blocks = 4  # Num blocks to farm at a time
-        total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
+        full_nodes, wallets, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]
         pool_ph = receive_address[1]
         full_node_api = full_nodes[0]
@@ -635,14 +629,11 @@ class TestPoolWalletRpc:
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
 
-            join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
-                {
-                    "wallet_id": wallet_id,
-                    "pool_url": "https://pool.example.com",
-                    "relative_lock_height": 5,
-                    "target_puzzlehash": pool_ph.hex(),
-                    "host": f"{self_hostname}:5000",
-                }
+            join_pool_tx: TransactionRecord = await client.pw_join_pool(
+                wallet_id,
+                pool_ph,
+                "https://pool.example.com",
+                5,
             )
             assert join_pool_tx is not None
 
@@ -677,9 +668,9 @@ class TestPoolWalletRpc:
             status: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
 
-            leave_pool_tx: TransactionRecord = await api_user[0].pw_self_pool({"wallet_id": wallet_id})
-            assert leave_pool_tx["transaction"].wallet_id == wallet_id
-            assert leave_pool_tx["transaction"].amount == 1
+            leave_pool_tx: TransactionRecord = await client.pw_self_pool(wallet_id)
+            assert leave_pool_tx.wallet_id == wallet_id
+            assert leave_pool_tx.amount == 1
 
             async def status_is_leaving():
                 await self.farm_blocks(full_node_api, our_ph, 1)
@@ -709,9 +700,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     async def test_change_pools(self, setup):
         """This tests Pool A -> escaping -> Pool B"""
-        num_blocks = 4  # Num blocks to farm at a time
-        total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
+        full_nodes, wallets, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]
         pool_a_ph = receive_address[1]
         pool_b_ph = await wallets[1].get_new_puzzlehash()
@@ -771,13 +760,11 @@ class TestPoolWalletRpc:
             status: PoolWalletInfo = await client.pw_status(wallet_id)
             log.warning(f"New status: {status}")
 
-            join_pool_tx: TransactionRecord = await api_user[0].pw_join_pool(
-                {
-                    "wallet_id": wallet_id,
-                    "pool_url": "https://pool-b.org",
-                    "relative_lock_height": 10,
-                    "target_puzzlehash": pool_b_ph.hex(),
-                }
+            join_pool_tx: TransactionRecord = await client.pw_join_pool(
+                wallet_id,
+                pool_b_ph,
+                "https://pool-b.org",
+                10,
             )
             assert join_pool_tx is not None
 
@@ -801,14 +788,3 @@ class TestPoolWalletRpc:
             client.close()
             await client.await_closed()
             await rpc_cleanup()
-
-    # @pytest.mark.asyncio
-    # async def test_only_call_pw_status_on_pool_wallet(self, setup):
-    #    TODO: How to test Python exception across process boundary with pytest
-    #    full_nodes, wallets, receive_address, client, rpc_cleanup, api_user = setup
-    #    status: PoolWalletInfo = await client.pw_status(1)
-    #    assert status.current.to_json_dict()["error"] == "wallet_id 1 is not a pooling wallet"
-
-    # pooling -> escaping -> self pooling
-    # Pool A -> Pool B
-    # Recover pool wallet from genesis_id
