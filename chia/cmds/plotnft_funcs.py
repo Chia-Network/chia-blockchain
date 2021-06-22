@@ -46,6 +46,7 @@ async def create_pool_args(pool_url: str) -> Dict:
 
 async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     state = args["state"]
+    prompt = not args.get("yes", False)
 
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
@@ -62,8 +63,11 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
 
     pool_msg = f" and join pool: {pool_url}" if pool_url else ""
     print(f"Will create a plot NFT{pool_msg}.")
+    if prompt:
+        user_input: str = input("Confirm [n]/y: ")
+    else:
+        user_input = "yes"
 
-    user_input: str = input("Confirm [n]/y: ")
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
             tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
