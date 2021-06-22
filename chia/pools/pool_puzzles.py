@@ -352,7 +352,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     if full_spend.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
         # Launcher spend
-        extra_data = full_solution.rest().rest().first().first().as_atom()
+        extra_data: Program = full_solution.rest().rest().first().first().as_atom()
         return PoolState.from_bytes(extra_data)
 
     # Not launcher spend
@@ -366,7 +366,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         # pool member
         if inner_solution.rest().first().as_int() == 1:
             return None
-        extra_data: Program = inner_solution.first()
+        extra_data = inner_solution.first()
         state_bytes: Optional[bytes] = None
         for key, value in extra_data.as_python():
             if key == b"p":
