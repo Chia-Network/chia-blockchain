@@ -85,8 +85,8 @@ def configure(
     if testnet is not None:
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
-            testnet_port = "58444"
-            testnet_introducer = "beta1_introducer.chia.net"
+            testnet_port = "59444"
+            testnet_introducer = "beta1_introducer.chivescoin.org"
             testnet = "testnet7"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
@@ -110,8 +110,8 @@ def configure(
 
         elif testnet == "false" or testnet == "f":
             print("Setting Mainnet")
-            mainnet_port = "8444"
-            mainnet_introducer = "introducer.chia.net"
+            mainnet_port = "9444"
+            mainnet_introducer = "introducer.chivescoin.org"
             net = "mainnet"
             config["full_node"]["port"] = int(mainnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
