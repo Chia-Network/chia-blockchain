@@ -12,6 +12,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
+from chia.daemon.keychain_proxy import uses_keychain_proxy
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
@@ -34,7 +35,6 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config, save_config, config_path_for_filename
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
@@ -62,11 +62,12 @@ class Farmer:
         root_path: Path,
         farmer_config: Dict,
         pool_config: Dict,
-        keychain: Keychain,
         consensus_constants: ConsensusConstants,
     ):
-        self._root_path = root_path
+        self.keychain_proxy = None
+        self.root_path = root_path
         self.config = farmer_config
+        self.pool_config = pool_config
         # Keep track of all sps, keyed on challenge chain signage point hash
         self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
 
@@ -88,10 +89,12 @@ class Farmer:
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
-        self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
-        self.all_root_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
+
+    @uses_keychain_proxy()
+    async def setup_keys(self):
+        self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
 
         self._private_keys = [master_sk_to_farmer_sk(sk) for sk in self.all_root_sks] + [
             master_sk_to_pool_sk(sk) for sk in self.all_root_sks
@@ -108,7 +111,7 @@ class Farmer:
         self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
         # This is the self pooling configuration, which is only used for original self-pooled plots
-        self.pool_target_encoded = pool_config["xch_target_address"]
+        self.pool_target_encoded = self.pool_config["xch_target_address"]
         self.pool_target = decode_puzzle_hash(self.pool_target_encoded)
         self.pool_sks_map: Dict = {}
         for key in self.get_private_keys():
@@ -132,6 +135,7 @@ class Farmer:
         self.last_config_access_time: uint64 = uint64(0)
 
     async def _start(self):
+        await self.setup_keys()
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
 
@@ -403,9 +407,10 @@ class Farmer:
     def get_private_keys(self):
         return self._private_keys
 
+    @uses_keychain_proxy()
     def get_reward_targets(self, search_for_private_key: bool) -> Dict:
         if search_for_private_key:
-            all_sks = self.keychain.get_all_private_keys()
+            all_sks = asyncio.run(self.keychain_proxy.get_all_private_keys())
             stop_searching_for_farmer, stop_searching_for_pool = False, False
             for i in range(500):
                 if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
@@ -429,7 +434,7 @@ class Farmer:
         }
 
     def set_reward_targets(self, farmer_target_encoded: Optional[str], pool_target_encoded: Optional[str]):
-        config = load_config(self._root_path, "config.yaml")
+        config = load_config(self.root_path, "config.yaml")
         if farmer_target_encoded is not None:
             self.farmer_target_encoded = farmer_target_encoded
             self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
@@ -438,7 +443,7 @@ class Farmer:
             self.pool_target_encoded = pool_target_encoded
             self.pool_target = decode_puzzle_hash(pool_target_encoded)
             config["pool"]["xch_target_address"] = pool_target_encoded
-        save_config(self._root_path, "config.yaml", config)
+        save_config(self.root_path, "config.yaml", config)
 
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():

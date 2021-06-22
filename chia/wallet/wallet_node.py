@@ -4,7 +4,6 @@ import logging
 import socket
 import time
 import traceback
-from functools import wraps
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
@@ -54,6 +53,7 @@ from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_blockchain import ReceiveBlockResult
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.util.profiler import profile_task
+from functools import wraps
 
 
 class WalletNode:
@@ -116,7 +116,6 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
-
     def uses_keychain_proxy():
         """
         Decorator which establishes a KeychainProxy connection if necessary
@@ -129,6 +128,7 @@ class WalletNode:
                 return await method(self, *args, **kwargs)
             return inner
         return wrapper
+
     @uses_keychain_proxy()
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         key: PrivateKey = None

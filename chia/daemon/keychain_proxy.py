@@ -1,18 +1,38 @@
+from chia.util.ws_message import WsRpcMessage
 import logging
 import ssl
 
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from blspy import AugSchemeMPL, PrivateKey
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import KEYCHAIN_ERR_LOCKED, KEYCHAIN_ERR_NO_KEYS
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, KeyringIsLocked, bytes_to_mnemonic, mnemonic_to_seed, supports_keyring_password
+from functools import wraps
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 
 class KeyringIsEmpty(Exception):
     pass
+
+
+class MalformedKeychainResponse(Exception):
+    pass
+
+
+def uses_keychain_proxy():
+    """
+    Decorator which establishes a KeychainProxy connection if necessary
+    """
+    def wrapper(method):
+        @wraps(method)
+        async def inner(self, *args, **kwargs):
+            if not self.keychain_proxy:
+                self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            return await method(self, *args, **kwargs)
+        return inner
+    return wrapper
 
 
 class KeychainProxy(DaemonProxy):
@@ -28,12 +48,60 @@ class KeychainProxy(DaemonProxy):
     def use_local_keychain(self) -> bool:
         return self.keychain is not None
 
+    def handle_error(self, response: WsRpcMessage):
+        error = response["data"].get("error", None)
+        if error:
+            if error == KEYCHAIN_ERR_LOCKED:
+                raise KeyringIsLocked()
+            elif error == KEYCHAIN_ERR_NO_KEYS:
+                raise KeyringIsEmpty()
+            else:
+                err = f"{response.command} failed with error: {error}"
+                self.log.error(f"{err}")
+                raise Exception(f"{err}")
+
+    async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+        keys: List[Tuple[PrivateKey, bytes]] = []
+        if self.use_local_keychain():
+            keys = self.keychain.get_all_private_keys()
+        else:
+            data = {}
+            request = self.format_request("get_all_private_keys", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if success:
+                private_keys = response["data"].get("private_keys", None)
+                if not private_keys:
+                    err = f"Missing private_keys in {response.command} response"
+                    self.log.error(f"{err}")
+                    raise MalformedKeychainResponse(f"{err}")
+                else:
+                    for key_dict in private_keys:
+                        pk = key_dict.get("private_key", None)
+                        ent = key_dict.get("entropy", None)
+                        if not pk or not ent:
+                            err = f"Missing pk and/or ent in {response.command} response"
+                            self.log.error(f"{err}")
+                            continue  # We'll skip the incomplete key entry
+                        mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
+                        seed = mnemonic_to_seed(mnemonic, passphrase="")
+                        key = AugSchemeMPL.key_gen(seed)
+                        if bytes(key.get_g1()).hex() == pk:
+                            keys.append((key, ent))
+                        else:
+                            err = "G1Elements don't match"
+                            self.log.error(f"{err}")
+            else:
+                self.handle_error(response)
+
+        return keys
+
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         key: Optional[PrivateKey] = None
         if self.use_local_keychain():
             private_keys = self.keychain.get_all_private_keys()
             if len(private_keys) == 0:
-                self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
+                raise KeyringIsEmpty()
             else:
                 if fingerprint is not None:
                     for sk, _ in private_keys:
@@ -51,7 +119,9 @@ class KeychainProxy(DaemonProxy):
                 pk = response["data"].get("private_key", None)
                 ent = response["data"].get("entropy", None)
                 if not pk or not ent:
-                    self.log.error("Missing pk and/or ent in get_key_for_fingerprint response")
+                    err = f"Missing pk and/or ent in {response.command} response"
+                    self.log.error(f"{err}")
+                    raise MalformedKeychainResponse(f"{err}")
                 else:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic, passphrase="")
@@ -59,18 +129,10 @@ class KeychainProxy(DaemonProxy):
                     if bytes(private_key.get_g1()).hex() == pk:
                         key = private_key
                     else:
-                        self.log.error("G1Elements don't match")
-                        raise Exception("G1Elements don't match")
+                        err = "G1Elements don't match"
+                        self.log.error(f"{err}")
             else:
-                error = response["data"].get("error", None)
-                if error:
-                    if error == KEYCHAIN_ERR_LOCKED:
-                        raise KeyringIsLocked()
-                    elif error == KEYCHAIN_ERR_NO_KEYS:
-                        raise KeyringIsEmpty()
-                    else:
-                        self.log.error(f"get_key_for_fingerprint failed with error: {error}")
-                        raise Exception(error)
+                self.handle_error(response)
 
         return key
 
