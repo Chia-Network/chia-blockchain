@@ -13,7 +13,7 @@ from chia.rpc.rpc_server import start_rpc_server
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.block_tools import get_signage_point
+from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
 from tests.wallet_tools import WalletTool
