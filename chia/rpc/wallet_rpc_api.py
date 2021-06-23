@@ -1029,14 +1029,19 @@ class WalletRpcApi:
         fee_amount = 0
         last_height_farmed = 0
         for record in tx_records:
-            height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
-            if height > last_height_farmed:
-                last_height_farmed = height
+            if record.wallet_id not in self.service.wallet_state_manager.wallets:
+                continue
             if record.type == TransactionType.COINBASE_REWARD:
+                if self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
+                    # Don't add pool rewards for pool wallets.
+                    continue
                 pool_reward_amount += record.amount
+            height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
             if record.type == TransactionType.FEE_REWARD:
                 fee_amount += record.amount - calculate_base_farmer_reward(height)
                 farmer_reward_amount += calculate_base_farmer_reward(height)
+            if height > last_height_farmed:
+                last_height_farmed = height
             amount += record.amount
 
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
