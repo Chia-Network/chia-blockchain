@@ -198,6 +198,7 @@ class WalletRpcApi:
 
     async def get_public_keys(self, request: Dict):
         try:
+            assert self.service.keychain_proxy is not None  # An offering to the mypy gods
             fingerprints = [
                 sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
@@ -207,6 +208,7 @@ class WalletRpcApi:
             return {"public_key_fingerprints": fingerprints}
 
     async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
+        assert self.service.keychain_proxy is not None  # An offering to the mypy gods
         for sk, seed in await self.service.keychain_proxy.get_all_private_keys():
             if sk.get_g1().get_fingerprint() == fingerprint:
                 return sk, seed
@@ -240,13 +242,15 @@ class WalletRpcApi:
         mnemonic = request["mnemonic"]
         passphrase = ""
         try:
-            sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
         except KeyError as e:
             return {
                 "success": False,
                 "error": f"The word '{e.args[0]}' is incorrect.'",
                 "word": e.args[0],
             }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
         fingerprint = sk.get_g1().get_fingerprint()
         await self._stop_wallet()
@@ -914,13 +918,16 @@ class WalletRpcApi:
             mnemonic = request["words"]
             passphrase = ""
             try:
-                sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+                assert self.service.keychain_proxy is not None  # An offering to the mypy gods
+                sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
             except KeyError as e:
                 return {
                     "success": False,
                     "error": f"The word '{e.args[0]}' is incorrect.'",
                     "word": e.args[0],
                 }
+            except Exception as e:
+                return {"success": False, "error": str(e)}
         elif "fingerprint" in request:
             sk, seed = await self._get_private_key(request["fingerprint"])
 
