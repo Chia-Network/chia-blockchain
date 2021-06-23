@@ -199,7 +199,7 @@ class WalletRpcApi:
     async def get_public_keys(self, request: Dict):
         try:
             fingerprints = [
-                sk.get_g1().get_fingerprint() for (sk, seed) in self.service.keychain.get_all_private_keys()
+                sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
@@ -207,7 +207,7 @@ class WalletRpcApi:
             return {"public_key_fingerprints": fingerprints}
 
     async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
-        for sk, seed in self.service.keychain.get_all_private_keys():
+        for sk, seed in await self.service.keychain_proxy.get_all_private_keys():
             if sk.get_g1().get_fingerprint() == fingerprint:
                 return sk, seed
         return None, None
