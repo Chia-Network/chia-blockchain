@@ -263,7 +263,7 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 
 async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
-    prompt = args.get("yes", False)
+    prompt = not args.get("yes", False)
 
     msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
     func = functools.partial(wallet_client.pw_self_pool, wallet_id)
