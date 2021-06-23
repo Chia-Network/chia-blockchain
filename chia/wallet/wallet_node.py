@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from blspy import PrivateKey
-
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -40,6 +39,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint128
+from chia.util.keychain import Keychain
 from chia.util.lru_cache import LRUCache
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
 from chia.util.path import mkdir, path_from_root
@@ -56,11 +56,31 @@ from chia.util.profiler import profile_task
 from functools import wraps
 
 
+def uses_keychain_proxy():
+    """
+    Decorator which establishes a KeychainProxy connection if necessary
+    """
+
+    def wrapper(method):
+        @wraps(method)
+        async def inner(self, *args, **kwargs):
+            if not self.keychain_proxy:
+                self.keychain_proxy = await connect_to_keychain_and_validate(
+                    self.root_path, self.log, self.local_keychain
+                )
+            return await method(self, *args, **kwargs)
+
+        return inner
+
+    return wrapper
+
+
 class WalletNode:
     key_config: Dict
     config: Dict
     constants: ConsensusConstants
-    keychain_proxy: KeychainProxy
+    keychain_proxy: Optional[KeychainProxy]
+    local_keychain: Optional[Keychain]  # For testing only. KeychainProxy is used in normal cases
     server: Optional[ChiaServer]
     log: logging.Logger
     wallet_peers: WalletPeers
@@ -85,10 +105,12 @@ class WalletNode:
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = None,
+        local_keychain: Optional[Keychain] = None,
     ):
         self.config = config
         self.constants = consensus_constants
         self.keychain_proxy = None
+        self.local_keychain = local_keychain
         self.root_path = root_path
         self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
@@ -116,23 +138,11 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
-    def uses_keychain_proxy():
-        """
-        Decorator which establishes a KeychainProxy connection if necessary
-        """
-        def wrapper(method):
-            @wraps(method)
-            async def inner(self, *args, **kwargs):
-                if not self.keychain_proxy:
-                    self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
-                return await method(self, *args, **kwargs)
-            return inner
-        return wrapper
-
     @uses_keychain_proxy()
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         key: PrivateKey = None
         try:
+            assert self.keychain_proxy is not None  # An offering to the mypy gods
             key = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
         except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")

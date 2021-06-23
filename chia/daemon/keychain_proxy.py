@@ -8,9 +8,8 @@ from chia.daemon.keychain_server import KEYCHAIN_ERR_LOCKED, KEYCHAIN_ERR_NO_KEY
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, KeyringIsLocked, bytes_to_mnemonic, mnemonic_to_seed, supports_keyring_password
-from functools import wraps
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class KeyringIsEmpty(Exception):
@@ -21,28 +20,20 @@ class MalformedKeychainResponse(Exception):
     pass
 
 
-def uses_keychain_proxy():
-    """
-    Decorator which establishes a KeychainProxy connection if necessary
-    """
-    def wrapper(method):
-        @wraps(method)
-        async def inner(self, *args, **kwargs):
-            if not self.keychain_proxy:
-                self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
-            return await method(self, *args, **kwargs)
-        return inner
-    return wrapper
-
-
 class KeychainProxy(DaemonProxy):
-    keychain: Keychain = None  # If the keyring doesn't support a master password, we'll proxy calls locally
+    keychain: Keychain  # If the keyring doesn't support a master password, we'll proxy calls locally
     log: logging.Logger
 
-    def __init__(self, uri: str, ssl_context: Optional[ssl.SSLContext], log: logging.Logger):
+    def __init__(
+        self, uri: str, ssl_context: Optional[ssl.SSLContext], log: logging.Logger, local_keychain: Optional[Keychain]
+    ):
         self.log = log
-        if not supports_keyring_password():
+        if local_keychain:
+            self.keychain = local_keychain
+        elif not supports_keyring_password():
             self.keychain = Keychain()  # Proxy locally, don't use RPC
+        else:
+            self.keychain = None
         super().__init__(uri, ssl_context)
 
     def use_local_keychain(self) -> bool:
@@ -65,7 +56,7 @@ class KeychainProxy(DaemonProxy):
         if self.use_local_keychain():
             keys = self.keychain.get_all_private_keys()
         else:
-            data = {}
+            data: Dict[str, Any] = {}
             request = self.format_request("get_all_private_keys", data)
             response = await self._get(request)
             success = response["data"].get("success", False)
@@ -137,17 +128,25 @@ class KeychainProxy(DaemonProxy):
         return key
 
 
-async def connect_to_keychain(self_hostname: str, daemon_port: int, ssl_context: Optional[ssl.SSLContext], log: logging.Logger) -> KeychainProxy:
+async def connect_to_keychain(
+    self_hostname: str,
+    daemon_port: int,
+    ssl_context: Optional[ssl.SSLContext],
+    log: logging.Logger,
+    local_keychain: Optional[Keychain],
+) -> KeychainProxy:
     """
     Connect to the local daemon.
     """
 
-    client = KeychainProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, log)
+    client = KeychainProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, log, local_keychain)
     await client.start()
     return client
 
 
-async def connect_to_keychain_and_validate(root_path: Path, log: logging.Logger) -> Optional[KeychainProxy]:
+async def connect_to_keychain_and_validate(
+    root_path: Path, log: logging.Logger, local_keychain: Optional[Keychain]
+) -> Optional[KeychainProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
@@ -159,7 +158,9 @@ async def connect_to_keychain_and_validate(root_path: Path, log: logging.Logger)
         ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
-        connection = await connect_to_keychain(net_config["self_hostname"], net_config["daemon_port"], ssl_context, log)
+        connection = await connect_to_keychain(
+            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, local_keychain
+        )
         r = await connection.ping()
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
