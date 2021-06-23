@@ -326,7 +326,9 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_2 = None
-        for coin in run_and_get_removals_and_additions(new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM)[1]:
+        for coin in run_and_get_removals_and_additions(
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE
+        )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
                 break
@@ -345,7 +347,9 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_3 = None
-        for coin in run_and_get_removals_and_additions(new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM)[1]:
+        for coin in run_and_get_removals_and_additions(
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE
+        )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
                 break

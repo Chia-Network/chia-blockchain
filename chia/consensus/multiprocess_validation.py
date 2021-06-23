@@ -78,7 +78,10 @@ def batch_pre_validate_blocks(
                     block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
                     npc_result = get_name_puzzle_conditions(
-                        block_generator, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
+                        block_generator,
+                        min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                        cost_per_byte=constants.COST_PER_BYTE,
+                        safe_mode=True,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
 
