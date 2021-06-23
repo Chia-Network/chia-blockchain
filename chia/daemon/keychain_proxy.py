@@ -64,6 +64,51 @@ class KeychainProxy(DaemonProxy):
                 self.log.error(f"{err}")
                 raise Exception(f"{err}")
 
+    async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+        key: PrivateKey
+        if self.use_local_keychain():
+            key = self.keychain.add_private_key(mnemonic, passphrase)
+        else:
+            data = {"mnemonic": mnemonic, "passphrase": passphrase}
+            request = self.format_request("add_private_key", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if success:
+                seed = mnemonic_to_seed(mnemonic, passphrase)
+                key = AugSchemeMPL.key_gen(seed)
+            else:
+                error = response["data"].get("error", None)
+                if error == KEYCHAIN_ERR_KEYERROR:
+                    error_details = response["data"].get("error_details", {})
+                    word = error_details.get("word", "")
+                    raise KeyError(word)
+                else:
+                    self.handle_error(response)
+
+        return key
+
+    async def delete_all_keys(self):
+        if self.use_local_keychain():
+            self.keychain.delete_all_keys()
+        else:
+            data = {}
+            request = self.format_request("delete_all_keys", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if not success:
+                self.handle_error(response)
+
+    async def delete_key_by_fingerprint(self, fingerprint: int):
+        if self.use_local_keychain():
+            self.keychain.delete_key_by_fingerprint(fingerprint)
+        else:
+            data = {"fingerprint": fingerprint}
+            request = self.format_request("delete_key_by_fingerprint", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if not success:
+                self.handle_error(response)
+
     async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
         keys: List[Tuple[PrivateKey, bytes]] = []
         if self.use_local_keychain():
@@ -137,29 +182,6 @@ class KeychainProxy(DaemonProxy):
                         self.log.error(f"{err}")
             else:
                 self.handle_error(response)
-
-        return key
-
-    async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
-        key: PrivateKey
-        if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic, passphrase)
-        else:
-            data = {"mnemonic": mnemonic, "passphrase": passphrase}
-            request = self.format_request("add_private_key", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
-            if success:
-                seed = mnemonic_to_seed(mnemonic, passphrase)
-                key = AugSchemeMPL.key_gen(seed)
-            else:
-                error = response["data"].get("error", None)
-                if error == KEYCHAIN_ERR_KEYERROR:
-                    error_details = response["data"].get("error_details", {})
-                    word = error_details.get("word", "")
-                    raise KeyError(word)
-                else:
-                    self.handle_error(response)
 
         return key
 
