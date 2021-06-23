@@ -218,7 +218,7 @@ async def setup_farmer(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_farmer(b_tools.root_path, config, config_pool, b_tools.keychain, consensus_constants)
+    kwargs = service_kwargs_for_farmer(b_tools.root_path, config, config_pool, consensus_constants, b_tools.keychain)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,

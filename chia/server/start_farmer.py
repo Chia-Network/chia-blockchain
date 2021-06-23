@@ -1,5 +1,5 @@
 import pathlib
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,6 +11,7 @@ from chia.server.start_service import run_service
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.keychain import Keychain
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -23,6 +24,7 @@ def service_kwargs_for_farmer(
     config: Dict,
     config_pool: Dict,
     consensus_constants: ConsensusConstants,
+    keychain: Optional[Keychain] = None,
 ) -> Dict:
 
     connect_peers = []
@@ -33,7 +35,7 @@ def service_kwargs_for_farmer(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    farmer = Farmer(root_path, config, config_pool, consensus_constants=updated_constants)
+    farmer = Farmer(root_path, config, config_pool, consensus_constants=updated_constants, local_keychain=keychain)
     peer_api = FarmerAPI(farmer)
     network_id = config["selected_network"]
     kwargs = dict(

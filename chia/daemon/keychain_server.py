@@ -4,9 +4,7 @@ from blspy import PrivateKey
 from chia.util.keychain import Keychain
 from typing import Any, Dict, List, Optional, cast
 
-keychain_commands = [
-    "get_all_private_keys",
-    "get_key_for_fingerprint"]
+keychain_commands = ["get_all_private_keys", "get_key_for_fingerprint"]
 
 log = logging.getLogger(__name__)
 
@@ -55,4 +53,7 @@ class KeychainServer:
         else:
             private_key, entropy = private_keys[0]
 
-        return {"success": True, "private_key": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
+        if not private_key or not entropy:
+            return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
+        else:
+            return {"success": True, "private_key": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
