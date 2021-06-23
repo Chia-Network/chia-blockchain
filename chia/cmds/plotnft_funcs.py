@@ -135,6 +135,9 @@ async def pprint_pool_wallet_state(
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
+    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL:
+        expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
+        print(f"Expected leave block height after: {expected_leave_height}")
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
