@@ -803,10 +803,15 @@ class PoolWallet:
             and pool_wallet_info.current.state == LEAVING_POOL
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height
-            self.log.info(f"Current block height: {peak.height} OK to leave at height {leave_height}")
+
+            curr: BlockRecord = peak
+            while not curr.is_transaction_block:
+                curr = self.wallet_state_manager.blockchain.block_record(curr.prev_hash)
+
+            self.log.info(f"Last transaction block height: {curr.height} OK to leave at height {leave_height}")
 
             # Add some buffer (+2) to reduce chances of a reorg
-            if peak.height > leave_height + 2:
+            if curr.height > leave_height + 2:
                 unconfirmed: List[
                     TransactionRecord
                 ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
