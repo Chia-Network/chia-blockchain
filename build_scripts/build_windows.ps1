@@ -2,8 +2,8 @@
 
 $ErrorActionPreference = "Stop"
 
-mkdir build_scripts\win_build
-Set-Location -Path ".\build_scripts\win_build" -PassThru
+mkdir win_build
+Set-Location -Path ".\win_build" -PassThru
 
 git status
 
@@ -18,7 +18,7 @@ If ($LastExitCode -gt 0){
 }
 else
 {
-    Set-Location -Path - -PassThru
+    Set-Location -Path .. -PassThru
     Write-Output "miniupnpc download successful."
 }
 
@@ -33,9 +33,11 @@ pip install pywin32
 pip install pyinstaller==4.2
 pip install setuptools_scm
 
+
 Write-Output "   ---"
 Write-Output "Get CHIA_INSTALLER_VERSION"
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
+Set-Location -Path .. -PassThru
 $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
