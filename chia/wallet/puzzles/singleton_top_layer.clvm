@@ -104,13 +104,13 @@
         )
    )
 
-   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `output_m113`
+   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `is_output_m113`
    ;; precalculated
-   (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . output_m113))
+   (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . is_output_m113))
        (assert
           (not (all is_output_odd has_odd_output_been_found))
           (strip_first_condition_if
-             output_m113
+             is_output_m113
              (c (if is_output_odd
                     (morph_condition (f conditions) SINGLETON_STRUCT)
                     (f conditions)

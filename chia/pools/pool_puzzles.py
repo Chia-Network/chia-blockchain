@@ -346,6 +346,17 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     return inner_puzzle
 
 
+def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
+    state_bytes: Optional[bytes] = None
+    for key, value in extra_data.as_python():
+        if key == b"p":
+            state_bytes = value
+            break
+    if state_bytes is None:
+        return None
+    return PoolState.from_bytes(state_bytes)
+
+
 def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
     full_solution_ser: SerializedProgram = full_spend.solution
     full_solution: Program = Program.from_bytes(bytes(full_solution_ser))
@@ -367,23 +378,14 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         if inner_solution.rest().first().as_int() == 1:
             return None
         extra_data = inner_solution.first()
-        state_bytes: Optional[bytes] = None
-        for key, value in extra_data.as_python():
-            if key == b"p":
-                state_bytes = value
-                break
+        return pool_state_from_extra_data(extra_data)
     else:
         # pool waitingroom
         if inner_solution.first().as_int() == 0:
             return None
         extra_data = inner_solution.rest().first()
-        for key, value in extra_data.as_python():
-            if key == b"p":
-                state_bytes = value
-                break
-    if state_bytes is None:
-        return None
-    return PoolState.from_bytes(state_bytes)
+        return pool_state_from_extra_data(extra_data)
+
 
 
 def pool_state_to_inner_puzzle(
