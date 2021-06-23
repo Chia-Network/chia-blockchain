@@ -109,6 +109,12 @@ async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     print(res)
 
 
+async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["id"]
+    await wallet_client.delete_unconfirmed_transactions(wallet_id)
+    print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
+
+
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.COLOURED_COIN:
         return "", units["colouredcoin"]

@@ -213,6 +213,17 @@ class TestWalletRpc:
 
             assert (await client.get_height_info()) > 0
 
+            created_tx = await client.send_transaction("1", tx_amount, addr)
+
+            async def tx_in_mempool():
+                tx = await client.get_transaction("1", created_tx.name)
+                return tx.is_in_mempool()
+
+            await time_out_assert(5, tx_in_mempool, True)
+            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
+            await client.delete_unconfirmed_transactions("1")
+            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
+
             sk_dict = await client.get_private_key(pks[0])
             assert sk_dict["fingerprint"] == pks[0]
             assert sk_dict["sk"] is not None

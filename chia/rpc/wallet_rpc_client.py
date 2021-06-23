@@ -145,6 +145,13 @@ class WalletRpcClient(RpcClient):
             )
         return TransactionRecord.from_json_dict(response["transaction"])
 
+    async def delete_unconfirmed_transactions(self, wallet_id: str) -> None:
+        await self.fetch(
+            "delete_unconfirmed_transactions",
+            {"wallet_id": wallet_id},
+        )
+        return None
+
     async def create_backup(self, file_path: Path) -> None:
         return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
 
