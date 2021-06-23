@@ -100,8 +100,8 @@ def create_pool_state(
 @streamable
 class PoolWalletInfo(Streamable):
     """
-    Internal Pool Wallet state, not destined for the blockchain. This can be completely derived with CoinSolutions list,
-    or with the information from the WalletPoolStore.
+    Internal Pool Wallet state, not destined for the blockchain. This can be completely derived with
+    the Singleton's CoinSolutions list, or with the information from the WalletPoolStore.
     """
 
     current: PoolState
@@ -111,3 +111,4 @@ class PoolWalletInfo(Streamable):
     p2_singleton_puzzle_hash: bytes32
     current_inner: Program  # Inner puzzle in current singleton, not revealed yet
     tip_singleton_coin_id: bytes32
+    current_state_block_height: uint32  # Block height that current PoolState is from

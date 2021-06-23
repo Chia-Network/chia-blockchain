@@ -101,6 +101,7 @@ async def pprint_pool_wallet_state(
     pool_state_dict: Dict,
 ):
     print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
+    print(f"Current state from block height: {pool_wallet_info.current_state_block_height}")
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
     print(
         "Target address (not for plotting): "

@@ -194,9 +194,11 @@ class PoolWallet:
 
         curr_spend_i = len(all_spends) - 1
         extra_data: Optional[PoolState] = None
+        last_singleton_spend_height = uint32(0)
         while extra_data is None:
             full_spend: CoinSolution = all_spends[curr_spend_i]
             extra_data = solution_to_extra_data(full_spend)
+            last_singleton_spend_height = uint32(history[curr_spend_i][0])
             curr_spend_i -= 1
 
         assert extra_data is not None
@@ -215,6 +217,7 @@ class PoolWallet:
             p2_singleton_puzzle_hash,
             current_inner,
             tip_singleton_coin.name(),
+            last_singleton_spend_height,
         )
 
     async def get_tip(self) -> Tuple[uint32, CoinSolution]:
