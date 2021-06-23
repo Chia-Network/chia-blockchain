@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-export NODE_OPTIONS="--max-old-space-size=2000"
+export NODE_OPTIONS="--max-old-space-size=3000"
 
 
 if [ -z "$VIRTUAL_ENV" ]; then
