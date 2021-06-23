@@ -124,9 +124,8 @@
   ; this final stager asserts our ID
   ; it also runs the innerpuz with the innersolution with the "truths" added
   ; it then passes that output conditions from the innerpuz to the morph conditions function
-
   (defun stager_three (SINGLETON_STRUCT lineage_proof my_id full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
-    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (a INNER_PUZZLE (c (list my_id full_puzhash innerpuzhash my_amount lineage_proof SINGLETON_STRUCT) inner_solution)) 0))
+    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (a INNER_PUZZLE (c (truth_data_to_truth_struct my_id full_puzhash innerpuzhash my_amount lineage_proof SINGLETON_STRUCT) inner_solution)) 0))
   )
 
   ; this checks whether we are an eve spend or not and calculates our full coin ID appropriately and passes it on to the final stager
@@ -175,5 +174,4 @@
     (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
     (x)
   )
-
 )
