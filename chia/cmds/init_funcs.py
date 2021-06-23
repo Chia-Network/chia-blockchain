@@ -75,7 +75,7 @@ def check_keys(new_root: Path) -> None:
 
     # Set the destinations
     if "xch_target_address" not in config["farmer"]:
-        print(f"Setting the xch destination address for coinbase fees reward to {all_targets[0]}")
+        print(f"Setting the xcc destination address for coinbase fees reward to {all_targets[0]}")
         config["farmer"]["xch_target_address"] = all_targets[0]
     elif config["farmer"]["xch_target_address"] not in all_targets:
         print(
@@ -87,7 +87,7 @@ def check_keys(new_root: Path) -> None:
     if "pool" not in config:
         config["pool"] = {}
     if "xch_target_address" not in config["pool"]:
-        print(f"Setting the xch destination address for coinbase reward to {all_targets[0]}")
+        print(f"Setting the xcc destination address for coinbase reward to {all_targets[0]}")
         config["pool"]["xch_target_address"] = all_targets[0]
     elif config["pool"]["xch_target_address"] not in all_targets:
         print(

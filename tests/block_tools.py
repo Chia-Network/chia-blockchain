@@ -207,7 +207,7 @@ class BlockTools:
             )
             # Create more plots, but to a pool address instead of public key
             args.pool_public_key = None
-            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
+            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xcc")
             args.num = num_pool_address_plots
             create_plots(
                 args,

@@ -72,20 +72,20 @@ network_overrides: &network_overrides
       DIFFICULTY_STARTING: 30
   config:
     mainnet:
-      address_prefix: "xch"
+      address_prefix: "xcc"
       default_full_node_port: 9444
     testnet0:
-      address_prefix: "txch"
+      address_prefix: "txcc"
     testnet1:
-      address_prefix: "txch"
+      address_prefix: "txcc"
     testnet2:
-      address_prefix: "txch"
+      address_prefix: "txcc"
     testnet3:
-      address_prefix: "txch"
+      address_prefix: "txcc"
     testnet4:
-      address_prefix: "txch"
+      address_prefix: "txcc"
     testnet7:
-      address_prefix: "txch"
+      address_prefix: "txcc"
       default_full_node_port: 59444
 
 selected_network: &selected_network "mainnet"
