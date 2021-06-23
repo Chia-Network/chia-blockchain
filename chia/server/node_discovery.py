@@ -33,6 +33,8 @@ NETWORK_ID_DEFAULT_PORTS = {
 
 
 class FullNodeDiscovery:
+    resolver: Optional[dns.asyncresolver.Resolver]
+
     def __init__(
         self,
         server: ChiaServer,

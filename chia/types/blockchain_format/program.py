@@ -7,7 +7,7 @@ from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE, deserialize_and_run_program, serialized_length
+from clvm_rs import STRICT_MODE, deserialize_and_run_program2, serialized_length
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -230,7 +230,7 @@ class SerializedProgram:
         native_opcode_names_by_opcode = dict(
             ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."
         )
-        cost, ret = deserialize_and_run_program(
+        cost, ret = deserialize_and_run_program2(
             self._buf,
             serialized_args,
             KEYWORD_TO_ATOM["q"][0],
@@ -239,8 +239,7 @@ class SerializedProgram:
             max_cost,
             flags,
         )
-        # TODO this could be parsed lazily
-        return cost, Program.to(sexp_from_stream(io.BytesIO(ret), SExp.to))
+        return cost, Program.to(ret)
 
 
 NIL = Program.from_bytes(b"\x80")
