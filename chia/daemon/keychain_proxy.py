@@ -33,7 +33,7 @@ class KeychainProxy(DaemonProxy):
         elif not supports_keyring_password():
             self.keychain = Keychain()  # Proxy locally, don't use RPC
         else:
-            self.keychain = None
+            self.keychain = None  # type: ignore
         super().__init__(uri, ssl_context)
 
     def use_local_keychain(self) -> bool:
