@@ -208,10 +208,13 @@ class WalletRpcApi:
             return {"public_key_fingerprints": fingerprints}
 
     async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
-        assert self.service.keychain_proxy is not None  # An offering to the mypy gods
-        for sk, seed in await self.service.keychain_proxy.get_all_private_keys():
-            if sk.get_g1().get_fingerprint() == fingerprint:
-                return sk, seed
+        try:
+            assert self.service.keychain_proxy is not None  # An offering to the mypy gods
+            for sk, seed in await self.service.keychain_proxy.get_all_private_keys():
+                if sk.get_g1().get_fingerprint() == fingerprint:
+                    return sk, seed
+        except Exception as e:
+            log.error(f"Failed to get private key by fingerprint: {e}")
         return None, None
 
     async def get_private_key(self, request):
@@ -274,7 +277,11 @@ class WalletRpcApi:
     async def delete_key(self, request):
         await self._stop_wallet()
         fingerprint = request["fingerprint"]
-        self.service.keychain.delete_key_by_fingerprint(fingerprint)
+        try:
+            await self.service.keychain_proxy.delete_key_by_fingerprint(fingerprint)
+        except Exception as e:
+            log.error(f"Failed to delete key by fingerprint: {e}")
+            return {"success": False, "error": str(e)}
         path = path_from_root(
             self.service.root_path,
             f"{self.service.config['database_path']}-{fingerprint}",
@@ -354,7 +361,12 @@ class WalletRpcApi:
 
     async def delete_all_keys(self, request: Dict):
         await self._stop_wallet()
-        self.service.keychain.delete_all_keys()
+        try:
+            assert self.service.keychain_proxy is not None  # An offering to the mypy gods
+            await self.service.keychain_proxy.delete_all_keys()
+        except Exception as e:
+            log.error(f"Failed to delete all keys: {e}")
+            return {"success": False, "error": str(e)}
         path = path_from_root(self.service.root_path, self.service.config["database_path"])
         if path.exists():
             path.unlink()
