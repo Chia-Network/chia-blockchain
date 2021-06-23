@@ -4,7 +4,13 @@ from blspy import PrivateKey
 from chia.util.keychain import Keychain
 from typing import Any, Dict, List, Optional, cast
 
-keychain_commands = ["get_all_private_keys", "get_key_for_fingerprint"]
+keychain_commands = [
+    "add_private_key",
+    "delete_all_keys",
+    "delete_key_by_fingerprint",
+    "get_all_private_keys",
+    "get_key_for_fingerprint",
+]
 
 log = logging.getLogger(__name__)
 
@@ -19,11 +25,65 @@ class KeychainServer:
         self.keychain = Keychain()
 
     async def handle_command(self, command, data) -> Dict[str, Any]:
-        if command == "get_all_private_keys":
+        if command == "add_private_key":
+            return await self.add_private_key(cast(Dict[str, Any], data))
+        elif command == "delete_all_keys":
+            return await self.delete_all_keys(cast(Dict[str, Any], data))
+        elif command == "delete_key_by_fingerprint":
+            return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
+        elif command == "get_all_private_keys":
             return await self.get_all_private_keys(cast(Dict[str, Any], data))
         elif command == "get_key_for_fingerprint":
             return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
         return {}
+
+    async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        mnemonic = request.get("mnemonic", None)
+        passphrase = request.get("passphrase", None)
+        if not mnemonic or not passphrase:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": "missing mnemonic and/or passphrase"},
+            }
+
+        try:
+            self.keychain.add_private_key(mnemonic, passphrase)
+        except KeyError as e:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_KEYERROR,
+                "error_details": {"message": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]},
+            }
+
+        return {"success": True}
+
+    async def delete_all_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        self.keychain.delete_all_keys()
+
+        return {"success": True}
+
+    async def delete_key_by_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        fingerprint = request.get("fingerprint", None)
+        if not fingerprint:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": "missing fingerprint"},
+            }
+
+        self.keychain.delete_key_by_fingerprint(fingerprint)
+
+        return {"success": True}
 
     async def get_all_private_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         all_keys: List[Dict[str, Any]] = []
@@ -59,27 +119,3 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
         else:
             return {"success": True, "private_key": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
-
-    async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.keychain.is_keyring_locked():
-            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
-
-        mnemonic = request.get("mnemonic", None)
-        passphrase = request.get("passphrase", None)
-        if not mnemonic or not passphrase:
-            return {
-                "success": False,
-                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing mnemonic and/or passphrase"},
-            }
-
-        try:
-            self.keychain.add_private_key(mnemonic, passphrase)
-        except KeyError as e:
-            return {
-                "success": False,
-                "error": KEYCHAIN_ERR_KEYERROR,
-                "error_details": {"message": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]},
-            }
-
-        return {"success": True}
