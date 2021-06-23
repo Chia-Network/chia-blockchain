@@ -440,3 +440,9 @@ class WalletTransactionStore:
 
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
+
+    async def delete_unconfirmed_transactions(self, wallet_id: int):
+        cursor = await self.db_connection.execute(
+            "DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=?", (wallet_id,)
+        )
+        await cursor.close()

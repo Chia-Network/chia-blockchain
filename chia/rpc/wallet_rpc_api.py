@@ -78,6 +78,7 @@ class WalletRpcApi:
             "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
+            "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             # Coloured coins and trading
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
@@ -671,6 +672,19 @@ class WalletRpcApi:
             "transaction": transaction,
             "transaction_id": transaction.name,
         }
+
+    async def delete_unconfirmed_transactions(self, request):
+        wallet_id = int(request["wallet_id"])
+        if wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet id {wallet_id} does not exist")
+        async with self.service.wallet_state_manager.lock:
+            async with self.service.wallet_state_manager.tx_store.db_wrapper.lock:
+                await self.service.wallet_state_manager.tx_store.db_wrapper.begin_transaction()
+                await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
+                await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
+                # Update the cache
+                await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
+                return {}
 
     async def get_transaction_count(self, request):
         wallet_id = int(request["wallet_id"])

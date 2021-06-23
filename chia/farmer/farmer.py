@@ -53,7 +53,7 @@ singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
-UPDATE_POOL_FARMER_INFO_INTERVAL: int = 60
+UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
