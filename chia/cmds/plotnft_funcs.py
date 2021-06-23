@@ -135,8 +135,6 @@ async def pprint_pool_wallet_state(
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
-    if len(unconfirmed_transactions) > 0:
-        print(f"Unconfirmed transactions: {unconfirmed_transactions}")
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -301,7 +299,14 @@ async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
     pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
-    print(pool_wallet_info)
+    print(
+        {
+            "pool_wallet_info": pool_wallet_info,
+            "unconfirmed_transactions": [
+                {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in unconfirmed_transactions
+            ],
+        }
+    )
 
 
 async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

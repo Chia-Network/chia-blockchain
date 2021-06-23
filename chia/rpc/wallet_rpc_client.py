@@ -220,5 +220,5 @@ class WalletRpcClient(RpcClient):
         json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
         return (
             PoolWalletInfo.from_json_dict(json_dict["state"]),
-            [TransactionRecord.from_json_dict(tr) for tr in json_dict["transaction"]],
+            [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
         )
