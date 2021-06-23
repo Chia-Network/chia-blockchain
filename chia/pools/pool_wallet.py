@@ -282,9 +282,13 @@ class PoolWallet:
             self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend}")
             coin_name_to_spend.pop(spent_coin_name)
 
-            # If we have reached the target state, resets it to None
-            if self.target_state == solution_to_extra_data(tip_spend):
-                self.target_state = None
+            # If we have reached the target state, resets it to None. Loops back to get current state
+            for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
+                latest_state: Optional[PoolState] = solution_to_extra_data(added_spend)
+                if latest_state is not None:
+                    if self.target_state == latest_state:
+                        self.target_state = None
+                    break
         await self.update_pool_config(False)
 
     async def rewind(self, block_height: int) -> bool:
