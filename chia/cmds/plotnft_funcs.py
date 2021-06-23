@@ -102,7 +102,9 @@ async def pprint_pool_wallet_state(
 ):
     print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
-    print(f"Target address: {encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}")
+    print(
+        f"Target address (not for plotting): {encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}"
+    )
     print(f"Pool URL: {pool_wallet_info.current.pool_url}")
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
     print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
@@ -122,6 +124,13 @@ async def pprint_pool_wallet_state(
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
+    if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
+        payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
+        try:
+            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
+            print(f"Payout instructions (pool will pay to this address): {payout_address}")
+        except Exception:
+            print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
