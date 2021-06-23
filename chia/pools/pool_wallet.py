@@ -740,6 +740,9 @@ class PoolWallet:
         all_spends: List[CoinSolution] = []
         total_amount = 0
         for coin_record in unspent_coin_records:
+            if len(all_spends) >= 100:
+                # Limit the total number of spends, so it fits into the block
+                break
             absorb_spend: List[CoinSolution] = create_absorb_spend(
                 last_solution,
                 current_state.current,
