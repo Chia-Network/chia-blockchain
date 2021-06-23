@@ -1,6 +1,6 @@
 import pathlib
 from multiprocessing import freeze_support
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -10,6 +10,7 @@ from chia.server.start_service import run_service
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.keychain import Keychain
 from chia.wallet.wallet_node import WalletNode
 
 # See: https://bugs.python.org/issue29288
@@ -24,6 +25,7 @@ def service_kwargs_for_wallet(
     root_path: pathlib.Path,
     config: Dict,
     consensus_constants: ConsensusConstants,
+    keychain: Optional[Keychain] = None,
 ) -> Dict:
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
@@ -39,6 +41,7 @@ def service_kwargs_for_wallet(
         config,
         root_path,
         consensus_constants=updated_constants,
+        local_keychain=keychain,
     )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
