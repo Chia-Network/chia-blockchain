@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from chia.cmds.init_funcs import chia_init
+from chia.cmds.init_funcs import check_keys, chia_init
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
@@ -115,7 +115,15 @@ async def ping() -> Dict[str, Any]:
 
 
 class WebSocketServer:
-    def __init__(self, root_path: Path, ca_crt_path: Path, ca_key_path: Path, crt_path: Path, key_path: Path):
+    def __init__(
+        self,
+        root_path: Path,
+        ca_crt_path: Path,
+        ca_key_path: Path,
+        crt_path: Path,
+        key_path: Path,
+        run_check_keys_on_unlock: bool = False,
+    ):
         self.root_path = root_path
         self.log = log
         self.services: Dict = dict()
@@ -130,6 +138,7 @@ class WebSocketServer:
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
         self.keychain_server = KeychainServer()
+        self.run_check_keys_on_unlock = run_check_keys_on_unlock
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -327,6 +336,15 @@ class WebSocketServer:
                 tb = traceback.format_exc()
                 self.log.error(f"Keyring password validation failed: {e} {tb}")
                 error = "validation exception"
+
+        if success and self.run_check_keys_on_unlock:
+            try:
+                self.log.info("Running check_keys now that the keyring is unlocked")
+                check_keys(self.root_path)
+                self.run_check_keys_on_unlock = False
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
 
         response = {"success": success, "error": error}
         return response
@@ -1038,7 +1056,9 @@ async def async_run_daemon(root_path: Path, have_gui: bool = False) -> int:
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    ws_server = WebSocketServer(
+        root_path, ca_crt_path, ca_key_path, crt_path, key_path, run_check_keys_on_unlock=have_gui
+    )
     await ws_server.start()
     assert ws_server.websocket_server is not None
     await ws_server.websocket_server.wait_closed()
