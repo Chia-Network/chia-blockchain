@@ -36,11 +36,12 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
 
 
 def test_only_odd_coins():
-    did_core_hash = SINGLETON_MOD.get_tree_hash()
-    # (MOD_HASH LAUNCHER_ID INNERPUZ parent_info my_amount inner_solution)
+    singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
+    # (SINGLETON_STRUCT INNER_PUZZLE lineage_proof my_amount inner_solution)
+    # SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     solution = Program.to(
         [
-            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
+            (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
@@ -56,11 +57,11 @@ def test_only_odd_coins():
 
     solution = Program.to(
         [
-            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            1,
+            (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
+            Program.to(binutils.assemble("(q (51 0xcafef00d 201))")),
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
-            [[51, 0xCAFEF00D, 205]],
+            0,
         ]
     )
     try:
@@ -70,14 +71,14 @@ def test_only_odd_coins():
 
 
 def test_only_one_odd_coin_created():
-    did_core_hash = SINGLETON_MOD.get_tree_hash()
+    singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
     solution = Program.to(
         [
-            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            1,
+            (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
+            Program.to(binutils.assemble("(q (51 0xcafef00d 203) (51 0xfadeddab 205))")),
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
-            [[51, 0xCAFEF00D, 203], [51, 0xFADEDDAB, 203]],
+            [],
         ]
     )
     try:
@@ -88,11 +89,11 @@ def test_only_one_odd_coin_created():
         assert False
     solution = Program.to(
         [
-            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
-            1,
+            (singleton_mod_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
+            Program.to(binutils.assemble("(q (51 0xcafef00d 203) (51 0xfadeddab 204) (51 0xdeadbeef 202))")),
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
-            [[51, 0xCAFEF00D, 203], [51, 0xFADEDDAB, 202], [51, 0xFADEDDAB, 4]],
+            [],
         ]
     )
     try:
