@@ -12,6 +12,7 @@ def configure(
     set_farmer_peer: str,
     set_node_introducer: str,
     set_fullnode_port: str,
+    set_harvester_port: str,
     set_log_level: str,
     enable_upnp: str,
     set_outbound_peer_count: str,
@@ -58,6 +59,11 @@ def configure(
         config["wallet"]["introducer_peer"]["port"] = int(set_fullnode_port)
         config["introducer"]["port"] = int(set_fullnode_port)
         print("Default full node port updated")
+        change_made = True
+    if set_harvester_port:
+        config["harvester"]["port"] = int(set_harvester_port)
+        config["farmer"]["harvester_peer"]["port"] = int(set_harvester_port)
+        print("Default harvester port updated")
         change_made = True
     if set_log_level:
         levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
@@ -156,6 +162,11 @@ def configure(
     type=str,
 )
 @click.option(
+    "--set-harvester-port",
+    help="Set the port to use for the harvester, useful for testing",
+    type=str,
+)
+@click.option(
     "--set-log-level",
     "--log-level",
     "-log-level",
@@ -181,6 +192,7 @@ def configure_cmd(
     set_farmer_peer,
     set_node_introducer,
     set_fullnode_port,
+    set_harvester_port,
     set_log_level,
     enable_upnp,
     set_outbound_peer_count,
@@ -192,6 +204,7 @@ def configure_cmd(
         set_farmer_peer,
         set_node_introducer,
         set_fullnode_port,
+        set_harvester_port,
         set_log_level,
         enable_upnp,
         set_outbound_peer_count,
