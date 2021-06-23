@@ -94,9 +94,8 @@ if [ ! "$CI" ]; then
 			echo "----------------------------------------------"
 			echo "Building the GUI with branch $SUBMODULE_BRANCH"
 			echo "----------------------------------------------"
-
 	fi
-
+	
 	npm install
 	npm audit fix || true
 	npm run build
