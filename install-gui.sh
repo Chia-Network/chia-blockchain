@@ -72,8 +72,18 @@ fi
 # Pipelines directly, so skip unless you are completing a source/developer install.
 # Ubuntu special cases above.
 if [ ! "$CI" ]; then
+	echo "Running git submodule update --init --recursive."
+	echo ""
+	git submodule update --init --recursive
+	echo "Running git submodule update."
+	echo ""
+	git submodule update
 	cd chia-blockchain-gui
+
 	git pull origin main
+	echo "----------------------------------------------"
+	echo "Building the GUI with branch $SUBMODULE_BRANCH"
+	echo "----------------------------------------------"
 	
 	npm install
 	npm audit fix || true
