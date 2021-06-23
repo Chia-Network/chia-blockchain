@@ -387,7 +387,6 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         return pool_state_from_extra_data(extra_data)
 
 
-
 def pool_state_to_inner_puzzle(
     pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32, delay_time: uint64, delay_ph: bytes32
 ) -> Program:
