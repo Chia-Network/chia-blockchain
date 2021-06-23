@@ -43,7 +43,7 @@ class KeychainServer:
 
         mnemonic = request.get("mnemonic", None)
         passphrase = request.get("passphrase", None)
-        if not mnemonic or not passphrase:
+        if mnemonic is None or passphrase is None:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
@@ -74,7 +74,7 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         fingerprint = request.get("fingerprint", None)
-        if not fingerprint:
+        if fingerprint is None:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
