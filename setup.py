@@ -44,14 +44,14 @@ dev_dependencies = [
 ]
 
 kwargs = dict(
-    name="silicoin-blockchain",
+    name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
     description="Chia blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",
-    keywords="silicoin blockchain node",
+    keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
     extras_require=dict(
@@ -93,15 +93,15 @@ kwargs = dict(
     ],
     entry_points={
         "console_scripts": [
-            "silicoin = chia.cmds.chia:main",
-            "silicoin_wallet = chia.server.start_wallet:main",
-            "silicoin_full_node = chia.server.start_full_node:main",
-            "silicoin_harvester = chia.server.start_harvester:main",
-            "silicoin_farmer = chia.server.start_farmer:main",
-            "silicoin_introducer = chia.server.start_introducer:main",
-            "silicoin_timelord = chia.server.start_timelord:main",
-            "silicoin_timelord_launcher = chia.timelord.timelord_launcher:main",
-            "silicoin_full_node_simulator = chia.simulator.start_simulator:main",
+            "chia = chia.cmds.chia:main",
+            "chia_wallet = chia.server.start_wallet:main",
+            "chia_full_node = chia.server.start_full_node:main",
+            "chia_harvester = chia.server.start_harvester:main",
+            "chia_farmer = chia.server.start_farmer:main",
+            "chia_introducer = chia.server.start_introducer:main",
+            "chia_timelord = chia.server.start_timelord:main",
+            "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
+            "chia_full_node_simulator = chia.simulator.start_simulator:main",
         ]
     },
     package_data={
