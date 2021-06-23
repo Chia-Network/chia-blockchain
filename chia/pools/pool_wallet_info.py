@@ -111,4 +111,4 @@ class PoolWalletInfo(Streamable):
     p2_singleton_puzzle_hash: bytes32
     current_inner: Program  # Inner puzzle in current singleton, not revealed yet
     tip_singleton_coin_id: bytes32
-    current_state_block_height: uint32  # Block height that current PoolState is from
+    singleton_block_height: uint32  # Block height that current PoolState is from

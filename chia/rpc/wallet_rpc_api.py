@@ -1142,6 +1142,8 @@ class WalletRpcApi:
         if wallet.type() != WalletType.POOLING_WALLET.value:
             raise ValueError(f"wallet_id {wallet_id} is not a pooling wallet")
         state: PoolWalletInfo = await wallet.get_current_state()
+        unconfirmed_transactions: List[TransactionRecord] = await wallet.get_unconfirmed_transactions()
         return {
             "state": state.to_json_dict(),
+            "unconfirmed_transactions": unconfirmed_transactions,
         }

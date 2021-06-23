@@ -99,9 +99,10 @@ async def pprint_pool_wallet_state(
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
     pool_state_dict: Dict,
+    unconfirmed_transactions: List[TransactionRecord],
 ):
     print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
-    print(f"Current state from block height: {pool_wallet_info.current_state_block_height}")
+    print(f"Current state from block height: {pool_wallet_info.singleton_block_height}")
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
     print(
         "Target address (not for plotting): "
@@ -134,6 +135,8 @@ async def pprint_pool_wallet_state(
             print(f"Payout instructions (pool will pay to this address): {payout_address}")
         except Exception:
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
+    if len(unconfirmed_transactions) > 0:
+        print(f"Unconfirmed transactions: {unconfirmed_transactions}")
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -168,9 +171,15 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
                 print(f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet. Please provide a different id.")
                 return
-        response: PoolWalletInfo = await wallet_client.pw_status(wallet_id_passed_in)
-
-        await pprint_pool_wallet_state(wallet_client, wallet_id_passed_in, response, address_prefix, pool_state_dict)
+        pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id_passed_in)
+        await pprint_pool_wallet_state(
+            wallet_client,
+            wallet_id_passed_in,
+            pool_wallet_info,
+            address_prefix,
+            pool_state_dict,
+            unconfirmed_transactions,
+        )
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
         print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
@@ -179,8 +188,15 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             typ = WalletType(int(summary["type"]))
             if typ == WalletType.POOLING_WALLET:
                 print(f"Wallet id {wallet_id}: ")
-                response = await wallet_client.pw_status(wallet_id)
-                await pprint_pool_wallet_state(wallet_client, wallet_id, response, address_prefix, pool_state_dict)
+                pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
+                await pprint_pool_wallet_state(
+                    wallet_client,
+                    wallet_id,
+                    pool_wallet_info,
+                    address_prefix,
+                    pool_state_dict,
+                    unconfirmed_transactions,
+                )
                 print("")
     farmer_client.close()
     await farmer_client.await_closed()
@@ -284,7 +300,7 @@ async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 
 async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
-    pool_wallet_info: PoolWalletInfo = await wallet_client.pw_status(wallet_id)
+    pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
     print(pool_wallet_info)
 
 

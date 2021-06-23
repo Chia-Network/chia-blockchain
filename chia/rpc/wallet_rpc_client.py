@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -216,5 +216,9 @@ class WalletRpcClient(RpcClient):
             (await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee}))["transaction"]
         )
 
-    async def pw_status(self, wallet_id: str) -> PoolWalletInfo:
-        return PoolWalletInfo.from_json_dict((await self.fetch("pw_status", {"wallet_id": wallet_id}))["state"])
+    async def pw_status(self, wallet_id: str) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
+        json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
+        return (
+            PoolWalletInfo.from_json_dict(json_dict["state"]),
+            [TransactionRecord.from_json_dict(tr) for tr in json_dict["transaction"]],
+        )

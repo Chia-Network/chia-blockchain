@@ -220,6 +220,9 @@ class PoolWallet:
             last_singleton_spend_height,
         )
 
+    async def get_unconfirmed_transactions(self) -> List[TransactionRecord]:
+        return self.wallet_state_manager.get_unconfirmed_for_wallet(self.wallet_id)
+
     async def get_tip(self) -> Tuple[uint32, CoinSolution]:
         return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)[-1]
 
