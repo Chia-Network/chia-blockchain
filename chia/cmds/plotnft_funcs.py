@@ -116,7 +116,7 @@ async def pprint_pool_wallet_state(
     )
     if pool_wallet_info.target is not None:
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
-        print(f"Pool URL: {pool_wallet_info.target.pool_url}")
+        print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
         balances: Dict = await wallet_client.get_wallet_balance(str(wallet_id))
         balance = balances["confirmed_wallet_balance"]
@@ -124,7 +124,7 @@ async def pprint_pool_wallet_state(
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
     if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
-        print(f"Pool URL: {pool_wallet_info.current.pool_url}")
+        print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
         if pool_wallet_info.launcher_id in pool_state_dict:
             print(f"Current difficulty: {pool_state_dict[pool_wallet_info.launcher_id]['current_difficulty']}")
             print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points']}")
