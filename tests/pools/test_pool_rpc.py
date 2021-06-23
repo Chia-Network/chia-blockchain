@@ -211,7 +211,7 @@ class TestPoolWalletRpc:
             if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                 wallet_id = summary["id"]
         assert wallet_id is not None
-        status: PoolWalletInfo = await client.pw_status(wallet_id)
+        status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
         assert status.target is None
@@ -269,7 +269,7 @@ class TestPoolWalletRpc:
             if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                 wallet_id = summary["id"]
         assert wallet_id is not None
-        status: PoolWalletInfo = await client.pw_status(wallet_id)
+        status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
         assert status.target is None
@@ -334,8 +334,8 @@ class TestPoolWalletRpc:
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx_2.name) is None
 
         await asyncio.sleep(3)
-        status_2: PoolWalletInfo = await client.pw_status(2)
-        status_3: PoolWalletInfo = await client.pw_status(3)
+        status_2: PoolWalletInfo = (await client.pw_status(2))[0]
+        status_3: PoolWalletInfo = (await client.pw_status(3))[0]
 
         if status_2.current.state == PoolSingletonState.SELF_POOLING.value:
             assert status_3.current.state == PoolSingletonState.FARMING_TO_POOL.value
@@ -405,7 +405,7 @@ class TestPoolWalletRpc:
         )
         await self.farm_blocks(full_node_api, our_ph, 1)
         await asyncio.sleep(2)
-        status: PoolWalletInfo = await client.pw_status(2)
+        status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
         plot_id: bytes32 = self.create_pool_plot(status.p2_singleton_puzzle_hash)
@@ -436,7 +436,7 @@ class TestPoolWalletRpc:
         )
         await self.farm_blocks(full_node_api, our_ph, 2)
         await asyncio.sleep(2)
-        new_status: PoolWalletInfo = await client.pw_status(2)
+        new_status: PoolWalletInfo = (await client.pw_status(2))[0]
         assert status.current == new_status.current
         assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
         bal = await client.get_wallet_balance(2)
@@ -526,7 +526,7 @@ class TestPoolWalletRpc:
                     wallet_id = summary["id"]
             assert wallet_id is not None
             log.warning(f"PW status wallet id: {wallet_id}")
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -540,7 +540,7 @@ class TestPoolWalletRpc:
             )
             assert join_pool_tx is not None
 
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -563,14 +563,14 @@ class TestPoolWalletRpc:
 
             await self.farm_blocks(full_node_api, our_ph, 6)
 
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
 
             async def status_is_farming_to_pool():
                 await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
             await time_out_assert(timeout=20, function=status_is_farming_to_pool)
@@ -623,7 +623,7 @@ class TestPoolWalletRpc:
                     wallet_id = summary["id"]
             assert wallet_id is not None
             log.warning(f"PW status wallet id: {wallet_id}")
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -637,7 +637,7 @@ class TestPoolWalletRpc:
             )
             assert join_pool_tx is not None
 
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -660,12 +660,12 @@ class TestPoolWalletRpc:
 
             async def status_is_farming_to_pool():
                 await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
 
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             leave_pool_tx: TransactionRecord = await client.pw_self_pool(wallet_id)
@@ -674,21 +674,21 @@ class TestPoolWalletRpc:
 
             async def status_is_leaving():
                 await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving)
-            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New state: {pw_info.current}")
 
             async def status_is_self_pooling():
                 # Farm enough blocks to wait for relative_lock_height
                 await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.SELF_POOLING.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_self_pooling)
-            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New state: {pw_info.current}")
             assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
@@ -741,7 +741,7 @@ class TestPoolWalletRpc:
                     wallet_id = summary["id"]
             assert wallet_id is not None
             log.warning(f"PW status wallet id: {wallet_id}")
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
@@ -749,15 +749,15 @@ class TestPoolWalletRpc:
 
             async def status_is_farming_to_pool():
                 await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
 
-            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             assert pw_info.current.pool_url == "https://pool-a.org"
             assert pw_info.current.relative_lock_height == 5
-            status: PoolWalletInfo = await client.pw_status(wallet_id)
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New status: {status}")
 
             join_pool_tx: TransactionRecord = await client.pw_join_pool(
@@ -770,15 +770,15 @@ class TestPoolWalletRpc:
 
             async def status_is_leaving():
                 await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = await client.pw_status(wallet_id)
+                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving)
-            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             log.warning(f"New state: {pw_info.current}")
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
-            pw_info: PoolWalletInfo = await client.pw_status(wallet_id)
+            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             assert pw_info.current.pool_url == "https://pool-b.org"
             assert pw_info.current.relative_lock_height == 10
             log.warning(f"New state: {pw_info.current}")
