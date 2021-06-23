@@ -173,7 +173,7 @@ def create_travel_spend(
         log.warning(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
-            f"hash:{Program(bytes(target)).get_tree_hash()}"
+            f"hash:{Program.to(bytes(target)).get_tree_hash()}"
         )
         # key_value_list is:
         # "ps" -> poolstate as bytes
