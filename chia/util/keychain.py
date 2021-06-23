@@ -1,4 +1,3 @@
-from ssl import ALERT_DESCRIPTION_CERTIFICATE_EXPIRED
 import colorama
 import pkg_resources
 import sys

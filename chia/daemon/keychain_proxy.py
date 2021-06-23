@@ -4,7 +4,12 @@ import ssl
 
 from blspy import AugSchemeMPL, PrivateKey
 from chia.daemon.client import DaemonProxy
-from chia.daemon.keychain_server import KEYCHAIN_ERR_LOCKED, KEYCHAIN_ERR_NO_KEYS
+from chia.daemon.keychain_server import (
+    KEYCHAIN_ERR_KEYERROR,
+    KEYCHAIN_ERR_LOCKED,
+    KEYCHAIN_ERR_MALFORMED_REQUEST,
+    KEYCHAIN_ERR_NO_KEYS,
+)
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, KeyringIsLocked, bytes_to_mnemonic, mnemonic_to_seed, supports_keyring_password
@@ -13,6 +18,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 class KeyringIsEmpty(Exception):
+    pass
+
+
+class MalformedKeychainRequest(Exception):
     pass
 
 
@@ -41,11 +50,15 @@ class KeychainProxy(DaemonProxy):
 
     def handle_error(self, response: WsRpcMessage):
         error = response["data"].get("error", None)
+        error_details = response["data"].get("error_details", {})
         if error:
             if error == KEYCHAIN_ERR_LOCKED:
                 raise KeyringIsLocked()
             elif error == KEYCHAIN_ERR_NO_KEYS:
                 raise KeyringIsEmpty()
+            elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
+                message = error_details.get("message", "")
+                raise MalformedKeychainRequest(message)
             else:
                 err = f"{response.command} failed with error: {error}"
                 self.log.error(f"{err}")
@@ -124,6 +137,29 @@ class KeychainProxy(DaemonProxy):
                         self.log.error(f"{err}")
             else:
                 self.handle_error(response)
+
+        return key
+
+    async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+        key: PrivateKey
+        if self.use_local_keychain():
+            key = self.keychain.add_private_key(mnemonic, passphrase)
+        else:
+            data = {"mnemonic": mnemonic, "passphrase": passphrase}
+            request = self.format_request("add_private_key", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if success:
+                seed = mnemonic_to_seed(mnemonic, passphrase)
+                key = AugSchemeMPL.key_gen(seed)
+            else:
+                error = response["data"].get("error", None)
+                if error == KEYCHAIN_ERR_KEYERROR:
+                    error_details = response["data"].get("error_details", {})
+                    word = error_details.get("word", "")
+                    raise KeyError(word)
+                else:
+                    self.handle_error(response)
 
         return key
 

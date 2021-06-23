@@ -8,8 +8,10 @@ keychain_commands = ["get_all_private_keys", "get_key_for_fingerprint"]
 
 log = logging.getLogger(__name__)
 
+KEYCHAIN_ERR_KEYERROR = "key error"
 KEYCHAIN_ERR_LOCKED = "keyring is locked"
 KEYCHAIN_ERR_NO_KEYS = "no keys present"
+KEYCHAIN_ERR_MALFORMED_REQUEST = "malformed request"
 
 
 class KeychainServer:
@@ -57,3 +59,27 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
         else:
             return {"success": True, "private_key": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
+
+    async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        mnemonic = request.get("mnemonic", None)
+        passphrase = request.get("passphrase", None)
+        if not mnemonic or not passphrase:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": "missing mnemonic and/or passphrase"},
+            }
+
+        try:
+            self.keychain.add_private_key(mnemonic, passphrase)
+        except KeyError as e:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_KEYERROR,
+                "error_details": {"message": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]},
+            }
+
+        return {"success": True}
