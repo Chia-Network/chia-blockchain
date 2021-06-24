@@ -1,21 +1,20 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
+import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
-import { TooltipTypography, Flex, State, UnitFormat, CardKeyValue, Tooltip, TooltipIcon, More, Loading, FormatLargeNumber, Link } from '@chia/core';
+import { TooltipTypography, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber, Link } from '@chia/core';
 import {
   Box,
   Button,
   Grid,
-  IconButton,
   Card,
   CardContent,
   Typography,
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
-import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
+import { Delete as DeleteIcon } from '@material-ui/icons'; 
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
@@ -25,8 +24,7 @@ import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import PoolJoin from '../pool/PoolJoin';
 import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
 import { mojo_to_chia } from '../../util/chia';
-import { useToggle } from 'react-use';
-import PoolInfo from '../pool/PoolInfo';
+import { deleteUnconfirmedTransactions } from '../../modules/incoming';
 import PlotNFTGraph from './PlotNFTGraph';
 
 const StyledCard = styled(Card)`
@@ -70,11 +68,14 @@ export default function PlotNFTCard(props: Props) {
         },
         points_found_24h,
       },
+      pool_wallet_status: {
+        wallet_id,
+      },
     },
   } = props;
 
   const history = useHistory();
-  const [showPoolDetails, togglePoolDetails] = useToggle(false);
+  const dispatch = useDispatch();
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
   const totalPointsFound24 = points_found_24h.reduce((accumulator, item) => accumulator + item[1], 0);
 
@@ -87,6 +88,10 @@ export default function PlotNFTCard(props: Props) {
     });
   }
 
+  function handleDeleteUnconfirmedTransactions() {
+    dispatch(deleteUnconfirmedTransactions(wallet_id));
+  }
+
   const rows = [{
     key: 'status',
     label: <Trans>Status</Trans>,
@@ -97,7 +102,7 @@ export default function PlotNFTCard(props: Props) {
     value: <WalletStatus />,
   }, isSelfPooling && {
     key: 'rewards',
-    label: <Trans>Rewards</Trans>,
+    label: <Trans>Unclaimed Rewards</Trans>,
     value: <UnitFormat value={mojo_to_chia(BigInt(balance))} state={State.SUCCESS} />,
   }, {
     key: 'plots_count',
@@ -182,6 +187,14 @@ export default function PlotNFTCard(props: Props) {
                       </ListItemIcon>
                       <Typography variant="inherit" noWrap>
                         <Trans>Add a Plot</Trans>
+                      </Typography>
+                    </MenuItem>
+                    <MenuItem onClick={() => { onClose(); handleDeleteUnconfirmedTransactions(); }}>
+                      <ListItemIcon>
+                        <DeleteIcon />
+                      </ListItemIcon>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Delete Unconfirmed Transactions</Trans>
                       </Typography>
                     </MenuItem>
                   </Box>

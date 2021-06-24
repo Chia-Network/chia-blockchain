@@ -141,6 +141,12 @@ export function createPoolWalletMessage(initialTargetState, fee) {
   });
 };
 
+export function deleteUnconfirmedTransactionsMessage(walletId) {
+  return format_message('delete_unconfirmed_transactions', {
+    wallet_id: walletId,
+  });
+};
+
 export const pingWallet = () => {
   const action = walletMessage();
   action.message.command = 'ping';

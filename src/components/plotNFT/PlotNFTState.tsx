@@ -23,9 +23,14 @@ export default function PlotNFTState(props: Props) {
 
   if (!target && state === PlotNFTStateEnum.LEAVING_POOL) {
     return (
-      <StateTypography variant="body1" state={State.ERROR}>
-        <Trans>Invalid state</Trans>
-      </StateTypography>
+      <Flex alignItems="center" gap={1} inline>
+        <StateTypography variant="body1" state={State.ERROR}>
+          <Trans>Invalid state</Trans>
+        </StateTypography>
+        <TooltipIcon>
+          <Trans>The pool switching operation was cancelled, please try again by changing pool, or self pooling</Trans>
+        </TooltipIcon>
+      </Flex>
     );
   }
 
@@ -37,7 +42,7 @@ export default function PlotNFTState(props: Props) {
           <Trans>Pending</Trans>
         </StateTypography>
         <TooltipIcon>
-          <Trans>PlotNFT is transitioning to (new state)</Trans>
+          <Trans>PlotNFT is transitioning to (target state)</Trans>
         </TooltipIcon>
       </Flex>
     );

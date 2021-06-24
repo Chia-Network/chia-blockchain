@@ -108,7 +108,7 @@ export default function PlotAddSelectTemporaryDirectory() {
               )}
             </ButtonSelected>
           </Flex>
-          <Typography>
+          <Typography color="textSecondary">
             <Trans>
               If none selected, then it will default to the temporary directory.
             </Trans>

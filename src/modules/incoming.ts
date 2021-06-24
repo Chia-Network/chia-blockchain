@@ -58,6 +58,15 @@ export function getWalletBalance(walletId: number) {
   };
 }
 
+export function deleteUnconfirmedTransactions(walletId: number) {
+  return async (dispatch): Promise<void> => {
+    await async_api(
+      dispatch,
+      deleteUnconfirmedTransactionsMessage(walletId),
+      false,
+    );
+  };
+}
 
 export type IncomingState = {
   mnemonic: string[];

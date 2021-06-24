@@ -4,7 +4,7 @@ import { Alert } from '@material-ui/lab';
 import { uniq } from 'lodash';
 import styled from 'styled-components';
 import { useWatch, useFormContext } from 'react-hook-form';
-import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, Fee } from '@chia/core';
+import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, Fee, TextField } from '@chia/core';
 import { Grid, FormControl, FormControlLabel, Typography, Radio, Collapse } from '@material-ui/core';
 import PoolInfo from '../../pool/PoolInfo';
 import usePoolInfo from '../../../hooks/usePoolInfo';
@@ -101,14 +101,13 @@ export default function PlotNFTSelectBase(props: Props) {
                         variant="filled"
                         fullWidth
                       >
-                        <Autocomplete
+                        <TextField
                           name="poolUrl"
                           label="Pool URL"
                           variant="outlined"
-                          options={groupsOptions}
+                          autoComplete="pool-url"
                           onClick={handleDisableSelfPooling}
                           onChange={handleDisableSelfPooling}
-                          forcePopupIcon
                           fullWidth 
                           freeSolo 
                         />

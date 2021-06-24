@@ -41,12 +41,12 @@ export default function PlotAddNumberOfPlots() {
         </Grid>
 
         <Grid xs={12} md={8} lg={6} item>
-          <Typography variant="body1">
+          <Typography>
             <Trans>
               Does your machine support parallel plotting?
             </Trans>
           </Typography>
-          <Typography variant="body2">
+          <Typography color="textSecondary">
             <Trans>
               Plotting in parallel can save time. Otherwise, add plot(s) to the queue.
             </Trans>
@@ -59,14 +59,14 @@ export default function PlotAddNumberOfPlots() {
             <RadioGroup name="parallel" boolean>
               <Flex gap={2} flexWrap="wrap">
                 <FormControlLabel
-                  control={<Radio />}
-                  label={<Trans>Plot in Parallel</Trans>}
-                  value
-                />
-                <FormControlLabel
                   value={false}
                   control={<Radio />}
                   label={<Trans>Add Plot to Queue</Trans>}
+                />
+                <FormControlLabel
+                  control={<Radio />}
+                  label={<Trans>Plot in Parallel</Trans>}
+                  value
                 />
               </Flex>
             </RadioGroup>
