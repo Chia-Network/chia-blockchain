@@ -213,9 +213,12 @@ class FarmerAPI:
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
+                headers={
+                    'content-type':'application/json;',
+                }
                 try:
                     async with aiohttp.ClientSession() as session:
-                        async with session.post(f"{pool_url}/partial", data=post_partial_body) as resp:
+                        async with session.post(f"{pool_url}/partial", data=post_partial_body, headers=headers) as resp:
                             if resp.ok:
                                 pool_response: Dict = json.loads(await resp.text())
                                 self.farmer.log.info(f"Pool response: {pool_response}")
