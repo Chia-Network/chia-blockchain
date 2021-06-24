@@ -34,8 +34,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
-# from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
-
 
 class TradeManager:
     wallet_state_manager: Any
@@ -533,7 +531,6 @@ class TradeManager:
         now = uint64(int(time.time()))
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
-            # debug_spend_bundle(spend_bundle)
             if chia_discrepancy < 0:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),

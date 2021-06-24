@@ -25,7 +25,6 @@ from tests.block_tools import get_plot_dir, get_plot_tmp_dir
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.derive_keys import master_sk_to_local_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -444,7 +443,7 @@ class TestPoolWalletRpc:
 
         # Claim another 1.75
         absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
-        debug_spend_bundle(absorb_tx.spend_bundle)
+        absorb_tx.spend_bundle.debug()
         await time_out_assert(
             5,
             full_node_api.full_node.mempool_manager.get_spendbundle,
