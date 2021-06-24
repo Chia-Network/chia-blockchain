@@ -300,26 +300,30 @@ class WalletRpcApi:
         checks whether key is used for either farm or pool rewards
         checks if any wallets have a non-zero balance
         """
+        used_for_farmer: bool = False
+        used_for_pool: bool = False
+        walletBalance: bool = False
+
         fingerprint = request["fingerprint"]
         sk, _ = await self._get_private_key(fingerprint)
+        if sk is not None:
+            used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(self.service.root_path, sk, 100)
 
-        used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(self.service.root_path, sk, 100)
+            if self.service.logged_in_fingerprint != fingerprint:
+                await self._stop_wallet()
+                await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
 
-        if self.service.logged_in_fingerprint != fingerprint:
-            await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
+            async with self.service.wallet_state_manager.lock:
+                wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+                for w in wallets:
+                    wallet = self.service.wallet_state_manager.wallets[w.id]
+                    unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
+                    balance = await wallet.get_confirmed_balance(unspent)
+                    pending_balance = await wallet.get_unconfirmed_balance(unspent)
 
-        walletBalance: bool = False
-        async with self.service.wallet_state_manager.lock:
-            wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
-            for w in wallets:
-                wallet = self.service.wallet_state_manager.wallets[w.id]
-                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
-                balance = await wallet.get_confirmed_balance(unspent_records)
-                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-
-                if (balance + pending_balance) > 0:
-                    walletBalance = True
-                    break
+                    if (balance + pending_balance) > 0:
+                        walletBalance = True
+                        break
 
         return {
             "fingerprint": fingerprint,
