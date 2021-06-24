@@ -15,5 +15,5 @@ RUN touch /usr/bin/git && chmod +x /usr/bin/git
 RUN useradd -u 500 -r -d /home/chia -s /bin/bash -c "chia" chia
 RUN echo 'chia ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN chown -R chia /app /py /home/chia
-USER chia
+USER root
 RUN sh create-container.sh

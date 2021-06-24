@@ -11,7 +11,7 @@ import os.path as os_path
 from pathlib import Path
 from typing import List
 
-template_dir = 'runner-templates'
+template_dir = "runner-templates"
 
 
 def subdirs(root_dirs: List[str]) -> List[Path]:
@@ -76,7 +76,7 @@ default_replacements = {
     "TEST_DIR": "",
     "TEST_NAME": "",
     "PYTEST_PARALLEL_ARGS": "",
-    "CHIAHOME": os_path.join(os_mod.getcwd(), '..'),
+    "CHIAHOME": os_path.join(os_mod.getcwd(), ".."),
 }
 
 # -----

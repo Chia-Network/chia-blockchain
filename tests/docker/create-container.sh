@@ -14,9 +14,9 @@ sh "${MINICONDA}" -b -p "/home/chia/miniconda"
 CONDA="/home/chia/miniconda/bin/conda"
 "${CONDA}" init
 
-cat /app/pyvers.txt | while read PYVER ; do
+while read PYVER ; do
     echo python "$PYVER"
     "${CONDA}" update -n base -c defaults conda
     "${CONDA}" env create -f "environment$PYVER.yml"
     "${CONDA}" run -n "python$PYVER" sh run-in-container.sh "${PYVER}"
-done
+done < /app/pyvers.txt
