@@ -46,7 +46,7 @@ def large_block_generator(size):
     except FileNotFoundError:
         generator = make_block_generator(size)
         blob = bytes(generator.program)
-        #  TODO: Re-enable large-block*.hex but cache in ~/.chvies/subdir
+        #  TODO: Re-enable large-block*.hex but cache in ~/.chives/subdir
         #  with open(hex_path, "w") as f:
         #      f.write(blob.hex())
         return blob
