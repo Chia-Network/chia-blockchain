@@ -105,8 +105,8 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSolution) -> Tuple[uin
             seconds = int_from_bytes(value)
         if key == b"h":
             delayed_puzzle_hash = bytes32(value)
-    if seconds is None or delayed_puzzle_hash is None:
-        raise
+    assert seconds is not None
+    assert delayed_puzzle_hash is not None
     return seconds, delayed_puzzle_hash
 
 
