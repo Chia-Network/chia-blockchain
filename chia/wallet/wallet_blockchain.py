@@ -225,7 +225,7 @@ class WalletBlockchain(BlockchainInterface):
             None,
             block,
         )
-
+        heights_changed: Set[Tuple[uint32, Optional[bytes32]]] = set()
         # Always add the block to the database
         async with self.wallet_state_manager_lock:
             async with self.block_store.db_wrapper.lock:
@@ -235,10 +235,9 @@ class WalletBlockchain(BlockchainInterface):
                     self.add_block_record(block_record)
                     self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
                     fork_height, records_to_add = await self._reconsider_peak(
-                        block_record, genesis, fork_point_with_peak, additional_coin_spends
+                        block_record, genesis, fork_point_with_peak, additional_coin_spends, heights_changed
                     )
                     for record in records_to_add:
-                        self.__height_to_hash[record.height] = record.header_hash
                         if record.sub_epoch_summary_included is not None:
                             self.__sub_epoch_summaries[record.height] = record.sub_epoch_summary_included
                     await self.block_store.db_wrapper.commit_transaction()
@@ -250,6 +249,12 @@ class WalletBlockchain(BlockchainInterface):
                         await self.coin_store.rebuild_wallet_cache()
                         await self.tx_store.rebuild_tx_cache()
                         await self.pool_store.rebuild_cache()
+                        for height, replaced in heights_changed:
+                            # If it was replaced change back to the previous value otherwise pop the change
+                            if replaced is not None:
+                                self.__height_to_hash[height] = replaced
+                            else:
+                                self.__height_to_hash.pop(height)
                     raise
             if fork_height is not None:
                 self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
@@ -263,6 +268,7 @@ class WalletBlockchain(BlockchainInterface):
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
         additional_coin_spends_from_wallet: Optional[List[CoinSolution]],
+        heights_changed: Set[Tuple[uint32, Optional[bytes32]]],
     ) -> Tuple[Optional[uint32], List[BlockRecord]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -277,6 +283,11 @@ class WalletBlockchain(BlockchainInterface):
                     block_record.header_hash
                 )
                 assert block is not None
+                replaced = None
+                if uint32(0) in self.__height_to_hash:
+                    replaced = (self.__height_to_hash[uint32(0)],)
+                self.__height_to_hash[uint32(0)] = block.header_hash
+                heights_changed.add((uint32(0), replaced))
                 assert len(block.additions) == 0 and len(block.removals) == 0
                 await self.coins_of_interest_received(block.removals, block.additions, block_record, [])
                 self._peak_height = uint32(0)
@@ -327,6 +338,11 @@ class WalletBlockchain(BlockchainInterface):
 
             records_to_add: List[BlockRecord] = []
             for fetched_header_block, fetched_block_record, additional_coin_spends in reversed(blocks_to_add):
+                replaced = None
+                if fetched_block_record.height in self.__height_to_hash:
+                    replaced = self.__height_to_hash[fetched_block_record.height]
+                self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
+                heights_changed.add((fetched_block_record.height, replaced))
                 records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
                     await self.coins_of_interest_received(
