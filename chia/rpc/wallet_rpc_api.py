@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey, G1Element
 
-from chia.cmds.init_funcs import check_keys, check_key_used_for_rewards
+from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -22,7 +22,7 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
@@ -32,6 +32,8 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
+from chia.util.config import load_config
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -261,26 +263,56 @@ class WalletRpcApi:
             path.unlink()
         return {}
 
-    #
-    # Check the key for a few things
-    # 1) is it used for either farm or pool rewards
-    # 2) do any wallets have a non-zero balance
-    #
+    async def _check_key_used_for_rewards(
+        self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
+    ) -> Tuple[bool, bool]:
+        """Checks if the given key is used for either the farmer rewards or pool rewards
+        returns a tuple of two booleans
+        The first is true if the key is used as the Farmer rewards, otherwise false
+        The second is true if the key is used as the Pool rewards, otherwise false
+        Returns both false if the key cannot be found with the given fingerprint
+        """
+        if sk is None:
+            return False, False
+
+        config: Dict = load_config(new_root, "config.yaml")
+        farmer_target = config["farmer"].get("xch_target_address")
+        pool_target = config["pool"].get("xch_target_address")
+        found_farmer = False
+        found_pool = False
+        selected = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+        for i in range(max_ph_to_search):
+            if found_farmer and found_pool:
+                break
+
+            ph = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
+
+            if ph == farmer_target:
+                found_farmer = True
+            if ph == pool_target:
+                found_pool = True
+
+        return found_farmer, found_pool
+
     async def check_delete_key(self, request):
+        """Check the key use prior to possible deletion
+        checks whether key is used for either farm or pool rewards
+        checks if any wallets have a non-zero balance
+        """
         fingerprint = request["fingerprint"]
         sk, _ = await self._get_private_key(fingerprint)
 
-        used_for_farmer, used_for_pool = check_key_used_for_rewards(self.service.root_path, sk, 100)
+        used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(self.service.root_path, sk, 100)
 
         if self.service.logged_in_fingerprint != fingerprint:
             await self.service._start(fingerprint=fingerprint, skip_backup_import=True)
 
         walletBalance: bool = False
-        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
-
-        for w in wallets:
-            wallet = self.service.wallet_state_manager.wallets[w.id]
-            async with self.service.wallet_state_manager.lock:
+        async with self.service.wallet_state_manager.lock:
+            wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+            for w in wallets:
+                wallet = self.service.wallet_state_manager.wallets[w.id]
                 unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
                 balance = await wallet.get_confirmed_balance(unspent_records)
                 pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
