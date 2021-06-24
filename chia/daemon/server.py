@@ -808,11 +808,6 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
     log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
 
-    lockfile = singleton(service_launch_lock_path(root_path, service_command))
-    if lockfile is None:
-        logging.error(f"{service_command}: already running")
-        raise subprocess.SubprocessError
-
     # Insert proper e
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
