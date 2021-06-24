@@ -22,23 +22,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
-from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_aggsig_condition,
-    make_assert_coin_announcement,
-    make_assert_puzzle_announcement,
-    make_assert_relative_height_exceeds_condition,
-    make_assert_absolute_height_exceeds_condition,
-    make_assert_my_coin_id_condition,
-    make_assert_absolute_seconds_exceeds_condition,
-    make_assert_relative_seconds_exceeds_condition,
-    make_create_coin_announcement,
-    make_create_puzzle_announcement,
-    make_create_coin_condition,
-    make_reserve_fee_condition,
-    make_assert_my_parent_id,
-    make_assert_my_puzzlehash,
-    make_assert_my_amount,
-)
 
 DEFAULT_SEED = b"seed" * 8
 assert len(DEFAULT_SEED) == 32
@@ -103,36 +86,7 @@ class WalletTool:
 
         for con_list in condition_dic.values():
             for cvp in con_list:
-                if cvp.opcode == ConditionOpcode.CREATE_COIN:
-                    ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
-                if cvp.opcode == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
-                    ret.append(make_create_coin_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
-                    ret.append(make_create_puzzle_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.AGG_SIG_UNSAFE:
-                    ret.append(make_assert_aggsig_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
-                    ret.append(make_assert_coin_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
-                    ret.append(make_assert_puzzle_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
-                    ret.append(make_assert_absolute_seconds_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
-                    ret.append(make_assert_relative_seconds_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
-                    ret.append(make_assert_my_coin_id_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
-                    ret.append(make_assert_absolute_height_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-                    ret.append(make_assert_relative_height_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.RESERVE_FEE:
-                    ret.append(make_reserve_fee_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_MY_PARENT_ID:
-                    ret.append(make_assert_my_parent_id(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_MY_PUZZLEHASH:
-                    ret.append(make_assert_my_puzzlehash(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_MY_AMOUNT:
-                    ret.append(make_assert_my_amount(cvp.vars[0]))
+                ret.append([cvp.opcode.value] + cvp.vars)
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(

@@ -1947,7 +1947,7 @@ class TestBodyValidation:
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
-        assert (await b.receive_block(blocks[-1]))[1] == Err.BLOCK_COST_EXCEEDS_MAX
+        assert (await b.receive_block(blocks[-1]))[1] == Err.INVALID_BLOCK_COST
 
     @pytest.mark.asyncio
     async def test_clvm_must_not_fail(self, empty_blockchain):
@@ -2006,7 +2006,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         err = (await b.receive_block(block_2))[1]
-        assert err == Err.GENERATOR_RUNTIME_ERROR
+        assert err == Err.INVALID_BLOCK_COST
 
         # too high
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1000000))
@@ -2021,7 +2021,9 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
-        assert err == Err.INVALID_BLOCK_COST
+        # when the CLVM program exceeds cost during execution, it will fail with
+        # a general runtime error
+        assert err == Err.GENERATOR_RUNTIME_ERROR
 
         err = (await b.receive_block(block))[1]
         assert err is None
