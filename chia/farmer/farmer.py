@@ -92,7 +92,7 @@ class Farmer:
             raise RuntimeError(error_str)
 
     async def _start(self):
-        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
+        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
 
     def _close(self):
         self._shut_down = True
@@ -105,6 +105,7 @@ class Farmer:
 
     async def on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
+        self.state_changed("add_connection", {})
         handshake = harvester_protocol.HarvesterHandshake(
             self.get_public_keys(),
             self.pool_public_keys,
@@ -167,8 +168,9 @@ class Farmer:
             config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
-    async def _periodically_clear_cache_task(self):
+    async def _periodically_clear_cache_and_refresh_task(self):
         time_slept: uint64 = uint64(0)
+        refresh_slept = 0
         while not self._shut_down:
             if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
                 now = time.time()
@@ -188,4 +190,9 @@ class Farmer:
                     f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
                 )
             time_slept += 1
+            refresh_slept += 1
+            # Periodically refresh GUI to show the correct download/upload rate.
+            if refresh_slept >= 30:
+                self.state_changed("add_connection", {})
+                refresh_slept = 0
             await asyncio.sleep(1)

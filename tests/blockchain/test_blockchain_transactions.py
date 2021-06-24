@@ -12,7 +12,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
-from chia.util.wallet_tools import WalletTool
+from tests.wallet_tools import WalletTool
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import bt, setup_two_nodes, test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
@@ -326,7 +326,9 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_2 = None
-        for coin in run_and_get_removals_and_additions(new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM)[1]:
+        for coin in run_and_get_removals_and_additions(
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE
+        )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
                 break
@@ -345,7 +347,9 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_3 = None
-        for coin in run_and_get_removals_and_additions(new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM)[1]:
+        for coin in run_and_get_removals_and_additions(
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE
+        )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
                 break

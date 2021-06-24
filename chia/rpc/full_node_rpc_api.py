@@ -105,6 +105,10 @@ class FullNodeRpcApi:
                 assert sync_tip_height is not None
             if peak is not None:
                 sync_progress_height: uint32 = peak.height
+                # Don't display we're syncing towards 0, instead show 'Syncing height/height'
+                # until sync_store retrieves the correct number.
+                if sync_tip_height == uint32(0):
+                    sync_tip_height = peak.height
             else:
                 sync_progress_height = uint32(0)
         else:

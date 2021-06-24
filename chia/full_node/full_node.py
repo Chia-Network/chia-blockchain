@@ -80,6 +80,7 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
+    _ui_tasks: Set[asyncio.Task]
 
     def __init__(
         self,
@@ -101,10 +102,9 @@ class FullNode:
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
 
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
+
+        self._ui_tasks = set()
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -333,6 +333,11 @@ class FullNode:
         self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
 
+    async def _refresh_ui_connections(self, sleep_before: float = 0):
+        if sleep_before > 0:
+            await asyncio.sleep(sleep_before)
+        self._state_changed("peer_changed_peak")
+
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         """
         We have received a notification of a new peak from a peer. This happens either when we have just connected,
@@ -343,6 +348,17 @@ class FullNode:
             peer: peer that sent the message
 
         """
+
+        try:
+            seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
+            # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
+            # Limit to 3 refreshes.
+            if not seen_header_hash and len(self._ui_tasks) < 3:
+                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
+            # Prune completed connect tasks
+            self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
+        except Exception as e:
+            self.log.warning(f"Exception UI refresh task: {e}")
 
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
@@ -713,7 +729,7 @@ class FullNode:
         if len(ses_heigths) > 2 and our_peak_height is not None:
             ses_heigths.sort()
             max_fork_ses_height = ses_heigths[-3]
-            # This is fork point in SES in case where fork was not detected
+            # This is the fork point in SES in the case where no fork was detected
             if self.blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
                 for peer in peers_with_peak:
                     # Grab a block at peak + 1 and check if fork point is actually our current height
@@ -811,7 +827,7 @@ class FullNode:
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
@@ -825,7 +841,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point, wp_summaries
+                block, pre_validation_results[i], None if advanced_peak else fork_point
             )
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
@@ -1745,9 +1761,10 @@ class FullNode:
         vdf_proof: VDFProof,
         height: uint32,
         field_vdf: CompressibleVDFField,
-    ):
+    ) -> bool:
         full_blocks = await self.block_store.get_full_blocks_at([height])
         assert len(full_blocks) > 0
+        replaced = False
         for block in full_blocks:
             new_block = None
             block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
@@ -1782,11 +1799,12 @@ class FullNode:
                 if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
                     new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             if new_block is None:
-                self.log.debug("did not replace any proof, vdf does not match")
-                return
+                continue
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
+                replaced = True
+        return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
@@ -1795,7 +1813,10 @@ class FullNode:
         ):
             return None
         async with self.blockchain.compact_proof_lock:
-            await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+        if not replaced:
+            self.log.error(f"Could not replace compact proof: {request.height}")
+            return None
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
@@ -1874,7 +1895,10 @@ class FullNode:
         async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
-            await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+        if not replaced:
+            self.log.error(f"Could not replace compact proof: {request.height}")
+            return None
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
