@@ -39,6 +39,7 @@ async def show_async(
 
         if state:
             blockchain_state = await client.get_blockchain_state()
+            fee_estimates = await client.get_fee_estimates()
             if blockchain_state is None:
                 print("There is no blockchain found yet. Try again shortly")
                 return None
@@ -63,6 +64,19 @@ async def show_async(
             else:
                 print("\nSearching for an initial chain\n")
                 print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+
+            if fee_estimates["error"] is None:
+                print("Fee Estimates: ")
+                short = fee_estimates["short"]
+                medium = fee_estimates["medium"]
+                long = fee_estimates["long"]
+                print(f"Short (10 blocks): {short}")
+                print(f"Medium (60 blocks): {medium}")
+                print(f"Long (600 blocks): {long}")
+            else:
+                print("Fee Estimates: ")
+                print("-- No enough data for fee estimation --")
+                print("")
 
             if peak is not None:
                 if peak.is_transaction_block:

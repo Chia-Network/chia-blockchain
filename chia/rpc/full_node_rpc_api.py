@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from chia.full_node.fee_estimate import FeeEstimate
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -49,6 +50,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            "/get_fee_estimates": self.get_fee_estimates,
         }
 
     async def _state_changed(self, change: str) -> List[WsRpcMessage]:
@@ -550,3 +552,7 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+
+    async def get_fee_estimates(self, request):
+        estimate: FeeEstimate = self.service.fee_estimator.get_estimates()
+        return {"fee_estimate": estimate}
