@@ -101,7 +101,11 @@ async def pprint_pool_wallet_state(
     pool_state_dict: Dict,
     unconfirmed_transactions: List[TransactionRecord],
 ):
-    print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
+    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
+        expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
+        print(f"Current state: INVALID_STATE. Please leave/join again after block height {expected_leave_height}")
+    else:
+        print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
     print(f"Current state from block height: {pool_wallet_info.singleton_block_height}")
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
     print(
@@ -137,7 +141,8 @@ async def pprint_pool_wallet_state(
             print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
-        print(f"Expected leave block height after: {expected_leave_height}")
+        if pool_wallet_info.target is not None:
+            print(f"Expected to leave after block height: {expected_leave_height}")
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
