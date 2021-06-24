@@ -850,7 +850,10 @@ class PoolWallet:
         return len(unconfirmed) > 0
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:
-        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.wallet_id, record_list)
+        if (await self.get_current_state()).current.state == SELF_POOLING:
+            return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.wallet_id, record_list)
+        else:
+            return uint64(0)
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint64:
         return await self.get_confirmed_balance(record_list)
