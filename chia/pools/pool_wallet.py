@@ -663,10 +663,15 @@ class PoolWallet:
         return full_spend, puzzle_hash, launcher_coin.name()
 
     async def join_pool(self, target_state: PoolState):
+
         if target_state.state != FARMING_TO_POOL:
             raise ValueError(f"join_pool must be called with target_state={FARMING_TO_POOL} (FARMING_TO_POOL)")
         if self.target_state is not None:
             raise ValueError(f"Cannot join a pool while waiting for target state: {self.target_state}")
+        if await self.have_unconfirmed_transaction():
+            raise ValueError(
+                "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
+            )
 
         current_state: PoolWalletInfo = await self.get_current_state()
 
@@ -695,6 +700,10 @@ class PoolWallet:
         return tx_record
 
     async def self_pool(self):
+        if await self.have_unconfirmed_transaction():
+            raise ValueError(
+                "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
+            )
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         if pool_wallet_info.current.state == SELF_POOLING:
             raise ValueError("Attempted to self pool when already self pooling")
@@ -725,7 +734,9 @@ class PoolWallet:
     async def claim_pool_rewards(self, fee: uint64) -> TransactionRecord:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
         if await self.have_unconfirmed_transaction():
-            raise ValueError("Cannot claim due to unconfirmed transaction")
+            raise ValueError(
+                "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
+            )
 
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
