@@ -101,9 +101,9 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSolution) -> Tuple[uin
     seconds: Optional[uint64] = None
     delayed_puzzle_hash: Optional[bytes32] = None
     for key, value in extra_data.as_python():
-        if key == "t":
-            seconds = uint64(value)
-        if key == "h":
+        if key == b"t":
+            seconds = int_from_bytes(value)
+        if key == b"h":
             delayed_puzzle_hash = bytes32(value)
     if seconds is None or delayed_puzzle_hash is None:
         raise
@@ -369,8 +369,8 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     if full_spend.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
         # Launcher spend
-        extra_data: Program = full_solution.rest().rest().first().first().as_atom()
-        return PoolState.from_bytes(extra_data)
+        extra_data: Program = full_solution.rest().rest().first()
+        return pool_state_from_extra_data(extra_data)
 
     # Not launcher spend
     inner_solution: Program = full_solution.rest().rest().first()
