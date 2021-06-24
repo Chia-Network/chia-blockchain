@@ -215,11 +215,11 @@ class TestWalletRpc:
 
             created_tx = await client.send_transaction("1", tx_amount, addr)
 
-            async def tx_in_mempool():
+            async def tx_in_mempool_2():
                 tx = await client.get_transaction("1", created_tx.name)
                 return tx.is_in_mempool()
 
-            await time_out_assert(5, tx_in_mempool, True)
+            await time_out_assert(5, tx_in_mempool_2, True)
             assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
             await client.delete_unconfirmed_transactions("1")
             assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
