@@ -53,7 +53,7 @@ if __name__ == "__main__":
     cmd = [
         "sh",
         "-c",
-        "cd ../docker-stage && docker build --build-arg PYTHON_VERSIONS=\"%s\" -t chia-test ." % versions_env
+        'cd ../docker-stage && docker build --build-arg PYTHON_VERSIONS="%s" -t chia-test .' % versions_env
     ]
     subprocess.check_call(cmd)
     subprocess.check_call(["python3", "build-workflows.py", "-t", "./docker-templates", "-d", "docker-compose"])
