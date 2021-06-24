@@ -97,10 +97,16 @@ def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, d
 def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSolution) -> Tuple[uint64, bytes32]:
     extra_data = Program.from_bytes(bytes(coinsol.solution)).rest().rest().first()
     # Extra data is (pool_state delayed_puz_info)
-    delayed_puz_info = extra_data.rest().first()
     # Delayed puz info is (seconds delayed_puzzle_hash)
-    seconds: uint64 = uint64(int_from_bytes(delayed_puz_info.first().as_atom()))
-    delayed_puzzle_hash: bytes32 = bytes32(delayed_puz_info.rest().first().as_atom())
+    seconds: Optional[uint64] = None
+    delayed_puzzle_hash: Optional[bytes32] = None
+    for key, value in extra_data.as_python():
+        if key == b"t":
+            seconds = int_from_bytes(value)
+        if key == b"h":
+            delayed_puzzle_hash = bytes32(value)
+    assert seconds is not None
+    assert delayed_puzzle_hash is not None
     return seconds, delayed_puzzle_hash
 
 
@@ -161,14 +167,23 @@ def create_travel_spend(
         delay_ph,
     )
     if is_pool_member_inner_puzzle(inner_puzzle):
-        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([1, 0, 0, bytes(target)])
+        # inner sol is key_value_list ()
+        # key_value_list is:
+        # "ps" -> poolstate as bytes
+        inner_sol: Program = Program.to([[("p", bytes(target))], 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
-        # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data, destination_puz hash)
+        # inner sol is (spend_type, key_value_list, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
             target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
         )
-        inner_sol = Program.to([1, 0, 0, bytes(target), destination_inner.get_tree_hash()])
+        log.warning(
+            f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
+            f"{target}"
+            f"hash:{Program.to(bytes(target)).get_tree_hash()}"
+        )
+        # key_value_list is:
+        # "ps" -> poolstate as bytes
+        inner_sol = Program.to([1, [("p", bytes(target))], destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
 
@@ -216,10 +231,10 @@ def create_absorb_spend(
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol: Program = Program.to([0, reward_amount, height, 0])
+        inner_sol: Program = Program.to([reward_amount, height])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, destination_puzhash, pool_reward_amount, pool_reward_height, extra_data)
-        inner_sol = Program.to([0, reward_amount, height, 0, 0])
+        inner_sol = Program.to([0, reward_amount, height])
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
@@ -245,6 +260,7 @@ def create_absorb_spend(
     full_puzzle: SerializedProgram = SerializedProgram.from_program(
         create_full_puzzle(inner_puzzle, launcher_coin.name())
     )
+    assert coin.puzzle_hash == full_puzzle.get_tree_hash()
 
     reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
     p2_singleton_puzzle: SerializedProgram = SerializedProgram.from_program(
@@ -336,26 +352,45 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     return inner_puzzle
 
 
+def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
+    state_bytes: Optional[bytes] = None
+    for key, value in extra_data.as_python():
+        if key == b"p":
+            state_bytes = value
+            break
+    if state_bytes is None:
+        return None
+    return PoolState.from_bytes(state_bytes)
+
+
 def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
     full_solution_ser: SerializedProgram = full_spend.solution
     full_solution: Program = Program.from_bytes(bytes(full_solution_ser))
 
     if full_spend.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
         # Launcher spend
-        extra_data = full_solution.rest().rest().first().first().as_atom()
-        return PoolState.from_bytes(extra_data)
+        extra_data: Program = full_solution.rest().rest().first()
+        return pool_state_from_extra_data(extra_data)
 
     # Not launcher spend
     inner_solution: Program = full_solution.rest().rest().first()
-    inner_spend_type: int = inner_solution.first().as_int()
-
-    if inner_spend_type == 0:
-        # Absorb
-        return None
 
     # Spend which is not absorb, and is not the launcher
-    extra_data = inner_solution.rest().rest().rest().first().as_atom()
-    return PoolState.from_bytes(extra_data)
+    num_args = len(inner_solution.as_python())
+    assert num_args in (2, 3)
+
+    if num_args == 2:
+        # pool member
+        if inner_solution.rest().first().as_int() == 1:
+            return None
+        extra_data = inner_solution.first()
+        return pool_state_from_extra_data(extra_data)
+    else:
+        # pool waitingroom
+        if inner_solution.first().as_int() == 0:
+            return None
+        extra_data = inner_solution.rest().first()
+        return pool_state_from_extra_data(extra_data)
 
 
 def pool_state_to_inner_puzzle(

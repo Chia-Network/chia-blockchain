@@ -3,16 +3,7 @@
   MY_PUBKEY
   RECOVERY_DID_LIST_HASH
   NUM_VERIFICATIONS_REQUIRED
-  (
-    my_id
-    my_full_puzhash
-    my_innerpuzhash
-    my_amount
-    parent_info
-    mod_hash
-    launcher_id
-    launcher_puzzle_hash
-  )
+  Truths
   mode
   amount
   message
@@ -28,6 +19,7 @@
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+  (include singleton_truths.clib)
 
   (defun is-in-list (atom items)
     ;; returns 1 iff `atom` is in the list of `items`
@@ -145,7 +137,7 @@
     ; check that recovery list is not empty
       (if recovery_list_reveal
         (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-          (check_messages_from_identities mod_hash launcher_puzzle_hash NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
+          (check_messages_from_identities (singleton_mod_hash_truth Truths) (singleton_launcher_puzzle_hash_truth Truths) NUM_VERIFICATIONS_REQUIRED recovery_list_reveal (my_id_truth Truths) (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
           (x)
         )
         (x)

@@ -631,8 +631,7 @@ class PoolWallet:
         full_pooling_puzzle: Program = create_full_puzzle(puzzle, launcher_id=launcher_coin.name())
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
-        extra_data_bytes = Program.to([bytes(initial_target_state), [delay_time, delay_ph]])
-
+        extra_data_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([puzzle_hash, amount, extra_data_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())

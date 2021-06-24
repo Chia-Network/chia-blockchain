@@ -116,7 +116,7 @@ class TestPoolPuzzles(TestCase):
             version=1,
         )
         # Standard format comment
-        comment = Program.to([bytes(pool_state), [DELAY_TIME, DELAY_PH]])
+        comment = Program.to([("p", bytes(pool_state)), ("t", DELAY_TIME), ("h", DELAY_PH)])
         pool_wr_innerpuz: bytes32 = create_waiting_room_inner_puzzle(
             starting_ph,
             relative_lock_height,
