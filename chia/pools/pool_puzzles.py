@@ -381,7 +381,7 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
 
     if num_args == 2:
         # pool member
-        if inner_solution.rest().first().as_int() == 1:
+        if inner_solution.rest().first().as_int() != 0:
             return None
 
         # This is referred to as p1 in the chialisp code

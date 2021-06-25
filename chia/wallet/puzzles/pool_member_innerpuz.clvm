@@ -15,7 +15,8 @@
   ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
   ; WAITINGROOM_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
 
-  ; spend_type is absorbing money if p1 is a cons box, spend_type is escape if p1 is an atom
+  ; Absorbing money if pool_reward_height is an atom
+  ; Escaping if pool_reward_height is ()
 
   ; p1 is pool_reward_amount if absorbing money
   ; p1 is key_value_list if escaping
