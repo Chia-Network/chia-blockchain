@@ -1,6 +1,9 @@
 #!/bin/bash
 
+# Need to keep the name and productName value is same in package.json file. Other wise will be error on the last step (electron-packager)
+# Into direction path: ~/chives-blockchain/build_scripts
 # sudo sh build_linux.sh amd64
+# sudo sh build_linux.sh arm64
 
 . ../activate
 
