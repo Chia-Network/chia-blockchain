@@ -383,7 +383,14 @@ def solution_to_extra_data(full_spend: CoinSolution) -> Optional[PoolState]:
         # pool member
         if inner_solution.rest().first().as_int() == 1:
             return None
+
+        # This is referred to as p1 in the chialisp code
+        # spend_type is absorbing money if p1 is a cons box, spend_type is escape if p1 is an atom
+        # TODO: The comment above, and in the CLVM, seems wrong
         extra_data = inner_solution.first()
+        if isinstance(extra_data.as_python(), bytes):
+            # Absorbing
+            return None
         return pool_state_from_extra_data(extra_data)
     else:
         # pool waitingroom
