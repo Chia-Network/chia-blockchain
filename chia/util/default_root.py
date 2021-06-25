@@ -1,4 +1,4 @@
 import os
 from pathlib import Path
 
-DEFAULT_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chvies/mainnet"))).resolve()
+DEFAULT_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chives/mainnet"))).resolve()
