@@ -135,7 +135,7 @@
     (stager_three
       SINGLETON_STRUCT
       lineage_proof
-      (if (is_eve_proof lineage_proof)
+      (if (is_not_eve_proof lineage_proof)
           (create_my_ID
             SINGLETON_STRUCT
             full_puzhash

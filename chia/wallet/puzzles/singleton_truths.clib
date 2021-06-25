@@ -15,7 +15,7 @@
   (defun-inline parent_info_for_lineage_proof (lineage_proof) (f lineage_proof))
   (defun-inline puzzle_hash_for_lineage_proof (lineage_proof) (f (r lineage_proof)))
   (defun-inline amount_for_lineage_proof (lineage_proof) (f (r (r lineage_proof))))
-  (defun-inline is_eve_proof (lineage_proof) (r (r lineage_proof)))
+  (defun-inline is_not_eve_proof (lineage_proof) (r (r lineage_proof)))
   (defun-inline parent_info_for_eve_proof (lineage_proof) (f lineage_proof))
   (defun-inline amount_for_eve_proof (lineage_proof) (f (r lineage_proof)))
 )
