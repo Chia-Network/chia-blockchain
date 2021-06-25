@@ -1,11 +1,14 @@
 import logging
 
 from blspy import PrivateKey
+from chia.cmds.init_funcs import check_keys
 from chia.util.keychain import Keychain
+from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
 keychain_commands = [
     "add_private_key",
+    "check_keys",
     "delete_all_keys",
     "delete_key_by_fingerprint",
     "get_all_private_keys",
@@ -27,6 +30,8 @@ class KeychainServer:
     async def handle_command(self, command, data) -> Dict[str, Any]:
         if command == "add_private_key":
             return await self.add_private_key(cast(Dict[str, Any], data))
+        elif command == "check_keys":
+            return await self.check_keys(cast(Dict[str, Any], data))
         elif command == "delete_all_keys":
             return await self.delete_all_keys(cast(Dict[str, Any], data))
         elif command == "delete_key_by_fingerprint":
@@ -61,6 +66,22 @@ class KeychainServer:
 
         return {"success": True}
 
+    async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        root_path = request.get("root_path", None)
+        if root_path is None:
+            return {
+                "success": False,
+                "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
+                "error_details": {"message": "missing root_path"},
+            }
+
+        check_keys(Path(root_path))
+
+        return {"success": True}
+
     async def delete_all_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.keychain.is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
@@ -92,7 +113,7 @@ class KeychainServer:
 
         private_keys = self.keychain.get_all_private_keys()
         for sk, entropy in private_keys:
-            all_keys.append({"private_key": bytes(sk.get_g1()).hex(), "entropy": entropy.hex()})
+            all_keys.append({"pk": bytes(sk.get_g1()).hex(), "entropy": entropy.hex()})
 
         return {"success": True, "private_keys": all_keys}
 
@@ -118,4 +139,4 @@ class KeychainServer:
         if not private_key or not entropy:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
         else:
-            return {"success": True, "private_key": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
+            return {"success": True, "pk": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}

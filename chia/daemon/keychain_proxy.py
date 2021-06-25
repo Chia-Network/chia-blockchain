@@ -1,8 +1,8 @@
-from chia.util.ws_message import WsRpcMessage
 import logging
 import ssl
 
 from blspy import AugSchemeMPL, PrivateKey
+from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_KEYERROR,
@@ -13,6 +13,7 @@ from chia.daemon.keychain_server import (
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, KeyringIsLocked, bytes_to_mnemonic, mnemonic_to_seed, supports_keyring_password
+from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -60,7 +61,7 @@ class KeychainProxy(DaemonProxy):
                 message = error_details.get("message", "")
                 raise MalformedKeychainRequest(message)
             else:
-                err = f"{response.command} failed with error: {error}"
+                err = f"{response['data'].get('command')} failed with error: {error}"
                 self.log.error(f"{err}")
                 raise Exception(f"{err}")
 
@@ -86,6 +87,17 @@ class KeychainProxy(DaemonProxy):
                     self.handle_error(response)
 
         return key
+
+    async def check_keys(self, root_path):
+        if self.use_local_keychain():
+            check_keys(root_path)
+        else:
+            data = {"root_path": str(root_path)}
+            request = self.format_request("check_keys", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if not success:
+                self.handle_error(response)
 
     async def delete_all_keys(self):
         if self.use_local_keychain():
@@ -120,19 +132,20 @@ class KeychainProxy(DaemonProxy):
             success = response["data"].get("success", False)
             if success:
                 private_keys = response["data"].get("private_keys", None)
-                if not private_keys:
-                    err = f"Missing private_keys in {response.command} response"
+                if private_keys is None:
+                    err = f"Missing private_keys in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise MalformedKeychainResponse(f"{err}")
                 else:
                     for key_dict in private_keys:
-                        pk = key_dict.get("private_key", None)
-                        ent = key_dict.get("entropy", None)
-                        if not pk or not ent:
-                            err = f"Missing pk and/or ent in {response.command} response"
+                        pk = key_dict.get("pk", None)
+                        ent_str = key_dict.get("entropy", None)
+                        if pk is None or ent_str is None:
+                            err = f"Missing pk and/or ent in {response.get('command')} response"
                             self.log.error(f"{err}")
                             continue  # We'll skip the incomplete key entry
-                        mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
+                        ent = bytes.fromhex(ent_str)
+                        mnemonic = bytes_to_mnemonic(ent)
                         seed = mnemonic_to_seed(mnemonic, passphrase="")
                         key = AugSchemeMPL.key_gen(seed)
                         if bytes(key.get_g1()).hex() == pk:
@@ -165,10 +178,10 @@ class KeychainProxy(DaemonProxy):
             response = await self._get(request)
             success = response["data"].get("success", False)
             if success:
-                pk = response["data"].get("private_key", None)
+                pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if not pk or not ent:
-                    err = f"Missing pk and/or ent in {response.command} response"
+                if pk is None or ent is None:
+                    err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise MalformedKeychainResponse(f"{err}")
                 else:
