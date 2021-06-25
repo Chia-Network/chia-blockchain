@@ -488,9 +488,6 @@ class Farmer:
         rpc_response = {}
         for connection in self.server.get_connections():
             if connection.connection_type == NodeType.HARVESTER:
-                peer_host = connection.peer_host
-                peer_port = connection.peer_port
-                peer_full = f"{peer_host}:{peer_port}"
                 response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
                 if response is None:
                     self.log.error(
@@ -498,9 +495,14 @@ class Farmer:
                     )
                     continue
                 if not isinstance(response, harvester_protocol.RespondPlots):
-                    self.log.error(f"Invalid response from harvester: {peer_host}:{peer_port}")
+                    self.log.error(
+                        f"Invalid response from harvester:"
+                        f"peer_host {connection.peer_host}, peer_node_id {connection.peer_node_id}"
+                    )
                     continue
-                rpc_response[peer_full] = response.to_json_dict()
+                if connection.peer_host not in rpc_response:
+                    rpc_response[connection.peer_host] = {}
+                rpc_response[connection.peer_host][connection.peer_node_id.hex()] = response.to_json_dict()
         return rpc_response
 
     async def _periodically_update_pool_state_task(self):
