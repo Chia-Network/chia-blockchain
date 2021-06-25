@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# sudo sh build_linux.sh amd64
+
+. ../activate
+
 set -e
 
 if [ ! "$1" ]; then
