@@ -383,7 +383,7 @@ class TestPoolWalletRpc:
         ) is None
 
     @pytest.mark.asyncio
-    async def test_absorb(self, one_wallet_node_and_rpc):
+    async def test_absorb_self(self, one_wallet_node_and_rpc):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
@@ -458,6 +458,92 @@ class TestPoolWalletRpc:
         self.delete_plot(plot_id)
 
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
+
+    @pytest.mark.asyncio
+    async def test_absorb_pooling(self, one_wallet_node_and_rpc):
+        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        our_ph = await wallet_0.get_new_puzzlehash()
+        summaries_response = await client.get_wallets()
+        for summary in summaries_response:
+            if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
+                assert False
+        # Balance stars at 6 XCH
+        assert (await wallet_0.get_confirmed_balance()) == 6000000000000
+        creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+            our_ph, "http://123.45.67.89", 10, "localhost:5000", "new", "FARMING_TO_POOL"
+        )
+
+        await time_out_assert(
+            10,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            creation_tx.spend_bundle,
+            creation_tx.name,
+        )
+        await self.farm_blocks(full_node_api, our_ph, 1)
+        await asyncio.sleep(2)
+        status: PoolWalletInfo = (await client.pw_status(2))[0]
+
+        log.warning(f"{await wallet_0.get_confirmed_balance()}")
+        assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+        plot_id: bytes32 = self.create_pool_plot(status.p2_singleton_puzzle_hash)
+        all_blocks = await full_node_api.get_all_full_blocks()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=all_blocks,
+            force_plot_id=plot_id,
+            farmer_reward_puzzle_hash=our_ph,
+            guarantee_transaction_block=True,
+        )
+
+        await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
+        await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
+        await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+        await asyncio.sleep(2)
+        bal = await client.get_wallet_balance(2)
+        log.warning(f"{await wallet_0.get_confirmed_balance()}")
+        # Pooled plots don't have balance
+        assert bal["confirmed_wallet_balance"] == 0
+
+        # Claim 2 * 1.75, and farm a new 1.75
+        absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
+        await time_out_assert(
+            5,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            absorb_tx.spend_bundle,
+            absorb_tx.name,
+        )
+        await self.farm_blocks(full_node_api, our_ph, 2)
+        await asyncio.sleep(2)
+        new_status: PoolWalletInfo = (await client.pw_status(2))[0]
+        assert status.current == new_status.current
+        assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
+        bal = await client.get_wallet_balance(2)
+        log.warning(f"{await wallet_0.get_confirmed_balance()}")
+        assert bal["confirmed_wallet_balance"] == 0
+
+        # Claim another 1.75
+        absorb_tx: TransactionRecord = await client.pw_absorb_rewards(2)
+        absorb_tx.spend_bundle.debug()
+        await time_out_assert(
+            5,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            absorb_tx.spend_bundle,
+            absorb_tx.name,
+        )
+
+        await self.farm_blocks(full_node_api, our_ph, 2)
+        await asyncio.sleep(2)
+        bal = await client.get_wallet_balance(2)
+        assert bal["confirmed_wallet_balance"] == 0
+        log.warning(f"{await wallet_0.get_confirmed_balance()}")
+        self.delete_plot(plot_id)
+        assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
+        assert (
+            wallet_node_0.wallet_state_manager.get_peak().height == full_node_api.full_node.blockchain.get_peak().height
+        )
+        # Balance stars at 6 XCH and 5 more blocks are farmed, total 22 XCH
+        assert (await wallet_0.get_confirmed_balance()) == 21999999999999
 
     @pytest.mark.asyncio
     async def test_self_pooling_to_pooling(self, setup):
