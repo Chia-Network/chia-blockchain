@@ -50,6 +50,7 @@ log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
+UPDATE_PLOT_CACHE_INTERVAL: int = 60
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
@@ -130,6 +131,8 @@ class Farmer:
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
+
+        self.plots_cache: Dict[str, Dict[str, Tuple[Dict, float]]] = {}
 
     async def _start(self):
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
@@ -484,25 +487,66 @@ class Farmer:
 
         return None
 
-    async def get_plots(self) -> Dict:
-        rpc_response = {}
+    async def update_cached_plots(self):
+        # First remove outdated cache entries
+        remove_hosts = []
+        for host, host_cache in self.plots_cache.items():
+            remove_peers = []
+            for peer_id, peer_cache in host_cache.items():
+                _, last_update = peer_cache
+                # If the peer cache hasn't been updated for 10x interval, drop it since the harvester doesn't respond
+                if time.time() - last_update > UPDATE_PLOT_CACHE_INTERVAL * 10:
+                    remove_peers.append(peer_id)
+                for key in remove_peers:
+                    del host_cache[key]
+            if len(host_cache) == 0:
+                remove_hosts.append(host)
+        for key in remove_hosts:
+            del self.plots_cache[key]
+        # Now query each harvester and update caches
         for connection in self.server.get_connections():
-            if connection.connection_type == NodeType.HARVESTER:
+            if connection.connection_type != NodeType.HARVESTER:
+                continue
+            cache_entry = await self.get_cached_plots(connection)
+            if cache_entry is None or time.time() - cache_entry[1] > UPDATE_PLOT_CACHE_INTERVAL:
                 response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
-                if response is None:
+                if response is not None:
+                    if isinstance(response, harvester_protocol.RespondPlots):
+                        if connection.peer_host not in self.plots_cache:
+                            self.plots_cache[connection.peer_host] = {}
+
+                        self.plots_cache[connection.peer_host][connection.peer_node_id.hex()] = (
+                            response.to_json_dict(),
+                            time.time(),
+                        )
+                    else:
+                        self.log.error(
+                            f"Invalid response from harvester:"
+                            f"peer_host {connection.peer_host}, peer_node_id {connection.peer_node_id}"
+                        )
+                else:
                     self.log.error(
                         "Harvester did not respond. You might need to update harvester to the latest version"
                     )
-                    continue
-                if not isinstance(response, harvester_protocol.RespondPlots):
-                    self.log.error(
-                        f"Invalid response from harvester:"
-                        f"peer_host {connection.peer_host}, peer_node_id {connection.peer_node_id}"
-                    )
-                    continue
+
+    async def get_cached_plots(self, connection: WSChiaConnection) -> Optional[Tuple[Dict, float]]:
+        host_cache = self.plots_cache.get(connection.peer_host)
+        if host_cache is None:
+            return None
+        return host_cache.get(connection.peer_node_id.hex())
+
+    async def get_plots(self) -> Dict:
+        rpc_response: Dict = {}
+        for connection in self.server.get_connections():
+            if connection.connection_type != NodeType.HARVESTER:
+                continue
+
+            cache_entry = await self.get_cached_plots(connection)
+            if cache_entry is not None:
                 if connection.peer_host not in rpc_response:
                     rpc_response[connection.peer_host] = {}
-                rpc_response[connection.peer_host][connection.peer_node_id.hex()] = response.to_json_dict()
+                rpc_response[connection.peer_host][connection.peer_node_id.hex()] = cache_entry[0]
+
         return rpc_response
 
     async def _periodically_update_pool_state_task(self):
@@ -550,4 +594,8 @@ class Farmer:
             if refresh_slept >= 30:
                 self.state_changed("add_connection", {})
                 refresh_slept = 0
+
+            # Handles harvester plots cache cleanup and updates
+            await self.update_cached_plots()
+
             await asyncio.sleep(1)
