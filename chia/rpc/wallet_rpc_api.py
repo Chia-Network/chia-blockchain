@@ -7,7 +7,6 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey, G1Element
 
-from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
@@ -204,13 +203,16 @@ class WalletRpcApi:
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
+        except Exception:
+            return {"public_key_fingerprints": []}
         else:
             return {"public_key_fingerprints": fingerprints}
 
     async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
         try:
             assert self.service.keychain_proxy is not None  # An offering to the mypy gods
-            for sk, seed in await self.service.keychain_proxy.get_all_private_keys():
+            all_keys = await self.service.keychain_proxy.get_all_private_keys()
+            for sk, seed in all_keys:
                 if sk.get_g1().get_fingerprint() == fingerprint:
                     return sk, seed
         except Exception as e:
@@ -260,7 +262,10 @@ class WalletRpcApi:
 
         # Makes sure the new key is added to config properly
         started = False
-        check_keys(self.service.root_path)
+        try:
+            await self.service.keychain_proxy.check_keys(self.service.root_path)
+        except Exception as e:
+            log.error(f"Failed to check_keys after adding a new key: {e}")
         request_type = request["type"]
         if request_type == "new_wallet":
             started = await self.service._start(fingerprint=fingerprint, new_wallet=True)
