@@ -250,7 +250,7 @@ class Farmer:
         post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
         post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
 
-        headers={
+        headers = {
             'content-type': 'application/json;',
         }
         try:
