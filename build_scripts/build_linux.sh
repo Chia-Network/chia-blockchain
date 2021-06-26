@@ -5,7 +5,7 @@ if [ ! "$1" ]; then
 	exit 1
 elif [ "$1" = "amd64" ]; then
 	PLATFORM="$1"
-	REDHAT_PLATFORM="x86_64"
+#	REDHAT_PLATFORM="x86_64"
 	DIR_NAME="chia-blockchain-linux-x64"
 else
 	PLATFORM="$1"

@@ -4,11 +4,11 @@ if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
 	exit 1
 elif [ "$1" = "amd64" ]; then
-	PLATFORM="$1"
+	#PLATFORM="$1"
 	REDHAT_PLATFORM="x86_64"
 	DIR_NAME="chia-blockchain-linux-x64"
 else
-	PLATFORM="$1"
+	#PLATFORM="$1"
 	DIR_NAME="chia-blockchain-linux-arm64"
 fi
 
