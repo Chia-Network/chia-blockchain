@@ -1112,7 +1112,7 @@ farmer and full node protocols.
 - Use real plot sizes in UI instead of a formula/
 - HD keys now use EIP 2333 format instead of BIP32, for compatibility with
 other chains.
-- Keys are now derived with the EIP 2334 (m/12381/8444/a/b).
+- Keys are now derived with the EIP 2334 (m/12381/9444/a/b).
 - Removed the ability to pass in sk_seed to plotting, to increase security.
 - Linux builds of chiavdf and blspy now use a fresh build of gmp 6.2.1.
 
