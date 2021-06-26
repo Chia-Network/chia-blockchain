@@ -25,3 +25,5 @@ HALF_SUCCESS_PCT = 0.6  # Require 60 % success rate for target confirmations
 SUCCESS_PCT = 0.85  # Require 85 % success rate for target confirmations
 DOUBLE_SUCCESS_PCT = 0.95  # Require 95 % success rate for target confirmations
 SUFFICIENT_FEETXS = 0.1  # Require an avg of 0.1 tx in the combined feerate bucket per block to have stat significance
+
+FEE_ESTIMATOR_VERSION = "0.0.1"

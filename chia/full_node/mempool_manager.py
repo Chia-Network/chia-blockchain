@@ -46,7 +46,7 @@ def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int, cost_per_byte
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants, config):
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants, config, fee_tracker):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
@@ -75,7 +75,7 @@ class MempoolManager:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.log = log
         self.config = config
-        self.fee_tracker = FeeTracker(self.log)
+        self.fee_tracker = fee_tracker
 
     def shut_down(self):
         self.pool.shutdown(wait=True)
@@ -87,6 +87,7 @@ class MempoolManager:
         Returns aggregated spendbundle that can be used for creating new block,
         additions and removals in that spend_bundle
         """
+
         if (
             self.peak is None
             or self.peak.header_hash != last_tb_header_hash

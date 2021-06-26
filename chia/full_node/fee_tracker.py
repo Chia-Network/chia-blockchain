@@ -1,6 +1,9 @@
-from typing import List
+import logging
+from typing import List, Optional
 from sortedcontainers import SortedDict
 
+from chia.full_node.fee_estimate import FeeTrackerBackup, FeeStatBackup
+from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator_constants import (
     INFINITE_FEE_RATE,
     STEP_SIZE,
@@ -17,8 +20,10 @@ from chia.full_node.fee_estimator_constants import (
     SHORT_DECAY,
     INITIAL_STEP,
     MAX_FEE_RATE,
+    FEE_ESTIMATOR_VERSION,
 )
 from chia.types.mempool_item import MempoolItem
+from chia.util.ints import uint32
 
 
 # Implementation of bitcoin core fee estimation algorithm
@@ -56,8 +61,9 @@ class FeeStat:
     # transactions still unconfirmed after get_max_confirmes for each bucket
     old_unconf_txs: List[int]
     max_confirms: int
+    fee_store: FeeStore
 
-    def __init__(self, buckets, sorted_buckets, max_periods, decay, scale, log):
+    def __init__(self, buckets, sorted_buckets, max_periods, decay, scale, log, fee_store):
         self.buckets = buckets
         self.sorted_buckets = sorted_buckets
         self.confirmed_average = [[] for _ in range(0, max_periods)]
@@ -66,6 +72,8 @@ class FeeStat:
         self.scale = scale
         self.max_confirms = self.scale * len(self.confirmed_average)
         self.log = log
+        self.fee_store = fee_store
+        self.type = type
 
         for i in range(0, max_periods):
             self.confirmed_average[i] = [0 for _ in range(0, len(buckets))]
@@ -151,6 +159,9 @@ class FeeStat:
                 if i >= periods_ago:
                     break
                 self.failed_average[i][bucket_index] += 1
+
+    def create_backup(self) -> FeeStatBackup:
+        return FeeStatBackup(self.tx_ct_avg, self.confirmed_average, self.failed_average, self.m_feerate_avg)
 
     def estimate_median_val(self, conf_target: int, sufficient_tx_val: float, success_break_point: float, block_height):
         n_conf = 0.0  # Number of txs confirmed within conf_target
@@ -273,17 +284,26 @@ class FeeStat:
 
 
 class FeeTracker:
-    def __init__(self, log):
+    sorted_buckets: SortedDict
+    short_horizon: FeeStat
+    med_horizon: FeeStat
+    long_horizon: FeeStat
+    log: logging.Logger
+    latest_seen_height: uint32
+    first_recorded_height: uint32
+    fee_store: FeeStore
+    buckets: List[float]
+
+    @classmethod
+    async def create(cls, log, fee_store: FeeStore):
+        self = cls()
         self.log = log
-        self.sorted_buckets: SortedDict = SortedDict()
+        self.sorted_buckets = SortedDict()
         self.buckets = []
-        self.latest_seen_height = 0
-        self.first_recorded_height = 0
-        self.historical_first = 0
-        self.historical_best = 0
-        self.tracked_txs = 0
-        self.untracked_txs = 0
-        fee_rate = 0
+        self.latest_seen_height = uint32(0)
+        self.first_recorded_height = uint32(0)
+        self.fee_store = fee_store
+        fee_rate = 0.0
         index = 0
 
         while fee_rate < MAX_FEE_RATE:
@@ -300,14 +320,49 @@ class FeeTracker:
         assert len(self.sorted_buckets.keys()) == len(self.buckets)
 
         self.short_horizon = FeeStat(
-            self.buckets, self.sorted_buckets, SHORT_BLOCK_PERIODS, SHORT_DECAY, SHORT_SCALE, self.log
+            self.buckets, self.sorted_buckets, SHORT_BLOCK_PERIODS, SHORT_DECAY, SHORT_SCALE, self.log, self.fee_store
         )
-        self.med_horizon = FeeStat(self.buckets, self.sorted_buckets, MED_BLOCK_PERIODS, MED_DECAY, MED_SCALE, self.log)
+        self.med_horizon = FeeStat(
+            self.buckets, self.sorted_buckets, MED_BLOCK_PERIODS, MED_DECAY, MED_SCALE, self.log, self.fee_store
+        )
         self.long_horizon = FeeStat(
-            self.buckets, self.sorted_buckets, LONG_BLOCK_PERIODS, LONG_DECAY, LONG_SCALE, self.log
+            self.buckets, self.sorted_buckets, LONG_BLOCK_PERIODS, LONG_DECAY, LONG_SCALE, self.log, self.fee_store
         )
+        fee_backup: Optional[FeeTrackerBackup] = await self.fee_store.get_stored_fee_data()
 
-    def process_block(self, block_height: int, items: List[MempoolItem]):
+        if fee_backup is not None:
+            self.first_recorded_height = fee_backup.first_recorded_height
+            self.latest_seen_height = fee_backup.latest_seen_height
+            if "short" in fee_backup.stats:
+                short_fee_stat: FeeStatBackup = fee_backup.stats["short"]
+                self.short_horizon.tx_ct_avg = short_fee_stat.tx_ct_avg
+                self.short_horizon.m_feerate_avg = short_fee_stat.m_feerate_avg
+                self.short_horizon.confirmed_average = short_fee_stat.confirmed_average
+                self.short_horizon.failed_average = short_fee_stat.failed_average
+            if "medium" in fee_backup.stats:
+                medium_fee_stat: FeeStatBackup = fee_backup.stats["medium"]
+                self.med_horizon.tx_ct_avg = medium_fee_stat.tx_ct_avg
+                self.med_horizon.m_feerate_avg = medium_fee_stat.m_feerate_avg
+                self.med_horizon.confirmed_average = medium_fee_stat.confirmed_average
+                self.med_horizon.failed_average = medium_fee_stat.failed_average
+            if "long" in fee_backup.stats:
+                long_fee_stat: FeeStatBackup = fee_backup.stats["long"]
+                self.long_horizon.tx_ct_avg = long_fee_stat.tx_ct_avg
+                self.long_horizon.m_feerate_avg = long_fee_stat.m_feerate_avg
+                self.long_horizon.confirmed_average = long_fee_stat.confirmed_average
+                self.long_horizon.failed_average = long_fee_stat.failed_average
+
+        return self
+
+    async def shutdown(self):
+        short = self.short_horizon.create_backup()
+        medium = self.med_horizon.create_backup()
+        long = self.long_horizon.create_backup()
+        stats = {"short": short, "medium": medium, "long": long}
+        backup = FeeTrackerBackup(FEE_ESTIMATOR_VERSION, self.first_recorded_height, self.latest_seen_height, stats)
+        await self.fee_store.store_fee_data(backup)
+
+    def process_block(self, block_height: uint32, items: List[MempoolItem]):
         """New block has been farmed and these transaction have been included"""
         if block_height <= self.latest_seen_height:
             # Ignore reorgs
