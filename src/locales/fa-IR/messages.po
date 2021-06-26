@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:50\n"
+"PO-Revision-Date: 2021-06-26 19:30\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -764,7 +764,7 @@ msgstr "مزرعه دار درحال اجرا نیست"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "کلید عمومی استخراج کننده:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:33
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1520,7 +1520,7 @@ msgstr ""
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "کلید عمومی استخر:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:203
 #: src/components/plotNFT/PlotNFTCard.tsx:242
