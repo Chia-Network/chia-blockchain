@@ -37,14 +37,32 @@
 $ErrorActionPreference = "Stop"
 
 if(Test-Path '.\build_scripts\win_build')			{
-	Remove-Item '.\build_scripts\win_build' -Recurse
+	# Remove-Item '.\build_scripts\win_build' -Recurse
+}
+else   {
+	mkdir build_scripts\win_build
+}
+
+if(Test-Path '.\build_scripts\build\daemon')			{
+	Remove-Item '.\build_scripts\build\daemon' -Recurse
+}
+if(Test-Path '.\build_scripts\dist')			{
+	# Remove-Item '.\build_scripts\dist' -Recurse
 }
 
 if(Test-Path '.\chia-blockchain-gui\daemon')			{
 	Remove-Item '.\chia-blockchain-gui\daemon' -Recurse
 }
+if(Test-Path '.\chia-blockchain-gui\release-builds')			{
+	# Remove-Item '.\chia-blockchain-gui\release-builds' -Recurse
+}
+if(Test-Path '.\chia-blockchain-gui\Chia-win32-x64')			{
+	# Remove-Item '.\chia-blockchain-gui\Chia-win32-x64' -Recurse
+}
+if(Test-Path '.\chia-blockchain-gui\build')			{
+	# Remove-Item '.\chia-blockchain-gui\build' -Recurse
+}
 
-mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
 git status
@@ -109,7 +127,7 @@ Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
 $SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
-pyinstaller --log-level INFO $SPEC_FILE
+pyinstaller --paths C:\Python39 --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
@@ -117,6 +135,7 @@ Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
 
+git pull origin main
 git status
 
 Write-Output "   ---"
@@ -127,6 +146,7 @@ npm install -g electron-packager
 npm install
 npm audit fix
 
+git pull origin main
 git status
 
 Write-Output "   ---"
@@ -144,7 +164,7 @@ editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
-$packageName = "Chia-$packageVersion"
+$packageName = "chia-$packageVersion"
 
 Write-Output "packageName is $packageName"
 
@@ -158,7 +178,6 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
-git status
 
 If ($env:HAS_SECRET) {
    Write-Output "   ---"
@@ -169,8 +188,6 @@ If ($env:HAS_SECRET) {
    }   Else    {
    Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
 }
-
-git status
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
