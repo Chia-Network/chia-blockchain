@@ -81,6 +81,14 @@ def plots_cmd(ctx: click.Context):
 @click.option(
     "-x", "--exclude_final_dir", help="Skips adding [final dir] to harvester for farming", default=False, is_flag=True
 )
+@click.option(
+    "-D",
+    "--connect_to_daemon",
+    help="Connects to the daemon for keychain operations",
+    default=False,
+    is_flag=True,
+    hidden=True,  # -D is only set when launched by the daemon
+)
 @click.pass_context
 def create_cmd(
     ctx: click.Context,
@@ -101,6 +109,7 @@ def create_cmd(
     memo: str,
     nobitfield: bool,
     exclude_final_dir: bool,
+    connect_to_daemon: bool,
 ):
     from chia.plotting.create_plots import create_plots
 
@@ -123,6 +132,7 @@ def create_cmd(
             self.memo = memo
             self.nobitfield = nobitfield
             self.exclude_final_dir = exclude_final_dir
+            self.connect_to_daemon = connect_to_daemon
 
     if size < 32 and not override_k:
         print("k=32 is the minimum size for farming.")

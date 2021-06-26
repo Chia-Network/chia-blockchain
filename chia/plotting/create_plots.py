@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import List, Optional, Tuple
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
+from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.plotting.plot_tools import add_plot_directory, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -19,56 +21,143 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_s
 log = logging.getLogger(__name__)
 
 
-def get_farmer_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
-    sk_ent: Optional[Tuple[PrivateKey, bytes]]
-    keychain: Keychain = Keychain()
-    if alt_fingerprint is not None:
-        sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
-    else:
-        sk_ent = keychain.get_first_private_key()
-    if sk_ent is None:
-        raise RuntimeError("No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f")
-    return master_sk_to_farmer_sk(sk_ent[0]).get_g1()
+class PlotKeysResolver:
+    def __init__(
+        self,
+        farmer_public_key: str,
+        alt_fingerprint: int,
+        pool_public_key: str,
+        pool_contract_address: str,
+        root_path: Path,
+        log: logging.Logger,
+        connect_to_daemon=False,
+    ):
+        self.farmer_public_key = farmer_public_key
+        self.alt_fingerprint = alt_fingerprint
+        self.pool_public_key = pool_public_key
+        self.pool_contract_address = pool_contract_address
+        self.root_path = root_path
+        self.log = log
+        self.connect_to_daemon = connect_to_daemon
+        self.resolved = False
 
+        self._farmer_public_key_g1element = None
+        self._pool_public_key_g1element = None
+        self._pool_contract_puzzle_hash = None
 
-def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
-    sk_ent: Optional[Tuple[PrivateKey, bytes]]
-    keychain: Keychain = Keychain()
-    if alt_fingerprint is not None:
-        sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
-    else:
-        sk_ent = keychain.get_first_private_key()
-    if sk_ent is None:
-        raise RuntimeError("No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p")
-    return master_sk_to_pool_sk(sk_ent[0]).get_g1()
+    async def resolve(self):
+        if self.resolved:
+            return
+
+        keychain_proxy = None
+        if self.connect_to_daemon:
+            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log, None)
+
+        farmer_public_key: G1Element
+        if self.farmer_public_key is not None:
+            farmer_public_key = G1Element.from_bytes(bytes.fromhex(self.farmer_public_key))
+        else:
+            farmer_public_key = await self.get_farmer_public_key(keychain_proxy)
+
+        pool_public_key: Optional[G1Element] = None
+        pool_contract_puzzle_hash: Optional[bytes32] = None
+        if self.pool_public_key is not None:
+            if self.pool_contract_address is not None:
+                raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
+            pool_public_key = G1Element.from_bytes(bytes.fromhex(self.pool_public_key))
+        else:
+            if self.pool_contract_address is None:
+                # If nothing is set, farms to the provided key (or the first key)
+                pool_public_key = await self.get_pool_public_key(keychain_proxy)
+            else:
+                # If the pool contract puzzle hash is set, use that
+                pool_contract_puzzle_hash = decode_puzzle_hash(self.pool_contract_address)
+
+        self._farmer_public_key_g1element = farmer_public_key
+        self._pool_public_key_g1element = pool_public_key
+        self._pool_contract_puzzle_hash = pool_contract_puzzle_hash
+        self.resolved = True
+
+    @property
+    def farmer_public_key_g1element(self):
+        if not self.resolved:
+            raise Exception("resolve() hasn't been called yet")
+        return self._farmer_public_key_g1element
+
+    @property
+    def pool_public_key_g1element(self):
+        if not self.resolved:
+            raise Exception("resolve() hasn't been called yet")
+        return self._pool_public_key_g1element
+
+    @property
+    def pool_contract_puzzle_hash(self):
+        if not self.resolved:
+            raise Exception("resolve() hasn't been called yet")
+        return self._pool_contract_puzzle_hash
+
+    async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:
+        sk: Optional[PrivateKey] = None
+        if keychain_proxy:
+            try:
+                if self.alt_fingerprint is not None:
+                    sk = await keychain_proxy.get_key_for_fingerprint(self.alt_fingerprint)
+                else:
+                    sk = await keychain_proxy.get_first_private_key()
+            except Exception as e:
+                log.error(f"Keychain proxy failed with error: {e}")
+        else:
+            sk_ent: Optional[Tuple[PrivateKey, bytes]] = None
+            keychain: Keychain = Keychain()
+            if self.alt_fingerprint is not None:
+                sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
+            else:
+                sk_ent = keychain.get_first_private_key()
+
+            if sk_ent:
+                sk = sk_ent[0]
+        return sk
+
+    async def get_farmer_public_key(self, keychain_proxy: Optional[KeychainProxy] = None) -> G1Element:
+        sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
+        if sk is None:
+            raise RuntimeError(
+                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f"
+            )
+        return master_sk_to_farmer_sk(sk).get_g1()
+
+    async def get_pool_public_key(self, keychain_proxy: Optional[KeychainProxy] = None) -> G1Element:
+        sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
+        if sk is None:
+            raise RuntimeError(
+                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p"
+            )
+        return master_sk_to_pool_sk(sk).get_g1()
 
 
 def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
+
     config_filename = config_path_for_filename(root_path, "config.yaml")
     config = load_config(root_path, config_filename)
 
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
 
-    farmer_public_key: G1Element
-    if args.farmer_public_key is not None:
-        farmer_public_key = G1Element.from_bytes(bytes.fromhex(args.farmer_public_key))
-    else:
-        farmer_public_key = get_farmer_public_key(args.alt_fingerprint)
+    keys_resolver = PlotKeysResolver(
+        args.farmer_public_key,
+        args.alt_fingerprint,
+        args.pool_public_key,
+        args.pool_contract_address,
+        root_path,
+        log,
+        args.connect_to_daemon,
+    )
 
-    pool_public_key: Optional[G1Element] = None
-    pool_contract_puzzle_hash: Optional[bytes32] = None
-    if args.pool_public_key is not None:
-        if args.pool_contract_address is not None:
-            raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
-        pool_public_key = G1Element.from_bytes(bytes.fromhex(args.pool_public_key))
-    else:
-        if args.pool_contract_address is None:
-            # If nothing is set, farms to the provided key (or the first key)
-            pool_public_key = get_pool_public_key(args.alt_fingerprint)
-        else:
-            # If the pool contract puzzle hash is set, use that
-            pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
+    asyncio.run(keys_resolver.resolve())
+
+    farmer_public_key: G1Element = keys_resolver.farmer_public_key_g1element
+    pool_public_key: G1Element = keys_resolver.pool_public_key_g1element
+    pool_contract_puzzle_hash: Optional[bytes32] = keys_resolver.pool_contract_puzzle_hash
 
     assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
     num = args.num

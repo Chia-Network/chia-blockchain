@@ -12,6 +12,7 @@ keychain_commands = [
     "delete_all_keys",
     "delete_key_by_fingerprint",
     "get_all_private_keys",
+    "get_first_private_key",
     "get_key_for_fingerprint",
 ]
 
@@ -38,6 +39,8 @@ class KeychainServer:
             return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
         elif command == "get_all_private_keys":
             return await self.get_all_private_keys(cast(Dict[str, Any], data))
+        elif command == "get_first_private_key":
+            return await self.get_first_private_key(cast(Dict[str, Any], data))
         elif command == "get_key_for_fingerprint":
             return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
         return {}
@@ -116,6 +119,21 @@ class KeychainServer:
             all_keys.append({"pk": bytes(sk.get_g1()).hex(), "entropy": entropy.hex()})
 
         return {"success": True, "private_keys": all_keys}
+
+    async def get_first_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        key: Dict[str, Any] = {}
+        if self.keychain.is_keyring_locked():
+            return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
+
+        sk_ent = self.keychain.get_first_private_key()
+        if sk_ent is None:
+            return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
+
+        pk_str = bytes(sk_ent[0].get_g1()).hex()
+        ent_str = sk_ent[1].hex()
+        key = {"pk": pk_str, "entropy": ent_str}
+
+        return {"success": True, "private_key": key}
 
     async def get_key_for_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.keychain.is_keyring_locked():
