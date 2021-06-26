@@ -26,8 +26,8 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-packager -g
-npm install electron-installer-debian -g
-#npm install electron-installer-redhat -g
+#npm install electron-installer-debian -g
+npm install electron-installer-redhat -g
 
 echo "Create dist/"
 rm -rf dist
@@ -69,27 +69,27 @@ fi
 mv $DIR_NAME ../build_scripts/dist/
 cd ../build_scripts || exit
 
-echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
-rm -rf final_installer
-mkdir final_installer
-electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-debian failed!"
-	exit $LAST_EXIT_CODE
-fi
-
-#if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
-#	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
-#  electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
-#  --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
-#  --license ../LICENSE
-#  LAST_EXIT_CODE=$?
-#  if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-#	  echo >&2 "electron-installer-redhat failed!"
-#	  exit $LAST_EXIT_CODE
-#  fi
+#echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
+#rm -rf final_installer
+#mkdir final_installer
+#electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
+#--arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION
+#LAST_EXIT_CODE=$?
+#if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+#	echo >&2 "electron-installer-debian failed!"
+#	exit $LAST_EXIT_CODE
 #fi
+
+if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
+	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
+  electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
+  --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
+  --license ../LICENSE
+  LAST_EXIT_CODE=$?
+  if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+	  echo >&2 "electron-installer-redhat failed!"
+	  exit $LAST_EXIT_CODE
+  fi
+fi
 
 ls final_installer/
