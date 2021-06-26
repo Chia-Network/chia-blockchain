@@ -74,6 +74,7 @@ class FeeStat:
         self.log = log
         self.fee_store = fee_store
         self.type = type
+        self.max_periods = max_periods
 
         for i in range(0, max_periods):
             self.confirmed_average[i] = [0 for _ in range(0, len(buckets))]
@@ -161,7 +162,43 @@ class FeeStat:
                 self.failed_average[i][bucket_index] += 1
 
     def create_backup(self) -> FeeStatBackup:
-        return FeeStatBackup(self.tx_ct_avg, self.confirmed_average, self.failed_average, self.m_feerate_avg)
+        str_tx_ct_abg: List[str] = []
+        str_confirmed_average: List[List[str]] = []
+        str_failed_average: List[List[str]] = []
+        str_m_feerate_avg: List[str] = []
+        for i in range(0, self.max_periods):
+            str_i_list_conf = []
+            for j in range(0, len(self.confirmed_average[i])):
+                str_i_list_conf.append(float.hex(self.confirmed_average[i][j]))
+
+            str_confirmed_average.append(str_i_list_conf)
+
+            str_i_list_fail = []
+            for j in range(0, len(self.failed_average[i])):
+                str_i_list_fail.append(float.hex(self.failed_average[i][j]))
+
+            str_failed_average.append(str_i_list_fail)
+
+        for i in range(0, len(self.tx_ct_avg)):
+            str_tx_ct_abg.append(float.hex(self.tx_ct_avg[i]))
+
+        for i in range(0, len(self.m_feerate_avg)):
+            str_m_feerate_avg.append(float.hex(self.m_feerate_avg[i]))
+
+        return FeeStatBackup(self.type, str_tx_ct_abg, str_confirmed_average, str_failed_average, str_m_feerate_avg)
+
+    def import_backup(self, backup: FeeStatBackup):
+        for i in range(0, self.max_periods):
+            for j in range(0, len(self.confirmed_average[i])):
+                self.confirmed_average[i][j] = float.fromhex(backup.confirmed_average[i][j])
+            for j in range(0, len(self.failed_average[i])):
+                self.failed_average[i][j] = float.fromhex(backup.failed_average[i][j])
+
+        for i in range(0, len(self.tx_ct_avg)):
+            self.tx_ct_avg[i] = float.fromhex(backup.tx_ct_avg[i])
+
+        for i in range(0, len(self.m_feerate_avg)):
+            self.m_feerate_avg[i] = float.fromhex(backup.m_feerate_avg[i])
 
     def estimate_median_val(self, conf_target: int, sufficient_tx_val: float, success_break_point: float, block_height):
         n_conf = 0.0  # Number of txs confirmed within conf_target
@@ -333,24 +370,13 @@ class FeeTracker:
         if fee_backup is not None:
             self.first_recorded_height = fee_backup.first_recorded_height
             self.latest_seen_height = fee_backup.latest_seen_height
-            if "short" in fee_backup.stats:
-                short_fee_stat: FeeStatBackup = fee_backup.stats["short"]
-                self.short_horizon.tx_ct_avg = short_fee_stat.tx_ct_avg
-                self.short_horizon.m_feerate_avg = short_fee_stat.m_feerate_avg
-                self.short_horizon.confirmed_average = short_fee_stat.confirmed_average
-                self.short_horizon.failed_average = short_fee_stat.failed_average
-            if "medium" in fee_backup.stats:
-                medium_fee_stat: FeeStatBackup = fee_backup.stats["medium"]
-                self.med_horizon.tx_ct_avg = medium_fee_stat.tx_ct_avg
-                self.med_horizon.m_feerate_avg = medium_fee_stat.m_feerate_avg
-                self.med_horizon.confirmed_average = medium_fee_stat.confirmed_average
-                self.med_horizon.failed_average = medium_fee_stat.failed_average
-            if "long" in fee_backup.stats:
-                long_fee_stat: FeeStatBackup = fee_backup.stats["long"]
-                self.long_horizon.tx_ct_avg = long_fee_stat.tx_ct_avg
-                self.long_horizon.m_feerate_avg = long_fee_stat.m_feerate_avg
-                self.long_horizon.confirmed_average = long_fee_stat.confirmed_average
-                self.long_horizon.failed_average = long_fee_stat.failed_average
+            for stat in fee_backup.stats:
+                if stat.type == "short":
+                    self.short_horizon.import_backup(stat)
+                if stat.type == "medium":
+                    self.med_horizon.import_backup(stat)
+                if stat.type == "long":
+                    self.long_horizon.import_backup(stat)
 
         return self
 
@@ -358,7 +384,7 @@ class FeeTracker:
         short = self.short_horizon.create_backup()
         medium = self.med_horizon.create_backup()
         long = self.long_horizon.create_backup()
-        stats = {"short": short, "medium": medium, "long": long}
+        stats = [short, medium, long]
         backup = FeeTrackerBackup(FEE_ESTIMATOR_VERSION, self.first_recorded_height, self.latest_seen_height, stats)
         await self.fee_store.store_fee_data(backup)
 

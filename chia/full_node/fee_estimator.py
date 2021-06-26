@@ -9,16 +9,16 @@ class FeeEstimator:
 
     def get_estimates(self) -> FeeEstimate:
         if self.mempool_manager.peak is None or self.mempool_manager.fee_tracker.latest_seen_height == 0:
-            return FeeEstimate("no enough data", -1, -1, -1)
+            return FeeEstimate("no enough data", "-1", "-1", "-1")
 
         tracking_length = (
             self.mempool_manager.fee_tracker.latest_seen_height - self.mempool_manager.fee_tracker.first_recorded_height
         )
         if tracking_length < 20:
-            return FeeEstimate("no enough data", -1, -1, -1)
+            return FeeEstimate("no enough data", "-1", "-1", "-1")
 
         if self.mempool_manager.mempool.total_mempool_cost < self.mempool_manager.constants.MAX_BLOCK_COST_CLVM * 0.8:
-            return FeeEstimate(None, 0, 0, 0)
+            return FeeEstimate(None, "0", "0", "0")
 
         short, med, long = self.mempool_manager.fee_tracker.estimate_fee()
         short_fee = short[2]
@@ -31,4 +31,4 @@ class FeeEstimator:
             med_fee = med_fee / 1000
         if long_fee != -1:
             long_fee = long_fee / 1000
-        return FeeEstimate(None, short_fee, med_fee, long_fee)
+        return FeeEstimate(None, f"{short_fee}", f"{med_fee}", f"{long_fee}")
