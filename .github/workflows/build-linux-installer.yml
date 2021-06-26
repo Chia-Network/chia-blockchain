@@ -1,4 +1,4 @@
-name: Linux deb installer on Python 3.8
+name: Linux .deb installer on Python 3.8
 
 on:
   workflow_dispatch:
