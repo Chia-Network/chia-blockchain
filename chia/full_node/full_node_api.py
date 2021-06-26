@@ -804,6 +804,14 @@ class FullNodeAPI:
                     uint32(0),
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
+            elif prev_b.height % 10 == 9
+                # Every 10 blocks reward community 1 block 
+                # Chives Network Code
+                pool_target = PoolTarget(
+                    self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+                    uint32(0),
+                )
+                farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
             else:
                 farmer_ph = request.farmer_puzzle_hash
                 if request.proof_of_space.pool_contract_puzzle_hash is not None:
