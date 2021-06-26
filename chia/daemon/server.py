@@ -540,6 +540,11 @@ class WebSocketServer:
 
             service_name = config["service_name"]
             command_args = config["command_args"]
+
+            # Set the -D/--connect_to_daemon flag to signify that the child should connect
+            # to the daemon to access the keychain
+            command_args.append("-D")
+
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)

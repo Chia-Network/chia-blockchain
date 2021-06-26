@@ -158,6 +158,44 @@ class KeychainProxy(DaemonProxy):
 
         return keys
 
+    async def get_first_private_key(self) -> Optional[PrivateKey]:
+        key: Optional[PrivateKey] = None
+        if self.use_local_keychain():
+            sk_ent = self.keychain.get_first_private_key()
+            if sk_ent:
+                key = sk_ent[0]
+        else:
+            data: Dict[str, Any] = {}
+            request = self.format_request("get_first_private_key", data)
+            response = await self._get(request)
+            success = response["data"].get("success", False)
+            if success:
+                private_key = response["data"].get("private_key", None)
+                if private_key is None:
+                    err = f"Missing private_key in {response.get('command')} response"
+                    self.log.error(f"{err}")
+                    raise MalformedKeychainResponse(f"{err}")
+                else:
+                    pk = private_key.get("pk", None)
+                    ent_str = private_key.get("entropy", None)
+                    if pk is None or ent_str is None:
+                        err = f"Missing pk and/or ent in {response.get('command')} response"
+                        self.log.error(f"{err}")
+                        raise MalformedKeychainResponse(f"{err}")
+                    ent = bytes.fromhex(ent_str)
+                    mnemonic = bytes_to_mnemonic(ent)
+                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    sk = AugSchemeMPL.key_gen(seed)
+                    if bytes(sk.get_g1()).hex() == pk:
+                        key = sk
+                    else:
+                        err = "G1Elements don't match"
+                        self.log.error(f"{err}")
+            else:
+                self.handle_error(response)
+
+        return key
+
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         key: Optional[PrivateKey] = None
         if self.use_local_keychain():
