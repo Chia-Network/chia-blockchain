@@ -753,7 +753,7 @@ def validate_unfinished_header_block(
             != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
-    elif ( header_block.height % 10 == 0 )
+    elif ( header_block.height % 10 == 0 ) :
         # Every 10 blocks reward community 1 block 
         # Chives Network Code
         if (
