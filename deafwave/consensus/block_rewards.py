@@ -15,17 +15,17 @@ def calculate_pool_reward(height: uint32) -> uint64:
     """
 
     if height == 0:
-        return uint64(int((7 / 8) * 21000000 * _mojo_per_deafwave))
+        return 0
     elif height < 3 * _blocks_per_year:
-        return uint64(int((7 / 8) * 2 * _mojo_per_deafwave))
+        return uint64(int((7 / 8) * 10 * _mojo_per_deafwave))
     elif height < 6 * _blocks_per_year:
-        return uint64(int((7 / 8) * 1 * _mojo_per_deafwave))
+        return uint64(int((7 / 8) * 5 * _mojo_per_deafwave))
     elif height < 9 * _blocks_per_year:
-        return uint64(int((7 / 8) * 0.5 * _mojo_per_deafwave))
+        return uint64(int((7 / 8) * 2.5 * _mojo_per_deafwave))
     elif height < 12 * _blocks_per_year:
-        return uint64(int((7 / 8) * 0.25 * _mojo_per_deafwave))
+        return uint64(int((7 / 8) * 1.25 * _mojo_per_deafwave))
     else:
-        return uint64(int((7 / 8) * 0.125 * _mojo_per_deafwave))
+        return uint64(int((7 / 8) * 0.625 * _mojo_per_deafwave))
 
 
 def calculate_base_farmer_reward(height: uint32) -> uint64:
@@ -38,14 +38,14 @@ def calculate_base_farmer_reward(height: uint32) -> uint64:
     rates increase continuously.
     """
     if height == 0:
-        return uint64(int((1 / 8) * 21000000 * _mojo_per_deafwave))
+        return 0
     elif height < 3 * _blocks_per_year:
-        return uint64(int((1 / 8) * 2 * _mojo_per_deafwave))
+        return uint64(int((1 / 8) * 10 * _mojo_per_deafwave))
     elif height < 6 * _blocks_per_year:
-        return uint64(int((1 / 8) * 1 * _mojo_per_deafwave))
+        return uint64(int((1 / 8) * 5 * _mojo_per_deafwave))
     elif height < 9 * _blocks_per_year:
-        return uint64(int((1 / 8) * 0.5 * _mojo_per_deafwave))
+        return uint64(int((1 / 8) * 2.5 * _mojo_per_deafwave))
     elif height < 12 * _blocks_per_year:
-        return uint64(int((1 / 8) * 0.25 * _mojo_per_deafwave))
+        return uint64(int((1 / 8) * 1.25 * _mojo_per_deafwave))
     else:
-        return uint64(int((1 / 8) * 0.125 * _mojo_per_deafwave))
+        return uint64(int((1 / 8) * 0.625 * _mojo_per_deafwave))
