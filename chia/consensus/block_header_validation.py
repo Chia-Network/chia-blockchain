@@ -753,20 +753,6 @@ def validate_unfinished_header_block(
             != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
-    elif ( header_block.height % 10 == 9 ) :
-        # Every 10 blocks reward community 1 block 
-        # Chives Network Code
-        if (
-            header_block.foliage.foliage_block_data.pool_target.puzzle_hash
-            != constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH
-        ):
-            log.error(f"Pool target {header_block.foliage.foliage_block_data.pool_target} hb {header_block}")
-            return None, ValidationError(Err.INVALID_PREFARM)
-        if (
-            header_block.foliage.foliage_block_data.farmer_reward_puzzle_hash
-            != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-        ):
-            return None, ValidationError(Err.INVALID_PREFARM)
     else:
         # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
         if header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
