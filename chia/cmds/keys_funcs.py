@@ -85,6 +85,10 @@ def show_all_keys(show_mnemonic: bool):
             "First wallet address:",
             encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
         )
+        print(
+            "First wallet puzzle hash:",
+            create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()),
+        )
         assert seed is not None
         if show_mnemonic:
             print("Master private key (m):", bytes(sk).hex())
