@@ -168,7 +168,8 @@ class TestRpc:
             # Test farmer get_plots
             await farmer_rpc_api.service.update_cached_plots()
             farmer_res = await client.get_plots()
-            assert len(list(dict(list(farmer_res.values())[0]).values())[0]["plots"]) == num_plots
+            assert len(list(farmer_res["harvesters"])) == 1
+            assert len(list(farmer_res["harvesters"][0]["plots"])) == num_plots
 
             assert len(await client_2.get_plot_directories()) == 1
 

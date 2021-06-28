@@ -214,10 +214,13 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     total_plot_size = 0
     total_plots = 0
     if all_plots is not None:
-        for harvester_ip, harvester_peers in all_plots.items():
-            if harvester_ip == "success":
-                # This key is just "success": True
-                continue
+        harvesters_by_ip: dict = {}
+        for harvester in all_plots["harvesters"]:
+            ip = harvester["connection"]["host"]
+            if ip not in harvesters_by_ip:
+                harvesters_by_ip[ip] = {}
+            harvesters_by_ip[ip][harvester["connection"]["node_id"]] = harvester
+        for harvester_ip, harvester_peers in harvesters_by_ip.items():
             print(f"Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
             for harvester_peer_id, plots in harvester_peers.items():
                 total_plot_size_harvester = sum(map(lambda x: x["file_size"], plots["plots"]))

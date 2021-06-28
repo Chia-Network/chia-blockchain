@@ -536,18 +536,22 @@ class Farmer:
         return host_cache.get(connection.peer_node_id.hex())
 
     async def get_plots(self) -> Dict:
-        rpc_response: Dict = {}
+        harvesters: List = []
         for connection in self.server.get_connections():
             if connection.connection_type != NodeType.HARVESTER:
                 continue
 
             cache_entry = await self.get_cached_plots(connection)
             if cache_entry is not None:
-                if connection.peer_host not in rpc_response:
-                    rpc_response[connection.peer_host] = {}
-                rpc_response[connection.peer_host][connection.peer_node_id.hex()] = cache_entry[0]
+                harvester_object: dict = dict(cache_entry[0])
+                harvester_object["connection"] = {
+                    "node_id": connection.peer_node_id.hex(),
+                    "host": connection.peer_host,
+                    "port": connection.peer_port,
+                }
+                harvesters.append(harvester_object)
 
-        return rpc_response
+        return {"harvesters": harvesters}
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
