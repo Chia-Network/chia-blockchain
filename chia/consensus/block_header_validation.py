@@ -756,9 +756,7 @@ def validate_unfinished_header_block(
     elif ( prev_b.height % 3 == 1 ) :
         # Every 10 blocks reward community 1 block 
         # Chives Network Code
-        log.warning("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
-        log.warning(f"block_header_validation Previous Block Heigh: {prev_b.height}")
-        log.warning(f"block_header_validation Previous Block % 3  : {prev_b.height % 3 == 1}")
+        log.warning(f"Every 10 blocks reward community 1 block. Block Heigh: {prev_b.height}")
         if (
             header_block.foliage.foliage_block_data.pool_target.puzzle_hash
             != constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH
