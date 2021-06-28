@@ -95,6 +95,9 @@ network_overrides: &network_overrides
       address_prefix: "txch"
     testnet7:
       address_prefix: "txch"
+      default_full_node_port: 9444
+    testnet8:
+      address_prefix: "tsit"
 
 selected_network: &selected_network "testnet8"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
