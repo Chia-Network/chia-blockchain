@@ -810,6 +810,7 @@ class FullNodeAPI:
                 # Every 10 blocks reward community 1 block 
                 # Chives Network Code
                 # Chives Log Output
+                self.log.warning("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
                 self.log.warning(f"Previous Block Heigh: {prev_b.height}")
                 self.log.warning(f"Previous Block % 3  : {prev_b.height % 3 == 1}")
                 # self.log.warning(prev_b)

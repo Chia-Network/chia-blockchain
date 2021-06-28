@@ -753,10 +753,12 @@ def validate_unfinished_header_block(
             != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
-    elif ( 0) :
-        # header_block.height % 10 == 9 
+    elif ( prev_b.height % 3 == 1 ) :
         # Every 10 blocks reward community 1 block 
         # Chives Network Code
+        self.log.warning("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+        self.log.warning(f"block_header_validation Previous Block Heigh: {prev_b.height}")
+        self.log.warning(f"block_header_validation Previous Block % 3  : {prev_b.height % 3 == 1}")
         if (
             header_block.foliage.foliage_block_data.pool_target.puzzle_hash
             != constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH
