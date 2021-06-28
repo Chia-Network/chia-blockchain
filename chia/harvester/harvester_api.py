@@ -258,7 +258,7 @@ class HarvesterAPI:
         )
 
         if len(proofs_found_plots) > 0:
-            self.harvester.log.debug(f"✅ Proofs was found by: {proofs_found_plots}")
+            self.harvester.log.debug(f"✅ Proofs were found by: {proofs_found_plots}")
 
     @api_request
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):
