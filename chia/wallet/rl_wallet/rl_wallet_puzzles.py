@@ -3,12 +3,12 @@ from binascii import hexlify
 
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint64
-from chia.wallet.chialisp import sexp
-from chia.wallet.puzzles.load_clvm import load_clvm
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.condition_opcodes import ConditionOpcode
+from deafwave.util.ints import uint64
+from deafwave.wallet.chialisp import sexp
+from deafwave.wallet.puzzles.load_clvm import load_clvm
 
 RATE_LIMITED_MODE = 1
 AGGREGATION_MODE = 2
@@ -27,7 +27,7 @@ def rl_puzzle_for_pk(
     (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,
      min_block_time, parent_parent_id, parent_amount, fee)
     RATE LIMIT LOGIC:
-    M - chia_per_interval
+    M - deafwave_per_interval
     N - interval_blocks
     V - amount being spent
     MIN_BLOCK_AGE = V / (M / N)

@@ -54,7 +54,7 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
 
 
-@wallet_cmd.command("send", short_help="Send chia to another wallet")
+@wallet_cmd.command("send", short_help="Send deafwave to another wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -64,7 +64,7 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
+@click.option("-a", "--amount", help="How much deafwave to send, in XCH", type=str, required=True)
 @click.option(
     "-m",
     "--fee",

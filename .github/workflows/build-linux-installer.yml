@@ -84,7 +84,7 @@ jobs:
         . ./activate
         sudo apt-get -y install rpm
         ldd --version
-        cd ./chia-blockchain-gui
+        cd ./deafwave-blockchain-gui
         git status
         cd ../build_scripts
         sh build_linux.sh amd64

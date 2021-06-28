@@ -12,7 +12,7 @@ you can use p2_conditions.
 This roughly corresponds to bitcoin's graftroot.
 """
 
-from chia.types.blockchain_format.program import Program
+from deafwave.types.blockchain_format.program import Program
 
 from . import p2_conditions
 from .load_clvm import load_clvm

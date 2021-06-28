@@ -5,21 +5,21 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from chia import __version__
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import (
-    create_default_chia_config,
+from deafwave import __version__
+from deafwave.consensus.coinbase import create_puzzlehash_for_pk
+from deafwave.ssl.create_ssl import generate_ca_signed_cert, get_deafwave_ca_crt_key, make_ca_cert
+from deafwave.util.bech32m import encode_puzzle_hash
+from deafwave.util.config import (
+    create_default_deafwave_config,
     initial_config_file,
     load_config,
     save_config,
     unflatten_properties,
 )
-from chia.util.ints import uint32
-from chia.util.keychain import Keychain
-from chia.util.path import mkdir
-from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
+from deafwave.util.ints import uint32
+from deafwave.util.keychain import Keychain
+from deafwave.util.path import mkdir
+from deafwave.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
@@ -50,7 +50,7 @@ def check_keys(new_root: Path) -> None:
     keychain: Keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:
-        print("No keys are present in the keychain. Generate them with 'chia keys generate'")
+        print("No keys are present in the keychain. Generate them with 'deafwave keys generate'")
         return None
 
     config: Dict = load_config(new_root, "config.yaml")
@@ -176,11 +176,11 @@ def create_all_ssl(root: Path):
 
     private_ca_key_path = ca_dir / "private_ca.key"
     private_ca_crt_path = ca_dir / "private_ca.crt"
-    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
-    chia_ca_crt_path = ca_dir / "chia_ca.crt"
-    chia_ca_key_path = ca_dir / "chia_ca.key"
-    chia_ca_crt_path.write_bytes(chia_ca_crt)
-    chia_ca_key_path.write_bytes(chia_ca_key)
+    deafwave_ca_crt, deafwave_ca_key = get_deafwave_ca_crt_key()
+    deafwave_ca_crt_path = ca_dir / "deafwave_ca.crt"
+    deafwave_ca_key_path = ca_dir / "deafwave_ca.key"
+    deafwave_ca_crt_path.write_bytes(deafwave_ca_crt)
+    deafwave_ca_key_path.write_bytes(deafwave_ca_key)
 
     if not private_ca_key_path.exists() or not private_ca_crt_path.exists():
         # Create private CA
@@ -197,8 +197,8 @@ def create_all_ssl(root: Path):
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
 
-    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
-    generate_ssl_for_nodes(ssl_dir, chia_ca_crt, chia_ca_key, False, overwrite=False)
+    deafwave_ca_crt, deafwave_ca_key = get_deafwave_ca_crt_key()
+    generate_ssl_for_nodes(ssl_dir, deafwave_ca_crt, deafwave_ca_key, False, overwrite=False)
 
 
 def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private: bool, overwrite=True):
@@ -244,12 +244,12 @@ def init(create_certs: Optional[Path], root_path: Path):
                 print(f"** Directory {create_certs} does not exist **")
         else:
             print(f"** {root_path} does not exist **")
-            print("** Please run `chia init` to migrate or create new config files **")
+            print("** Please run `deafwave init` to migrate or create new config files **")
     else:
-        return chia_init(root_path)
+        return deafwave_init(root_path)
 
 
-def chia_version_number() -> Tuple[str, str, str, str]:
+def deafwave_version_number() -> Tuple[str, str, str, str]:
     scm_full_version = __version__
     left_full_version = scm_full_version.split("+")
 
@@ -297,37 +297,37 @@ def chia_version_number() -> Tuple[str, str, str, str]:
     return major_release_number, minor_release_number, patch_release_number, dev_release_number
 
 
-def chia_minor_release_number():
-    res = int(chia_version_number()[2])
+def deafwave_minor_release_number():
+    res = int(deafwave_version_number()[2])
     print(f"Install release number: {res}")
     return res
 
 
-def chia_full_version_str() -> str:
-    major, minor, patch, dev = chia_version_number()
+def deafwave_full_version_str() -> str:
+    major, minor, patch, dev = deafwave_version_number()
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(root_path: Path):
-    if os.environ.get("CHIA_ROOT", None) is not None:
+def deafwave_init(root_path: Path):
+    if os.environ.get("DEAFWAVE_ROOT", None) is not None:
         print(
-            f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
-            f"Please unset the environment variable and run chia init again\n"
+            f"warning, your DEAFWAVE_ROOT is set to {os.environ['DEAFWAVE_ROOT']}. "
+            f"Please unset the environment variable and run deafwave init again\n"
             f"or manually migrate config.yaml"
         )
 
-    print(f"Chia directory {root_path}")
+    print(f"Deafwave directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
-        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
+        # This is reached if DEAFWAVE_ROOT is set, or if user has run deafwave init twice
         # before a new update.
         check_keys(root_path)
         print(f"{root_path} already exists, no migration action taken")
         return -1
 
-    create_default_chia_config(root_path)
+    create_default_deafwave_config(root_path)
     create_all_ssl(root_path)
     check_keys(root_path)
     print("")
-    print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
+    print("To see your keys, run 'deafwave keys show --show-mnemonic-seed'")
 
     return 0

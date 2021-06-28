@@ -36,8 +36,8 @@ steps:
   # Install an Apple certificate required to build on a macOS agent machine
   - task: InstallAppleCertificate@2
     inputs:
-      certSecureFile: 'chia-apple-dev-id-app.p12'
-      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
+      certSecureFile: 'deafwave-apple-dev-id-app.p12'
+      certPwd: $(DEAFWAVE_APPLE_DEV_ID_APP_PASS)
       keychain: temp
       deleteCert: true
 
@@ -55,7 +55,7 @@ steps:
       . ./activate
       clang --version
       pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
+      pip install --no-index --find-links=./wheels/ deafwave-blockchain
     displayName: "Build and install wheels"
 
   - task: NodeTool@0

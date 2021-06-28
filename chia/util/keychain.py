@@ -10,7 +10,7 @@ from bitstring import BitArray
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
-from chia.util.hash import std_hash
+from deafwave.util.hash import std_hash
 
 MAX_KEYS = 100
 
@@ -120,7 +120,7 @@ class Keychain:
     testing: bool
     user: str
 
-    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
+    def __init__(self, user: str = "user-deafwave-1.8", testing: bool = False):
         self.testing = testing
         self.user = user
 
@@ -129,9 +129,9 @@ class Keychain:
         The keychain stores keys under a different name for tests.
         """
         if self.testing:
-            return f"chia-{self.user}-test"
+            return f"deafwave-{self.user}-test"
         else:
-            return f"chia-{self.user}"
+            return f"deafwave-{self.user}"
 
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """

@@ -1,6 +1,6 @@
 import pytest
 
-from chia.wallet.chialisp import (
+from deafwave.wallet.chialisp import (
     apply,
     args,
     cons,

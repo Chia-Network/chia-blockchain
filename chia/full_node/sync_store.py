@@ -2,8 +2,8 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Set, Tuple
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint128
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.ints import uint32, uint128
 
 log = logging.getLogger(__name__)
 

@@ -3,12 +3,12 @@ import json
 
 import aiohttp
 import pytest
-from chia.server.outbound_message import NodeType
-from chia.server.server import ssl_context_for_server
-from chia.types.peer_info import PeerInfo
-from chia.util.block_tools import BlockTools
-from chia.util.ints import uint16
-from chia.util.ws_message import create_payload
+from deafwave.server.outbound_message import NodeType
+from deafwave.server.server import ssl_context_for_server
+from deafwave.types.peer_info import PeerInfo
+from deafwave.util.block_tools import BlockTools
+from deafwave.util.ints import uint16
+from deafwave.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
@@ -90,7 +90,7 @@ class TestDaemon:
 
         read_handler = asyncio.create_task(reader(ws, message_queue))
         data = {}
-        payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
+        payload = create_payload("get_blockchain_state", data, service_name, "deafwave_full_node")
         await ws.send_str(payload)
 
         await asyncio.sleep(5)

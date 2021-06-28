@@ -5,7 +5,7 @@ from typing import Dict
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
-from chia.util.path import mkdir, path_from_root
+from deafwave.util.path import mkdir, path_from_root
 
 
 def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):

@@ -14,16 +14,16 @@ from blspy import G2Element
 
 from clvm_tools.binutils import assemble
 
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.consensus.constants import ConsensusConstants
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.program import Program
-from chia.types.coin_solution import CoinSolution
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
-from chia.util.block_tools import BlockTools, test_constants
-from chia.util.errors import Err
+from deafwave.consensus.blockchain import ReceiveBlockResult
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.types.announcement import Announcement
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.coin_solution import CoinSolution
+from deafwave.types.condition_opcodes import ConditionOpcode
+from deafwave.types.full_block import FullBlock
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.block_tools import BlockTools, test_constants
+from deafwave.util.errors import Err
 
 from .ram_db import create_ram_blockchain
 

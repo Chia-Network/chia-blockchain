@@ -1,16 +1,16 @@
 import logging
 from typing import List, Optional, Tuple, Union
 
-from chia.consensus.constants import ConsensusConstants
-from chia.protocols import timelord_protocol
-from chia.timelord.iters_from_block import iters_from_block
-from chia.timelord.types import Chain, StateType
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import ChallengeBlockInfo
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.protocols import timelord_protocol
+from deafwave.timelord.iters_from_block import iters_from_block
+from deafwave.timelord.types import Chain, StateType
+from deafwave.types.blockchain_format.classgroup import ClassgroupElement
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.blockchain_format.slots import ChallengeBlockInfo
+from deafwave.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from deafwave.types.end_of_slot_bundle import EndOfSubSlotBundle
+from deafwave.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

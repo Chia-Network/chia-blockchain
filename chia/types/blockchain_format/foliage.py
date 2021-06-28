@@ -3,11 +3,11 @@ from typing import List, Optional
 
 from blspy import G2Element
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
-from chia.util.streamable import Streamable, streamable
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.pool_target import PoolTarget
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.ints import uint64
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

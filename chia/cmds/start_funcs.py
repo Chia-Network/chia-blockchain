@@ -6,15 +6,15 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from chia.util.service_groups import services_for_groups
+from deafwave.daemon.client import DaemonProxy, connect_to_daemon_and_validate
+from deafwave.util.service_groups import services_for_groups
 
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
-    os.environ["CHIA_ROOT"] = str(root_path)
+    os.environ["DEAFWAVE_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
-    chia = sys.argv[0]
-    process = subprocess.Popen(f"{chia} run_daemon".split(), stdout=subprocess.PIPE)
+    deafwave = sys.argv[0]
+    process = subprocess.Popen(f"{deafwave} run_daemon".split(), stdout=subprocess.PIPE)
     return process
 
 
@@ -38,7 +38,7 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
 async def async_start(root_path: Path, group: str, restart: bool) -> None:
     daemon = await create_start_daemon_connection(root_path)
     if daemon is None:
-        print("Failed to create the chia daemon")
+        print("Failed to create the deafwave daemon")
         return None
 
     for service in services_for_groups(group):

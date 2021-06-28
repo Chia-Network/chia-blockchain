@@ -2,7 +2,7 @@ import functools
 import logging
 from inspect import signature
 
-from chia.util.streamable import Streamable
+from deafwave.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
 

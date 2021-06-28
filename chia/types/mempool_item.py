@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import List
 
-from chia.consensus.cost_calculator import NPCResult
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
-from chia.util.streamable import Streamable, streamable
+from deafwave.consensus.cost_calculator import NPCResult
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.program import SerializedProgram
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.ints import uint64
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

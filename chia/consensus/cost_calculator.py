@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from chia.consensus.condition_costs import ConditionCost
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.name_puzzle_condition import NPC
-from chia.util.ints import uint64, uint16
-from chia.util.streamable import Streamable, streamable
+from deafwave.consensus.condition_costs import ConditionCost
+from deafwave.types.blockchain_format.program import SerializedProgram
+from deafwave.types.condition_opcodes import ConditionOpcode
+from deafwave.types.name_puzzle_condition import NPC
+from deafwave.util.ints import uint64, uint16
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

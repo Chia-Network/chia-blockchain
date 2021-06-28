@@ -3,7 +3,7 @@ import itertools
 
 import pytest
 
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
+from deafwave.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from tests.setup_nodes import bt
 
 

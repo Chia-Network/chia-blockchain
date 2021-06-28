@@ -86,8 +86,8 @@ network_overrides: &network_overrides
       address_prefix: "txch"
 
 selected_network: &selected_network "mainnet"
-ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
-CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
+ALERTS_URL: https://download.deafwave.net/notify/mainnet_alert.txt
+DEAFWAVE_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
 # public ssl ca is included in source code
 # Private ssl ca is used for trusted connections between machines user owns
@@ -95,9 +95,9 @@ private_ssl_ca:
   crt: "config/ssl/ca/private_ca.crt"
   key: "config/ssl/ca/private_ca.key"
 
-chia_ssl_ca:
-  crt: "config/ssl/ca/chia_ca.crt"
-  key: "config/ssl/ca/chia_ca.key"
+deafwave_ssl_ca:
+  crt: "config/ssl/ca/deafwave_ca.crt"
+  key: "config/ssl/ca/deafwave_ca.key"
 
 
 daemon_ssl:
@@ -140,9 +140,9 @@ harvester:
     crt: "config/ssl/ca/private_ca.crt"
     key: "config/ssl/ca/private_ca.key"
 
-  chia_ssl_ca:
-    crt: "config/ssl/ca/chia_ca.crt"
-    key: "config/ssl/ca/chia_ca.key"
+  deafwave_ssl_ca:
+    crt: "config/ssl/ca/deafwave_ca.crt"
+    key: "config/ssl/ca/deafwave_ca.key"
 
 pool:
   # Replace this with a real puzzle hash
@@ -291,13 +291,13 @@ full_node:
   weight_proof_timeout: 360
 
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
-  # analyze with chia/utils/profiler.py
+  # analyze with deafwave/utils/profiler.py
   enable_profiler: False
 
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer.deafwave.net"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -305,7 +305,7 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer.deafwave.net  # Deafwave AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
     host: *self_hostname
@@ -387,7 +387,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
+    host: introducer.deafwave.net # Deafwave AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:

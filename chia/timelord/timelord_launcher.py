@@ -8,10 +8,10 @@ from typing import Dict, List
 
 import pkg_resources
 
-from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.setproctitle import setproctitle
+from deafwave.util.deafwave_logging import initialize_logging
+from deafwave.util.config import load_config
+from deafwave.util.default_root import DEFAULT_ROOT_PATH
+from deafwave.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
@@ -87,7 +87,7 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
 
 def main():
     root_path = DEFAULT_ROOT_PATH
-    setproctitle("chia_timelord_launcher")
+    setproctitle("deafwave_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
     config = net_config["timelord_launcher"]
     initialize_logging("TLauncher", config["logging"], root_path)

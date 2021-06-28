@@ -3,22 +3,22 @@ from unittest import TestCase
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
-from chia.full_node.generator import run_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.name_puzzle_condition import NPC
-from chia.types.generator_types import BlockGenerator, GeneratorArg
-from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm
+from deafwave.full_node.generator import run_generator
+from deafwave.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from deafwave.types.blockchain_format.program import Program, SerializedProgram
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.condition_with_args import ConditionWithArgs
+from deafwave.types.name_puzzle_condition import NPC
+from deafwave.types.generator_types import BlockGenerator, GeneratorArg
+from deafwave.util.clvm import int_to_bytes
+from deafwave.util.condition_tools import ConditionOpcode
+from deafwave.util.ints import uint32
+from deafwave.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
 
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="deafwave.wallet.puzzles")
 
 
 GENERATOR_CODE = """

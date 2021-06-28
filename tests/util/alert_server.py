@@ -73,7 +73,7 @@ def main():
     if port is None or file_path is None:
         print(
             "Missing arguments, example usage:\n\n"
-            "python chia/util/alert_server.py -p 4000 -file_path /home/user/alert.txt\n"
+            "python deafwave/util/alert_server.py -p 4000 -file_path /home/user/alert.txt\n"
         )
         quit()
 

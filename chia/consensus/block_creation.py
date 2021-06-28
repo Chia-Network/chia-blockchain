@@ -7,30 +7,30 @@ import blspy
 from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.full_node.signage_point import SignagePoint
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.merkle_set import MerkleSet
-from chia.util.prev_transaction_block import get_prev_transaction_block
-from chia.util.recursive_replace import recursive_replace
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from deafwave.consensus.blockchain_interface import BlockchainInterface
+from deafwave.consensus.coinbase import create_farmer_coin, create_pool_coin
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from deafwave.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from deafwave.full_node.signage_point import SignagePoint
+from deafwave.types.blockchain_format.coin import Coin, hash_coin_list
+from deafwave.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
+from deafwave.types.blockchain_format.pool_target import PoolTarget
+from deafwave.types.blockchain_format.proof_of_space import ProofOfSpace
+from deafwave.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.blockchain_format.vdf import VDFInfo, VDFProof
+from deafwave.types.end_of_slot_bundle import EndOfSubSlotBundle
+from deafwave.types.full_block import FullBlock
+from deafwave.types.generator_types import BlockGenerator
+from deafwave.types.unfinished_block import UnfinishedBlock
+from deafwave.util.hash import std_hash
+from deafwave.util.ints import uint8, uint32, uint64, uint128
+from deafwave.util.merkle_set import MerkleSet
+from deafwave.util.prev_transaction_block import get_prev_transaction_block
+from deafwave.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
 

@@ -1,13 +1,13 @@
 from typing import Callable, Dict, List
 
-from chia.harvester.harvester import Harvester
-from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from deafwave.harvester.harvester import Harvester
+from deafwave.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class HarvesterRpcApi:
     def __init__(self, harvester: Harvester):
         self.service = harvester
-        self.service_name = "chia_harvester"
+        self.service_name = "deafwave_harvester"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {

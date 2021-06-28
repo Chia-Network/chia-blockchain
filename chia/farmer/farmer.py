@@ -6,20 +6,20 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element
 
-import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.consensus.constants import ConsensusConstants
-from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import load_config, save_config
-from chia.util.ints import uint32, uint64
-from chia.util.keychain import Keychain
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+import deafwave.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from deafwave.consensus.coinbase import create_puzzlehash_for_pk
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.protocols import farmer_protocol, harvester_protocol
+from deafwave.protocols.protocol_message_types import ProtocolMessageTypes
+from deafwave.server.outbound_message import NodeType, make_msg
+from deafwave.server.ws_connection import WSDeafwaveConnection
+from deafwave.types.blockchain_format.proof_of_space import ProofOfSpace
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.bech32m import decode_puzzle_hash
+from deafwave.util.config import load_config, save_config
+from deafwave.util.ints import uint32, uint64
+from deafwave.util.keychain import Keychain
+from deafwave.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class Farmer:
         ]
 
         if len(self.get_public_keys()) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
+            error_str = "No keys exist. Please run 'deafwave keys generate' or open the UI."
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
@@ -88,7 +88,7 @@ class Farmer:
         assert len(self.farmer_target) == 32
         assert len(self.pool_target) == 32
         if len(self.pool_sks_map) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
+            error_str = "No keys exist. Please run 'deafwave keys generate' or open the UI."
             raise RuntimeError(error_str)
 
     async def _start(self):
@@ -103,7 +103,7 @@ class Farmer:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    async def on_connect(self, peer: WSChiaConnection):
+    async def on_connect(self, peer: WSDeafwaveConnection):
         # Sends a handshake to the harvester
         handshake = harvester_protocol.HarvesterHandshake(
             self.get_public_keys(),
@@ -120,7 +120,7 @@ class Farmer:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, data)
 
-    def on_disconnect(self, connection: ws.WSChiaConnection):
+    def on_disconnect(self, connection: ws.WSDeafwaveConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 

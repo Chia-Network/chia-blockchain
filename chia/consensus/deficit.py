@@ -1,8 +1,8 @@
 from typing import Optional
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
-from chia.util.ints import uint8, uint32
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.util.ints import uint8, uint32
 
 
 def calculate_deficit(

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from chia.util.streamable import Streamable, streamable
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

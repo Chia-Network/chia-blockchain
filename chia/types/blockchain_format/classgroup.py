@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes100
-from chia.util.streamable import Streamable, streamable
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.types.blockchain_format.sized_bytes import bytes100
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

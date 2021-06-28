@@ -24,7 +24,7 @@
 """Reference implementation for Bech32m and segwit addresses."""
 from typing import List, Optional, Tuple
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.blockchain_format.sized_bytes import bytes32
 
 CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 

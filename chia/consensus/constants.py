@@ -1,8 +1,8 @@
 import dataclasses
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint8, uint32, uint64, uint128
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.byte_types import hexstr_to_bytes
+from deafwave.util.ints import uint8, uint32, uint64, uint128
 
 
 @dataclasses.dataclass(frozen=True)
@@ -34,14 +34,14 @@ class ConsensusConstants:
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     GENESIS_CHALLENGE: bytes32
-    # Forks of chia should change this value to provide replay attack protection
+    # Forks of deafwave should change this value to provide replay attack protection
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash
     MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
-    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
+    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M deafwave.
     MAX_COIN_AMOUNT: int
     # Max block cost in clvm cost units
     MAX_BLOCK_COST_CLVM: int

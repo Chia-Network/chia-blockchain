@@ -5,26 +5,26 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
-from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.get_block_challenge import get_block_challenge
-from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
-from chia.types.header_block import HeaderBlock
-from chia.util.block_cache import BlockCache
-from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint64, uint32
-from chia.util.streamable import Streamable, dataclass_from_dict, streamable
+from deafwave.consensus.block_header_validation import validate_finished_header_block
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.consensus.blockchain_interface import BlockchainInterface
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.consensus.cost_calculator import NPCResult
+from deafwave.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from deafwave.consensus.full_block_to_block_record import block_to_block_record
+from deafwave.consensus.get_block_challenge import get_block_challenge
+from deafwave.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from deafwave.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.full_block import FullBlock
+from deafwave.types.generator_types import BlockGenerator
+from deafwave.types.header_block import HeaderBlock
+from deafwave.util.block_cache import BlockCache
+from deafwave.util.errors import Err
+from deafwave.util.generator_tools import get_block_header, tx_removals_and_additions
+from deafwave.util.ints import uint16, uint64, uint32
+from deafwave.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
 

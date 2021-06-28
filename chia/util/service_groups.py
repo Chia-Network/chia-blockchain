@@ -1,19 +1,19 @@
 from typing import KeysView, Generator
 
 SERVICES_FOR_GROUP = {
-    "all": "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet".split(),
-    "node": "chia_full_node".split(),
-    "harvester": "chia_harvester".split(),
-    "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),
-    "farmer-no-wallet": "chia_harvester chia_farmer chia_full_node".split(),
-    "farmer-only": "chia_farmer".split(),
-    "timelord": "chia_timelord_launcher chia_timelord chia_full_node".split(),
-    "timelord-only": "chia_timelord".split(),
-    "timelord-launcher-only": "chia_timelord_launcher".split(),
-    "wallet": "chia_wallet chia_full_node".split(),
-    "wallet-only": "chia_wallet".split(),
-    "introducer": "chia_introducer".split(),
-    "simulator": "chia_full_node_simulator".split(),
+    "all": "deafwave_harvester deafwave_timelord_launcher deafwave_timelord deafwave_farmer deafwave_full_node deafwave_wallet".split(),
+    "node": "deafwave_full_node".split(),
+    "harvester": "deafwave_harvester".split(),
+    "farmer": "deafwave_harvester deafwave_farmer deafwave_full_node deafwave_wallet".split(),
+    "farmer-no-wallet": "deafwave_harvester deafwave_farmer deafwave_full_node".split(),
+    "farmer-only": "deafwave_farmer".split(),
+    "timelord": "deafwave_timelord_launcher deafwave_timelord deafwave_full_node".split(),
+    "timelord-only": "deafwave_timelord".split(),
+    "timelord-launcher-only": "deafwave_timelord_launcher".split(),
+    "wallet": "deafwave_wallet deafwave_full_node".split(),
+    "wallet-only": "deafwave_wallet".split(),
+    "introducer": "deafwave_introducer".split(),
+    "simulator": "deafwave_full_node_simulator".split(),
 }
 
 

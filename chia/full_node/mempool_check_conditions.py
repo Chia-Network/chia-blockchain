@@ -1,21 +1,21 @@
 import time
 from typing import Dict, List, Optional, Set
 
-from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.generator import create_generator_args, setup_generator_args
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.generator_types import BlockGenerator
-from chia.types.name_puzzle_condition import NPC
-from chia.util.clvm import int_from_bytes
-from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
-from chia.util.errors import Err
-from chia.util.ints import uint32, uint64, uint16
-from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from deafwave.consensus.cost_calculator import NPCResult
+from deafwave.full_node.generator import create_generator_args, setup_generator_args
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.program import NIL
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.coin_record import CoinRecord
+from deafwave.types.condition_with_args import ConditionWithArgs
+from deafwave.types.generator_types import BlockGenerator
+from deafwave.types.name_puzzle_condition import NPC
+from deafwave.util.clvm import int_from_bytes
+from deafwave.util.condition_tools import ConditionOpcode, conditions_by_opcode
+from deafwave.util.errors import Err
+from deafwave.util.ints import uint32, uint64, uint16
+from deafwave.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
+from deafwave.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 

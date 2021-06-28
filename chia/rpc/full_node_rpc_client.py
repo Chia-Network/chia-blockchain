@@ -1,21 +1,21 @@
 from typing import Dict, List, Optional, Tuple
 
-from chia.consensus.block_record import BlockRecord
-from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.rpc.rpc_client import RpcClient
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.coin_record import CoinRecord
+from deafwave.types.full_block import FullBlock
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.types.unfinished_header_block import UnfinishedHeaderBlock
+from deafwave.util.byte_types import hexstr_to_bytes
+from deafwave.util.ints import uint32, uint64
 
 
 class FullNodeRpcClient(RpcClient):
     """
-    Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
+    Client to Deafwave RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
-    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
+    Note that this is not the same as the peer protocol, or wallet protocol (which run Deafwave's
     protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
     to the full node.
     """

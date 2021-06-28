@@ -7,30 +7,30 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey, G1Element
 
-from chia.cmds.init_funcs import check_keys
-from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
-from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.path import path_from_root
-from chia.util.ws_message import WsRpcMessage, create_payload_dict
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
-from chia.wallet.util.trade_utils import trade_record_to_dict
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
+from deafwave.cmds.init_funcs import check_keys
+from deafwave.consensus.block_rewards import calculate_base_farmer_reward
+from deafwave.protocols.protocol_message_types import ProtocolMessageTypes
+from deafwave.server.outbound_message import NodeType, make_msg
+from deafwave.simulator.simulator_protocol import FarmNewBlockProtocol
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from deafwave.util.byte_types import hexstr_to_bytes
+from deafwave.util.ints import uint32, uint64
+from deafwave.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from deafwave.util.path import path_from_root
+from deafwave.util.ws_message import WsRpcMessage, create_payload_dict
+from deafwave.wallet.cc_wallet.cc_wallet import CCWallet
+from deafwave.wallet.rl_wallet.rl_wallet import RLWallet
+from deafwave.wallet.did_wallet.did_wallet import DIDWallet
+from deafwave.wallet.trade_record import TradeRecord
+from deafwave.wallet.transaction_record import TransactionRecord
+from deafwave.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
+from deafwave.wallet.util.trade_utils import trade_record_to_dict
+from deafwave.wallet.util.transaction_type import TransactionType
+from deafwave.wallet.util.wallet_types import WalletType
+from deafwave.wallet.wallet_info import WalletInfo
+from deafwave.wallet.wallet_node import WalletNode
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -42,7 +42,7 @@ class WalletRpcApi:
     def __init__(self, wallet_node: WalletNode):
         assert wallet_node is not None
         self.service = wallet_node
-        self.service_name = "chia_wallet"
+        self.service_name = "deafwave_wallet"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
@@ -115,7 +115,7 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
+        return [create_payload_dict("state_changed", data, "deafwave_wallet", "wallet_ui")]
 
     async def _stop_wallet(self):
         """

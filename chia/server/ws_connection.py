@@ -6,24 +6,24 @@ from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
-from chia.cmds.init_funcs import chia_full_version_str
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake
-from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.rate_limits import RateLimiter
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint8, uint16
+from deafwave.cmds.init_funcs import deafwave_full_version_str
+from deafwave.protocols.protocol_message_types import ProtocolMessageTypes
+from deafwave.protocols.shared_protocol import Capability, Handshake
+from deafwave.server.outbound_message import Message, NodeType, make_msg
+from deafwave.server.rate_limits import RateLimiter
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.peer_info import PeerInfo
+from deafwave.util.errors import Err, ProtocolError
+from deafwave.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from chia.util.network import class_for_type, is_localhost
+from deafwave.util.network import class_for_type, is_localhost
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
 
 
-class WSChiaConnection:
+class WSDeafwaveConnection:
     """
     Represents a connection to another node. Local host and port are ours, while peer host and
     port are the host and port of the peer that we are connected to. Node_id and connection_type are
@@ -69,7 +69,7 @@ class WSChiaConnection:
         self.is_outbound = is_outbound
         self.is_feeler = is_feeler
 
-        # ChiaConnection metrics
+        # DeafwaveConnection metrics
         self.creation_time = time.time()
         self.bytes_read = 0
         self.bytes_written = 0
@@ -110,7 +110,7 @@ class WSChiaConnection:
                 Handshake(
                     network_id,
                     protocol_version,
-                    chia_full_version_str(),
+                    deafwave_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
                     [(uint16(Capability.BASE.value), "1")],
@@ -148,7 +148,7 @@ class WSChiaConnection:
                 Handshake(
                     network_id,
                     protocol_version,
-                    chia_full_version_str(),
+                    deafwave_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
                     [(uint16(Capability.BASE.value), "1")],

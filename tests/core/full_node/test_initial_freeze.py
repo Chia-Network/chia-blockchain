@@ -3,18 +3,18 @@ import time
 
 import pytest
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.protocols import full_node_protocol, wallet_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err
-from chia.util.ints import uint16, uint32
-from chia.wallet.transaction_record import TransactionRecord
+from deafwave.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from deafwave.consensus.blockchain import ReceiveBlockResult
+from deafwave.protocols import full_node_protocol, wallet_protocol
+from deafwave.protocols.protocol_message_types import ProtocolMessageTypes
+from deafwave.server.outbound_message import Message
+from deafwave.simulator.full_node_simulator import FullNodeSimulator
+from deafwave.simulator.simulator_protocol import FarmNewBlockProtocol
+from deafwave.types.mempool_inclusion_status import MempoolInclusionStatus
+from deafwave.types.peer_info import PeerInfo
+from deafwave.util.errors import Err
+from deafwave.util.ints import uint16, uint32
+from deafwave.wallet.transaction_record import TransactionRecord
 from tests.core.full_node.test_full_node import add_dummy_connection
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert

@@ -2,7 +2,7 @@ import enum
 from typing import Any
 
 
-# See chia/wallet/puzzles/condition_codes.clvm
+# See deafwave/wallet/puzzles/condition_codes.clvm
 class ConditionOpcode(bytes, enum.Enum):
     # UNKNOWN is ascii "0"
     UNKNOWN = bytes([48])

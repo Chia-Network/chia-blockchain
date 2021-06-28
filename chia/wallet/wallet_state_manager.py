@@ -12,50 +12,50 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiabip158 import PyBIP158
 from cryptography.fernet import Fernet
 
-from chia import __version__
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.find_fork_point import find_fork_point_in_chain
-from chia.full_node.weight_proof import WeightProofHandler
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.db_wrapper import DBWrapper
-from chia.util.errors import Err
-from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.block_record import HeaderBlockRecord
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
-from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.settings.user_settings import UserSettings
-from chia.wallet.trade_manager import TradeManager
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import open_backup_file
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_action_store import WalletActionStore
-from chia.wallet.wallet_block_store import WalletBlockStore
-from chia.wallet.wallet_blockchain import WalletBlockchain
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import WalletCoinStore
-from chia.wallet.wallet_info import WalletInfo, WalletInfoBackup
-from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
-from chia.wallet.wallet_sync_store import WalletSyncStore
-from chia.wallet.wallet_transaction_store import WalletTransactionStore
-from chia.wallet.wallet_user_store import WalletUserStore
-from chia.server.server import ChiaServer
-from chia.wallet.did_wallet.did_wallet import DIDWallet
+from deafwave import __version__
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.consensus.coinbase import pool_parent_id, farmer_parent_id
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.consensus.find_fork_point import find_fork_point_in_chain
+from deafwave.full_node.weight_proof import WeightProofHandler
+from deafwave.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.full_block import FullBlock
+from deafwave.types.header_block import HeaderBlock
+from deafwave.types.mempool_inclusion_status import MempoolInclusionStatus
+from deafwave.util.byte_types import hexstr_to_bytes
+from deafwave.util.db_wrapper import DBWrapper
+from deafwave.util.errors import Err
+from deafwave.util.hash import std_hash
+from deafwave.util.ints import uint32, uint64, uint128
+from deafwave.wallet.block_record import HeaderBlockRecord
+from deafwave.wallet.cc_wallet.cc_wallet import CCWallet
+from deafwave.wallet.derivation_record import DerivationRecord
+from deafwave.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
+from deafwave.wallet.key_val_store import KeyValStore
+from deafwave.wallet.rl_wallet.rl_wallet import RLWallet
+from deafwave.wallet.settings.user_settings import UserSettings
+from deafwave.wallet.trade_manager import TradeManager
+from deafwave.wallet.transaction_record import TransactionRecord
+from deafwave.wallet.util.backup_utils import open_backup_file
+from deafwave.wallet.util.transaction_type import TransactionType
+from deafwave.wallet.util.wallet_types import WalletType
+from deafwave.wallet.wallet import Wallet
+from deafwave.wallet.wallet_action import WalletAction
+from deafwave.wallet.wallet_action_store import WalletActionStore
+from deafwave.wallet.wallet_block_store import WalletBlockStore
+from deafwave.wallet.wallet_blockchain import WalletBlockchain
+from deafwave.wallet.wallet_coin_record import WalletCoinRecord
+from deafwave.wallet.wallet_coin_store import WalletCoinStore
+from deafwave.wallet.wallet_info import WalletInfo, WalletInfoBackup
+from deafwave.wallet.wallet_puzzle_store import WalletPuzzleStore
+from deafwave.wallet.wallet_sync_store import WalletSyncStore
+from deafwave.wallet.wallet_transaction_store import WalletTransactionStore
+from deafwave.wallet.wallet_user_store import WalletUserStore
+from deafwave.server.server import DeafwaveServer
+from deafwave.wallet.did_wallet.did_wallet import DIDWallet
 
 
 class WalletStateManager:
@@ -99,7 +99,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     weight_proof_handler: Any
-    server: ChiaServer
+    server: DeafwaveServer
 
     @staticmethod
     async def create(
@@ -107,7 +107,7 @@ class WalletStateManager:
         config: Dict,
         db_path: Path,
         constants: ConsensusConstants,
-        server: ChiaServer,
+        server: DeafwaveServer,
         name: str = None,
     ):
         self = WalletStateManager()

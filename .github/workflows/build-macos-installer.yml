@@ -103,7 +103,7 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
-        cd ./chia-blockchain-gui
+        cd ./deafwave-blockchain-gui
         git status
         cd ../build_scripts
         sh build_macos.sh
@@ -111,5 +111,5 @@ jobs:
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Chia-Installer-on-MacOS-10.15-dmg
+        name: Deafwave-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/

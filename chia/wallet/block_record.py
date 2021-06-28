@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import List
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.header_block import HeaderBlock
-from chia.util.streamable import Streamable, streamable
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.header_block import HeaderBlock
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

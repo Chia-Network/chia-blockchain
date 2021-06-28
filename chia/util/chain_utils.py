@@ -1,9 +1,9 @@
 from typing import List
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.condition_tools import (
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.program import SerializedProgram
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.condition_tools import (
     conditions_dict_for_solution,
     created_outputs_for_conditions_dict,
 )

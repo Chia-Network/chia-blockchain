@@ -6,13 +6,13 @@ from typing import List
 import aiosqlite
 import pytest
 
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.types.full_block import FullBlock
-from chia.util.db_wrapper import DBWrapper
-from chia.util.path import mkdir
+from deafwave.consensus.blockchain import Blockchain
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.full_node.block_store import BlockStore
+from deafwave.full_node.coin_store import CoinStore
+from deafwave.types.full_block import FullBlock
+from deafwave.util.db_wrapper import DBWrapper
+from deafwave.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
 
 
@@ -96,8 +96,8 @@ def persistent_blocks(
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
-    block_path_dir = Path("~/.chia/blocks").expanduser()
-    file_path = Path(f"~/.chia/blocks/{db_name}").expanduser()
+    block_path_dir = Path("~/.deafwave/blocks").expanduser()
+    file_path = Path(f"~/.deafwave/blocks/{db_name}").expanduser()
     if not path.exists(block_path_dir):
         mkdir(block_path_dir.parent)
         mkdir(block_path_dir)

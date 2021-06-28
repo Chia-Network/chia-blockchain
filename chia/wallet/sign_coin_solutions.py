@@ -3,9 +3,9 @@ from typing import Callable, List, Optional
 import blspy
 from blspy import AugSchemeMPL, PrivateKey
 
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from deafwave.types.coin_solution import CoinSolution
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 
 
 async def sign_coin_solutions(

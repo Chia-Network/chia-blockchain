@@ -3,9 +3,9 @@ from typing import List
 
 from blspy import AugSchemeMPL
 
-from chia.util.ints import uint32
-from chia.util.keychain import Keychain
-from chia.util.validate_alert import create_alert_file, create_not_ready_alert_file, validate_alert_file
+from deafwave.util.ints import uint32
+from deafwave.util.keychain import Keychain
+from deafwave.util.validate_alert import create_alert_file, create_not_ready_alert_file, validate_alert_file
 
 bitcoin_hash = None
 bram_message = None

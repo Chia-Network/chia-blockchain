@@ -6,13 +6,13 @@ import time
 import pytest
 from clvm_tools import binutils
 
-from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.generator_types import BlockGenerator
-from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
+from deafwave.consensus.condition_costs import ConditionCost
+from deafwave.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from deafwave.full_node.bundle_tools import simple_solution_generator
+from deafwave.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from deafwave.types.blockchain_format.program import Program, SerializedProgram
+from deafwave.types.generator_types import BlockGenerator
+from deafwave.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import bt, test_constants
 
 from .make_block_generator import make_block_generator
@@ -46,7 +46,7 @@ def large_block_generator(size):
     except FileNotFoundError:
         generator = make_block_generator(size)
         blob = bytes(generator.program)
-        #  TODO: Re-enable large-block*.hex but cache in ~/.chia/subdir
+        #  TODO: Re-enable large-block*.hex but cache in ~/.deafwave/subdir
         #  with open(hex_path, "w") as f:
         #      f.write(blob.hex())
         return blob

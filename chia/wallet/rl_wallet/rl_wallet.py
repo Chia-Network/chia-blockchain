@@ -8,17 +8,17 @@ from typing import Any, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.streamable import Streamable, streamable
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.rl_wallet.rl_wallet_puzzles import (
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.coin_solution import CoinSolution
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.byte_types import hexstr_to_bytes
+from deafwave.util.ints import uint8, uint32, uint64, uint128
+from deafwave.util.streamable import Streamable, streamable
+from deafwave.wallet.derivation_record import DerivationRecord
+from deafwave.wallet.derive_keys import master_sk_to_wallet_sk
+from deafwave.wallet.rl_wallet.rl_wallet_puzzles import (
     make_clawback_solution,
     rl_make_aggregation_puzzle,
     rl_make_aggregation_solution,
@@ -26,12 +26,12 @@ from chia.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
     solution_for_rl,
 )
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from deafwave.wallet.transaction_record import TransactionRecord
+from deafwave.wallet.util.transaction_type import TransactionType
+from deafwave.wallet.util.wallet_types import WalletType
+from deafwave.wallet.wallet import Wallet
+from deafwave.wallet.wallet_coin_record import WalletCoinRecord
+from deafwave.wallet.wallet_info import WalletInfo
 
 
 @dataclass(frozen=True)

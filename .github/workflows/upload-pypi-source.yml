@@ -51,12 +51,12 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        flake8 chia tests
+        flake8 deafwave tests
 
     - name: Lint source with mypy
       run: |
         mypy --exclude config.py tests
-        mypy chia
+        mypy deafwave
 
     - name: Build source distribution
       run: |

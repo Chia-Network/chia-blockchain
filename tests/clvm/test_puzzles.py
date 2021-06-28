@@ -3,13 +3,13 @@ from unittest import TestCase
 
 from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.hash import std_hash
-from chia.wallet.puzzles import (
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.coin_solution import CoinSolution
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.condition_tools import ConditionOpcode
+from deafwave.util.hash import std_hash
+from deafwave.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
     p2_delegated_puzzle,

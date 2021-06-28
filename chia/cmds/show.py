@@ -19,15 +19,15 @@ async def show_async(
 
     from time import localtime, struct_time
     from typing import List, Optional
-    from chia.consensus.block_record import BlockRecord
-    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-    from chia.server.outbound_message import NodeType
-    from chia.types.full_block import FullBlock
-    from chia.util.bech32m import encode_puzzle_hash
-    from chia.util.byte_types import hexstr_to_bytes
-    from chia.util.config import load_config
-    from chia.util.default_root import DEFAULT_ROOT_PATH
-    from chia.util.ints import uint16
+    from deafwave.consensus.block_record import BlockRecord
+    from deafwave.rpc.full_node_rpc_client import FullNodeRpcClient
+    from deafwave.server.outbound_message import NodeType
+    from deafwave.types.full_block import FullBlock
+    from deafwave.util.bech32m import encode_puzzle_hash
+    from deafwave.util.byte_types import hexstr_to_bytes
+    from deafwave.util.config import load_config
+    from deafwave.util.default_root import DEFAULT_ROOT_PATH
+    from deafwave.util.ints import uint16
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -65,7 +65,7 @@ async def show_async(
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
                 print("\nSearching for an initial chain\n")
-                print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+                print("You may be able to expedite with 'deafwave show -a host:port' using a known node.\n")
 
             if peak is not None:
                 if peak.is_transaction_block:

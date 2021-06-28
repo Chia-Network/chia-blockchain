@@ -6,35 +6,35 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from chia.consensus.block_body_validation import validate_block_body
-from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.find_fork_point import find_fork_point_in_chain
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo
-from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, GeneratorArg
-from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.util.streamable import recurse_jsonify
+from deafwave.consensus.block_body_validation import validate_block_body
+from deafwave.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.consensus.blockchain_interface import BlockchainInterface
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.consensus.cost_calculator import NPCResult
+from deafwave.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from deafwave.consensus.find_fork_point import find_fork_point_in_chain
+from deafwave.consensus.full_block_to_block_record import block_to_block_record
+from deafwave.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from deafwave.full_node.block_store import BlockStore
+from deafwave.full_node.coin_store import CoinStore
+from deafwave.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from deafwave.types.blockchain_format.vdf import VDFInfo
+from deafwave.types.coin_record import CoinRecord
+from deafwave.types.end_of_slot_bundle import EndOfSubSlotBundle
+from deafwave.types.full_block import FullBlock
+from deafwave.types.generator_types import BlockGenerator, GeneratorArg
+from deafwave.types.header_block import HeaderBlock
+from deafwave.types.unfinished_block import UnfinishedBlock
+from deafwave.types.unfinished_header_block import UnfinishedHeaderBlock
+from deafwave.types.weight_proof import SubEpochChallengeSegment
+from deafwave.util.errors import Err
+from deafwave.util.generator_tools import get_block_header, tx_removals_and_additions
+from deafwave.util.ints import uint16, uint32, uint64, uint128
+from deafwave.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
 

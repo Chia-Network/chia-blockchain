@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.ints import uint32
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

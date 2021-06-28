@@ -11,11 +11,11 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
 
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, save_config
-from chia.wallet.derive_keys import master_sk_to_local_sk
+from deafwave.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from deafwave.types.blockchain_format.proof_of_space import ProofOfSpace
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.util.config import load_config, save_config
+from deafwave.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 

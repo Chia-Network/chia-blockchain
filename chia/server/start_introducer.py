@@ -1,12 +1,12 @@
 import pathlib
 from typing import Dict
 
-from chia.introducer.introducer import Introducer
-from chia.introducer.introducer_api import IntroducerAPI
-from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from deafwave.introducer.introducer import Introducer
+from deafwave.introducer.introducer_api import IntroducerAPI
+from deafwave.server.outbound_message import NodeType
+from deafwave.server.start_service import run_service
+from deafwave.util.config import load_config_cli
+from deafwave.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

@@ -1,9 +1,9 @@
 from typing import Optional
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.puzzles.load_clvm import load_clvm
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.wallet.puzzles.load_clvm import load_clvm
 
 MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm", package_or_requirement=__name__)
 

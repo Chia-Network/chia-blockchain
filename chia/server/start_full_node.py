@@ -3,15 +3,15 @@ import pathlib
 from multiprocessing import freeze_support
 from typing import Dict
 
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.full_node import FullNode
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from deafwave.consensus.constants import ConsensusConstants
+from deafwave.consensus.default_constants import DEFAULT_CONSTANTS
+from deafwave.full_node.full_node import FullNode
+from deafwave.full_node.full_node_api import FullNodeAPI
+from deafwave.rpc.full_node_rpc_api import FullNodeRpcApi
+from deafwave.server.outbound_message import NodeType
+from deafwave.server.start_service import run_service
+from deafwave.util.config import load_config_cli
+from deafwave.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

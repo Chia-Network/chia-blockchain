@@ -9,18 +9,18 @@ from typing import Dict, Optional, List, Set
 
 import aiosqlite
 
-import chia.server.ws_connection as ws
+import deafwave.server.ws_connection as ws
 import dns.asyncresolver
-from chia.protocols import full_node_protocol, introducer_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.address_manager_store import AddressManagerStore
-from chia.server.outbound_message import NodeType, make_msg
-from chia.server.server import ChiaServer
-from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.util.hash import std_hash
-from chia.util.ints import uint64
-from chia.util.path import mkdir, path_from_root
+from deafwave.protocols import full_node_protocol, introducer_protocol
+from deafwave.protocols.protocol_message_types import ProtocolMessageTypes
+from deafwave.server.address_manager import AddressManager, ExtendedPeerInfo
+from deafwave.server.address_manager_store import AddressManagerStore
+from deafwave.server.outbound_message import NodeType, make_msg
+from deafwave.server.server import DeafwaveServer
+from deafwave.types.peer_info import PeerInfo, TimestampedPeerInfo
+from deafwave.util.hash import std_hash
+from deafwave.util.ints import uint64
+from deafwave.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -30,7 +30,7 @@ MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
 class FullNodeDiscovery:
     def __init__(
         self,
-        server: ChiaServer,
+        server: DeafwaveServer,
         root_path: Path,
         target_outbound_count: int,
         peer_db_path: str,
@@ -39,7 +39,7 @@ class FullNodeDiscovery:
         peer_connect_interval: int,
         log,
     ):
-        self.server: ChiaServer = server
+        self.server: DeafwaveServer = server
         self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
@@ -100,7 +100,7 @@ class FullNodeDiscovery:
     def add_message(self, message, data):
         self.message_queue.put_nowait((message, data))
 
-    async def on_connect(self, peer: ws.WSChiaConnection):
+    async def on_connect(self, peer: ws.WSDeafwaveConnection):
         if (
             peer.is_outbound is False
             and peer.peer_server_port is not None
@@ -127,7 +127,7 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
-    async def update_peer_timestamp_on_message(self, peer: ws.WSChiaConnection):
+    async def update_peer_timestamp_on_message(self, peer: ws.WSDeafwaveConnection):
         if (
             peer.is_outbound
             and peer.peer_server_port is not None
@@ -165,7 +165,7 @@ class FullNodeDiscovery:
         if self.introducer_info is None:
             return None
 
-        async def on_connect(peer: ws.WSChiaConnection):
+        async def on_connect(peer: ws.WSDeafwaveConnection):
             msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
             await peer.send_message(msg)
 

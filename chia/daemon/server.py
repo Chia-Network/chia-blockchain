@@ -16,24 +16,24 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from chia.cmds.init_funcs import chia_init
-from chia.daemon.windows_signal import kill
-from chia.server.server import ssl_context_for_root, ssl_context_for_server
-from chia.ssl.create_ssl import get_mozzila_ca_crt
-from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config
-from chia.util.json_util import dict_to_json_str
-from chia.util.path import mkdir
-from chia.util.service_groups import validate_service
-from chia.util.setproctitle import setproctitle
-from chia.util.ws_message import WsRpcMessage, create_payload, format_response
+from deafwave.cmds.init_funcs import chia_init
+from deafwave.daemon.windows_signal import kill
+from deafwave.server.server import ssl_context_for_root, ssl_context_for_server
+from deafwave.ssl.create_ssl import get_mozzila_ca_crt
+from deafwave.util.chia_logging import initialize_logging
+from deafwave.util.config import load_config
+from deafwave.util.json_util import dict_to_json_str
+from deafwave.util.path import mkdir
+from deafwave.util.service_groups import validate_service
+from deafwave.util.setproctitle import setproctitle
+from deafwave.util.ws_message import WsRpcMessage, create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()
 
 try:
     from aiohttp import ClientSession, web
 except ModuleNotFoundError:
-    print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
+    print("Error: Make sure to run . ./activate from the project folder before starting Deafwave.")
     quit()
 
 try:
@@ -45,7 +45,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-service_plotter = "chia plots create"
+service_plotter = "deafwave plots create"
 
 
 async def fetch(url: str):
@@ -78,15 +78,15 @@ class PlotEvent(str, Enum):
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
     name_map = {
-        "chia": "chia",
-        "chia_wallet": "start_wallet",
-        "chia_full_node": "start_full_node",
-        "chia_harvester": "start_harvester",
-        "chia_farmer": "start_farmer",
-        "chia_introducer": "start_introducer",
-        "chia_timelord": "start_timelord",
-        "chia_timelord_launcher": "timelord_launcher",
-        "chia_full_node_simulator": "start_simulator",
+        "deafwave": "deafwave",
+        "deafwave_wallet": "start_wallet",
+        "deafwave_full_node": "start_full_node",
+        "deafwave_harvester": "start_harvester",
+        "deafwave_farmer": "start_farmer",
+        "deafwave_introducer": "start_introducer",
+        "deafwave_timelord": "start_timelord",
+        "deafwave_timelord_launcher": "timelord_launcher",
+        "deafwave_full_node_simulator": "start_simulator",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -672,7 +672,7 @@ class WebSocketServer:
 
         # TODO: fix this hack
         asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
+        log.info("deafwave daemon exiting in 5 seconds")
 
         response = {"success": True}
         return response
@@ -729,8 +729,8 @@ def plotter_log_path(root_path: Path, id: str):
 
 
 def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str):
-    # we need to pass on the possibly altered CHIA_ROOT
-    os.environ["CHIA_ROOT"] = str(root_path)
+    # we need to pass on the possibly altered DEAFWAVE_ROOT
+    os.environ["DEAFWAVE_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
 
     # Swap service name with name of executable
@@ -765,14 +765,14 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     """
     Launch a child process.
     """
-    # set up CHIA_ROOT
+    # set up DEAFWAVE_ROOT
     # invoke correct script
     # save away PID
 
-    # we need to pass on the possibly altered CHIA_ROOT
-    os.environ["CHIA_ROOT"] = str(root_path)
+    # we need to pass on the possibly altered DEAFWAVE_ROOT
+    os.environ["DEAFWAVE_ROOT"] = str(root_path)
 
-    log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
+    log.debug(f"Launching service with DEAFWAVE_ROOT: {os.environ['DEAFWAVE_ROOT']}")
 
     lockfile = singleton(service_launch_lock_path(root_path, service_command))
     if lockfile is None:
@@ -946,9 +946,9 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
 
 
 async def async_run_daemon(root_path: Path) -> int:
-    chia_init(root_path)
+    deafwave_init(root_path)
     config = load_config(root_path, "config.yaml")
-    setproctitle("chia_daemon")
+    setproctitle("deafwave_daemon")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
@@ -986,7 +986,7 @@ def run_daemon(root_path: Path) -> int:
 
 
 def main() -> int:
-    from chia.util.default_root import DEFAULT_ROOT_PATH
+    from deafwave.util.default_root import DEFAULT_ROOT_PATH
 
     return run_daemon(DEFAULT_ROOT_PATH)
 

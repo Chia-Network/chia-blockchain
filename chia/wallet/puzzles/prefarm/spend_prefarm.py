@@ -3,15 +3,15 @@ import asyncio
 from blspy import G2Element
 from clvm_tools import binutils
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.program import Program
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint32, uint16
+from deafwave.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from deafwave.rpc.full_node_rpc_client import FullNodeRpcClient
+from deafwave.types.blockchain_format.program import Program
+from deafwave.types.coin_solution import CoinSolution
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.bech32m import decode_puzzle_hash
+from deafwave.util.config import load_config
+from deafwave.util.default_root import DEFAULT_ROOT_PATH
+from deafwave.util.ints import uint32, uint16
 
 
 async def main() -> None:

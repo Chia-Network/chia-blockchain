@@ -2,13 +2,13 @@ from typing import List, Optional
 
 import aiosqlite
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.full_block import FullBlock
-from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.coin_record import CoinRecord
+from deafwave.types.full_block import FullBlock
+from deafwave.util.db_wrapper import DBWrapper
+from deafwave.util.ints import uint32, uint64
+from deafwave.util.lru_cache import LRUCache
 
 
 class CoinStore:

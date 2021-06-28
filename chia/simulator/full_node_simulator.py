@@ -1,12 +1,12 @@
 from typing import List, Optional
 
-from chia.consensus.block_record import BlockRecord
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import RespondBlock
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.types.full_block import FullBlock
-from chia.util.api_decorators import api_request
-from chia.util.ints import uint8
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.full_node.full_node_api import FullNodeAPI
+from deafwave.protocols.full_node_protocol import RespondBlock
+from deafwave.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from deafwave.types.full_block import FullBlock
+from deafwave.util.api_decorators import api_request
+from deafwave.util.ints import uint8
 
 
 class FullNodeSimulator(FullNodeAPI):

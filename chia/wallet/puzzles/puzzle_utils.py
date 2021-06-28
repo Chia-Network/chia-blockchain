@@ -1,4 +1,4 @@
-from chia.util.condition_tools import ConditionOpcode
+from deafwave.util.condition_tools import ConditionOpcode
 
 
 def make_create_coin_condition(puzzle_hash, amount):

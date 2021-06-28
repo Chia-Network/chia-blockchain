@@ -2,16 +2,16 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-from chia.cmds.units import units
-from chia.consensus.block_record import BlockRecord
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
-from chia.util.misc import format_minutes
+from deafwave.cmds.units import units
+from deafwave.consensus.block_record import BlockRecord
+from deafwave.rpc.farmer_rpc_client import FarmerRpcClient
+from deafwave.rpc.full_node_rpc_client import FullNodeRpcClient
+from deafwave.rpc.harvester_rpc_client import HarvesterRpcClient
+from deafwave.rpc.wallet_rpc_client import WalletRpcClient
+from deafwave.util.config import load_config
+from deafwave.util.default_root import DEFAULT_ROOT_PATH
+from deafwave.util.ints import uint16
+from deafwave.util.misc import format_minutes
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
@@ -200,9 +200,9 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Farming")
 
     if amounts is not None:
-        print(f"Total chia farmed: {amounts['farmed_amount'] / units['chia']}")
-        print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
-        print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
+        print(f"Total deafwave farmed: {amounts['farmed_amount'] / units['deafwave']}")
+        print(f"User transaction fees: {amounts['fee_amount'] / units['deafwave']}")
+        print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['deafwave']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
     else:
         print("Total chia farmed: Unknown")
@@ -246,4 +246,4 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
     print("Expected time to win: " + format_minutes(minutes))
-    print("Note: log into your key using 'chia wallet show' to see rewards for each key")
+    print("Note: log into your key using 'deafwave wallet show' to see rewards for each key")

@@ -3,13 +3,13 @@ from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.db_wrapper import DBWrapper
-from chia.util.errors import Err
-from chia.util.ints import uint8, uint32
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.transaction_type import TransactionType
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.mempool_inclusion_status import MempoolInclusionStatus
+from deafwave.util.db_wrapper import DBWrapper
+from deafwave.util.errors import Err
+from deafwave.util.ints import uint8, uint32
+from deafwave.wallet.transaction_record import TransactionRecord
+from deafwave.wallet.util.transaction_type import TransactionType
 
 
 class WalletTransactionStore:

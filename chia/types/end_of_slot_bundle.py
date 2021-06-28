@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from chia.types.blockchain_format.slots import (
+from deafwave.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from chia.util.streamable import Streamable, streamable
+from deafwave.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

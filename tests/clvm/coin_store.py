@@ -2,17 +2,17 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Dict, Iterator, Set
 
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import (
+from deafwave.full_node.mempool_check_conditions import mempool_check_conditions_dict
+from deafwave.types.blockchain_format.coin import Coin
+from deafwave.types.blockchain_format.sized_bytes import bytes32
+from deafwave.types.coin_record import CoinRecord
+from deafwave.types.spend_bundle import SpendBundle
+from deafwave.util.condition_tools import (
     conditions_dict_for_solution,
     coin_announcement_names_for_conditions_dict,
     puzzle_announcement_names_for_conditions_dict,
 )
-from chia.util.ints import uint32, uint64
+from deafwave.util.ints import uint32, uint64
 
 
 class BadSpendBundleError(Exception):
