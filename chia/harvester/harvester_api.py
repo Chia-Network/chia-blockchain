@@ -212,7 +212,7 @@ class HarvesterAPI:
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
-        proofs_found_plots = []
+        proofs_found_plots = set([])
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
             time_taken = time.time() - start
@@ -230,13 +230,15 @@ class HarvesterAPI:
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                 await peer.send_message(msg)
 
-                plot_info = self.harvester.provers[filename]
-                name = filename.name
-                if plot_info.pool_contract_puzzle_hash is not None:
-                    p2_address = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
-                    proofs_found_plots.append(f"{name} (P2: {p2_address})")
-                else:
-                    proofs_found_plots.append(f"{name} (non-portable)")
+                plot = self.harvester.provers[filename]
+                plot_name = filename.name
+                plot_desc = f"{plot_name} (non-portable)"
+
+                if plot.pool_contract_puzzle_hash is not None:
+                    p2_address = encode_puzzle_hash(plot.pool_contract_puzzle_hash, address_prefix)
+                    plot_desc = f"{plot_name} (P2: {p2_address})"
+
+                proofs_found_plots.add(plot_desc)
 
         now = uint64(int(time.time()))
         farming_info = FarmingInfo(
@@ -254,10 +256,9 @@ class HarvesterAPI:
             f" Found {total_proofs_found} proofs. Time: {time.time() - start:.5f} s. "
             f"Total {len(self.harvester.provers)} plots"
         )
+
         if len(proofs_found_plots) > 0:
-            self.harvester.log.debug(
-                f"✅ Proofs was found by: {proofs_found_plots}"
-            )
+            self.harvester.log.debug(f"✅ Proofs was found by: {proofs_found_plots}")
 
     @api_request
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):
