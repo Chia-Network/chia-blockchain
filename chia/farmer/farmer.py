@@ -251,11 +251,13 @@ class Farmer:
         post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
 
         headers = {
-            'content-type': 'application/json;',
+            "content-type": "application/json;",
         }
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"{pool_config.pool_url}/farmer", data=post_farmer_body, headers=headers) as resp:
+                async with session.post(
+                    f"{pool_config.pool_url}/farmer", data=post_farmer_body, headers=headers
+                ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"POST /farmer response: {response}")
