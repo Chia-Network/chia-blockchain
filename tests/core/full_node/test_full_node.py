@@ -292,7 +292,7 @@ class TestFullNodeBlockCompression:
 
         # Creates a cc wallet
         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
-        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.get_send_queue()
+        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
         tr = tx_queue[0]
         await time_out_assert(
             10,

@@ -67,7 +67,7 @@ class WalletBlockchain(BlockchainInterface):
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
 
-    coins_of_interest_received: Any
+    new_transaction_block_callback: Any
     reorg_rollback: Any
     wallet_state_manager_lock: asyncio.Lock
 
@@ -85,7 +85,7 @@ class WalletBlockchain(BlockchainInterface):
         tx_store: WalletTransactionStore,
         pool_store: WalletPoolStore,
         consensus_constants: ConsensusConstants,
-        coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
+        new_transaction_block_callback: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
         reorg_rollback: Callable,
         lock: asyncio.Lock,
     ):
@@ -109,7 +109,7 @@ class WalletBlockchain(BlockchainInterface):
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self.block_store = block_store
         self._shut_down = False
-        self.coins_of_interest_received = coins_of_interest_received
+        self.new_transaction_block_callback = new_transaction_block_callback
         self.reorg_rollback = reorg_rollback
         self.log = logging.getLogger(__name__)
         self.wallet_state_manager_lock = lock
@@ -290,7 +290,7 @@ class WalletBlockchain(BlockchainInterface):
                 self.__height_to_hash[uint32(0)] = block.header_hash
                 heights_changed.add((uint32(0), replaced))
                 assert len(block.additions) == 0 and len(block.removals) == 0
-                await self.coins_of_interest_received(block.removals, block.additions, block_record, [])
+                await self.new_transaction_block_callback(block.removals, block.additions, block_record, [])
                 self._peak_height = uint32(0)
                 return uint32(0), [block_record]
             return None, []
@@ -325,7 +325,7 @@ class WalletBlockchain(BlockchainInterface):
                 fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
                 if curr == block_record.header_hash:
                     additional_coin_spends = additional_coin_spends_from_wallet
-                if curr != block_record.header_hash:
+                else:
                     additional_coin_spends = await self.block_store.get_additional_coin_spends(curr)
                 if additional_coin_spends is None:
                     additional_coin_spends = []
@@ -346,7 +346,7 @@ class WalletBlockchain(BlockchainInterface):
                 heights_changed.add((fetched_block_record.height, replaced))
                 records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
-                    await self.coins_of_interest_received(
+                    await self.new_transaction_block_callback(
                         fetched_header_block.removals,
                         fetched_header_block.additions,
                         fetched_block_record,
