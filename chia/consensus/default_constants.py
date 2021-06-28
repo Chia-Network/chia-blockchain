@@ -32,10 +32,10 @@ testnet_kwargs = {
     # Forks of chia should change this value to provide replay attack protection. This is set to mainnet genesis chall
     "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("1171692f4b57dcaf0c86a2ec665d53c14d4335e37984bf843fc803607683ac6a"),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "97690c9438fbaf1dcddc7c6d4d16079f4fd872c53f7fd53c10c58f2d9368ebf9"
+        "37bacb630736cc299eb145c39b34ad4a3f8bd761bdf1c8b7cb646e475f7eac3b"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "87657fb12a98ab65a71a9f6e0e2a3b6536697e6407b8addc0f09907d7aa236f7c20453205de40255079c0123d0367988"
+        "b1634ed780b72b0811a5a14a9d2f8f0c4970069ad56925d36de362be90009184"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Size of mempool = 50x the size of block
