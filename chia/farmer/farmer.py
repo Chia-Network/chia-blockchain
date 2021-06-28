@@ -42,11 +42,7 @@ from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
 )
-
-
-from chia.wallet.puzzles.load_clvm import load_clvm
-
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
@@ -126,14 +122,13 @@ class Farmer:
 
         # The variables below are for use with an actual pool
 
-        # List of configs from from config.yaml
-
         # From p2_singleton_puzzle_hash to pool state dict
         self.pool_state: Dict[bytes32, Dict] = {}
 
         # From public key bytes to PrivateKey
         self.authentication_keys: Dict[bytes, PrivateKey] = {}
 
+        # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
 
     async def _start(self):
@@ -251,11 +246,13 @@ class Farmer:
         post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
 
         headers = {
-            'content-type': 'application/json;',
+            "content-type": "application/json;",
         }
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"{pool_config.pool_url}/farmer", data=post_farmer_body, headers=headers) as resp:
+                async with session.post(
+                    f"{pool_config.pool_url}/farmer", data=post_farmer_body, headers=headers
+                ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"POST /farmer response: {response}")
