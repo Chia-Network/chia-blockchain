@@ -805,13 +805,13 @@ class FullNodeAPI:
                     uint32(0),
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-            elif ( prev_b.height % 10 == 8 ) :
+            elif ( prev_b.height % 3 == 1 ) :
                 # prev_b.height % 10 == 8
                 # Every 10 blocks reward community 1 block 
                 # Chives Network Code
                 # Chives Log Output
                 self.log.warning(f"Previous Block Heigh: {prev_b.height}")
-                self.log.warning(f"Previous Block % 10  : {prev_b.height % 10 == 9}")
+                self.log.warning(f"Previous Block % 3  : {prev_b.height % 3 == 1}")
                 # self.log.warning(prev_b)
                 pool_target = PoolTarget(
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
