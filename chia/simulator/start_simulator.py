@@ -1,5 +1,17 @@
-from multiprocessing import freeze_support
+
+import os
+import sys
 from pathlib import Path
+
+# Workaround import path conflict between tests.* and site-packages/tests (installed by 'fasteners')
+chia_blockchain_import_path = str(Path.resolve(Path(os.path.dirname(os.path.abspath(__file__))) / ".." / ".."))
+
+if chia_blockchain_import_path in sys.path:
+    sys.path.remove(chia_blockchain_import_path)
+    sys.path.insert(0, chia_blockchain_import_path)
+
+from multiprocessing import freeze_support
+
 from typing import Dict
 
 from chia.full_node.full_node import FullNode
