@@ -1,15 +1,13 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { orderBy } from 'lodash';
 import { Box, Tooltip, Typography } from '@material-ui/core';
-import { useSelector } from 'react-redux';
 import { Card, CopyToClipboard, Flex, Table } from '@chia/core';
-import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/components/Table/Table';
 import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../util/chia';
 import { unix_to_short_date } from '../../util/utils';
 import TransactionType from '../../constants/TransactionType';
 import WalletType from '../../constants/WalletType';
+import useWallet from '../../hooks/useWallet';
 
 const getCols = (type: WalletType) => [
   {
@@ -73,9 +71,7 @@ type Props = {
 
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
-  const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === walletId),
-  );
+  const { wallet, transactions } = useWallet(walletId);
 
   const cols = useMemo(() => {
     if (!wallet) {
@@ -89,17 +85,14 @@ export default function WalletHistory(props: Props) {
     return null;
   }
 
-  const { transactions } = wallet;
-  const sortedTransactions = transactions && orderBy(transactions, (row) => row.created_at_time, 'desc');
-
   return (
     <Card
       title={<Trans>History</Trans>}
     >
-      {sortedTransactions?.length ? (
+      {transactions?.length ? (
         <Table
           cols={cols}
-          rows={sortedTransactions}
+          rows={transactions}
           rowsPerPageOptions={[10, 25, 100]}
           rowsPerPage={10}
           pages

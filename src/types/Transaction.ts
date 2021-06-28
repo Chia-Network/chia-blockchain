@@ -7,11 +7,11 @@ type Transaction = {
   created_at_time: number;
   to_address: string;
   to_puzzle_hash?: string;
-  amount: string;
-  fee_amount: string;
+  amount: number;
+  sent: number;
+  fee_amount: number;
   incoming: boolean;
   confirmed: boolean;
-  sent: number;
   spend_bundle?: SpendBundle;
   additions: Coin[];
   removals: Coin[];

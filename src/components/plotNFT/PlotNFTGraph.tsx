@@ -75,6 +75,22 @@ function aggregatePoints(points, hours: number = 2, totalHours: number = 24) {
   return items;
 }
 
+// https://github.com/plouc/nivo/issues/308#issuecomment-451280930
+const theme = {
+  tooltip: {
+    container: {
+      color: 'rgba(0, 0, 0, 0.87)',
+    },
+  },
+  axis: {
+    ticks: {
+      text: {
+        fill: 'rgba(255,255,255,0.5)',
+      },
+    },
+  },
+};
+
 type Props = {
   title?: ReactNode;
   points: [number, number][];
@@ -97,22 +113,6 @@ export default function PlotNFTGraph(props: Props) {
   const min = aggregated.length ? Math.min(...aggregated.map(item => item.y)) : 0;
   const max = Math.max(min, ...aggregated.map(item => item.y));
   const middle = max / 2;
-
-  // https://github.com/plouc/nivo/issues/308#issuecomment-451280930
-  const theme = {
-    tooltip: {
-      container: {
-        color: 'rgba(0, 0, 0, 0.87)',
-      },
-    },
-    axis: {
-      ticks: {
-        text: {
-          fill: 'rgba(255,255,255,0.5)',
-        },
-      },
-    },
-  };
 
   return (
     <StyledRoot>
@@ -168,6 +168,7 @@ export default function PlotNFTGraph(props: Props) {
           enableArea
         />
 
+        {/* 
         <StyledMaxTypography variant="body2" color="textSecondary">
           <FormatLargeNumber value={max} />
         </StyledMaxTypography>
@@ -179,6 +180,7 @@ export default function PlotNFTGraph(props: Props) {
         <StyledMiddleTypography variant="body2" color="textSecondary">
           <FormatLargeNumber value={middle} />
         </StyledMiddleTypography>
+        */}
       </StyledGraphContainer>
       </Flex>
     </StyledRoot>

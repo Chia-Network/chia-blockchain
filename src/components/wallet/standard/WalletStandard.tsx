@@ -37,6 +37,7 @@ import type { RootState } from '../../../modules/rootReducer';
 import WalletHistory from '../WalletHistory';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import { deleteUnconfirmedTransactions } from '../../../modules/incoming';
+import WalletGraph from '../WalletGraph';
 
 const drawerWidth = 240;
 
@@ -328,6 +329,7 @@ function BalanceCard(props: BalanceCardProps) {
           </Box>
         </Box>
       </Grid>
+      <WalletGraph walletId={wallet_id} />
     </Card>
   );
 }

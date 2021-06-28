@@ -112,6 +112,7 @@ export default {
     new LodashModuleReplacementPlugin({
       paths: true,
       flattening: true,
+      shorthands: true,
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(DEV ? 'development' : 'production'),
