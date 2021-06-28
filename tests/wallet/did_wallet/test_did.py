@@ -412,7 +412,7 @@ class TestDIDWallet:
 
         new_ph = await did_wallet_4.get_new_inner_hash()
         pubkey = (await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)).pubkey
-        await did_wallet_3.create_attestment(coin.name(), ph, pubkey, "test.attest")
+        await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         (
