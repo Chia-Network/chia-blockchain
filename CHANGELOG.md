@@ -618,7 +618,7 @@ all fields that referred to sub blocks are changed to blocks.
 ### Fixed
 
 - On the Farm page of the GUI Latest Block Challenge is now populated. This shows you the actual challenge that came from the Timelord. Index is the signage point index in the current slot. There are 64 signage points every 10 minutes on average where 32 sub blocks can be won.
-- Last Attempted Proof is now fixed. This will show you the last time one of your plots passed the [plot filter](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it).
+- Last Attempted Proof is now fixed. This will show you the last time one of your plots passed the [plot filter](https://github.com/HiveProject2021/chives-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it).
 - Plot filename is now back in the Plots table of the GUI.
 - There was a bug in adding a sub block to weight proofs and an issue in the weight proof index.
 - Over time the node would think that there were no peers attached with peak sub block heights higher than 0.

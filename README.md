@@ -19,7 +19,7 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 * A growing community of farmers and developers around the world
 
 Please check out the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki)
-and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for
+and [FAQ](https://github.com/HiveProject2021/chives-blockchain/wiki/FAQ) for
 information on this project.
 
 Python 3.7+ is required. Make sure your default python version is >=3.7
