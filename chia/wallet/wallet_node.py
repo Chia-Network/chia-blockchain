@@ -34,6 +34,7 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.header_block import HeaderBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
@@ -312,7 +313,8 @@ class WalletNode:
             )
             already_sent = set()
             for peer, status, _ in record.sent_to:
-                already_sent.add(hexstr_to_bytes(peer))
+                if status == MempoolInclusionStatus.SUCCESS.value:
+                    already_sent.add(hexstr_to_bytes(peer))
             messages.append((msg, already_sent))
 
         return messages

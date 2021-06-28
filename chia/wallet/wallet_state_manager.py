@@ -149,7 +149,7 @@ class WalletStateManager:
             self.tx_store,
             self.pool_store,
             self.constants,
-            self.coins_of_interest_received,
+            self.new_transaction_block_callback,
             self.reorg_rollback,
             self.lock,
         )
@@ -562,7 +562,7 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coins_of_interest_received(
+    async def new_transaction_block_callback(
         self,
         removals: List[Coin],
         additions: List[Coin],
@@ -617,6 +617,8 @@ class WalletStateManager:
                 continue
             removed_notified.add(coin_record.wallet_id)
             self.state_changed("coin_removed", coin_record.wallet_id)
+
+        self.tx_pending_changed()
 
     async def coins_of_interest_added(
         self, coins: List[Coin], block: BlockRecord
@@ -869,13 +871,6 @@ class WalletStateManager:
             if tx is not None:
                 self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
-    async def get_send_queue(self) -> List[TransactionRecord]:
-        """
-        Wallet Node uses this to retry sending transactions
-        """
-        records = await self.tx_store.get_not_sent()
-        return records
-
     async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
         """
         Retrieves all confirmed and pending transactions
@@ -1003,7 +998,13 @@ class WalletStateManager:
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
 
-        await self.retry_sending_after_reorg(reorged)
+        for record in reorged:
+            if record.type in [
+                TransactionType.OUTGOING_TX,
+                TransactionType.OUTGOING_TRADE,
+                TransactionType.INCOMING_TRADE,
+            ]:
+                await self.tx_store.tx_reorged(record)
 
         # Removes wallets that were created from a blockchain transaction which got reorged.
         remove_ids = []
@@ -1016,24 +1017,6 @@ class WalletStateManager:
             await self.user_store.delete_wallet(wallet_id, in_transaction=True)
             self.wallets.pop(wallet_id)
             self.new_peak_callbacks.pop(wallet_id)
-
-    async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
-        """
-        Retries sending spend_bundle to the Full_Node, after confirmed tx
-        get's excluded from chain because of the reorg.
-        """
-        if len(records) == 0:
-            return None
-
-        for record in records:
-            if record.type in [
-                TransactionType.OUTGOING_TX,
-                TransactionType.OUTGOING_TRADE,
-                TransactionType.INCOMING_TRADE,
-            ]:
-                await self.tx_store.tx_reorged(record)
-
-        self.tx_pending_changed()
 
     async def close_all_stores(self) -> None:
         if self.blockchain is not None:
