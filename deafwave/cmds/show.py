@@ -166,7 +166,7 @@ async def show_async(
             print(node_stop, "Node stopped")
         if add_connection:
             if ":" not in add_connection:
-                print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
+                print("Enter a valid IP and port in the following format: 10.5.4.3:8176")
             else:
                 ip, port = (
                     ":".join(add_connection.split(":")[:-1]),
