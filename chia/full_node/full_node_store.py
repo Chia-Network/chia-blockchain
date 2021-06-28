@@ -433,7 +433,7 @@ class FullNodeStore:
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
-        new_cc_hash = eos.get_hash()
+        new_cc_hash = eos.challenge_chain.get_hash()
         self.recent_eos.put(new_cc_hash, (eos, time.time()))
 
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
@@ -741,7 +741,7 @@ class FullNodeStore:
 
         for eos_op, _, _ in self.finished_sub_slots:
             if eos_op is not None:
-                self.recent_eos.put(eos_op.get_hash(), (eos_op, time.time()))
+                self.recent_eos.put(eos_op.challenge_chain.get_hash(), (eos_op, time.time()))
 
         return new_eos, new_sps, new_ips
 

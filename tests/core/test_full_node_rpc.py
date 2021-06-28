@@ -289,7 +289,7 @@ class TestRpc:
             selected_eos = blocks[-1].finished_sub_slots[0]
 
             # Don't have EOS yet
-            res = await client.get_recent_signage_point_or_eos(None, selected_eos.get_hash())
+            res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
             assert res is None
 
             # Properly fetch an EOS
@@ -298,7 +298,7 @@ class TestRpc:
                     full_node_protocol.RespondEndOfSubSlot(eos), peer
                 )
 
-            res = await client.get_recent_signage_point_or_eos(None, selected_eos.get_hash())
+            res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
             assert res is not None
             assert "signage_point" not in res
             assert res["eos"] == selected_eos
@@ -310,7 +310,7 @@ class TestRpc:
             selected_eos = blocks[-1].finished_sub_slots[-1]
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
 
-            res = await client.get_recent_signage_point_or_eos(None, selected_eos.get_hash())
+            res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
             assert res is not None
             assert "signage_point" not in res
             assert res["eos"] == selected_eos
@@ -328,7 +328,7 @@ class TestRpc:
             assert "eos" not in res
 
             # EOS is no longer in the blockchain
-            res = await client.get_recent_signage_point_or_eos(None, selected_eos.get_hash())
+            res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
             assert res is not None
             assert "signage_point" not in res
             assert res["eos"] == selected_eos
