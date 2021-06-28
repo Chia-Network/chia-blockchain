@@ -47,7 +47,7 @@ export default function ConfirmDialog(props: Props) {
       )}
 
       <DialogActions>
-        <Button onClick={handleCancel} color="secondary" variant="contained" autoFocus>
+        <Button onClick={handleCancel} color="secondary" variant="outlined" autoFocus>
           {cancelTitle}
         </Button>
         <Button onClick={handleConfirm} color={confirmColor} variant="contained">

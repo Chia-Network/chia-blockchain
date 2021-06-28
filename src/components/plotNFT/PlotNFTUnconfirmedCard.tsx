@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { Flex, Loading } from '@chia/core';
+import { Flex, Link, Loading } from '@chia/core';
 import {
   Box,
   Card,
@@ -48,8 +48,6 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
     }
   }, [transaction?.confirmed]);
 
-  console.log('state', state);
-
   return (
     <StyledCard>
       <StyledCardContent>
@@ -61,9 +59,12 @@ export default function PlotNFTUnconfirmedCard(props: Props) {
                 : <Trans>Creating Plot NFT and Joining the Pool</Trans>}
             </Typography>
             {state === PlotNFTState.FARMING_TO_POOL && (
-              <Typography variant="body1" align="center">
-                <Trans>Pool URL: {poolUrl}</Trans>
-              </Typography>
+              <Flex alignItems="center" gap={1} justifyContent="center">
+                <Typography variant="body2" color="textSecondary">
+                  <Trans>Pool:</Trans>
+                </Typography>
+                <Link target="_blank" href={poolUrl}>{poolUrl}</Link>
+              </Flex>
             )}
           </Box>
           <Flex flexGrow={1} alignItems="center" justifyContent="center" flexDirection="column" gap={2}>

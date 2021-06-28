@@ -73,7 +73,7 @@ export const OfferView = () => {
         <>
           <Button
             onClick={handleDecline}
-            variant="contained"
+            variant="outlined"
           >
             <Trans>Cancel</Trans>
           </Button>

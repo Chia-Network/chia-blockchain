@@ -677,7 +677,7 @@ function AddressCard(props: AddressCardProps) {
                 <Trans>Address</Trans>
               }
               value={address}
-              variant="outlined"
+              variant="filled"
             />
           </Box>
           <Box>

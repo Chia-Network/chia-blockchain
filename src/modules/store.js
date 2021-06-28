@@ -13,24 +13,6 @@ const middlewares = [reduxThunk, wsMiddleware, routerMiddleware(history)];
 const rootReducer = createRootReducer(history);
 const initialState = {};
 
-try {
-  if (localStorage.getItem('plot_queue')) {
-    initialState.plot_queue = JSON.parse(localStorage.getItem('plot_queue'));
-  }
-} catch {
-  localStorage.removeItem('plot_queue');
-}
-
-try {
-  if (localStorage.getItem('local_storage')) {
-    initialState.local_storage = JSON.parse(
-      localStorage.getItem('local_storage'),
-    );
-  }
-} catch {
-  localStorage.removeItem('local_storage');
-}
-
 const store =
   isElectron() && !dev_config.redux_tool
     ? createStore(
@@ -48,16 +30,5 @@ const store =
             compose,
         ),
       );
-
-store.subscribe(() => {
-  const state = store.getState();
-  if (state.plot_queue) {
-    localStorage.setItem('plot_queue', JSON.stringify(state.plot_queue));
-  }
-
-  if (state.local_storage) {
-    localStorage.setItem('local_storage', JSON.stringify(state.local_storage));
-  }
-});
 
 export default store;

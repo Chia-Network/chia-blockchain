@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
-import { ConfirmDialog, Flex, Button, Link, Logo } from '@chia/core';
+import { Button, ConfirmDialog, Flex, Logo } from '@chia/core';
 import {
   Card,
   Typography,
@@ -81,7 +81,7 @@ export default function SelectKey() {
         title={<Trans>Delete all keys</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         cancelTitle={<Trans>Back</Trans>}
-        confirmColor="default"
+        confirmColor="danger"
       >
         <Trans>
           Deleting all keys will permanently remove the keys from your
@@ -171,30 +171,25 @@ export default function SelectKey() {
                 </List>
               </Card>
             )}
-            <Link to="/wallet/add">
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-              >
-                <Trans>
-                  Create a new private key
-                </Trans>
-              </Button>
-            </Link>
-            <Link to="/wallet/import">
-              <Button type="submit" variant="contained" size="large" fullWidth>
-                <Trans>
-                  Import from Mnemonics (24 words)
-                </Trans>
-              </Button>
-            </Link>
+            <Button
+              to="/wallet/add"
+              variant="contained"
+              color="primary"
+              size="large"
+              fullWidth
+            >
+              <Trans>
+                Create a new private key
+              </Trans>
+            </Button>
+            <Button to="/wallet/import" type="submit" variant="outlined" size="large" fullWidth>
+              <Trans>
+                Import from Mnemonics (24 words)
+              </Trans>
+            </Button>
             <Button
               onClick={handleDeleteAllKeys}
-              type="submit"
-              variant="contained"
+              variant="outlined"
               color="danger"
               size="large"
               fullWidth

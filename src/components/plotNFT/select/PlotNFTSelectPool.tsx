@@ -112,7 +112,7 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
         />
         {!onCancel && (
           <Flex gap={1}>
-            <FormBackButton variant="contained" />
+            <FormBackButton variant="outlined" />
             <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
               {submitTitle}
             </ButtonLoading>

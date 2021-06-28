@@ -40,5 +40,5 @@ export default function Link(props: Props) {
     newProps.onClick = handleOpenExternal;
   }
 
-  return <StyledBadeLink component={RouterLink} {...newProps} fullWidth />;
+  return <StyledBadeLink component={RouterLink} {...newProps} />;
 }

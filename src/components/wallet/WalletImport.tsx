@@ -44,7 +44,7 @@ function MnemonicField(props: TextFieldProps & MnemonicFieldProps) {
         renderInput={(params) => (
           <TextField
             autoComplete="off"
-            variant="outlined"
+            variant="filled"
             margin="normal"
             color="primary"
             label={label}

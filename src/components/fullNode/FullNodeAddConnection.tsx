@@ -92,7 +92,7 @@ export default function FullNodeAddConnection(props: Props) {
         <DialogActions>
           <Button
             onClick={handleHide}
-            variant="contained"
+            variant="outlined"
             color="secondary"
           >
             <Trans>Cancel</Trans>

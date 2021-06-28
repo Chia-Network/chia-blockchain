@@ -78,22 +78,6 @@ export const startPlotting = (
   return action;
 };
 
-/*
-export const workspaceSelected = (location) => {
-  const action = plotControl();
-  action.command = 'workspace_location';
-  action.location = location;
-  return action;
-};
-
-export const finalSelected = (location) => {
-  const action = plotControl();
-  action.command = 'final_location';
-  action.location = location;
-  return action;
-};
-*/
-
 export const plottingStarted = () => {
   const action = plotControl();
   action.command = 'plotting_started';

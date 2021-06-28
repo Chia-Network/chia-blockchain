@@ -1,7 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import { State, StateTypography } from '@chia/core';
+import { State, StateIndicator } from '@chia/core';
+import { Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 import getWalletSyncingStatus from '../../util/getWalletSyncingStatus';
 import SyncingStatus from '../../constants/SyncingStatus';
@@ -9,40 +10,42 @@ import SyncingStatus from '../../constants/SyncingStatus';
 
 type Props = {
   variant?: string;
+  indicator?: boolean;
 };
 
 export default function WalletStatus(props: Props) {
-  const { variant } = props;
+  const { variant, indicator } = props;
 
   const walletState = useSelector(
     (state: RootState) => state.wallet_state,
   );
 
-  const walletSyncingHeight = useSelector(
-    (state: RootState) => state.wallet_state.status.height,
-  );
-
   const syncingStatus = getWalletSyncingStatus(walletState);
-  const isSynced = syncingStatus === SyncingStatus.SYNCED;
 
   return (
-    <StateTypography 
+    <Typography 
       variant={variant}
-      state={!isSynced && State.WARNING}
     >
       {syncingStatus === SyncingStatus.NOT_SYNCED && (
-        <Trans>Not Synced</Trans>
+        <StateIndicator state={State.WARNING} indicator={indicator}>
+          <Trans>Not Synced</Trans>
+        </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCED && (
-        <Trans>Synced</Trans>
+        <StateIndicator state={State.SUCCESS} indicator={indicator}>
+          <Trans>Synced</Trans>
+        </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCING && (
-        <Trans>Syncing. Height: {walletSyncingHeight}</Trans>
+        <StateIndicator state={State.WARNING} indicator={indicator}>
+          <Trans>Syncing</Trans>
+        </StateIndicator>
       )}
-    </StateTypography>
+    </Typography>
   );
 }
 
 WalletStatus.defaultProps = {
   variant: 'body1',
+  indicator: false,
 };

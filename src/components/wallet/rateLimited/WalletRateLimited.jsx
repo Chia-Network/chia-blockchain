@@ -300,7 +300,7 @@ const IncompleteCard = (props) => {
                 <Trans>User Pubkey</Trans>
               }
               value={pubkey}
-              variant="outlined"
+              variant="filled"
             />
           </Box>
           <Box>
@@ -428,7 +428,7 @@ const RLDetailsCard = (props) => {
                 fullWidth
                 label={<Trans>My Pubkey</Trans>}
                 value={user_pubkey}
-                variant="outlined"
+                variant="filled"
               />
             </Box>
             <Box>
@@ -491,7 +491,7 @@ const RLDetailsCard = (props) => {
                   <Trans>Info Packet</Trans>
                 }
                 value={ip_hex}
-                variant="outlined"
+                variant="filled"
               />
             </Box>
             <Box>

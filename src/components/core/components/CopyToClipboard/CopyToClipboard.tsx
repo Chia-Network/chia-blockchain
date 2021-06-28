@@ -33,8 +33,8 @@ export default function CopyToClipboard(props: Props) {
 
   return (
     <Tooltip title={tooltipTitle}>
-      <IconButton>
-        <AssignmentIcon onClick={handleCopy} fontSize={fontSize} />
+      <IconButton onClick={handleCopy}>
+        <AssignmentIcon fontSize={fontSize} />
       </IconButton>
     </Tooltip>
   );

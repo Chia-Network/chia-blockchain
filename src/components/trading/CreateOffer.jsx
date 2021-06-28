@@ -148,7 +148,7 @@ export default function CreateOffer() {
         <>
           <Button
             onClick={handleCancel}
-            variant="contained"
+            variant="outlined"
           >
             <Trans>Cancel</Trans>
           </Button>
@@ -211,7 +211,7 @@ export default function CreateOffer() {
                     amount_input = input;
                   }}
                   label={<Trans>Amount</Trans>}
-                  variant="outlined"
+                  variant="filled"
                 />
               </Box>
               <Button

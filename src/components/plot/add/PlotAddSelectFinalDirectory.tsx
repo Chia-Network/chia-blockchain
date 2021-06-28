@@ -45,7 +45,7 @@ export default function PlotAddSelectFinalDirectory() {
           inputProps={{
             readOnly: true,
           }}
-          variant="outlined"
+          variant="filled"
           rules={{
             minLength: {
               value: 1,
@@ -58,7 +58,7 @@ export default function PlotAddSelectFinalDirectory() {
           }}
           required
         />
-        <ButtonSelected onClick={handleSelect} size="large" variant="contained" selected={hasFinalLocation} nowrap>
+        <ButtonSelected onClick={handleSelect} size="large" variant="outlined" selected={hasFinalLocation} nowrap>
           {hasFinalLocation ? (
             <Trans>Selected</Trans>
           ) : (

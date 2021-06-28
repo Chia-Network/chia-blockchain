@@ -91,13 +91,11 @@ export default function Connections() {
     <Card
       title={<Trans>Connections</Trans>}
       action={(
-        <Flex>
-          <Button onClick={handleAddPeer} variant="contained">
-            <Trans>
-              Connect to other peers
-            </Trans>
-          </Button>
-        </Flex>
+        <Button onClick={handleAddPeer} variant="outlined">
+          <Trans>
+            Connect to other peers
+          </Trans>
+        </Button>
       )}
     >
       {connections ? (

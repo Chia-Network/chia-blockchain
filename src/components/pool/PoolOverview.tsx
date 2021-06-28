@@ -10,7 +10,6 @@ import {
   Power as PowerIcon,
 } from '@material-ui/icons';
 import { Box, Button, ListItemIcon, MenuItem, IconButton, Grid, Tooltip, Typography } from '@material-ui/core';
-import { sumBy } from 'lodash';
 import PlotNFTCard from '../plotNFT/PlotNFTCard';
 import PlotNFTName from '../plotNFT/PlotNFTName';
 import PlotNFTState from '../plotNFT/PlotNFTState';
@@ -24,6 +23,7 @@ import PlotNFTStateEnum from '../../constants/PlotNFTState';
 import PlotNFTUnconfirmedCard from '../plotNFT/PlotNFTUnconfirmedCard';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
 import { mojo_to_chia } from '../../util/chia';
+import WalletStatus from '../wallet/WalletStatus';
 
 const groupsCols = [
   {
@@ -33,10 +33,6 @@ const groupsCols = [
   {
     field: (nft: PlotNFT) => <PlotNFTState nft={nft} />,
     title: <Trans>Status</Trans>,
-  },
-  {
-    field: () => <PoolWalletStatus />,
-    title: <Trans>Wallet Status</Trans>,
   },
   {
     field: (nft: PlotNFT) => {
@@ -56,7 +52,7 @@ const groupsCols = [
       
       return null;
     },
-    title: <Trans>Rewards</Trans>,
+    title: <Trans>Unclaimed Rewards</Trans>,
   },
   {
     title: <Trans>Actions</Trans>,
@@ -112,21 +108,6 @@ export default function PoolOverview() {
 
   const hasNFTs = (!!nfts && !!nfts.length) || unconfirmed.length;
 
-  const totalWinning = useMemo<number>(() => {
-    const selfPoolingNFTs = nfts && nfts.filter(
-      (nft) => nft.pool_wallet_status.current.state === PlotNFTStateEnum.SELF_POOLING,
-    );
-
-    if (selfPoolingNFTs && selfPoolingNFTs.length) {
-      return sumBy<PlotNFT>(
-        selfPoolingNFTs, 
-        (item) => item.wallet_balance.confirmed_wallet_balance ?? 0,
-      );
-    }
-
-    return 0;
-  }, [nfts]);
-
   function handleAddPool() {
     history.push('/dashboard/pool/add');
   }
@@ -173,10 +154,10 @@ export default function PoolOverview() {
           <Flex gap={1} >
             <Typography variant="body1" color="textSecondary">
               <Trans>
-                Total Self Pooling Rewards
+                Wallet Status:
               </Trans>
             </Typography>
-            <UnitFormat value={mojo_to_chia(BigInt(totalWinning))} state={State.SUCCESS} />
+            <WalletStatus />
           </Flex>
         </Flex>
         {showTable ? (

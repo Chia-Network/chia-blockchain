@@ -143,7 +143,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
             </Grid>
           </CardStep>
           <Flex gap={1}>
-            <FormBackButton variant="contained" />
+            <FormBackButton variant="outlined" />
             <ButtonLoading loading={working} color="primary" type="submit" variant="contained">
               <Trans>Confirm</Trans>
             </ButtonLoading>

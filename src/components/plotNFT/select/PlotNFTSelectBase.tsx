@@ -104,12 +104,11 @@ export default function PlotNFTSelectBase(props: Props) {
                         <TextField
                           name="poolUrl"
                           label="Pool URL"
-                          variant="outlined"
+                          variant="filled"
                           autoComplete="pool-url"
                           onClick={handleDisableSelfPooling}
                           onChange={handleDisableSelfPooling}
-                          fullWidth 
-                          freeSolo 
+                          fullWidth
                         />
                       </FormControl>
                     </Flex>

@@ -56,7 +56,7 @@ export default function PlotAddSelectTemporaryDirectory() {
           inputProps={{
             readOnly: true,
           }}
-          variant="outlined"
+          variant="filled"
           rules={{
             minLength: {
               value: 1,
@@ -69,7 +69,7 @@ export default function PlotAddSelectTemporaryDirectory() {
           }}
           required
         />
-        <ButtonSelected onClick={handleSelect} size="large" variant="contained" selected={hasWorkspaceLocation} nowrap>
+        <ButtonSelected onClick={handleSelect} size="large" variant="outlined" selected={hasWorkspaceLocation} nowrap>
           {hasWorkspaceLocation ? (
             <Trans>Selected</Trans>
           ) : (
@@ -98,9 +98,9 @@ export default function PlotAddSelectTemporaryDirectory() {
               inputProps={{
                 readOnly: true,
               }}
-              variant="outlined"
+              variant="filled"
             />
-            <ButtonSelected onClick={handleSelect2} size="large" variant="contained" selected={hasWorkspaceLocation2} nowrap>
+            <ButtonSelected onClick={handleSelect2} size="large" variant="outlined" selected={hasWorkspaceLocation2} nowrap>
               {hasWorkspaceLocation2 ? (
                 <Trans>Selected</Trans>
               ) : (

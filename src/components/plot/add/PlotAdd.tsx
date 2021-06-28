@@ -47,7 +47,7 @@ export default function PlotAdd() {
       maxRam: defaultPlotSize.defaultRam,
       numThreads: 2,
       numBuckets: 128,
-      queue: "default",
+      queue: 'default',
       finalLocation: '',
       workspaceLocation: '',
       workspaceLocation2: '',
@@ -167,7 +167,7 @@ export default function PlotAdd() {
         <PlotAddSelectFinalDirectory />
         <PlotAddNFT ref={addNFTref}/>
         <Flex gap={1}>
-          <FormBackButton variant="contained" />
+          <FormBackButton variant="outlined" />
           <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
             <Trans>
               Create

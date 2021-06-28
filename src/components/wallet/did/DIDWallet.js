@@ -874,7 +874,7 @@ const CreateAttest = (props) => {
                   fullWidth
                   label="Attest Packet"
                   value={attest_packet}
-                  variant="outlined"
+                  variant="filled"
                 />
               </Box>
               <Box>

@@ -3,7 +3,7 @@ import { linearGradientDef } from '@nivo/core';
 import { t } from '@lingui/macro';
 import { ResponsiveLine } from '@nivo/line';
 import { Typography, Paper } from '@material-ui/core';
-import { Flex } from '@chia/core';
+import { Flex, FormatLargeNumber } from '@chia/core';
 import styled from 'styled-components';
 
 const StyledRoot = styled.div`
@@ -13,11 +13,34 @@ const StyledRoot = styled.div`
 `;
 
 const StyledGraphContainer = styled.div`
+  position: relative;
   height: 100px;
 `;
 
 const StyledTooltip = styled(Paper)`
   padding: 0.25rem 0.5rem;
+`;
+
+const StyledMaxTypography = styled(Typography)`
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  font-size: 0.625rem;
+`;
+
+const StyledMinTypography = styled(Typography)`
+  position: absolute;
+  left: 0;
+  bottom: 0.1rem;
+  font-size: 0.625rem;
+`;
+
+const StyledMiddleTypography = styled(Typography)`
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(0, -50%);
+  font-size: 0.625rem;
 `;
 
 const HOUR_SECONDS = 60 * 60;
@@ -71,13 +94,22 @@ export default function PlotNFTGraph(props: Props) {
     })),
   }];
 
-  const max = Math.max(...aggregated.map(item => item.y));
+  const min = aggregated.length ? Math.min(...aggregated.map(item => item.y)) : 0;
+  const max = Math.max(min, ...aggregated.map(item => item.y));
+  const middle = max / 2;
 
   // https://github.com/plouc/nivo/issues/308#issuecomment-451280930
   const theme = {
     tooltip: {
       container: {
         color: 'rgba(0, 0, 0, 0.87)',
+      },
+    },
+    axis: {
+      ticks: {
+        text: {
+          fill: 'rgba(255,255,255,0.5)',
+        },
       },
     },
   };
@@ -92,7 +124,7 @@ export default function PlotNFTGraph(props: Props) {
       )}
       <StyledGraphContainer>
         <ResponsiveLine
-          margin={{ top: 2, bottom: 2 }}
+          margin={{ left: 0, top: 2, bottom: 2, right: 0 }}
           data={data}
           theme={theme}
           xScale={{ type: 'point' }}
@@ -112,11 +144,10 @@ export default function PlotNFTGraph(props: Props) {
           axisRight={null}
           axisBottom={null}
           axisLeft={null /* {
-            tickValues: [0, max],
+            tickValues: [0, max / 2, max],
             tickSize: 0,
-            tickPadding: -40,
+            tickPadding: 5,
             tickRotation: 1,
-            
             legend: '',
             legendPosition: 'middle'
           } */}
@@ -136,6 +167,18 @@ export default function PlotNFTGraph(props: Props) {
           enableGridY={false}
           enableArea
         />
+
+        <StyledMaxTypography variant="body2" color="textSecondary">
+          <FormatLargeNumber value={max} />
+        </StyledMaxTypography>
+
+        <StyledMinTypography variant="body2" color="textSecondary">
+          <FormatLargeNumber value={min} />
+        </StyledMinTypography>
+
+        <StyledMiddleTypography variant="body2" color="textSecondary">
+          <FormatLargeNumber value={middle} />
+        </StyledMiddleTypography>
       </StyledGraphContainer>
       </Flex>
     </StyledRoot>

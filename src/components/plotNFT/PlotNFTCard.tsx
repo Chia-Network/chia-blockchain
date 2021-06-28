@@ -18,7 +18,6 @@ import { Delete as DeleteIcon } from '@material-ui/icons';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
-import WalletStatus from '../wallet/WalletStatus';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 import PoolJoin from '../pool/PoolJoin';
@@ -96,10 +95,6 @@ export default function PlotNFTCard(props: Props) {
     key: 'status',
     label: <Trans>Status</Trans>,
     value: <PlotNFTStatus nft={nft} />,
-  }, {
-    key: 'wallet_status',
-    label: <Trans>Wallet Status</Trans>,
-    value: <WalletStatus />,
   }, isSelfPooling && {
     key: 'rewards',
     label: <Trans>Unclaimed Rewards</Trans>,
@@ -245,7 +240,7 @@ export default function PlotNFTCard(props: Props) {
                   <PoolAbsorbRewards nft={nft}>
                     {({ absorb, disabled }) => (
                       <Button
-                        variant="contained"
+                        variant="outlined"
                         onClick={absorb}
                         disabled={disabled}
                         fullWidth

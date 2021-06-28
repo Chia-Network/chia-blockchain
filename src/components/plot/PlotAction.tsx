@@ -31,6 +31,7 @@ export default function PlotAction(props: Props) {
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
+        confirmColor="danger"
       >
         <Trans>
           Are you sure you want to delete the plot? The plot cannot be

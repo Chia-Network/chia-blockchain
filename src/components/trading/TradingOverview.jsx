@@ -392,7 +392,7 @@ export const TradeDetail = () => {
               <Button
                 onClick={secure_cancel}
                 className={classes.accept}
-                variant="contained"
+                variant="outlined"
                 color="primary"
                 style={visible}
               >
