@@ -82,6 +82,7 @@ class DIDWallet:
             raise ValueError("failed to generate ID for wallet")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         assert self.did_info.origin_coin is not None
+        assert self.did_info.current_inner is not None
         did_puzzle_hash = did_wallet_puzzles.create_fullpuz(
             self.did_info.current_inner, self.did_info.origin_coin.name()
         ).get_tree_hash()
@@ -331,8 +332,8 @@ class DIDWallet:
             num_of_backup_ids_needed = uint64(int(details[5]))
             if num_of_backup_ids_needed > len(backup_ids):
                 raise Exception
-            innerpuz = Program.from_bytes(bytes.fromhex(details[4]))
-            did_info = DIDInfo(
+            innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
+            did_info: DIDInfo = DIDInfo(
                 origin,
                 backup_ids,
                 num_of_backup_ids_needed,
@@ -400,17 +401,20 @@ class DIDWallet:
                                 new_pubkey,
                             )
                             await self.save_info(did_info, False)
-                            request = wallet_protocol.RequestRemovals(sub_height, header_hash, None)
-                            removals_response = await node.request_removals(request)
+                            removal_request = wallet_protocol.RequestRemovals(sub_height, header_hash, None)
+                            removals_response = await node.request_removals(removal_request)
                             for coin_tuple in removals_response.coins:
                                 if coin_tuple[0] == coin.parent_coin_info:
-                                    request = wallet_protocol.RequestPuzzleSolution(coin.parent_coin_info, sub_height)
-                                    response = await node.request_puzzle_solution(request)
+                                    puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(coin.parent_coin_info, sub_height)
+                                    response = await node.request_puzzle_solution(puzzle_solution_request)
+                                    assert response is not None
                                     req_puz_sol = response.response
-                                    innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
+                                    assert req_puz_sol.puzzle is not None
+                                    parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
+                                    assert parent_innerpuz is not None
                                     parent_info = LineageProof(
                                         coin_tuple[1].parent_coin_info,
-                                        innerpuz.get_tree_hash(),
+                                        parent_innerpuz.get_tree_hash(),
                                         coin_tuple[1].amount,
                                     )
                                     await self.add_parent(coin.parent_coin_info, parent_info, False)
@@ -791,6 +795,7 @@ class DIDWallet:
             ]
         )
         # full solution is (parent_info my_amount solution)
+        assert self.did_info.current_inner is not None
         innerpuz: Program = self.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,

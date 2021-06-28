@@ -6,20 +6,11 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet import did_wallet_puzzles
-from clvm_tools import binutils
 from chia.types.blockchain_format.program import Program
-from chia.wallet.derivation_record import DerivationRecord
-from chia.types.coin_solution import CoinSolution
 from blspy import AugSchemeMPL
 from chia.types.spend_bundle import SpendBundle
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert
-from secrets import token_bytes
-from chia.wallet.util.transaction_type import TransactionType
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 
 @pytest.fixture(scope="module")
@@ -411,7 +402,9 @@ class TestDIDWallet:
         coin = coins.pop()
 
         new_ph = await did_wallet_4.get_new_inner_hash()
-        pubkey = (await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)).pubkey
+        pubkey = (
+            await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
+        ).pubkey
         await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
