@@ -798,9 +798,7 @@ class FullNodeAPI:
             except ValueError as e:
                 self.log.warning(f"Value Error: {e}")
                 return None
-            # Chives Log Output
-            # self.log.warning(f"Previous Block Heigh: {prev_b.height}")
-            # self.log.warning(f"Previous Block % 10  : {prev_b.height % 10 == 9}")
+            
             if prev_b is None:
                 pool_target = PoolTarget(
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
@@ -810,7 +808,10 @@ class FullNodeAPI:
             elif ( prev_b.height % 10 == 9 ) :
                 # Every 10 blocks reward community 1 block 
                 # Chives Network Code
-                self.log.warning(prev_b)
+                # Chives Log Output
+                self.log.warning(f"Previous Block Heigh: {prev_b.height}")
+                self.log.warning(f"Previous Block % 10  : {prev_b.height % 10 == 9}")
+                # self.log.warning(prev_b)
                 pool_target = PoolTarget(
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
                     uint32(prev_b.height + 1),
