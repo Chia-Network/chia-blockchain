@@ -986,8 +986,8 @@ class FullNodeAPI:
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
-        self.log.warning("########################################################")
-        self.log.warning(request)
+        # self.log.warning("########################################################")
+        # self.log.warning(request)
         try:
             await self.full_node.respond_unfinished_block(request, None, True)
         except Exception as e:
