@@ -214,7 +214,7 @@ class FarmerAPI:
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
                 headers = {
-                    'content-type':'application/json;',
+                    "content-type": "application/json;",
                 }
                 try:
                     async with aiohttp.ClientSession() as session:
