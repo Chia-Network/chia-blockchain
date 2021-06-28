@@ -21,6 +21,7 @@ class FarmerRpcApi:
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_plots": self.get_plots,
             "/get_pool_login_link": self.get_pool_login_link,
+            "/get_harvesters": self.get_harvesters,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -114,6 +115,9 @@ class FarmerRpcApi:
 
     async def get_plots(self, _: Dict):
         return await self.service.get_plots()
+
+    async def get_harvesters(self, _: Dict):
+        return await self.service.get_harvesters()
 
     async def get_pool_login_link(self, request: Dict) -> Dict:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))

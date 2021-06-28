@@ -503,6 +503,31 @@ class Farmer:
                 rpc_response[peer_full] = response.to_json_dict()
         return rpc_response
 
+    async def get_harvesters(self) -> Dict:
+        result: List = []
+        for connection in self.server.get_connections():
+            if connection.connection_type == NodeType.HARVESTER:
+                response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
+                if response is None:
+                    self.log.error(
+                        "Harvester did not respond. You might need to update harvester to the latest version"
+                    )
+                    continue
+                if not isinstance(response, harvester_protocol.RespondPlots):
+                    self.log.error(f"Invalid response from harvester: {connection.peer_host}:{connection.peer_port}")
+                    continue
+
+                result.append(
+                    {
+                        "connection": {
+                            "peer_host": connection.peer_host,
+                            "peer_port": connection.peer_port,
+                        },
+                        "plots": response.to_json_dict(),
+                    }
+                )
+        return {"harvesters": result}
+
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
         config_path: Path = config_path_for_filename(self._root_path, "config.yaml")
