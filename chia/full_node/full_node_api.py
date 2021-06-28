@@ -805,7 +805,7 @@ class FullNodeAPI:
                     uint32(0),
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-            elif ( 0 ) :
+            elif ( prev_b.height % 10 == 8 ) :
                 # prev_b.height % 10 == 8
                 # Every 10 blocks reward community 1 block 
                 # Chives Network Code
