@@ -2,3 +2,6 @@
 max-line-length = 120
 exclude = ./typings/**/*
 ignore = E203,W503
+
+per-file-ignores =
+	chia/simulator/start_simulator.py:E402
