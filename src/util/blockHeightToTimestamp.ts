@@ -1,4 +1,4 @@
-import type Peak from "../types/Peak";
+import type Peak from '../types/Peak';
 
 const BLOCK_DURATION_SECONDS = (24 * 60 * 60) / 4608;
 

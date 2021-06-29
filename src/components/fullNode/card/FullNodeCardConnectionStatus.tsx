@@ -1,11 +1,12 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import FarmCard from "../../farm/card/FarmCard";
+import FarmCard from '../../farm/card/FarmCard';
+import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardConnectionStatus() {
   const connected = useSelector(
-    (state) => state.daemon_state.full_node_connected,
+    (state: RootState) => state.daemon_state.full_node_connected,
   );
 
   return (

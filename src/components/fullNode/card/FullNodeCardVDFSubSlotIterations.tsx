@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import FarmCard from "../../farm/card/FarmCard";
+import FarmCard from '../../farm/card/FarmCard';
 import { FormatLargeNumber } from '@chia/core';
 
 export default function FullNodeCardVDFSubSlotIterations() {

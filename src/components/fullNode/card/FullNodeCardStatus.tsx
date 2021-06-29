@@ -3,7 +3,8 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { FormatLargeNumber } from '@chia/core';
 import styled from 'styled-components';
-import FarmCard from "../../farm/card/FarmCard";
+import FarmCard from '../../farm/card/FarmCard';
+import type { RootState } from '../../../modules/rootReducer';
 
 const StyledWarning = styled.span`
   color: #F7CA3E;
@@ -46,7 +47,7 @@ function getData(state) {
 
 export default function FullNodeCardStatus() {
   const state = useSelector(
-    (state) => state.full_node_state.blockchain_state,
+    (state: RootState) => state.full_node_state.blockchain_state,
   );
 
   const { value, tooltip, color } = getData(state);

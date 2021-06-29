@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { UseFormMethods, FormProvider, SubmitHandler } from "react-hook-form";
+import { UseFormMethods, FormProvider, SubmitHandler } from 'react-hook-form';
 
 export default function Form<T>(props: {
   methods: UseFormMethods<T>,

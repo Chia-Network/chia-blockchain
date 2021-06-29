@@ -1,12 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import FarmCard from "../../farm/card/FarmCard";
+import FarmCard from '../../farm/card/FarmCard';
 import { unix_to_short_date } from '../../../util/utils';
+import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardPeakTime() {
   const latestPeakTimestamp = useSelector(
-    (state) => state.full_node_state.latest_peak_timestamp,
+    (state: RootState) => state.full_node_state.latest_peak_timestamp,
   );
 
   const value = latestPeakTimestamp ? unix_to_short_date(latestPeakTimestamp) : '';
