@@ -37,9 +37,10 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
     } = nft;
 
     const poolContractPuzzleHash = `0x${p2_singleton_puzzle_hash}`;
-    const isPending = !!target && target !== state;
+    const isPending = !!target && target.state !== state;
     const isLeavingPool = state === PlotNFTState.LEAVING_POOL;
     const isSelfPooling = state === PlotNFTState.SELF_POOLING;
+
 
     return {
       isPending,
