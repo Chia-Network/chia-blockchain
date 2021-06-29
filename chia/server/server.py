@@ -374,23 +374,23 @@ class ChiaServer:
             if peer_id == self.node_id:
                 raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
-                connection = WSChiaConnection(
-                    self._local_type,
-                    ws,
-                    self._port,
-                    self.log,
-                    True,
-                    False,
-                    target_node.host,
-                    self.incoming_messages,
-                    self.connection_closed,
-                    peer_id,
-                    self._inbound_rate_limit_percent,
-                    self._outbound_rate_limit_percent,
-                    session=session,
-                )
-                handshake = await connection.perform_handshake(
-                    self._network_id, protocol_version, self._port, self._local_type, self.capabilities
+            connection = WSChiaConnection(
+                self._local_type,
+                ws,
+                self._port,
+                self.log,
+                True,
+                False,
+                target_node.host,
+                self.incoming_messages,
+                self.connection_closed,
+                peer_id,
+                self._inbound_rate_limit_percent,
+                self._outbound_rate_limit_percent,
+                session=session,
+            )
+            handshake = await connection.perform_handshake(
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
             assert handshake is True
             await self.connection_added(connection, on_connect)
