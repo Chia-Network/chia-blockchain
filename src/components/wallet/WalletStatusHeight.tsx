@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { FormatLargeNumber, State, StateIndicator } from '@chia/core';
+import { FormatLargeNumber } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 
 export default function WalletStatusHeight() {

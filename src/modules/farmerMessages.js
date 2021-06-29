@@ -1,6 +1,5 @@
 import { service_farmer } from '../util/service_names';
 import { async_api } from './message';
-import { updatePlotNFTs } from './plotNFT';
 
 export const farmerMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',

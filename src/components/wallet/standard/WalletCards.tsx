@@ -5,7 +5,6 @@ import WalletCardSpendableBalance from '../card/WalletCardSpendableBalance';
 import WalletCardPendingTotalBalance from '../card/WalletCardPendingTotalBalance';
 import WalletCardPendingBalance from '../card/WalletCardPendingBalance';
 import WalletCardPendingChange from '../card/WalletCardPendingChange';
-import useWallet from '../../../hooks/useWallet';
 
 type Props = {
   wallet_id: number;

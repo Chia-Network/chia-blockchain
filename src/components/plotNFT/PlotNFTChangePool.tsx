@@ -9,7 +9,6 @@ import usePlotNFTs from '../../hooks/usePlotNFTs';
 import { pwSelfPool, pwJoinPool } from '../../modules/plotNFT';
 import PlotNFTSelectPool, { SubmitData } from './select/PlotNFTSelectPool';
 import PlotNFTName from './PlotNFTName';
-import PlotNFTState from '../../constants/PlotNFTState';
 
 type Props = {
   headerTag?: ReactNode;

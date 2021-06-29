@@ -19,7 +19,7 @@ import { Grid, Typography } from '@material-ui/core';
 import { useParams } from 'react-router';
 import usePlotNFTs from '../../hooks/usePlotNFTs';
 import { pwAbsorbRewards } from '../../modules/plotNFT';
-import PlotNFTSelectPool, { SubmitData } from './select/PlotNFTSelectPool';
+import { SubmitData } from './select/PlotNFTSelectPool';
 import PlotNFTName from './PlotNFTName';
 import { mojo_to_chia, chia_to_mojo } from '../../util/chia';
 import useStandardWallet from '../../hooks/useStandardWallet';

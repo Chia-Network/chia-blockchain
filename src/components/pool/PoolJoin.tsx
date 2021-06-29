@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { useHistory } from 'react-router';
 import { Trans } from '@lingui/macro';
 import { AlertDialog } from '@chia/core';

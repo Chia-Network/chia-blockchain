@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useHistory, useLocation } from 'react-router';
+import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
 import { Alert } from '@material-ui/lab';

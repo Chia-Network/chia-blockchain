@@ -1,5 +1,5 @@
 import React, { ReactElement, ReactNode } from 'react';
-import { Box, Container } from '@material-ui/core';
+import { Container } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex, Loading } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
