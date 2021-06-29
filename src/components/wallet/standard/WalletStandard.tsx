@@ -616,6 +616,7 @@ type StandardWalletProps = {
 
 export default function StandardWallet(props: StandardWalletProps) {
   const { wallet_id } = props;
+  const dispatch = useDispatch();
 
   function handleDeleteUnconfirmedTransactions() {
     dispatch(deleteUnconfirmedTransactions(wallet_id));
