@@ -210,7 +210,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Farming")
 
     if amounts is not None:
-        print(f"Total chia farmed: {amounts['farmed_amount'] / units['chia']}")
+        print(f"Total chives farmed: {amounts['farmed_amount'] / units['chia']}")
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")

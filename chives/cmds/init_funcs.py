@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from chia import __version__
+from chives import __version__
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
 from chia.util.bech32m import encode_puzzle_hash
@@ -317,13 +317,13 @@ def chia_init(root_path: Path):
     if os.environ.get("CHIVES_ROOT", None) is not None:
         print(
             f"warning, your CHIVES_ROOT is set to {os.environ['CHIVES_ROOT']}. "
-            f"Please unset the environment variable and run chia init again\n"
+            f"Please unset the environment variable and run chives init again\n"
             f"or manually migrate config.yaml"
         )
 
     print(f"Chives directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
-        # This is reached if CHIVES_ROOT is set, or if user has run chia init twice
+        # This is reached if CHIVES_ROOT is set, or if user has run chives init twice
         # before a new update.
         check_keys(root_path)
         print(f"{root_path} already exists, no migration action taken")

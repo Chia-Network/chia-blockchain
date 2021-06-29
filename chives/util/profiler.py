@@ -6,12 +6,12 @@ import pathlib
 from chia.util.path import mkdir, path_from_root
 
 # to use the profiler, enable it config file, "enable_profiler"
-# the output will be printed to your chia root path, e.g. ~/.chives/mainnet/profile/
+# the output will be printed to your chives root path, e.g. ~/.chives/mainnet/profile/
 # to analyze the profile, run:
 
 #   python chia/utils/profiler.py ~/.chives/mainnet/profile | less -r
 
-# this will print CPU usage of the chia full node main thread at 1 second increments.
+# this will print CPU usage of the chives full node main thread at 1 second increments.
 # find a time window of interest and analyze the profile file (which are in pstats format).
 
 # for example:

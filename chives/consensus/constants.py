@@ -34,7 +34,7 @@ class ConsensusConstants:
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     GENESIS_CHALLENGE: bytes32
-    # Forks of chia should change this value to provide replay attack protection
+    # Forks of chives should change this value to provide replay attack protection
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash

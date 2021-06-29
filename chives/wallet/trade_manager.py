@@ -399,7 +399,7 @@ class TradeManager:
                     cc_coinsol_outamounts[colour] = [(coinsol, total)]
 
             else:
-                # standard chia coin
+                # standard chives coin
                 unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
@@ -437,7 +437,7 @@ class TradeManager:
                         return (
                             False,
                             None,
-                            "Unable to generate zero value coin. Confirm that you have chia available",
+                            "Unable to generate zero value coin. Confirm that you have chives available",
                         )
                     zero_spend_list.append(zero_spend_bundle)
 

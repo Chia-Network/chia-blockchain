@@ -19,7 +19,7 @@ dependencies = [
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
     #  See https://github.com/frispete/keyrings.cryptfile/issues/15
     "PyYAML==5.4.1",  # Used for config file format
-    "setproctitle==1.2.2",  # Gives the chia processes readable names
+    "setproctitle==1.2.2",  # Gives the chives processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI

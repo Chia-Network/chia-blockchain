@@ -124,13 +124,13 @@ Write-Output "pip install chia-blockchain"
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 
 Write-Output "   ---"
-Write-Output "Use pyinstaller to create chia .exe's"
+Write-Output "Use pyinstaller to create chives .exe's"
 Write-Output "   ---"
 $SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
 pyinstaller --paths C:\Python39 --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
-Write-Output "Copy chia executables to chia-blockchain-gui\"
+Write-Output "Copy chives executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
@@ -158,7 +158,7 @@ If ($LastExitCode -gt 0){
 }
 
 Write-Output "   ---"
-Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
+Write-Output "Increase the stack for chives command for (chia plots create) chiapos limitations"
 # editbin.exe needs to be in the path
 editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"

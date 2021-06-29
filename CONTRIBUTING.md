@@ -4,7 +4,7 @@ Welcome to the chia-blockchain project!
 We are happy that you are taking a look at the code for Chia, a proof of space and time cryptocurrency.
 
 A lot of fascinating new cryptography and blockchain concepts are used and implemented here.
-This repo includes the code for the Chives full node, farmer, and timelord (in chia folder), which are all written in python.
+This repo includes the code for the Chives full node, farmer, and timelord (in chives folder), which are all written in python.
 It also includes a verifiable delay function implementation that it imports from the [chiavdf repo](https://github.com/HiveProject2021/chiavdf) (in c/c++), and a proof of space implementation that it imports from the [chiapos repo](https://github.com/HiveProject2021/chiapos). BLS signatures are imported from the [bls-signatures repo](https://github.com/HiveProject2021/bls-signatures) as blspy. There is an additional dependency on the [chiabip158 repo](https://github.com/HiveProject2021/chiabip158). For major platforms, binary and source wheels are shipped to PyPI from each dependent repo. Then chia-blockchain can pip install those from PyPI or they can be prepackaged as is done for the Windows installer. On unsupported platforms, pip will fall back to the source distributions, to be compiled locally.
 
 If you want to learn more about this project, read the [wiki](https://github.com/HiveProject2021/chia-blockchain/wiki), or check out the [green paper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
@@ -51,7 +51,7 @@ proofs of space during testing. The next time tests are run, this will not be ne
 ```bash
 . ./activate
 pip install ".[dev]"
-black chia tests && mypy chia tests && flake8 chia tests
+black chives tests && mypy chives tests && flake8 chives tests
 py.test tests -v --durations 0
 ```
 
@@ -87,7 +87,7 @@ workflow.
 ## Testnets and review environments
 
 With the launch of `1.0.0` we will begin running an official `testnet`.  
-Prior to the release of `1.1.0` there will be two running test nets. `testnet` and `transaction-beta-testnet`. The `transaction-beta-testnet` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
+Prior to the release of `1.1.0` there will be two running test nets. `testnet` and `transaction-beta-testnet`. The `transaction-beta-testnet` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chives blockchain.
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the current release branch.
 
 Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.

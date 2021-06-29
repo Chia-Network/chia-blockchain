@@ -12,7 +12,7 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiabip158 import PyBIP158
 from cryptography.fernet import Fernet
 
-from chia import __version__
+from chives import __version__
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
