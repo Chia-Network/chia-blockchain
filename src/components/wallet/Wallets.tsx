@@ -28,6 +28,7 @@ import DistributedWallet from './did/DIDWallet';
 import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
 import LayoutSidebar from '../layout/LayoutSidebar';
+import LayoutMain from '../layout/LayoutMain';
 import config from '../../config/config';
 
 const localTest = config.local_test;
@@ -161,6 +162,20 @@ export default function Wallets() {
   const visibleWallets = useMemo(() => {
     return wallets?.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET) ?? [];
   }, [wallets]);
+  const loading = !wallets;
+
+  return (
+    <LayoutMain
+      loading={loading}
+      loadingTitle={<Trans>Loading list of wallets</Trans>}
+      title={<Trans>Wallets</Trans>}
+    >
+      {!!wallet && wallet.type === WalletType.STANDARD_WALLET && (
+        <StandardWallet wallet_id={id} />
+      )}
+    </LayoutMain>
+  );
+  /*
 
   return (
     <LayoutSidebar
@@ -212,4 +227,5 @@ export default function Wallets() {
       </Grid>
     </LayoutSidebar>
   );
+  */
 }

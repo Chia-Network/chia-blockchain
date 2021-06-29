@@ -38,6 +38,8 @@ import WalletHistory from '../WalletHistory';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import { deleteUnconfirmedTransactions } from '../../../modules/incoming';
 import WalletGraph from '../WalletGraph';
+import WalletCards from './WalletCards';
+import WalletStatus from '../WalletStatus';
 
 const drawerWidth = 240;
 
@@ -616,7 +618,7 @@ export default function StandardWallet(props: StandardWalletProps) {
   }
 
   return (
-    <Flex flexDirection="column" gap={2}>
+    <Flex flexDirection="column" gap={1}>
       <Flex gap={1} alignItems="center">
         <Flex flexGrow={1}>
           <Typography variant="h5" gutterBottom>
@@ -639,10 +641,22 @@ export default function StandardWallet(props: StandardWalletProps) {
         </More>
       </Flex>
 
-      <BalanceCard wallet_id={wallet_id} />
-      <SendCard wallet_id={wallet_id} />
-      <AddressCard wallet_id={wallet_id} />
-      <WalletHistory walletId={wallet_id} />
+      <Flex flexDirection="column" gap={1}>
+        <Flex gap={1} justifyContent="flex-end">
+          <Typography variant="body1" color="textSecondary">
+            <Trans>
+              Wallet Status:
+            </Trans>
+          </Typography>
+          <WalletStatus height />
+        </Flex>
+        <Flex flexDirection="column" gap={3}>
+          <WalletCards wallet_id={wallet_id} />
+          <SendCard wallet_id={wallet_id} />
+          <AddressCard wallet_id={wallet_id} />
+          <WalletHistory walletId={wallet_id} />
+        </Flex>
+      </Flex>
     </Flex>
   );
 }

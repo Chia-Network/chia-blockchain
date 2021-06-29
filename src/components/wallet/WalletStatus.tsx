@@ -11,34 +11,38 @@ import SyncingStatus from '../../constants/SyncingStatus';
 type Props = {
   variant?: string;
   indicator?: boolean;
+  height?: boolean;
 };
 
 export default function WalletStatus(props: Props) {
-  const { variant, indicator } = props;
+  const { variant, height, indicator } = props;
 
   const walletState = useSelector(
     (state: RootState) => state.wallet_state,
   );
 
+  const currentHeight = walletState?.status?.height;
+
   const syncingStatus = getWalletSyncingStatus(walletState);
 
   return (
-    <Typography 
-      variant={variant}
-    >
+    <Typography variant={variant}>
       {syncingStatus === SyncingStatus.NOT_SYNCED && (
         <StateIndicator state={State.WARNING} indicator={indicator}>
           <Trans>Not Synced</Trans>
+          {height ? ` (${currentHeight})` : ''}
         </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCED && (
         <StateIndicator state={State.SUCCESS} indicator={indicator}>
           <Trans>Synced</Trans>
+          {height ? ` (${currentHeight})` : ''}
         </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCING && (
         <StateIndicator state={State.WARNING} indicator={indicator}>
           <Trans>Syncing</Trans>
+          {height ? ` (${currentHeight})` : ''}
         </StateIndicator>
       )}
     </Typography>
@@ -48,4 +52,5 @@ export default function WalletStatus(props: Props) {
 WalletStatus.defaultProps = {
   variant: 'body1',
   indicator: false,
+  height: false,
 };

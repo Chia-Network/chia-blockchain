@@ -12,6 +12,7 @@ import {
 
 const StyledCard = styled(Card)`
   height: 100%;
+  overflow: visible;
 `;
 
 type Props = {

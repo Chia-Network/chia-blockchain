@@ -11,7 +11,10 @@ import type Transaction from '../../types/Transaction';
 import type Peak from '../../types/Peak';
 import { mojo_to_chia } from '../../util/chia';
 import usePeak from '../../hooks/usePeak';
+import useCurrencyCode from '../../hooks/useCurrencyCode';
 import blockHeightToTimestamp from '../../util/blockHeightToTimestamp';
+
+const HOUR_SECONDS = 60 * 60;
 
 const StyledRoot = styled.div`
   // border-radius: 1rem;
@@ -21,7 +24,7 @@ const StyledRoot = styled.div`
 
 const StyledGraphContainer = styled.div`
   position: relative;
-  height: 150px;
+  height: ${({ height }) => `${height}px`};
 `;
 
 const StyledTooltip = styled(Paper)`
@@ -66,6 +69,61 @@ const theme = {
   },
 };
 
+type Aggregate = {
+  interval: number, // interval second
+  count: number, // number of intervals
+  offset?: number,
+};
+
+type Point = {
+  value: number;
+  timestamp: number;
+};
+
+function aggregatePoints(
+  points: Point[], 
+  interval: number, // interval second
+  count: number, // number of intervals
+  offset: number = 0,
+) {
+  let current = Date.now() / 1000;
+  console.log('current', current);
+
+  const items = [];
+
+  for (let i = -count; i < 0; i += 1) {
+    const start = current + i * interval - offset;
+    const end = current + (i + 1) * interval - offset;
+
+    const item = {
+      start,
+      end,
+      timestamp: start,
+      value: 0,
+    };
+
+    points.forEach((pointItem) => {
+      const { timestamp, value } = pointItem;
+
+      /*
+      console.log('timestamp', timestamp);
+      console.log('value', value);
+      console.log('start end', start, end, timestamp > start && timestamp <= end);
+      */
+
+      if (timestamp > start && timestamp <= end) {
+        item.value += value;
+      }
+    });
+
+    items.push(item);
+  } 
+
+  console.log('items', items);
+
+  return items;
+}
+
 function generateTransactionGraphData(transactions: Transaction[], peak: Peak): {
   value: number;
   timestamp: number;
@@ -98,7 +156,7 @@ function generateTransactionGraphData(transactions: Transaction[], peak: Peak): 
 
   // sum grouped transaction and extract just valuable information
   results = map(groupedResults, (items, timestamp) => ({
-    timestamp,
+    timestamp: Number(timestamp),
     value: sumBy(items, 'value'),
   }));
 
@@ -108,7 +166,7 @@ function generateTransactionGraphData(transactions: Transaction[], peak: Peak): 
   return results;
 }
 
-function prepareGraphPoints(balance: number, transactions: Transaction[], peak: Peak): {
+function prepareGraphPoints(balance: number, transactions: Transaction[], peak: Peak, aggregate?: Aggregate): {
   x: number;
   y: number;
   tooltip?: ReactNode;
@@ -118,7 +176,14 @@ function prepareGraphPoints(balance: number, transactions: Transaction[], peak: 
   }
 
   let start = balance;
-  const data = generateTransactionGraphData(transactions, peak);
+  let data = generateTransactionGraphData(transactions, peak);
+
+  /*
+  if (aggregate) {
+    const { interval, count, offset } = aggregate;
+    data = aggregatePoints(data, interval, count, offset);
+  }
+  */
 
   const points = [{
     x: peak.height,
@@ -143,18 +208,24 @@ function prepareGraphPoints(balance: number, transactions: Transaction[], peak: 
 
 type Props = {
   walletId: number;
+  height?: number;
 };
 
 export default function WalletGraph(props: Props) {
-  const { walletId } = props;
+  const { walletId, height } = props;
   const { peak } = usePeak();
   const { wallet, transactions } = useWallet(walletId);
   const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
+  const currencyCode = useCurrencyCode();
   if (!transactions || !balance || !peak) {
     return null;
   }
 
-  const points = prepareGraphPoints(balance, transactions, peak);
+  const points = prepareGraphPoints(balance, transactions, peak, {
+    interval: 60 * 60,
+    count: 24,
+    offset: 0,
+  });
   
   const data = [{
     id: 'Points',
@@ -166,7 +237,7 @@ export default function WalletGraph(props: Props) {
   const middle = max / 2;
 
   return (
-    <StyledGraphContainer>
+    <StyledGraphContainer height={height}>
       <ResponsiveLine
         margin={{ left: 0, top: 2, bottom: 2, right: 0 }}
         data={data}
@@ -179,7 +250,7 @@ export default function WalletGraph(props: Props) {
         }}
         tooltip={({ point }) => (
           <StyledTooltip>
-            {point?.data?.tooltip}
+            {point?.data?.tooltip} {currencyCode}
           </StyledTooltip>
         )}
         xScale={{
@@ -232,3 +303,7 @@ export default function WalletGraph(props: Props) {
     </StyledGraphContainer>
   );
 }
+
+WalletGraph.defaultProps = {
+  height: 150,
+};
