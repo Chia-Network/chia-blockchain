@@ -25,7 +25,7 @@ export default function Fee(props: FeeProps) {
         if (isHigh) {
           return (
             <StyledWarning>
-              <Trans>Value is too high</Trans>
+              <Trans>Value seems high</Trans>
             </StyledWarning>
           );
         }

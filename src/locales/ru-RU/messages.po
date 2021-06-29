@@ -2423,7 +2423,11 @@ msgid "VDF Sub Slot Iterations"
 msgstr "Итерации VDF суб слота"
 
 #: src/components/core/components/Fee/Fee.tsx:28
-msgid "Value is too high"
+#~ msgid "Value is too high"
+#~ msgstr ""
+
+#: src/components/core/components/Fee/Fee.tsx:28
+msgid "Value seems high"
 msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:137
