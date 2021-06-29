@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { Dropzone } from '@chia/core';
 import { Trans } from '@lingui/macro';
 import {
-  CssBaseline, 
+  CssBaseline,
   Container,
   Typography,
   Paper,
@@ -268,12 +268,12 @@ export const RecoverDIDWallet = () => {
     const recovery_file_path = acceptedFiles[0].path;
     const recovery_name = recovery_file_path.replace(/^.*[\\/]/, '');
     dispatch(recover_did_action(recovery_file_path));
-  };
+  }
 
   function goBack() {
     dispatch(changeCreateWallet(CREATE_DID_WALLET_OPTIONS));
   }
-  
+
   return (
     <div>
       <div className={classes.cardTitle}>
@@ -291,9 +291,7 @@ export const RecoverDIDWallet = () => {
         </Box>
       </div>
       <Dropzone onDrop={handleDrop}>
-        <Trans>
-          Drag and drop offer file
-        </Trans>
+        <Trans>Drag and drop offer file</Trans>
       </Dropzone>
     </div>
   );

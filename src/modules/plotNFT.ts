@@ -1,4 +1,10 @@
-import { createPoolWalletMessage, pwAbsorbRewardsMessage, pwSelfPoolMessage, pwJoinPoolMessage, async_api } from './message';
+import {
+  createPoolWalletMessage,
+  pwAbsorbRewardsMessage,
+  pwSelfPoolMessage,
+  pwJoinPoolMessage,
+  async_api,
+} from './message';
 import { getPoolState } from './farmerMessages';
 import { getWallets, getPwStatus, getWalletBalance } from './incoming';
 import WalletType from '../constants/WalletType';
@@ -12,23 +18,23 @@ import PlotNFTExternal from 'types/PlotNFTExternal';
 
 export function getPlotNFTs() {
   return async (dispatch) => {
-    const [
-      wallets,
-      poolStates,
-    ] = await Promise.all<Wallet[], PoolState[]>([
+    const [wallets, poolStates] = await Promise.all<Wallet[], PoolState[]>([
       dispatch(getWallets()),
       dispatch(getPoolState()),
     ]);
 
     // filter pool wallets
-    const poolWallets = wallets?.filter((wallet) => wallet.type === WalletType.POOLING_WALLET) ?? [];
+    const poolWallets =
+      wallets?.filter((wallet) => wallet.type === WalletType.POOLING_WALLET) ??
+      [];
 
-    const [
-      poolWalletStates,
-      walletBalances,
-    ] = await Promise.all([
-      await Promise.all<PoolWalletStatus>(poolWallets.map((wallet) => dispatch(getPwStatus(wallet.id)))),
-      await Promise.all<WalletBalance>(poolWallets.map((wallet) => dispatch(getWalletBalance(wallet.id)))),
+    const [poolWalletStates, walletBalances] = await Promise.all([
+      await Promise.all<PoolWalletStatus>(
+        poolWallets.map((wallet) => dispatch(getPwStatus(wallet.id))),
+      ),
+      await Promise.all<WalletBalance>(
+        poolWallets.map((wallet) => dispatch(getWalletBalance(wallet.id))),
+      ),
     ]);
 
     console.log('poolWalletStates', poolWalletStates);
@@ -39,7 +45,9 @@ export function getPlotNFTs() {
     const external: PlotNFTExternal[] = [];
 
     poolStates.forEach((poolStateItem) => {
-      const poolWalletStatus = poolWalletStates.find((item) => item.launcher_id === poolStateItem.pool_config.launcher_id);
+      const poolWalletStatus = poolWalletStates.find(
+        (item) => item.launcher_id === poolStateItem.pool_config.launcher_id,
+      );
       if (!poolWalletStatus) {
         external.push({
           pool_state: poolStateItem,
@@ -47,7 +55,9 @@ export function getPlotNFTs() {
         return;
       }
 
-      const walletBalance = walletBalances.find((item) => item.wallet_id === poolWalletStatus.wallet_id);
+      const walletBalance = walletBalances.find(
+        (item) => item.wallet_id === poolWalletStatus.wallet_id,
+      );
       if (!walletBalance) {
         throw new Error('Wallet balance is not defined');
       }
@@ -59,17 +69,19 @@ export function getPlotNFTs() {
       });
     });
 
-
     dispatch(updatePlotNFTs(nfts, external));
 
     return {
       nfts,
       external,
     };
-  }
+  };
 }
 
-export function createPlotNFT(initialTargetState: InitialTargetState, fee?: string) {
+export function createPlotNFT(
+  initialTargetState: InitialTargetState,
+  fee?: string,
+) {
   return async (dispatch) => {
     const { data } = await async_api(
       dispatch,
@@ -113,11 +125,21 @@ export function pwSelfPool(walletId: number) {
   };
 }
 
-export function pwJoinPool(walletId: number, poolUrl: string, relativeLockHeight: number, targetPuzzlehash?: string) {
+export function pwJoinPool(
+  walletId: number,
+  poolUrl: string,
+  relativeLockHeight: number,
+  targetPuzzlehash?: string,
+) {
   return async (dispatch) => {
     const { data } = await async_api(
       dispatch,
-      pwJoinPoolMessage(walletId, poolUrl, relativeLockHeight, targetPuzzlehash),
+      pwJoinPoolMessage(
+        walletId,
+        poolUrl,
+        relativeLockHeight,
+        targetPuzzlehash,
+      ),
       false,
     );
 

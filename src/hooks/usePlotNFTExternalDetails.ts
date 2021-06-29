@@ -22,9 +22,7 @@ export default function usePlotNFTExternalDetails(nft: PlotNFTExternal): {
     const {
       pool_state: {
         p2_singleton_puzzle_hash,
-        pool_config: {
-          pool_url,
-        },
+        pool_config: { pool_url },
       },
     } = nft;
 
@@ -35,7 +33,11 @@ export default function usePlotNFTExternalDetails(nft: PlotNFTExternal): {
       isSelfPooling,
       isSynced: isWalletSynced,
       humanName,
-      plots: plots && plots.filter((plot) => plot.pool_contract_puzzle_hash === poolContractPuzzleHash),
+      plots:
+        plots &&
+        plots.filter(
+          (plot) => plot.pool_contract_puzzle_hash === poolContractPuzzleHash,
+        ),
     };
   }, [nft, isWalletSynced, plots, humanName]);
 

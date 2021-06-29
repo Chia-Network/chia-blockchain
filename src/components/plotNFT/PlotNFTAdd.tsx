@@ -11,7 +11,7 @@ import PlotNFTSelectPool, { SubmitData } from './select/PlotNFTSelectPool';
 
 type Props = {
   headerTag?: ReactNode;
-}
+};
 
 export default function PlotNFTAdd(props: Props) {
   const { headerTag: HeaderTag } = props;
@@ -20,18 +20,21 @@ export default function PlotNFTAdd(props: Props) {
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
 
   async function handleSubmit(data: SubmitData) {
-    const { 
-      fee, 
+    const {
+      fee,
       initialTargetState,
-      initialTargetState: {
-        state,
-      },
+      initialTargetState: { state },
     } = data;
-    const { success, transaction } = await dispatch(createPlotNFT(initialTargetState, fee));
+    const { success, transaction } = await dispatch(
+      createPlotNFT(initialTargetState, fee),
+    );
     if (success) {
       unconfirmedNFTs.add({
         transactionId: transaction.name,
-        state: state === 'SELF_POOLING' ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+        state:
+          state === 'SELF_POOLING'
+            ? PlotNFTState.SELF_POOLING
+            : PlotNFTState.FARMING_TO_POOL,
         poolUrl: initialTargetState.pool_url,
       });
 
@@ -45,23 +48,20 @@ export default function PlotNFTAdd(props: Props) {
         <HeaderTag>
           <Flex alignItems="center">
             <ChevronRightIcon color="secondary" />
-            <Trans>
-              Add a Plot NFT
-            </Trans>
+            <Trans>Add a Plot NFT</Trans>
           </Flex>
         </HeaderTag>
       )}
       <PlotNFTSelectPool
         onSubmit={handleSubmit}
         title={<Trans>Want to Join a Pool? Create a Plot NFT</Trans>}
-        description={(
+        description={
           <Trans>
-            Join a pool and get consistent XCH farming rewards. 
-            The average returns are the same, but it is much less volatile. 
-            Assign plots to a plot NFT.
-            You can easily switch pools without having to re-plot.
+            Join a pool and get consistent XCH farming rewards. The average
+            returns are the same, but it is much less volatile. Assign plots to
+            a plot NFT. You can easily switch pools without having to re-plot.
           </Trans>
-        )}
+        }
       />
     </>
   );

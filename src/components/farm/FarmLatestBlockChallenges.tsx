@@ -1,9 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import {
-  Typography,
-} from '@material-ui/core';
+import { Typography } from '@material-ui/core';
 import { Link, Table, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/components/Table/Table';
@@ -13,9 +11,7 @@ const cols = [
     minWidth: '200px',
     tooltip: true,
     field: 'signage_point.challenge_hash',
-    title: (
-      <Trans>Challenge Hash</Trans>
-    ),
+    title: <Trans>Challenge Hash</Trans>,
   },
   {
     field: (row: Row) => row.signage_point.signage_point_index,
@@ -37,18 +33,16 @@ export default function FarmLatestBlockChallenges() {
 
   return (
     <Card
-      title={(
-        <Trans>
-          Latest Block Challenges
-        </Trans>
-      )}
-      tooltip={hasPlots ? (
-        <Trans>
-          Below are the current block challenges. You may or may not have
-          a proof of space for these challenges. These blocks do not
-          currently contain a proof of time.
-        </Trans>
-      ): undefined}
+      title={<Trans>Latest Block Challenges</Trans>}
+      tooltip={
+        hasPlots ? (
+          <Trans>
+            Below are the current block challenges. You may or may not have a
+            proof of space for these challenges. These blocks do not currently
+            contain a proof of time.
+          </Trans>
+        ) : undefined
+      }
     >
       {!hasPlots && (
         <Typography variant="body2">

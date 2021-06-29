@@ -27,19 +27,13 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
 
   const details = useMemo(() => {
     const {
-      pool_state: {
-        p2_singleton_puzzle_hash,
-      },
+      pool_state: { p2_singleton_puzzle_hash },
       pool_wallet_status: {
-        current: {
-          state,
-        },
+        current: { state },
         target,
         wallet_id,
       },
-      wallet_balance: {
-        confirmed_wallet_balance,
-      },
+      wallet_balance: { confirmed_wallet_balance },
     } = nft;
 
     const poolContractPuzzleHash = `0x${p2_singleton_puzzle_hash}`;
@@ -55,7 +49,11 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
       canEdit: isWalletSynced && !isPending,
       humanName,
       isSelfPooling,
-      plots: plots && plots.filter((plot) => plot.pool_contract_puzzle_hash === poolContractPuzzleHash),
+      plots:
+        plots &&
+        plots.filter(
+          (plot) => plot.pool_contract_puzzle_hash === poolContractPuzzleHash,
+        ),
     };
   }, [nft, isWalletSynced, plots, humanName]);
 

@@ -23,7 +23,7 @@ export const DropView = () => {
   const dispatch = useDispatch();
   const parsing_state = useSelector((state) => state.trade_state.parsing_state);
   const isParsing = parsing_state === parsingStatePending;
- 
+
   function handleDrop(acceptedFiles) {
     const offer_file_path = acceptedFiles[0].path;
     const offer_name = offer_file_path.replace(/^.*[/\\]/, '');
@@ -34,13 +34,9 @@ export const DropView = () => {
   }
 
   return (
-    <Card
-      title={<Trans>Select Offer</Trans>}
-    >
+    <Card title={<Trans>Select Offer</Trans>}>
       <Dropzone onDrop={handleDrop} processing={isParsing}>
-        <Trans>
-          Drag and drop offer file
-        </Trans>
+        <Trans>Drag and drop offer file</Trans>
       </Dropzone>
     </Card>
   );
@@ -69,23 +65,16 @@ export const OfferView = () => {
   return (
     <Card
       title={<Trans>Offer</Trans>}
-      actions={(
+      actions={
         <>
-          <Button
-            onClick={handleDecline}
-            variant="outlined"
-          >
+          <Button onClick={handleDecline} variant="outlined">
             <Trans>Cancel</Trans>
           </Button>
-          <Button
-            onClick={handleAccept}
-            variant="contained"
-            color="primary"
-          >
+          <Button onClick={handleAccept} variant="contained" color="primary">
             <Trans>Accept</Trans>
           </Button>
         </>
-      )}
+      }
     >
       <TradesTable rows={trades} />
     </Card>

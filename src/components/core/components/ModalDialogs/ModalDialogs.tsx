@@ -21,13 +21,17 @@ export default function ModalDialogs(props: Props) {
 
   return (
     <>
-      {dialogs.map((dialog) => cloneElement(// @ts-ignore
-        dialog.element, {
-          key: dialog.id,
-          open: true,
-          onClose: (value: any) => handleClose(value, dialog),
-        }
-      ))}
+      {dialogs.map((dialog) =>
+        cloneElement(
+          // @ts-ignore
+          dialog.element,
+          {
+            key: dialog.id,
+            open: true,
+            onClose: (value: any) => handleClose(value, dialog),
+          },
+        ),
+      )}
     </>
   );
 }

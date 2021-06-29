@@ -2,7 +2,14 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { Warning as WarningIcon } from '@material-ui/icons';
-import { Card, Flex, Table, FormatBytes, StateColor, Address } from '@chia/core';
+import {
+  Card,
+  Flex,
+  Table,
+  FormatBytes,
+  StateColor,
+  Address,
+} from '@chia/core';
 import {
   Box,
   Typography,
@@ -77,7 +84,11 @@ const cols = [
     minWidth: '100px',
     field: ({ pool_contract_puzzle_hash }: Plot) => (
       <Address value={pool_contract_puzzle_hash} tooltip copyToClipboard>
-        {(address) => <Typography variant="body2" noWrap>{address}</Typography>}
+        {(address) => (
+          <Typography variant="body2" noWrap>
+            {address}
+          </Typography>
+        )}
       </Address>
     ),
     title: <Trans>Pool Contract Address</Trans>,
@@ -104,7 +115,9 @@ export default function PlotOverviewPlots() {
     return null;
   }
 
-  const queuePlots = queue?.filter((item) => item.state !== PlotStatusEnum.FINISHED);
+  const queuePlots = queue?.filter(
+    (item) => item.state !== PlotStatusEnum.FINISHED,
+  );
 
   return (
     <>

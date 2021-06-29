@@ -42,8 +42,8 @@ const WalletItem = (props: any) => {
   const history = useHistory();
   const { wallet_id } = props;
 
-  const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
+  const wallet = useSelector((state: RootState) =>
+    state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
 
   if (!wallet) {
@@ -141,13 +141,17 @@ export function StatusCard() {
           <Box flexGrow={1}>
             <Trans>height:</Trans>
           </Box>
-          <Box><FormatLargeNumber value={height} /></Box>
+          <Box>
+            <FormatLargeNumber value={height} />
+          </Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
             <Trans>connections:</Trans>
           </Box>
-          <Box><FormatLargeNumber value={connectionCount} /></Box>
+          <Box>
+            <FormatLargeNumber value={connectionCount} />
+          </Box>
         </Box>
       </div>
     </div>
@@ -160,7 +164,10 @@ export default function Wallets() {
   const id = useSelector((state: RootState) => state.wallet_menu.id);
   const wallet = wallets?.find((wallet) => wallet && wallet.id === id);
   const visibleWallets = useMemo(() => {
-    return wallets?.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET) ?? [];
+    return (
+      wallets?.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET) ??
+      []
+    );
   }, [wallets]);
   const loading = !wallets;
 

@@ -8,12 +8,10 @@ type Props = {
 };
 
 export default function PlotNFTExternalState(props: Props) {
-  const { 
+  const {
     nft: {
       pool_state: {
-        pool_config: {
-          pool_url,
-        },
+        pool_config: { pool_url },
       },
     },
   } = props;
@@ -22,12 +20,8 @@ export default function PlotNFTExternalState(props: Props) {
 
   return (
     <Typography variant="body1">
-      {isSelfPooling && (
-        <Trans>Self Pooling</Trans>
-      )}
-      {!isSelfPooling && (
-        <Trans>Pooling</Trans>
-      )}
+      {isSelfPooling && <Trans>Self Pooling</Trans>}
+      {!isSelfPooling && <Trans>Pooling</Trans>}
     </Typography>
   );
 }

@@ -36,7 +36,6 @@ export default function WalletCards(props: Props) {
             </Grid>
           </Grid>
         </Grid>
-
       </Grid>
     </div>
   );

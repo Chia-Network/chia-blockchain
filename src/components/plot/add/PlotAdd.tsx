@@ -33,7 +33,9 @@ export default function PlotAdd() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState<boolean>(false);
   const currencyCode = useCurrencyCode();
-  const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
+  const fingerprint = useSelector(
+    (state: RootState) => state.wallet_state.selected_fingerprint,
+  );
   const addNFTref = useRef();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
   const openDialog = useOpenDialog();
@@ -66,7 +68,7 @@ export default function PlotAdd() {
   const plotSize = watch('plotSize');
 
   useEffect(() => {
-    const plotSizeConfig = plotSizes.find(item => item.value === plotSize);
+    const plotSizeConfig = plotSizes.find((item) => item.value === plotSize);
     if (plotSizeConfig) {
       setValue('maxRam', plotSizeConfig.defaultRam);
     }
@@ -88,14 +90,13 @@ export default function PlotAdd() {
         // create nft
         const nftData = await addNFTref.current?.getSubmitData();
 
-        const { 
-          fee, 
+        const {
+          fee,
           initialTargetState,
-          initialTargetState: {
-            state,
-          },
-         } = nftData;
-        const { success, error, transaction, p2_singleton_puzzle_hash } = await dispatch(createPlotNFT(initialTargetState, fee));
+          initialTargetState: { state },
+        } = nftData;
+        const { success, error, transaction, p2_singleton_puzzle_hash } =
+          await dispatch(createPlotNFT(initialTargetState, fee));
         if (!success) {
           throw new Error(error ?? t`Unable to create plot NFT`);
         }
@@ -106,39 +107,46 @@ export default function PlotAdd() {
 
         unconfirmedNFTs.add({
           transactionId: transaction.name,
-          state: state === 'SELF_POOLING' ? PlotNFTState.SELF_POOLING : PlotNFTState.FARMING_TO_POOL,
+          state:
+            state === 'SELF_POOLING'
+              ? PlotNFTState.SELF_POOLING
+              : PlotNFTState.FARMING_TO_POOL,
           poolUrl: initialTargetState.pool_url,
         });
-  
+
         selectedP2SingletonPuzzleHash = p2_singleton_puzzle_hash;
       }
-  
+
       const plotAddConfig = {
         ...rest,
         delay: delay * 60,
       };
-  
+
       if (selectedP2SingletonPuzzleHash) {
-        plotAddConfig.c = toBech32m(selectedP2SingletonPuzzleHash, currencyCode.toLowerCase());
+        plotAddConfig.c = toBech32m(
+          selectedP2SingletonPuzzleHash,
+          currencyCode.toLowerCase(),
+        );
       }
 
-      if (!selectedP2SingletonPuzzleHash && !farmerPublicKey && !poolPublicKey && fingerprint) {
+      if (
+        !selectedP2SingletonPuzzleHash &&
+        !farmerPublicKey &&
+        !poolPublicKey &&
+        fingerprint
+      ) {
         plotAddConfig.fingerprint = fingerprint;
       }
 
       await dispatch(plotQueueAdd(plotAddConfig));
-  
+
       history.push('/dashboard/plot');
-    } catch(error) {
-      await openDialog((
-        <Alert severity="warning">
-          {error.message}
-        </Alert>
-      ));
+    } catch (error) {
+      await openDialog(<Alert severity="warning">{error.message}</Alert>);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   if (!currencyCode) {
     return (
@@ -149,15 +157,11 @@ export default function PlotAdd() {
   }
 
   return (
-    <Form
-      methods={methods}
-      onSubmit={handleSubmit}>
+    <Form methods={methods} onSubmit={handleSubmit}>
       <PlotHeaderSource>
         <Flex alignItems="center">
           <ChevronRightIcon color="secondary" />
-          <Trans>
-            Add a Plot
-          </Trans>
+          <Trans>Add a Plot</Trans>
         </Flex>
       </PlotHeaderSource>
       <Flex flexDirection="column" gap={3}>
@@ -165,13 +169,16 @@ export default function PlotAdd() {
         <PlotAddNumberOfPlots />
         <PlotAddSelectTemporaryDirectory />
         <PlotAddSelectFinalDirectory />
-        <PlotAddNFT ref={addNFTref}/>
+        <PlotAddNFT ref={addNFTref} />
         <Flex gap={1}>
           <FormBackButton variant="outlined" />
-          <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
-            <Trans>
-              Create
-            </Trans>
+          <ButtonLoading
+            loading={loading}
+            color="primary"
+            type="submit"
+            variant="contained"
+          >
+            <Trans>Create</Trans>
           </ButtonLoading>
         </Flex>
       </Flex>

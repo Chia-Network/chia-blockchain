@@ -26,25 +26,23 @@ export default function WalletStatusCard() {
           <Box flexGrow={1}>
             <Trans>status:</Trans>
           </Box>
-          <Box>
-            {syncing ? (
-              <Trans>syncing</Trans>
-            ) : (
-              <Trans>synced</Trans>
-            )}
-          </Box>
+          <Box>{syncing ? <Trans>syncing</Trans> : <Trans>synced</Trans>}</Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
             <Trans>height:</Trans>
           </Box>
-          <Box><FormatLargeNumber value={height} /></Box>
+          <Box>
+            <FormatLargeNumber value={height} />
+          </Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
             <Trans>connections:</Trans>
           </Box>
-          <Box><FormatLargeNumber value={connectionCount} /></Box>
+          <Box>
+            <FormatLargeNumber value={connectionCount} />
+          </Box>
         </Box>
       </div>
     </div>

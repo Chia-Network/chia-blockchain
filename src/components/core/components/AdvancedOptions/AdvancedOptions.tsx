@@ -25,7 +25,13 @@ type Props = {
 };
 
 export default function AdvancedOptions(props: Props) {
-  const { children, expanded: defaultExpanded, hideExpanded, moreTitle, lessTitle } = props;
+  const {
+    children,
+    expanded: defaultExpanded,
+    hideExpanded,
+    moreTitle,
+    lessTitle,
+  } = props;
   const [isExpanded, setIsExpanded] = useToggle(defaultExpanded);
 
   const hideTitle = hideExpanded && isExpanded;
@@ -56,11 +62,9 @@ export default function AdvancedOptions(props: Props) {
         </StyledToggleAdvancedOptions>
       )}
 
-      <Accordion expanded={isExpanded}>
-        {children}
-      </Accordion>
+      <Accordion expanded={isExpanded}>{children}</Accordion>
     </Flex>
-  )
+  );
 }
 
 AdvancedOptions.defaultProps = {

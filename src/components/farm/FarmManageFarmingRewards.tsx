@@ -4,9 +4,19 @@ import { useForm } from 'react-hook-form';
 import { Alert } from '@material-ui/lab';
 import styled from 'styled-components';
 import { Flex, Form, TextField, Loading } from '@chia/core';
-import { Button, Dialog, DialogActions, DialogTitle, DialogContent, Typography } from '@material-ui/core';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
+  Typography,
+} from '@material-ui/core';
 import { useDispatch } from 'react-redux';
-import { getRewardTargets, setRewardTargets } from '../../modules/farmerMessages';
+import {
+  getRewardTargets,
+  setRewardTargets,
+} from '../../modules/farmerMessages';
 import { bech32m } from 'bech32';
 
 const StyledTextField = styled(TextField)`
@@ -30,7 +40,7 @@ export default function FarmManageFarmingRewards(props: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const methods = useForm<FormData>({
-    mode: "onChange",
+    mode: 'onChange',
     shouldUnregister: false,
     defaultValues: {
       farmer_target: '',
@@ -38,17 +48,20 @@ export default function FarmManageFarmingRewards(props: Props) {
     },
   });
 
-  const { register , formState: { errors } } = methods;
+  const {
+    register,
+    formState: { errors },
+  } = methods;
 
   function handleClose() {
     onClose();
   }
 
-  function checkAddress(stringToCheck: string) : boolean {
+  function checkAddress(stringToCheck: string): boolean {
     try {
       bech32m.decode(stringToCheck);
       return true;
-    } catch(err) {
+    } catch (err) {
       return false;
     }
   }
@@ -101,10 +114,7 @@ export default function FarmManageFarmingRewards(props: Props) {
       aria-labelledby="manage-farming-rewards-title"
       open={open}
     >
-      <Form
-        methods={methods}
-        onSubmit={handleSubmit}
-      >
+      <Form methods={methods} onSubmit={handleSubmit}>
         <DialogTitle id="manage-farming-rewards-title">
           <Trans>Manage Your Farming Rewards Target Addresses</Trans>
         </DialogTitle>
@@ -116,31 +126,27 @@ export default function FarmManageFarmingRewards(props: Props) {
               </Flex>
             ) : (
               <>
-                {error && (
-                  <Alert severity="error">{error.message}</Alert>
-                )}
-                {errors.farmer_target && errors.farmer_target.type === "required" && (
+                {error && <Alert severity="error">{error.message}</Alert>}
+                {errors.farmer_target &&
+                  errors.farmer_target.type === 'required' && (
+                    <Alert severity="error">
+                      <Trans>Farmer Reward Address must not be empty.</Trans>
+                    </Alert>
+                  )}
+                {errors.farmer_target &&
+                  errors.farmer_target.type === 'validate' && (
+                    <Alert severity="error">
+                      <Trans>
+                        Farmer Reward Address is not properly formatted.
+                      </Trans>
+                    </Alert>
+                  )}
+                {errors.pool_target && errors.pool_target.type === 'required' && (
                   <Alert severity="error">
-                    <Trans>
-                      Farmer Reward Address must not be empty.
-                    </Trans>
+                    <Trans>Pool Reward Address must not be empty.</Trans>
                   </Alert>
                 )}
-                {errors.farmer_target && errors.farmer_target.type === "validate" && (
-                  <Alert severity="error">
-                    <Trans>
-                      Farmer Reward Address is not properly formatted.
-                    </Trans>
-                  </Alert>
-                )}
-                {errors.pool_target && errors.pool_target.type === "required" && (
-                  <Alert severity="error">
-                    <Trans>
-                      Pool Reward Address must not be empty.
-                    </Trans>
-                  </Alert>
-                )}
-                {errors.pool_target && errors.pool_target.type === "validate" && (
+                {errors.pool_target && errors.pool_target.type === 'validate' && (
                   <Alert severity="error">
                     <Trans>
                       Pool Reward Address is not properly formatted.
@@ -150,8 +156,8 @@ export default function FarmManageFarmingRewards(props: Props) {
                 {showWarning && (
                   <Alert severity="warning">
                     <Trans>
-                      No private keys for one or both addresses.
-                      Safe only if you are sending rewards to another wallet.
+                      No private keys for one or both addresses. Safe only if
+                      you are sending rewards to another wallet.
                     </Trans>
                   </Alert>
                 )}
@@ -159,21 +165,28 @@ export default function FarmManageFarmingRewards(props: Props) {
                   label={<Trans>Farmer Reward Address</Trans>}
                   name="farmer_target"
                   variant="filled"
-                  inputProps = { { spellCheck: false } }
-                  {...register('farmer_target', { required: true, validate: checkAddress})}
+                  inputProps={{ spellCheck: false }}
+                  {...register('farmer_target', {
+                    required: true,
+                    validate: checkAddress,
+                  })}
                 />
                 <StyledTextField
                   label={<Trans>Pool Reward Address</Trans>}
                   name="pool_target"
                   variant="filled"
-                  inputProps = { { spellCheck: false } }
-                  {...register('pool_target', { required: true, validate: checkAddress})}
+                  inputProps={{ spellCheck: false }}
+                  {...register('pool_target', {
+                    required: true,
+                    validate: checkAddress,
+                  })}
                 />
 
                 <Typography variant="body2" color="textSecondary">
                   <Trans>
-                    Note that this does not change your pooling payout addresses.
-                    This only affects old format plots, and the 0.25XCH reward for pooling plots.
+                    Note that this does not change your pooling payout
+                    addresses. This only affects old format plots, and the
+                    0.25XCH reward for pooling plots.
                   </Trans>
                 </Typography>
               </>

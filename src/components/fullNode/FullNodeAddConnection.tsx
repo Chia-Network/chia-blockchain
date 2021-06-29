@@ -8,8 +8,8 @@ import { Button, Dialog, DialogTitle, DialogContent } from '@material-ui/core';
 import { openConnection } from '../../modules/fullnodeMessages';
 
 type Props = {
-  open: boolean,
-  onClose: (value?: any) => void,
+  open: boolean;
+  onClose: (value?: any) => void;
 };
 
 type FormData = {
@@ -63,18 +63,13 @@ export default function FullNodeAddConnection(props: Props) {
       maxWidth="xs"
       fullWidth
     >
-      <Form
-        methods={methods}
-        onSubmit={handleSubmit}
-      >
+      <Form methods={methods} onSubmit={handleSubmit}>
         <DialogTitle id="alert-dialog-title">
           <Trans>Connect to other peers</Trans>
         </DialogTitle>
-        <DialogContent>          
+        <DialogContent>
           <Flex gap={2} flexDirection="column">
-            {error && (
-              <Alert severity="error">{error.message}</Alert>
-            )}
+            {error && <Alert severity="error">{error.message}</Alert>}
 
             <TextField
               label={<Trans>IP address / host</Trans>}
@@ -90,18 +85,10 @@ export default function FullNodeAddConnection(props: Props) {
           </Flex>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={handleHide}
-            variant="outlined"
-            color="secondary"
-          >
+          <Button onClick={handleHide} variant="outlined" color="secondary">
             <Trans>Cancel</Trans>
           </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            type="submit"
-          >
+          <Button variant="contained" color="primary" type="submit">
             <Trans>Connect</Trans>
           </Button>
         </DialogActions>

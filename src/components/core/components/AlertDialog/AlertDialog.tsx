@@ -1,11 +1,18 @@
 import React, { ReactNode } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@material-ui/core';
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+} from '@material-ui/core';
 
 type Props = {
-  title?: ReactNode,
-  children?: ReactNode,
-  open: boolean,
-  onClose: (value?: any) => void,
+  title?: ReactNode;
+  children?: ReactNode;
+  open: boolean;
+  onClose: (value?: any) => void;
 };
 
 export default function AlertDialog(props: Props) {
@@ -30,11 +37,7 @@ export default function AlertDialog(props: Props) {
       aria-describedby="alert-dialog-description"
       open={open}
     >
-      {title && (
-        <DialogTitle id="alert-dialog-title">
-          {title}
-        </DialogTitle>
-      )}
+      {title && <DialogTitle id="alert-dialog-title">{title}</DialogTitle>}
       {children && (
         <DialogContent>
           <DialogContentText id="alert-dialog-description">

@@ -14,18 +14,16 @@ export default function FarmCardNotAvailable(props: Props) {
   return (
     <FarmCard
       title={title}
-      value={state ? (
-        <StateIndicator state={state}>
+      value={
+        state ? (
+          <StateIndicator state={state}>
+            <Trans>Not Available</Trans>
+          </StateIndicator>
+        ) : (
           <Trans>Not Available</Trans>
-        </StateIndicator>
-      ) : (
-        <Trans>Not Available</Trans>
-      )}
-      description={(
-        <Trans>
-          Wait for synchronization
-        </Trans>
-      )}
+        )
+      }
+      description={<Trans>Wait for synchronization</Trans>}
       valueColor="initial"
     />
   );

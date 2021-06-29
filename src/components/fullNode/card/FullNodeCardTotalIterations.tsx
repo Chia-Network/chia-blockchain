@@ -7,14 +7,17 @@ import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardTotalIterations() {
   const value = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state?.peak?.total_iters ?? 0
+    (state: RootState) =>
+      state.full_node_state.blockchain_state?.peak?.total_iters ?? 0,
   );
 
   return (
     <FarmCard
       valueColor="textPrimary"
       title={<Trans>Total Iterations</Trans>}
-      tooltip={<Trans>Total iterations since the start of the blockchain</Trans>}
+      tooltip={
+        <Trans>Total iterations since the start of the blockchain</Trans>
+      }
       value={<FormatLargeNumber value={value} />}
     />
   );

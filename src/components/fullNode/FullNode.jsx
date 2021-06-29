@@ -69,7 +69,11 @@ const cols = [
       const height = get(row, 'reward_chain_block.height');
 
       if (!isFinished) {
-        return <i><FormatLargeNumber value={foliageHeight} /></i>;
+        return (
+          <i>
+            <FormatLargeNumber value={foliageHeight} />
+          </i>
+        );
       }
 
       return <FormatLargeNumber value={height} />;
@@ -106,7 +110,8 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
       label: <Trans>Status</Trans>,
       value: (
         <Trans>
-          Syncing <FormatLargeNumber value={progress} />/<FormatLargeNumber value={tip} />
+          Syncing <FormatLargeNumber value={progress} />/
+          <FormatLargeNumber value={tip} />
         </Trans>
       ),
       colour: 'orange',
@@ -247,11 +252,16 @@ const FullNodeStatus = (props) => {
     (state) => state.full_node_state.latest_peak_timestamp,
   );
 
-  const networkInfo = useSelector(
-    (state) => state.wallet_state.network_info,
-  );
+  const networkInfo = useSelector((state) => state.wallet_state.network_info);
 
-  const statusItems = blockchainState && getStatusItems(blockchainState, connected, latestPeakTimestamp, networkInfo);
+  const statusItems =
+    blockchainState &&
+    getStatusItems(
+      blockchainState,
+      connected,
+      latestPeakTimestamp,
+      networkInfo,
+    );
 
   return (
     <Card title={<Trans>Full Node Status</Trans>}>

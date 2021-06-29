@@ -8,14 +8,19 @@ export default function useUnconfirmedPlotNFTs(): {
   add: (item: UnconfirmedPlotNFT) => void;
   remove: (transactionId: string) => void;
 } {
-  let [unconfirmed] = useLocalStorage<UnconfirmedPlotNFT[]>(LOCAL_STORAGE_KEY, []);
+  let [unconfirmed] = useLocalStorage<UnconfirmedPlotNFT[]>(
+    LOCAL_STORAGE_KEY,
+    [],
+  );
 
   function handleAdd(item: UnconfirmedPlotNFT) {
     writeStorage(LOCAL_STORAGE_KEY, [...unconfirmed, item]);
   }
 
   function handleRemove(transactionId: string) {
-    const newList = unconfirmed.filter(item => item.transactionId !== transactionId);
+    const newList = unconfirmed.filter(
+      (item) => item.transactionId !== transactionId,
+    );
     writeStorage(LOCAL_STORAGE_KEY, newList);
   }
 

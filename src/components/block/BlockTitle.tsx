@@ -23,12 +23,8 @@ export default function BlockTitle(props: Props) {
 
   return (
     <Flex gap={1} alignItems="baseline">
-      <BackIcon onClick={handleGoBack}>
-        {' '}
-      </BackIcon>
-      <span>
-        {children}
-      </span>
+      <BackIcon onClick={handleGoBack}> </BackIcon>
+      <span>{children}</span>
     </Flex>
   );
 }

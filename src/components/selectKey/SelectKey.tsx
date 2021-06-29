@@ -55,7 +55,7 @@ export default function SelectKey() {
   }
 
   async function handleDeletePrivateKey(fingerprint: Fingerprint) {
-    const deletePrivateKey = await openDialog((
+    const deletePrivateKey = await openDialog(
       <ConfirmDialog
         title={<Trans>Delete key</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
@@ -66,8 +66,8 @@ export default function SelectKey() {
           Deleting the key will permanently remove the key from your computer,
           make sure you have backups. Are you sure you want to continue?
         </Trans>
-      </ConfirmDialog>
-    ));
+      </ConfirmDialog>,
+    );
 
     // @ts-ignore
     if (deletePrivateKey) {
@@ -76,7 +76,7 @@ export default function SelectKey() {
   }
 
   async function handleDeleteAllKeys() {
-    const deleteAllKeys = await openDialog((
+    const deleteAllKeys = await openDialog(
       <ConfirmDialog
         title={<Trans>Delete all keys</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
@@ -84,12 +84,11 @@ export default function SelectKey() {
         confirmColor="danger"
       >
         <Trans>
-          Deleting all keys will permanently remove the keys from your
-          computer, make sure you have backups. Are you sure you want to
-          continue?
+          Deleting all keys will permanently remove the keys from your computer,
+          make sure you have backups. Are you sure you want to continue?
         </Trans>
-      </ConfirmDialog>
-    ));
+      </ConfirmDialog>,
+    );
 
     // @ts-ignore
     if (deleteAllKeys) {
@@ -141,9 +140,7 @@ export default function SelectKey() {
                           </Trans>
                         }
                         secondary={
-                          <Trans>
-                            Can be backed up to mnemonic seed
-                          </Trans>
+                          <Trans>Can be backed up to mnemonic seed</Trans>
                         }
                       />
                       <ListItemSecondaryAction>
@@ -156,7 +153,13 @@ export default function SelectKey() {
                             <VisibilityIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={<Trans>DANGER: permanently delete private key</Trans>}>
+                        <Tooltip
+                          title={
+                            <Trans>
+                              DANGER: permanently delete private key
+                            </Trans>
+                          }
+                        >
                           <IconButton
                             edge="end"
                             aria-label="delete"
@@ -178,14 +181,16 @@ export default function SelectKey() {
               size="large"
               fullWidth
             >
-              <Trans>
-                Create a new private key
-              </Trans>
+              <Trans>Create a new private key</Trans>
             </Button>
-            <Button to="/wallet/import" type="submit" variant="outlined" size="large" fullWidth>
-              <Trans>
-                Import from Mnemonics (24 words)
-              </Trans>
+            <Button
+              to="/wallet/import"
+              type="submit"
+              variant="outlined"
+              size="large"
+              fullWidth
+            >
+              <Trans>Import from Mnemonics (24 words)</Trans>
             </Button>
             <Button
               onClick={handleDeleteAllKeys}

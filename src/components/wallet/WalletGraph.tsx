@@ -25,7 +25,8 @@ const StyledRoot = styled.div`
 const StyledGraphContainer = styled.div`
   position: relative;
   min-height: 100px;
-  height: ${({ height }) => typeof height === 'string' ? height : `${height}px`};
+  height: ${({ height }) =>
+    typeof height === 'string' ? height : `${height}px`};
 `;
 
 const StyledTooltip = styled(Paper)`
@@ -71,9 +72,9 @@ const theme = {
 };
 
 type Aggregate = {
-  interval: number, // interval second
-  count: number, // number of intervals
-  offset?: number,
+  interval: number; // interval second
+  count: number; // number of intervals
+  offset?: number;
 };
 
 type Point = {
@@ -82,7 +83,7 @@ type Point = {
 };
 
 function aggregatePoints(
-  points: Point[], 
+  points: Point[],
   interval: number, // interval second
   count: number, // number of intervals
   offset: number = 0,
@@ -111,17 +112,22 @@ function aggregatePoints(
     });
 
     items.push(item);
-  } 
+  }
 
   return items;
 }
 
-function generateTransactionGraphData(transactions: Transaction[], peak: Peak): {
+function generateTransactionGraphData(
+  transactions: Transaction[],
+  peak: Peak,
+): {
   value: number;
   timestamp: number;
 }[] {
   // use only confirmed transactions
-  const confirmedTransactions = transactions.filter(transaction => transaction.confirmed);
+  const confirmedTransactions = transactions.filter(
+    (transaction) => transaction.confirmed,
+  );
 
   // extract and compute values
   let results = confirmedTransactions.map<{
@@ -131,7 +137,7 @@ function generateTransactionGraphData(transactions: Transaction[], peak: Peak): 
     const { type, confirmed_at_height, amount, fee_amount } = transaction;
 
     const isOutgoing = [
-      TransactionType.OUTGOING, 
+      TransactionType.OUTGOING,
       TransactionType.OUTGOING_TRADE,
     ].includes(type);
 
@@ -139,7 +145,7 @@ function generateTransactionGraphData(transactions: Transaction[], peak: Peak): 
 
     return {
       value,
-      timestamp: blockHeightToTimestamp(confirmed_at_height, peak)
+      timestamp: blockHeightToTimestamp(confirmed_at_height, peak),
     };
   });
 
@@ -158,7 +164,12 @@ function generateTransactionGraphData(transactions: Transaction[], peak: Peak): 
   return results;
 }
 
-function prepareGraphPoints(balance: number, transactions: Transaction[], peak: Peak, aggregate?: Aggregate): {
+function prepareGraphPoints(
+  balance: number,
+  transactions: Transaction[],
+  peak: Peak,
+  aggregate?: Aggregate,
+): {
   x: number;
   y: number;
   tooltip?: ReactNode;
@@ -177,11 +188,13 @@ function prepareGraphPoints(balance: number, transactions: Transaction[], peak: 
   }
   */
 
-  const points = [{
-    x: peak.height,
-    y: mojo_to_chia(start),
-    tooltip: mojo_to_chia(balance),
-  }];
+  const points = [
+    {
+      x: peak.height,
+      y: mojo_to_chia(start),
+      tooltip: mojo_to_chia(balance),
+    },
+  ];
 
   data.forEach((item) => {
     const { timestamp, value } = item;
@@ -218,14 +231,16 @@ export default function WalletGraph(props: Props) {
     count: 24,
     offset: 0,
   });
-  
-  const data = [{
-    id: 'Points',
-    data: points,
-  }];
-  
-  const min = points.length ? Math.min(...points.map(item => item.y)) : 0;
-  const max = Math.max(min, ...points.map(item => item.y));
+
+  const data = [
+    {
+      id: 'Points',
+      data: points,
+    },
+  ];
+
+  const min = points.length ? Math.min(...points.map((item) => item.y)) : 0;
+  const max = Math.max(min, ...points.map((item) => item.y));
   const middle = max / 2;
 
   return (
@@ -251,7 +266,8 @@ export default function WalletGraph(props: Props) {
         colors={{ scheme: 'accent' }}
         axisTop={null}
         axisRight={null}
-        axisBottom={null /* {
+        axisBottom={
+          null /* {
           tickValues: "every 1 second",
           tickSize: 5,
           tickPadding: 5,
@@ -260,8 +276,8 @@ export default function WalletGraph(props: Props) {
           legend: "Time",
           legendOffset: 36,
           legendPosition: "middle"
-        } */}
-
+        } */
+        }
         axisLeft={null}
         pointSize={0}
         pointBorderWidth={0}
@@ -269,8 +285,8 @@ export default function WalletGraph(props: Props) {
         curve="monotoneX"
         defs={[
           linearGradientDef('gradientA', [
-              { offset: 0, color: 'inherit' },
-              { offset: 100, color: 'inherit', opacity: 0 },
+            { offset: 0, color: 'inherit' },
+            { offset: 100, color: 'inherit', opacity: 0 },
           ]),
         ]}
         fill={[{ match: '*', id: 'gradientA' }]}

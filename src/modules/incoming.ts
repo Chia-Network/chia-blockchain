@@ -1,5 +1,11 @@
 import { service_wallet } from '../util/service_names';
-import { async_api, pwStatusMessage, getWalletsMessage, get_balance_for_wallet, getTransactionMessage } from './message';
+import {
+  async_api,
+  pwStatusMessage,
+  getWalletsMessage,
+  get_balance_for_wallet,
+  getTransactionMessage,
+} from './message';
 import type WalletBalance from '../types/WalletBalance';
 import type Wallet from '../types/Wallet';
 import type Transaction from '../types/Transaction';
@@ -36,11 +42,7 @@ export function getPwStatus(walletId: number) {
 
 export function getWallets() {
   return async (dispatch): Promise<Wallet[]> => {
-    const { data } = await async_api(
-      dispatch,
-      getWalletsMessage(),
-      false,
-    );
+    const { data } = await async_api(dispatch, getWalletsMessage(), false);
 
     return data?.wallets;
   };
@@ -150,10 +152,14 @@ export default function incomingReducer(
 
       return {
         ...rest,
-        wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-          sending_transaction: false,
-          send_transaction_result: null,
-        }),
+        wallets: mergeArrayItem(
+          wallets,
+          (wallet: Wallet) => wallet.id === wallet_id,
+          {
+            sending_transaction: false,
+            send_transaction_result: null,
+          },
+        ),
       };
     case 'OUTGOING_MESSAGE':
       if (
@@ -165,10 +171,14 @@ export default function incomingReducer(
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            sending_transaction: false,
-            send_transaction_result: null,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              sending_transaction: false,
+              send_transaction_result: null,
+            },
+          ),
         };
       }
       return state;
@@ -177,24 +187,23 @@ export default function incomingReducer(
         return state;
       }
 
-      const { 
+      const {
         message,
         message: {
           data,
           command,
-          data: {
-            success,
-          },
-        }
+          data: { success },
+        },
       } = action;
 
       if (command === 'generate_mnemonic') {
-        const mnemonic = typeof message.data.mnemonic === 'string'
-          ? message.data.mnemonic.split(' ')
-          : message.data.mnemonic;
+        const mnemonic =
+          typeof message.data.mnemonic === 'string'
+            ? message.data.mnemonic.split(' ')
+            : message.data.mnemonic;
 
         return {
-          ...state, 
+          ...state,
           mnemonic,
         };
       }
@@ -202,14 +211,12 @@ export default function incomingReducer(
         return {
           ...state,
           logged_in: success,
-          selected_fingerprint: success
-            ? data.fingerprint
-            : undefined,
+          selected_fingerprint: success ? data.fingerprint : undefined,
         };
       }
       if (command === 'log_in') {
-        return { 
-          ...state, 
+        return {
+          ...state,
           logged_in: success,
         };
       }
@@ -230,21 +237,21 @@ export default function incomingReducer(
           logged_in_received: true,
         };
       } else if (command === 'ping') {
-        return { 
-          ...state, 
+        return {
+          ...state,
           server_started: success,
         };
       } else if (command === 'get_wallets' && success) {
         const { wallets } = data;
 
-        return { 
-          ...state, 
+        return {
+          ...state,
           wallets: mergeArrays(state.wallets, (wallet) => wallet.id, wallets),
         };
       } else if (command === 'get_wallet_balance' && success) {
         const { wallets, ...rest } = state;
 
-        const { 
+        const {
           wallet_balance,
           wallet_balance: {
             wallet_id,
@@ -253,36 +260,49 @@ export default function incomingReducer(
           },
         } = data;
 
-        const pending_balance = unconfirmed_wallet_balance - confirmed_wallet_balance;
+        const pending_balance =
+          unconfirmed_wallet_balance - confirmed_wallet_balance;
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            wallet_balance: {
-              ...wallet_balance,
-              pending_balance,
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              wallet_balance: {
+                ...wallet_balance,
+                pending_balance,
+              },
             },
-          }),
+          ),
         };
       } else if (command === 'get_transactions' && success) {
-        const { wallet_id, transactions } = data; 
+        const { wallet_id, transactions } = data;
         const { wallets, ...rest } = state;
 
-        return { 
+        return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            transactions: transactions.reverse(),
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              transactions: transactions.reverse(),
+            },
+          ),
         };
       } else if (command === 'get_next_address' && success) {
         const { wallet_id, address } = data;
         const { wallets, ...rest } = state;
-        
-        return { 
+
+        return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            address,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              address,
+            },
+          ),
         };
       } else if (command === 'get_connections' && success) {
         if (data.connections) {
@@ -326,9 +346,13 @@ export default function incomingReducer(
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            colour,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              colour,
+            },
+          ),
         };
       } else if (command === 'cc_get_name') {
         const { wallet_id, name } = data;
@@ -336,9 +360,13 @@ export default function incomingReducer(
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            name,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              name,
+            },
+          ),
         };
       } else if (command === 'did_get_did') {
         const { wallet_id, my_did: mydid, coin_id: didcoin } = data;
@@ -346,21 +374,33 @@ export default function incomingReducer(
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            mydid,
-            didcoin,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              mydid,
+              didcoin,
+            },
+          ),
         };
       } else if (command === 'did_get_recovery_list') {
-        const { wallet_id, recover_list: backup_dids, num_required: dids_num_req } = data;
+        const {
+          wallet_id,
+          recover_list: backup_dids,
+          num_required: dids_num_req,
+        } = data;
         const { wallets, ...rest } = state;
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            backup_dids,
-            dids_num_req,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              backup_dids,
+              dids_num_req,
+            },
+          ),
         };
       } else if (command === 'did_create_attest') {
         const { wallet_id, message_spend_bundle: did_attest } = data;
@@ -368,9 +408,13 @@ export default function incomingReducer(
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            did_attest,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              did_attest,
+            },
+          ),
         };
       }
 
@@ -380,10 +424,14 @@ export default function incomingReducer(
 
         return {
           ...rest,
-          wallets: mergeArrayItem(wallets, (wallet: Wallet) => wallet.id === wallet_id, {
-            sending_transaction: false,
-            send_transaction_result,
-          }),
+          wallets: mergeArrayItem(
+            wallets,
+            (wallet: Wallet) => wallet.id === wallet_id,
+            {
+              sending_transaction: false,
+              send_transaction_result,
+            },
+          ),
         };
       }
       if (command === 'get_farmed_amount') {

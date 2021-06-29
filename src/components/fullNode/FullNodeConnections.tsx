@@ -3,7 +3,15 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import { Delete as DeleteIcon } from '@material-ui/icons';
 import styled from 'styled-components';
-import { Card, Flex, FormatBytes, FormatLargeNumber, Loading, Table, IconButton } from '@chia/core';
+import {
+  Card,
+  Flex,
+  FormatBytes,
+  FormatLargeNumber,
+  Loading,
+  Table,
+  IconButton,
+} from '@chia/core';
 import { Button, Tooltip } from '@material-ui/core';
 import { service_connection_types } from '../../util/service_names';
 import Connection from '../../types/Connection';
@@ -42,9 +50,19 @@ const cols = [
     field(row: Connection) {
       return (
         <>
-          <FormatBytes value={row.bytes_written} unit="MiB" removeUnit fixedDecimals />
+          <FormatBytes
+            value={row.bytes_written}
+            unit="MiB"
+            removeUnit
+            fixedDecimals
+          />
           /
-          <FormatBytes value={row.bytes_read} unit="MiB" removeUnit fixedDecimals />
+          <FormatBytes
+            value={row.bytes_read}
+            unit="MiB"
+            removeUnit
+            fixedDecimals
+          />
         </>
       );
     },
@@ -79,24 +97,22 @@ const cols = [
 
 export default function Connections() {
   const openDialog = useOpenDialog();
-  const connections = useSelector((state: RootState) => state.full_node_state.connections);
+  const connections = useSelector(
+    (state: RootState) => state.full_node_state.connections,
+  );
 
   function handleAddPeer() {
-    openDialog((
-      <FullNodeAddConnection />
-    ));
+    openDialog(<FullNodeAddConnection />);
   }
 
   return (
     <Card
       title={<Trans>Connections</Trans>}
-      action={(
+      action={
         <Button onClick={handleAddPeer} variant="outlined">
-          <Trans>
-            Connect to other peers
-          </Trans>
+          <Trans>Connect to other peers</Trans>
         </Button>
-      )}
+      }
     >
       {connections ? (
         <Table cols={cols} rows={connections} />

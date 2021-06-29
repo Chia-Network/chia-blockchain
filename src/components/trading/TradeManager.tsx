@@ -1,13 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Route, Switch, useLocation, useHistory, useRouteMatch } from 'react-router';
 import {
-  Grid,
-  List,
-  Divider,
-  ListItem,
-  ListItemText,
-} from '@material-ui/core';
+  Route,
+  Switch,
+  useLocation,
+  useHistory,
+  useRouteMatch,
+} from 'react-router';
+import { Grid, List, Divider, ListItem, ListItemText } from '@material-ui/core';
 import { OfferSwitch } from './ViewOffer';
 import { TradingOverview } from './TradingOverview';
 import CreateOffer from './CreateOffer';
@@ -21,7 +21,7 @@ export default function TradeManager() {
   return (
     <LayoutSidebar
       title={<Trans>Trading</Trans>}
-      sidebar={(
+      sidebar={
         <List disablePadding>
           <Divider />
           <span key="trade_overview">
@@ -31,9 +31,7 @@ export default function TradeManager() {
               button
             >
               <ListItemText
-                primary={
-                  <Trans>Trade Overview</Trans>
-                }
+                primary={<Trans>Trade Overview</Trans>}
                 secondary=""
               />
             </ListItem>
@@ -44,12 +42,7 @@ export default function TradeManager() {
             onClick={() => history.push(`${url}/create`)}
             button
           >
-            <ListItemText
-              primary={
-                <Trans>Create Offer</Trans>
-              }
-              secondary=""
-            />
+            <ListItemText primary={<Trans>Create Offer</Trans>} secondary="" />
           </ListItem>
           <Divider />
 
@@ -58,14 +51,11 @@ export default function TradeManager() {
             selected={pathname === '/dashboard/trade/offer'}
             button
           >
-            <ListItemText
-              primary={<Trans>View Offer</Trans>}
-              secondary=""
-            />
+            <ListItemText primary={<Trans>View Offer</Trans>} secondary="" />
           </ListItem>
           <Divider />
         </List>
-      )}
+      }
     >
       <Grid container spacing={3}>
         {/* Chart */}

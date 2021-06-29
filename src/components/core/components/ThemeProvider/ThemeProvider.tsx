@@ -6,7 +6,6 @@ import {
 } from '@material-ui/core/styles';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 
-
 type Props = {
   children: ReactNode;
   theme: Object;

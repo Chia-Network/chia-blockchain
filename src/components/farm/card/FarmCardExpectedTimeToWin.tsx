@@ -30,26 +30,19 @@ export default function FarmCardExpectedTimeToWin() {
     return plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
   }, [plots]);
 
-  const proportion = totalNetworkSpace
-    ? farmerSpace / totalNetworkSpace
-    : 0;
+  const proportion = totalNetworkSpace ? farmerSpace / totalNetworkSpace : 0;
 
-  const minutes = proportion
-    ? MINUTES_PER_BLOCK / proportion
-    : 0;
+  const minutes = proportion ? MINUTES_PER_BLOCK / proportion : 0;
 
   const expectedTimeToWin = moment.duration({ minutes }).humanize();
 
   if (fullNodeState !== FullNodeState.SYNCED) {
-    const state = fullNodeState === FullNodeState.SYNCHING
-      ? State.WARNING
-      : undefined;
+    const state =
+      fullNodeState === FullNodeState.SYNCHING ? State.WARNING : undefined;
 
     return (
       <FarmCardNotAvailable
-        title={
-          <Trans>Estimated Time to Win</Trans>
-        }
+        title={<Trans>Estimated Time to Win</Trans>}
         state={state}
       />
     );
@@ -57,9 +50,7 @@ export default function FarmCardExpectedTimeToWin() {
 
   return (
     <FarmCard
-      title={
-        <Trans>Estimated Time to Win</Trans>
-      }
+      title={<Trans>Estimated Time to Win</Trans>}
       value={`${expectedTimeToWin}`}
       tooltip={
         <Trans>

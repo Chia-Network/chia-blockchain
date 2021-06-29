@@ -3,7 +3,18 @@ import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
-import { TooltipTypography, Flex, State, UnitFormat, CardKeyValue, Tooltip, More, Loading, FormatLargeNumber, Link } from '@chia/core';
+import {
+  TooltipTypography,
+  Flex,
+  State,
+  UnitFormat,
+  CardKeyValue,
+  Tooltip,
+  More,
+  Loading,
+  FormatLargeNumber,
+  Link,
+} from '@chia/core';
 import {
   Box,
   Button,
@@ -14,7 +25,7 @@ import {
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
-import { Delete as DeleteIcon } from '@material-ui/icons'; 
+import { Delete as DeleteIcon } from '@material-ui/icons';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
@@ -44,7 +55,7 @@ const StyledSyncingFooter = styled(CardContent)`
     theme.palette.type === 'dark' ? '#515151' : '#F6F6F6'};
   padding: 2rem 3rem;
   text-align: center;
-  borer-top: 1px solid #D8D6D6;
+  borer-top: 1px solid #d8d6d6;
 `;
 
 const StyledInvisibleContainer = styled(Box)`
@@ -56,27 +67,25 @@ type Props = {
 };
 
 export default function PlotNFTCard(props: Props) {
-  const { 
+  const {
     nft,
     nft: {
       pool_state: {
         p2_singleton_puzzle_hash,
-        pool_config: {
-          launcher_id,
-          pool_url,
-        },
+        pool_config: { launcher_id, pool_url },
         points_found_24h,
       },
-      pool_wallet_status: {
-        wallet_id,
-      },
+      pool_wallet_status: { wallet_id },
     },
   } = props;
 
   const history = useHistory();
   const dispatch = useDispatch();
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
-  const totalPointsFound24 = points_found_24h.reduce((accumulator, item) => accumulator + item[1], 0);
+  const totalPointsFound24 = points_found_24h.reduce(
+    (accumulator, item) => accumulator + item[1],
+    0,
+  );
 
   function handleAddPlot() {
     history.push({
@@ -91,78 +100,97 @@ export default function PlotNFTCard(props: Props) {
     dispatch(deleteUnconfirmedTransactions(wallet_id));
   }
 
-  const rows = [{
-    key: 'status',
-    label: <Trans>Status</Trans>,
-    value: <PlotNFTStatus nft={nft} />,
-  }, isSelfPooling && {
-    key: 'rewards',
-    label: <Trans>Unclaimed Rewards</Trans>,
-    value: <UnitFormat value={mojo_to_chia(BigInt(balance))} state={State.SUCCESS} />,
-  }, {
-    key: 'plots_count',
-    label: <Trans>Number of Plots</Trans>,
-    value: plots
-      ? <FormatLargeNumber value={plots.length} />
-      : <Loading size="small" />,
-  }, !isSelfPooling && {
-    key: 'current_difficulty',
-    label: (
-      <TooltipTypography 
-        title={(
-          <Trans>
-            This difficulty is an artifically lower difficulty than on the real network,
-            and is used when farming, in order to find more proofs and send them to the pool.
-            The more plots you have, the higher difficulty you will have.
-            However, the difficulty does not affect rewards.
-          </Trans>
-        )}
-      >
-        <Trans>Current Difficulty</Trans>
-      </TooltipTypography>
-    ),
-    value: <FormatLargeNumber value={nft.pool_state.current_difficulty} />,
-  }, !isSelfPooling && {
-    key: 'current_points',
-    label: (
-      <TooltipTypography 
-        title={(
-          <Trans>
-            This is the total number of points this plotNFT has with this pool, 
-            since the last payout. The pool will reset the points after making a payout.
-          </Trans>
-        )}
-      >
-        <Trans>Current Points Balance</Trans>
-      </TooltipTypography>
-    ),
-    value: <FormatLargeNumber value={nft.pool_state.current_points} />,
-  }, !isSelfPooling && {
-    key: 'points_found_since_start',
-    label: (
-      <TooltipTypography 
-        title={(
-          <Trans>
-            This is the total number of points your farmer has found for this plot NFT. 
-            Each k32 plot will get around 10 points per day, 
-            so if you have 10TiB, should should expect around 1000 points per day, 
-            or 41 points per hour.
-          </Trans>
-        )}
-      >
-        <Trans>Points Found Since Start</Trans>
-      </TooltipTypography>
-    ),
-    value: <FormatLargeNumber value={nft.pool_state.points_found_since_start} />,
-  }, !isSelfPooling && {
-    key: 'points_found_24',
-    label: (
-      <Typography>
-        <Trans>Points Found in Last 24 Hours</Trans>
-      </Typography>
-    ),
-    value: <FormatLargeNumber value={totalPointsFound24} />,
-  }].filter(row => !!row);
+  const rows = [
+    {
+      key: 'status',
+      label: <Trans>Status</Trans>,
+      value: <PlotNFTStatus nft={nft} />,
+    },
+    isSelfPooling && {
+      key: 'rewards',
+      label: <Trans>Unclaimed Rewards</Trans>,
+      value: (
+        <UnitFormat
+          value={mojo_to_chia(BigInt(balance))}
+          state={State.SUCCESS}
+        />
+      ),
+    },
+    {
+      key: 'plots_count',
+      label: <Trans>Number of Plots</Trans>,
+      value: plots ? (
+        <FormatLargeNumber value={plots.length} />
+      ) : (
+        <Loading size="small" />
+      ),
+    },
+    !isSelfPooling && {
+      key: 'current_difficulty',
+      label: (
+        <TooltipTypography
+          title={
+            <Trans>
+              This difficulty is an artifically lower difficulty than on the
+              real network, and is used when farming, in order to find more
+              proofs and send them to the pool. The more plots you have, the
+              higher difficulty you will have. However, the difficulty does not
+              affect rewards.
+            </Trans>
+          }
+        >
+          <Trans>Current Difficulty</Trans>
+        </TooltipTypography>
+      ),
+      value: <FormatLargeNumber value={nft.pool_state.current_difficulty} />,
+    },
+    !isSelfPooling && {
+      key: 'current_points',
+      label: (
+        <TooltipTypography
+          title={
+            <Trans>
+              This is the total number of points this plotNFT has with this
+              pool, since the last payout. The pool will reset the points after
+              making a payout.
+            </Trans>
+          }
+        >
+          <Trans>Current Points Balance</Trans>
+        </TooltipTypography>
+      ),
+      value: <FormatLargeNumber value={nft.pool_state.current_points} />,
+    },
+    !isSelfPooling && {
+      key: 'points_found_since_start',
+      label: (
+        <TooltipTypography
+          title={
+            <Trans>
+              This is the total number of points your farmer has found for this
+              plot NFT. Each k32 plot will get around 10 points per day, so if
+              you have 10TiB, should should expect around 1000 points per day,
+              or 41 points per hour.
+            </Trans>
+          }
+        >
+          <Trans>Points Found Since Start</Trans>
+        </TooltipTypography>
+      ),
+      value: (
+        <FormatLargeNumber value={nft.pool_state.points_found_since_start} />
+      ),
+    },
+    !isSelfPooling && {
+      key: 'points_found_24',
+      label: (
+        <Typography>
+          <Trans>Points Found in Last 24 Hours</Trans>
+        </Typography>
+      ),
+      value: <FormatLargeNumber value={totalPointsFound24} />,
+    },
+  ].filter((row) => !!row);
 
   return (
     <StyledCard>
@@ -176,7 +204,12 @@ export default function PlotNFTCard(props: Props) {
               <More>
                 {({ onClose }) => (
                   <Box>
-                    <MenuItem onClick={() => { onClose(); handleAddPlot(); }}>
+                    <MenuItem
+                      onClick={() => {
+                        onClose();
+                        handleAddPlot();
+                      }}
+                    >
                       <ListItemIcon>
                         <PlotIcon />
                       </ListItemIcon>
@@ -184,7 +217,12 @@ export default function PlotNFTCard(props: Props) {
                         <Trans>Add a Plot</Trans>
                       </Typography>
                     </MenuItem>
-                    <MenuItem onClick={() => { onClose(); handleDeleteUnconfirmedTransactions(); }}>
+                    <MenuItem
+                      onClick={() => {
+                        onClose();
+                        handleDeleteUnconfirmedTransactions();
+                      }}
+                    >
                       <ListItemIcon>
                         <DeleteIcon />
                       </ListItemIcon>
@@ -203,7 +241,9 @@ export default function PlotNFTCard(props: Props) {
                     <Typography variant="body2" color="textSecondary">
                       <Trans>Pool:</Trans>
                     </Typography>
-                    <Link target="_blank" href={pool_url}>{pool_url}</Link>
+                    <Link target="_blank" href={pool_url}>
+                      {pool_url}
+                    </Link>
                   </Flex>
                 )}
               </Typography>
@@ -216,9 +256,7 @@ export default function PlotNFTCard(props: Props) {
             </Flex>
 
             {!isSelfPooling && !!totalPointsFound24 && (
-              <PlotNFTGraph 
-                points={points_found_24h}
-              />
+              <PlotNFTGraph points={points_found_24h} />
             )}
           </Flex>
 
@@ -268,10 +306,11 @@ export default function PlotNFTCard(props: Props) {
                     >
                       <Flex flexDirection="column" gap={1}>
                         <Typography variant="body1">
-                          {isSelfPooling 
-                            ? <Trans>Join Pool</Trans>
-                            : <Trans>Change Pool</Trans>
-                          }
+                          {isSelfPooling ? (
+                            <Trans>Join Pool</Trans>
+                          ) : (
+                            <Trans>Change Pool</Trans>
+                          )}
                         </Typography>
                       </Flex>
                     </Button>
@@ -287,7 +326,8 @@ export default function PlotNFTCard(props: Props) {
           <Flex alignItems="center">
             <Typography variant="body2">
               <Trans>
-                You can still create plots for this plot NFT, but you can not make changes until sync is complete.
+                You can still create plots for this plot NFT, but you can not
+                make changes until sync is complete.
               </Trans>
             </Typography>
           </Flex>

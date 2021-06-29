@@ -13,7 +13,12 @@ export default function FullNodeEstimatedNetworkSpace() {
     <FarmCard
       valueColor="textPrimary"
       title={<Trans>Estimated Network Space</Trans>}
-      tooltip={<Trans>Estimated sum of all the plotted disk space of all farmers in the network</Trans>}
+      tooltip={
+        <Trans>
+          Estimated sum of all the plotted disk space of all farmers in the
+          network
+        </Trans>
+      }
       value={<FormatBytes value={value} precision={3} />}
     />
   );

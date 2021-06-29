@@ -70,7 +70,7 @@ function aggregatePoints(points, hours: number = 2, totalHours: number = 24) {
     });
 
     items.push(item);
-  } 
+  }
 
   return items;
 }
@@ -96,79 +96,82 @@ type Props = {
   points: [number, number][];
 };
 
-
 export default function PlotNFTGraph(props: Props) {
   const { points, title } = props;
   const aggregated = aggregatePoints(points, 2);
 
-  const data = [{
-    id: 'Points',
-    data: aggregated.map(item => ({
-      x: item.x,
-      y: item.y,
-      tooltip: t`${item.y} points ${item.x - 2} - ${item.x} hours ago`,
-    })),
-  }];
+  const data = [
+    {
+      id: 'Points',
+      data: aggregated.map((item) => ({
+        x: item.x,
+        y: item.y,
+        tooltip: t`${item.y} points ${item.x - 2} - ${item.x} hours ago`,
+      })),
+    },
+  ];
 
-  const min = aggregated.length ? Math.min(...aggregated.map(item => item.y)) : 0;
-  const max = Math.max(min, ...aggregated.map(item => item.y));
+  const min = aggregated.length
+    ? Math.min(...aggregated.map((item) => item.y))
+    : 0;
+  const max = Math.max(min, ...aggregated.map((item) => item.y));
   const middle = max / 2;
 
   return (
     <StyledRoot>
       <Flex flexDirection="column" gap={1}>
-      {title && (
-        <Typography variant="body1" color="textSecondary">
-          {title}
-        </Typography>
-      )}
-      <StyledGraphContainer>
-        <ResponsiveLine
-          margin={{ left: 0, top: 2, bottom: 2, right: 0 }}
-          data={data}
-          theme={theme}
-          xScale={{ type: 'point' }}
-          yScale={{
-            type: 'linear',
-            stacked: true,
-            min: 0,
-            max,
-          }}
-          tooltip={({ point }) => (
-            <StyledTooltip>
-              {point?.data?.tooltip}
-            </StyledTooltip>
-          )}
-          colors={{ scheme: 'accent' }}
-          axisTop={null}
-          axisRight={null}
-          axisBottom={null}
-          axisLeft={null /* {
+        {title && (
+          <Typography variant="body1" color="textSecondary">
+            {title}
+          </Typography>
+        )}
+        <StyledGraphContainer>
+          <ResponsiveLine
+            margin={{ left: 0, top: 2, bottom: 2, right: 0 }}
+            data={data}
+            theme={theme}
+            xScale={{ type: 'point' }}
+            yScale={{
+              type: 'linear',
+              stacked: true,
+              min: 0,
+              max,
+            }}
+            tooltip={({ point }) => (
+              <StyledTooltip>{point?.data?.tooltip}</StyledTooltip>
+            )}
+            colors={{ scheme: 'accent' }}
+            axisTop={null}
+            axisRight={null}
+            axisBottom={null}
+            axisLeft={
+              null /* {
             tickValues: [0, max / 2, max],
             tickSize: 0,
             tickPadding: 5,
             tickRotation: 1,
             legend: '',
             legendPosition: 'middle'
-          } */}
-          pointSize={0}
-          pointBorderWidth={0}
-          useMesh={true}
-          curve="monotoneX"
-          defs={[
-            linearGradientDef('gradientA', [
+          } */
+            }
+            pointSize={0}
+            pointBorderWidth={0}
+            useMesh={true}
+            curve="monotoneX"
+            defs={[
+              linearGradientDef('gradientA', [
                 { offset: 0, color: 'inherit' },
                 { offset: 100, color: 'inherit', opacity: 0 },
-            ]),
-          ]}
-          fill={[{ match: '*', id: 'gradientA' }]}
-          areaOpacity={0.3}
-          enableGridX={false}
-          enableGridY={false}
-          enableArea
-        />
+              ]),
+            ]}
+            fill={[{ match: '*', id: 'gradientA' }]}
+            areaOpacity={0.3}
+            enableGridX={false}
+            enableGridY={false}
+            enableArea
+          />
 
-        {/* 
+          {/* 
         <StyledMaxTypography variant="body2" color="textSecondary">
           <FormatLargeNumber value={max} />
         </StyledMaxTypography>
@@ -181,7 +184,7 @@ export default function PlotNFTGraph(props: Props) {
           <FormatLargeNumber value={middle} />
         </StyledMiddleTypography>
         */}
-      </StyledGraphContainer>
+        </StyledGraphContainer>
       </Flex>
     </StyledRoot>
   );

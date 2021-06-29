@@ -10,7 +10,9 @@ export default function FullNodeCardPeakTime() {
     (state: RootState) => state.full_node_state.latest_peak_timestamp,
   );
 
-  const value = latestPeakTimestamp ? unix_to_short_date(latestPeakTimestamp) : '';
+  const value = latestPeakTimestamp
+    ? unix_to_short_date(latestPeakTimestamp)
+    : '';
 
   return (
     <FarmCard

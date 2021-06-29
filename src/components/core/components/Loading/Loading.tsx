@@ -1,5 +1,9 @@
 import React, { ReactNode } from 'react';
-import { CircularProgress, CircularProgressProps, Typography } from '@material-ui/core';
+import {
+  CircularProgress,
+  CircularProgressProps,
+  Typography,
+} from '@material-ui/core';
 import styled from 'styled-components';
 import Flex from '../Flex';
 
@@ -26,7 +30,5 @@ export default function Loading(props: Props) {
     );
   }
 
-  return (
-    <StyledCircularProgress {...rest} />
-  );
+  return <StyledCircularProgress {...rest} />;
 }

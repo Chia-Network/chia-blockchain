@@ -15,10 +15,7 @@ import {
 import { AlertDialog, Card, Flex } from '@chia/core';
 import isElectron from 'is-electron';
 import { newBuy, newSell, addTrade, resetTrades } from '../../modules/trade';
-import {
-  chia_to_mojo,
-  colouredcoin_to_mojo,
-} from '../../util/chia';
+import { chia_to_mojo, colouredcoin_to_mojo } from '../../util/chia';
 import { openDialog } from '../../modules/dialog';
 import { create_trade_action } from '../../modules/trade_messages';
 import { COLOURED_COIN } from '../../util/wallet_types';
@@ -30,9 +27,7 @@ const TradeList = () => {
 
   const tradeRows = useMemo(() => {
     return trades.map((trade) => ({
-      amount: trade.side === 'sell'
-        ? -trade.amount
-        : trade.amount,
+      amount: trade.side === 'sell' ? -trade.amount : trade.amount,
       name: wallets[trade.wallet_id].name,
     }));
   }, [trades]);
@@ -41,9 +36,7 @@ const TradeList = () => {
     return null;
   }
 
-  return (
-    <TradesTable rows={tradeRows} />
-  );
+  return <TradesTable rows={tradeRows} />;
 };
 
 export default function CreateOffer() {
@@ -60,10 +53,8 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans>
-              Please select coin colour
-            </Trans>
-          </AlertDialog>
+            <Trans>Please select coin colour</Trans>
+          </AlertDialog>,
         ),
       );
       return;
@@ -73,7 +64,7 @@ export default function CreateOffer() {
         openDialog(
           <AlertDialog>
             <Trans>Please select amount</Trans>
-          </AlertDialog>
+          </AlertDialog>,
         ),
       );
       return;
@@ -82,21 +73,21 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans>
-              Please select buy or sell
-            </Trans>
-          </AlertDialog>
+            <Trans>Please select buy or sell</Trans>
+          </AlertDialog>,
         ),
       );
       return;
     }
-    const mojo = wallets[wallet_id.value].type === COLOURED_COIN
-      ? colouredcoin_to_mojo(amount_input.value)
-      : chia_to_mojo(amount_input.value);
+    const mojo =
+      wallets[wallet_id.value].type === COLOURED_COIN
+        ? colouredcoin_to_mojo(amount_input.value)
+        : chia_to_mojo(amount_input.value);
 
-    const trade = buy_or_sell.value === 1
-      ? newBuy(mojo, wallet_id.value)
-      : newSell(mojo, wallet_id.value);
+    const trade =
+      buy_or_sell.value === 1
+        ? newBuy(mojo, wallet_id.value)
+        : newSell(mojo, wallet_id.value);
 
     dispatch(addTrade(trade));
   }
@@ -107,7 +98,7 @@ export default function CreateOffer() {
         openDialog(
           <AlertDialog>
             <Trans>Please add a trade pair</Trans>
-          </AlertDialog>
+          </AlertDialog>,
         ),
       );
       return;
@@ -129,10 +120,8 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans>
-              This feature is available only from the GUI.
-            </Trans>
-          </AlertDialog>
+            <Trans>This feature is available only from the GUI.</Trans>
+          </AlertDialog>,
         ),
       );
     }
@@ -144,32 +133,22 @@ export default function CreateOffer() {
   return (
     <Card
       title={<Trans>Create Trade Offer</Trans>}
-      actions={(
+      actions={
         <>
-          <Button
-            onClick={handleCancel}
-            variant="outlined"
-          >
+          <Button onClick={handleCancel} variant="outlined">
             <Trans>Cancel</Trans>
           </Button>
-          <Button
-            onClick={handleSave}
-            variant="contained"
-            color="primary"
-          >
+          <Button onClick={handleSave} variant="contained" color="primary">
             <Trans>Save</Trans>
           </Button>
         </>
-      )}
+      }
     >
       <Flex flexDirection="column" gap={3}>
         <TradeList />
         <Grid spacing={2} container>
           <Grid item xs={6}>
-            <FormControl
-              fullWidth
-              variant="outlined"
-            >
+            <FormControl fullWidth variant="outlined">
               <InputLabel required>
                 <Trans>Side</Trans>
               </InputLabel>
@@ -178,16 +157,17 @@ export default function CreateOffer() {
                   buy_or_sell = input;
                 }}
               >
-                <MenuItem value={1}><Trans>Buy</Trans></MenuItem>
-                <MenuItem value={2}><Trans>Sell</Trans></MenuItem>
+                <MenuItem value={1}>
+                  <Trans>Buy</Trans>
+                </MenuItem>
+                <MenuItem value={2}>
+                  <Trans>Sell</Trans>
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={6}>
-            <FormControl
-              fullWidth
-              variant="outlined"
-            >
+            <FormControl fullWidth variant="outlined">
               <InputLabel required>
                 <Trans>Colour</Trans>
               </InputLabel>
@@ -196,9 +176,12 @@ export default function CreateOffer() {
                   wallet_id = input;
                 }}
               >
-                {!!wallets && wallets.map((wallet) => (
-                  <MenuItem value={wallet.id} key={wallet.id}>{wallet.name}</MenuItem>
-                ))}
+                {!!wallets &&
+                  wallets.map((wallet) => (
+                    <MenuItem value={wallet.id} key={wallet.id}>
+                      {wallet.name}
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>
@@ -214,11 +197,7 @@ export default function CreateOffer() {
                   variant="filled"
                 />
               </Box>
-              <Button
-                onClick={handleAdd}
-                variant="contained"
-                disableElevation
-              >
+              <Button onClick={handleAdd} variant="contained" disableElevation>
                 <Trans>Add</Trans>
               </Button>
             </Flex>

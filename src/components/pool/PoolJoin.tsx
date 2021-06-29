@@ -9,19 +9,17 @@ import useOpenDialog from '../../hooks/useOpenDialog';
 type Props = {
   nft: PlotNFT;
   children: (data: {
-    join: () => Promise<void>,
-    disabled: boolean,
-  }) => JSX.Element,
+    join: () => Promise<void>;
+    disabled: boolean;
+  }) => JSX.Element;
 };
 
 export default function PoolJoin(props: Props) {
-  const { 
+  const {
     children,
     nft,
     nft: {
-      pool_state: {
-        p2_singleton_puzzle_hash,
-      },
+      pool_state: { p2_singleton_puzzle_hash },
     },
   } = props;
   const { canEdit, balance, isSelfPooling } = usePlotNFTDetails(nft);
@@ -37,7 +35,7 @@ export default function PoolJoin(props: Props) {
       );
       return;
     }
-  
+
     history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/change-pool`);
   }
 

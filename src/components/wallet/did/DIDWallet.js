@@ -290,11 +290,13 @@ const RecoveryCard = (props) => {
   let recovery_files = [];
 
   function handleDrop(acceptedFiles) {
-    if (acceptedFiles.length === 0) { return; }
-    console.log("FILE: ", acceptedFiles)
+    if (acceptedFiles.length === 0) {
+      return;
+    }
+    console.log('FILE: ', acceptedFiles);
     const offer_file_path = acceptedFiles[0].path;
-    recovery_files.push(offer_file_path)
-    console.log("RECOVERY FILES", recovery_files)
+    recovery_files.push(offer_file_path);
+    console.log('RECOVERY FILES', recovery_files);
 
     const offer_name = offer_file_path.replace(/^.*[/\\]/, '');
 
@@ -350,9 +352,9 @@ const RecoveryCard = (props) => {
           <Dropzone onDrop={handleDrop}>
             {({ isDragActive, isDragReject, acceptedFiles, rejectedFiles }) => {
               if (recovery_files.length === 0) {
-                return <p>Try dragging a file here!</p>
+                return <p>Try dragging a file here!</p>;
               }
-              return recovery_files.map((file) => (file));
+              return recovery_files.map((file) => file);
             }}
           </Dropzone>
         </Grid>

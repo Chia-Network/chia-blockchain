@@ -1,10 +1,22 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import { Folder as FolderIcon, Delete as DeleteIcon } from '@material-ui/icons';
 import {
-  Folder as FolderIcon,
-  Delete as DeleteIcon,
-} from '@material-ui/icons';
-import { Avatar, Box, Button, Dialog, DialogActions, DialogTitle, DialogContent, IconButton, List, ListItem, ListItemAvatar, ListItemSecondaryAction, ListItemText, Typography } from '@material-ui/core';
+  Avatar,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  ListItemText,
+  Typography,
+} from '@material-ui/core';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   add_plot_directory_and_refresh,

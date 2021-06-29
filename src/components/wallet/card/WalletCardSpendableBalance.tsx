@@ -21,9 +21,7 @@ export default function WalletCardSpendableBalance(props: Props) {
     <FarmCard
       loading={loading}
       valueColor="secondary"
-      title={
-        <Trans>Spendable Balance</Trans>
-      }
+      title={<Trans>Spendable Balance</Trans>}
       tooltip={
         <Trans>
           This is the amount of Chia that you can currently use to make
@@ -32,7 +30,11 @@ export default function WalletCardSpendableBalance(props: Props) {
           yet in the blockchain.
         </Trans>
       }
-      value={<>{mojo_to_chia_string(value)} {currencyCode}</>}
+      value={
+        <>
+          {mojo_to_chia_string(value)} {currencyCode}
+        </>
+      }
     />
   );
 }

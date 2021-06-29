@@ -30,7 +30,7 @@ type Props = {
 export default function Log(props: Props) {
   const { children } = props;
 
-  return ( 
+  return (
     <StyledPaper>
       <StyledScrollToBottom debug={false}>
         <pre>{children}</pre>

@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
-import { createGlobalStyle } from 'styled-components'
+import { createGlobalStyle } from 'styled-components';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
@@ -15,7 +15,12 @@ import { exit_and_close } from '../../modules/message';
 import useLocale from '../../hooks/useLocale';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
-import { i18n, activateLocale, defaultLocale, getMaterialLocale } from '../../config/locales';
+import {
+  i18n,
+  activateLocale,
+  defaultLocale,
+  getMaterialLocale,
+} from '../../config/locales';
 import Fonts from './fonts/Fonts';
 
 const GlobalStyle = createGlobalStyle`
@@ -38,19 +43,17 @@ const GlobalStyle = createGlobalStyle`
 export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale(defaultLocale);
-  
+
   const theme = useMemo(() => {
     const material = getMaterialLocale(locale);
-    return darkMode
-      ? darkTheme(material)
-      : lightTheme(material);
+    return darkMode ? darkTheme(material) : lightTheme(material);
   }, [locale, darkMode]);
 
   // get the daemon's uri from global storage (put there by loadConfig)
   let daemon_uri = null;
   if (isElectron()) {
     const electron = window.require('electron');
-    const { remote : r } = electron;
+    const { remote: r } = electron;
     daemon_uri = r.getGlobal('daemon_rpc_ws');
   }
 

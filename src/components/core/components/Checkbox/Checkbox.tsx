@@ -18,12 +18,12 @@ const ParseBoolean = (props: CheckboxProps) => {
   }
 
   return <MaterialCheckbox onChange={handleChange} {...rest} />;
-}
+};
 
 type Props = {
-  name: string,
-  label?: ReactNode,
-  value?: any,
+  name: string;
+  label?: ReactNode;
+  value?: any;
 };
 
 export default function Checkbox(props: Props): JSX.Element {
@@ -32,12 +32,7 @@ export default function Checkbox(props: Props): JSX.Element {
 
   return (
     // @ts-ignore
-    <Controller
-      as={<ParseBoolean />}
-      name={name}
-      control={control}
-      {...rest}
-    />
+    <Controller as={<ParseBoolean />} name={name} control={control} {...rest} />
   );
 }
 

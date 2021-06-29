@@ -25,30 +25,41 @@ export default function PlotNFTChangePool(props: Props) {
   const dispatch = useDispatch();
   const history = useHistory();
   const nft = useMemo(() => {
-    return nfts?.find(nft => nft.pool_state.p2_singleton_puzzle_hash === plotNFTId);
+    return nfts?.find(
+      (nft) => nft.pool_state.p2_singleton_puzzle_hash === plotNFTId,
+    );
   }, [nfts, plotNFTId]);
-
 
   async function handleSubmit(data: SubmitData) {
     const walletId = nft?.pool_wallet_status.wallet_id;
 
-    const { 
+    const {
       initialTargetState: {
         state,
         pool_url,
         relative_lock_height,
         target_puzzle_hash,
-      }
+      },
     } = data;
 
-    if (walletId === undefined || pool_url === nft?.pool_state.pool_config.pool_url) {
+    if (
+      walletId === undefined ||
+      pool_url === nft?.pool_state.pool_config.pool_url
+    ) {
       return;
     }
 
     if (state === 'SELF_POOLING') {
       await dispatch(pwSelfPool(walletId));
     } else {
-      await dispatch(pwJoinPool(walletId, pool_url, relative_lock_height, target_puzzle_hash));
+      await dispatch(
+        pwJoinPool(
+          walletId,
+          pool_url,
+          relative_lock_height,
+          target_puzzle_hash,
+        ),
+      );
     }
 
     if (history.length) {
@@ -68,15 +79,15 @@ export default function PlotNFTChangePool(props: Props) {
 
   if (!nft) {
     return (
-      <Trans>Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists</Trans>
+      <Trans>
+        Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists
+      </Trans>
     );
   }
 
-  const { 
+  const {
     pool_state: {
-      pool_config: {
-        pool_url,
-      },
+      pool_config: { pool_url },
     },
   } = nft;
 

@@ -1,35 +1,54 @@
 import React, { ChangeEvent, ReactElement, ReactNode, forwardRef } from 'react';
 import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
-import { RadioGroup as MaterialRadioGroup, RadioGroupProps } from '@material-ui/core';
+import {
+  RadioGroup as MaterialRadioGroup,
+  RadioGroupProps,
+} from '@material-ui/core';
 
-type ReactRules<T> = ControllerProps<ReactElement<T>>['rules'] | {
-  min?: number | string | {
-    value: number,
-    message: ReactNode,
-  },
-  max?: number | string | {
-    value: number,
-    message: ReactNode,
-  },
-  minLength?: number | string | {
-    value: number,
-    message: ReactNode,
-  },
-  maxLength?: number | string | {
-    value: number,
-    message: ReactNode,
-  },
-  required?: boolean | {
-    value: boolean,
-    message: ReactNode,
-  },
-};
+type ReactRules<T> =
+  | ControllerProps<ReactElement<T>>['rules']
+  | {
+      min?:
+        | number
+        | string
+        | {
+            value: number;
+            message: ReactNode;
+          };
+      max?:
+        | number
+        | string
+        | {
+            value: number;
+            message: ReactNode;
+          };
+      minLength?:
+        | number
+        | string
+        | {
+            value: number;
+            message: ReactNode;
+          };
+      maxLength?:
+        | number
+        | string
+        | {
+            value: number;
+            message: ReactNode;
+          };
+      required?:
+        | boolean
+        | {
+            value: boolean;
+            message: ReactNode;
+          };
+    };
 
 type Props = RadioGroupProps & {
-  hideError?: boolean,
-  name: string,
-  rules?: ReactRules<typeof MaterialRadioGroup>,
-  boolean?: boolean,
+  hideError?: boolean;
+  name: string;
+  rules?: ReactRules<typeof MaterialRadioGroup>;
+  boolean?: boolean;
 };
 
 const ParseBoolean = forwardRef((props: RadioGroupProps, ref) => {

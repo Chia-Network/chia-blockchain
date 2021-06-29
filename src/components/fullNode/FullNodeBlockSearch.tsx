@@ -32,10 +32,7 @@ export default function FullNodeBlockSearch() {
   }
 
   return (
-    <Form
-      methods={methods}
-      onSubmit={handleSubmit}
-    >
+    <Form methods={methods} onSubmit={handleSubmit}>
       <Paper elevation={0} variant="outlined">
         <Flex alignItems="center" gap={1}>
           <Box />

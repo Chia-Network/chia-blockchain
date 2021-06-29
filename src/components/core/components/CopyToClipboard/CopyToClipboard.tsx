@@ -27,9 +27,11 @@ export default function CopyToClipboard(props: Props) {
     timeout.start();
   }
 
-  const tooltipTitle = copied 
-    ? <Trans>Copied</Trans>
-    : <Trans>Copy to Clipboard</Trans>
+  const tooltipTitle = copied ? (
+    <Trans>Copied</Trans>
+  ) : (
+    <Trans>Copy to Clipboard</Trans>
+  );
 
   return (
     <Tooltip title={tooltipTitle}>

@@ -45,9 +45,11 @@ export default function SideBarItem(props: Props) {
 
   return (
     <StyledListItem button selected={isSelected} onClick={() => handleClick()}>
-      <StyledListItemIcon>{cloneElement(icon, {
-        color: isSelected ? 'primary' : 'inherit',
-      })}</StyledListItemIcon>
+      <StyledListItemIcon>
+        {cloneElement(icon, {
+          color: isSelected ? 'primary' : 'inherit',
+        })}
+      </StyledListItemIcon>
       <StyledListItemText primary={title} />
     </StyledListItem>
   );

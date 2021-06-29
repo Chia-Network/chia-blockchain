@@ -13,10 +13,18 @@ type Props = {
 };
 
 export default function FormatBytes(props: Props) {
-  const { value, mode, precision, unit, unitSeparator, removeUnit, fixedDecimals } = props;
+  const {
+    value,
+    mode,
+    precision,
+    unit,
+    unitSeparator,
+    removeUnit,
+    fixedDecimals,
+  } = props;
   const humanValue = bytes(value, {
     unit,
-    mode, 
+    mode,
     decimalPlaces: precision,
     unitSeparator,
     fixedDecimals,

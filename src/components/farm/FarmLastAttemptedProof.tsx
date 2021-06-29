@@ -36,44 +36,49 @@ const cols = [
 export default function FarmLastAttemptedProof() {
   const { size } = usePlots();
 
-  const lastAttemtedProof = useSelector((state: RootState) => state.farming_state.farmer.last_farming_info ?? []);
+  const lastAttemtedProof = useSelector(
+    (state: RootState) => state.farming_state.farmer.last_farming_info ?? [],
+  );
   const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 5);
   const isEmpty = !reducedLastAttemtedProof.length;
 
   return (
     <Card
-      title={(
+      title={<Trans>Last Attempted Proof</Trans>}
+      tooltip={
         <Trans>
-          Last Attempted Proof
+          This table shows you the last time your farm attempted to win a block
+          challenge.{' '}
+          <Link
+            target="_blank"
+            href="https://github.com/Chia-Network/chia-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it"
+          >
+            Learn more
+          </Link>
         </Trans>
-      )}
-      tooltip={(
-        <Trans>
-          This table shows you the last time your farm attempted to win a block challenge.{' '}
-          <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it">Learn more</Link>
-        </Trans>
-      )}
+      }
       interactive
     >
       <Table
         cols={cols}
         rows={reducedLastAttemtedProof}
-        caption={isEmpty && (
-          <Typography>
-            <Trans>
-              None of your plots have passed the plot filter yet.
-            </Trans>
+        caption={
+          isEmpty && (
+            <Typography>
+              <Trans>None of your plots have passed the plot filter yet.</Trans>
 
-            {!!size && (
-              <>
-                {' '}
-                <Trans>
-                  But you are currently farming <FormatBytes value={size} precision={3} />
-                </Trans>
-              </>
-            )}
-          </Typography>
-        )}
+              {!!size && (
+                <>
+                  {' '}
+                  <Trans>
+                    But you are currently farming{' '}
+                    <FormatBytes value={size} precision={3} />
+                  </Trans>
+                </>
+              )}
+            </Typography>
+          )
+        }
       />
     </Card>
   );

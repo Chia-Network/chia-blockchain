@@ -12,7 +12,7 @@ const StyledContainer = styled(Container)`
 `;
 
 const StyledInnerContainer = styled(Flex)`
-  box-shadow: inset 6px 0 8px -8px rgba(0,0,0,0.2);
+  box-shadow: inset 6px 0 8px -8px rgba(0, 0, 0, 0.2);
   flex-grow: 1;
 `;
 
@@ -34,10 +34,17 @@ export default function LayoutMain(props: Props) {
         <StyledContainer maxWidth="lg">
           <Flex flexDirection="column" gap={2} flexGrow="1">
             {loading ? (
-              <Flex flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
+              <Flex
+                flexDirection="column"
+                flexGrow={1}
+                alignItems="center"
+                justifyContent="center"
+              >
                 <Loading>{loadingTitle}</Loading>
               </Flex>
-            ) : children}
+            ) : (
+              children
+            )}
           </Flex>
         </StyledContainer>
       </StyledInnerContainer>

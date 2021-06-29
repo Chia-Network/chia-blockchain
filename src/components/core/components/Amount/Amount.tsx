@@ -1,6 +1,11 @@
 import React, { ReactNode } from 'react';
 import { Trans, Plural } from '@lingui/macro';
-import { Box, InputAdornment, FormControl, FormHelperText } from '@material-ui/core';
+import {
+  Box,
+  InputAdornment,
+  FormControl,
+  FormHelperText,
+} from '@material-ui/core';
 import { useWatch, useFormContext } from 'react-hook-form';
 import TextField, { TextFieldProps } from '../TextField';
 import { chia_to_mojo } from '../../../../util/chia';
@@ -9,7 +14,7 @@ import FormatLargeNumber from '../FormatLargeNumber';
 import Flex from '../Flex';
 
 export type AmountProps = TextFieldProps & {
-  children?: (props: { mojo: number, value: string | undefined }) => ReactNode;
+  children?: (props: { mojo: number; value: string | undefined }) => ReactNode;
   name?: string;
 };
 
@@ -26,16 +31,15 @@ export default function Amount(props: AmountProps) {
   const mojo = chia_to_mojo(value);
 
   return (
-    <FormControl
-      variant={variant}
-      fullWidth={fullWidth}
-    >
+    <FormControl variant={variant} fullWidth={fullWidth}>
       <TextField
         name={name}
         variant={variant}
         type="text"
         InputProps={{
-          endAdornment: <InputAdornment position="end">{currencyCode}</InputAdornment>,
+          endAdornment: (
+            <InputAdornment position="end">{currencyCode}</InputAdornment>
+          ),
         }}
         {...rest}
       />
@@ -48,10 +52,11 @@ export default function Amount(props: AmountProps) {
                 <Plural value={mojo} one="mojo" other="mojos" />
               </Box>
             </Flex>
-            {children && children({
-              mojo,
-              value,
-            })}
+            {children &&
+              children({
+                mojo,
+                value,
+              })}
           </Flex>
         </FormHelperText>
       )}

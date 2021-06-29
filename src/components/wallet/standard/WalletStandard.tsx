@@ -1,6 +1,16 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { More, Amount, Fee, Form, TextField as ChiaTextField, AlertDialog, CopyToClipboard, Flex, Card } from '@chia/core';
+import {
+  More,
+  Amount,
+  Fee,
+  Form,
+  TextField as ChiaTextField,
+  AlertDialog,
+  CopyToClipboard,
+  Flex,
+  Card,
+} from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import isNumeric from 'validator/es/lib/isNumeric';
@@ -238,8 +248,8 @@ type BalanceCardProps = {
 function BalanceCard(props: BalanceCardProps) {
   const { wallet_id } = props;
 
-  const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
+  const wallet = useSelector((state: RootState) =>
+    state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
 
   const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
@@ -367,8 +377,8 @@ function SendCard(props: SendCardProps) {
     (state: RootState) => state.wallet_state.status.syncing,
   );
 
-  const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
+  const wallet = useSelector((state: RootState) =>
+    state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
 
   if (!wallet) {
@@ -463,21 +473,17 @@ function SendCard(props: SendCardProps) {
   return (
     <Card
       title={<Trans>Create Transaction</Trans>}
-      tooltip={(
+      tooltip={
         <Trans>
-          On average there is one minute between each transaction block.
-          Unless there is congestion you can expect your transaction to be included in less than a minute.
+          On average there is one minute between each transaction block. Unless
+          there is congestion you can expect your transaction to be included in
+          less than a minute.
         </Trans>
-      )}
+      }
     >
-      {result_message && (
-        <p className={result_class}>{result_message}</p>
-      )}
+      {result_message && <p className={result_class}>{result_message}</p>}
 
-      <Form
-        methods={methods}
-        onSubmit={handleSubmit}
-      >
+      <Form methods={methods} onSubmit={handleSubmit}>
         <Grid spacing={2} container>
           <Grid xs={12} item>
             <ChiaTextField
@@ -514,10 +520,7 @@ function SendCard(props: SendCardProps) {
           <Grid xs={12} item>
             <Flex justifyContent="flex-end" gap={1}>
               {!!config.local_test && (
-                <Button
-                  onClick={farm}
-                  variant="outlined"
-                >
+                <Button onClick={farm} variant="outlined">
                   <Trans>Farm</Trans>
                 </Button>
               )}
@@ -547,8 +550,8 @@ function AddressCard(props: AddressCardProps) {
 
   const classes = useStyles();
   const dispatch = useDispatch();
-  const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets?.find((item) => item.id === wallet_id),
+  const wallet = useSelector((state: RootState) =>
+    state.wallet_state.wallets?.find((item) => item.id === wallet_id),
   );
 
   if (!wallet) {
@@ -566,21 +569,22 @@ function AddressCard(props: AddressCardProps) {
   }
 
   return (
-    <Card 
+    <Card
       title={<Trans>Receive Address</Trans>}
-      action={(
-        <Button
-          onClick={newAddress}
-          variant="outlined"
-        >
+      action={
+        <Button onClick={newAddress} variant="outlined">
           <Trans>New Address</Trans>
         </Button>
-      )}
-      tooltip={(
+      }
+      tooltip={
         <Trans>
-          HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key.
+          HD or Hierarchical Deterministic keys are a type of public key/private
+          key scheme where one private key can have a nearly infinite number of
+          different public keys (and therefor wallet receive addresses) that
+          will all ultimately come back to and be spendable by a single private
+          key.
         </Trans>
-      )}
+      }
     >
       <Grid item xs={12}>
         <Box display="flex">
@@ -592,7 +596,7 @@ function AddressCard(props: AddressCardProps) {
               InputProps={{
                 readOnly: true,
                 endAdornment: (
-                  <InputAdornment position='end'>
+                  <InputAdornment position="end">
                     <CopyToClipboard value={address} />
                   </InputAdornment>
                 ),
@@ -628,7 +632,12 @@ export default function StandardWallet(props: StandardWalletProps) {
         <More>
           {({ onClose }) => (
             <Box>
-              <MenuItem onClick={() => { onClose(); handleDeleteUnconfirmedTransactions(); }}>
+              <MenuItem
+                onClick={() => {
+                  onClose();
+                  handleDeleteUnconfirmedTransactions();
+                }}
+              >
                 <ListItemIcon>
                   <DeleteIcon />
                 </ListItemIcon>
@@ -644,9 +653,7 @@ export default function StandardWallet(props: StandardWalletProps) {
       <Flex flexDirection="column" gap={2}>
         <Flex gap={1} justifyContent="flex-end">
           <Typography variant="body1" color="textSecondary">
-            <Trans>
-              Wallet Status:
-            </Trans>
+            <Trans>Wallet Status:</Trans>
           </Typography>
           <WalletStatus height />
         </Flex>

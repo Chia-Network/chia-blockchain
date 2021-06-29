@@ -57,7 +57,7 @@ export default function Flex(props: Props) {
 
   return (
     <StyledGapBox
-      display={inline ? 'inline-flex' :'flex'}
+      display={inline ? 'inline-flex' : 'flex'}
       flexDirection={flexDirection}
       rowGap={rowGapValue}
       columnGap={columnGapValue}

@@ -1,50 +1,49 @@
 import React from 'react';
-import {
-  TextField,
-  TextFieldProps,
-} from '@material-ui/core';
+import { TextField, TextFieldProps } from '@material-ui/core';
 import { get } from 'lodash';
-import { Autocomplete as MaterialAutocomplete, AutocompleteProps } from '@material-ui/lab';
+import {
+  Autocomplete as MaterialAutocomplete,
+  AutocompleteProps,
+} from '@material-ui/lab';
 import { matchSorter } from 'match-sorter';
 import { useController, useFormContext } from 'react-hook-form';
 import type { ReactRules } from '../TextField/TextField';
 
-const filterOptions = (options: string[], { inputValue }: { inputValue: string }) =>
+const filterOptions = (
+  options: string[],
+  { inputValue }: { inputValue: string },
+) =>
   matchSorter(options, inputValue, {
     threshold: matchSorter.rankings.STARTS_WITH,
   });
 
-type Props = TextFieldProps & AutocompleteProps<string, false, false, true> & {
-  name: string;
-  defaultValue?: any;
-  // shouldUnregister?: boolean;
-  fullWidth?: boolean;
-  freeSolo?: boolean;
-  rules?: ReactRules<typeof MaterialAutocomplete>;
-  renderInput?: any;
-};
+type Props = TextFieldProps &
+  AutocompleteProps<string, false, false, true> & {
+    name: string;
+    defaultValue?: any;
+    // shouldUnregister?: boolean;
+    fullWidth?: boolean;
+    freeSolo?: boolean;
+    rules?: ReactRules<typeof MaterialAutocomplete>;
+    renderInput?: any;
+  };
 
 export default function Autocomplete(props: Props) {
-  const { 
-    name, 
-    defaultValue, 
-    rules, 
-    options, 
-    // shouldUnregister, 
-    fullWidth, 
+  const {
+    name,
+    defaultValue,
+    rules,
+    options,
+    // shouldUnregister,
+    fullWidth,
     freeSolo,
     forcePopupIcon,
     onChange: defaultOnChange,
-    ...rest 
+    ...rest
   } = props;
   const { control, errors } = useFormContext();
   const {
-    field: {
-      onChange,
-      onBlur,
-      value,
-      ref,
-    },
+    field: { onChange, onBlur, value, ref },
     /*
     fieldState: {
       error,
@@ -66,7 +65,7 @@ export default function Autocomplete(props: Props) {
       defaultOnChange(updatedValue);
     }
   }
-  
+
   const errorMessage = get(errors, name);
 
   return (

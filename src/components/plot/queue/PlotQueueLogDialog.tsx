@@ -1,6 +1,14 @@
 import React, { useEffect, useState, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Button, Dialog, DialogActions, DialogTitle, DialogContent, LinearProgress, Typography } from '@material-ui/core';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
+  LinearProgress,
+  Typography,
+} from '@material-ui/core';
 import { Flex, Log } from '@chia/core';
 import styled from 'styled-components';
 import type { RootState } from '../../../modules/rootReducer';
@@ -20,13 +28,16 @@ type Props = {
 
 export default function PlotQueueLogDialog(props: Props) {
   const { id, open, onClose } = props;
-  const queueItem = useThrottleSelector((state: RootState) => state.plot_queue.queue.find((item) => item.id === id), { 
-    wait: 2000,
-    force(_data, _dataBefore, state) {
-      const event = state.plot_queue?.event;
-      return event === 'state_changed';
+  const queueItem = useThrottleSelector(
+    (state: RootState) => state.plot_queue.queue.find((item) => item.id === id),
+    {
+      wait: 2000,
+      force(_data, _dataBefore, state) {
+        const event = state.plot_queue?.event;
+        return event === 'state_changed';
+      },
     },
-  });
+  );
   const [log, setLog] = useState<ReactNode>(<Trans>Loading...</Trans>);
 
   useEffect(() => {
@@ -49,9 +60,7 @@ export default function PlotQueueLogDialog(props: Props) {
       open={open}
     >
       <DialogTitle id="confirmation-dialog-title">
-        <Trans>
-          View Log
-        </Trans>
+        <Trans>View Log</Trans>
       </DialogTitle>
 
       <DialogContent dividers>
@@ -59,23 +68,25 @@ export default function PlotQueueLogDialog(props: Props) {
           {!!queueItem && queueItem.progress !== undefined && (
             <Flex gap={1} alignItems="center">
               <Flex flexGrow={1}>
-                <StyledLinearProgress variant="determinate" value={queueItem.progress * 100} color="secondary" />
+                <StyledLinearProgress
+                  variant="determinate"
+                  value={queueItem.progress * 100}
+                  color="secondary"
+                />
               </Flex>
               <Flex>
                 <Typography variant="body2" color="textSecondary">
                   {`${Math.round(queueItem.progress * 100)}%`}
                 </Typography>
               </Flex>
-            </Flex>  
+            </Flex>
           )}
           <Log>{log}</Log>
         </Flex>
       </DialogContent>
       <DialogActions>
         <Button autoFocus onClick={handleClose} color="secondary">
-          <Trans>
-            Close
-          </Trans>
+          <Trans>Close</Trans>
         </Button>
       </DialogActions>
     </Dialog>

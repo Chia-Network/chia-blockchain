@@ -2,10 +2,13 @@ import React from 'react';
 import styled from 'styled-components';
 import { darken } from 'polished';
 import { useHistory } from 'react-router-dom';
-import { Button as BaseButton, ButtonProps as BaseButtonProps } from '@material-ui/core';
+import {
+  Button as BaseButton,
+  ButtonProps as BaseButtonProps,
+} from '@material-ui/core';
 
 const StyledBaseButton = styled(BaseButton)`
-  white-space: ${({ nowrap }) => nowrap ? 'nowrap' : 'normal'};
+  white-space: ${({ nowrap }) => (nowrap ? 'nowrap' : 'normal')};
 `;
 
 function getColor(theme, variant) {
@@ -19,15 +22,17 @@ function getColor(theme, variant) {
 
 const DangerButton = styled(StyledBaseButton)`
   color: ${({ theme, variant }) => getColor(theme, variant)};
-  ${({ theme, variant }) => variant === 'contained'
-    ? `background-color: ${theme.palette.danger.main};`
-    : undefined}
-
-  &:hover {
-    color: ${({ theme, variant }) =>  getColor(theme, variant)};
-    ${({ theme, variant }) => variant === 'contained'
+  ${({ theme, variant }) =>
+    variant === 'contained'
       ? `background-color: ${theme.palette.danger.main};`
       : undefined}
+
+  &:hover {
+    color: ${({ theme, variant }) => getColor(theme, variant)};
+    ${({ theme, variant }) =>
+      variant === 'contained'
+        ? `background-color: ${theme.palette.danger.main};`
+        : undefined}
   }
 `;
 
@@ -55,9 +60,13 @@ export default function Button(props: ButtonProps) {
     case 'danger':
       return <DangerButton onClick={handleClick} {...rest} />;
     case 'primary':
-      return <StyledBaseButton onClick={handleClick} color="primary" {...rest} />;
+      return (
+        <StyledBaseButton onClick={handleClick} color="primary" {...rest} />
+      );
     case 'secondary':
-      return <StyledBaseButton onClick={handleClick} color="secondary" {...rest} />;
+      return (
+        <StyledBaseButton onClick={handleClick} color="secondary" {...rest} />
+      );
     default:
       return <StyledBaseButton onClick={handleClick} {...rest} />;
   }

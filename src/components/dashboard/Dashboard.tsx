@@ -32,11 +32,11 @@ const StyledAppBar = styled(AppBar)`
   box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
   width: ${({ theme }) => `calc(100% - ${theme.drawer.width})`};
   margin-left: ${({ theme }) => theme.drawer.width};
-  z-index: ${({ theme}) => theme.zIndex.drawer + 1};
+  z-index: ${({ theme }) => theme.zIndex.drawer + 1};
 `;
 
 const StyledDrawer = styled(Drawer)`
-  z-index: ${({ theme}) => theme.zIndex.drawer + 2};
+  z-index: ${({ theme }) => theme.zIndex.drawer + 2};
   width: ${({ theme }) => theme.drawer.width};
   flex-shrink: 0;
 

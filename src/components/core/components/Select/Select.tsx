@@ -4,8 +4,8 @@ import { Controller, useFormContext } from 'react-hook-form';
 import { Select as MaterialSelect, SelectProps } from '@material-ui/core';
 
 type Props = SelectProps & {
-  hideError?: boolean,
-  name: string,
+  hideError?: boolean;
+  name: string;
 };
 
 export default function Select(props: Props) {

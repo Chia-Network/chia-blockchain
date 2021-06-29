@@ -3,7 +3,7 @@ import { Button, ButtonProps } from '@chia/core';
 import { Check as CheckIcon } from '@material-ui/icons';
 
 type Props = ButtonProps & {
-  selected?: boolean,
+  selected?: boolean;
 };
 
 export default function ButtonSelected(props: Props) {
@@ -14,11 +14,11 @@ export default function ButtonSelected(props: Props) {
     <Button color={color} {...rest}>
       {selected ? (
         <>
-          <CheckIcon />
-          {' '}
-          {children}
+          <CheckIcon /> {children}
         </>
-      ) : children}
+      ) : (
+        children
+      )}
     </Button>
   );
 }

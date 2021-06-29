@@ -34,7 +34,7 @@ export const startPlotting = (
   overrideK,
   f,
   p,
-  c
+  c,
 ) => {
   const action = daemonMessage();
   action.message.command = 'start_plotting';

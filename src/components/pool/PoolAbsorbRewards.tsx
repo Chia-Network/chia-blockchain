@@ -5,25 +5,23 @@ import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
 type Props = {
   nft: PlotNFT;
   children: (data: {
-    absorb: () => Promise<void>,
-    disabled: boolean,
-  }) => JSX.Element,
+    absorb: () => Promise<void>;
+    disabled: boolean;
+  }) => JSX.Element;
 };
 
 export default function PoolAbsorbRewards(props: Props) {
-  const { 
+  const {
     children,
     nft,
     nft: {
-      pool_state: {
-        p2_singleton_puzzle_hash,
-      },
+      pool_state: { p2_singleton_puzzle_hash },
     },
   } = props;
   const { canEdit } = usePlotNFTDetails(nft);
   const history = useHistory();
 
-  async function handleAbsorbRewards() {  
+  async function handleAbsorbRewards() {
     history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/absorb-rewards`);
   }
 

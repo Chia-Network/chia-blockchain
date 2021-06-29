@@ -22,9 +22,7 @@ export default function DashboardTitle(props: Props) {
 
   return (
     <DashboardTitleTeleporter.Source>
-      <Flex alignItems="center">
-        {children}
-      </Flex>
+      <Flex alignItems="center">{children}</Flex>
     </DashboardTitleTeleporter.Source>
   );
 }

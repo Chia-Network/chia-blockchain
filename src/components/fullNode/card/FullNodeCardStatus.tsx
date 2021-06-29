@@ -7,7 +7,7 @@ import FarmCard from '../../farm/card/FarmCard';
 import type { RootState } from '../../../modules/rootReducer';
 
 const StyledWarning = styled.span`
-  color: #F7CA3E;
+  color: #f7ca3e;
 `;
 
 function getData(state) {
@@ -18,7 +18,8 @@ function getData(state) {
       value: (
         <StyledWarning>
           <Trans>
-            Syncing <FormatLargeNumber value={progress} />/<FormatLargeNumber value={tip} />
+            Syncing <FormatLargeNumber value={progress} />/
+            <FormatLargeNumber value={tip} />
           </Trans>
         </StyledWarning>
       ),
@@ -40,7 +41,9 @@ function getData(state) {
     return {
       value: <Trans>Synced</Trans>,
       color: 'primary',
-      tooltip: <Trans>This node is fully caught up and validating the network</Trans>,
+      tooltip: (
+        <Trans>This node is fully caught up and validating the network</Trans>
+      ),
     };
   }
 }
@@ -55,9 +58,7 @@ export default function FullNodeCardStatus() {
   return (
     <FarmCard
       valueColor={color}
-      title={
-        <Trans>Status</Trans>
-      }
+      title={<Trans>Status</Trans>}
       tooltip={tooltip}
       value={value}
     />

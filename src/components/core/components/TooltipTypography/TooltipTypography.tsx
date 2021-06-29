@@ -12,10 +12,8 @@ export default function TooltipTypography(props: Props) {
 
   return (
     <Flex alignItems="center" gap={1}>
-      <Typography {...rest}/>
-      <TooltipIcon>
-        {title}
-      </TooltipIcon>
+      <Typography {...rest} />
+      <TooltipIcon>{title}</TooltipIcon>
     </Flex>
   );
 }

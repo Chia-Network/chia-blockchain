@@ -7,9 +7,7 @@ function getColor({ theme, color }) {
   if (color !== 'inherit') {
     return color;
   }
-  return theme.palette.type === 'dark' 
-        ? 'white' 
-        : '#757575';
+  return theme.palette.type === 'dark' ? 'white' : '#757575';
 }
 
 const StyledHomeIcon = styled(HomeIcon)`

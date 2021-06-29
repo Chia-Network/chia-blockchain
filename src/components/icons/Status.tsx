@@ -3,7 +3,9 @@ import styled from 'styled-components';
 import { StateColor } from '@chia/core';
 import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
 
-const StyledFiberManualRecordIcon = styled(({ color, ...rest }) => <FiberManualRecordIcon {...rest} />)`
+const StyledFiberManualRecordIcon = styled(({ color, ...rest }) => (
+  <FiberManualRecordIcon {...rest} />
+))`
   font-size: 1rem;
   color: ${({ color }) => color};
 `;
@@ -18,7 +20,7 @@ function Status(props: Props, ref) {
 
   return (
     <div ref={ref}>
-      <StyledFiberManualRecordIcon color={color}  />
+      <StyledFiberManualRecordIcon color={color} />
     </div>
   );
 }

@@ -16,13 +16,13 @@ export default function usePeak(): {
 
   const loading = height === undefined || timestamp === undefined;
 
-  return { 
-    peak: loading 
+  return {
+    peak: loading
       ? undefined
       : {
-        height,
-        timestamp,
-      }, 
+          height,
+          timestamp,
+        },
     loading,
   };
 }

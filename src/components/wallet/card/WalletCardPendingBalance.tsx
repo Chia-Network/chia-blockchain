@@ -21,17 +21,19 @@ export default function WalletCardPendingBalance(props: Props) {
     <FarmCard
       loading={loading}
       valueColor="secondary"
-      title={
-        <Trans>Pending Balance</Trans>
-      }
+      title={<Trans>Pending Balance</Trans>}
       tooltip={
         <Trans>
-          This is the sum of the incoming and outgoing pending
-          transactions (not yet included into the blockchain).
-          This does not include farming rewards.
+          This is the sum of the incoming and outgoing pending transactions (not
+          yet included into the blockchain). This does not include farming
+          rewards.
         </Trans>
       }
-      value={<span>{mojo_to_chia_string(value)} {currencyCode}</span>}
+      value={
+        <span>
+          {mojo_to_chia_string(value)} {currencyCode}
+        </span>
+      }
     />
   );
 }

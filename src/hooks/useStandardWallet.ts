@@ -7,11 +7,11 @@ export default function useStandardWallet(): {
   loading: boolean;
   wallet?: Wallet;
 } {
-  const wallets = useSelector(
-    (state: RootState) => state.wallet_state.wallets,
-  );
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
-  const standardWallet = wallets?.find((wallet) => wallet?.type === WalletType.STANDARD_WALLET);
+  const standardWallet = wallets?.find(
+    (wallet) => wallet?.type === WalletType.STANDARD_WALLET,
+  );
 
   return {
     loading: !wallets,

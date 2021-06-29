@@ -11,7 +11,8 @@ import PlotNFTState from '../constants/PlotNFTState';
 export default function useAbsorbRewards(nft: PlotNFT) {
   const openDialog = useOpenDialog();
   const dispatch = useDispatch();
-  const { isPending, isSynced, walletId, state, balance } = usePlotNFTDetails(nft);
+  const { isPending, isSynced, walletId, state, balance } =
+    usePlotNFTDetails(nft);
 
   async function handleAbsorbRewards(fee?: string) {
     if (!isSynced) {

@@ -4,14 +4,30 @@ import { Alert } from '@material-ui/lab';
 import { uniq } from 'lodash';
 import styled from 'styled-components';
 import { useWatch, useFormContext } from 'react-hook-form';
-import { Button, Autocomplete, Flex, Loading, CardStep, RadioGroup, Fee, TextField } from '@chia/core';
-import { Grid, FormControl, FormControlLabel, Typography, Radio, Collapse } from '@material-ui/core';
+import {
+  Button,
+  Autocomplete,
+  Flex,
+  Loading,
+  CardStep,
+  RadioGroup,
+  Fee,
+  TextField,
+} from '@chia/core';
+import {
+  Grid,
+  FormControl,
+  FormControlLabel,
+  Typography,
+  Radio,
+  Collapse,
+} from '@material-ui/core';
 import PoolInfo from '../../pool/PoolInfo';
 import usePoolInfo from '../../../hooks/usePoolInfo';
 import usePlotNFTs from '../../../hooks/usePlotNFTs';
 
 const StyledCollapse = styled(Collapse)`
-  display: ${({ in: visible }) => visible ? 'block' : 'none'};
+  display: ${({ in: visible }) => (visible ? 'block' : 'none')};
 `;
 
 type Props = {
@@ -62,32 +78,34 @@ export default function PlotNFTSelectBase(props: Props) {
     <>
       <CardStep
         step={step}
-        title={(
+        title={
           <Flex gap={1} alignItems="center">
-            <Flex flexGrow={1}>
-              {title}
-            </Flex>
-            {onCancel && <Button onClick={onCancel}><Trans>Cancel</Trans></Button>}
+            <Flex flexGrow={1}>{title}</Flex>
+            {onCancel && (
+              <Button onClick={onCancel}>
+                <Trans>Cancel</Trans>
+              </Button>
+            )}
           </Flex>
-        )}
+        }
       >
         {description && (
-          <Typography variant="subtitle1">
-            {description}
-          </Typography>
+          <Typography variant="subtitle1">{description}</Typography>
         )}
 
         <Grid container spacing={4}>
           <Grid xs={12} item>
-            <FormControl
-              variant="filled"
-              fullWidth
-            >
+            <FormControl variant="filled" fullWidth>
               <RadioGroup name="self" boolean>
                 <Flex gap={1} flexDirection="column">
                   <FormControlLabel
                     control={<Radio />}
-                    label={<Trans>Self pool. When you win a block you will earn XCH rewards.</Trans>}
+                    label={
+                      <Trans>
+                        Self pool. When you win a block you will earn XCH
+                        rewards.
+                      </Trans>
+                    }
                     value
                   />
                   <Flex gap={2}>
@@ -96,11 +114,13 @@ export default function PlotNFTSelectBase(props: Props) {
                       control={<Radio />}
                       label={<Trans>Connect to pool</Trans>}
                     />
-                    <Flex flexBasis={0} flexGrow={1} flexDirection="column" gap={1}>
-                      <FormControl
-                        variant="filled"
-                        fullWidth
-                      >
+                    <Flex
+                      flexBasis={0}
+                      flexGrow={1}
+                      flexDirection="column"
+                      gap={1}
+                    >
+                      <FormControl variant="filled" fullWidth>
                         <TextField
                           name="poolUrl"
                           label="Pool URL"
@@ -132,14 +152,9 @@ export default function PlotNFTSelectBase(props: Props) {
       </CardStep>
 
       <StyledCollapse in={showPoolInfo}>
-        <CardStep
-          step={step + 1}
-          title={<Trans>Verify Pool Details</Trans>}
-        >
+        <CardStep step={step + 1} title={<Trans>Verify Pool Details</Trans>}>
           {poolInfo.error && (
-            <Alert severity="warning">
-              {poolInfo.error.message}
-            </Alert>
+            <Alert severity="warning">{poolInfo.error.message}</Alert>
           )}
 
           {poolInfo.loading && (
@@ -148,9 +163,7 @@ export default function PlotNFTSelectBase(props: Props) {
             </Flex>
           )}
 
-          {poolInfo.poolInfo && (
-            <PoolInfo poolInfo={poolInfo.poolInfo} />
-          )}
+          {poolInfo.poolInfo && <PoolInfo poolInfo={poolInfo.poolInfo} />}
         </CardStep>
       </StyledCollapse>
     </>

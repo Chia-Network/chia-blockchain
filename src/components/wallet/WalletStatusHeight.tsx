@@ -4,9 +4,7 @@ import { FormatLargeNumber, State, StateIndicator } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 
 export default function WalletStatusHeight() {
-  const walletState = useSelector(
-    (state: RootState) => state.wallet_state,
-  );
+  const walletState = useSelector((state: RootState) => state.wallet_state);
 
   const currentHeight = walletState?.status?.height;
 

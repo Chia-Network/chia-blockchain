@@ -10,9 +10,7 @@ export default function useWallet(walletId: number): {
   wallet?: Wallet;
   transactions?: Transaction[];
 } {
-  const wallets = useSelector(
-    (state: RootState) => state.wallet_state.wallets,
-  );
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
   const wallet = useMemo(() => {
     return wallets?.find((item) => item.id === walletId);
@@ -31,5 +29,5 @@ export default function useWallet(walletId: number): {
     return transactions;
   }, [wallet]);
 
-  return { wallet, transactions, loading: !wallets};
+  return { wallet, transactions, loading: !wallets };
 }

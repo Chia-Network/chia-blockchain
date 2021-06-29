@@ -12,14 +12,10 @@ export default function FullNodeCardConnectionStatus() {
   return (
     <FarmCard
       valueColor={connected ? 'primary' : 'textPrimary'}
-      title={
-        <Trans>Connection Status</Trans>
+      title={<Trans>Connection Status</Trans>}
+      value={
+        connected ? <Trans>Connected</Trans> : <Trans>Not connected</Trans>
       }
-      value={connected ? (
-        <Trans>Connected</Trans>
-      ) : (
-        <Trans>Not connected</Trans>
-      )}
     />
   );
 }

@@ -195,8 +195,7 @@ if (!handleSquirrelEvent()) {
             title: i18n._(/* i18n */ { id: 'Confirm' }),
             message: i18n._(
               /* i18n */ {
-                id:
-                  'Are you sure you want to quit? GUI Plotting and farming will stop.',
+                id: 'Are you sure you want to quit? GUI Plotting and farming will stop.',
               },
             ),
           });

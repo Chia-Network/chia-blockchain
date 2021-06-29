@@ -94,7 +94,10 @@ export const getPoolState = () => {
   };
 };
 
-export const setPoolPayoutInstructions = (singletonGenesis, poolPayoutInstructions) => {
+export const setPoolPayoutInstructions = (
+  singletonGenesis,
+  poolPayoutInstructions,
+) => {
   return async (dispatch) => {
     const { data } = await async_api(
       dispatch,
@@ -125,4 +128,3 @@ export const getPlots = () => {
     return data;
   };
 };
-

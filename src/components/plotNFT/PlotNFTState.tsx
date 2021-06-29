@@ -10,12 +10,10 @@ type Props = {
 };
 
 export default function PlotNFTState(props: Props) {
-  const { 
+  const {
     nft: {
       pool_wallet_status: {
-        current: {
-          state,
-        },
+        current: { state },
         target,
       },
     },
@@ -28,7 +26,10 @@ export default function PlotNFTState(props: Props) {
           <Trans>Invalid state</Trans>
         </StateTypography>
         <TooltipIcon>
-          <Trans>The pool switching operation was cancelled, please try again by changing pool, or self pooling</Trans>
+          <Trans>
+            The pool switching operation was cancelled, please try again by
+            changing pool, or self pooling
+          </Trans>
         </TooltipIcon>
       </Flex>
     );
@@ -38,7 +39,7 @@ export default function PlotNFTState(props: Props) {
   if (isPending) {
     return (
       <Flex alignItems="center" gap={1} inline>
-        <StateTypography variant='body1' state={State.WARNING}>
+        <StateTypography variant="body1" state={State.WARNING}>
           <Trans>Pending</Trans>
         </StateTypography>
         <TooltipIcon>
@@ -50,15 +51,9 @@ export default function PlotNFTState(props: Props) {
 
   return (
     <Typography variant="body1">
-      {state === PlotNFTStateEnum.SELF_POOLING && (
-        <Trans>Self Pooling</Trans>
-      )}
-      {state === PlotNFTStateEnum.LEAVING_POOL && (
-        <Trans>Leaving Pool</Trans>
-      )}
-      {state === PlotNFTStateEnum.FARMING_TO_POOL && (
-        <Trans>Pooling</Trans>
-      )}
+      {state === PlotNFTStateEnum.SELF_POOLING && <Trans>Self Pooling</Trans>}
+      {state === PlotNFTStateEnum.LEAVING_POOL && <Trans>Leaving Pool</Trans>}
+      {state === PlotNFTStateEnum.FARMING_TO_POOL && <Trans>Pooling</Trans>}
     </Typography>
   );
 }

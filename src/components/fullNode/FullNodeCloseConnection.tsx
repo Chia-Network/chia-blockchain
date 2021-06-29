@@ -16,17 +16,15 @@ export default function FullNodeCloseConnection(props: Props): JSX.Element {
   const dispatch = useDispatch();
 
   async function handleClose() {
-    const canDisconnect = await openDialog((
+    const canDisconnect = await openDialog(
       <ConfirmDialog
         title={<Trans>Confirm Disconnect</Trans>}
         confirmTitle={<Trans>Disconnect</Trans>}
         confirmColor="danger"
       >
-        <Trans>
-          Are you sure you want to disconnect?
-        </Trans>
-      </ConfirmDialog>
-    ));
+        <Trans>Are you sure you want to disconnect?</Trans>
+      </ConfirmDialog>,
+    );
 
     // @ts-ignore
     if (canDisconnect) {

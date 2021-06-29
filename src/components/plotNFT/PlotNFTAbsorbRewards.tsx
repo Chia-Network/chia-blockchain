@@ -2,7 +2,17 @@ import React, { useMemo, useState, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
 import { useDispatch } from 'react-redux';
-import { UnitFormat, CardStep, ButtonLoading, Loading, Fee, Flex, Form, FormBackButton, State } from '@chia/core';
+import {
+  UnitFormat,
+  CardStep,
+  ButtonLoading,
+  Loading,
+  Fee,
+  Flex,
+  Form,
+  FormBackButton,
+  State,
+} from '@chia/core';
 import { useForm } from 'react-hook-form';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { Grid, Typography } from '@material-ui/core';
@@ -34,7 +44,9 @@ export default function PlotNFTAbsorbRewards(props: Props) {
   const dispatch = useDispatch();
   const history = useHistory();
   const nft = useMemo(() => {
-    return nfts?.find(nft => nft.pool_state.p2_singleton_puzzle_hash === plotNFTId);
+    return nfts?.find(
+      (nft) => nft.pool_state.p2_singleton_puzzle_hash === plotNFTId,
+    );
   }, [nfts, plotNFTId]);
 
   const methods = useForm<FormData>({
@@ -51,15 +63,15 @@ export default function PlotNFTAbsorbRewards(props: Props) {
       const address = wallet?.address;
 
       const { fee } = data;
-  
+
       const feeMojos = chia_to_mojo(fee);
-  
+
       if (walletId === undefined || !address) {
         return;
       }
 
       await dispatch(pwAbsorbRewards(walletId, feeMojos));
-  
+
       if (history.length) {
         history.goBack();
       } else {
@@ -88,14 +100,14 @@ export default function PlotNFTAbsorbRewards(props: Props) {
 
   if (!nft) {
     return (
-      <Trans>Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists</Trans>
+      <Trans>
+        Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists
+      </Trans>
     );
   }
 
   const {
-    wallet_balance: {
-      confirmed_wallet_balance: balance,
-    },
+    wallet_balance: { confirmed_wallet_balance: balance },
   } = nft;
 
   return (
@@ -109,24 +121,25 @@ export default function PlotNFTAbsorbRewards(props: Props) {
         </HeaderTag>
       )}
 
-      <Form
-        methods={methods}
-        onSubmit={handleSubmit}
-      >
+      <Form methods={methods} onSubmit={handleSubmit}>
         <Flex flexDirection="column" gap={3}>
           <CardStep
             step="1"
-            title={(
+            title={
               <Flex gap={1} alignItems="center">
-                <Flex flexGrow={1}>
-                  Please Confirm
-                </Flex>
+                <Flex flexGrow={1}>Please Confirm</Flex>
               </Flex>
-            )}
+            }
           >
             <Typography variant="subtitle1">
               <Trans>
-                You will recieve <UnitFormat value={mojo_to_chia(BigInt(balance))} display="inline" state={State.SUCCESS} /> to {wallet?.address}
+                You will recieve{' '}
+                <UnitFormat
+                  value={mojo_to_chia(BigInt(balance))}
+                  display="inline"
+                  state={State.SUCCESS}
+                />{' '}
+                to {wallet?.address}
               </Trans>
             </Typography>
 
@@ -144,7 +157,12 @@ export default function PlotNFTAbsorbRewards(props: Props) {
           </CardStep>
           <Flex gap={1}>
             <FormBackButton variant="outlined" />
-            <ButtonLoading loading={working} color="primary" type="submit" variant="contained">
+            <ButtonLoading
+              loading={working}
+              color="primary"
+              type="submit"
+              variant="contained"
+            >
               <Trans>Confirm</Trans>
             </ButtonLoading>
           </Flex>

@@ -18,17 +18,17 @@ export default function FormBackButton(props: Props) {
   const { isDirty } = formState;
 
   async function handleBack() {
-    const canGoBack = !isDirty || await openDialog<boolean>((
-      <ConfirmDialog
-        title={<Trans>Unsaved Changes</Trans>}
-        confirmTitle={<Trans>Discard</Trans>}
-        confirmColor="danger"
-      >
-        <Trans>
-          You have made changes. Do you want to discard them?
-        </Trans>
-      </ConfirmDialog>
-    ));
+    const canGoBack =
+      !isDirty ||
+      (await openDialog<boolean>(
+        <ConfirmDialog
+          title={<Trans>Unsaved Changes</Trans>}
+          confirmTitle={<Trans>Discard</Trans>}
+          confirmColor="danger"
+        >
+          <Trans>You have made changes. Do you want to discard them?</Trans>
+        </ConfirmDialog>,
+      ));
 
     if (canGoBack) {
       history.goBack();

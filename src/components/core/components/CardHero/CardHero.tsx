@@ -4,11 +4,12 @@ import { Card, CardContent } from '@material-ui/core';
 import { Flex } from '@chia/core';
 
 const StyledContent = styled(CardContent)`
-  padding: ${({ theme }) => `${theme.spacing(5)}px ${theme.spacing(4)}px !important`};
+  padding: ${({ theme }) =>
+    `${theme.spacing(5)}px ${theme.spacing(4)}px !important`};
 `;
 
 type Props = {
-  children?: ReactNode,
+  children?: ReactNode;
 };
 
 export default function CardHero(props: Props) {

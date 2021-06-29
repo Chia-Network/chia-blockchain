@@ -20,7 +20,7 @@ export default function PlotOverview() {
 
       {!loading && (
         <>
-          {(hasPlots || hasQueue) ? (
+          {hasPlots || hasQueue ? (
             <PlotOverviewPlots />
           ) : (
             <Grid container spacing={3}>

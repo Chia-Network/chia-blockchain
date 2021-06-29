@@ -4,7 +4,10 @@ import { useInterval } from 'react-use';
 import { getTransaction } from '../modules/incoming';
 import type Transaction from '../types/Transaction';
 
-export default function useTransaction(transactionId: string, delay: number = 1000): [Transaction | undefined] {
+export default function useTransaction(
+  transactionId: string,
+  delay: number = 1000,
+): [Transaction | undefined] {
   const dispatch = useDispatch();
   const [transaction, setTransaction] = useState<Transaction | undefined>();
   const isConfirmed = !!transaction?.confirmed;
@@ -13,8 +16,10 @@ export default function useTransaction(transactionId: string, delay: number = 10
     if (transaction?.confirmed) {
       return;
     }
-  
-    const updatedTransaction = await dispatch<Transaction>(getTransaction(transactionId));
+
+    const updatedTransaction = await dispatch<Transaction>(
+      getTransaction(transactionId),
+    );
     setTransaction(updatedTransaction);
   }
 
@@ -24,9 +29,12 @@ export default function useTransaction(transactionId: string, delay: number = 10
     }
   }, [transactionId]);
 
-  useInterval(() => {
-    getTransactionDetails();
-  }, isConfirmed ? null : delay);
+  useInterval(
+    () => {
+      getTransactionDetails();
+    },
+    isConfirmed ? null : delay,
+  );
 
   return [transaction];
 }

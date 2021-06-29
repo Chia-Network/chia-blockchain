@@ -17,7 +17,7 @@ export default function usePoolInfo(poolUrl?: string): {
     const normalizedUrl = normalizeUrl(poolUrl);
     const isValidUrl = isURL(normalizedUrl, {
       allow_underscores: true,
-    })
+    });
 
     if (!isValidUrl) {
       throw new Error(t`The pool URL speciefied is not valid. ${poolUrl}`);
@@ -33,7 +33,9 @@ export default function usePoolInfo(poolUrl?: string): {
         ...data,
       };
     } catch (e) {
-      throw new Error(t`The pool URL "${normalizedUrl}" is not working. Is it pool? Error: ${e.message}`);
+      throw new Error(
+        t`The pool URL "${normalizedUrl}" is not working. Is it pool? Error: ${e.message}`,
+      );
     }
   }, [poolUrl]);
 

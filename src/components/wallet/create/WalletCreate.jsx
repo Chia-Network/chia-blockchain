@@ -29,7 +29,7 @@ import {
   CREATE_RL_USER,
   CREATE_DID_WALLET_OPTIONS,
   CREATE_DID_WALLET,
-  RECOVER_DID_WALLET
+  RECOVER_DID_WALLET,
 } from '../../../modules/createWallet';
 import { CreateNewCCWallet } from './createNewColouredCoin';
 import { CreateExistingCCWallet } from './createExistingColouredCoin';
@@ -115,21 +115,13 @@ export const MainWalletList = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>Coloured Coin</Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Coloured Coin</Trans>} />
           </ListItem>
           <ListItem button onClick={select_option_rl}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>Rate Limited</Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Rate Limited</Trans>} />
           </ListItem>
         </List>
       </Grid>
@@ -175,24 +167,14 @@ export const CCListItems = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>
-                  Create new coloured coin
-                </Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Create new coloured coin</Trans>} />
           </ListItem>
           <ListItem button onClick={select_option_existing}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
             <ListItemText
-              primary={
-                <Trans>
-                  Create wallet for existing colour
-                </Trans>
-              }
+              primary={<Trans>Create wallet for existing colour</Trans>}
             />
           </ListItem>
         </List>
@@ -239,25 +221,13 @@ export const RLListItems = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>
-                  Create admin wallet
-                </Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Create admin wallet</Trans>} />
           </ListItem>
           <ListItem button onClick={select_option_user}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>
-                  Create user wallet
-                </Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Create user wallet</Trans>} />
           </ListItem>
         </List>
       </Grid>
@@ -303,25 +273,13 @@ export const DIDListItems = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>
-                  Create DID wallet
-                </Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Create DID wallet</Trans>} />
           </ListItem>
           <ListItem button onClick={select_option_recover}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>
-                  Recover DID wallet
-                </Trans>
-              }
-            />
+            <ListItemText primary={<Trans>Recover DID wallet</Trans>} />
           </ListItem>
         </List>
       </Grid>

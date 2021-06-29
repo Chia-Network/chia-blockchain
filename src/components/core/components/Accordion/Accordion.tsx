@@ -9,11 +9,7 @@ type Props = {
 export default function Accordion(props: Props) {
   const { expanded, children } = props;
 
-  return (
-    <Collapse in={expanded}>
-      {children}
-    </Collapse>
-  );
+  return <Collapse in={expanded}>{children}</Collapse>;
 }
 
 Accordion.defaultProps = {

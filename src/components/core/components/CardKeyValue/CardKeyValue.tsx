@@ -10,13 +10,14 @@ import {
 import styled from 'styled-components';
 
 const StyledTableCell = styled(TableCell)`
-  ${({ hideDivider }) => hideDivider 
-    ? `
+  ${({ hideDivider }) =>
+    hideDivider
+      ? `
       border-bottom: 0px solid transparent;
       padding-left: 0;
       padding-right: 0 !important;
     `
-    : ''}
+      : ''}
 `;
 
 type Props = {
@@ -24,10 +25,10 @@ type Props = {
     key: string;
     label: ReactNode;
     value: ReactNode;
-  }[],
+  }[];
   label?: string;
   hideDivider?: boolean;
-  size?: 'small' | 'normal' | 'large',
+  size?: 'small' | 'normal' | 'large';
 };
 
 export default function CardKeyValue(props: Props) {
@@ -39,15 +40,15 @@ export default function CardKeyValue(props: Props) {
         {rows.map((row) => (
           <TableRow key={row.key}>
             <StyledTableCell hideDivider={hideDivider}>
-              <Typography variant='body1' color="textSecondary" noWrap> 
+              <Typography variant="body1" color="textSecondary" noWrap>
                 {row.label}
               </Typography>
             </StyledTableCell>
             <StyledTableCell align="right" hideDivider={hideDivider}>
               <Box maxWidth="100%">
-              <Typography variant="body2" noWrap>
-                {row.value}
-              </Typography>
+                <Typography variant="body2" noWrap>
+                  {row.value}
+                </Typography>
               </Box>
             </StyledTableCell>
           </TableRow>

@@ -14,11 +14,7 @@ export default function UnitFormat(props: Props) {
   const currencyCode = useCurrencyCode();
 
   return (
-    <StateTypography 
-      variant={variant}
-      state={state}
-      {...rest}
-    >
+    <StateTypography variant={variant} state={state} {...rest}>
       {`${value} ${currencyCode}`}
     </StateTypography>
   );

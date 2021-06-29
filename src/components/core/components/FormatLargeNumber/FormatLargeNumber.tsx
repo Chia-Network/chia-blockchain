@@ -33,9 +33,5 @@ export default function FormatLargeNumber(props: Props) {
     return numberFormat.format(value);
   }, [value, numberFormat]);
 
-  return (
-    <span>
-      {formatedValue}
-    </span>
-  );
+  return <span>{formatedValue}</span>;
 }

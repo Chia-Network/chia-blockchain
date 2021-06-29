@@ -1,4 +1,9 @@
-import React, { useState, ReactNode, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  ReactNode,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton } from '@chia/core';
@@ -21,7 +26,9 @@ async function prepareSubmitData(data: FormData): SubmitData {
 
   if (!self && poolUrl) {
     const normalizedPoolUrl = normalizeUrl(poolUrl);
-    const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(normalizedPoolUrl);
+    const { target_puzzle_hash, relative_lock_height } = await getPoolInfo(
+      normalizedPoolUrl,
+    );
     if (!target_puzzle_hash) {
       throw new Error(t`Pool does not provide target_puzzle_hash.`);
     }
@@ -61,10 +68,19 @@ type Props = {
     self?: boolean;
     poolUrl?: string;
   };
-}
+};
 
 const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
-  const { step, onCancel, defaultValues, onSubmit, title, description, submitTitle, hideFee } = props;
+  const {
+    step,
+    onCancel,
+    defaultValues,
+    onSubmit,
+    title,
+    description,
+    submitTitle,
+    hideFee,
+  } = props;
   const [loading, setLoading] = useState<boolean>(false);
 
   const methods = useForm<FormData>({
@@ -98,10 +114,7 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   }
 
   return (
-    <Form
-      methods={methods}
-      onSubmit={handleSubmit}
-    >
+    <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <PlotNFTSelectBase
           step={step}
@@ -113,7 +126,12 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
         {!onCancel && (
           <Flex gap={1}>
             <FormBackButton variant="outlined" />
-            <ButtonLoading loading={loading} color="primary" type="submit" variant="contained">
+            <ButtonLoading
+              loading={loading}
+              color="primary"
+              type="submit"
+              variant="contained"
+            >
               {submitTitle}
             </ButtonLoading>
           </Flex>

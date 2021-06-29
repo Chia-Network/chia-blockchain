@@ -23,22 +23,14 @@ const Title = {
 
 const Description = {
   [FarmerStatus.FARMING]: null,
-  [FarmerStatus.SYNCHING]: (
-    <Trans>
-      Wait for synchronization
-    </Trans>
-  ),
-  [FarmerStatus.NOT_AVAILABLE]: (
-    <Trans>
-      Wait for synchronization
-    </Trans>
-  ),
+  [FarmerStatus.SYNCHING]: <Trans>Wait for synchronization</Trans>,
+  [FarmerStatus.NOT_AVAILABLE]: <Trans>Wait for synchronization</Trans>,
   [FarmerStatus.NOT_CONNECTED]: <Trans>Farmer is not connected</Trans>,
   [FarmerStatus.NOT_RUNNING]: <Trans>Farmer is not running</Trans>,
 };
 
 type Props = {
-  plot?: Plot,
+  plot?: Plot;
 };
 
 export default function PlotStatus(props: Props) {
@@ -56,11 +48,7 @@ export default function PlotStatus(props: Props) {
     <Indicator color={color}>
       <Flex alignItems="center" gap={1}>
         <span>{title}</span>
-        {description && (
-          <TooltipIcon>
-            {description}
-          </TooltipIcon>
-        )}
+        {description && <TooltipIcon>{description}</TooltipIcon>}
       </Flex>
     </Indicator>
   );

@@ -158,7 +158,8 @@ function UIPart() {
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Typography variant="h5" component="h1" gutterBottom>
             <Trans>
-              Restore Metadata for Coloured Coins and other Smart Wallets from Backup
+              Restore Metadata for Coloured Coins and other Smart Wallets from
+              Backup
             </Trans>
           </Typography>
 
@@ -169,9 +170,7 @@ function UIPart() {
             onDragLeave={(e) => handleDragLeave(e)}
           >
             <Typography variant="subtitle1">
-              <Trans>
-                Drag and drop your backup file
-              </Trans>
+              <Trans>Drag and drop your backup file</Trans>
             </Typography>
           </StyledDropPaper>
 

@@ -8,7 +8,7 @@ type PoolWalletStatus = {
     state: PlotNFTState;
     target_puzzle_hash: string;
     version: number;
-  },
+  };
   current_inner: string;
   launcher_coin: {
     amount: number;

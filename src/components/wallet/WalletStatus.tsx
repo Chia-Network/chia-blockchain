@@ -17,9 +17,7 @@ type Props = {
 export default function WalletStatus(props: Props) {
   const { variant, height, indicator } = props;
 
-  const walletState = useSelector(
-    (state: RootState) => state.wallet_state,
-  );
+  const walletState = useSelector((state: RootState) => state.wallet_state);
 
   const syncingStatus = getWalletSyncingStatus(walletState);
 
@@ -27,23 +25,17 @@ export default function WalletStatus(props: Props) {
     <Typography variant={variant}>
       {syncingStatus === SyncingStatus.NOT_SYNCED && (
         <StateIndicator state={State.WARNING} indicator={indicator}>
-          <Trans>Not Synced</Trans>
-          {' '}
-          {height && <WalletStatusHeight />}
+          <Trans>Not Synced</Trans> {height && <WalletStatusHeight />}
         </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCED && (
         <StateIndicator state={State.SUCCESS} indicator={indicator}>
-          <Trans>Synced</Trans>
-          {' '}
-          {height && <WalletStatusHeight />}
+          <Trans>Synced</Trans> {height && <WalletStatusHeight />}
         </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCING && (
         <StateIndicator state={State.WARNING} indicator={indicator}>
-          <Trans>Syncing</Trans>
-          {' '}
-          {height && <WalletStatusHeight />}
+          <Trans>Syncing</Trans> {height && <WalletStatusHeight />}
         </StateIndicator>
       )}
     </Typography>

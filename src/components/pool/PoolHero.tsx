@@ -27,11 +27,7 @@ export default function PoolHero() {
               Smooth out your XCH farming rewards by joining a pool.
             </Trans>
           </Typography>
-          <Button
-            onClick={handleJoinPool}
-            variant="contained"
-            color="primary"
-          >
+          <Button onClick={handleJoinPool} variant="contained" color="primary">
             <Trans>Join a Pool</Trans>
           </Button>
         </CardHero>

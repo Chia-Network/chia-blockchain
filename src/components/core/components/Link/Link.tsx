@@ -10,10 +10,14 @@ import {
 } from 'react-router-dom';
 import useOpenExternal from '../../../../hooks/useOpenExternal';
 
-type Props = BaseLinkProps & ({
-  to?: string | Object;
-  fullWidth?: boolean;
-} | RouterLinkProps);
+type Props = BaseLinkProps &
+  (
+    | {
+        to?: string | Object;
+        fullWidth?: boolean;
+      }
+    | RouterLinkProps
+  );
 
 const StyledBadeLink = styled(({ fullWidth, ...rest }) => (
   <BaseLink {...rest} />

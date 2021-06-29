@@ -22,9 +22,7 @@ export default function PlotNFTName(props: Props) {
     variant,
     nft,
     nft: {
-      pool_state: {
-        p2_singleton_puzzle_hash,
-      },
+      pool_state: { p2_singleton_puzzle_hash },
     },
   } = props;
 
@@ -44,7 +42,6 @@ export default function PlotNFTName(props: Props) {
         </Flex>
       </TooltipIcon>
     </Flex>
-
   );
 }
 

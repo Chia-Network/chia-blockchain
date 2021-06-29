@@ -21,17 +21,18 @@ export default function WalletCardPendingChange(props: Props) {
     <FarmCard
       loading={loading}
       valueColor="secondary"
-      title={
-        <Trans>Pending Change</Trans>
-      }
+      title={<Trans>Pending Change</Trans>}
       tooltip={
         <Trans>
-          This is the pending change, which are change coins which
-          you have sent to yourself, but have not been confirmed
-          yet.
+          This is the pending change, which are change coins which you have sent
+          to yourself, but have not been confirmed yet.
         </Trans>
       }
-      value={<>{mojo_to_chia_string(value)} {currencyCode}</>}
+      value={
+        <>
+          {mojo_to_chia_string(value)} {currencyCode}
+        </>
+      }
     />
   );
 }

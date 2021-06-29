@@ -1,6 +1,12 @@
 import React, { ReactNode, ReactElement } from 'react';
 import styled from 'styled-components';
-import { Box, Card as CardMaterial, CardContent, Grid, Typography } from '@material-ui/core';
+import {
+  Box,
+  Card as CardMaterial,
+  CardContent,
+  Grid,
+  Typography,
+} from '@material-ui/core';
 import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
 
@@ -15,7 +21,7 @@ type Props = {
   actions?: ReactNode;
   gap?: number;
   interactive?: boolean;
-  action?: ReactNode,
+  action?: ReactNode;
 };
 
 export default function Card(props: Props) {
@@ -23,14 +29,12 @@ export default function Card(props: Props) {
 
   const headerTitle = tooltip ? (
     <Flex alignItems="center" gap={1}>
-      <Box>
-        {title}
-      </Box>
-      <TooltipIcon interactive={interactive}>
-        {tooltip}
-      </TooltipIcon>
+      <Box>{title}</Box>
+      <TooltipIcon interactive={interactive}>{tooltip}</TooltipIcon>
     </Flex>
-  ) : title;
+  ) : (
+    title
+  );
 
   return (
     <CardMaterial>
@@ -38,15 +42,9 @@ export default function Card(props: Props) {
         <StyledCardTitle>
           <Flex gap={2} alignItems="center" flexWrap="wrap">
             <Box flexGrow={1}>
-              <Typography variant="h5">
-                {headerTitle}
-              </Typography>
+              <Typography variant="h5">{headerTitle}</Typography>
             </Box>
-            {action && (
-              <Box>
-                {action}
-              </Box>
-            )}
+            {action && <Box>{action}</Box>}
           </Flex>
         </StyledCardTitle>
       )}
@@ -57,9 +55,7 @@ export default function Card(props: Props) {
           </Flex>
           {actions && (
             <Grid xs={12} item>
-              <Flex gap={2}>
-                {actions}
-              </Flex>
+              <Flex gap={2}>{actions}</Flex>
             </Grid>
           )}
         </Flex>

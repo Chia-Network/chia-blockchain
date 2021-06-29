@@ -41,9 +41,7 @@ export default function FarmCard(props: Props) {
       <CardContent>
         <StyledTitle>
           <Flex gap={1} alignItems="center">
-            <Typography color="textSecondary">
-              {title}
-            </Typography>
+            <Typography color="textSecondary">{title}</Typography>
             {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
           </Flex>
         </StyledTitle>

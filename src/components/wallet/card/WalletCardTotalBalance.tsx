@@ -29,19 +29,24 @@ export default function WalletCardTotalBalance(props: Props) {
   return (
     <FarmCard
       loading={loading}
-      title={
-        <Trans>Total Balance</Trans>
-      }
+      title={<Trans>Total Balance</Trans>}
       tooltip={
         <Trans>
-          This is the total amount of chia in the blockchain at the current
-          peak sub block that is controlled by your private keys. It includes
-          frozen farming rewards, but not pending incoming and outgoing
-          transactions.
+          This is the total amount of chia in the blockchain at the current peak
+          sub block that is controlled by your private keys. It includes frozen
+          farming rewards, but not pending incoming and outgoing transactions.
         </Trans>
       }
-      value={<>{mojo_to_chia_string(value)} {currencyCode}</>}
-      description={<StyledGraphContainer><WalletGraph walletId={wallet_id} height={120} /></StyledGraphContainer>}
+      value={
+        <>
+          {mojo_to_chia_string(value)} {currencyCode}
+        </>
+      }
+      description={
+        <StyledGraphContainer>
+          <WalletGraph walletId={wallet_id} height={120} />
+        </StyledGraphContainer>
+      }
     />
   );
 }

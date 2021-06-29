@@ -11,5 +11,5 @@ const Color = {
 };
 
 export default styled(({ state, ...rest }) => <Typography {...rest} />)`
-  ${({ state }) => state ? `color: ${Color[state]};` : ''}
+  ${({ state }) => (state ? `color: ${Color[state]};` : '')}
 `;

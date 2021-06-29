@@ -24,17 +24,18 @@ export default function WalletCardPendingTotalBalance(props: Props) {
     <FarmCard
       loading={loading}
       valueColor="secondary"
-      title={
-        <Trans>Pending Total Balance</Trans>
-      }
+      title={<Trans>Pending Total Balance</Trans>}
       tooltip={
         <Trans>
-          This is the total balance + pending balance: it is what
-          your balance will be after all pending transactions are
-          confirmed.
+          This is the total balance + pending balance: it is what your balance
+          will be after all pending transactions are confirmed.
         </Trans>
       }
-      value={<>{mojo_to_chia_string(value)} {currencyCode}</>}
+      value={
+        <>
+          {mojo_to_chia_string(value)} {currencyCode}
+        </>
+      }
     />
   );
 }

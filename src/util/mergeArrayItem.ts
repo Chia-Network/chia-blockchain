@@ -1,6 +1,6 @@
 export default function mergeArrayItem<T>(
-  array: T[], 
-  identity: (item: T) => boolean, 
+  array: T[],
+  identity: (item: T) => boolean,
   object: Partial<T>,
 ): T[] {
   return array?.map((item) => {

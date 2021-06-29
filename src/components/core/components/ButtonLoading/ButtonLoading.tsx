@@ -17,7 +17,7 @@ const StyledLoading = styled(CircularProgress)`
 `;
 
 const StyledButtonContent = styled.span`
-  visibility: ${({ hide }) => hide ? 'hidden' : 'visible'};
+  visibility: ${({ hide }) => (hide ? 'hidden' : 'visible')};
 `;
 
 type Props = ButtonProps & {
@@ -34,9 +34,7 @@ export default function ButtonLoading(props: Props) {
     }
   }
 
-  const disabledButton = mode === 'autodisable' && loading
-    ? true
-    : disabled;
+  const disabledButton = mode === 'autodisable' && loading ? true : disabled;
 
   return (
     <StyledWrapper>
