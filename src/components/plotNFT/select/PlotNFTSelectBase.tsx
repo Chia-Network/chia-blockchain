@@ -1,7 +1,7 @@
-import React, { useMemo, ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import { Alert } from '@material-ui/lab';
-import { uniq } from 'lodash';
+// import { uniq } from 'lodash';
 import styled from 'styled-components';
 import { useWatch, useFormContext } from 'react-hook-form';
 import {
@@ -23,7 +23,7 @@ import {
 } from '@material-ui/core';
 import PoolInfo from '../../pool/PoolInfo';
 import usePoolInfo from '../../../hooks/usePoolInfo';
-import usePlotNFTs from '../../../hooks/usePlotNFTs';
+// import usePlotNFTs from '../../../hooks/usePlotNFTs';
 
 const StyledCollapse = styled(Collapse)`
   display: ${({ in: visible }) => (visible ? 'block' : 'none')};
@@ -39,7 +39,7 @@ type Props = {
 
 export default function PlotNFTSelectBase(props: Props) {
   const { step, onCancel, title, description, hideFee } = props;
-  const { nfts } = usePlotNFTs();
+  // const { nfts } = usePlotNFTs();
   const { control, setValue } = useFormContext();
   const self = useWatch<boolean>({
     control,

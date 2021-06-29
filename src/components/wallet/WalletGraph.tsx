@@ -81,6 +81,7 @@ type Aggregate = {
   offset?: number;
 };
 
+/*
 type Point = {
   value: number;
   timestamp: number;
@@ -120,6 +121,7 @@ function aggregatePoints(
 
   return items;
 }
+*/
 
 function generateTransactionGraphData(
   transactions: Transaction[],

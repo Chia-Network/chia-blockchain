@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 // import styled from 'styled-components';
 import {
@@ -11,7 +11,7 @@ import {
   */
   Typography,
 } from '@material-ui/core';
-import { useRouteMatch, useHistory } from 'react-router';
+// import { useRouteMatch, useHistory } from 'react-router';
 import { /*useDispatch, */ useSelector } from 'react-redux';
 import { FormatLargeNumber } from '@chia/core';
 import StandardWallet from './standard/WalletStandard';
