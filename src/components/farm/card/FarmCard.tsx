@@ -13,6 +13,11 @@ import {
 const StyledCard = styled(Card)`
   height: 100%;
   overflow: visible;
+  margin-bottom: -0.5rem;
+`;
+
+const StyledTitle = styled.div`
+  margin-bottom: 0.5rem;
 `;
 
 const StyledValue = styled(Typography)`
@@ -34,12 +39,14 @@ export default function FarmCard(props: Props) {
   return (
     <StyledCard>
       <CardContent>
-        <Flex gap={1} alignItems="center">
-          <Typography color="textSecondary" gutterBottom>
-            {title}
-          </Typography>
-          {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
-        </Flex>
+        <StyledTitle>
+          <Flex gap={1} alignItems="center">
+            <Typography color="textSecondary">
+              {title}
+            </Typography>
+            {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
+          </Flex>
+        </StyledTitle>
         {loading ? (
           <Box>
             <CircularProgress color="primary" size={25} />

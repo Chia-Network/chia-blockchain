@@ -19,6 +19,7 @@ import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
 import LayoutMain from '../layout/LayoutMain';
 import FullNodeBlockSearch from './FullNodeBlockSearch';
+import FullNodeCards from './card/FullNodeCards';
 
 /* global BigInt */
 
@@ -312,7 +313,7 @@ export default function FullNode() {
   return (
     <LayoutMain title={<Trans>Full Node</Trans>}>
       <Flex flexDirection="column" gap={3}>
-        <FullNodeStatus />
+        <FullNodeCards />
         <BlocksCard />
         <FullNodeConnections />
       </Flex>

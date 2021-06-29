@@ -641,7 +641,7 @@ export default function StandardWallet(props: StandardWalletProps) {
         </More>
       </Flex>
 
-      <Flex flexDirection="column" gap={1}>
+      <Flex flexDirection="column" gap={2}>
         <Flex gap={1} justifyContent="flex-end">
           <Typography variant="body1" color="textSecondary">
             <Trans>
