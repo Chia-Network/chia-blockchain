@@ -1,8 +1,8 @@
 import inspect
-from typing import Callable, List, Optional, Union, Coroutine, Any
+from typing import List, Any
 
 import blspy
-from blspy import AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL
 
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
@@ -11,9 +11,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 
 async def sign_coin_solutions(
     coin_solutions: List[CoinSolution],
-    secret_key_for_public_key_f: Callable[
-        [blspy.G1Element], Union[Optional[PrivateKey], Coroutine[Any, Any, blspy.G1Element]]
-    ],
+    secret_key_for_public_key_f: Any,  # Potentially awaitable function from G1Element => Optional[PrivateKey]
     additional_data: bytes,
     max_cost: int,
 ) -> SpendBundle:
