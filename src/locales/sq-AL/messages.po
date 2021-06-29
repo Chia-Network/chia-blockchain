@@ -80,7 +80,7 @@ msgstr "Shto një direktori për Plotet"
 msgid "Add Plot to Queue"
 msgstr "Shto Plote ne radhë"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:88
 msgid "Add Wallet"
 msgstr "Shto kuletë"
 
@@ -247,7 +247,7 @@ msgstr "Ju jeni duke vjelë<0/>"
 msgid "Buy"
 msgstr "Bli"
 
-#: src/components/wallet/Wallets.tsx:61
+#: src/components/wallet/Wallets.tsx:49
 msgid "CC Wallet"
 msgstr "Shto kuletë"
 
@@ -307,7 +307,7 @@ msgstr "Chia"
 msgid "Chia Blockchain Wiki"
 msgstr "Zinxhiri Chia Wiki"
 
-#: src/components/wallet/Wallets.tsx:58
+#: src/components/wallet/Wallets.tsx:46
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "Kuleta Chia"
@@ -559,7 +559,7 @@ msgstr "Statusi aktual i burses"
 msgid "DANGER: permanently delete private key"
 msgstr "KUJDES: Fshije përgjithmonë çelësin privat"
 
-#: src/components/wallet/Wallets.tsx:65
+#: src/components/wallet/Wallets.tsx:53
 msgid "DID Wallet"
 msgstr "Shto kuletë"
 
@@ -1045,7 +1045,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:177
+#: src/components/wallet/Wallets.tsx:165
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1624,7 +1624,7 @@ msgstr "Në rradhë"
 msgid "RAM max usage"
 msgstr "Përdorimi maksimal i RAM-it"
 
-#: src/components/wallet/Wallets.tsx:63
+#: src/components/wallet/Wallets.tsx:51
 msgid "RL Wallet"
 msgstr "Kuletë e re"
 
@@ -1885,7 +1885,7 @@ msgstr "Krahina"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:125
+#: src/components/wallet/Wallets.tsx:113
 msgid "Status"
 msgstr "Statusi"
 
@@ -2337,7 +2337,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:178
+#: src/components/wallet/Wallets.tsx:166
 msgid "Wallets"
 msgstr "Kuletat"
 
@@ -2473,16 +2473,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[Gabimi 22] Skedari nuk u gjet. Ka shumë të ngjarë që një nga dosjet e skemave në konfigurimin.yaml ka një problem."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:150
+#: src/components/wallet/Wallets.tsx:138
 msgid "connections:"
 msgstr "lidhje:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:142
+#: src/components/wallet/Wallets.tsx:130
 msgid "height:"
 msgstr "lartësia:"
 
-#: src/components/wallet/Wallets.tsx:136
+#: src/components/wallet/Wallets.tsx:124
 msgid "not synced"
 msgstr "i pa sinkronizuar"
 
@@ -2491,17 +2491,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:130
+#: src/components/wallet/Wallets.tsx:118
 msgid "status:"
 msgstr "statusi:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/Wallets.tsx:123
 msgid "synced"
 msgstr "sinkronizuar"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:122
 msgid "syncing"
 msgstr "po sinkronizohet"
 

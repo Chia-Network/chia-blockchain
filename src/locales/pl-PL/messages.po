@@ -80,7 +80,7 @@ msgstr "Dodaj folder z działkami"
 msgid "Add Plot to Queue"
 msgstr "Dodaj działkę do kolejki"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:88
 msgid "Add Wallet"
 msgstr "Dodaj portfel"
 
@@ -247,7 +247,7 @@ msgstr "Obecnie farmisz  <0/>"
 msgid "Buy"
 msgstr "Kup"
 
-#: src/components/wallet/Wallets.tsx:61
+#: src/components/wallet/Wallets.tsx:49
 msgid "CC Wallet"
 msgstr "Portfel CC"
 
@@ -307,7 +307,7 @@ msgstr "Chia"
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchainu Chia"
 
-#: src/components/wallet/Wallets.tsx:58
+#: src/components/wallet/Wallets.tsx:46
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "Portfel Chia"
@@ -559,7 +559,7 @@ msgstr "Aktualny status handlu"
 msgid "DANGER: permanently delete private key"
 msgstr "NIEBEZPIECZEŃSTWO: klucz prywatny zostanie nieodwracalnie usunięty"
 
-#: src/components/wallet/Wallets.tsx:65
+#: src/components/wallet/Wallets.tsx:53
 msgid "DID Wallet"
 msgstr "Portfel DID"
 
@@ -1045,7 +1045,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:177
+#: src/components/wallet/Wallets.tsx:165
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1624,7 +1624,7 @@ msgstr "W kolejce"
 msgid "RAM max usage"
 msgstr "Maksymalne użycie pamięci RAM"
 
-#: src/components/wallet/Wallets.tsx:63
+#: src/components/wallet/Wallets.tsx:51
 msgid "RL Wallet"
 msgstr "Portfel RL"
 
@@ -1885,7 +1885,7 @@ msgstr "Stan"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:125
+#: src/components/wallet/Wallets.tsx:113
 msgid "Status"
 msgstr "Status"
 
@@ -2337,7 +2337,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:178
+#: src/components/wallet/Wallets.tsx:166
 msgid "Wallets"
 msgstr "Portfele"
 
@@ -2473,16 +2473,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[Błąd 22] Plik nie został znaleziony. Prawdopodobnie jeden z folderów działek w pliku config.yaml ma problem."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:150
+#: src/components/wallet/Wallets.tsx:138
 msgid "connections:"
 msgstr "połączenia:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:142
+#: src/components/wallet/Wallets.tsx:130
 msgid "height:"
 msgstr "wysokość:"
 
-#: src/components/wallet/Wallets.tsx:136
+#: src/components/wallet/Wallets.tsx:124
 msgid "not synced"
 msgstr "nie zsynchronizowano"
 
@@ -2491,17 +2491,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:130
+#: src/components/wallet/Wallets.tsx:118
 msgid "status:"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/Wallets.tsx:123
 msgid "synced"
 msgstr "zsynchronizowano"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:122
 msgid "syncing"
 msgstr "synchronizowanie"
 

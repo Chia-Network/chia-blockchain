@@ -82,7 +82,7 @@ msgstr "افزودن پوشه حاوی پلات"
 msgid "Add Plot to Queue"
 msgstr "افزودن پلات به صف"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:88
 msgid "Add Wallet"
 msgstr "افزودن کیف پول"
 
@@ -251,7 +251,7 @@ msgstr "اما شما در حال مزرعه داری <0/> هستید"
 msgid "Buy"
 msgstr "خریدن"
 
-#: src/components/wallet/Wallets.tsx:61
+#: src/components/wallet/Wallets.tsx:49
 msgid "CC Wallet"
 msgstr "کیف پول CC"
 
@@ -311,7 +311,7 @@ msgstr "چیـا"
 msgid "Chia Blockchain Wiki"
 msgstr "ویکی زنجیره بلوکی چیـا"
 
-#: src/components/wallet/Wallets.tsx:58
+#: src/components/wallet/Wallets.tsx:46
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "کیف پول چیـا"
@@ -563,7 +563,7 @@ msgstr "وضعیت فعلی مبادله"
 msgid "DANGER: permanently delete private key"
 msgstr "خطر: حذف دائم کلید شخصی"
 
-#: src/components/wallet/Wallets.tsx:65
+#: src/components/wallet/Wallets.tsx:53
 msgid "DID Wallet"
 msgstr "کیف پول DID"
 
@@ -1051,7 +1051,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:177
+#: src/components/wallet/Wallets.tsx:165
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1632,7 +1632,7 @@ msgstr "در صف انتظار"
 msgid "RAM max usage"
 msgstr "حداکثر مقدار استفاده از فضای رم"
 
-#: src/components/wallet/Wallets.tsx:63
+#: src/components/wallet/Wallets.tsx:51
 msgid "RL Wallet"
 msgstr "کیف پول RL"
 
@@ -1893,7 +1893,7 @@ msgstr "حالت"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:125
+#: src/components/wallet/Wallets.tsx:113
 msgid "Status"
 msgstr "وضعیت"
 
@@ -2349,7 +2349,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:178
+#: src/components/wallet/Wallets.tsx:166
 msgid "Wallets"
 msgstr "کیف پول ها"
 
@@ -2489,16 +2489,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[خطای 22] پرونده پیدا نشد. به احتمال زیاد یکی از پوشه های پلات در config.yaml شما مشکل دارد."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:150
+#: src/components/wallet/Wallets.tsx:138
 msgid "connections:"
 msgstr "اتصال ها:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:142
+#: src/components/wallet/Wallets.tsx:130
 msgid "height:"
 msgstr "ارتفاع:"
 
-#: src/components/wallet/Wallets.tsx:136
+#: src/components/wallet/Wallets.tsx:124
 msgid "not synced"
 msgstr "همگام‌سازی نشده"
 
@@ -2507,17 +2507,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:130
+#: src/components/wallet/Wallets.tsx:118
 msgid "status:"
 msgstr "وضعیت:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/Wallets.tsx:123
 msgid "synced"
 msgstr "همگام سازی شده"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:122
 msgid "syncing"
 msgstr "در حال همگام سازی"
 

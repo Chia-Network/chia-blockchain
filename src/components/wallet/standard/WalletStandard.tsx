@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React /* , { ReactNode } */ from 'react';
 import { Trans } from '@lingui/macro';
 import {
   More,
@@ -16,10 +16,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm } from 'react-hook-form';
 import {
+  /*
   Tooltip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  */
   Box,
   Typography,
   Button,
@@ -30,8 +32,8 @@ import {
   MenuItem,
 } from '@material-ui/core';
 import {
-  ExpandMore as ExpandMoreIcon,
-  Help as HelpIcon,
+  // ExpandMore as ExpandMoreIcon,
+  // Help as HelpIcon,
   Delete as DeleteIcon,
 } from '@material-ui/icons';
 import {
@@ -39,15 +41,15 @@ import {
   send_transaction,
   farm_block,
 } from '../../../modules/message';
-import { mojo_to_chia_string, chia_to_mojo } from '../../../util/chia';
+import { /* mojo_to_chia_string, */ chia_to_mojo } from '../../../util/chia';
 import { openDialog } from '../../../modules/dialog';
 import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
 import type { RootState } from '../../../modules/rootReducer';
 import WalletHistory from '../WalletHistory';
-import useCurrencyCode from '../../../hooks/useCurrencyCode';
+// import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import { deleteUnconfirmedTransactions } from '../../../modules/incoming';
-import WalletGraph from '../WalletGraph';
+// import WalletGraph from '../WalletGraph';
 import WalletCards from './WalletCards';
 import WalletStatus from '../WalletStatus';
 
@@ -209,6 +211,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+/*
 type BalanceCardSubSectionProps = {
   title: ReactNode;
   tooltip?: ReactNode;
@@ -345,6 +348,7 @@ function BalanceCard(props: BalanceCardProps) {
     </Card>
   );
 }
+*/
 
 type SendCardProps = {
   wallet_id: number;
@@ -360,8 +364,6 @@ function SendCard(props: SendCardProps) {
   const { wallet_id } = props;
   const classes = useStyles();
   let address_input: HTMLInputElement;
-  let amount_input: HTMLInputElement;
-  let fee_input: HTMLInputElement;
   const dispatch = useDispatch();
 
   const methods = useForm<SendTransactionData>({
@@ -548,7 +550,6 @@ type AddressCardProps = {
 function AddressCard(props: AddressCardProps) {
   const { wallet_id } = props;
 
-  const classes = useStyles();
   const dispatch = useDispatch();
   const wallet = useSelector((state: RootState) =>
     state.wallet_state.wallets?.find((item) => item.id === wallet_id),
@@ -562,10 +563,6 @@ function AddressCard(props: AddressCardProps) {
 
   function newAddress() {
     dispatch(get_address(wallet_id, true));
-  }
-
-  function copy() {
-    navigator.clipboard.writeText(address);
   }
 
   return (

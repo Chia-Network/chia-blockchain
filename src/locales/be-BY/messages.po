@@ -80,7 +80,7 @@ msgstr "Дадаць каталог з дзялянкамі"
 msgid "Add Plot to Queue"
 msgstr "Дадаць дзялянку ў чаргу"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:88
 msgid "Add Wallet"
 msgstr "Дадаць кашалёк"
 
@@ -247,7 +247,7 @@ msgstr "Але зараз ідзе фермерства на <0/>"
 msgid "Buy"
 msgstr "Купіць"
 
-#: src/components/wallet/Wallets.tsx:61
+#: src/components/wallet/Wallets.tsx:49
 msgid "CC Wallet"
 msgstr "Кашалёк каляровай манеты"
 
@@ -307,7 +307,7 @@ msgstr "Chia"
 msgid "Chia Blockchain Wiki"
 msgstr "Вікі блокчэйна Chia"
 
-#: src/components/wallet/Wallets.tsx:58
+#: src/components/wallet/Wallets.tsx:46
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "Кашалёк Chia"
@@ -559,7 +559,7 @@ msgstr "Бягучы гандлёвы стан"
 msgid "DANGER: permanently delete private key"
 msgstr "НЕБЯСПЕЧНА: выдаліць закрыты ключ назаўсёды"
 
-#: src/components/wallet/Wallets.tsx:65
+#: src/components/wallet/Wallets.tsx:53
 msgid "DID Wallet"
 msgstr "Кашалёк з дэцэнтралізаваным ідэнтыфікатарам"
 
@@ -1045,7 +1045,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:177
+#: src/components/wallet/Wallets.tsx:165
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1624,7 +1624,7 @@ msgstr "У чарзе"
 msgid "RAM max usage"
 msgstr "Макс. выкарыстанне RAM"
 
-#: src/components/wallet/Wallets.tsx:63
+#: src/components/wallet/Wallets.tsx:51
 msgid "RL Wallet"
 msgstr "Кашалёк з абмежаваннямі вываду"
 
@@ -1885,7 +1885,7 @@ msgstr "Стан"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:125
+#: src/components/wallet/Wallets.tsx:113
 msgid "Status"
 msgstr "Стан"
 
@@ -2337,7 +2337,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:178
+#: src/components/wallet/Wallets.tsx:166
 msgid "Wallets"
 msgstr "Кашалькі"
 
@@ -2473,16 +2473,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[Памылка 22] Файл не знойдзены. Хутчэй за ўсё, праблема з адной з папак з дзялянкамі, указаных у файле config.yaml."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:150
+#: src/components/wallet/Wallets.tsx:138
 msgid "connections:"
 msgstr "падлучэнні:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:142
+#: src/components/wallet/Wallets.tsx:130
 msgid "height:"
 msgstr "вышыня:"
 
-#: src/components/wallet/Wallets.tsx:136
+#: src/components/wallet/Wallets.tsx:124
 msgid "not synced"
 msgstr "не сінхр."
 
@@ -2491,17 +2491,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:130
+#: src/components/wallet/Wallets.tsx:118
 msgid "status:"
 msgstr "стан:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/Wallets.tsx:123
 msgid "synced"
 msgstr "сінхр."
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:122
 msgid "syncing"
 msgstr "ідзе сінхр."
 

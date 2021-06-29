@@ -2,8 +2,8 @@ import React, { ReactNode } from 'react';
 import { linearGradientDef } from '@nivo/core';
 import { ResponsiveLine } from '@nivo/line';
 import { orderBy, groupBy, sumBy, map } from 'lodash';
-import { Flex, FormatLargeNumber } from '@chia/core';
-import { Typography, Paper } from '@material-ui/core';
+// import { Flex, FormatLargeNumber } from '@chia/core';
+import { /* Typography, */ Paper } from '@material-ui/core';
 import styled from 'styled-components';
 import useWallet from '../../hooks/useWallet';
 import TransactionType from '../../constants/TransactionType';
@@ -14,6 +14,7 @@ import usePeak from '../../hooks/usePeak';
 import useCurrencyCode from '../../hooks/useCurrencyCode';
 import blockHeightToTimestamp from '../../util/blockHeightToTimestamp';
 
+/*
 const HOUR_SECONDS = 60 * 60;
 
 const StyledRoot = styled.div`
@@ -21,6 +22,7 @@ const StyledRoot = styled.div`
   // background-color: #303030;
   // padding: 1rem;
 `;
+*/
 
 const StyledGraphContainer = styled.div`
   position: relative;
@@ -33,6 +35,7 @@ const StyledTooltip = styled(Paper)`
   padding: 0.25rem 0.5rem;
 `;
 
+/*
 const StyledMaxTypography = styled(Typography)`
   position: absolute;
   left: 0;
@@ -54,6 +57,7 @@ const StyledMiddleTypography = styled(Typography)`
   transform: translate(0, -50%);
   font-size: 0.625rem;
 `;
+*/
 
 // https://github.com/plouc/nivo/issues/308#issuecomment-451280930
 const theme = {
@@ -241,7 +245,7 @@ export default function WalletGraph(props: Props) {
 
   const min = points.length ? Math.min(...points.map((item) => item.y)) : 0;
   const max = Math.max(min, ...points.map((item) => item.y));
-  const middle = max / 2;
+  // const middle = max / 2;
 
   return (
     <StyledGraphContainer height={height}>

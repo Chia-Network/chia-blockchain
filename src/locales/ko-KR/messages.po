@@ -80,7 +80,7 @@ msgstr "플롯 디렉토리를 추가"
 msgid "Add Plot to Queue"
 msgstr "플롯을 대기열에 추가"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:88
 msgid "Add Wallet"
 msgstr "지갑 추가"
 
@@ -247,7 +247,7 @@ msgstr "하지만 당신은 현재 <0/>을 파밍하고 있습니다."
 msgid "Buy"
 msgstr "매수"
 
-#: src/components/wallet/Wallets.tsx:61
+#: src/components/wallet/Wallets.tsx:49
 msgid "CC Wallet"
 msgstr "CC 지갑"
 
@@ -307,7 +307,7 @@ msgstr "치아"
 msgid "Chia Blockchain Wiki"
 msgstr "치아 블록체인 위키"
 
-#: src/components/wallet/Wallets.tsx:58
+#: src/components/wallet/Wallets.tsx:46
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "치아 지갑"
@@ -559,7 +559,7 @@ msgstr "현재 거래 상태"
 msgid "DANGER: permanently delete private key"
 msgstr "경고: 영구적으로 개인 키를 삭제합니다."
 
-#: src/components/wallet/Wallets.tsx:65
+#: src/components/wallet/Wallets.tsx:53
 msgid "DID Wallet"
 msgstr "DID 지갑"
 
@@ -1045,7 +1045,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:177
+#: src/components/wallet/Wallets.tsx:165
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1624,7 +1624,7 @@ msgstr "대기중"
 msgid "RAM max usage"
 msgstr "최대 RAM 사용량"
 
-#: src/components/wallet/Wallets.tsx:63
+#: src/components/wallet/Wallets.tsx:51
 msgid "RL Wallet"
 msgstr "RL 지갑"
 
@@ -1885,7 +1885,7 @@ msgstr "상태"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:125
+#: src/components/wallet/Wallets.tsx:113
 msgid "Status"
 msgstr "상태"
 
@@ -2337,7 +2337,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:178
+#: src/components/wallet/Wallets.tsx:166
 msgid "Wallets"
 msgstr "지갑"
 
@@ -2473,16 +2473,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[오류 22] 파일을 찾을 수 없습니다. config.yaml의 플롯 폴더 중 하나에 문제가 있을 가능성이 높습니다."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:150
+#: src/components/wallet/Wallets.tsx:138
 msgid "connections:"
 msgstr "연결:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:142
+#: src/components/wallet/Wallets.tsx:130
 msgid "height:"
 msgstr "높이:"
 
-#: src/components/wallet/Wallets.tsx:136
+#: src/components/wallet/Wallets.tsx:124
 msgid "not synced"
 msgstr "동기화 되지 않음"
 
@@ -2491,17 +2491,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:130
+#: src/components/wallet/Wallets.tsx:118
 msgid "status:"
 msgstr "상태:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/Wallets.tsx:123
 msgid "synced"
 msgstr "동기화됨"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:122
 msgid "syncing"
 msgstr "동기화중"
 

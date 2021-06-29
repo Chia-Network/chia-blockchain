@@ -1,19 +1,21 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import styled from 'styled-components';
+// import styled from 'styled-components';
 import {
   Box,
-  Grid,
+  /*
   List,
   Divider,
   ListItem,
   ListItemText,
+  */
   Typography,
 } from '@material-ui/core';
-import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { Flex, FormatLargeNumber } from '@chia/core';
+import { useRouteMatch, useHistory } from 'react-router';
+import { /*useDispatch, */ useSelector } from 'react-redux';
+import { FormatLargeNumber } from '@chia/core';
 import StandardWallet from './standard/WalletStandard';
+/*
 import {
   changeWalletMenu,
   standardWallet,
@@ -21,22 +23,12 @@ import {
   RLWallet,
   DIDWallet,
 } from '../../modules/walletMenu';
-import { CreateWalletView } from './create/WalletCreate';
-import ColouredWallet from './coloured/WalletColoured';
-import RateLimitedWallet from './rateLimited/WalletRateLimited';
-import DistributedWallet from './did/DIDWallet';
+*/
 import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
-import LayoutSidebar from '../layout/LayoutSidebar';
 import LayoutMain from '../layout/LayoutMain';
-import config from '../../config/config';
 
-const localTest = config.local_test;
-
-const StyledList = styled(List)`
-  width: 100%;
-`;
-
+/*
 const WalletItem = (props: any) => {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -103,6 +95,7 @@ const CreateWallet = () => {
     </div>
   );
 };
+*/
 
 export function StatusCard() {
   const syncing = useSelector(
@@ -159,16 +152,18 @@ export function StatusCard() {
 }
 
 export default function Wallets() {
-  const { path } = useRouteMatch();
+  // const { path } = useRouteMatch();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const id = useSelector((state: RootState) => state.wallet_menu.id);
   const wallet = wallets?.find((wallet) => wallet && wallet.id === id);
+  /*
   const visibleWallets = useMemo(() => {
     return (
       wallets?.filter((wallet) => wallet.type !== WalletType.POOLING_WALLET) ??
       []
     );
   }, [wallets]);
+  */
   const loading = !wallets;
 
   return (
