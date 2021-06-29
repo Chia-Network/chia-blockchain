@@ -1,5 +1,4 @@
 import asyncio
-import time
 import pytest
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo

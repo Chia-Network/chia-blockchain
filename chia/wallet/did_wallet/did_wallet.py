@@ -405,9 +405,10 @@ class DIDWallet:
                             removals_response = await node.request_removals(removal_request)
                             for coin_tuple in removals_response.coins:
                                 if coin_tuple[0] == coin.parent_coin_info:
-                                    puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(coin.parent_coin_info, sub_height)
+                                    puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
+                                        coin.parent_coin_info, sub_height
+                                    )
                                     response = await node.request_puzzle_solution(puzzle_solution_request)
-                                    assert response is not None
                                     req_puz_sol = response.response
                                     assert req_puz_sol.puzzle is not None
                                     parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
