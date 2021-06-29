@@ -27,6 +27,7 @@
     "lint": "tsc --noEmit && npm run eslint"
   },
   "dependencies": {
+    "@fontsource/roboto": "^4.4.5",
     "@lingui/core": "^3.10.4",
     "@lingui/macro": "^3.10.2",
     "@lingui/react": "^3.10.2",
@@ -42,7 +43,7 @@
     "byte-size": "^7.0.1",
     "bytes-iec": "^3.1.1",
     "connected-react-router": "^6.9.1",
-    "core-js": "^3.15.1",
+    "core-js": "^3.15.2",
     "crypto-browserify": "^3.12.0",
     "dotenv": "^10.0.0",
     "es6-promise": "^4.2.8",
@@ -79,7 +80,7 @@
     "unique-names-generator": "^4.5.0",
     "use-dark-mode": "^2.3.1",
     "validator": "^13.6.0",
-    "ws": "^7.5.0",
+    "ws": "^7.5.1",
     "yarn": "^1.22.10"
   },
   "devDependencies": {
@@ -121,6 +122,7 @@
     "concurrently": "^6.2.0",
     "copy-webpack-plugin": "^9.0.1",
     "cross-env": "^7.0.3",
+    "css-loader": "^5.2.6",
     "electron": "^11.4.9",
     "electron-osx-sign": "github:electron/electron-osx-sign#master",
     "electron-winstaller": "^5.0.0",
@@ -146,6 +148,7 @@
     "prettier-eslint-cli": "^5.0.1",
     "react-refresh": "^0.10.0",
     "redux-devtools-extension": "^2.13.9",
+    "style-loader": "^3.0.0",
     "terser-webpack-plugin": "^5.1.4",
     "tsconfig-paths-webpack-plugin": "^3.5.1",
     "typescript": "^4.3.4",

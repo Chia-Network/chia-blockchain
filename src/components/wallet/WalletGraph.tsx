@@ -1,14 +1,17 @@
 import React, { ReactNode } from 'react';
 import { linearGradientDef } from '@nivo/core';
 import { ResponsiveLine } from '@nivo/line';
-import { orderBy } from 'lodash';
+import { orderBy, groupBy, sumBy, map } from 'lodash';
 import { Flex, FormatLargeNumber } from '@chia/core';
 import { Typography, Paper } from '@material-ui/core';
 import styled from 'styled-components';
 import useWallet from '../../hooks/useWallet';
 import TransactionType from '../../constants/TransactionType';
 import type Transaction from '../../types/Transaction';
+import type Peak from '../../types/Peak';
 import { mojo_to_chia } from '../../util/chia';
+import usePeak from '../../hooks/usePeak';
+import blockHeightToTimestamp from '../../util/blockHeightToTimestamp';
 
 const StyledRoot = styled.div`
   // border-radius: 1rem;
@@ -63,50 +66,73 @@ const theme = {
   },
 };
 
-function preparePoints(balance: number, transactions: Transaction[]): {
-  x: number;
-  y: number;
-  tooltip?: ReactNode;
+function generateTransactionGraphData(transactions: Transaction[], peak: Peak): {
+  value: number;
+  timestamp: number;
 }[] {
-  let current = Date.now() / 1000;
+  // use only confirmed transactions
+  const confirmedTransactions = transactions.filter(transaction => transaction.confirmed);
 
-  console.log('balance', balance);
-  console.log('transactions', transactions);
-
-  const points = [];
-
-  if (!transactions || !transactions.length) {
-    return points;
-  }
-
-  const ordered = orderBy(transactions, ['confirmed_at_height'], ['desc']);
-
-  let start = balance;
-
-  points.push({
-    x: 1,
-    y: mojo_to_chia(start),
-    tooltip: mojo_to_chia(balance),
-  });
-
-  ordered.forEach((item, index) => {
-    const { type, created_at_time, confirmed_at_height, amount, fee_amount, confirmed } = item;
-
-    if (!confirmed) {
-      return;
-    }
+  // extract and compute values
+  let results = confirmedTransactions.map<{
+    value: number;
+    timestamp: number;
+  }>((transaction) => {
+    const { type, confirmed_at_height, amount, fee_amount } = transaction;
 
     const isOutgoing = [
       TransactionType.OUTGOING, 
       TransactionType.OUTGOING_TRADE,
     ].includes(type);
 
-    const total = (amount + fee_amount) * (isOutgoing ? -1 : 1);
+    const value = (amount + fee_amount) * (isOutgoing ? -1 : 1);
 
-    start = start - total;
+    return {
+      value,
+      timestamp: blockHeightToTimestamp(confirmed_at_height, peak)
+    };
+  });
+
+  // group transactions by confirmed_at_height
+  const groupedResults = groupBy(results, 'timestamp');
+
+  // sum grouped transaction and extract just valuable information
+  results = map(groupedResults, (items, timestamp) => ({
+    timestamp,
+    value: sumBy(items, 'value'),
+  }));
+
+  // order by timestamp
+  results = orderBy(results, ['timestamp'], ['desc']);
+
+  return results;
+}
+
+function prepareGraphPoints(balance: number, transactions: Transaction[], peak: Peak): {
+  x: number;
+  y: number;
+  tooltip?: ReactNode;
+}[] {
+  if (!transactions || !transactions.length || !peak) {
+    return [];
+  }
+
+  let start = balance;
+  const data = generateTransactionGraphData(transactions, peak);
+
+  const points = [{
+    x: peak.height,
+    y: mojo_to_chia(start),
+    tooltip: mojo_to_chia(balance),
+  }];
+
+  data.forEach((item) => {
+    const { timestamp, value } = item;
+
+    start = start - value;
 
     points.push({
-      x: confirmed_at_height,
+      x: timestamp,
       y: mojo_to_chia(start),
       tooltip: mojo_to_chia(start),
     });
@@ -115,22 +141,21 @@ function preparePoints(balance: number, transactions: Transaction[]): {
   return points.reverse();
 }
 
-
 type Props = {
   walletId: number;
 };
 
 export default function WalletGraph(props: Props) {
   const { walletId } = props;
+  const { peak } = usePeak();
   const { wallet, transactions } = useWallet(walletId);
   const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
-  if (!transactions || !balance) {
+  if (!transactions || !balance || !peak) {
     return null;
   }
 
-  const points = preparePoints(balance, transactions);
+  const points = prepareGraphPoints(balance, transactions, peak);
   
-
   const data = [{
     id: 'Points',
     data: points,

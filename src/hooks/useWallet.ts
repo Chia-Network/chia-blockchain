@@ -21,7 +21,11 @@ export default function useWallet(walletId: number): {
   const transactions = useMemo(() => {
     const transactions = wallet?.transactions;
     if (transactions) {
-      return orderBy(transactions, ['confirmed', 'created_at_time'], ['asc', 'desc']);
+      return orderBy(
+        transactions,
+        ['confirmed', 'confirmed_at_height', 'created_at_time'],
+        ['asc', 'desc', 'desc'],
+      );
     }
 
     return transactions;
