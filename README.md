@@ -5,6 +5,7 @@
 [Green Paper](https://github.com/HiveProject2021/chives-blockchain/wiki/The-Chives-Network-Blockchain)
 [Road Map](https://www.chivescoin.org/roadmap/)
 [Commuity Autonomy](https://www.chivescoin.org/community/)
+[Get Chives For Free](https://game.chivescoin.org/)
 
 # 1 Name：Chives
 * English name: Chives
@@ -18,6 +19,7 @@
 * Block allocation(Stage 3): 45% is allocated to miners, 45% is allocated to the master nodes, and 10% is allocated to the community
 * Reward halving: Halving in 3 years, to a block reward of 12.5 Chives from the 13th year (same as Chia)
 * Total issuance: No upper limit (same as Chia)
+* Need to Replot(Can not use chia plots)
 
 Chives is a hard fork created by volunteers in the community using Chives code. As a completely decentralized, no reservation, no ICO, and community autonomy cryptocurrency, it can create a low-power, green and environmentally friendly blockchain system with Chia™.
 
