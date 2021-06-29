@@ -5,6 +5,7 @@ import {
   getWalletsMessage,
   get_balance_for_wallet,
   getTransactionMessage,
+  deleteUnconfirmedTransactionsMessage,
 } from './message';
 import type WalletBalance from '../types/WalletBalance';
 import type Wallet from '../types/Wallet';
