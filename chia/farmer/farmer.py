@@ -50,7 +50,7 @@ log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
-UPDATE_PLOT_CACHE_INTERVAL: int = 60
+UPDATE_HARVESTER_CACHE_INTERVAL: int = 60
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
@@ -132,7 +132,7 @@ class Farmer:
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
 
-        self.plots_cache: Dict[str, Dict[str, Tuple[Dict, float]]] = {}
+        self.harvester_cache: Dict[str, Dict[str, Tuple[Dict, float]]] = {}
 
     async def _start(self):
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
@@ -487,35 +487,35 @@ class Farmer:
 
         return None
 
-    async def update_cached_plots(self):
+    async def update_cached_harvesters(self):
         # First remove outdated cache entries
         remove_hosts = []
-        for host, host_cache in self.plots_cache.items():
+        for host, host_cache in self.harvester_cache.items():
             remove_peers = []
             for peer_id, peer_cache in host_cache.items():
                 _, last_update = peer_cache
                 # If the peer cache hasn't been updated for 10x interval, drop it since the harvester doesn't respond
-                if time.time() - last_update > UPDATE_PLOT_CACHE_INTERVAL * 10:
+                if time.time() - last_update > UPDATE_HARVESTER_CACHE_INTERVAL * 10:
                     remove_peers.append(peer_id)
                 for key in remove_peers:
                     del host_cache[key]
             if len(host_cache) == 0:
                 remove_hosts.append(host)
         for key in remove_hosts:
-            del self.plots_cache[key]
+            del self.harvester_cache[key]
         # Now query each harvester and update caches
         for connection in self.server.get_connections():
             if connection.connection_type != NodeType.HARVESTER:
                 continue
-            cache_entry = await self.get_cached_plots(connection)
-            if cache_entry is None or time.time() - cache_entry[1] > UPDATE_PLOT_CACHE_INTERVAL:
+            cache_entry = await self.get_cached_harvesters(connection)
+            if cache_entry is None or time.time() - cache_entry[1] > UPDATE_HARVESTER_CACHE_INTERVAL:
                 response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
                 if response is not None:
                     if isinstance(response, harvester_protocol.RespondPlots):
-                        if connection.peer_host not in self.plots_cache:
-                            self.plots_cache[connection.peer_host] = {}
+                        if connection.peer_host not in self.harvester_cache:
+                            self.harvester_cache[connection.peer_host] = {}
 
-                        self.plots_cache[connection.peer_host][connection.peer_node_id.hex()] = (
+                        self.harvester_cache[connection.peer_host][connection.peer_node_id.hex()] = (
                             response.to_json_dict(),
                             time.time(),
                         )
@@ -529,19 +529,19 @@ class Farmer:
                         "Harvester did not respond. You might need to update harvester to the latest version"
                     )
 
-    async def get_cached_plots(self, connection: WSChiaConnection) -> Optional[Tuple[Dict, float]]:
-        host_cache = self.plots_cache.get(connection.peer_host)
+    async def get_cached_harvesters(self, connection: WSChiaConnection) -> Optional[Tuple[Dict, float]]:
+        host_cache = self.harvester_cache.get(connection.peer_host)
         if host_cache is None:
             return None
         return host_cache.get(connection.peer_node_id.hex())
 
-    async def get_plots(self) -> Dict:
+    async def get_harvesters(self) -> Dict:
         harvesters: List = []
         for connection in self.server.get_connections():
             if connection.connection_type != NodeType.HARVESTER:
                 continue
 
-            cache_entry = await self.get_cached_plots(connection)
+            cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry is not None:
                 harvester_object: dict = dict(cache_entry[0])
                 harvester_object["connection"] = {
@@ -600,6 +600,6 @@ class Farmer:
                 refresh_slept = 0
 
             # Handles harvester plots cache cleanup and updates
-            await self.update_cached_plots()
+            await self.update_cached_harvesters()
 
             await asyncio.sleep(1)
