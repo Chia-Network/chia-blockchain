@@ -14,7 +14,7 @@ TIMELORD: 8446 -> 8622
 
 VDF: 8000 -> 8176
 
-NODE: 8444 -> 8620
+NODE: 8444 -> 8620 [Except for derive keys]
 RPC: 8555 -> 8735 [+4]
 
 UI: 8222 -> 8398
