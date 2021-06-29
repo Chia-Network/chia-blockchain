@@ -482,13 +482,13 @@ class WalletNode:
                     valid, fork_point, _ = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
                         weight_proof
                     )
-                    if not valid:
-                        self.log.error(
-                            f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
-                            f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
-                        )
-                        self.log.debug(f"{weight_proof}")
-                        return None
+                if not valid:
+                    self.log.error(
+                        f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
+                        f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+                    )
+                    self.log.debug(f"{weight_proof}")
+                    return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
                     header_block.header_hash, uint32(fork_point)
@@ -663,15 +663,10 @@ class WalletNode:
         advanced_peak = False
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
-        if (
-            self.full_node_peer is not None
-            and peer.peer_host == self.full_node_peer.host
-            or peer.peer_host == "127.0.0.1"
-        ):
-            trusted = True
-            pre_validation_results: Optional[List[PreValidationResult]] = None
-        else:
-            trusted = False
+        assert self.server
+        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        pre_validation_results: Optional[List[PreValidationResult]] = None
+        if not trusted:
             pre_validation_results = await self.wallet_state_manager.blockchain.pre_validate_blocks_multiprocessing(
                 header_blocks
             )
