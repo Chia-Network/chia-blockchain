@@ -26,7 +26,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm and electron packagers"
 npm install electron-packager -g
 npm install electron-installer-debian -g
-s
+
 echo "Create dist/"
 rm -rf dist
 mkdir dist
@@ -41,7 +41,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-cssp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
 cd chia-blockchain-gui || exit
 
