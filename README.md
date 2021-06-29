@@ -4,12 +4,12 @@
 
 # 1 Name：Chives
 * English name: Chives
-* English abbreviation: XCC (XCH Chives)
+* English abbreviation: XCC (XCC Chives)
 * ICO: No
 * Pre-Mine: No
 * Description: Forked from Chia
 * Block time: 18.75 seconds (same as Chia)
-* Block reward: 200 Chives (Chia: 2 XCH)
+* Block reward: 200 Chives (Chia: 2 XCC)
 * Block allocation: 45% is allocated to miners, 45% is allocated to the master nodes, and 10% is allocated to the community
 * Reward halving: Halving in 3 years, to a block reward of 12.5 Chives from the 13th year (same as Chia)
 * Total issuance: No upper limit (same as Chia)

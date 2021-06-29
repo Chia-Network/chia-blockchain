@@ -314,16 +314,16 @@ def chia_full_version_str() -> str:
 
 
 def chia_init(root_path: Path):
-    if os.environ.get("CHIA_ROOT", None) is not None:
+    if os.environ.get("CHIVES_ROOT", None) is not None:
         print(
-            f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
+            f"warning, your CHIVES_ROOT is set to {os.environ['CHIVES_ROOT']}. "
             f"Please unset the environment variable and run chia init again\n"
             f"or manually migrate config.yaml"
         )
 
     print(f"Chia directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
-        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
+        # This is reached if CHIVES_ROOT is set, or if user has run chia init twice
         # before a new update.
         check_keys(root_path)
         print(f"{root_path} already exists, no migration action taken")

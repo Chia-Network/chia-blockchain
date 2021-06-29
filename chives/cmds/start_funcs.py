@@ -11,7 +11,7 @@ from chia.util.service_groups import services_for_groups
 
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
-    os.environ["CHIA_ROOT"] = str(root_path)
+    os.environ["CHIVES_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
     chia = sys.argv[0]
     process = subprocess.Popen(f"{chia} run_daemon".split(), stdout=subprocess.PIPE)
