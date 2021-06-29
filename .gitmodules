@@ -5,3 +5,6 @@
 [submodule "mozilla-ca"]
 	path = mozilla-ca
 	url = https://github.com/Chia-Network/mozilla-ca.git
+[submodule "sector-blockchain-gui"]
+	path = sector-blockchain-gui
+	url = https://github.com/scmurray1/sector-blockchain-gui
