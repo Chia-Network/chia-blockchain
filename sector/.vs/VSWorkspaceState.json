@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\cmds",
+    "\\introducer",
+    "\\protocols",
+    "\\timelord",
+    "\\types",
+    "\\types\\blockchain_format",
+    "\\wallet",
+    "\\wallet\\rl_wallet",
+    "\\wallet\\util"
+  ],
+  "SelectedNode": "\\server\\node_discovery.py",
+  "PreviewInSolutionExplorer": false
+}
