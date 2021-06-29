@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from blspy import G1Element
-from chivespos import Verifier
+from chiapos import Verifier
 
 from chives.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots, parse_plot_info
 from chives.util.config import load_config

@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from chivesvdf import prove
+from chiavdf import prove
 
 from chives.consensus.constants import ConsensusConstants
 from chives.types.blockchain_format.classgroup import ClassgroupElement

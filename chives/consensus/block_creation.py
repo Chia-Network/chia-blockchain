@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import blspy
 from blspy import G1Element, G2Element
-from chivesbip158 import PyBIP158
+from chiabip158 import PyBIP158
 
 from chives.consensus.block_record import BlockRecord
 from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward

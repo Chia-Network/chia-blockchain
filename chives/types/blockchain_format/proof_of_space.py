@@ -4,7 +4,7 @@ from typing import Optional
 
 from bitstring import BitArray
 from blspy import G1Element
-from chivespos import Verifier
+from chiapos import Verifier
 
 from chives.consensus.constants import ConsensusConstants
 from chives.types.blockchain_format.sized_bytes import bytes32

@@ -2,7 +2,7 @@ from secrets import token_bytes
 
 import pytest
 from blspy import AugSchemeMPL
-from chivespos import DiskPlotter
+from chiapos import DiskPlotter
 
 from chives.consensus.coinbase import create_puzzlehash_for_pk
 from chives.plotting.plot_tools import stream_plot_info_ph, stream_plot_info_pk

@@ -158,7 +158,7 @@ If ($LastExitCode -gt 0){
 }
 
 Write-Output "   ---"
-Write-Output "Increase the stack for chives command for (chives plots create) chivespos limitations"
+Write-Output "Increase the stack for chives command for (chives plots create) chiapos limitations"
 # editbin.exe needs to be in the path
 editbin.exe /STACK:8000000 daemon\chives.exe
 Write-Output "   ---"

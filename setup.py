@@ -2,9 +2,9 @@ from setuptools import setup
 
 dependencies = [
     "blspy==1.0.2",  # Signature library
-    "chivesvdf==1.0.2",  # timelord and vdf verification
-    "chivesbip158==1.0",  # bip158-style wallet filters
-    "chivespos==1.0.3",  # proof of space
+    "chiavdf==1.0.2",  # timelord and vdf verification
+    "chiabip158==1.0",  # bip158-style wallet filters
+    "chiapos==1.0.3",  # proof of space
     "clvm==0.9.7",
     "clvm_rs==0.1.8",
     "clvm_tools==0.4.3",
