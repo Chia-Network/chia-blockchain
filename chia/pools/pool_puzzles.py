@@ -363,6 +363,7 @@ def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
             return None
         return PoolState.from_bytes(state_bytes)
     except Exception as e:
+        log.error(f"Error in pool_state_from_extra_data {e}")
         return None
 
 
