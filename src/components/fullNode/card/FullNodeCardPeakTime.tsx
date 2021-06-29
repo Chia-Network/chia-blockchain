@@ -17,7 +17,7 @@ export default function FullNodeCardPeakTime() {
   return (
     <FarmCard
       valueColor="textPrimary"
-      title={<Trans>Peak Height</Trans>}
+      title={<Trans>Peak Time</Trans>}
       tooltip={<Trans>This is the time of the latest peak sub block.</Trans>}
       value={value}
     />
