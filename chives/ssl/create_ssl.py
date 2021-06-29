@@ -67,7 +67,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     subject = issuer = x509.Name(
         [
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
-            x509.NameAttribute(NameOID.COMMON_NAME, "Chia CA"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Chives CA"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
         ]
     )

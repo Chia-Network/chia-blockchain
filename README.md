@@ -14,7 +14,7 @@
 * Reward halving: Halving in 3 years, to a block reward of 12.5 Chives from the 13th year (same as Chia)
 * Total issuance: No upper limit (same as Chia)
 
-Chives is a hard fork created by volunteers in the community using Chia code. As a completely decentralized, no reservation, no ICO, and community autonomy cryptocurrency, it can create a low-power, green and environmentally friendly blockchain system with Chia™.
+Chives is a hard fork created by volunteers in the community using Chives code. As a completely decentralized, no reservation, no ICO, and community autonomy cryptocurrency, it can create a low-power, green and environmentally friendly blockchain system with Chia™.
 
 # 2 What is a Chives Farm?
 Running a Chives Farm is similar to mining, but using hard drive storage space instead of processing power. During block creation a snapshot the network storage space is taken;
@@ -37,11 +37,11 @@ On the blockchain of the Chives network, there is no upper limit to the total nu
 A block is generated every 18.75 seconds, and each block rewards 200 Chives. Of this, 45% is allocated to miners, another 45% is allocated to the master nodes, and 10% is allocated to the community. Halving of block rewards in 3 years, to a final reward rate of 12.5 Chives every 10 minutes from the 13th year.
 
 # 6 What problems does Chives solve?
-1) Chia officially reserves a large number of coins.
+1) Chives officially reserves a large number of coins.
 
-The official developers of Chia coin reserve 21 Millions coins for their own use, which is unfair to everyone who participates in Chia. The 21 Millions coins officially reserved are equivalent to the total reward of all miners mining for a 12 years straight.
+The official developers of Chives coin reserve 21 Millions coins for their own use, which is unfair to everyone who participates in Chia. The 21 Millions coins officially reserved are equivalent to the total reward of all miners mining for a 12 years straight.
 
-2) The problem of concentration of computing power caused by the large-scale mining pool of Chia coin.
+2) The problem of concentration of computing power caused by the large-scale mining pool of Chives coin.
 
 In order to prevent the participation of large mining pools from causing too low returns for retail investors, Chives refers to Dash’s governance model, citing the concept of master nodes and community autonomy.
 
@@ -53,7 +53,7 @@ Anyone can become a master node, which provides another channel for people to pa
 
 3) The problem that the community does not obtain block rewards.
 
-Currently in Chia’s model, only two groups of officials and miners can obtain block rewards: The official team who owns Chia by reserving 21 million coins, and miners who need to buy a lot of equipment and participate in mining to gain income.
+Currently in Chia’s model, only two groups of officials and miners can obtain block rewards: The official team who owns Chives by reserving 21 million coins, and miners who need to buy a lot of equipment and participate in mining to gain income.
 
 All those who have done publicity and promotion for Chia, have contributed, but will not receive any of the block rewards. This situation violates the spirit of community participation in fairness and openness.
 

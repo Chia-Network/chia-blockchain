@@ -321,7 +321,7 @@ def chia_init(root_path: Path):
             f"or manually migrate config.yaml"
         )
 
-    print(f"Chia directory {root_path}")
+    print(f"Chives directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
         # This is reached if CHIVES_ROOT is set, or if user has run chia init twice
         # before a new update.

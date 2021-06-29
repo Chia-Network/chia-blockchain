@@ -4,10 +4,10 @@ Welcome to the chia-blockchain project!
 We are happy that you are taking a look at the code for Chia, a proof of space and time cryptocurrency.
 
 A lot of fascinating new cryptography and blockchain concepts are used and implemented here.
-This repo includes the code for the Chia full node, farmer, and timelord (in chia folder), which are all written in python.
-It also includes a verifiable delay function implementation that it imports from the [chiavdf repo](https://github.com/Chia-Network/chiavdf) (in c/c++), and a proof of space implementation that it imports from the [chiapos repo](https://github.com/Chia-Network/chiapos). BLS signatures are imported from the [bls-signatures repo](https://github.com/Chia-Network/bls-signatures) as blspy. There is an additional dependency on the [chiabip158 repo](https://github.com/Chia-Network/chiabip158). For major platforms, binary and source wheels are shipped to PyPI from each dependent repo. Then chia-blockchain can pip install those from PyPI or they can be prepackaged as is done for the Windows installer. On unsupported platforms, pip will fall back to the source distributions, to be compiled locally.
+This repo includes the code for the Chives full node, farmer, and timelord (in chia folder), which are all written in python.
+It also includes a verifiable delay function implementation that it imports from the [chiavdf repo](https://github.com/HiveProject2021/chiavdf) (in c/c++), and a proof of space implementation that it imports from the [chiapos repo](https://github.com/HiveProject2021/chiapos). BLS signatures are imported from the [bls-signatures repo](https://github.com/HiveProject2021/bls-signatures) as blspy. There is an additional dependency on the [chiabip158 repo](https://github.com/HiveProject2021/chiabip158). For major platforms, binary and source wheels are shipped to PyPI from each dependent repo. Then chia-blockchain can pip install those from PyPI or they can be prepackaged as is done for the Windows installer. On unsupported platforms, pip will fall back to the source distributions, to be compiled locally.
 
-If you want to learn more about this project, read the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki), or check out the [green paper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
+If you want to learn more about this project, read the [wiki](https://github.com/HiveProject2021/chia-blockchain/wiki), or check out the [green paper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
 
 ## Contributions
 
@@ -23,9 +23,9 @@ Contact any of the team members on [Keybase](https://keybase.io/team/chia_networ
 
 We ask that external contributors create a fork of the `main` branch for any feature work they wish to take on.
 
-Members of the Chia organization may create feature branches from the `main` branch.
+Members of the Chives organization may create feature branches from the `main` branch.
 
-In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `1.0.0`.
+In the event an emergency fix is required for the release version of Chia, members of the Chives organization will create a feature branch from the current release branch `1.0.0`.
 
 ## Branching Strategy
 
@@ -34,7 +34,7 @@ In the event an emergency fix is required for the release version of Chia, membe
 1. All changes go into the main branch.
 2. Main is stable at all times, all tests pass.
 3. Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
-4. Chia Network's nodes on the public testnet are running the latest version `x.y.z`.
+4. Chives Network's nodes on the public testnet are running the latest version `x.y.z`.
 5. The `main` branch will have a long running `beta testnet` to allow previewing of changes.
 6. Pull Request events may require a `beta testnet` review environment. At the moment this is at the discretion of the reviewer.
 7. Hotfixes land in the release branch they fix, and all later versions. (This will be achieved by regularly merging from `1.0.x` to main).
@@ -82,7 +82,7 @@ workflow.
 3. Install BlackConnect plugin
 4. Set to run python black on save
 5. Set line length to 120
-6. Install these linters https://github.com/Chia-Network/chia-blockchain/tree/main/.github/linters
+6. Install these linters https://github.com/HiveProject2021/chia-blockchain/tree/main/.github/linters
 
 ## Testnets and review environments
 
@@ -92,8 +92,8 @@ Following the release of `1.1.0`, the official `testnet` will include all change
 
 Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.
 Changes that impact the blockchain could require a review environment before acceptance into `main`. This is at the discretion of the reviewer.
-Chia organization members have been granted CI access to deploy `beta testnets`.
-If you are not a Chia organization member, you can enquire about deploying a `beta testnet` in the public dev Keybase channel.
+Chives organization members have been granted CI access to deploy `beta testnets`.
+If you are not a Chives organization member, you can enquire about deploying a `beta testnet` in the public dev Keybase channel.
 
 ## Submit changes
 

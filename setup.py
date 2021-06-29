@@ -44,7 +44,7 @@ kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
-    description="Chia blockchain full node, farmer, timelord, and wallet.",
+    description="Chives blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",

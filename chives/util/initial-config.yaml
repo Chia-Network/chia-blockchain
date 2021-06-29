@@ -311,7 +311,7 @@ full_node:
       host: *self_hostname
       port: 9446
   introducer_peer:
-      host: introducer.chivescoin.org  # Chia AWS introducer IPv4/IPv6
+      host: introducer.chivescoin.org  # Chives AWS introducer IPv4/IPv6
       port: 9444
   wallet_peer:
     host: *self_hostname
@@ -395,7 +395,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.chivescoin.org # Chia AWS introducer IPv4/IPv6
+    host: introducer.chivescoin.org # Chives AWS introducer IPv4/IPv6
     port: 9444
 
   ssl:

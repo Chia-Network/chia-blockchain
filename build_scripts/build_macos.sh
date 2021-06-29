@@ -9,7 +9,7 @@ if [ ! "$CHIVES_INSTALLER_VERSION" ]; then
 	echo "WARNING: No environment variable CHIVES_INSTALLER_VERSION set. Using 0.0.0."
 	CHIVES_INSTALLER_VERSION="0.0.0"
 fi
-echo "Chia Installer Version is: $CHIVES_INSTALLER_VERSION"
+echo "Chives Installer Version is: $CHIVES_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
@@ -44,7 +44,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
+electron-packager . Chives --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIVES_INSTALLER_VERSION
 LAST_EXIT_CODE=$?

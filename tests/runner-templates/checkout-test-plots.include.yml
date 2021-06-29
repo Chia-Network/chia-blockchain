@@ -1,7 +1,7 @@
     - name: Checkout test blocks and plots
       uses: actions/checkout@v2
       with:
-        repository: 'Chia-Network/test-cache'
+        repository: 'HiveProject2021/test-cache'
         path: '.chia'
         ref: '0.26.0'
         fetch-depth: 1

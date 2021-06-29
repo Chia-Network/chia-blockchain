@@ -8,7 +8,7 @@ if [ -z "$VIRTUAL_ENV" ]; then
 fi
 
 if [ "$(id -u)" = 0 ]; then
-  echo "The Chia Blockchain GUI can not be installed or run by the root user."
+  echo "The Chives Blockchain GUI can not be installed or run by the root user."
 	exit 1
 fi
 
@@ -93,6 +93,6 @@ else
 fi
 
 echo ""
-echo "Chia blockchain install-gui.sh completed."
+echo "Chives blockchain install-gui.sh completed."
 echo ""
 echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI."

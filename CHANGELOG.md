@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.1.6 Chia Blockchain 2021-05-20
+## 1.1.6 Chives Blockchain 2021-05-20
 
 ### Added
 
@@ -50,13 +50,13 @@ for setuptools_scm/PEP 440 reasons.
 - Thanks to @msg7086 for fixing install.sh for Debian.
 - And thank you to @alfonsoperez, @asdf2014, @fredericosilva, @lamba09, @Nikolaj-K, @sargonas, @aisk, @Ich5003, and @trumankain for various other fixes and improvements.
 
-## 1.1.5 Chia Blockchain 2021-05-09
+## 1.1.5 Chives Blockchain 2021-05-09
 
 ### Fixed
 
 - We were not checking for negative values in the uint64 constructor. Therefore coins with negative values were added to the mempool. These blocks passed validation, but they did not get added into the blockchain due to negative values not serializing in uint64. Farmers making these blocks would make blocks that did not make it into or advance the chain, so the blockchain slowed down starting at block 255518 around 6:35AM PDT 5/9/2021. The fix adds a check in the mempool and block validation, and does not disconnect peers who send these invalid blocks (any peer 1.1.4 or older), making this update not mandatory but is recommended. Users not updating might see their blocks get rejected from other peers. Upgraded nodes will show an error when they encounter an old node trying to send an invalid block. This "Consensus error 124..." can be safely ignored.
 
-## 1.1.4 Chia Blockchain 2021-05-04
+## 1.1.4 Chives Blockchain 2021-05-04
 
 ### Changed
 
@@ -71,7 +71,7 @@ for setuptools_scm/PEP 440 reasons.
 - Two issues with processing Weight Proofs during syncing while farming.
 - Fixed a bug in the outgoing rate control logic that could prevent messages being sent.
 
-## 1.1.3 Chia Blockchain 2021-05-01
+## 1.1.3 Chives Blockchain 2021-05-01
 
 ### Added
 
@@ -116,7 +116,7 @@ for setuptools_scm/PEP 440 reasons.
 - Thanks @antoniobg for a typo fix in keychain.py.
 - Thanks to @altendky for catching a Copyright date error.
 
-## 1.1.2 Chia Blockchain 2021-04-24
+## 1.1.2 Chives Blockchain 2021-04-24
 
 ### Changed
 
@@ -127,7 +127,7 @@ for setuptools_scm/PEP 440 reasons.
 - When attempting to sync, connections could accidentally disconnect for rate limiting reasons. This was causing many to not be able to sync.
 - Some temp files were not being closed during GUI plotting.
 
-## 1.1.1 Chia Blockchain 2021-04-21
+## 1.1.1 Chives Blockchain 2021-04-21
 
 ### Added
 
@@ -141,11 +141,11 @@ for setuptools_scm/PEP 440 reasons.
 
 - Changes were made in 1.1.0 to make sure that even out of order signage points were found and responded to by as many farmers as possible. That change lead to a situation where the harvester could thrash on the same cached signage point.
 
-## 1.1.0 Chia Blockchain 2021-04-21
+## 1.1.0 Chives Blockchain 2021-04-21
 
 ### Added
 
-- This fork release includes full transaction support for the Chia Blockchain. Transactions are still disabled until 5/3/2021 at 10:00AM PDT. It is hard to overstate how much work and clean up went into this release.
+- This fork release includes full transaction support for the Chives Blockchain. Transactions are still disabled until 5/3/2021 at 10:00AM PDT. It is hard to overstate how much work and clean up went into this release.
 - This is the 1.0 release of Chialisp. Much has been massaged and finalized. We will be putting a focus on updating and expanding the documentation on [chialisp.com](https://chialisp.com) shortly.
 - Farmers now compress blocks using code snippets from previous blocks. This saves storage space and allows larger smart coins to have a library of sorts on chain.
 - We now support offline signing of coins.
@@ -167,7 +167,7 @@ for setuptools_scm/PEP 440 reasons.
 - Timelords are now successfully infusing almost 100% of blocks.
 - Harvester should be a bit more tolerant of some bad plots.
 
-## 1.0.5 Chia Blockchain 2021-04-14
+## 1.0.5 Chives Blockchain 2021-04-14
 
 ### Added
 
@@ -185,7 +185,7 @@ for setuptools_scm/PEP 440 reasons.
 - Help -> About was blank.
 - Our estimate for k=32 was about 0.4GiB too low in some cases.
 - Building the GUI in especially ARM64 Linux was painful enough to be considered broken.
-## 1.0.4 Chia Blockchain 2021-04-12
+## 1.0.4 Chives Blockchain 2021-04-12
 
 ### Added
 
@@ -209,23 +209,23 @@ for setuptools_scm/PEP 440 reasons.
 - Wallet start up would have a race condition that output a harmless error on startup.
 - Thanks for a typo fix from @alfonsoperez.
 
-## 1.0.3 Chia Blockchain 2021-03-30
+## 1.0.3 Chives Blockchain 2021-03-30
 
 ### Added
 
 - This is a minor bug fix release for version 1.0.2
-- You should review the [release notes for v1.0.2](https://github.com/Chia-Network/chia-blockchain/releases/tag/1.0.2) but we especially want to point out that wallet sync is much faster than in 1.0.1 and earlier versions.
+- You should review the [release notes for v1.0.2](https://github.com/HiveProject2021/chia-blockchain/releases/tag/1.0.2) but we especially want to point out that wallet sync is much faster than in 1.0.1 and earlier versions.
 
 ### Fixed
 
 - An incorrect merge brought in unreleased features and broke `chia keys`.
 - Omitted from the 1.0.2 changelog, we fixed one crash in harvester with the release of chiapos 1.0.0 as well.
 
-## 1.0.2 Chia Blockchain 2021-03-30
+## 1.0.2 Chives Blockchain 2021-03-30
 
 ### Added
 
-- We have released version 1.0.0 of [chiapos](https://github.com/Chia-Network/chiapos). This includes a 20% speed increase for bitfield plotting compared to the previous version on the same machine. In many cases this will mean that bitfield plotting is as fast or faster than non bitfield plotting.
+- We have released version 1.0.0 of [chiapos](https://github.com/HiveProject2021/chiapos). This includes a 20% speed increase for bitfield plotting compared to the previous version on the same machine. In many cases this will mean that bitfield plotting is as fast or faster than non bitfield plotting.
 - @xorinox improved our support for RedHat related distributions in `install.sh`.
 - @ayaseen improved our support for RedHat related distributions in `install-timelord.sh`.
 - We have added Dutch and Polish to supported translations. Thanks @psydafke, @WesleyVH, @pieterhauwaerts, @bartlomiej.tokarzewski, @abstruso, @feel.the.code, and @Axadiw for contributions to [translations on Crowdin](https://crowdin.com/project/chia-blockchain).
@@ -252,7 +252,7 @@ for setuptools_scm/PEP 440 reasons.
 - There was a potential node locking issue that could have prevented a Timelord from getting a new peak and cause a chain stall.
 - We did not correctly support some Crowdin locales. Pirate English was starting to overwrite US English for example.
 
-## 1.0.1 Chia Blockchain 2021-03-23
+## 1.0.1 Chives Blockchain 2021-03-23
 
 ### Added
 
@@ -273,11 +273,11 @@ for setuptools_scm/PEP 440 reasons.
 - Users can now pip install e.g. chia-blockchain==1.0.1 on most platforms.
 - Sometimes the GUI had an error regarding MainWindow.
 
-## 1.0.0 First Release of Chia Blockchain 2021-03-17
+## 1.0.0 First Release of Chives Blockchain 2021-03-17
 
 ### Added
 
-- This is the first production release of the Chia Blockchain. This can be installed and will wait for the green flag that will be dropped at approximately 7AM PDST (14:00 UTC) on Friday March 19, 2021. All farming rewards from that point forward will be considered valid and valuable XCC. There is a six week lock on all transactions. During those six weeks farmers will be earning their farming rewards but those rewards can not be spent.
+- This is the first production release of the Chives Blockchain. This can be installed and will wait for the green flag that will be dropped at approximately 7AM PDST (14:00 UTC) on Friday March 19, 2021. All farming rewards from that point forward will be considered valid and valuable XCC. There is a six week lock on all transactions. During those six weeks farmers will be earning their farming rewards but those rewards can not be spent.
 - Initial difficulty will be set for 100PB. This may mean the initial epoch may be slow. Mainnet difficulty resets are targeted for 24 hours so this difficulty will adjust to the actual space brought online in 24 to 48 hours after launch.
 - Transactions are not enabled in the 1.0.0 version and will be soft forked in during the six week period via a 1.1.0 release.
 - There will also be a 1.0.1 release after the green flag process is complete to simplify install for new users by removing the green flag alert. In the interim there will be new testnet releases using the 1.1bx version scheme.
@@ -360,7 +360,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Known Issues
 
-- Some users can't plot in the GUI in MacOS Big Sur - especially on M1. See issue [1189](https://github.com/Chia-Network/chia-blockchain/issues/1189)
+- Some users can't plot in the GUI in MacOS Big Sur - especially on M1. See issue [1189](https://github.com/HiveProject2021/chia-blockchain/issues/1189)
 
 ## 1.0rc6 aka Release Candidate 6 - 2021-03-11
 
@@ -397,7 +397,7 @@ for setuptools_scm/PEP 440 reasons.
 - `requirements-dev.txt` has been removed in favor of the CI actions and test scripts.
 - We have moved to a new and much higher scalability download.chia.net to support the mainnet launch flag and additional download demand.
 - To always get the latest testnet and then mainnet installers you can now use a latest URL: [Windows](https://download.chia.net/latest/Setup-Win64.exe) and [MacOS x86_64](https://download.chia.net/latest/Setup-MacOS.dmg).
-- Chia wheels not on Pypi and some dependecies not found there also are now on pypi.chia.net.
+- Chives wheels not on Pypi and some dependecies not found there also are now on pypi.chia.net.
 - Additional typing has been added to the Python code with thanks to @jespino.
 - Cryptography and Keyring have been bumped to their current releases.
 - PRs and commits to the chia-blockchain-gui repository will automatically have their locales updated.
@@ -453,7 +453,7 @@ for setuptools_scm/PEP 440 reasons.
 - Python root CA certificates have issues so we have added the Mozilla certificate store via curl.se and use that to connect to backup.chia.net via https, for example.
 - The difficulty adjustment calculation was simplified.
 - All of the chia sub repositories that were attempting to build MacOS Universal wheels were only generating x86_64 wheels internally. We have moved back to only generating x86_64 MacOS wheels on CI.
-- However, we have updated and test compiled all Chia dependencies on Apple Silicon and will be making available a test .dmg for MacOS ARM64 shortly.
+- However, we have updated and test compiled all Chives dependencies on Apple Silicon and will be making available a test .dmg for MacOS ARM64 shortly.
 - Various weight proof edge cases have been fixed.
 - Various typos and style clean ups were made to the Click CLI implementation. `chia -upnp f` was added to disable uPnP.
 - `chia plots check` shouldn't crash when encountering plots that cause RuntimeError. PR again thanks to @eFishCent.
@@ -481,7 +481,7 @@ for setuptools_scm/PEP 440 reasons.
 
 - All chialisp opcodes have been renumbered. This should be the last major breaking change for chialisp and the clvm. There are a couple minor enhancements still needed for mainnet launch, but they may or may not require minor breaking changes. We will be restarting testnet chains on a mostly weekly basis either way.
 - Node batch syncing performance was increased, and it now avoids re-validating blocks that node had already validated.
-- The entire CLI has been ported to [Click](https://click.palletsprojects.com/en/7.x/). Huge thanks to @jespino for the big assist and @unparalleled-js for the [recommendation and the initial start](https://github.com/Chia-Network/chia-blockchain/issues/464). This will make building out the CLI much easier. There are some subtle changes and some shortcuts are not there anymore. `chia -h` and `chia SUBCOMMAND -h` can be your guide.
+- The entire CLI has been ported to [Click](https://click.palletsprojects.com/en/7.x/). Huge thanks to @jespino for the big assist and @unparalleled-js for the [recommendation and the initial start](https://github.com/HiveProject2021/chia-blockchain/issues/464). This will make building out the CLI much easier. There are some subtle changes and some shortcuts are not there anymore. `chia -h` and `chia SUBCOMMAND -h` can be your guide.
 - We have upgraded Electron to 11.3 to support Apple Silicon. There are still one or two issues in our build chain for Apple Silicon but we should have an M1 native build shortly.
 - The websocket address is no longer displayed in the GUI unless it is running as a remote GUI. Thanks @dkackman !
 - `chia plots check` now will continue checking after it finds an error in a plot to the total number of checks you specified.
@@ -512,7 +512,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
-- This is an errata release for Release Candidate 1. There were a couple of things that did not smoothly migrate from the Beta versions. Please make sure you also consult the [release notes for RC-1](https://github.com/Chia-Network/chia-blockchain/releases/tag/1.0rc1) was well.
+- This is an errata release for Release Candidate 1. There were a couple of things that did not smoothly migrate from the Beta versions. Please make sure you also consult the [release notes for RC-1](https://github.com/HiveProject2021/chia-blockchain/releases/tag/1.0rc1) was well.
 - Incorrect older spend to addresses were being migrated from Beta 27. This would send farming rewards to un-spendable coins.
 - Netspace was not calculating properly in RC-1.
 - The Windows installer was building with the wrong version number.
@@ -528,9 +528,9 @@ for setuptools_scm/PEP 440 reasons.
 - 'chia wallet show' now shows your wallet's height.
 - Last Attempted Proof is now above Latest Block Challenge on the Farm page of the GUI.
 - The GUI now detects duplicate plots and also only counts unique plots and unique plot size.
-- We have integrated with crowdin to make it easier to translate the GUI. Check out [Chia Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
+- We have integrated with crowdin to make it easier to translate the GUI. Check out [Chives Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
 - We have added Italian, Russian, and Finnish. More to come soon.
-- There is now remote UI support. [Documents](https://github.com/Chia-Network/chia-blockchain-gui/blob/main/remote.md) will temporarily live in the repository but have moved to the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Connecting-the-UI-to-a-remote-daemon). Thanks to @dkackman for this excellent addition!
+- There is now remote UI support. [Documents](https://github.com/HiveProject2021/chia-blockchain-gui/blob/main/remote.md) will temporarily live in the repository but have moved to the [wiki](https://github.com/HiveProject2021/chia-blockchain/wiki/Connecting-the-UI-to-a-remote-daemon). Thanks to @dkackman for this excellent addition!
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
 validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
 - Added `chia plots check --challenge-start [start]` that begins at a different `[start]` for `-n [challenges]`. Useful when you want to do more detailed checks on plots without restarting from lower challenge values you already have done. Huge thanks to @eFishCent for this and all of the debugging work behind the scenes confirming that plot failures were machine errors and not bugs!
@@ -572,7 +572,7 @@ all fields that referred to sub blocks are changed to blocks.
 - We are moving away from the terms sub blocks and blocks in our new consensus. What used to be called sub blocks will now just be blocks. Some blocks are now also transaction blocks. This is simpler both in the code and to reason about. Not all the code or UI may have caught up yet.
 - This release has the final mainnet rewards schedule. During the first three years, each block winner will win 2 TXCC/XCC per block for a total of 9216 TXCC per day from 4608 challenges per day.
 - Smart transactions now use an announcement instead of 'coin consumed' or lock methods.
-- The GUI is now in a separate submodule repository from chia-blockchain, [chia-blockchain-gui](https://github.com/Chia-Network/chia-blockchain-gui). The installers and install scripts have been updated and it continues to follow the same install steps. Note that the GUI directory will now be `chia-blockchain-gui`. The workflow for this may be "touch and go" for people who use the git install methods over the short term.
+- The GUI is now in a separate submodule repository from chia-blockchain, [chia-blockchain-gui](https://github.com/HiveProject2021/chia-blockchain-gui). The installers and install scripts have been updated and it continues to follow the same install steps. Note that the GUI directory will now be `chia-blockchain-gui`. The workflow for this may be "touch and go" for people who use the git install methods over the short term.
 - Very large coin counts are now supported.
 - Various RPC endpoints have been renamed to follow our switch to "just blocks" from sub blocks.
 - We've made changes to the protocol handshake and the blockchain genesis process to support mainnet launch and running/farming more than one chain at a time. That also means we can't as easily determine when an old version of the peer tries to connect so we will put warnings in the logs for now.
@@ -603,15 +603,15 @@ all fields that referred to sub blocks are changed to blocks.
 
 ### Changed
 
-- Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by 2x or more. Part of this increase is that we have temporarily limited the size of transactions. If you want to test sending a transaction you should keep the value of your transaction below 20 TXCC as new consensus will cause you to use a lot of inputs. This will be returned to the expected level as soon as the integration of [clvm rust](https://github.com/Chia-Network/clvm_rs) is complete.
+- Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by 2x or more. Part of this increase is that we have temporarily limited the size of transactions. If you want to test sending a transaction you should keep the value of your transaction below 20 TXCC as new consensus will cause you to use a lot of inputs. This will be returned to the expected level as soon as the integration of [clvm rust](https://github.com/HiveProject2021/clvm_rs) is complete.
 - We have changed the way TLS between nodes and between chia services work. Each node now has two certificate authorities. One is a public, shared CA that signs the TLS certificates that every node uses to connect to other nodes on 8444 or 58444. You now also have a self generated private CA that must sign e.g. farmer and harvester's certificates. To run a remote harvester you need a new harvester key that is then signed by your private CA. We know this is not easy for remote harvester in this release but will address it quickly.
 - We have changed the way we compile the proof of space plotter and added one additional optimization. On many modern processors this will mean that using the plotter with the `-e` flag will be 2-3% faster than the Beta 17 plotter on the same CPU. We have found this to be very sensitive to different CPUs but are now confident that, at worst, the Beta 24 plotter with `-e` will be the same speed as Beta 17 if not slightly faster on the same hardware. Huge thanks to @xorinox for meticulously tracking down and testing this.
 - If a peer is not responsive during sync, node will disconnect it.
 - Peers that have not sent data in the last hour are now disconnected.
-- We have made the "Help Translate" button in the GUI open in your default web browser and added instructions for adding new translations and more phrases in existing translations at that [URL](https://github.com/Chia-Network/chia-blockchain/tree/main/electron-react/src/locales). Try the "Help Translate" option on the language selection pull down to the left of the dark/light mode selection at the top right of the GUI.
+- We have made the "Help Translate" button in the GUI open in your default web browser and added instructions for adding new translations and more phrases in existing translations at that [URL](https://github.com/HiveProject2021/chia-blockchain/tree/main/electron-react/src/locales). Try the "Help Translate" option on the language selection pull down to the left of the dark/light mode selection at the top right of the GUI.
 - Sync store now tracks all connected peers and removes them as they get removed.
 - The Rate Limited Wallet has been ported to new consensus and updated Chialisp methods.
-- We are down to only one sub dependency that does not ship binary wheels for all four platforms. The only platform still impacted is ARM64 (generally Raspberry Pi) but that only means that you still need the minor build tools as outlined on the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Raspberry-Pi).
+- We are down to only one sub dependency that does not ship binary wheels for all four platforms. The only platform still impacted is ARM64 (generally Raspberry Pi) but that only means that you still need the minor build tools as outlined on the [wiki](https://github.com/HiveProject2021/chia-blockchain/wiki/Raspberry-Pi).
 - We upgraded to Electron 9.4.2 for the GUI.
 - We have upgraded to py-setproctitle 1.2.2. We now have binary wheels for setproctitle on all four platforms and make it a requirement in setup.py. It is run-time optional if you wish to disable it.
 
@@ -743,7 +743,7 @@ all fields that referred to sub blocks are changed to blocks.
 
 - Welcome to the new consensus. This release is an all but a full re-write of the blockchain in under 30 days. There is now only one tip of the blockchain but we went from two chains to three. Block times are now a little under a minute but there are a couple of sub blocks between each transaction block. A block is also itself a special kind of sub block and each sub block rewards the farmer who won it 1 TXCC. Sub blocks come, on average, about every 17 to 18 seconds.
 - Starting with this Beta, there are 4608 opportunities per day for a farmer to win 1 TXCC compared to Beta 18 where there were 288 opportunities per day for a farmer to win 16 TXCC.
-- There is a lot more information and explanation of the new consensus algorithm in the New Consensus Working Document linked from [chia.net](https://chia.net/). Among the improvements this gives the Chia blockchain are a much higher security level against all attacks, more frequent transaction blocks that have less time variation between them and are then buried under confirmations (sub blocks also count towards re-org security) much more quickly.
+- There is a lot more information and explanation of the new consensus algorithm in the New Consensus Working Document linked from [chia.net](https://chia.net/). Among the improvements this gives the Chives blockchain are a much higher security level against all attacks, more frequent transaction blocks that have less time variation between them and are then buried under confirmations (sub blocks also count towards re-org security) much more quickly.
 - New consensus means this is a very hard fork. All of your TXCC from Beta 17/18 will be gone. Your plots and keys will work just fine however. You will have to sync to the new chain.
 - You now have to sync 16 times more "blocks" for every 5 minutes of historical time so syncing is slower than it was on the old chain. We're aware of this and will be speeding it up and addressing blockchain database growth in the nest couple of releases.
 - Prior to this Beta 19, we had block times that targeted 5 minutes and rewarded 16 TXCC to one farmer. Moving forward we have epoch times that target 10 minutes and reward 32 TXCC to 32 farmers about every 17-18 seconds over that period. This has subtle naming and UI impacts in various places.
@@ -763,7 +763,7 @@ all fields that referred to sub blocks are changed to blocks.
 - The new plots page offers advanced plotting options in the various "Show Advanced Options" fold outs.
 - The plotter supports the new bitfield back propagation method and the old method from Beta 17. To choose the old method add a `-e` to the command line or choose "Disable bitfield plotting" in "Show Advanced Options" of the Plots tab. Bitfield back propagation writes about 13% less total writes and can be faster on some slower hard drive temp spaces. For now, SSD temp space will likely plot faster with bitfield back propagation disabled. We will be returning to speed enhancements to the plotter as we approach and pass our mainnet launch.
 - The Farm tab in the GUI is significantly enhanced. Here you have a dashboard overview of your farm and your activity in response to challenges blockchain challnegs, how long it will take you - on average - to win a block, and how much TXCC you've won so far. Harvester and Full Node connections have moved to Advanced Options.
-- Harvester and farmer will start when the GUI starts instead of waiting for key selection if there are already keys available. This means you will start farming on reboot if you have the Chia application set to launch on start.
+- Harvester and farmer will start when the GUI starts instead of waiting for key selection if there are already keys available. This means you will start farming on reboot if you have the Chives application set to launch on start.
 - Testnet is now running at the primary port of 58444. Update your routers appropriately. This opens 8444 for mainnet.
 - All networking code has been refactored and mostly moved to websockets.
 - RPCs and daemon now communicate over TLS with certificates that are generated into `~/.chives/VERSION/config/`
@@ -797,8 +797,8 @@ all fields that referred to sub blocks are changed to blocks.
 ### Added
 
 - F1 generation in the plotter is now fully parallel for a small speedup.
-- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out of order" and that is now expected behavior.
-- Partial support for Python 3.9. That includes new versions of Chia dependencies like chiabip158.
+- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/HiveProject2021/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out of order" and that is now expected behavior.
+- Partial support for Python 3.9. That includes new versions of Chives dependencies like chiabip158.
 
 ### Changed
 
@@ -807,7 +807,7 @@ all fields that referred to sub blocks are changed to blocks.
 
 ### Fixed
 
-- A segfault caused by memory leaks in bls-library has been fixed. This should end the random farmer and harvester crashes over time as outlined in [Issue 500](https://github.com/Chia-Network/chia-blockchain/issues/500).
+- A segfault caused by memory leaks in bls-library has been fixed. This should end the random farmer and harvester crashes over time as outlined in [Issue 500](https://github.com/HiveProject2021/chia-blockchain/issues/500).
 - Plotting could hang up retrying in an "error 0" state due to a bug in table handling in some edge cases.
 - CPU utilization as reported in the plotter is now accurate for Windows.
 - FreeBSD and OpenBSD should be able to build and install chia-blockchain and its dependencies again.
@@ -821,25 +821,25 @@ all fields that referred to sub blocks are changed to blocks.
 
 ### Fixed
 
-- In the GUI there was [a regression](https://github.com/Chia-Network/chia-blockchain/issues/484) that removed the scroll bar on the Plot page. The scroll bar has returned!
+- In the GUI there was [a regression](https://github.com/HiveProject2021/chia-blockchain/issues/484) that removed the scroll bar on the Plot page. The scroll bar has returned!
 - In Dark Mode you couldn't read the white on white plotting log text.
 - To fix a bug in Beta 15's plotter we introduced a fixed that slowed plotting by as much as 25%.
 - Certain NTFS root mount points couldn't be used for plotting or farming.
-- Logging had [a regression](https://github.com/Chia-Network/chia-blockchain/issues/485) where log level could no longer be set by service.
+- Logging had [a regression](https://github.com/HiveProject2021/chia-blockchain/issues/485) where log level could no longer be set by service.
 
 ## [1.0beta16] aka Beta 1.16 - 2020-10-20
 
 ### Added
 
-- The Chia GUI now supports dark and light mode.
-- The GUI now supports translations and localizations. If you'd like to add your language you can see the examples in [the locales directory](https://github.com/Chia-Network/chia-blockchain/tree/dev/electron-react/src/locales) of the chia-blockchain repository.
+- The Chives GUI now supports dark and light mode.
+- The GUI now supports translations and localizations. If you'd like to add your language you can see the examples in [the locales directory](https://github.com/HiveProject2021/chia-blockchain/tree/dev/electron-react/src/locales) of the chia-blockchain repository.
 - `chia check plots` now takes a `-g` option that allows you to specify a matching path string to only check a single plot file, a wild card list of plot files, or all plots in a single directory instead of the default behavior of checking every directory listed in your config.yaml. A big thank you to @eFishCent for this pull request!
 - Better documentation of the various timelord options in the default config.yaml.
 
 ### Changed
 
 - The entire GUI has been refactored for code quality and performance.
-- Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details in the [chiapos release notes](https://github.com/Chia-Network/chiapos/releases/tag/0.12.32).
+- Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details in the [chiapos release notes](https://github.com/HiveProject2021/chiapos/releases/tag/0.12.32).
 - Node losing or not connecting to another peer node (which is entirely normal behaviour) is now logged at INFO and not WARNING. Your logs will be quieter.
 - Both the GUI and CLI now default to putting the second temporary directory files into the specified temporary directory.
 - SSL Certificate handling was refactored along with Consensus constants, service launching, and internal configuration management.
@@ -926,7 +926,7 @@ all fields that referred to sub blocks are changed to blocks.
 ### Added
 
 - Rate limited wallets can now have unspent and un-spendable funds clawed back by the Admin wallet.
-- You can now backup your wallet related metadata in an encrypted and signed file to a free service from Chia Network at backup.chia.net. Simply having a backup of your private key will allow you to fully restore the state of your wallet including coloured coins, rate limited wallets, distributed identity wallets and many more. Your private key is used to automatically restore the last backup you saved to the Chia backup cloud service. This service is open source and ultimately you will be able to configure your backups to go to backup.chia.net, your own installation, or a third party's version of it.
+- You can now backup your wallet related metadata in an encrypted and signed file to a free service from Chives Network at backup.chia.net. Simply having a backup of your private key will allow you to fully restore the state of your wallet including coloured coins, rate limited wallets, distributed identity wallets and many more. Your private key is used to automatically restore the last backup you saved to the Chives backup cloud service. This service is open source and ultimately you will be able to configure your backups to go to backup.chia.net, your own installation, or a third party's version of it.
 - Added a Code of Conduct in CODE_OF_CONDUCT.md.
 - Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
@@ -949,13 +949,13 @@ all fields that referred to sub blocks are changed to blocks.
 - View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
 - Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
 - Fixed a typo in `chia show -w` with thanks to @pyl on Keybase.
-- In Windows the start menu item is now Chia Network and the icon in Add/Remove is updated.
+- In Windows the start menu item is now Chives Network and the icon in Add/Remove is updated.
 
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 
 ### Added
 
-- The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
+- The Chives UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
 - Ability to run only the farmer, wallet, or timelord services, for more advanced configurations (chia run farmer-only, wallet-only, timelord-only)
 
 ### Changed
@@ -978,11 +978,11 @@ all fields that referred to sub blocks are changed to blocks.
 - We've added unhardened HD keys to bls-signatures for the smart wallets that need them. We've added significant cross project testing to our BLS implementation.
 - The python implementation of bls-signatures is now current to the new specification.
 - `chia show -b` now returns plot public key and pool public key for each block.
-- Added cbor2 binary wheels for ARM64 to the Chia simple site. Raspberry Pi should be just a little easier to install.
+- Added cbor2 binary wheels for ARM64 to the Chives simple site. Raspberry Pi should be just a little easier to install.
 
 ### Changed
 
-- Wallet addresses and other key related elements are now expressed in Chech32 which is the Chia implementation of [Bech32](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). All of your old wallet addresses will be replaced with the new Chech32 addresses. The only thing you can't do is send test chia between 1.8/1.9 and 1.10 software. Anyone who upgrades to 1.10 will keep their transactions and balances of test chia from the earlier two releases however.
+- Wallet addresses and other key related elements are now expressed in Chech32 which is the Chives implementation of [Bech32](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). All of your old wallet addresses will be replaced with the new Chech32 addresses. The only thing you can't do is send test chia between 1.8/1.9 and 1.10 software. Anyone who upgrades to 1.10 will keep their transactions and balances of test chia from the earlier two releases however.
 - We added a first few enhancements to plotting speed. For a k=30 on a ramdisk with `-b 64 GiB` it results in an 11% speedup in overall plotting speed and a 23% improvement in phase 1 speed. Many more significant increases in plotting speed are in the works.
 - The proof of space document in chiapos has been updated to the new format and edited for clarity. Additionally GitHub actions now has the on demand ability to create the PDF version.
 - Relic has upstreamed our changes required for the IETF BLS standard. We now build directly from the Relic repository for all but Windows and will be migrating Windows in the next release.
@@ -1050,7 +1050,7 @@ the now deprecated AES methods. This should increase plotting speed and support
 more processors.
 - Plot refreshing happens during all new challenges and only new/modified files
 are read.
-- Updated [blspy](https://github.com/Chia-Network/bls-signatures) to use the
+- Updated [blspy](https://github.com/HiveProject2021/bls-signatures) to use the
 new [IETF standard for BLS signatures](https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-02).
 - Added a faster VDF process which generates n-wesolowski proofs quickly
 after the VDF result is known. This requires a high number of CPUs. To use it,
@@ -1152,7 +1152,7 @@ relic. We will make a patch available for these systems shortly.
 - Added ability to import private keys in the UI.
 - Added ability to see private keys and mnemonic seeds in the keys menu
 - User can specify log level in the config file (defaults to info.)
-- The Windows installer is now signed by a Chia Network certificate. It may take some time to develop enough reputation to not warn multiple times during install.
+- The Windows installer is now signed by a Chives Network certificate. It may take some time to develop enough reputation to not warn multiple times during install.
 
 ### Changed
 
@@ -1160,12 +1160,12 @@ relic. We will make a patch available for these systems shortly.
 - We have made performance improvements to plotting speed on all platforms.
 - The command line plotter now supports specifying it's memory buffer size.
 - Test plots for the simulation and testing harness now go into `~/.chives/test-plots/`
-- We have completely refactored all networking code towards making each Chia service use the same default networking infrastructure and move to websockets as the default networking wire protocol.
+- We have completely refactored all networking code towards making each Chives service use the same default networking infrastructure and move to websockets as the default networking wire protocol.
 - We added additional improvements and more RPCs to the start daemon and various services to continue to make chia start/stop reliable cross platform.
 - The install.sh script now discovers if it's running on Ubuntu less than 20.04 and correctly upgrades node.js to the current stable version.
 - For GitHub ci builds of the Windows installer, editbin.exe is more reliably found.
 - All installer ci builds now obtain version information automatically from setuptools_scm and convert it to an installer version number that is appropriate for the platform and type of release (dev versus release.)
-- We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actions and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
+- We now codesign the Apple .dmg installer with the Chives Network developer ID on both GitHub Actions and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
 
 ### Fixed
 
@@ -1243,7 +1243,7 @@ relic. We will make a patch available for these systems shortly.
 
 ### Fixed
 
-- There was a regression in Chia Proof of Space ([chiapos](https://github.com/Chia-Network/chiapos)) that came from our efforts to speed up plotting on Windows native. Now k>=32 plots work correctly. We made additional bug fixes and corrected limiting small k size generation.
+- There was a regression in Chives Proof of Space ([chiapos](https://github.com/HiveProject2021/chiapos)) that came from our efforts to speed up plotting on Windows native. Now k>=32 plots work correctly. We made additional bug fixes and corrected limiting small k size generation.
 - There was a bug in Timelord handling that could stop all VDF progress.
 
 ### Deprecated
@@ -1267,15 +1267,15 @@ relic. We will make a patch available for these systems shortly.
 - We’ve added TLS authentication for incoming farmer connections. TLS certs and keys are generated during chia init and only full nodes with your keys will be able to connect to your Farmer. Also, Harvester, Timelord, and Wallet will now not accept incoming connections which reduces the application attack surface.
 - The node RPC has a new endpoint get_header_by_height which allows you to retrieve the block header from a block height. Try `chia show -bh 1000` to see the block header hash of block 1000. You can then look up the block details with `chia show -b f655e1a9f7f8c89a703e40d9ce82ae33508badaf7b37fa1a56cad27926b5e936` which will look up a block by it's header hash.
 - Our Windows binaries check the processor they are about to run on at runtime and choose the best processor optimizations for our [MPIR](http://mpir.org/) VDF dependency on Windows.
-- Most of the content of README.md and INSTALL.md have been moved to the [repository wiki](https://github.com/Chia-Network/chia-blockchain/wiki) and placed in [INSTALL](https://github.com/Chia-Network/chia-blockchain/wiki/INSTALL) and [Quick Start Guide](https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide)
+- Most of the content of README.md and INSTALL.md have been moved to the [repository wiki](https://github.com/HiveProject2021/chia-blockchain/wiki) and placed in [INSTALL](https://github.com/HiveProject2021/chia-blockchain/wiki/INSTALL) and [Quick Start Guide](https://github.com/HiveProject2021/chia-blockchain/wiki/Quick-Start-Guide)
 - Harvester is now asynchronous and will better be able to look up more plots spread across more physical drives.
 - Full node startup time has been sped up significantly by optimizing the loading of the blockchain from disk.
 
 ### Changed
 
 - Most scripts have been removed in favor of chia action commands. You can run `chia version` or `chia start node` for example. Just running `chia` will show you more options. However `chia-create-plots` continues to use the hyphenated form. Also it's now `chia generate keys` as another example.
-- Chia start commands like `chia start farmer` and `chia stop node` now keep track of process IDs in a run/ directory in your configuration directory. `chia stop` is unlikely to work on Windows native for now. If `chia start -r node` doesn't work you can force the run/ directory to be reset with `chia start -f node`.
-- We suggest you take a look at our [Upgrading documentation](https://github.com/Chia-Network/chia-blockchain/wiki/Updating-beta-software) if you aren't performing a new install.
+- Chives start commands like `chia start farmer` and `chia stop node` now keep track of process IDs in a run/ directory in your configuration directory. `chia stop` is unlikely to work on Windows native for now. If `chia start -r node` doesn't work you can force the run/ directory to be reset with `chia start -f node`.
+- We suggest you take a look at our [Upgrading documentation](https://github.com/HiveProject2021/chia-blockchain/wiki/Updating-beta-software) if you aren't performing a new install.
 - blspy now has libsodium included in the MacOS and Linux binary wheels.
 - miniupnpc and setprotitle were dynamically checked for an installed at runtime. Removed those checks and we rely upon the install tools installing them before first run.
 - Windows wheels that the Windows Installer packages are also available in the ci Artifacts in a .zip file.
@@ -1287,7 +1287,7 @@ relic. We will make a patch available for these systems shortly.
 
 ### Known issues
 
-- Plots of k>=32 are not working for farming, and some broken plots can cause a memory leak. A [workaround is available](https://github.com/Chia-Network/chia-blockchain/wiki/Beta-1.4-k=32-or-larger-work-around).
+- Plots of k>=32 are not working for farming, and some broken plots can cause a memory leak. A [workaround is available](https://github.com/HiveProject2021/chia-blockchain/wiki/Beta-1.4-k=32-or-larger-work-around).
 - If you are running a simulation, blockchain tips are not saved in the database and this is a regression. If you stop a node it can go back in time and cause an odd state. This doesn't practically effect testnet participation as, on restart, node will just sync up a few blocks to the then current tips.
 - uPnP support on Windows may be broken. However, Windows nodes will be able to connect to other nodes and, once connected, participate fully in the network.
 - Coins are not currently reserved as part of trade offers and thus could potentially be spent before the offer is accepted resulting in a failed offer transaction.
@@ -1301,7 +1301,7 @@ relic. We will make a patch available for these systems shortly.
 - Windows, WSL 2, Linux and MacOS installation is significantly streamlined. There is a new Windows installer for the Wallet GUI (huge thanks to @dkackman).
 - All installs can now be from the source repository or just the binary dependencies on WSL 2, most modern Linuxes, and MacOS Catalina. Binary support is for both Python 3.7 and 3.8.
 - There is a new migration tool to move from Beta1 (or 2) to Beta3. It should move everything except your plots.
-- There is a new command `chia init` that will migrate files and generate your initial configuration. If you want to use the Wallet or farm, you will also have to `chia-generate-keys`. You can read step by step instructions for [upgrading from a previous beta release](https://github.com/Chia-Network/chia-blockchain/wiki/Updating-beta-software). If you've set `$CHIVES_ROOT` you will have to make sure your existing configuration remains compatible manually.
+- There is a new command `chia init` that will migrate files and generate your initial configuration. If you want to use the Wallet or farm, you will also have to `chia-generate-keys`. You can read step by step instructions for [upgrading from a previous beta release](https://github.com/HiveProject2021/chia-blockchain/wiki/Updating-beta-software). If you've set `$CHIVES_ROOT` you will have to make sure your existing configuration remains compatible manually.
 - Wallet has improved paper wallet recovery support.
 - We now also support restoring old wallets with only the wallet_sk and wallet_target. Beta3's Wallet will re-sync from scratch.
 - We've made lots of little improvements that should speed up node syncing
@@ -1338,7 +1338,7 @@ relic. We will make a patch available for these systems shortly.
 
 ### Added
 
-- There is now full transaction support on the Chia blockchain. In this initial Beta 1.0 release, all transaction types are supported though the wallets and UIs currently only directly support basic transactions like coinbase rewards and sending coins while paying fees. UI support for our [smart transactions](https://github.com/Chia-Network/wallets/blob/main/README.md) will be available in the UIs shortly.
+- There is now full transaction support on the Chives blockchain. In this initial Beta 1.0 release, all transaction types are supported though the wallets and UIs currently only directly support basic transactions like coinbase rewards and sending coins while paying fees. UI support for our [smart transactions](https://github.com/HiveProject2021/wallets/blob/main/README.md) will be available in the UIs shortly.
 - Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and _much_ easier. Windows native node/farmer/plotting functionality are coming soon.
 - Install is significantly easier with less dependencies on all supported platforms.
 - If you’re a farmer you can use the Wallet to keep track of your earnings. Either use the same keys.yaml on the same machine or copy the keys.yaml to another machine where you want to track of and spend your coins.
@@ -1346,10 +1346,10 @@ relic. We will make a patch available for these systems shortly.
 
 ### Changed
 
-- We have revamped the chia management command line. To start a farmer all you have to do is start the venv with `. ./activate` and then type `chia-start-farmer &`. The [README.md](https://github.com/Chia-Network/chia-blockchain/blob/main/README.md) has been updated to reflect the new commands.
+- We have revamped the chia management command line. To start a farmer all you have to do is start the venv with `. ./activate` and then type `chia-start-farmer &`. The [README.md](https://github.com/HiveProject2021/chia-blockchain/blob/main/README.md) has been updated to reflect the new commands.
 - We have moved all node to node communication to TLS 1.3 by default. For now, all TLS is unauthenticated but certain types of over the wire node to node communications will have the ability to authenticate both by certificate and by inter protocol signature. Encrypting over the wire by default stops casual snooping of transaction origination, light wallet to trusted node communication, and harvester-farmer-node communication for example. This leaves only the mempool and the chain itself open to casual observation by the public and the various entities around the world.
 - Configuration directories have been moved to a default location of HomeDirectory/.chives/release/config, plots/ db/, wallet/ etc. This can be overridden by `export CHIVES_ROOT=~/.chia` for example which would then put the plots directory in `HomeDirectory/.chives/plots`.
-- The libraries chia-pos, chia-fast-vdf, and chia-bip-158 have been moved to their own repositories: [chiapos](https://github.com/Chia-Network/chiapos), [chiavdf](https://github.com/Chia-Network/chiavdf), and [chaibip158](https://github.com/Chia-Network/chiabip158). They are brought in by chia-blockchain at install time. Our BLS signature library remains at [bls-signatures](https://github.com/Chia-Network/bls-signatures).
+- The libraries chia-pos, chia-fast-vdf, and chia-bip-158 have been moved to their own repositories: [chiapos](https://github.com/HiveProject2021/chiapos), [chiavdf](https://github.com/HiveProject2021/chiavdf), and [chaibip158](https://github.com/HiveProject2021/chiabip158). They are brought in by chia-blockchain at install time. Our BLS signature library remains at [bls-signatures](https://github.com/HiveProject2021/bls-signatures).
 - The install process now brings in chiapos, chiavdf, etc from Pypi where they are auto published via GitHub Actions ci using cibuildwheel. Check out `.github/workflows/build.yml` for build methods in each of the sub repositories.
 - `chia-regenerate-keys` has been renamed `chia-generate-keys`.
 - setproctitle is now an optional install dependency that we will continue to install in the default install methods.
@@ -1359,7 +1359,7 @@ relic. We will make a patch available for these systems shortly.
 
 ### Removed
 
-- The Beta release is not compatible with the history of the Alpha blockchain and we will be ceasing support of the Alpha chain approximately two weeks after the release of this Beta. However, your plots and keys are fully compatible with the Beta chain. Please save your plot keys! Examples of how to save your keys and upgrade to the Beta are available on the [repo wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
+- The Beta release is not compatible with the history of the Alpha blockchain and we will be ceasing support of the Alpha chain approximately two weeks after the release of this Beta. However, your plots and keys are fully compatible with the Beta chain. Please save your plot keys! Examples of how to save your keys and upgrade to the Beta are available on the [repo wiki](https://github.com/HiveProject2021/chia-blockchain/wiki).
 - The ssh ui and web ui are removed in favor of the cli ui and the Electron GUI. To mimic the ssh ui try `chia show -s -c` and try `chia show --help` for usage instructions.
 - We have removed the inkfish vdf implementation and replaced it with the pybind11 C++ version.
 
@@ -1418,7 +1418,7 @@ relic. We will make a patch available for these systems shortly.
 - Due to changes to the sqlite database that are not backwards compatible, re-synch will be required.
 - Loading the blockchain only loads headers into memory instead of header blocks (header + proofs), speeds up the startup, and reduces normal operation memory usage by 80%.
 - Memory access is now synchronous to reduce use of locks and speed up block processing.
-- Chia fullnode, farmer and harvester now default to logging to chia.log in the chia-blockchain directory. This is configured in config.yaml and due to config.yaml changes it is recommended to edit the new template config instead of using older config.yaml’s from previous versions.
+- Chives fullnode, farmer and harvester now default to logging to chia.log in the chia-blockchain directory. This is configured in config.yaml and due to config.yaml changes it is recommended to edit the new template config instead of using older config.yaml’s from previous versions.
 - uvloop is now an optional add on.
 - Harvester/farmer will not try to farm plots that they don’t have the key for.
 
@@ -1432,7 +1432,7 @@ relic. We will make a patch available for these systems shortly.
 ### Added
 
 - FullNode performance improvements - Syncing up to the blockchain by importing all blocks is faster due to improvements in VDF verification speed and multithreading block verification.
-- VDF improvements - VDF verification and generation speed has increased and dependence on flint2 has been removed. We wish to thank Dr. William Hart (@wbhart) for dual licensing parts of his contributions in FLINT and Antic for inclusion in the Chia blockchain.
+- VDF improvements - VDF verification and generation speed has increased and dependence on flint2 has been removed. We wish to thank Dr. William Hart (@wbhart) for dual licensing parts of his contributions in FLINT and Antic for inclusion in the Chives blockchain.
 - Implemented an RPC interface with JSON serialization for streamables - currently on port 9555.
 - Added details on how to contribute in CONTRIBUTING.md. Thanks @RichardLitt.
 - Added color logging
@@ -1513,21 +1513,21 @@ relic. We will make a patch available for these systems shortly.
 
 ### Added
 
-- This is the first release of the Chia testnet! Blockchain consensus, proof of time, and proof of space are included.
+- This is the first release of the Chives testnet! Blockchain consensus, proof of time, and proof of space are included.
 - More details on the release at [https://www.chia.net/developer/](https://www.chia.net/developer/)
 
-[unreleased]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta5...dev
-[1.0beta5]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta4...1.0beta5
-[1.0beta4]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta3...1.0beta4
-[1.0beta3]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta2...1.0beta3
-[1.0beta2]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta1...1.0beta2
-[1.0beta1]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.5.1...1.0beta1
-[alpha 1.5.1]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.5...alpha-1.5.1
-[alpha 1.5]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.4.1...alpha-1.5
-[alpha 1.4.1]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.4...alpha-1.4.1
-[alpha 1.4]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.3...alpha-1.4
-[alpha 1.3]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.2...alpha-1.3
-[alpha 1.2]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.1.1...alpha-1.2
-[alpha 1.1.1]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.1...alpha-1.1.1
-[alpha 1.1]: https://github.com/Chia-Network/chia-blockchain/compare/alpha-1.0...alpha-1.1
-[alpha 1.0]: https://github.com/Chia-Network/chia-blockchain/releases/tag/Alpha-1.0
+[unreleased]: https://github.com/HiveProject2021/chia-blockchain/compare/1.0beta5...dev
+[1.0beta5]: https://github.com/HiveProject2021/chia-blockchain/compare/1.0beta4...1.0beta5
+[1.0beta4]: https://github.com/HiveProject2021/chia-blockchain/compare/1.0beta3...1.0beta4
+[1.0beta3]: https://github.com/HiveProject2021/chia-blockchain/compare/1.0beta2...1.0beta3
+[1.0beta2]: https://github.com/HiveProject2021/chia-blockchain/compare/1.0beta1...1.0beta2
+[1.0beta1]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.5.1...1.0beta1
+[alpha 1.5.1]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.5...alpha-1.5.1
+[alpha 1.5]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.4.1...alpha-1.5
+[alpha 1.4.1]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.4...alpha-1.4.1
+[alpha 1.4]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.3...alpha-1.4
+[alpha 1.3]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.2...alpha-1.3
+[alpha 1.2]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.1.1...alpha-1.2
+[alpha 1.1.1]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.1...alpha-1.1.1
+[alpha 1.1]: https://github.com/HiveProject2021/chia-blockchain/compare/alpha-1.0...alpha-1.1
+[alpha 1.0]: https://github.com/HiveProject2021/chia-blockchain/releases/tag/Alpha-1.0

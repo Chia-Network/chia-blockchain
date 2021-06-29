@@ -4,7 +4,7 @@
 # you have to install python and git command tools first.
 # Open the powershell as a adminstrator rool.
 # Go into the dir "chives-blockchain" and input the command:".\build_scripts\build_windows.ps1"
-# This script Copyright by Chia Newwork.
+# This script Copyright by Chives Newwork.
 # This script improved by Chives Newwork.
 # Having any question, email to : chivescoin@gmail.com or go the chivescoin.org
 # 2021-06-05
@@ -102,7 +102,7 @@ if (-not (Test-Path env:CHIVES_INSTALLER_VERSION)) {
   $env:CHIVES_INSTALLER_VERSION = '0.0.0'
   Write-Output "WARNING: No environment variable CHIVES_INSTALLER_VERSION set. Using 0.0.0"
   }
-Write-Output "Chia Version is: $env:CHIVES_INSTALLER_VERSION"
+Write-Output "Chives Version is: $env:CHIVES_INSTALLER_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -170,7 +170,7 @@ Write-Output "packageName is $packageName"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chives --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
 Write-Output "   ---"
 
 Write-Output "   ---"
