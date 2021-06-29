@@ -1,4 +1,3 @@
-
 import os
 import sys
 from pathlib import Path
@@ -60,6 +59,10 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
 
 
 def main() -> None:
+    connect_to_daemon = False
+    if "-D" in sys.argv:
+        connect_to_daemon = True
+        sys.argv.remove("-D")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config["database_path"] = config["simulator_database_path"]
     config["peer_db_path"] = config["simulator_peer_db_path"]
@@ -70,7 +73,7 @@ def main() -> None:
     kwargs = service_kwargs_for_full_node_simulator(
         DEFAULT_ROOT_PATH,
         config,
-        BlockTools(test_constants),
+        BlockTools(test_constants, root_path=DEFAULT_ROOT_PATH, connect_to_daemon=connect_to_daemon),
     )
     return run_service(**kwargs)
 

@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import logging
 import os
@@ -15,6 +16,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
+from chia.daemon.keychain_proxy import connect_to_keychain_and_validate
 from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
@@ -123,7 +125,11 @@ class BlockTools:
     """
 
     def __init__(
-        self, constants: ConsensusConstants = test_constants, root_path: Optional[Path] = None, const_dict=None
+        self,
+        constants: ConsensusConstants = test_constants,
+        root_path: Optional[Path] = None,
+        const_dict=None,
+        connect_to_daemon: bool = False,
     ):
         self._tempdir = None
         if root_path is None:
@@ -131,27 +137,14 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
+        self.connect_to_daemon = connect_to_daemon
         create_default_chia_config(root_path)
-        self.keychain = Keychain(user="testing-1.8.0", testing=True)
-        self.keychain.delete_all_keys()
-        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
-        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
-        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
-        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
-        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-        )
-        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-        )
+
+        asyncio.run(self.init_keys())
+
         self.init_plots(root_path)
 
         create_all_ssl(root_path)
-
-        self.all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
-        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
@@ -159,6 +152,7 @@ class BlockTools:
 
         self.load_plots()
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
+
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
@@ -170,6 +164,39 @@ class BlockTools:
         if const_dict is not None:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
+
+    async def init_keys(self):
+        keychain_user = "testing-1.8.0"
+        keychain_testing = True
+        local_keychain = (
+            Keychain(user=keychain_user, testing=keychain_testing) if self.connect_to_daemon is False else None
+        )
+        self.keychain_proxy = await connect_to_keychain_and_validate(
+            self.root_path, log, local_keychain, keychain_user, keychain_testing
+        )
+        await self.keychain_proxy.delete_all_keys()
+        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
+        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+        self.farmer_master_sk = await self.keychain_proxy.add_private_key(
+            bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+        )
+        self.pool_master_sk = await self.keychain_proxy.add_private_key(
+            bytes_to_mnemonic(self.pool_master_sk_entropy), ""
+        )
+        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+        )
+        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+        )
+        self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
+
+        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
+            raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
     def change_config(self, new_config: Dict):
         self._config = new_config
@@ -197,6 +224,7 @@ class BlockTools:
         args.buffer = 100
         args.farmer_public_key = bytes(self.farmer_pk).hex()
         args.pool_public_key = bytes(self.pool_pk).hex()
+        args.alt_fingerprint = None
         args.pool_contract_address = None
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
@@ -209,6 +237,7 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
+        args.connect_to_daemon = False
         test_private_keys = [
             AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big")))
             for i in range(num_pool_public_key_plots + num_pool_address_plots)
