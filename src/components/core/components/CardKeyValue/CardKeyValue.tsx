@@ -14,7 +14,7 @@ const StyledTableCell = styled(TableCell)`
     ? `
       border-bottom: 0px solid transparent;
       padding-left: 0;
-      padding-right: 0;
+      padding-right: 0 !important;
     `
     : ''}
 `;

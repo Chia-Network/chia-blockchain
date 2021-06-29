@@ -8,6 +8,7 @@ import type WalletBalance from '../types/WalletBalance';
 import type PoolState from '../types/PoolState';
 import type PoolWalletStatus from '../types/PoolWalletStatus';
 import type InitialTargetState from '../types/InitialTargetState';
+import PlotNFTExternal from 'types/PlotNFTExternal';
 
 export function getPlotNFTs() {
   return async (dispatch) => {
@@ -30,28 +31,41 @@ export function getPlotNFTs() {
       await Promise.all<WalletBalance>(poolWallets.map((wallet) => dispatch(getWalletBalance(wallet.id)))),
     ]);
 
+    console.log('poolWalletStates', poolWalletStates);
+    console.log('walletBalances', walletBalances);
+
     // combine poolState and poolWalletState
-    const nfts = poolStates.map((poolStateItem): PlotNFT | undefined => {
+    const nfts: PlotNFT[] = [];
+    const external: PlotNFTExternal[] = [];
+
+    poolStates.forEach((poolStateItem) => {
       const poolWalletStatus = poolWalletStates.find((item) => item.launcher_id === poolStateItem.pool_config.launcher_id);
       if (!poolWalletStatus) {
-        return undefined;
+        external.push({
+          pool_state: poolStateItem,
+        });
+        return;
       }
 
       const walletBalance = walletBalances.find((item) => item.wallet_id === poolWalletStatus.wallet_id);
       if (!walletBalance) {
-        return undefined;
+        throw new Error('Wallet balance is not defined');
       }
 
-      return {
+      nfts.push({
         pool_state: poolStateItem,
         pool_wallet_status: poolWalletStatus,
         wallet_balance: walletBalance,
-      };
-    }).filter<PlotNFT>((item) => !!item);
+      });
+    });
 
-    dispatch(updatePlotNFTs(nfts));
 
-    return nfts;
+    dispatch(updatePlotNFTs(nfts, external));
+
+    return {
+      nfts,
+      external,
+    };
   }
 }
 
@@ -115,15 +129,17 @@ export function pwJoinPool(walletId: number, poolUrl: string, relativeLockHeight
   };
 }
 
-export function updatePlotNFTs(items: PlotNFT[]) {
+export function updatePlotNFTs(items: PlotNFT[], external: PlotNFTExternal[]) {
   return {
     type: 'PLOT_NFT_UPDATE',
     items,
+    external,
   };
 }
 
 type PlotNFTState = {
   items?: PlotNFT[];
+  external?: PlotNFTExternal[];
 };
 
 const initialState: PlotNFTState = {};
@@ -139,6 +155,7 @@ export default function groupReducer(
       return {
         ...state,
         items: action.items,
+        external: action.external,
       };
     default:
       return state;

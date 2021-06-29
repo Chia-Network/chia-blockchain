@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useToggle } from 'react-use';
-import { Flex, UnitFormat, More, State, Table } from '@chia/core';
+import { Flex, UnitFormat, More, Table } from '@chia/core';
 import { useHistory } from 'react-router';
 import { 
   ViewList as ViewListIcon,
@@ -11,8 +11,8 @@ import {
 } from '@material-ui/icons';
 import { Box, Button, ListItemIcon, MenuItem, IconButton, Grid, Tooltip, Typography } from '@material-ui/core';
 import PlotNFTCard from '../plotNFT/PlotNFTCard';
+import PlotExternalNFTCard from '../plotNFT/PlotExternalNFTCard';
 import PlotNFTName from '../plotNFT/PlotNFTName';
-import PlotNFTState from '../plotNFT/PlotNFTState';
 import PoolWalletStatus from '../wallet/WalletStatus';
 import PoolAbsorbRewards from './PoolAbsorbRewards';
 import PoolJoin from './PoolJoin';
@@ -103,10 +103,10 @@ const groupsCols = [
 export default function PoolOverview() {
   const history = useHistory();
   const [showTable, toggleShowTable] = useToggle(false);
-  const { nfts, loading } = usePlotNFTs();
+  const { nfts, external, loading } = usePlotNFTs();
   const { unconfirmed } = useUnconfirmedPlotNFTs();
 
-  const hasNFTs = (!!nfts && !!nfts.length) || unconfirmed.length;
+  const hasNFTs = (!!nfts && !!nfts?.length) || !!external?.length || unconfirmed.length;
 
   function handleAddPool() {
     history.push('/dashboard/pool/add');
@@ -173,9 +173,14 @@ export default function PoolOverview() {
                 <PlotNFTUnconfirmedCard unconfirmedPlotNFT={unconfirmedPlotNFT} />
               </Grid>
             ))}
-            {nfts.map((nft) => (
-              <Grid key={nft.pool_state.p2_singleton_puzzle_hash} xs={12} md={6} item>
-                <PlotNFTCard nft={nft} />
+            {nfts.map((item) => (
+              <Grid key={item.pool_state.p2_singleton_puzzle_hash} xs={12} md={6} item>
+                <PlotNFTCard nft={item} />
+              </Grid>
+            ))}
+            {external.map((item) => (
+              <Grid key={item.pool_state.p2_singleton_puzzle_hash} xs={12} md={6} item>
+                <PlotExternalNFTCard nft={item} />
               </Grid>
             ))}
           </Grid>

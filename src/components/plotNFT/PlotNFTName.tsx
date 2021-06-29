@@ -3,8 +3,9 @@ import { Box, Typography } from '@material-ui/core';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import type PlotNFT from '../../types/PlotNFT';
-import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
+import usePlotNFTName from '../../hooks/usePlotNFTName';
 import { Address, Flex, TooltipIcon } from '@chia/core';
+import PlotNFTExternal from '../../types/PlotNFTExternal';
 
 const StyledTitle = styled(Box)`
   font-size: 0.625rem;
@@ -12,7 +13,7 @@ const StyledTitle = styled(Box)`
 `;
 
 type Props = {
-  nft: PlotNFT;
+  nft: PlotNFT | PlotNFTExternal;
   variant?: string;
 };
 
@@ -27,7 +28,7 @@ export default function PlotNFTName(props: Props) {
     },
   } = props;
 
-  const { humanName } = usePlotNFTDetails(nft);
+  const humanName = usePlotNFTName(nft);
 
   return (
     <Flex gap={1} alignItems="center">

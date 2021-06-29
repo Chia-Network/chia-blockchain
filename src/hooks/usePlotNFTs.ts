@@ -4,14 +4,17 @@ import { useInterval } from 'react-use';
 import type { RootState } from '../modules/rootReducer';
 import type PlotNFT from '../types/PlotNFT';
 import { getPlotNFTs } from '../modules/plotNFT';
+import PlotNFTExternal from 'types/PlotNFTExternal';
 
 export default function usePlotNFTs(): {
   loading: boolean;
   nfts?: PlotNFT[];
+  external?: PlotNFTExternal[];
 } {
   const dispatch = useDispatch();
   const nfts = useSelector((state: RootState) => state.plot_nft.items);
-  const loading = !nfts;
+  const external = useSelector((state: RootState) => state.plot_nft.external);
+  const loading = !nfts || !external;
 
   useInterval(() => {
     dispatch(getPlotNFTs());
@@ -24,5 +27,6 @@ export default function usePlotNFTs(): {
   return {
     loading,
     nfts,
+    external,
   };
 }

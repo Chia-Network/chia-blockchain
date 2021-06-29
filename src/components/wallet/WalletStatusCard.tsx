@@ -16,7 +16,6 @@ export default function WalletStatusCard() {
     (state: RootState) => state.wallet_state.status.connection_count,
   );
 
-  console.log('WalletStatusCard syncing', syncing);
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">

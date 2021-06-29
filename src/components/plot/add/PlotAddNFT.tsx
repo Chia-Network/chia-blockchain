@@ -10,9 +10,11 @@ import PlotNFTSelectPool from '../../plotNFT/select/PlotNFTSelectPool';
 type Props = {};
 
 const PlotAddNFT = forwardRef((props: Props, ref) => {
-  const { nfts, loading } = usePlotNFTs();
+  const { nfts, external, loading } = usePlotNFTs();
   const [showCreatePlotNFT, setShowCreatePlotNFT] = useState<boolean>(false);
-  const { setValue } = useFormContext(); //
+  const { setValue } = useFormContext();
+
+  const hasNFTs = !!nfts?.length || !external?.length;
 
   function handleJoinPool() {
     setShowCreatePlotNFT(true);
@@ -61,7 +63,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
         </Flex>
       )}
 
-      {!loading && !!nfts && !!nfts.length && (
+      {!loading && hasNFTs && (
         <>
           <Typography variant="subtitle1">
             <Trans>
@@ -82,7 +84,20 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
                   <MenuItem value={''}>
                     <em><Trans>None</Trans></em>
                   </MenuItem>
-                  {nfts.map((nft) => {
+                  {nfts?.map((nft) => {
+                    const {
+                      pool_state: {
+                        p2_singleton_puzzle_hash,
+                      },
+                    } = nft;
+              
+                    return (
+                      <MenuItem value={p2_singleton_puzzle_hash} key={p2_singleton_puzzle_hash}>
+                        <PlotNFTName nft={nft} />
+                      </MenuItem>
+                    );
+                  })}
+                  {external?.map((nft) => {
                     const {
                       pool_state: {
                         p2_singleton_puzzle_hash,
@@ -111,7 +126,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
         </>
       )}
 
-      {!loading && nfts && !nfts.length && (
+      {!loading && !hasNFTs && (
         <>
           <Typography variant="subtitle1">
             <Trans>
