@@ -852,6 +852,10 @@ msgstr "الأسئلة المتكررة"
 msgid "Full Node"
 msgstr "العقد المنتهية"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "حالة العقد المكتملة"

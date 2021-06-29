@@ -852,6 +852,10 @@ msgstr "Întrebări frecvente"
 msgid "Full Node"
 msgstr "Nod complet"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Stare nod complet"

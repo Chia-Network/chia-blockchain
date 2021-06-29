@@ -852,6 +852,10 @@ msgstr "Sıkça Sorulan Sorular"
 msgid "Full Node"
 msgstr "Tam Node"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Tam Node Durumu"

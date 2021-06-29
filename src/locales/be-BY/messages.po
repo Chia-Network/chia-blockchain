@@ -852,6 +852,10 @@ msgstr "Частыя пытанні"
 msgid "Full Node"
 msgstr "Поўны вузел"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Стан поўнага вузла"

@@ -852,6 +852,10 @@ msgstr "Często zadawane pytania"
 msgid "Full Node"
 msgstr "Pełen węzeł"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Stan pełnego węzła"

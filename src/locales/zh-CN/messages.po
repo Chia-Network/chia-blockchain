@@ -852,6 +852,10 @@ msgstr "常见问题解答"
 msgid "Full Node"
 msgstr "全节点"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "全节点状态"

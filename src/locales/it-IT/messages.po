@@ -852,6 +852,10 @@ msgstr "Domande Frequenti"
 msgid "Full Node"
 msgstr "Full Node"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Stato del Full Node"

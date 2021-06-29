@@ -42,7 +42,7 @@ export default function FullNodeCards(props: Props) {
         <Grid xs={12} sm={6} md={4} item>
           <FullNodeCardTotalIterations />
         </Grid>
-        <Grid xs={12} sm={6} md={4} item>
+        <Grid xs={12} md={4} item>
           <FullNodeEstimatedNetworkSpace />
         </Grid>
       </Grid>

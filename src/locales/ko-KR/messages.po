@@ -852,6 +852,10 @@ msgstr "자주 묻는 질문"
 msgid "Full Node"
 msgstr "전체 노드"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "전체 노드 현황"

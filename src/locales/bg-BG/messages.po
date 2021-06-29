@@ -533,10 +533,6 @@ msgstr "Създаден от:"
 msgid "Creating Plot NFT and Joining the Pool"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
-#~ msgid "Creating Plot NFT and Joining the Pool {poolUrl}"
-#~ msgstr ""
-
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:58
 msgid "Creating Plot NFT for Self Pooling"
 msgstr ""
@@ -855,6 +851,10 @@ msgstr "Често задавани въпроси"
 #: src/components/fullNode/FullNode.jsx:314
 msgid "Full Node"
 msgstr "Цялостен възен"
+
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
@@ -1519,10 +1519,6 @@ msgstr ""
 msgid "Pool Reward Amount"
 msgstr "Стойност на възнаграждената от басейна"
 
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:63
-#~ msgid "Pool URL: {poolUrl}"
-#~ msgstr ""
-
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:29
 msgid "Pool does not provide relative_lock_height."
 msgstr ""
@@ -1694,11 +1690,6 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
-#~ msgstr ""
-
-#: src/components/plotNFT/PlotNFTCard.tsx:106
-#: src/components/pool/PoolOverview.tsx:58
-#~ msgid "Rewards"
 #~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
@@ -1958,10 +1949,6 @@ msgstr "Синхронизиране <0/>/<1/>"
 #~ msgid "Syncing {progress}/{tip}"
 #~ msgstr "Syncing {progress}/{tip}"
 
-#: src/components/wallet/WalletStatus.tsx:40
-#~ msgid "Syncing. Height: {walletSyncingHeight}"
-#~ msgstr ""
-
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
 #~ msgstr ""
@@ -2177,10 +2164,6 @@ msgstr "Общо пространство на мрежата"
 msgid "Total Plot Size:"
 msgstr "Общ обем на полета:"
 
-#: src/components/pool/PoolOverview.tsx:164
-#~ msgid "Total Self Pooling Rewards"
-#~ msgstr ""
-
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:13
 msgid "Total Size of Plots"
 msgstr "Общ обем на полета"
@@ -2242,10 +2225,6 @@ msgstr ""
 #: src/components/pool/PoolOverview.tsx:55
 msgid "Unclaimed Rewards"
 msgstr ""
-
-#: src/components/plotNFT/PlotNFTState.tsx:34
-#~ msgid "Unconfirmed transaction"
-#~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
@@ -2321,15 +2300,6 @@ msgstr "Изчаква за синхронизация"
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:73
 msgid "Waiting for the transaction to be confirmed"
 msgstr ""
-
-#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:70
-#~ msgid "Waiting on transaction to hit the memory pool..."
-#~ msgstr ""
-
-#: src/components/plotNFT/PlotNFTCard.tsx:114
-#: src/components/pool/PoolOverview.tsx:34
-#~ msgid "Wallet Status"
-#~ msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:156
 #: src/components/wallet/standard/WalletStandard.tsx:647

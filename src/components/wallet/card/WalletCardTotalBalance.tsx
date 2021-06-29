@@ -11,7 +11,7 @@ const StyledGraphContainer = styled.div`
   margin-left: -1rem;
   margin-right: -1rem;
   margin-top: 1rem;
-  margin-bottom: -1.5rem;
+  margin-bottom: -1rem;
 `;
 
 type Props = {

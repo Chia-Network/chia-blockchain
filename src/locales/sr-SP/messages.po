@@ -852,6 +852,10 @@ msgstr "Често Постављана Питања"
 msgid "Full Node"
 msgstr "Пун Чвор"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Статус пуног чвора"

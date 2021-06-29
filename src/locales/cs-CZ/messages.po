@@ -852,6 +852,10 @@ msgstr "Často kladené otázky"
 msgid "Full Node"
 msgstr "Uzel"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Stav uzlu"

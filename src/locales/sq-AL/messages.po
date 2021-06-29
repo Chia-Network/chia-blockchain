@@ -852,6 +852,10 @@ msgstr "Pyetjet më të shpeshta"
 msgid "Full Node"
 msgstr "Nyja e plotë"
 
+#: src/components/fullNode/FullNode.jsx:317
+msgid "Full Node Overview"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "Statusi i Nyjes së plotë"

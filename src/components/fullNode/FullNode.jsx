@@ -312,6 +312,11 @@ const BlocksCard = () => {
 export default function FullNode() {
   return (
     <LayoutMain title={<Trans>Full Node</Trans>}>
+      <Flex gap={1}>
+        <Typography variant="h5" gutterBottom>
+          <Trans>Full Node Overview</Trans>
+        </Typography>
+      </Flex>
       <Flex flexDirection="column" gap={3}>
         <FullNodeCards />
         <BlocksCard />
