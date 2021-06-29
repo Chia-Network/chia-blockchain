@@ -5,7 +5,7 @@ import pytest
 
 from deafwave.protocols.shared_protocol import protocol_version
 from deafwave.server.outbound_message import NodeType
-from deafwave.server.server import ChiaServer, ssl_context_for_client
+from deafwave.server.server import DeafwaveServer, ssl_context_for_client
 from deafwave.server.ws_connection import WSDeafwaveConnection
 from deafwave.ssl.create_ssl import generate_ca_signed_cert
 from deafwave.types.peer_info import PeerInfo

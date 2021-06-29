@@ -27,7 +27,7 @@ from deafwave.protocols.wallet_protocol import (
 )
 from deafwave.server.node_discovery import WalletPeers
 from deafwave.server.outbound_message import Message, NodeType, make_msg
-from deafwave.server.server import ChiaServer
+from deafwave.server.server import DeafwaveServer
 from deafwave.server.ws_connection import WSDeafwaveConnection
 from deafwave.types.blockchain_format.coin import Coin, hash_coin_list
 from deafwave.types.blockchain_format.sized_bytes import bytes32

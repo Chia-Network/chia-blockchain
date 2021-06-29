@@ -16,11 +16,11 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from deafwave.cmds.init_funcs import chia_init
+from deafwave.cmds.init_funcs import deafwave_init
 from deafwave.daemon.windows_signal import kill
 from deafwave.server.server import ssl_context_for_root, ssl_context_for_server
 from deafwave.ssl.create_ssl import get_mozzila_ca_crt
-from deafwave.util.chia_logging import initialize_logging
+from deafwave.util.deafwave_logging import initialize_logging
 from deafwave.util.config import load_config
 from deafwave.util.json_util import dict_to_json_str
 from deafwave.util.path import mkdir
