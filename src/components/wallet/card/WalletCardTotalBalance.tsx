@@ -44,7 +44,7 @@ export default function WalletCardTotalBalance(props: Props) {
       }
       description={
         <StyledGraphContainer>
-          <WalletGraph walletId={wallet_id} height={120} />
+          <WalletGraph walletId={wallet_id} height={114} />
         </StyledGraphContainer>
       }
     />

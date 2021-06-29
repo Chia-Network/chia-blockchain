@@ -13,8 +13,8 @@ import {
 import { Status } from '@chia/icons';
 import { useRouteMatch, useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Box, Grid, Tooltip, Typography } from '@material-ui/core';
-import HelpIcon from '@material-ui/icons/Help';
+import { Box, Tooltip, Typography } from '@material-ui/core';
+// import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
 import LayoutMain from '../layout/LayoutMain';
@@ -215,7 +215,6 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
 
   return status_items;
 };
-*/
 
 const StatusCell = (props) => {
   const { item } = props;
@@ -242,7 +241,7 @@ const StatusCell = (props) => {
   );
 };
 
-/*
+
 const FullNodeStatus = (props) => {
   const blockchainState = useSelector(
     (state) => state.full_node_state.blockchain_state,
