@@ -363,7 +363,6 @@ type SendTransactionData = {
 function SendCard(props: SendCardProps) {
   const { wallet_id } = props;
   const classes = useStyles();
-  let address_input: HTMLInputElement;
   const dispatch = useDispatch();
 
   const methods = useForm<SendTransactionData>({
