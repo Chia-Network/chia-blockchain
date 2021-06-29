@@ -866,19 +866,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
-            updated_puz = await wallet.get_new_puzzle()
-            spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
+            spend_bundle = await wallet.create_update_spend()
 
         success = spend_bundle is not None and update_success
-        return {"success": success}
-
-    async def did_spend(self, request):
-        wallet_id = int(request["wallet_id"])
-        async with self.service.wallet_state_manager.lock:
-            wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            spend_bundle = await wallet.create_spend(request["puzzlehash"])
-
-        success = spend_bundle is not None
         return {"success": success}
 
     async def did_get_did(self, request):
