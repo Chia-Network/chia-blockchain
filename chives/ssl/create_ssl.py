@@ -45,7 +45,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
         .not_valid_before(datetime.datetime.today() - one_day)
         .not_valid_after(datetime.datetime(2100, 8, 2))
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("chives.net")]),
+            x509.SubjectAlternativeName([x509.DNSName("chivescoin.org")]),
             critical=False,
         )
         .sign(root_key, hashes.SHA256(), default_backend())

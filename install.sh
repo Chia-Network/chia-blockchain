@@ -116,8 +116,8 @@ python -m pip install --upgrade pip
 python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-python -m pip install --extra-index-url https://pypi.chives.net/simple/ miniupnpc==2.2.2
-python -m pip install -e . --extra-index-url https://pypi.chives.net/simple/
+python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
+python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
 
 echo ""
 echo "Chives blockchain install.sh complete."
