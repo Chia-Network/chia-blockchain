@@ -27,6 +27,14 @@ class KeyringIsLocked(Exception):
     pass
 
 
+class KeyringRequiresMigration(Exception):
+    pass
+
+
+class KeyringCurrentPassphaseIsInvalid(Exception):
+    pass
+
+
 def supports_keyring_password() -> bool:
     from sys import platform
 
@@ -471,12 +479,12 @@ class Keychain:
         KeyringWrapper.get_shared_instance().set_cached_master_password(password)
 
     @staticmethod
-    def set_master_password(current_password: Optional[str], new_password: str) -> None:
+    def set_master_password(current_password: Optional[str], new_password: str, allow_migration: bool = True) -> None:
         """
         Encrypts the keyring contents to new password, provided that the current
         password can decrypt the contents
         """
-        KeyringWrapper.get_shared_instance().set_master_password(current_password, new_password)
+        KeyringWrapper.get_shared_instance().set_master_password(current_password, new_password, allow_migration)
 
     @staticmethod
     def remove_master_password(current_password: Optional[str]) -> None:

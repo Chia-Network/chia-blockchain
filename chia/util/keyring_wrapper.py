@@ -152,11 +152,17 @@ class KeyringWrapper:
         return self.keyring.check_password(password)
 
     def set_master_password(
-        self, current_password: Optional[str], new_password: str, write_to_keyring: bool = True
+        self,
+        current_password: Optional[str],
+        new_password: str,
+        write_to_keyring: bool = True,
+        allow_migration: bool = True,
     ) -> None:
         """
         Sets a new master password for the keyring
         """
+
+        from chia.util.keychain import KeyringCurrentPassphaseIsInvalid, KeyringRequiresMigration
 
         # Require a valid current_password
         if (
@@ -164,13 +170,16 @@ class KeyringWrapper:
             and current_password is not None
             and not self.master_password_is_valid(current_password)
         ):
-            raise ValueError("invalid current password")
+            raise KeyringCurrentPassphaseIsInvalid("invalid current password")
 
         self.set_cached_master_password(new_password, validated=True)
 
         if write_to_keyring:
             # We'll migrate the legacy contents to the new keyring at this point
             if self.using_legacy_keyring():
+                if not allow_migration:
+                    raise KeyringRequiresMigration("keyring requires migration")
+
                 self.migrate_legacy_keyring()
             else:
                 # We're reencrypting the keyring contents using the new password. Ensure that the

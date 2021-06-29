@@ -24,7 +24,7 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, KeyringCurrentPassphaseIsInvalid, KeyringRequiresMigration
 from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -300,6 +300,8 @@ class WebSocketServer:
             response = await self.is_keyring_locked()
         elif command == "unlock_keyring":
             response = await self.unlock_keyring(cast(Dict[str, Any], data))
+        elif command == "set_keyring_passphrase":
+            response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
@@ -345,6 +347,39 @@ class WebSocketServer:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
+
+        response = {"success": success, "error": error}
+        return response
+
+    async def set_keyring_passphrase(self, request: Dict[str, Any]):
+        success = False
+        error = None
+        current_passphrase = None
+        new_passphrase = None
+
+        if not error and Keychain.has_master_password():
+            current_passphrase = request.get("current_passphrase", None)
+            if type(current_passphrase) is not str:
+                error = "missing current_passphrase"
+
+        if not error:
+            new_passphrase = request.get("new_passphrase", None)
+            if type(new_passphrase) is not str:
+                error = "missing new_passphrase"
+
+        if error is None:
+            try:
+                assert new_passphrase is not None  # mypy, I love you
+                Keychain.set_master_password(current_passphrase, new_passphrase, allow_migration=False)
+            except KeyringRequiresMigration:
+                error = "keyring requires migration"
+            except KeyringCurrentPassphaseIsInvalid:
+                error = "current passphrase is invalid"
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Failed to set keyring passphrase: {e} {tb}")
+            else:
+                success = True
 
         response = {"success": success, "error": error}
         return response
