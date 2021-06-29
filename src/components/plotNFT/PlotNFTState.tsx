@@ -35,7 +35,7 @@ export default function PlotNFTState(props: Props) {
     );
   }
 
-  const isPending = target && target !== state;
+  const isPending = !!target && target.state !== state;
   if (isPending) {
     return (
       <Flex alignItems="center" gap={1} inline>
