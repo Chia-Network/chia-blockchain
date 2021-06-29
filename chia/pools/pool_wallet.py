@@ -46,7 +46,7 @@ from chia.pools.pool_puzzles import (
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import (
     master_sk_to_pooling_authentication_sk,
-    master_sk_to_singleton_owner_sk,
+    find_owner_sk,
 )
 from chia.wallet.sign_coin_solutions import sign_coin_solutions
 from chia.wallet.transaction_record import TransactionRecord
@@ -458,29 +458,20 @@ class PoolWallet:
         )
         return standard_wallet_record, p2_singleton_puzzle_hash, launcher_coin_id
 
-    async def get_pool_wallet_sk(self):
-        owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-            self.wallet_state_manager.private_key, uint32(self.wallet_id)
-        )
-        assert owner_sk is not None
-        return owner_sk
+    async def sign(self, coin_solution: CoinSolution) -> SpendBundle:
+        async def pk_to_sk(pk: G1Element) -> PrivateKey:
+            owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
+            assert owner_sk is not None
+            return owner_sk
 
-    async def sign(self, coin_solution: CoinSolution):
-        sk: PrivateKey = await self.get_pool_wallet_sk()
-
-        def pk_to_sk(pk: G1Element) -> PrivateKey:
-            d = {bytes(pk): sk}
-            return d[bytes(pk)]
-
-        spend_bundle: SpendBundle = await sign_coin_solutions(
+        return await sign_coin_solutions(
             [coin_solution],
             pk_to_sk,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
-        return spend_bundle
 
-    async def generate_travel_transaction(self, target_state: PoolState) -> TransactionRecord:
+    async def generate_travel_transaction(self) -> TransactionRecord:
         # target_state is contained within pool_wallet_state
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
 
@@ -693,7 +684,7 @@ class PoolWallet:
                 )
 
         self.target_state = target_state
-        tx_record: TransactionRecord = await self.generate_travel_transaction(target_state)
+        tx_record: TransactionRecord = await self.generate_travel_transaction()
         await self.wallet_state_manager.add_pending_transaction(tx_record)
 
         return tx_record
@@ -726,7 +717,7 @@ class PoolWallet:
         self.target_state = create_pool_state(
             SELF_POOLING, owner_puzzlehash, owner_pubkey, pool_url=None, relative_lock_height=uint32(0)
         )
-        tx_record = await self.generate_travel_transaction(self.target_state)
+        tx_record = await self.generate_travel_transaction()
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record
 
@@ -850,7 +841,7 @@ class PoolWallet:
                     assert self.target_state.relative_lock_height >= self.MINIMUM_RELATIVE_LOCK_HEIGHT
                     assert self.target_state.pool_url is not None
 
-                tx_record = await self.generate_travel_transaction(self.target_state)
+                tx_record = await self.generate_travel_transaction()
                 await self.wallet_state_manager.add_pending_transaction(tx_record)
 
     async def have_unconfirmed_transaction(self) -> bool:
