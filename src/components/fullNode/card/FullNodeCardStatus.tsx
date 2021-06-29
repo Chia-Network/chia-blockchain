@@ -11,9 +11,9 @@ const StyledWarning = styled.span`
 `;
 
 function getData(state) {
-  if (state.sync && state.sync.sync_mode) {
-    const progress = state.sync.sync_progress_height;
-    const tip = state.sync.sync_tip_height;
+  if (state?.sync && state?.sync?.sync_mode) {
+    const progress = state?.sync?.sync_progress_height;
+    const tip = state?.sync?.sync_tip_height;
     return {
       value: (
         <StyledWarning>
@@ -31,7 +31,7 @@ function getData(state) {
         </Trans>
       ),
     };
-  } else if (!state.sync.synced) {
+  } else if (!state?.sync?.synced) {
     return {
       value: <Trans>Not Synced</Trans>,
       color: 'error',
