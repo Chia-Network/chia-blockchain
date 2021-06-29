@@ -37,9 +37,6 @@ export function getPlotNFTs() {
       ),
     ]);
 
-    console.log('poolWalletStates', poolWalletStates);
-    console.log('walletBalances', walletBalances);
-
     // combine poolState and poolWalletState
     const nfts: PlotNFT[] = [];
     const external: PlotNFTExternal[] = [];
@@ -117,8 +114,6 @@ export function pwSelfPool(walletId: number) {
       false,
     );
 
-    console.log('join self pool response', data);
-
     await dispatch(getPlotNFTs());
 
     return data;
@@ -142,8 +137,6 @@ export function pwJoinPool(
       ),
       false,
     );
-
-    console.log('join pool response', data);
 
     await dispatch(getPlotNFTs());
 
