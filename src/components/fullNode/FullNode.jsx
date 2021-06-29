@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { get } from 'lodash';
 import {
-  FormatBytes,
+  // FormatBytes,
   FormatLargeNumber,
   Flex,
   Card,
@@ -101,6 +101,7 @@ const cols = [
   },
 ];
 
+/*
 const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const status_items = [];
   if (state.sync && state.sync.sync_mode) {
@@ -214,6 +215,7 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
 
   return status_items;
 };
+*/
 
 const StatusCell = (props) => {
   const { item } = props;
@@ -240,6 +242,7 @@ const StatusCell = (props) => {
   );
 };
 
+/*
 const FullNodeStatus = (props) => {
   const blockchainState = useSelector(
     (state) => state.full_node_state.blockchain_state,
@@ -279,6 +282,7 @@ const FullNodeStatus = (props) => {
     </Card>
   );
 };
+*/
 
 const BlocksCard = () => {
   const { url } = useRouteMatch();

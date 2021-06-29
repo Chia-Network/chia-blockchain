@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import { darken } from 'polished';
 import { useHistory } from 'react-router-dom';
 import {
   Button as BaseButton,

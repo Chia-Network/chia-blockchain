@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
-import { Box, AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
+import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
 import {
   DarkModeToggle,
   LocaleToggle,

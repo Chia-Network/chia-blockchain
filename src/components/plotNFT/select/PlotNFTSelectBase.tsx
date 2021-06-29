@@ -6,7 +6,6 @@ import styled from 'styled-components';
 import { useWatch, useFormContext } from 'react-hook-form';
 import {
   Button,
-  Autocomplete,
   Flex,
   Loading,
   CardStep,
@@ -54,6 +53,7 @@ export default function PlotNFTSelectBase(props: Props) {
 
   const poolInfo = usePoolInfo(poolUrl);
 
+  /*
   const groupsOptions = useMemo(() => {
     if (!nfts) {
       return [];
@@ -65,6 +65,7 @@ export default function PlotNFTSelectBase(props: Props) {
 
     return uniq(urls);
   }, [nfts]);
+  */
 
   function handleDisableSelfPooling() {
     if (self) {

@@ -1,22 +1,8 @@
 import React from 'react';
-import { t, Trans } from '@lingui/macro';
-import styled from 'styled-components';
-import {
-  Box,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@material-ui/core';
+import { Trans } from '@lingui/macro';
+import { Typography } from '@material-ui/core';
 import type PoolInfoType from '../../types/PoolInfo';
 import { CardKeyValue, Flex, Link } from '@chia/core';
-
-const StyledLogo = styled.img`
-  max-height: 300px;
-  max-width: 350px;
-`;
 
 type Props = {
   poolInfo: PoolInfoType;

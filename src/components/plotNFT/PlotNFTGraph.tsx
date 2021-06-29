@@ -3,7 +3,7 @@ import { linearGradientDef } from '@nivo/core';
 import { t } from '@lingui/macro';
 import { ResponsiveLine } from '@nivo/line';
 import { Typography, Paper } from '@material-ui/core';
-import { Flex, FormatLargeNumber } from '@chia/core';
+import { Flex } from '@chia/core';
 import styled from 'styled-components';
 
 const StyledRoot = styled.div`
@@ -21,6 +21,7 @@ const StyledTooltip = styled(Paper)`
   padding: 0.25rem 0.5rem;
 `;
 
+/*
 const StyledMaxTypography = styled(Typography)`
   position: absolute;
   left: 0;
@@ -42,6 +43,7 @@ const StyledMiddleTypography = styled(Typography)`
   transform: translate(0, -50%);
   font-size: 0.625rem;
 `;
+*/
 
 const HOUR_SECONDS = 60 * 60;
 
@@ -115,7 +117,7 @@ export default function PlotNFTGraph(props: Props) {
     ? Math.min(...aggregated.map((item) => item.y))
     : 0;
   const max = Math.max(min, ...aggregated.map((item) => item.y));
-  const middle = max / 2;
+  // const middle = max / 2;
 
   return (
     <StyledRoot>
