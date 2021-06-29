@@ -31,11 +31,14 @@ class MalformedKeychainResponse(Exception):
 
 
 class KeychainProxy(DaemonProxy):
-    keychain: Keychain  # If the keyring doesn't support a master password, we'll proxy calls locally
-    log: logging.Logger
-
     def __init__(
-        self, uri: str, ssl_context: Optional[ssl.SSLContext], log: logging.Logger, local_keychain: Optional[Keychain]
+        self,
+        uri: str,
+        ssl_context: Optional[ssl.SSLContext],
+        log: logging.Logger,
+        local_keychain: Optional[Keychain],
+        user: str = None,
+        testing: bool = False,
     ):
         self.log = log
         if local_keychain:
@@ -44,10 +47,22 @@ class KeychainProxy(DaemonProxy):
             self.keychain = Keychain()  # Proxy locally, don't use RPC
         else:
             self.keychain = None  # type: ignore
+        self.keychain_user = user
+        self.keychain_testing = testing
         super().__init__(uri, ssl_context)
 
     def use_local_keychain(self) -> bool:
         return self.keychain is not None
+
+    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+        if data is None:
+            data = {}
+
+        if self.keychain_user or self.keychain_testing:
+            data["kc_user"] = self.keychain_user
+            data["kc_testing"] = self.keychain_testing
+
+        return super().format_request(command, data)
 
     def handle_error(self, response: WsRpcMessage):
         error = response["data"].get("error", None)
@@ -243,18 +258,20 @@ async def connect_to_keychain(
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
     local_keychain: Optional[Keychain],
+    user: str = None,
+    testing: bool = False,
 ) -> KeychainProxy:
     """
     Connect to the local daemon.
     """
 
-    client = KeychainProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, log, local_keychain)
+    client = KeychainProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, log, local_keychain, user, testing)
     await client.start()
     return client
 
 
 async def connect_to_keychain_and_validate(
-    root_path: Path, log: logging.Logger, local_keychain: Optional[Keychain]
+    root_path: Path, log: logging.Logger, local_keychain: Optional[Keychain], user: str = None, testing: bool = False
 ) -> Optional[KeychainProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
@@ -268,13 +285,13 @@ async def connect_to_keychain_and_validate(
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         connection = await connect_to_keychain(
-            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, local_keychain
+            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, local_keychain, user, testing
         )
         r = await connection.ping()
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
     except Exception as e:
-        print(f"Daemon not started yet: {e}")
+        print(f"Keychain(daemon) not started yet: {e}")
         return None
     return None

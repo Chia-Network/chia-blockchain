@@ -26,7 +26,29 @@ KEYCHAIN_ERR_MALFORMED_REQUEST = "malformed request"
 
 class KeychainServer:
     def __init__(self):
-        self.keychain = Keychain()
+        self._default_keychain = Keychain()
+        self._alt_keychains = {}
+
+    def get_keychain_for_request(self, request: Dict[str, Any]):
+        """
+        Keychain instances can have a user and testing flag associated with them.
+        The keychain backends ultimately point to the same data stores, but the user
+        and testing flags are used to partition those data stores. We attempt to
+        maintain a mapping of user/testing pairs to their corresponding Keychain.
+        """
+        keychain = None
+        user = request.get("kc_user", self._default_keychain.user)
+        testing = request.get("kc_testing", self._default_keychain.testing)
+        if user == self._default_keychain.user and testing == self._default_keychain.testing:
+            keychain = self._default_keychain
+        else:
+            key = (user or "unnamed") + ("test" if testing else "")
+            if key in self._alt_keychains:
+                keychain = self._alt_keychains[key]
+            else:
+                keychain = Keychain(user=user, testing=testing)
+                self._alt_keychains[key] = keychain
+        return keychain
 
     async def handle_command(self, command, data) -> Dict[str, Any]:
         if command == "add_private_key":
@@ -46,7 +68,7 @@ class KeychainServer:
         return {}
 
     async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         mnemonic = request.get("mnemonic", None)
@@ -59,7 +81,7 @@ class KeychainServer:
             }
 
         try:
-            self.keychain.add_private_key(mnemonic, passphrase)
+            self.get_keychain_for_request(request).add_private_key(mnemonic, passphrase)
         except KeyError as e:
             return {
                 "success": False,
@@ -70,7 +92,7 @@ class KeychainServer:
         return {"success": True}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         root_path = request.get("root_path", None)
@@ -86,15 +108,15 @@ class KeychainServer:
         return {"success": True}
 
     async def delete_all_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        self.keychain.delete_all_keys()
+        self.get_keychain_for_request(request).delete_all_keys()
 
         return {"success": True}
 
     async def delete_key_by_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         fingerprint = request.get("fingerprint", None)
@@ -105,16 +127,16 @@ class KeychainServer:
                 "error_details": {"message": "missing fingerprint"},
             }
 
-        self.keychain.delete_key_by_fingerprint(fingerprint)
+        self.get_keychain_for_request(request).delete_key_by_fingerprint(fingerprint)
 
         return {"success": True}
 
     async def get_all_private_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         all_keys: List[Dict[str, Any]] = []
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        private_keys = self.keychain.get_all_private_keys()
+        private_keys = self.get_keychain_for_request(request).get_all_private_keys()
         for sk, entropy in private_keys:
             all_keys.append({"pk": bytes(sk.get_g1()).hex(), "entropy": entropy.hex()})
 
@@ -122,10 +144,10 @@ class KeychainServer:
 
     async def get_first_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
         key: Dict[str, Any] = {}
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        sk_ent = self.keychain.get_first_private_key()
+        sk_ent = self.get_keychain_for_request(request).get_first_private_key()
         if sk_ent is None:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
@@ -136,10 +158,10 @@ class KeychainServer:
         return {"success": True, "private_key": key}
 
     async def get_key_for_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if self.keychain.is_keyring_locked():
+        if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
-        private_keys = self.keychain.get_all_private_keys()
+        private_keys = self.get_keychain_for_request(request).get_all_private_keys()
         if len(private_keys) == 0:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
