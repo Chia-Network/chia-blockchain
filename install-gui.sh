@@ -2,17 +2,17 @@
 set -e
 
 if [ -z "$VIRTUAL_ENV" ]; then
-  echo "This requires the chia python virtual environment."
+  echo "This requires the sector python virtual environment."
   echo "Execute '. ./activate' before running."
 	exit 1
 fi
 
 if [ "$(id -u)" = 0 ]; then
-  echo "The Chia Blockchain GUI can not be installed or run by the root user."
+  echo "The Sector Blockchain GUI can not be installed or run by the root user."
 	exit 1
 fi
 
-# Allows overriding the branch or commit to build in chia-blockchain-gui
+# Allows overriding the branch or commit to build in sector-blockchain-gui
 SUBMODULE_BRANCH=$1
 
 UBUNTU=false
@@ -78,7 +78,7 @@ if [ ! "$CI" ]; then
 	echo "Running git submodule update."
 	echo ""
 	git submodule update
-	cd chia-blockchain-gui
+	cd sector-blockchain-gui
 
 	if [ "$SUBMODULE_BRANCH" ];
 	then
@@ -98,6 +98,6 @@ else
 fi
 
 echo ""
-echo "Chia blockchain install-gui.sh completed."
+echo "Sector blockchain install-gui.sh completed."
 echo ""
-echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI."
+echo "Type 'cd sector-blockchain-gui' and then 'npm run electron &' to start the GUI."
