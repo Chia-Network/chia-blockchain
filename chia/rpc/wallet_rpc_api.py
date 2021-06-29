@@ -92,7 +92,6 @@ class WalletRpcApi:
             "/cancel_trade": self.cancel_trade,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
-            "/did_spend": self.did_spend,
             "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_did": self.did_get_did,
             "/did_recovery_spend": self.did_recovery_spend,
