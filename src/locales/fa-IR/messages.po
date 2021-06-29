@@ -18,9 +18,17 @@ msgstr ""
 "X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 118\n"
 
+#: src/components/plot/add/PlotAddNFT.tsx:55
+msgid "(Optional)"
+msgstr ""
+
 #: src/components/farm/FarmLatestBlockChallenges.tsx:70
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "آیا می خواهید که بلوک های چیـا را فراتر از این کاوش کنید؟ <0>Chia Explorer</0> را که توسط یک توسعه دهنده متن باز ساخته شده است را چک کنید."
+
+#: src/components/plot/add/PlotAddNFT.tsx:122
+msgid "+ Add New Plot NFT"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,7 +40,8 @@ msgstr "128 باکت پیشنهاد می شود"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "دروگر (Harvester) یک سرویس در حال اجرا بر روی ماشینی است که پلات (ها) در عمل آنجا ذخیره شده اند. مزرعه دار (Farmer) و دروگر برای دیدن وضعیت رشته (Chain) با گره کامل در تعامل هستند. شبکه دروگر های متصل خود را در زیر ببینید. \n"
+msgstr ""
+"دروگر (Harvester) یک سرویس در حال اجرا بر روی ماشینی است که پلات (ها) در عمل آنجا ذخیره شده اند. مزرعه دار (Farmer) و دروگر برای دیدن وضعیت رشته (Chain) با گره کامل در تعامل هستند. شبکه دروگر های متصل خود را در زیر ببینید. \n"
 "بیشتر فرار بگیرید"
 
 #: src/electron/main.tsx:423
@@ -50,13 +59,14 @@ msgstr "پذیرش شده در زمان:"
 
 #: src/components/plot/PlotsFailed.tsx:17
 #: src/components/plot/PlotsNotFound.tsx:17
-#: src/components/plot/overview/PlotOverviewPlots.tsx:88
+#: src/components/plot/overview/PlotOverviewPlots.tsx:97
 msgid "Action"
 msgstr "عملیات"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:57
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:61
 #: src/components/fullNode/FullNodeConnections.tsx:65
+#: src/components/pool/PoolOverview.tsx:58
 msgid "Actions"
 msgstr "عملیات"
 
@@ -64,24 +74,30 @@ msgstr "عملیات"
 msgid "Add"
 msgstr "افزودن"
 
-#: src/components/plot/PlotHeader.tsx:65
+#: src/components/plot/PlotHeader.tsx:73
 msgid "Add Plot Directory"
 msgstr "افزودن پوشه حاوی پلات"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:69
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:64
 msgid "Add Plot to Queue"
 msgstr "افزودن پلات به صف"
 
-#: src/components/wallet/Wallets.tsx:110
+#: src/components/wallet/Wallets.tsx:100
 msgid "Add Wallet"
 msgstr "افزودن کیف پول"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:47
-#: src/components/plot/PlotHeader.tsx:46
-#: src/components/plot/add/PlotAdd.tsx:80
+#: src/components/plot/PlotHeader.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:158
 #: src/components/plot/overview/PlotOverviewHero.tsx:40
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:164
+#: src/components/plotNFT/PlotNFTCard.tsx:184
 msgid "Add a Plot"
 msgstr "افزودن پلات"
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:48
+msgid "Add a Plot NFT"
+msgstr ""
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:56
 msgid "Add a plot"
@@ -91,27 +107,28 @@ msgstr "افزودن پلات"
 msgid "Add plot directory"
 msgstr "افزودن پوشه قرارگیری پلات"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:569
-#: src/components/wallet/coloured/WalletColoured.tsx:672
-#: src/components/wallet/standard/WalletStandard.tsx:570
+#: src/components/wallet/coloured/WalletColoured.tsx:574
+#: src/components/wallet/coloured/WalletColoured.tsx:677
+#: src/components/wallet/standard/WalletStandard.tsx:589
 msgid "Address"
 msgstr "آدرس"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:466
+#: src/components/wallet/standard/WalletStandard.tsx:489
 msgid "Address / Puzzle hash"
 msgstr "آدرس/ جورچین هش(در هم ریزی)"
 
+#: src/components/core/components/Amount/Amount.tsx:63
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:18
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:60
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:486
+#: src/components/wallet/standard/WalletStandard.tsx:499
 msgid "Amount"
 msgstr "مقدار"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:590
+#: src/components/wallet/coloured/WalletColoured.tsx:595
 msgid "Amount ({cc_unit})"
 msgstr "مقدار ({cc_unit})"
 
@@ -140,6 +157,11 @@ msgstr "مطمئنید که می‌خواهید خارج شوید؟ فرایند
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "آیا مطمئنید که میخواهید از مقدار k= {plotSize} استفاده کنید؟"
 
+#: src/components/plotNFT/PlotNFTName.tsx:41
+msgid "Autogenerated name from pool contract address"
+msgstr ""
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:46
 #: src/components/selectKey/SelectKey.tsx:62
 #: src/components/selectKey/SelectKey.tsx:83
 msgid "Back"
@@ -149,9 +171,9 @@ msgstr "بازگشت"
 msgid "Backup file is used to restore smart wallets."
 msgstr "فایل های پشتیبان برای بازگردانی کیف پول هوشمند استفاده می شوند."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:376
+#: src/components/wallet/coloured/WalletColoured.tsx:381
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
-#: src/components/wallet/standard/WalletStandard.tsx:247
+#: src/components/wallet/standard/WalletStandard.tsx:255
 msgid "Balance"
 msgstr "موجودی حساب"
 
@@ -162,7 +184,8 @@ msgstr "مقدار پایه جایزه‌ِ مزرعه دار"
 #: src/components/farm/FarmLatestBlockChallenges.tsx:46
 #: src/components/farm/FarmLatestBlockChallenges.tsx:55
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "در پایین چالش های بلوک کنونی را می‌بینید. ممکن است شما گواهی حجمی برای این چالش ها داشته باشید یا نداشته باشید.\n"
+msgstr ""
+"در پایین چالش های بلوک کنونی را می‌بینید. ممکن است شما گواهی حجمی برای این چالش ها داشته باشید یا نداشته باشید.\n"
 " این بلاک ها در حال حاضر گواه زمانی ندارند."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:20
@@ -204,7 +227,7 @@ msgstr "بلوک با هش {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "هیچ بلوکی با هش {headerHash} موجود نیست."
 
-#: src/components/fullNode/FullNode.jsx:299
+#: src/components/fullNode/FullNode.jsx:300
 msgid "Blocks"
 msgstr "بلوک ها"
 
@@ -228,7 +251,7 @@ msgstr "اما شما در حال مزرعه داری <0/> هستید"
 msgid "Buy"
 msgstr "خریدن"
 
-#: src/components/wallet/Wallets.tsx:59
+#: src/components/wallet/Wallets.tsx:61
 msgid "CC Wallet"
 msgstr "کیف پول CC"
 
@@ -241,8 +264,9 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "میتواند در دانه های کمک یادآوری، پشتیبان گیری شود"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:66
-#: src/components/farm/FarmManageFarmingRewards.tsx:178
+#: src/components/farm/FarmManageFarmingRewards.tsx:185
 #: src/components/fullNode/FullNodeAddConnection.tsx:98
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:70
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
@@ -265,6 +289,16 @@ msgstr "چالش"
 msgid "Challenge Hash"
 msgstr "چالشِ در هم سازی(هش)"
 
+#: src/components/plotNFT/PlotNFTChangePool.tsx:101
+msgid "Change"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:273
+#: src/components/plotNFT/PlotNFTChangePool.tsx:100
+#: src/components/pool/PoolOverview.tsx:90
+msgid "Change Pool"
+msgstr ""
+
 #: src/electron/main.tsx:402
 msgid "Chat on KeyBase"
 msgstr "در اپلیکیشن KeyBase صبحت کنید"
@@ -277,7 +311,8 @@ msgstr "چیـا"
 msgid "Chia Blockchain Wiki"
 msgstr "ویکی زنجیره بلوکی چیـا"
 
-#: src/components/wallet/Wallets.tsx:56
+#: src/components/wallet/Wallets.tsx:58
+#: src/components/wallet/standard/WalletStandard.tsx:625
 msgid "Chia Wallet"
 msgstr "کیف پول چیـا"
 
@@ -288,6 +323,11 @@ msgstr "تعداد پلات ها را انتخاب کنید"
 #: src/components/plot/add/PlotAddChooseSize.tsx:59
 msgid "Choose Plot Size"
 msgstr "مقدار فضای پلات را انتخاب کنید"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:250
+#: src/components/pool/PoolOverview.tsx:74
+msgid "Claim Rewards"
+msgstr ""
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:102
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:76
@@ -307,7 +347,7 @@ msgstr "سکه ها:"
 msgid "Colour"
 msgstr "رنگ"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:220
+#: src/components/wallet/coloured/WalletColoured.tsx:225
 msgid "Colour Info"
 msgstr "اطلاعات رنگ"
 
@@ -315,7 +355,7 @@ msgstr "اطلاعات رنگ"
 msgid "Colour String"
 msgstr "رشته ی رنگی"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:226
+#: src/components/wallet/coloured/WalletColoured.tsx:231
 msgid "Colour:"
 msgstr "رنگ:"
 
@@ -327,7 +367,9 @@ msgstr "سکه رنگ شده"
 msgid "Coloured Coin Options"
 msgstr "تنظیمات سکه رنگ شده"
 
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:148
 #: src/electron/main.tsx:195
+#: src/hooks/useAbsorbRewards.tsx:45
 msgid "Confirm"
 msgstr "تایید"
 
@@ -339,7 +381,7 @@ msgstr "تایید و قطع ارتباط"
 msgid "Confirmed at block:"
 msgstr "تایید شده در بلوک:"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:50
 msgid "Confirmed at height {0}"
 msgstr "تایید شده در ارتفاع {0}"
 
@@ -348,12 +390,17 @@ msgid "Connect"
 msgstr "اتصال"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:71
-#: src/components/fullNode/FullNodeConnections.tsx:96
+#: src/components/fullNode/FullNodeConnections.tsx:95
 msgid "Connect to other peers"
 msgstr "اتصال به سایر همسان‌ ها"
 
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:97
+msgid "Connect to pool"
+msgstr ""
+
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:57
-#: src/components/fullNode/FullNode.jsx:144
+#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:18
 msgid "Connected"
 msgstr "متصل شد"
 
@@ -361,7 +408,8 @@ msgstr "متصل شد"
 msgid "Connecting to wallet"
 msgstr "اتصال به کیف پول"
 
-#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
 msgid "Connection Status"
 msgstr "وضعیت اتصال"
 
@@ -386,11 +434,10 @@ msgstr "مشارکت در GitHub"
 msgid "Copied"
 msgstr "رونوشت شد"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:686
+#: src/components/wallet/coloured/WalletColoured.tsx:691
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:583
 msgid "Copy"
 msgstr "رونوشت"
 
@@ -399,6 +446,8 @@ msgid "Copy to Clipboard"
 msgstr "رونوشت در کلیپ بورد"
 
 #: src/components/backup/BackupCreate.tsx:78
+#: src/components/plot/add/PlotAdd.tsx:172
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:133
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
@@ -415,8 +464,8 @@ msgid "Create Offer"
 msgstr "ایجاد پیشنهاد"
 
 #: src/components/plot/add/PlotAdd.tsx:92
-msgid "Create Plot"
-msgstr "ساخت پلات"
+#~ msgid "Create Plot"
+#~ msgstr "ساخت پلات"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -434,9 +483,9 @@ msgstr "ساخت کیف پول دارای محدودیت نرخ مخصوص کا�
 msgid "Create Trade Offer"
 msgstr "ایجاد پیشنهاد مبادله"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:550
+#: src/components/wallet/coloured/WalletColoured.tsx:555
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
-#: src/components/wallet/standard/WalletStandard.tsx:442
+#: src/components/wallet/standard/WalletStandard.tsx:465
 msgid "Create Transaction"
 msgstr "ایجاد معامله"
 
@@ -444,7 +493,11 @@ msgstr "ایجاد معامله"
 msgid "Create a Backup"
 msgstr "ایجاد پشتیبان"
 
-#: src/components/selectKey/SelectKey.tsx:182
+#: src/components/plot/add/PlotAddNFT.tsx:35
+msgid "Create a Plot NFT"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:181
 msgid "Create a new private key"
 msgstr "ایجاد یک کلید خصوصی جدید"
 
@@ -480,6 +533,28 @@ msgstr "ایجاد شده در:"
 msgid "Created by us:"
 msgstr "ایجاد شده توسط ما:"
 
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
+msgid "Creating Plot NFT and Joining the Pool"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:58
+msgid "Creating Plot NFT for Self Pooling"
+msgstr ""
+
+#: src/components/plot/add/PlotAdd.tsx:84
+msgid "Currency code is not defined"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:101
+#: src/components/plotNFT/PlotNFTCard.tsx:121
+msgid "Current Difficulty"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:116
+#: src/components/plotNFT/PlotNFTCard.tsx:136
+msgid "Current Points Balance"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
 msgstr "وضعیت فعلی مبادله"
@@ -488,7 +563,7 @@ msgstr "وضعیت فعلی مبادله"
 msgid "DANGER: permanently delete private key"
 msgstr "خطر: حذف دائم کلید شخصی"
 
-#: src/components/wallet/Wallets.tsx:71
+#: src/components/wallet/Wallets.tsx:65
 msgid "DID Wallet"
 msgstr "کیف پول DID"
 
@@ -498,7 +573,7 @@ msgstr "کیف پول DID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:32
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:47
+#: src/components/wallet/WalletHistory.tsx:45
 msgid "Date"
 msgstr "تاریخ"
 
@@ -506,7 +581,7 @@ msgstr "تاریخ"
 msgid "Delay"
 msgstr "تاخیر"
 
-#: src/components/plot/PlotAction.tsx:34
+#: src/components/plot/PlotAction.tsx:33
 #: src/components/plot/PlotAction.tsx:58
 #: src/components/plot/queue/PlotQueueActions.tsx:40
 #: src/components/plot/queue/PlotQueueActions.tsx:85
@@ -515,13 +590,18 @@ msgstr "تاخیر"
 msgid "Delete"
 msgstr "حذف"
 
-#: src/components/plot/PlotAction.tsx:33
+#: src/components/plot/PlotAction.tsx:32
 #: src/components/plot/queue/PlotQueueActions.tsx:39
 msgid "Delete Plot"
 msgstr "حذف پلات"
 
+#: src/components/plotNFT/PlotNFTCard.tsx:192
+#: src/components/wallet/standard/WalletStandard.tsx:636
+msgid "Delete Unconfirmed Transactions"
+msgstr ""
+
 #: src/components/selectKey/SelectKey.tsx:81
-#: src/components/selectKey/SelectKey.tsx:202
+#: src/components/selectKey/SelectKey.tsx:197
 msgid "Delete all keys"
 msgstr "حذف تمامی کلید ها"
 
@@ -531,7 +611,8 @@ msgstr "حذف کلید"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
+msgstr ""
+"حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
 " آیا مطمئنید که می‌خواهید ادامه دهید؟"
 
 #: src/components/selectKey/SelectKey.tsx:65
@@ -547,7 +628,8 @@ msgid "Developer Tools"
 msgstr "ابزارهای توسعه دهنده"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:180
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:15
 msgid "Difficulty"
 msgstr "سختی"
 
@@ -558,6 +640,10 @@ msgstr "سختی"
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:203
 msgid "Disable bitfield plotting"
 msgstr "غیر فعال کردن بیتفیلد برای پلات ها"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:24
+msgid "Discard"
+msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -607,20 +693,25 @@ msgstr "برای بازگردانی کیف پول چیـای خود 24 کلمه 
 msgid "Error"
 msgstr "خطا"
 
-#: src/components/wallet/standard/WalletStandard.tsx:415
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "خطا: چیـا را به آدرس رنگی نمی‌توان ارسال کرد. لطفاً یک آدرس چیا وارد کنید."
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+msgid "Estimated Network Space"
+msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:61
 msgid "Estimated Time to Win"
 msgstr "زمان تقریبی برنده شدن"
 
-#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:199
 msgid "Estimated network space"
 msgstr "فضای تقریبی کل شبکه"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:202
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:16
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "تخمین مجموع دیسک های پلات شده همه مزرعه داران در شبکه"
 
@@ -637,9 +728,9 @@ msgstr "بجز آخرین پوشه"
 msgid "Failed to open (invalid plots)"
 msgstr "ناتوانی در بازگشایی (پلات های نامعتبر)"
 
-#: src/components/dashboard/DashboardSideBar.tsx:54
-#: src/components/wallet/coloured/WalletColoured.tsx:622
-#: src/components/wallet/standard/WalletStandard.tsx:515
+#: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/wallet/coloured/WalletColoured.tsx:627
+#: src/components/wallet/standard/WalletStandard.tsx:521
 msgid "Farm"
 msgstr "مزرعه"
 
@@ -700,13 +791,17 @@ msgstr "مزرعه داری"
 msgid "Farming Status"
 msgstr "وضعیت مزرعه داری"
 
-#: src/components/wallet/WalletHistory.tsx:66
+#: src/components/core/components/Fee/Fee.tsx:48
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:139
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:126
+#: src/components/pool/PoolInfo.tsx:30
+#: src/components/wallet/WalletHistory.tsx:64
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:500
+#: src/components/wallet/standard/WalletStandard.tsx:510
 msgid "Fee"
 msgstr "کارمزد"
 
@@ -718,7 +813,7 @@ msgstr "کارمزد"
 #~ msgid "Fee ({0})"
 #~ msgstr "Fee ({0})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:607
+#: src/components/wallet/coloured/WalletColoured.tsx:612
 msgid "Fee ({currencyCode})"
 msgstr "هزینه({currencyCode})"
 
@@ -737,7 +832,7 @@ msgstr "فایل"
 
 #: src/components/plot/PlotsFailed.tsx:13
 #: src/components/plot/PlotsNotFound.tsx:13
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:89
 msgid "Filename"
 msgstr "نام فايل"
 
@@ -745,8 +840,8 @@ msgstr "نام فايل"
 msgid "Final folder location"
 msgstr "مکان پوشه نهایی"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:93
+#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "تمام شد"
 
@@ -758,12 +853,12 @@ msgstr "در توییتر دنبال کنید"
 msgid "Frequently Asked Questions"
 msgstr "سوالات متداول"
 
-#: src/components/dashboard/DashboardSideBar.tsx:38
-#: src/components/fullNode/FullNode.jsx:313
+#: src/components/dashboard/DashboardSideBar.tsx:39
+#: src/components/fullNode/FullNode.jsx:314
 msgid "Full Node"
 msgstr "گره کامل"
 
-#: src/components/fullNode/FullNode.jsx:256
+#: src/components/fullNode/FullNode.jsx:257
 msgid "Full Node Status"
 msgstr "وضعیت گره کامل"
 
@@ -775,7 +870,11 @@ msgstr "تمام صفحه"
 msgid "Generate New Colour"
 msgstr "ساخت رنگ جدید"
 
-#: src/components/wallet/standard/WalletStandard.tsx:559
+#: src/components/pool/PoolOverview.tsx:149
+msgid "Grid view"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.tsx:580
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "کلید های سلسله مراتب قطعی(HD)، نوعی طرح کلید عمومی/شخصی هستند، که یک کلید شخصی می تواند نزدیک به بیشمار عدد از کلید های عمومی مختلف (و بنابراین کیف پول چندین آدرس را دریافت می‌کند) که در نهایت همگی به یک کلید شخصی باز می‌گردند و قابل خرج کردن با آن کلید می‌شوند."
 
@@ -783,7 +882,7 @@ msgstr "کلید های سلسله مراتب قطعی(HD)، نوعی طرح ک�
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
 msgstr "عنوان هش"
 
@@ -792,7 +891,7 @@ msgid "Header hash"
 msgstr "عنوان هش"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:76
+#: src/components/fullNode/FullNode.jsx:77
 #: src/components/fullNode/FullNodeConnections.tsx:62
 msgid "Height"
 msgstr "ارتفاع"
@@ -805,11 +904,11 @@ msgstr "راهنما"
 msgid "Help translate"
 msgstr "کمک در ترجمه"
 
-#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:41
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:71
 msgid "Hide Advanced Options"
 msgstr "مخفی کردن گزینه های پیشرفته"
 
-#: src/components/wallet/WalletHistory.tsx:88
+#: src/components/wallet/WalletHistory.tsx:90
 msgid "History"
 msgstr "تاریخچه"
 
@@ -834,17 +933,21 @@ msgstr "اگر چیزی انتخاب نشود، به طور پیش فرض به �
 msgid "Import Wallet from Mnemonics"
 msgstr "وارد کردن کیف پول از رمزینه حفظی"
 
-#: src/components/selectKey/SelectKey.tsx:189
+#: src/components/selectKey/SelectKey.tsx:186
 msgid "Import from Mnemonics (24 words)"
 msgstr "رمزینه حفظی را وارد کنید(24 کلمه)"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:45
 msgid "In Progress"
 msgstr "در حال انجام"
 
-#: src/components/wallet/WalletHistory.tsx:24
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "Incoming"
 msgstr "دریافتی"
+
+#: src/components/core/components/Fee/Fee.tsx:36
+msgid "Incorrect value"
+msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:22
 msgid "Index"
@@ -875,11 +978,38 @@ msgstr "راه اندازی کیف پول کاربر با نرخ محدود:"
 msgid "Interval"
 msgstr "فاصله"
 
+#: src/components/plotNFT/PlotNFTState.tsx:28
+msgid "Invalid state"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:272
+#: src/components/pool/PoolOverview.tsx:89
+msgid "Join Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:52
+#: src/components/plot/add/PlotAddNFT.tsx:142
+#: src/components/pool/PoolHero.tsx:35
+msgid "Join a Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:37
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:58
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:132
+msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
+msgstr ""
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:56
 msgid "K-Size"
 msgstr "مقدار حجم-K"
 
-#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/dashboard/DashboardSideBar.tsx:66
 msgid "Keys"
 msgstr "کلیدها"
 
@@ -900,11 +1030,32 @@ msgstr "آخرین ارتفاع زراعت شده"
 msgid "Latest Block Challenges"
 msgstr "آخرین چالش های بلوک"
 
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:199
+#: src/components/plotNFT/PlotNFTCard.tsx:227
+msgid "Launcher Id"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTState.tsx:57
+msgid "Leaving Pool"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:149
+msgid "List view"
+msgstr ""
+
+#: src/components/pool/Pool.tsx:21
+msgid "Loading Plot NFTs"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:170
+msgid "Loading list of wallets"
+msgstr ""
+
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:30
 msgid "Loading..."
 msgstr "درحال بارگذاری..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:103
+#: src/components/plot/overview/PlotOverviewPlots.tsx:113
 msgid "Local Harvester Plots"
 msgstr "برداشت کننده پلات های محلی"
 
@@ -964,6 +1115,10 @@ msgstr "آدرس های مقصد خود را برای پاداش های مزرع
 msgid "MiB Up/Down"
 msgstr "MiB آپلود/دانلود"
 
+#: src/components/pool/PoolInfo.tsx:38
+msgid "Minimum Difficulty"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:95
 msgid "Minutes"
 msgstr "دقیقه"
@@ -976,7 +1131,8 @@ msgstr "حافظه بیشتر سرعت را کمی افزایش می دهد"
 msgid "My Pubkey"
 msgstr "کلید عمومی من"
 
-#: src/components/fullNode/FullNode.jsx:161
+#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
 msgid "Network Name"
 msgstr "نام شبکه"
 
@@ -988,8 +1144,8 @@ msgstr "نام شبکه"
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:701
-#: src/components/wallet/standard/WalletStandard.tsx:598
+#: src/components/wallet/coloured/WalletColoured.tsx:706
+#: src/components/wallet/standard/WalletStandard.tsx:576
 msgid "New Address"
 msgstr "آدرس جدید"
 
@@ -1003,7 +1159,7 @@ msgstr "کیف پول جدید"
 msgid "Next"
 msgstr "بعدی"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:247
+#: src/components/wallet/coloured/WalletColoured.tsx:252
 msgid "Nickname"
 msgstr "نام مستعار"
 
@@ -1020,7 +1176,7 @@ msgstr "هیچ بذر ۲۴ کلمه‌ای نیست، از هنگامی که ا�
 msgid "No blocks farmed yet"
 msgstr "هنوز هیچ بلاکی مزرعه داری(تولید) نشده است"
 
-#: src/components/wallet/WalletHistory.tsx:100
+#: src/components/wallet/WalletHistory.tsx:102
 msgid "No previous transactions"
 msgstr "بدون تراکنش های قبلی"
 
@@ -1034,6 +1190,10 @@ msgstr "بدون کلید خصوصی برای یک یا هر دو آدرس. فق
 msgid "Node ID"
 msgstr "شناسه گره"
 
+#: src/components/plot/add/PlotAddNFT.tsx:85
+msgid "None"
+msgstr ""
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:63
 msgid "None of your plots have passed the plot filter yet."
 msgstr "هنوز هیچ یک از پلات های شما از فیلتر طرح عبور نکرده اند."
@@ -1045,7 +1205,9 @@ msgstr "هنوز هیچ یک از پلات های شما از فیلتر طرح 
 msgid "Not Available"
 msgstr "در دسترس نیست"
 
-#: src/components/fullNode/FullNode.jsx:123
+#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:34
+#: src/components/wallet/WalletStatus.tsx:30
 msgid "Not Synced"
 msgstr "همگام سازی نشده است"
 
@@ -1058,14 +1220,24 @@ msgid "Not confirmed yet"
 msgstr "هنوز تایید نشده"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:60
-#: src/components/fullNode/FullNode.jsx:146
-#: src/components/fullNode/FullNode.jsx:153
+#: src/components/fullNode/FullNode.jsx:147
+#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Not connected"
 msgstr "متصل نیست"
 
 #: src/components/plot/PlotsNotFound.tsx:35
 msgid "Not found Plots"
 msgstr "پلاتی یافت نشد"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:174
+msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:84
+#: src/components/plotNFT/PlotNFTCard.tsx:104
+msgid "Number of Plots"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:161
 msgid "Number of buckets"
@@ -1087,16 +1259,19 @@ msgstr "پیشنهاد"
 msgid "Offers Created"
 msgstr "پیشنهادات ایجاد شده"
 
-#: src/components/wallet/standard/WalletStandard.tsx:444
+#: src/components/wallet/standard/WalletStandard.tsx:467
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr "به طور متوسط بین هر بلوک تراکنش یک دقیقه فاصله است\n"
+msgstr ""
+"به طور متوسط بین هر بلوک تراکنش یک دقیقه فاصله است\n"
 "تا زمانی که ازدحام وجود نداشته باشد ، انتظار دارید معامله شما در کمتر از یک دقیقه انجام شود."
 
-#: src/components/wallet/WalletHistory.tsx:23
+#: src/components/wallet/WalletHistory.tsx:21
 msgid "Outgoing"
 msgstr "در حال خروج"
 
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:168
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:17
 msgid "Peak Height"
 msgstr "حداکثر ارتفاع"
 
@@ -1104,28 +1279,36 @@ msgstr "حداکثر ارتفاع"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:172
+#: src/components/fullNode/FullNode.jsx:173
 msgid "Peak Time"
 msgstr "حداکثر زمان"
 
-#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/plotNFT/PlotNFTState.tsx:42
+#: src/components/wallet/WalletHistory.tsx:53
 msgid "Pending"
 msgstr "در انتظار"
 
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:25
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
-#: src/components/wallet/standard/WalletStandard.tsx:299
+#: src/components/wallet/standard/WalletStandard.tsx:307
 msgid "Pending Balance"
 msgstr "موجودی در انتظار"
 
+#: src/components/wallet/card/WalletCardPendingChange.tsx:25
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
-#: src/components/wallet/standard/WalletStandard.tsx:310
+#: src/components/wallet/standard/WalletStandard.tsx:318
 msgid "Pending Change"
 msgstr "در انتظار تغییر"
 
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:28
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
-#: src/components/wallet/standard/WalletStandard.tsx:288
+#: src/components/wallet/standard/WalletStandard.tsx:296
 msgid "Pending Total Balance"
 msgstr "مقدار موجودی در انتظار"
+
+#: src/hooks/useAbsorbRewards.tsx:44
+msgid "Please Confirm"
+msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1141,7 +1324,7 @@ msgstr "لطفاً یک مقدار اولیه سکه، معتبر وارد کن�
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
-#: src/components/wallet/standard/WalletStandard.tsx:392
+#: src/components/wallet/standard/WalletStandard.tsx:414
 msgid "Please enter a valid numeric amount"
 msgstr "لطفاً یک مقدار عددی معتبر وارد کنید"
 
@@ -1149,7 +1332,7 @@ msgstr "لطفاً یک مقدار عددی معتبر وارد کنید"
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
-#: src/components/wallet/standard/WalletStandard.tsx:402
+#: src/components/wallet/standard/WalletStandard.tsx:426
 msgid "Please enter a valid numeric fee"
 msgstr "لطفاً کارمزد عددی معتبری وارد کنید"
 
@@ -1166,7 +1349,7 @@ msgid "Please enter a valid pubkey"
 msgstr "لطفاً یک کلید عمومی معتبر وارد کنید"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
-#: src/components/wallet/standard/WalletStandard.tsx:375
+#: src/components/wallet/standard/WalletStandard.tsx:402
 msgid "Please finish syncing before making a transaction"
 msgstr "لطفا قبل از ایجاد تراکتش، همگام سازی را تمام کنید"
 
@@ -1196,6 +1379,14 @@ msgstr "لطفاً محل پوشه نهایی را مشخص کنید"
 msgid "Please specify temporary directory"
 msgstr "لطفا پوشه موقت را مشخص کنید"
 
+#: src/hooks/useAbsorbRewards.tsx:20
+msgid "Please wait for synchronization"
+msgstr ""
+
+#: src/hooks/useJoinPool.tsx:22
+msgid "Please wait for wallet synchronization"
+msgstr ""
+
 #: src/components/plot/Plot.tsx:18
 msgid "Plot"
 msgstr "پلات"
@@ -1213,6 +1404,15 @@ msgstr "کد شناسایی پلات"
 msgid "Plot Key"
 msgstr "کلید پلات"
 
+#: src/components/pool/PoolOverview.tsx:31
+msgid "Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:91
+#: src/components/plotNFT/PlotNFTChangePool.tsx:71
+msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+msgstr ""
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
 #~ msgstr ""
@@ -1229,7 +1429,7 @@ msgstr "کلید عمومی پلات"
 msgid "Plot Size"
 msgstr "اندازه پلات"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:63
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:68
 msgid "Plot in Parallel"
 msgstr "پلات سازی به شکل موازی"
 
@@ -1237,7 +1437,11 @@ msgstr "پلات سازی به شکل موازی"
 msgid "Plot is duplicate of {0}"
 msgstr "پلات کپی این {0} پلات است"
 
-#: src/components/dashboard/DashboardSideBar.tsx:49
+#: src/components/plotNFT/PlotNFTState.tsx:45
+msgid "PlotNFT is transitioning to (target state)"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
 msgstr "پلات ها"
 
@@ -1264,6 +1468,25 @@ msgstr "پلات سازی با فعال کردن bitfield حدود ۳۰٪ اعم
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:133
+#: src/components/plotNFT/PlotNFTCard.tsx:153
+msgid "Points Found Since Start"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
+#: src/components/plotNFT/PlotNFTCard.tsx:161
+msgid "Points Found in Last 24 Hours"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/pool/Pool.tsx:25
+msgid "Pool"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:83
+msgid "Pool Contract Address"
+msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:74
 msgid "Pool Key"
@@ -1298,8 +1521,27 @@ msgstr ""
 msgid "Pool Reward Amount"
 msgstr "مقدار پاداش استخر"
 
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:29
+msgid "Pool does not provide relative_lock_height."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:26
+msgid "Pool does not provide target_puzzle_hash."
+msgstr ""
+
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
+#: src/components/plotNFT/PlotNFTCard.tsx:204
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:64
+msgid "Pool:"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:29
+#: src/components/plotNFT/PlotNFTState.tsx:60
+msgid "Pooling"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
@@ -1308,6 +1550,15 @@ msgstr ""
 #: src/components/fullNode/FullNodeConnections.tsx:39
 msgid "Port"
 msgstr "پورت"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:76
+#: src/components/plotNFT/PlotNFTChangePool.tsx:64
+msgid "Preparing Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:84
+msgid "Preparing standard wallet"
+msgstr ""
 
 #: src/components/block/Block.jsx:320
 msgid "Previous"
@@ -1345,6 +1596,10 @@ msgstr "اثباتِ مقدار فضا"
 msgid "Proofs Found"
 msgstr "اثبات های یافت شده"
 
+#: src/components/pool/PoolInfo.tsx:34
+msgid "Protocol Version"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
 msgstr "کلید عمومی"
@@ -1373,7 +1628,7 @@ msgstr "در صف انتظار"
 msgid "RAM max usage"
 msgstr "حداکثر مقدار استفاده از فضای رم"
 
-#: src/components/wallet/Wallets.tsx:65
+#: src/components/wallet/Wallets.tsx:63
 msgid "RL Wallet"
 msgstr "کیف پول RL"
 
@@ -1398,8 +1653,8 @@ msgstr "تنظیمات محدودیت نرخ(سرعت)"
 msgid "Rate Limited User Wallet Setup"
 msgstr "پیکره بندی کیف پولِ با نرخ(سرعت) محدود"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:663
-#: src/components/wallet/standard/WalletStandard.tsx:557
+#: src/components/wallet/coloured/WalletColoured.tsx:668
+#: src/components/wallet/standard/WalletStandard.tsx:570
 msgid "Receive Address"
 msgstr "آدرس گیرنده"
 
@@ -1407,9 +1662,13 @@ msgstr "آدرس گیرنده"
 msgid "Recover DID wallet"
 msgstr "بازیابی کیف پول DID"
 
-#: src/components/plot/PlotHeader.tsx:57
+#: src/components/plot/PlotHeader.tsx:65
 msgid "Refresh Plots"
 msgstr "تازه سازی پلات ها"
+
+#: src/components/pool/PoolInfo.tsx:42
+msgid "Relative Lock Height"
+msgstr ""
 
 #: src/electron/main.tsx:375
 msgid "Release Notes"
@@ -1419,7 +1678,7 @@ msgstr "یادداشت‌های انتشار"
 msgid "Removing"
 msgstr "حذف کردن"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:263
+#: src/components/wallet/coloured/WalletColoured.tsx:268
 msgid "Rename"
 msgstr "تغییر نام"
 
@@ -1444,7 +1703,7 @@ msgstr "بازگردانی فراداده ها (Metadata) برای سکه های
 msgid "Safe To Skip"
 msgstr "برای رد کردن مشکلی نیست"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:181
+#: src/components/farm/FarmManageFarmingRewards.tsx:188
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "ذخیره"
@@ -1505,11 +1764,28 @@ msgstr "مقصد نهایی را برای پوشه ای که می خواهید �
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
 msgstr "مقصد موقت را برای پوشه ای که می خواهید پلات در آن ذخیره شود انتخاب کنید. توصیه می کنیم از حافظه های سریع استفاده کنید."
 
+#: src/components/plot/add/PlotAddNFT.tsx:81
+msgid "Select your Plot NFT"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:69
+msgid "Select your Plot NFT from the dropdown or create a new one."
+msgstr ""
+
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:74
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:105
 msgid "Selected"
 msgstr "انتخاب"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:26
+#: src/components/plotNFT/PlotNFTState.tsx:54
+msgid "Self Pooling"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:90
+msgid "Self pool. When you win a block you will earn XCH rewards."
+msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:44
@@ -1517,9 +1793,9 @@ msgstr "انتخاب"
 msgid "Sell"
 msgstr "فروش"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:632
+#: src/components/wallet/coloured/WalletColoured.tsx:637
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:526
+#: src/components/wallet/standard/WalletStandard.tsx:531
 msgid "Send"
 msgstr "ارسال"
 
@@ -1531,7 +1807,7 @@ msgstr "این بسته اطلاعاتی را برای کاربر کیف پول 
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
 msgstr "کلید عمومی خود را به مدیر کیف پولِ نرخ محدود خود ارسال کنید:"
 
-#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:48
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:70
 msgid "Show Advanced Options"
 msgstr "نمایش گزینه‌های پیشرفته"
 
@@ -1560,6 +1836,10 @@ msgstr "ورود"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "از افزودن پوشه نهایی به برداشت گر(harvester) برای مزرعه داری، صرفه نظر شود"
 
+#: src/components/pool/PoolHero.tsx:26
+msgid "Smooth out your XCH farming rewards by joining a pool."
+msgstr ""
+
 #: src/electron/main.tsx:471
 msgid "Speech"
 msgstr "صحبت کردن"
@@ -1572,9 +1852,10 @@ msgstr "مبلغ قابل خرج کردن"
 msgid "Spendable Amount Per Interval"
 msgstr "مبلغ قابل هزینه در هر فاصله"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:387
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:25
+#: src/components/wallet/coloured/WalletColoured.tsx:392
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
-#: src/components/wallet/standard/WalletStandard.tsx:261
+#: src/components/wallet/standard/WalletStandard.tsx:269
 msgid "Spendable Balance"
 msgstr "موجودی قابل برداشت"
 
@@ -1592,19 +1873,23 @@ msgstr "مدت فاصله خرج کردن (تعداد بلوک ها)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "محدودیت خرج کردن (چیـا بر فاصله): {0}"
 
-#: src/components/fullNode/FullNode.jsx:95
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "حالت"
 
-#: src/components/fullNode/FullNode.jsx:105
-#: src/components/fullNode/FullNode.jsx:122
-#: src/components/fullNode/FullNode.jsx:130
-#: src/components/fullNode/FullNode.jsx:152
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:123
+#: src/components/fullNode/FullNode.jsx:131
+#: src/components/fullNode/FullNode.jsx:153
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:58
+#: src/components/plot/overview/PlotOverviewPlots.tsx:93
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:80
+#: src/components/plotNFT/PlotNFTCard.tsx:96
+#: src/components/pool/PoolOverview.tsx:35
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:56
-#: src/components/wallet/WalletStatusCard.tsx:21
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/WalletHistory.tsx:54
+#: src/components/wallet/WalletStatusCard.tsx:22
+#: src/components/wallet/Wallets.tsx:125
 msgid "Status"
 msgstr "وضعیت"
 
@@ -1644,17 +1929,21 @@ msgstr "وضعیت:"
 msgid "Submit"
 msgstr "ثبت و ارسال"
 
-#: src/components/fullNode/FullNode.jsx:131
+#: src/components/fullNode/FullNode.jsx:132
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:40
+#: src/components/wallet/WalletStatus.tsx:37
 msgid "Synced"
 msgstr "همگام سازی شده"
 
 #: src/components/farm/FarmerStatus.tsx:19
 #: src/components/farm/card/FarmCardStatus.tsx:18
 #: src/components/plot/PlotStatus.tsx:18
+#: src/components/wallet/WalletStatus.tsx:44
 msgid "Syncing"
 msgstr "در حال همگام‌سازی"
 
-#: src/components/fullNode/FullNode.jsx:107
+#: src/components/fullNode/FullNode.jsx:108
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:19
 msgid "Syncing <0/>/<1/>"
 msgstr "Syncing <0/>/<1/>"
 
@@ -1682,6 +1971,10 @@ msgstr "Syncing <0/>/<1/>"
 #~ msgid "TXCH User Transaction Fees"
 #~ msgstr ""
 
+#: src/components/pool/PoolInfo.tsx:46
+msgid "Target Puzzle Hash"
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr ""
@@ -1703,13 +1996,27 @@ msgstr "گره کاملی که مزرعه شما به آن متصل است. <0>�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "حداقل اندازه مورد نیاز برای شبکه اصلی k = 32 است"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:126
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
 msgid "The node is not synced"
 msgstr "گره همگام سازی نشده"
 
-#: src/components/fullNode/FullNode.jsx:113
+#: src/components/fullNode/FullNode.jsx:114
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:26
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "گره در حال همگام‌سازی است، به این معنی که بلاک‌ها را از گره‌های دیگر بارگیری می‌کند تا به آخرین بلاک در زنجیره برسد"
+
+#: src/hooks/usePoolInfo.ts:36
+msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:23
+msgid "The pool URL speciefied is not valid. {poolUrl}"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTState.tsx:31
+msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
+msgstr ""
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1735,26 +2042,36 @@ msgstr "این پلات‌ها نامعتبر هستند، ممکن است بخ�
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "به شما این امکان را می‌دهد تا پوشه‌ای را که در آن پلات‌ها قرار دارند اضافه کنید. اگر هیچ پلاتی را ایجاد نکرده‌اید، به صفحه پلات‌ها بروید."
 
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:93
+#: src/components/plotNFT/PlotNFTCard.tsx:113
+msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+msgstr ""
+
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:31
 #: src/hooks/useSelectFile.tsx:21
 msgid "This feature is available only from the GUI."
 msgstr "این ویژگی تنها در نسخه داری واسط گرافیکی در دسترس است."
 
-#: src/components/wallet/standard/WalletStandard.tsx:264
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:28
+#: src/components/wallet/standard/WalletStandard.tsx:272
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "این مقدار چیـایی است که در حال حاضر می‌توانید برای انجام تراکنش ها استفاده کنید. این مقدار شامل پاداش معوق مزرعه ، معاملات ورودی معلق و مقدار چیـایی اخیراً هزینه کرده‌اید اما هنوز در زنجیره بلوکی نیستند نمی‌باشد."
 
-#: src/components/wallet/standard/WalletStandard.tsx:313
+#: src/components/wallet/card/WalletCardPendingChange.tsx:28
+#: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "این‌ تغییر در انتظار انجام است، تغییر سکه‌هایی که برای خودتان ارسال کرده‌اید، اما هنوز تایید نشده‌اند."
 
-#: src/components/wallet/standard/WalletStandard.tsx:302
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:28
+#: src/components/wallet/standard/WalletStandard.tsx:310
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "این مجموع تراکنش‌های در حال واریز و در حال برداشت شما است (که هنوز وارد زنجیره بلاکی نشده‌اند).\n"
+msgstr ""
+"این مجموع تراکنش‌های در حال واریز و در حال برداشت شما است (که هنوز وارد زنجیره بلاکی نشده‌اند).\n"
 "این شامل پاداش‌های مزرعه‌داری نمی‌شود."
 
-#: src/components/fullNode/FullNode.jsx:174
+#: src/components/fullNode/FullNode.jsx:175
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 msgid "This is the time of the latest peak sub block."
 msgstr "این مدت زمان به حداکثر رسیدن آخرین زیربلاک است."
 
@@ -1762,17 +2079,34 @@ msgstr "این مدت زمان به حداکثر رسیدن آخرین زیرب�
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "این مدت زمان صرف شده برای ساخت بلوک توسط مزرعه دار است،که قبلا با توجه به زمان سپری شده به انتها رسیده است"
 
-#: src/components/wallet/standard/WalletStandard.tsx:252
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:36
+#: src/components/wallet/standard/WalletStandard.tsx:260
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "این مقدار کل چیـا در زنجیره بلوکی در نقطه حداکثر زیر بلوک کنونی است که توسط کلیدهای شخصی شما کنترل می‌شود. این شامل پاداش های معلق و گیر کرده مزرعه داری می‌شود، اما شامل تراکنش های درحال ورود و خروجی که در آماده برای انجام هستند نمی‌شود."
 
-#: src/components/wallet/standard/WalletStandard.tsx:291
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:31
+#: src/components/wallet/standard/WalletStandard.tsx:299
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "این مقدار موجودی کل + موجودی در حال انتظار است: یعنی موجودی شما در زمانی که تمام تراکنش های در انتظار انجام به تایید برسند."
 
-#: src/components/fullNode/FullNode.jsx:134
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:110
+#: src/components/plotNFT/PlotNFTCard.tsx:130
+msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:125
+#: src/components/plotNFT/PlotNFTCard.tsx:145
+msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
 msgid "This node is fully caught up and validating the network"
 msgstr "این گره کاملا درگیر و در حال اعتبار سنجی شبکه است"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:212
+msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
+msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1780,7 +2114,8 @@ msgstr "این گره کاملا درگیر و در حال اعتبار سنجی
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:51
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr "این جدول آخرین زمانی را به شما نشان میدهد که مزرعه شما تلاشی برای برنده شدن در چالش و پردازش یک بلوک کرده است.\n"
+msgstr ""
+"این جدول آخرین زمانی را به شما نشان میدهد که مزرعه شما تلاشی برای برنده شدن در چالش و پردازش یک بلوک کرده است.\n"
 "<0>بیشتر بدانید</0>"
 
 #: src/components/trading/TradingOverview.jsx:192
@@ -1795,7 +2130,7 @@ msgstr "این معامله در این ارتفاع بلوکی شامل زنج�
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "این ورژن از چیـا دیگر با با شبکه بلوکی سازگاری ندارد و نمی‌تواند با امنیت به مزرعه داری بپردازد."
 
-#: src/components/fullNode/FullNode.jsx:87
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "زمان ایجاد"
 
@@ -1807,13 +2142,14 @@ msgstr "زمان ایجاد"
 msgid "Timestamp"
 msgstr "برچسب زمان"
 
-#: src/components/wallet/WalletHistory.tsx:43
+#: src/components/wallet/WalletHistory.tsx:41
 msgid "To"
 msgstr "به"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:380
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:33
+#: src/components/wallet/coloured/WalletColoured.tsx:385
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
-#: src/components/wallet/standard/WalletStandard.tsx:249
+#: src/components/wallet/standard/WalletStandard.tsx:257
 msgid "Total Balance"
 msgstr "موجودی کل"
 
@@ -1821,7 +2157,8 @@ msgstr "موجودی کل"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:192
+#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:15
 msgid "Total Iterations"
 msgstr "کل تکرار ها"
 
@@ -1829,7 +2166,7 @@ msgstr "کل تکرار ها"
 msgid "Total Network Space"
 msgstr "فضای کل شبکه"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+#: src/components/plot/overview/PlotOverviewPlots.tsx:127
 msgid "Total Plot Size:"
 msgstr "اندازه کل پلات ها:"
 
@@ -1841,7 +2178,8 @@ msgstr "جمع اندازه پلات ها"
 msgid "Total VDF Iterations"
 msgstr "کل تکرار های VDF"
 
-#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:195
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:16
 msgid "Total iterations since the start of the blockchain"
 msgstr "کل تکرارها از زمان شروع زنجیره بلوکی"
 
@@ -1881,11 +2219,20 @@ msgstr "تاریخچه معاملات"
 msgid "Transactions Filter Hash"
 msgstr "هشِ فیلتر تراکنش ها"
 
-#: src/components/wallet/WalletHistory.tsx:26
+#: src/components/wallet/WalletHistory.tsx:24
 msgid "Type"
 msgstr "نوع"
 
-#: src/components/fullNode/FullNode.jsx:93
+#: src/components/plot/add/PlotAdd.tsx:100
+msgid "Unable to create plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:100
+#: src/components/pool/PoolOverview.tsx:55
+msgid "Unclaimed Rewards"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "ناتمام"
 
@@ -1897,14 +2244,27 @@ msgstr "شناسایی منحصر به فرد"
 msgid "Unknown"
 msgstr "ناشناخته"
 
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:23
+msgid "Unsaved Changes"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
 msgstr "کلید عمومی کاربر"
 
-#: src/components/fullNode/FullNode.jsx:186
+#: src/components/fullNode/FullNode.jsx:187
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
 msgid "VDF Sub Slot Iterations"
 msgstr "تکرارهای زیر شکافی VDF"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+msgid "Value is too high"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:137
+msgid "Verify Pool Details"
+msgstr ""
 
 #: src/electron/main.tsx:296
 msgid "View"
@@ -1920,11 +2280,11 @@ msgid "View Offer"
 msgstr "مشاهده‌ی پیشنهاد"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
-#: src/components/wallet/standard/WalletStandard.tsx:282
+#: src/components/wallet/standard/WalletStandard.tsx:290
 msgid "View pending balances"
 msgstr "مشاهده موجودی های در حال انتظار"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:399
+#: src/components/wallet/coloured/WalletColoured.tsx:404
 msgid "View pending balances..."
 msgstr "مشاهده موجودی های در انتظار..."
 
@@ -1942,6 +2302,15 @@ msgstr "در انتظار همگام سازی"
 #: src/components/wallet/WalletStatusCard.tsx:20
 #~ msgid "Waiting for network to launch"
 #~ msgstr "Waiting for network to launch"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:73
+msgid "Waiting for the transaction to be confirmed"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:156
+#: src/components/wallet/standard/WalletStandard.tsx:647
+msgid "Wallet Status:"
+msgstr ""
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1971,8 +2340,8 @@ msgstr "در انتظار همگام سازی"
 #~ msgid "WalletStatusCard.syncing"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:44
-#: src/components/wallet/Wallets.tsx:175
+#: src/components/dashboard/DashboardSideBar.tsx:45
+#: src/components/wallet/Wallets.tsx:171
 msgid "Wallets"
 msgstr "کیف پول ها"
 
@@ -1980,7 +2349,11 @@ msgstr "کیف پول ها"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:107
+#: src/components/plotNFT/PlotNFTAdd.tsx:56
+msgid "Want to Join a Pool? Create a Plot NFT"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:120
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "آیا می خواهید چیـا بیشتری بدست آورید؟ پلات های بیشتری را به مزرعه خود اضافه کنید."
 
@@ -2002,7 +2375,8 @@ msgstr "به چیـا خوش آمدید. لطفا با کلیدی که از قب
 
 #: src/components/wallet/WalletAdd.tsx:66
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "خوش آمدید! واژه هایی که در ادامه می‌بینید برای پشتیبانی از کیف پول شما هستند. بدون آنها شما دسترسی به کیف پولتان را از دست می‌دهید، آنها را امن و مطمئن نگه دارید.\n"
+msgstr ""
+"خوش آمدید! واژه هایی که در ادامه می‌بینید برای پشتیبانی از کیف پول شما هستند. بدون آنها شما دسترسی به کیف پولتان را از دست می‌دهید، آنها را امن و مطمئن نگه دارید.\n"
 "هر واژه را به ترتیب اعداد کنارش بنویسید(ترتیب واژه ها مهم است)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
@@ -2023,6 +2397,19 @@ msgstr "بدونه کارمزد"
 msgid "Yes"
 msgstr "بله"
 
+#: src/hooks/useAbsorbRewards.tsx:28
+#: src/hooks/useJoinPool.tsx:30
+msgid "You are in pending state. Please wait for confirmation"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:36
+msgid "You are not self pooling"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:289
+msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -2031,13 +2418,18 @@ msgstr "بله"
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 msgstr "نیازی به همگام سازی یا اتصال به پلات نیست. پرونده های موقتی در طی مراحل پلات سازی ایجاد می شوند که از اندازه پرونده های پلات نهایی بیشتر است. اطمینان حاصل کنید که فضای کافی دارید. <0> بیشتر بیاموزید</0>"
 
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:27
+msgid "You have made changes. Do you want to discard them?"
+msgstr ""
+
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 #~ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:65
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr "شما {0} درصد فضا در شبکه دارید، بر این اساس برای مزرعه داری (ساختن) یک بلوک مدت زمان {expectedTimeToWin} تخمین زده میشود.\n"
+msgstr ""
+"شما {0} درصد فضا در شبکه دارید، بر این اساس برای مزرعه داری (ساختن) یک بلوک مدت زمان {expectedTimeToWin} تخمین زده میشود.\n"
 "در عمل رسیدن به نتیجه اصلی ۳ تا ۴ برابر تخمین بالا به طول می انجامد."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -2048,9 +2440,21 @@ msgstr "شما {0} درصد فضا در شبکه دارید، بر این اسا
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
+#: src/components/pool/PoolJoin.tsx:35
+msgid "You need to claim your rewards first"
+msgstr ""
+
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
 #~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:128
+msgid "You will recieve <0/> to {0}"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:48
+msgid "You will recieve <0/> to {address}"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:33
 msgid "Your Farm Overview"
@@ -2064,6 +2468,10 @@ msgstr "اتصالات گره کامل شما"
 msgid "Your Harvester Network"
 msgstr "شبکه برداشت کننده های شما"
 
+#: src/components/pool/PoolOverview.tsx:135
+msgid "Your Pool Overview"
+msgstr ""
+
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[خطای 13] مجوز رد شد. شما در حال تلاش برای دسترسی به یک پرونده / پوشه بدون داشتن مجوزهای لازم هستید. به احتمال زیاد یکی از پوشه های پلات در config.yaml شما مشکل دارد."
@@ -2072,32 +2480,36 @@ msgstr "[خطای 13] مجوز رد شد. شما در حال تلاش برای �
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[خطای 22] پرونده پیدا نشد. به احتمال زیاد یکی از پوشه های پلات در config.yaml شما مشکل دارد."
 
-#: src/components/wallet/WalletStatusCard.tsx:44
-#: src/components/wallet/Wallets.tsx:158
+#: src/components/wallet/WalletStatusCard.tsx:45
+#: src/components/wallet/Wallets.tsx:148
 msgid "connections:"
 msgstr "اتصال ها:"
 
-#: src/components/wallet/WalletStatusCard.tsx:38
-#: src/components/wallet/Wallets.tsx:152
+#: src/components/wallet/WalletStatusCard.tsx:39
+#: src/components/wallet/Wallets.tsx:142
 msgid "height:"
 msgstr "ارتفاع:"
 
-#: src/components/wallet/Wallets.tsx:146
+#: src/components/wallet/Wallets.tsx:136
 msgid "not synced"
 msgstr "همگام‌سازی نشده"
 
-#: src/components/wallet/WalletStatusCard.tsx:26
-#: src/components/wallet/Wallets.tsx:140
+#: src/components/plot/add/PlotAdd.tsx:104
+msgid "p2_singleton_puzzle_hash is not defined"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:27
+#: src/components/wallet/Wallets.tsx:130
 msgid "status:"
 msgstr "وضعیت:"
 
-#: src/components/wallet/WalletStatusCard.tsx:32
-#: src/components/wallet/Wallets.tsx:145
+#: src/components/wallet/WalletStatusCard.tsx:33
+#: src/components/wallet/Wallets.tsx:135
 msgid "synced"
 msgstr "همگام سازی شده"
 
-#: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:144
+#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/Wallets.tsx:134
 msgid "syncing"
 msgstr "در حال همگام سازی"
 
@@ -2108,6 +2520,10 @@ msgstr "در حال همگام سازی"
 #: src/components/farm/card/FarmCardUserFees.tsx:16
 #~ msgid "{0} User Transaction Fees"
 #~ msgstr "{0} User Transaction Fees"
+
+#: src/components/plotNFT/PlotNFTGraph.tsx:109
+msgid "{0} points {1} - {2} hours ago"
+msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "{currencyCode} Block Rewards"
@@ -2121,3 +2537,6 @@ msgstr "{currencyCode} مجموع چیـا برداشت شده"
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} کارمزد تراکنش های کاربر"
 
+#: src/components/core/components/Amount/Amount.tsx:48
+msgid "{mojo, plural, one {mojo} other {mojos}}"
+msgstr ""
