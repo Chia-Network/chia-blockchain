@@ -312,7 +312,7 @@ msgid "Chia Blockchain Wiki"
 msgstr "ویکی زنجیره بلوکی چیـا"
 
 #: src/components/wallet/Wallets.tsx:58
-#: src/components/wallet/standard/WalletStandard.tsx:629
+#: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "کیف پول چیـا"
 
@@ -596,7 +596,7 @@ msgid "Delete Plot"
 msgstr "حذف پلات"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:230
-#: src/components/wallet/standard/WalletStandard.tsx:645
+#: src/components/wallet/standard/WalletStandard.tsx:646
 msgid "Delete Unconfirmed Transactions"
 msgstr ""
 
@@ -2316,7 +2316,7 @@ msgid "Waiting for the transaction to be confirmed"
 msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:185
-#: src/components/wallet/standard/WalletStandard.tsx:656
+#: src/components/wallet/standard/WalletStandard.tsx:657
 msgid "Wallet Status:"
 msgstr ""
 
