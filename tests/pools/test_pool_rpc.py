@@ -627,34 +627,20 @@ class TestPoolWalletRpc:
             assert join_pool_tx_2 is not None
 
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
+            status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
-            assert status.current.to_json_dict() == {
-                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
-                "pool_url": None,
-                "relative_lock_height": 0,
-                "state": 1,
-                "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
-                "version": 1,
-            }
-            assert status.target.to_json_dict() == {
-                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
-                "pool_url": "https://pool.example.com",
-                "relative_lock_height": 10,
-                "state": 3,
-                "target_puzzle_hash": "0x9ba327777484b8300d60427e4f3b776ac81948dfedd069a8d3f55834e101696e",
-                "version": 1,
-            }
+            assert status.target is not None
+            assert status.target.state == PoolSingletonState.FARMING_TO_POOL.value
+            assert status_2.current.state == PoolSingletonState.SELF_POOLING.value
+            assert status_2.target is not None
+            assert status_2.target.state == PoolSingletonState.FARMING_TO_POOL.value
 
             await self.farm_blocks(full_node_api, our_ph, 6)
-
-            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-            log.warning(f"New status: {status}")
 
             total_blocks += await self.farm_blocks(full_node_api, our_ph, num_blocks)
 
             async def status_is_farming_to_pool(w_id: int):
-                await self.farm_blocks(full_node_api, our_ph, 1)
                 pw_status: PoolWalletInfo = (await client.pw_status(w_id))[0]
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
