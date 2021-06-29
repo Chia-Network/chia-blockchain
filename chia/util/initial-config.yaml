@@ -72,6 +72,7 @@ network_overrides: &network_overrides
   config:
     mainnet:
       address_prefix: "xch"
+      default_full_node_port: 8444
     testnet0:
       address_prefix: "txch"
     testnet1:
@@ -84,6 +85,7 @@ network_overrides: &network_overrides
       address_prefix: "txch"
     testnet7:
       address_prefix: "txch"
+      default_full_node_port: 58444
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
@@ -111,6 +113,9 @@ logging: &logging
   log_filename: "log/debug.log"
   log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
+  log_syslog: False  # If True, outputs to SysLog host and port specified
+  log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
+  log_syslog_port: 514  # UDP port of the remote or local Unix syslog
 
 harvester:
   # The harvester server (if run) will run on this port
@@ -359,6 +364,8 @@ introducer:
 wallet:
   port: 8449
   rpc_port: 9256
+
+  enable_profiler: False
 
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.

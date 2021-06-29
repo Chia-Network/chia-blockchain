@@ -2,11 +2,11 @@ from setuptools import setup
 
 dependencies = [
     "blspy==1.0.2",  # Signature library
-    "chiavdf==1.0.1",  # timelord and vdf verification
+    "chiavdf==1.0.2",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
-    "chiapos==1.0.2",  # proof of space
-    "clvm==0.9.6",
-    "clvm_rs==0.1.7",
+    "chiapos==1.0.3",  # proof of space
+    "clvm==0.9.7",
+    "clvm_rs==0.1.8",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.1",  # Allows users to open ports on their router
+    "miniupnpc==2.2.2",  # Allows users to open ports on their router
 ]
 
 dev_dependencies = [

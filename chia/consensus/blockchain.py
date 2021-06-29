@@ -164,7 +164,6 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: Optional[PreValidationResult] = None,
         fork_point_with_peak: Optional[uint32] = None,
-        summaries_to_check: List[SubEpochSummary] = None,  # passed only on long sync
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         This method must be called under the blockchain lock
@@ -205,7 +204,10 @@ class Blockchain(BlockchainInterface):
                         return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None
                     assert block_generator is not None and block.transactions_info is not None
                     npc_result = get_name_puzzle_conditions(
-                        block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
+                        block_generator,
+                        min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                        cost_per_byte=self.constants.COST_PER_BYTE,
+                        safe_mode=False,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
@@ -256,9 +258,9 @@ class Blockchain(BlockchainInterface):
         # Always add the block to the database
         async with self.block_store.db_wrapper.lock:
             try:
+                header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
-                header_hash: bytes32 = block.header_hash
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 fork_height, peak_height, records = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
@@ -376,7 +378,12 @@ class Blockchain(BlockchainInterface):
                 if npc_result is None:
                     block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
                     assert block_generator is not None
-                    npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
+                    npc_result = get_name_puzzle_conditions(
+                        block_generator,
+                        self.constants.MAX_BLOCK_COST_CLVM,
+                        cost_per_byte=self.constants.COST_PER_BYTE,
+                        safe_mode=False,
+                    )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions
             else:
@@ -466,6 +473,8 @@ class Blockchain(BlockchainInterface):
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
                 # Start from the most recent
                 for rc in reversed(curr.finished_reward_slot_hashes):
+                    if sub_slot_total_iters < curr.sub_slot_iters:
+                        break
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
             curr = self.try_block_record(curr.prev_hash)
@@ -522,7 +531,10 @@ class Blockchain(BlockchainInterface):
             if block_generator is None:
                 return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
             npc_result = get_name_puzzle_conditions(
-                block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
+                block_generator,
+                min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                cost_per_byte=self.constants.COST_PER_BYTE,
+                safe_mode=False,
             )
         error_code, cost_result = await validate_block_body(
             self.constants,
@@ -543,7 +555,11 @@ class Blockchain(BlockchainInterface):
         return PreValidationResult(None, required_iters, cost_result)
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock], npc_results: Dict[uint32, NPCResult], batch_size: int = 4
+        self,
+        blocks: List[FullBlock],
+        npc_results: Dict[uint32, NPCResult],
+        batch_size: int = 4,
+        wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
@@ -555,6 +571,7 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            wp_summaries,
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:
@@ -617,6 +634,8 @@ class Blockchain(BlockchainInterface):
                 del self.__block_records[header_hash]  # remove from blocks
             del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
 
+            if height == 0:
+                break
             height = height - 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
@@ -685,14 +704,24 @@ class Blockchain(BlockchainInterface):
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size=900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
+        records: List[BlockRecord] = []
         hashes = []
+        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
         for height in heights:
             hashes.append(self.height_to_hash(height))
-        return await self.block_store.get_block_records_by_hash(hashes)
+            if len(hashes) > batch_size:
+                res = await self.block_store.get_block_records_by_hash(hashes)
+                records.extend(res)
+                hashes = []
+
+        if len(hashes) > 0:
+            res = await self.block_store.get_block_records_by_hash(hashes)
+            records.extend(res)
+        return records
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:

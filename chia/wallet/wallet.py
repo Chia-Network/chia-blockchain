@@ -56,10 +56,7 @@ class Wallet:
         name: str = None,
     ):
         self = Wallet()
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
         self.secret_key_store = SecretKeyStore()
@@ -81,7 +78,10 @@ class Wallet:
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(
-                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+                program,
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
+                safe_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE

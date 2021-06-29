@@ -345,7 +345,34 @@ class TestFullSync:
         for block in default_1000_blocks[1000 - num_blocks_initial :]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
+        assert node_height_exactly(full_node_2, 999)
+
+    @pytest.mark.asyncio
+    async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = default_1000_blocks
+
+        for block in blocks[:501]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        peak1 = full_node_1.full_node.blockchain.get_peak()
+        full_node_2.full_node.sync_store.set_long_sync(True)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
+        summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
+        summaries2 = summaries1
+        s = summaries1[1]
+        # change summary so check would fail on 2 sub epoch
+        summaries2[1] = SubEpochSummary(
+            s.prev_subepoch_summary_hash,
+            s.reward_chain_hash,
+            s.num_blocks_overflow,
+            s.new_difficulty * 2,
+            s.new_sub_slot_iters * 2,
+        )
+        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
+        log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
+        assert node_height_exactly(full_node_2, 320)
 
     @pytest.mark.asyncio
     async def test_wp_backwards_comp(self, five_nodes, default_1000_blocks):

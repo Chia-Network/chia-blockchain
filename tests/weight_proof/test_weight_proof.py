@@ -18,7 +18,7 @@ from chia.server.start_full_node import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.block_cache import BlockCache
-from chia.util.block_tools import test_constants
+from tests.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
@@ -504,7 +504,8 @@ class TestWeightProof:
     async def test_weight_proof_from_database(self):
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
-        blocks, peak = await block_store.get_block_records()
+        blocks = await block_store.get_block_records_in_range(0, 0xFFFFFFFF)
+        peak = len(blocks) - 1
         peak_height = blocks[peak].height
         headers = await block_store.get_header_blocks_in_range(0, peak_height)
         sub_height_to_hash = {}

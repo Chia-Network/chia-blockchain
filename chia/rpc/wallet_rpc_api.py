@@ -22,6 +22,7 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
+from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
@@ -202,6 +203,8 @@ class WalletRpcApi:
                     "fingerprint": fingerprint,
                     "sk": bytes(sk).hex(),
                     "pk": bytes(sk.get_g1()).hex(),
+                    "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
+                    "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
                     "seed": s,
                 },
             }
@@ -346,6 +349,7 @@ class WalletRpcApi:
                     "colour": colour,
                     "wallet_id": cc_wallet.id(),
                 }
+
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet = await CCWallet.create_wallet_for_cc(
@@ -353,6 +357,10 @@ class WalletRpcApi:
                     )
                     asyncio.create_task(self._create_backup_and_upload(host))
                 return {"type": cc_wallet.type()}
+
+            else:  # undefined mode
+                pass
+
         elif request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
@@ -374,6 +382,7 @@ class WalletRpcApi:
                     "origin": rl_admin.rl_info.rl_origin,
                     "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
                 }
+
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
                 async with self.service.wallet_state_manager.lock:
@@ -385,6 +394,10 @@ class WalletRpcApi:
                     "type": rl_user.type(),
                     "pubkey": rl_user.rl_info.user_pubkey.hex(),
                 }
+
+            else:  # undefined rl_type
+                pass
+
         elif request["wallet_type"] == "did_wallet":
             if request["did_type"] == "new":
                 backup_dids = []
@@ -408,6 +421,7 @@ class WalletRpcApi:
                     "my_did": my_did,
                     "wallet_id": did_wallet.id(),
                 }
+
             elif request["did_type"] == "recovery":
                 async with self.service.wallet_state_manager.lock:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
@@ -433,6 +447,14 @@ class WalletRpcApi:
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
+
+            else:  # undefined did_type
+                pass
+
+        else:  # undefined wallet_type
+            pass
+
+        return None
 
     ##########################################################################################
     # Wallet
@@ -747,22 +769,22 @@ class WalletRpcApi:
         else:
             new_amount_verifications_required = len(recovery_list)
         async with self.service.wallet_state_manager.lock:
-            success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
+            update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
             updated_puz = await wallet.get_new_puzzle()
             spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
-        if spend_bundle is not None and success:
-            return {"success": True}
-        return {"success": False}
+
+        success = spend_bundle is not None and update_success
+        return {"success": success}
 
     async def did_spend(self, request):
         wallet_id = int(request["wallet_id"])
         async with self.service.wallet_state_manager.lock:
             wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
             spend_bundle = await wallet.create_spend(request["puzzlehash"])
-        if spend_bundle is not None:
-            return {"success": True}
-        return {"success": False}
+
+        success = spend_bundle is not None
+        return {"success": success}
 
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
@@ -914,8 +936,6 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
-        request["wallet_id"] = 1
-        request["puzzle_hash"] = puzzle_hash
         async with self.service.wallet_state_manager.lock:
             await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}
