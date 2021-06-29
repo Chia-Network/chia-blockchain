@@ -674,13 +674,15 @@ class WalletRpcApi:
         }
 
     async def delete_unconfirmed_transactions(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         if wallet_id not in self.service.wallet_state_manager.wallets:
             raise ValueError(f"Wallet id {wallet_id} does not exist")
         async with self.service.wallet_state_manager.lock:
             async with self.service.wallet_state_manager.tx_store.db_wrapper.lock:
                 await self.service.wallet_state_manager.tx_store.db_wrapper.begin_transaction()
                 await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
+                if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
+                    self.service.wallet_state_manager.wallets[wallet_id].target_state = None
                 await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
                 # Update the cache
                 await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
