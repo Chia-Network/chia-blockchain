@@ -1,6 +1,6 @@
-[submodule "chia-blockchain-gui"]
-	path = chia-blockchain-gui
-	url = https://github.com/Chia-Network/chia-blockchain-gui.git
+[submodule "deafwave-blockchain-gui"]
+	path = deafwave-blockchain-gui
+	url = https://github.com/ChandlerFerry/deafwave-blockchain-gui.git
 	branch = main
 [submodule "mozilla-ca"]
 	path = mozilla-ca
