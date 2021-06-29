@@ -14,7 +14,7 @@ import {
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import isNumeric from 'validator/es/lib/isNumeric';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import {
   /*
   Tooltip,
@@ -375,6 +375,11 @@ function SendCard(props: SendCardProps) {
     },
   });
 
+  const addressValue = useWatch<string>({
+    control: methods.control,
+    name: 'address',
+  });
+
   const syncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
@@ -396,9 +401,8 @@ function SendCard(props: SendCardProps) {
     : classes.resultFailure;
 
   function farm() {
-    const address = address_input.value;
-    if (address !== '') {
-      dispatch(farm_block(address));
+    if (addressValue) {
+      dispatch(farm_block(addressValue));
     }
   }
 
