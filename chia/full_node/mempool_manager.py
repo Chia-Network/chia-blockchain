@@ -75,7 +75,7 @@ class MempoolManager:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.log = log
         self.config = config
-        self.fee_tracker = fee_tracker
+        self.fee_tracker: FeeTracker = fee_tracker
 
     def shut_down(self):
         self.pool.shutdown(wait=True)

@@ -3,7 +3,6 @@ import aiosqlite
 
 from chia.full_node.fee_estimate import FeeTrackerBackup
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32
 
 
 class FeeStore:
@@ -35,7 +34,7 @@ class FeeStore:
 
     async def store_fee_data(self, fee_backup: FeeTrackerBackup, type: str = "backup") -> Any:
         cursor = await self.db.execute(
-            f"INSERT OR REPLACE INTO coin_record VALUES(?, ?)",
+            "INSERT OR REPLACE INTO coin_record VALUES(?, ?)",
             (type, bytes(fee_backup)),
         )
         await cursor.close()

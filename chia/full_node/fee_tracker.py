@@ -234,12 +234,12 @@ class FeeStat:
 
             if total_num >= sufficient_tx_val / (1 - self.decay):
                 curr_pct = n_conf / (total_num + fail_num + extra_num)
-
                 # Check to see if we are no longer getting confirmed at the same rate
                 if curr_pct < success_break_point:
                     if passing is True:
                         fail_min_bucket = min(cur_near_bucket, cur_far_bucket)
                         fail_max_bucket = max(cur_near_bucket, cur_far_bucket)
+                        self.log.debug(f"Fail_min_bucket: {fail_min_bucket}")
                         fail_bucket["start"] = self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0
                         fail_bucket["end"] = self.buckets[fail_max_bucket]
                         fail_bucket["within_target"] = n_conf
@@ -314,8 +314,8 @@ class FeeStat:
                 + fail_bucket["left_mempool"]
             )
 
-        self.log.info(f"passed_within_target_perc: {passed_within_target_perc}")
-        self.log.info(f"failed_within_target_perc: {failed_within_target_perc}")
+        self.log.debug(f"passed_within_target_perc: {passed_within_target_perc}")
+        self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")
 
         return pass_bucket, fail_bucket, median
 

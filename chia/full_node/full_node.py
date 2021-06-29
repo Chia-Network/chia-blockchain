@@ -23,7 +23,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate_store import FeeStore
-from chia.full_node.fee_estimator import FeeEstimator
+from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.full_node_store import FullNodeStore
 from chia.full_node.mempool_manager import MempoolManager
@@ -133,7 +133,7 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.config, self.fee_tracker)
-        self.fee_estimator = FeeEstimator(self.mempool_manager, self.log)
+        self.fee_estimator = SmartFeeEstimator(self.mempool_manager, self.log)
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
