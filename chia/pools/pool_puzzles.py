@@ -363,7 +363,7 @@ def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
             return None
         return PoolState.from_bytes(state_bytes)
     except TypeError as e:
-        log.error("Unexpected return from PoolWallet Smart Contract code {e}")
+        log.error(f"Unexpected return from PoolWallet Smart Contract code {e}")
         return None
 
 
