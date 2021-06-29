@@ -5,7 +5,7 @@
 [Green Paper](https://github.com/HiveProject2021/chives-blockchain/wiki/The-Chives-Network-Blockchain)
 [Road Map](https://www.chivescoin.org/roadmap/)
 [Commuity Autonomy](https://www.chivescoin.org/community/)
-[Get Chives For Free](https://game.chivescoin.org/)
+[Get Chives For Free(7.15 Publish)](https://game.chivescoin.org/)
 
 # 1 Name：Chives
 * English name: Chives
