@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\sector\\cmds",
+    "\\sector\\wallet",
+    "\\sector\\wallet\\puzzles",
+    "\\sector\\wallet\\puzzles\\prefarm",
+    "\\tests\\blockchain",
+    "\\tests\\core",
+    "\\tests\\wallet",
+    "\\tests\\wallet\\rl_wallet",
+    "\\tests\\wallet\\rpc"
+  ],
+  "SelectedNode": "\\sector",
+  "PreviewInSolutionExplorer": false
+}

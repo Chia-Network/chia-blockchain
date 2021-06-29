@@ -2,15 +2,15 @@ import asyncio
 
 import pytest
 
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16
-from chia.wallet.util.wallet_types import WalletType
+from sector.rpc.wallet_rpc_api import WalletRpcApi
+from sector.simulator.simulator_protocol import FarmNewBlockProtocol
+from sector.types.blockchain_format.coin import Coin
+from sector.types.blockchain_format.sized_bytes import bytes32
+from sector.types.mempool_inclusion_status import MempoolInclusionStatus
+from sector.types.peer_info import PeerInfo
+from sector.util.bech32m import encode_puzzle_hash
+from sector.util.ints import uint16
+from sector.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
@@ -113,7 +113,7 @@ class TestRLWallet:
 
         await time_out_assert(15, check_balance, 100, api_user, user_wallet_id)
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
-        address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash(), "xch")
+        address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash(), "xsc")
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction({"wallet_id": user_wallet_id, "amount": 3, "fee": 2, "address": address})
         assert "transaction_id" in val
@@ -144,7 +144,7 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 195, api_user, user_wallet_id)
 
         # test spending
-        puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash(), "xch")
+        puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash(), "xsc")
         val = await api_user.send_transaction(
             {
                 "wallet_id": user_wallet_id,

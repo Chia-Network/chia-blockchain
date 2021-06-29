@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from clvm_tools.clvmc import compile_clvm
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from sector.types.blockchain_format.program import Program, SerializedProgram
 
 wallet_program_files = set(
     [

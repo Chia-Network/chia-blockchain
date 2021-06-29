@@ -4,14 +4,14 @@ import logging
 import pytest
 from clvm.casts import int_to_bytes
 
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.protocols import full_node_protocol
-from chia.types.announcement import Announcement
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
-from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint64
+from sector.consensus.blockchain import ReceiveBlockResult
+from sector.protocols import full_node_protocol
+from sector.types.announcement import Announcement
+from sector.types.condition_opcodes import ConditionOpcode
+from sector.types.condition_with_args import ConditionWithArgs
+from sector.types.spend_bundle import SpendBundle
+from sector.util.errors import ConsensusError, Err
+from sector.util.ints import uint64
 from tests.wallet_tools import WalletTool
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import bt, setup_two_nodes, test_constants
@@ -979,9 +979,9 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
 
-        # This condition requires fee to be 10 mojo
+        # This condition requires fee to be 10 octet
         cvp_fee = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
-        # This spend bundle has 9 mojo as fee
+        # This spend bundle has 9 octet as fee
         block1_dic_bad = {cvp_fee.opcode: [cvp_fee]}
         block1_dic_good = {cvp_fee.opcode: [cvp_fee]}
         block1_spend_bundle_bad = wallet_a.generate_signed_transaction(

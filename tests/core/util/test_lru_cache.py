@@ -1,6 +1,6 @@
 import unittest
 
-from chia.util.lru_cache import LRUCache
+from sector.util.lru_cache import LRUCache
 
 
 class TestLRUCache(unittest.TestCase):

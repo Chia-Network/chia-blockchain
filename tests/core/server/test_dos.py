@@ -5,15 +5,15 @@ import logging
 import pytest
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
 
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
-from chia.server.rate_limits import RateLimiter
-from chia.server.server import ssl_context_for_client
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
+from sector.full_node.full_node_api import FullNodeAPI
+from sector.protocols import full_node_protocol
+from sector.protocols.protocol_message_types import ProtocolMessageTypes
+from sector.server.outbound_message import make_msg
+from sector.server.rate_limits import RateLimiter
+from sector.server.server import ssl_context_for_client
+from sector.server.ws_connection import WSChiaConnection
+from sector.types.peer_info import PeerInfo
+from sector.util.ints import uint16, uint64
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 

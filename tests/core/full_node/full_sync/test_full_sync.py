@@ -6,13 +6,13 @@ from typing import List
 
 import pytest
 
-from chia.full_node.weight_proof import _validate_sub_epoch_summaries
-from chia.protocols import full_node_protocol
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.peer_info import PeerInfo
-from chia.util.hash import std_hash
-from chia.util.ints import uint16
+from sector.full_node.weight_proof import _validate_sub_epoch_summaries
+from sector.protocols import full_node_protocol
+from sector.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from sector.types.full_block import FullBlock
+from sector.types.peer_info import PeerInfo
+from sector.util.hash import std_hash
+from sector.util.ints import uint16
 from tests.core.fixtures import default_400_blocks, default_1000_blocks, default_10000_blocks, empty_blockchain
 from tests.core.node_height import node_height_exactly
 from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants

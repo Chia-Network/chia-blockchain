@@ -4,18 +4,18 @@ from pathlib import Path
 
 import pytest
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint32
+from sector.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from sector.rpc.full_node_rpc_api import FullNodeRpcApi
+from sector.rpc.full_node_rpc_client import FullNodeRpcClient
+from sector.rpc.rpc_server import start_rpc_server
+from sector.rpc.wallet_rpc_api import WalletRpcApi
+from sector.rpc.wallet_rpc_client import WalletRpcClient
+from sector.simulator.simulator_protocol import FarmNewBlockProtocol
+from sector.types.blockchain_format.coin import Coin
+from sector.types.peer_info import PeerInfo
+from sector.types.spend_bundle import SpendBundle
+from sector.util.bech32m import encode_puzzle_hash
+from sector.util.ints import uint16, uint32
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -96,7 +96,7 @@ class TestWalletRpc:
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
-            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
+            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xsc")
             tx_amount = 15600000
             try:
                 await client.send_transaction("1", 100000000000000001, addr)
@@ -147,7 +147,7 @@ class TestWalletRpc:
             ] == initial_funds_eventually - tx_amount
 
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "xsc"))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
@@ -179,7 +179,7 @@ class TestWalletRpc:
             push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
             assert push_res["success"]
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "xsc"))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(
