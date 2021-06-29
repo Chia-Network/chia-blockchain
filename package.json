@@ -16,7 +16,7 @@
     "dev": "npm run locale && concurrently --kill-others \"npm run dev:react\" \"npm run dev:electron\"",
     "dev:fast": "concurrently --kill-others \"npm run dev:react\" \"npm run dev:electron\"",
     "build:electron": "cross-env NODE_ENV=production webpack --config ./webpack.electron.babel.ts",
-    "build:react": "cross-env NODE_ENV=production NODE_OPTIONS=--max_old_space_size=3000 webpack --config ./webpack.react.babel.ts",
+    "build:react": "cross-env NODE_ENV=production NODE_OPTIONS=--max_old_space_size=4096 webpack --config ./webpack.react.babel.ts",
     "build": "npm run locale && npm run build:electron && npm run build:react",
     "electron": "electron .",
     "locale:extract": "lingui extract",
