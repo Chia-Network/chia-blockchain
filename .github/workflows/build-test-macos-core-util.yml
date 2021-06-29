@@ -58,7 +58,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.26.0'
+        ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -90,4 +90,4 @@ jobs:
     - name: Test core-util code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/util/test_keychain.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py tests/core/util/test_type_checking.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/util/test_keychain.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py tests/core/util/test_type_checking.py -s -v --durations 0 

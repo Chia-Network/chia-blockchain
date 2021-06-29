@@ -49,7 +49,7 @@ def add_private_key_seed(mnemonic: str):
         passphrase = ""
         sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
-        print(f"Added private key with public key fingerprint {fingerprint} and mnemonic")
+        print(f"Added private key with public key fingerprint {fingerprint}")
 
     except ValueError as e:
         print(e)

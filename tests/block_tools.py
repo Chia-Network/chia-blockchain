@@ -9,7 +9,7 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Any
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
@@ -153,13 +153,12 @@ class BlockTools:
         self.all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
-        farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
-        if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
+        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
-        _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
-        self.plots: Dict[Path, PlotInfo] = loaded_plots
-        self.local_sk_cache: Dict[bytes32, PrivateKey] = {}
+        self.load_plots()
+        self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
@@ -179,10 +178,14 @@ class BlockTools:
         self.constants = updated_constants
         save_config(self.root_path, "config.yaml", self._config)
 
+    def load_plots(self):
+        _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
+        self.plots: Dict[Path, PlotInfo] = loaded_plots
+
     def init_plots(self, root_path: Path):
         plot_dir = get_plot_dir()
         mkdir(plot_dir)
-        temp_dir = plot_dir / "tmp"
+        temp_dir = get_plot_tmp_dir()
         mkdir(temp_dir)
         num_pool_public_key_plots = 15
         num_pool_address_plots = 5
@@ -245,16 +248,26 @@ class BlockTools:
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
                 if plot_info.prover.get_id() in self.local_sk_cache:
-                    local_master_sk = self.local_sk_cache[plot_info.prover.get_id()]
+                    local_master_sk, pool_pk_or_ph = self.local_sk_cache[plot_info.prover.get_id()]
                 else:
-                    _, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
-                    self.local_sk_cache[plot_info.prover.get_id()] = local_master_sk
+                    pool_pk_or_ph, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
+                    self.local_sk_cache[plot_info.prover.get_id()] = (local_master_sk, pool_pk_or_ph)
+                if isinstance(pool_pk_or_ph, G1Element):
+                    include_taproot = False
+                else:
+                    assert isinstance(pool_pk_or_ph, bytes32)
+                    include_taproot = True
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1())
+                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
-                return AugSchemeMPL.aggregate([harv_share, farm_share])
+                if include_taproot:
+                    taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(local_sk.get_g1(), farmer_sk.get_g1())
+                    taproot_share: G2Element = AugSchemeMPL.sign(taproot_sk, m, agg_pk)
+                else:
+                    taproot_share = G2Element()
+                return AugSchemeMPL.aggregate([harv_share, farm_share, taproot_share])
 
         raise ValueError(f"Do not have key {plot_pk}")
 
@@ -294,6 +307,7 @@ class BlockTools:
         current_time: bool = False,
         previous_generator: CompressorArg = None,
         genesis_timestamp: Optional[uint64] = None,
+        force_plot_id: Optional[bytes32] = None,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -309,6 +323,8 @@ class BlockTools:
             farmer_reward_puzzle_hash = self.farmer_ph
 
         if len(block_list) == 0:
+            if force_plot_id is not None:
+                raise ValueError("Cannot specify plot_id for genesis block")
             initial_block_list_len = 0
             genesis = self.create_genesis_block(
                 constants,
@@ -406,6 +422,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        force_plot_id=force_plot_id,
                     )
 
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -683,6 +700,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
@@ -970,6 +988,7 @@ class BlockTools:
         seed: bytes,
         difficulty: uint64,
         sub_slot_iters: uint64,
+        force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
         plots: List[PlotInfo] = [
@@ -977,7 +996,9 @@ class BlockTools:
         ]
         random.seed(seed)
         for plot_info in plots:
-            plot_id = plot_info.prover.get_id()
+            plot_id: bytes32 = plot_info.prover.get_id()
+            if force_plot_id is not None and plot_id != force_plot_id:
+                continue
             if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
@@ -1001,9 +1022,14 @@ class BlockTools:
                             local_master_sk,
                         ) = parse_plot_info(plot_info.prover.get_memo())
                         local_sk = master_sk_to_local_sk(local_master_sk)
+
+                        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+                            include_taproot = False
+                        else:
+                            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+                            include_taproot = True
                         plot_pk = ProofOfSpace.generate_plot_public_key(
-                            local_sk.get_g1(),
-                            farmer_public_key,
+                            local_sk.get_g1(), farmer_public_key, include_taproot
                         )
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,
@@ -1196,6 +1222,10 @@ def get_plot_dir() -> Path:
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
+
+
+def get_plot_tmp_dir():
+    return get_plot_dir() / "tmp"
 
 
 def load_block_list(
