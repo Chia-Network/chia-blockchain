@@ -36,17 +36,3 @@ Most users should only install harvesters, farmers, plotter, full nodes, and wal
 Building Timelords and VDFs is for sophisticated users, in most environments.
 Chia Network and additional volunteers are running sufficient Timelords
 for consensus.
-
-## Installing
-
-Install instructions are available in the
-[INSTALL](https://github.com/Chia-Network/chia-blockchain/wiki/INSTALL)
-section of the
-[chia-blockchain repository wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
-
-## Running
-
-Once installed, a
-[Quick Start Guide](https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide)
-is available from the repository
-[wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
