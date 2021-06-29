@@ -15,6 +15,10 @@ const StyledCard = styled(Card)`
   overflow: visible;
 `;
 
+const StyledValue = styled(Typography)`
+  font-size: 1.25rem;
+`;
+
 type Props = {
   title: ReactNode;
   value: ReactNode;
@@ -41,9 +45,9 @@ export default function FarmCard(props: Props) {
             <CircularProgress color="primary" size={25} />
           </Box>
         ) : (
-          <Typography variant="h5" color={valueColor}>
+          <StyledValue variant="h5" color={valueColor}>
             {value}
-          </Typography>
+          </StyledValue>
         )}
 
         {description && (

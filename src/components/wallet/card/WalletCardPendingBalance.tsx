@@ -31,7 +31,7 @@ export default function WalletCardPendingBalance(props: Props) {
           This does not include farming rewards.
         </Trans>
       }
-      value={<>{mojo_to_chia_string(value)} {currencyCode}</>}
+      value={<span>{mojo_to_chia_string(value)} {currencyCode}</span>}
     />
   );
 }

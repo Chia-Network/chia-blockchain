@@ -24,7 +24,8 @@ const StyledRoot = styled.div`
 
 const StyledGraphContainer = styled.div`
   position: relative;
-  height: ${({ height }) => `${height}px`};
+  min-height: 100px;
+  height: ${({ height }) => typeof height === 'string' ? height : `${height}px`};
 `;
 
 const StyledTooltip = styled(Paper)`
@@ -87,7 +88,6 @@ function aggregatePoints(
   offset: number = 0,
 ) {
   let current = Date.now() / 1000;
-  console.log('current', current);
 
   const items = [];
 
@@ -105,12 +105,6 @@ function aggregatePoints(
     points.forEach((pointItem) => {
       const { timestamp, value } = pointItem;
 
-      /*
-      console.log('timestamp', timestamp);
-      console.log('value', value);
-      console.log('start end', start, end, timestamp > start && timestamp <= end);
-      */
-
       if (timestamp > start && timestamp <= end) {
         item.value += value;
       }
@@ -118,8 +112,6 @@ function aggregatePoints(
 
     items.push(item);
   } 
-
-  console.log('items', items);
 
   return items;
 }
@@ -208,7 +200,7 @@ function prepareGraphPoints(balance: number, transactions: Transaction[], peak: 
 
 type Props = {
   walletId: number;
-  height?: number;
+  height?: number | string;
 };
 
 export default function WalletGraph(props: Props) {

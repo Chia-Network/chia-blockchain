@@ -26,7 +26,7 @@ const StyledGapBox = styled(({ rowGap, columnGap, ...rest }) => (
   <Box {...rest} />
 ))`
   > *:not(:last-child) {
-    margin-bottom: ${({ rowGap }) => rowGap};
+    ${({ rowGap }) => rowGap && `margin-bottom: ${rowGap}`};
     ${({ columnGap }) => columnGap && `margin-right: ${columnGap}`};
   }
 `;

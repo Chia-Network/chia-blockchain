@@ -11,7 +11,7 @@ const StyledGraphContainer = styled.div`
   margin-left: -1rem;
   margin-right: -1rem;
   margin-top: 1rem;
-  margin-bottom: -1rem;
+  margin-bottom: -1.5rem;
 `;
 
 type Props = {
@@ -41,7 +41,7 @@ export default function WalletCardTotalBalance(props: Props) {
         </Trans>
       }
       value={<>{mojo_to_chia_string(value)} {currencyCode}</>}
-      description={<StyledGraphContainer><WalletGraph walletId={wallet_id} height={100} /></StyledGraphContainer>}
+      description={<StyledGraphContainer><WalletGraph walletId={wallet_id} height={120} /></StyledGraphContainer>}
     />
   );
 }

@@ -13,7 +13,6 @@ import { Box, Button, ListItemIcon, MenuItem, IconButton, Grid, Tooltip, Typogra
 import PlotNFTCard from '../plotNFT/PlotNFTCard';
 import PlotExternalNFTCard from '../plotNFT/PlotExternalNFTCard';
 import PlotNFTName from '../plotNFT/PlotNFTName';
-import PoolWalletStatus from '../wallet/WalletStatus';
 import PoolAbsorbRewards from './PoolAbsorbRewards';
 import PoolJoin from './PoolJoin';
 import PoolHero from './PoolHero';
@@ -21,6 +20,7 @@ import type PlotNFT from '../../types/PlotNFT';
 import usePlotNFTs from '../../hooks/usePlotNFTs';
 import PlotNFTStateEnum from '../../constants/PlotNFTState';
 import PlotNFTUnconfirmedCard from '../plotNFT/PlotNFTUnconfirmedCard';
+import PlotNFTState from '../plotNFT/PlotNFTState';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
 import { mojo_to_chia } from '../../util/chia';
 import WalletStatus from '../wallet/WalletStatus';
