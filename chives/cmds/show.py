@@ -19,16 +19,16 @@ async def show_async(
 
     from time import localtime, struct_time
     from typing import List, Optional
-    from chia.consensus.block_record import BlockRecord
-    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-    from chia.server.outbound_message import NodeType
-    from chia.types.full_block import FullBlock
-    from chia.util.bech32m import encode_puzzle_hash
-    from chia.util.byte_types import hexstr_to_bytes
-    from chia.util.config import load_config
-    from chia.util.default_root import DEFAULT_ROOT_PATH
-    from chia.util.ints import uint16
-    from chia.util.misc import format_bytes
+    from chives.consensus.block_record import BlockRecord
+    from chives.rpc.full_node_rpc_client import FullNodeRpcClient
+    from chives.server.outbound_message import NodeType
+    from chives.types.full_block import FullBlock
+    from chives.util.bech32m import encode_puzzle_hash
+    from chives.util.byte_types import hexstr_to_bytes
+    from chives.util.config import load_config
+    from chives.util.default_root import DEFAULT_ROOT_PATH
+    from chives.util.ints import uint16
+    from chives.util.misc import format_bytes
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -66,7 +66,7 @@ async def show_async(
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
                 print("\nSearching for an initial chain\n")
-                print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+                print("You may be able to expedite with 'chives show -a host:port' using a known node.\n")
 
             if peak is not None:
                 if peak.is_transaction_block:

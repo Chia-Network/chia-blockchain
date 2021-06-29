@@ -1,12 +1,12 @@
 from clvm.casts import int_from_bytes
 from clvm_tools import binutils
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.types.blockchain_format.program import Program
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.condition_tools import parse_sexp_to_conditions
-from chia.util.ints import uint32
+from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chives.types.blockchain_format.program import Program
+from chives.types.condition_opcodes import ConditionOpcode
+from chives.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chives.util.condition_tools import parse_sexp_to_conditions
+from chives.util.ints import uint32
 
 address1 = "txch15gx26ndmacfaqlq8m0yajeggzceu7cvmaz4df0hahkukes695rss6lej7h"  # Gene wallet (m/12381/9444/2/42):
 address2 = "txch1c2cguswhvmdyz9hr3q6hak2h6p9dw4rz82g4707k2xy2sarv705qcce4pn"  # Mariano address (m/12381/9444/2/0)
@@ -37,25 +37,25 @@ def make_puzzle(amount: int) -> int:
     result = puzzle_prog.run(solution)
     error, result_human = parse_sexp_to_conditions(result)
 
-    total_chia = 0
+    total_chives = 0
     if error:
         print(f"Error: {error}")
     else:
         assert result_human is not None
         for cvp in result_human:
             assert len(cvp.vars) == 2
-            total_chia += int_from_bytes(cvp.vars[1])
+            total_chives += int_from_bytes(cvp.vars[1])
             print(
                 f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(cvp.vars[0], prefix)},"
                 f" amount: {int_from_bytes(cvp.vars[1])}"
             )
-    return total_chia
+    return total_chives
 
 
-total_chia = 0
+total_chives = 0
 print("Pool address: ")
-total_chia += make_puzzle(pool_amounts)
+total_chives += make_puzzle(pool_amounts)
 print("\nFarmer address: ")
-total_chia += make_puzzle(farmer_amounts)
+total_chives += make_puzzle(farmer_amounts)
 
-assert total_chia == calculate_base_farmer_reward(uint32(0)) + calculate_pool_reward(uint32(0))
+assert total_chives == calculate_base_farmer_reward(uint32(0)) + calculate_pool_reward(uint32(0))

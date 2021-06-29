@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.streamable import Streamable, streamable
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.condition_with_args import ConditionWithArgs
+from chives.util.condition_tools import ConditionOpcode
+from chives.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

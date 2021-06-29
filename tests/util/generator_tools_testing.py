@@ -1,11 +1,11 @@
 from typing import List, Tuple
 
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
-from chia.util.generator_tools import additions_for_npc
+from chives.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.full_block import FullBlock
+from chives.types.generator_types import BlockGenerator
+from chives.util.generator_tools import additions_for_npc
 
 
 def run_and_get_removals_and_additions(

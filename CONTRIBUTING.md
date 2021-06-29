@@ -1,13 +1,13 @@
 # Introduction
 
-Welcome to the chia-blockchain project!
+Welcome to the chives-blockchain project!
 We are happy that you are taking a look at the code for Chia, a proof of space and time cryptocurrency.
 
 A lot of fascinating new cryptography and blockchain concepts are used and implemented here.
 This repo includes the code for the Chives full node, farmer, and timelord (in chives folder), which are all written in python.
-It also includes a verifiable delay function implementation that it imports from the [chiavdf repo](https://github.com/HiveProject2021/chiavdf) (in c/c++), and a proof of space implementation that it imports from the [chiapos repo](https://github.com/HiveProject2021/chiapos). BLS signatures are imported from the [bls-signatures repo](https://github.com/HiveProject2021/bls-signatures) as blspy. There is an additional dependency on the [chiabip158 repo](https://github.com/HiveProject2021/chiabip158). For major platforms, binary and source wheels are shipped to PyPI from each dependent repo. Then chia-blockchain can pip install those from PyPI or they can be prepackaged as is done for the Windows installer. On unsupported platforms, pip will fall back to the source distributions, to be compiled locally.
+It also includes a verifiable delay function implementation that it imports from the [chivesvdf repo](https://github.com/HiveProject2021/chivesvdf) (in c/c++), and a proof of space implementation that it imports from the [chivespos repo](https://github.com/HiveProject2021/chivespos). BLS signatures are imported from the [bls-signatures repo](https://github.com/HiveProject2021/bls-signatures) as blspy. There is an additional dependency on the [chivesbip158 repo](https://github.com/HiveProject2021/chivesbip158). For major platforms, binary and source wheels are shipped to PyPI from each dependent repo. Then chives-blockchain can pip install those from PyPI or they can be prepackaged as is done for the Windows installer. On unsupported platforms, pip will fall back to the source distributions, to be compiled locally.
 
-If you want to learn more about this project, read the [wiki](https://github.com/HiveProject2021/chia-blockchain/wiki), or check out the [green paper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
+If you want to learn more about this project, read the [wiki](https://github.com/HiveProject2021/chives-blockchain/wiki), or check out the [green paper](https://www.chives.net/assets/ChiaGreenPaper.pdf).
 
 ## Contributions
 
@@ -19,7 +19,7 @@ You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a
 Generally, things to the left are in progress or done. Some things go through "Coming up soon", but some will come directly out of other columns.
 Usually, the things closer to the top of each column are the ones that will be worked on soonest.
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
-Contact any of the team members on [Keybase](https://keybase.io/team/chia_network.public), which we use as the main communication method. You can also comment on any Trello card.
+Contact any of the team members on [Keybase](https://keybase.io/team/chives_network.public), which we use as the main communication method. You can also comment on any Trello card.
 
 We ask that external contributors create a fork of the `main` branch for any feature work they wish to take on.
 
@@ -69,7 +69,7 @@ If you want verbose logging for tests, edit the `tests/pytest.ini` file.
 4. Preferences > Settings > Python > Linting > flake8 enabled
 5. Preferences > Settings > Python > Linting > mypy enabled
 6. Preferences > Settings > Formatting > Python > Provider > black
-7. Preferences > Settings > mypy > Targets: set to `./chia` and `./tests`
+7. Preferences > Settings > mypy > Targets: set to `./chives` and `./tests`
 
 ## Configure Pycharm
 
@@ -82,7 +82,7 @@ workflow.
 3. Install BlackConnect plugin
 4. Set to run python black on save
 5. Set line length to 120
-6. Install these linters https://github.com/HiveProject2021/chia-blockchain/tree/main/.github/linters
+6. Install these linters https://github.com/HiveProject2021/chives-blockchain/tree/main/.github/linters
 
 ## Testnets and review environments
 

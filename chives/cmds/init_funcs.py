@@ -6,20 +6,20 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from chives import __version__
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import (
-    create_default_chia_config,
+from chives.consensus.coinbase import create_puzzlehash_for_pk
+from chives.ssl.create_ssl import generate_ca_signed_cert, get_chives_ca_crt_key, make_ca_cert
+from chives.util.bech32m import encode_puzzle_hash
+from chives.util.config import (
+    create_default_chives_config,
     initial_config_file,
     load_config,
     save_config,
     unflatten_properties,
 )
-from chia.util.ints import uint32
-from chia.util.keychain import Keychain
-from chia.util.path import mkdir
-from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chives.util.ints import uint32
+from chives.util.keychain import Keychain
+from chives.util.path import mkdir
+from chives.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
@@ -50,7 +50,7 @@ def check_keys(new_root: Path) -> None:
     keychain: Keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:
-        print("No keys are present in the keychain. Generate them with 'chia keys generate'")
+        print("No keys are present in the keychain. Generate them with 'chives keys generate'")
         return None
 
     config: Dict = load_config(new_root, "config.yaml")
@@ -176,11 +176,11 @@ def create_all_ssl(root: Path):
 
     private_ca_key_path = ca_dir / "private_ca.key"
     private_ca_crt_path = ca_dir / "private_ca.crt"
-    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
-    chia_ca_crt_path = ca_dir / "chia_ca.crt"
-    chia_ca_key_path = ca_dir / "chia_ca.key"
-    chia_ca_crt_path.write_bytes(chia_ca_crt)
-    chia_ca_key_path.write_bytes(chia_ca_key)
+    chives_ca_crt, chives_ca_key = get_chives_ca_crt_key()
+    chives_ca_crt_path = ca_dir / "chives_ca.crt"
+    chives_ca_key_path = ca_dir / "chives_ca.key"
+    chives_ca_crt_path.write_bytes(chives_ca_crt)
+    chives_ca_key_path.write_bytes(chives_ca_key)
 
     if not private_ca_key_path.exists() or not private_ca_crt_path.exists():
         # Create private CA
@@ -197,8 +197,8 @@ def create_all_ssl(root: Path):
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
 
-    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
-    generate_ssl_for_nodes(ssl_dir, chia_ca_crt, chia_ca_key, False, overwrite=False)
+    chives_ca_crt, chives_ca_key = get_chives_ca_crt_key()
+    generate_ssl_for_nodes(ssl_dir, chives_ca_crt, chives_ca_key, False, overwrite=False)
 
 
 def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private: bool, overwrite=True):
@@ -245,16 +245,16 @@ def init(create_certs: Optional[Path], root_path: Path):
         else:
             print(f"** {root_path} does not exist. Executing core init **")
             # sanity check here to prevent infinite recursion
-            if chia_init(root_path) == 0 and root_path.exists():
+            if chives_init(root_path) == 0 and root_path.exists():
                 return init(create_certs, root_path)
 
             print(f"** {root_path} was not created. Exiting **")
             return -1
     else:
-        return chia_init(root_path)
+        return chives_init(root_path)
 
 
-def chia_version_number() -> Tuple[str, str, str, str]:
+def chives_version_number() -> Tuple[str, str, str, str]:
     scm_full_version = __version__
     left_full_version = scm_full_version.split("+")
 
@@ -302,18 +302,18 @@ def chia_version_number() -> Tuple[str, str, str, str]:
     return major_release_number, minor_release_number, patch_release_number, dev_release_number
 
 
-def chia_minor_release_number():
-    res = int(chia_version_number()[2])
+def chives_minor_release_number():
+    res = int(chives_version_number()[2])
     print(f"Install release number: {res}")
     return res
 
 
-def chia_full_version_str() -> str:
-    major, minor, patch, dev = chia_version_number()
+def chives_full_version_str() -> str:
+    major, minor, patch, dev = chives_version_number()
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(root_path: Path):
+def chives_init(root_path: Path):
     if os.environ.get("CHIVES_ROOT", None) is not None:
         print(
             f"warning, your CHIVES_ROOT is set to {os.environ['CHIVES_ROOT']}. "
@@ -329,10 +329,10 @@ def chia_init(root_path: Path):
         print(f"{root_path} already exists, no migration action taken")
         return -1
 
-    create_default_chia_config(root_path)
+    create_default_chives_config(root_path)
     create_all_ssl(root_path)
     check_keys(root_path)
     print("")
-    print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
+    print("To see your keys, run 'chives keys show --show-mnemonic-seed'")
 
     return 0

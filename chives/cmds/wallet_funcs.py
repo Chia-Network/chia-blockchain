@@ -7,27 +7,27 @@ from typing import Callable, List, Optional, Tuple
 
 import aiohttp
 
-from chia.cmds.units import units
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.start_wallet import SERVICE_NAME
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint64
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
+from chives.cmds.units import units
+from chives.rpc.wallet_rpc_client import WalletRpcClient
+from chives.server.start_wallet import SERVICE_NAME
+from chives.util.bech32m import encode_puzzle_hash
+from chives.util.byte_types import hexstr_to_bytes
+from chives.util.config import load_config
+from chives.util.default_root import DEFAULT_ROOT_PATH
+from chives.util.ints import uint16, uint64
+from chives.wallet.transaction_record import TransactionRecord
+from chives.wallet.util.wallet_types import WalletType
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
     if verbose:
         print(tx)
     else:
-        chia_amount = Decimal(int(tx.amount)) / units["chia"]
+        chives_amount = Decimal(int(tx.amount)) / units["chives"]
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount: {chia_amount} {name}")
+        print(f"Amount: {chives_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
@@ -86,8 +86,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         )
         return
     print("Submitting transaction...")
-    final_amount = uint64(int(amount * units["chia"]))
-    final_fee = uint64(int(fee * units["chia"]))
+    final_amount = uint64(int(amount * units["chives"]))
+    final_fee = uint64(int(fee * units["chives"]))
     res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee)
     tx_id = res.name
     start = time.time()
@@ -100,7 +100,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             return None
 
     print("Transaction not yet submitted to nodes")
-    print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
+    print(f"Do 'chives wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -129,15 +129,15 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         else:
             print(f"Wallet ID {wallet_id} type {typ}")
             print(
-                f"   -Total Balance: {balances['confirmed_wallet_balance']/units['chia']} {address_prefix} "
+                f"   -Total Balance: {balances['confirmed_wallet_balance']/units['chives']} {address_prefix} "
                 f"({balances['confirmed_wallet_balance']} mojo)"
             )
             print(
-                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix} "
+                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['chives']} {address_prefix} "
                 f"({balances['unconfirmed_wallet_balance']} mojo)"
             )
             print(
-                f"   -Spendable: {balances['spendable_balance']/units['chia']} {address_prefix} "
+                f"   -Spendable: {balances['spendable_balance']/units['chives']} {address_prefix} "
                 f"({balances['spendable_balance']} mojo)"
             )
 
@@ -148,7 +148,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     else:
         fingerprints = await wallet_client.get_public_keys()
     if len(fingerprints) == 0:
-        print("No keys loaded. Run 'chia keys generate' or import a key")
+        print("No keys loaded. Run 'chives keys generate' or import a key")
         return None
     if len(fingerprints) == 1:
         fingerprint = fingerprints[0]
@@ -181,7 +181,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
             use_cloud = True
             if "backup_path" in log_in_response:
                 path = log_in_response["backup_path"]
-                print(f"Backup file from backup.chia.net downloaded and written to: {path}")
+                print(f"Backup file from backup.chives.net downloaded and written to: {path}")
                 val = input("Do you want to use this file to restore from backup? (Y/N) ")
                 if val.lower() == "y":
                     log_in_response = await wallet_client.log_in_and_restore(fingerprint, path)

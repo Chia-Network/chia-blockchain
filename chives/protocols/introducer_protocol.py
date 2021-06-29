@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List
 
-from chia.types.peer_info import TimestampedPeerInfo
-from chia.util.streamable import Streamable, streamable
+from chives.types.peer_info import TimestampedPeerInfo
+from chives.util.streamable import Streamable, streamable
 
 """
 Protocol to introducer

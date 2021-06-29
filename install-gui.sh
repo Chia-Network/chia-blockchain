@@ -12,7 +12,7 @@ if [ "$(id -u)" = 0 ]; then
 	exit 1
 fi
 
-# Allows overriding the branch or commit to build in chia-blockchain-gui
+# Allows overriding the branch or commit to build in chives-blockchain-gui
 SUBMODULE_BRANCH=$1
 
 UBUNTU=false
@@ -78,7 +78,7 @@ if [ ! "$CI" ]; then
 	echo "Running git submodule update."
 	echo ""
 	git submodule update
-	cd chia-blockchain-gui
+	cd chives-blockchain-gui
 
 	git pull origin main
 	echo "----------------------------------------------"
@@ -95,4 +95,4 @@ fi
 echo ""
 echo "Chives blockchain install-gui.sh completed."
 echo ""
-echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI."
+echo "Type 'cd chives-blockchain-gui' and then 'npm run electron &' to start the GUI."

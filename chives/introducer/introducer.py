@@ -3,9 +3,9 @@ import logging
 import time
 from typing import Optional
 
-from chia.server.server import ChiaServer
-from chia.server.introducer_peers import VettedPeer
-from chia.util.ints import uint64
+from chives.server.server import ChiaServer
+from chives.server.introducer_peers import VettedPeer
+from chives.util.ints import uint64
 
 
 class Introducer:

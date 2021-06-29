@@ -1,7 +1,7 @@
 (mod (block_decompresser_program (historical_blocks_tree))
 
     (defconstant local_deserialize_mod
-        ;; this monstrosity is the assembly output of `chialisp_deserialisation.clvm`
+        ;; this monstrosity is the assembly output of `chiveslisp_deserialisation.clvm`
         ;; it's pasted in here because the compiler doesn't yet support nested `mod`
         ;; my apologies -- RK
 

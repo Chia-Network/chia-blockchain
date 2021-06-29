@@ -1,13 +1,13 @@
 from typing import Callable, Optional
 
-from chia.introducer.introducer import Introducer
-from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, make_msg
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.peer_info import TimestampedPeerInfo
-from chia.util.api_decorators import api_request, peer_required
-from chia.util.ints import uint64
+from chives.introducer.introducer import Introducer
+from chives.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import Message, make_msg
+from chives.server.ws_connection import WSChiaConnection
+from chives.types.peer_info import TimestampedPeerInfo
+from chives.util.api_decorators import api_request, peer_required
+from chives.util.ints import uint64
 
 
 class IntroducerAPI:

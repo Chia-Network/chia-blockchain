@@ -5,38 +5,38 @@ from secrets import token_bytes
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
-from chiabip158 import PyBIP158
+from chivesbip158 import PyBIP158
 
-import chia.server.ws_connection as ws
-from chia.consensus.block_creation import create_unfinished_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
-from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.full_node.signage_point import SignagePoint
-from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
-from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest
-from chia.server.outbound_message import Message, make_msg
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
-from chia.types.peer_info import PeerInfo
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task
-from chia.util.generator_tools import get_block_header
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.merkle_set import MerkleSet
+import chives.server.ws_connection as ws
+from chives.consensus.block_creation import create_unfinished_block
+from chives.consensus.block_record import BlockRecord
+from chives.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chives.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
+from chives.full_node.full_node import FullNode
+from chives.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chives.full_node.signage_point import SignagePoint
+from chives.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
+from chives.protocols.full_node_protocol import RejectBlock, RejectBlocks
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest
+from chives.server.outbound_message import Message, make_msg
+from chives.types.blockchain_format.coin import Coin, hash_coin_list
+from chives.types.blockchain_format.pool_target import PoolTarget
+from chives.types.blockchain_format.program import Program
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.coin_record import CoinRecord
+from chives.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chives.types.full_block import FullBlock
+from chives.types.generator_types import BlockGenerator
+from chives.types.mempool_inclusion_status import MempoolInclusionStatus
+from chives.types.mempool_item import MempoolItem
+from chives.types.peer_info import PeerInfo
+from chives.types.unfinished_block import UnfinishedBlock
+from chives.util.api_decorators import api_request, peer_required, bytes_required, execute_task
+from chives.util.generator_tools import get_block_header
+from chives.util.hash import std_hash
+from chives.util.ints import uint8, uint32, uint64, uint128
+from chives.util.merkle_set import MerkleSet
 
 
 class FullNodeAPI:

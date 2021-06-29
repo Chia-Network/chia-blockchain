@@ -1,12 +1,12 @@
 from typing import Dict, List, Optional
 
-from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo
-from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.ints import uint32
+from chives.consensus.block_record import BlockRecord
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chives.types.blockchain_format.vdf import VDFInfo
+from chives.types.header_block import HeaderBlock
+from chives.types.weight_proof import SubEpochChallengeSegment
+from chives.util.ints import uint32
 
 
 class BlockchainInterface:

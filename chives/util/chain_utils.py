@@ -1,9 +1,9 @@
 from typing import List
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.condition_tools import (
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.program import SerializedProgram
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.condition_tools import (
     conditions_dict_for_solution,
     created_outputs_for_conditions_dict,
 )

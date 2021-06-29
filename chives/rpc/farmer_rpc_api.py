@@ -1,14 +1,14 @@
 from typing import Callable, Dict, List
 
-from chia.farmer.farmer import Farmer
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chives.farmer.farmer import Farmer
+from chives.util.byte_types import hexstr_to_bytes
+from chives.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class FarmerRpcApi:
     def __init__(self, farmer: Farmer):
         self.service = farmer
-        self.service_name = "chia_farmer"
+        self.service_name = "chives_farmer"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {

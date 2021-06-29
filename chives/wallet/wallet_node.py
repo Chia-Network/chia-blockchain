@@ -9,13 +9,13 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from blspy import PrivateKey
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.protocols import wallet_protocol
-from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import (
+from chives.consensus.block_record import BlockRecord
+from chives.consensus.constants import ConsensusConstants
+from chives.consensus.multiprocess_validation import PreValidationResult
+from chives.protocols import wallet_protocol
+from chives.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.protocols.wallet_protocol import (
     RejectAdditionsRequest,
     RejectRemovalsRequest,
     RequestAdditions,
@@ -25,31 +25,31 @@ from chia.protocols.wallet_protocol import (
     RespondHeaderBlocks,
     RespondRemovals,
 )
-from chia.server.node_discovery import WalletPeers
-from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.server import ChiaServer
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.header_block import HeaderBlock
-from chia.types.peer_info import PeerInfo
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint128
-from chia.util.keychain import Keychain
-from chia.util.lru_cache import LRUCache
-from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
-from chia.util.path import mkdir, path_from_root
-from chia.wallet.block_record import HeaderBlockRecord
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.settings.settings_objects import BackupInitialized
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import open_backup_file
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_blockchain import ReceiveBlockResult
-from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.util.profiler import profile_task
+from chives.server.node_discovery import WalletPeers
+from chives.server.outbound_message import Message, NodeType, make_msg
+from chives.server.server import ChiaServer
+from chives.server.ws_connection import WSChiaConnection
+from chives.types.blockchain_format.coin import Coin, hash_coin_list
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.header_block import HeaderBlock
+from chives.types.peer_info import PeerInfo
+from chives.util.byte_types import hexstr_to_bytes
+from chives.util.errors import Err, ValidationError
+from chives.util.ints import uint32, uint128
+from chives.util.keychain import Keychain
+from chives.util.lru_cache import LRUCache
+from chives.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chives.util.path import mkdir, path_from_root
+from chives.wallet.block_record import HeaderBlockRecord
+from chives.wallet.derivation_record import DerivationRecord
+from chives.wallet.settings.settings_objects import BackupInitialized
+from chives.wallet.transaction_record import TransactionRecord
+from chives.wallet.util.backup_utils import open_backup_file
+from chives.wallet.util.wallet_types import WalletType
+from chives.wallet.wallet_action import WalletAction
+from chives.wallet.wallet_blockchain import ReceiveBlockResult
+from chives.wallet.wallet_state_manager import WalletStateManager
+from chives.util.profiler import profile_task
 
 
 class WalletNode:
@@ -115,7 +115,7 @@ class WalletNode:
     def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
-            self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
+            self.log.warning("No keys present. Create keys with the UI, or with the 'chives keys' program.")
             return None
 
         private_key: Optional[PrivateKey] = None

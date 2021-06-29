@@ -1,25 +1,25 @@
 import asyncio
 import time
 import pytest
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.peer_info import PeerInfo
+from chives.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet import did_wallet_puzzles
+from chives.wallet.did_wallet.did_wallet import DIDWallet
+from chives.wallet.did_wallet import did_wallet_puzzles
 from clvm_tools import binutils
-from chia.types.blockchain_format.program import Program
-from chia.wallet.derivation_record import DerivationRecord
-from chia.types.coin_solution import CoinSolution
+from chives.types.blockchain_format.program import Program
+from chives.wallet.derivation_record import DerivationRecord
+from chives.types.coin_solution import CoinSolution
 from blspy import AugSchemeMPL
-from chia.types.spend_bundle import SpendBundle
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chives.types.spend_bundle import SpendBundle
+from chives.wallet.transaction_record import TransactionRecord
+from chives.wallet.derive_keys import master_sk_to_wallet_sk
+from chives.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert
 from secrets import token_bytes
-from chia.wallet.util.transaction_type import TransactionType
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chives.wallet.util.transaction_type import TransactionType
+from chives.consensus.default_constants import DEFAULT_CONSTANTS
 
 
 @pytest.fixture(scope="module")

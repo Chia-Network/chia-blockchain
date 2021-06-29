@@ -1,8 +1,8 @@
 import dataclasses
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.byte_types import hexstr_to_bytes
+from chives.util.ints import uint8, uint32, uint64, uint128
 
 
 @dataclasses.dataclass(frozen=True)
@@ -41,7 +41,7 @@ class ConsensusConstants:
     MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
-    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
+    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chives.
     MAX_COIN_AMOUNT: int
     # Max block cost in clvm cost units
     MAX_BLOCK_COST_CLVM: int

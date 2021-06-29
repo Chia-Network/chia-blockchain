@@ -1,12 +1,12 @@
 from typing import List, Optional
 
-from chia.consensus.block_record import BlockRecord
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import RespondBlock
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.types.full_block import FullBlock
-from chia.util.api_decorators import api_request
-from chia.util.ints import uint8
+from chives.consensus.block_record import BlockRecord
+from chives.full_node.full_node_api import FullNodeAPI
+from chives.protocols.full_node_protocol import RespondBlock
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chives.types.full_block import FullBlock
+from chives.util.api_decorators import api_request
+from chives.util.ints import uint8
 
 
 class FullNodeSimulator(FullNodeAPI):

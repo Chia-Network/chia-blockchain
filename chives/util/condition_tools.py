@@ -2,15 +2,15 @@ from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import G1Element
 
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.clvm import int_from_bytes
-from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint64
+from chives.types.announcement import Announcement
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.program import Program, SerializedProgram
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.condition_opcodes import ConditionOpcode
+from chives.types.condition_with_args import ConditionWithArgs
+from chives.util.clvm import int_from_bytes
+from chives.util.errors import ConsensusError, Err
+from chives.util.ints import uint64
 
 # TODO: review each `assert` and consider replacing with explicit checks
 #       since asserts can be stripped with python `-OO` flag

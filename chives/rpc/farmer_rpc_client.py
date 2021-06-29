@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
-from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chives.rpc.rpc_client import RpcClient
+from chives.types.blockchain_format.sized_bytes import bytes32
 
 
 class FarmerRpcClient(RpcClient):

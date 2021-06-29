@@ -3,18 +3,18 @@ import time
 
 import pytest
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.protocols import full_node_protocol, wallet_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err
-from chia.util.ints import uint16, uint32
-from chia.wallet.transaction_record import TransactionRecord
+from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chives.consensus.blockchain import ReceiveBlockResult
+from chives.protocols import full_node_protocol, wallet_protocol
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import Message
+from chives.simulator.full_node_simulator import FullNodeSimulator
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.mempool_inclusion_status import MempoolInclusionStatus
+from chives.types.peer_info import PeerInfo
+from chives.util.errors import Err
+from chives.util.ints import uint16, uint32
+from chives.wallet.transaction_record import TransactionRecord
 from tests.core.full_node.test_full_node import add_dummy_connection
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert

@@ -37,7 +37,7 @@ steps:
   # Install an Apple certificate required to build on a macOS agent machine
   - task: InstallAppleCertificate@2
     inputs:
-      certSecureFile: 'chia-apple-dev-id-app.p12'
+      certSecureFile: 'chives-apple-dev-id-app.p12'
       certPwd: $(CHIVES_APPLE_DEV_ID_APP_PASS)
       keychain: temp
       deleteCert: true
@@ -49,7 +49,7 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
+      pip install -i https://pypi.chives.net/simple/ miniupnpc==2.2.2
       cd build_scripts
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
       python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
@@ -58,8 +58,8 @@ steps:
   - script: |
       . ./activate
       clang --version
-      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
+      pip wheel --use-pep517 --extra-index-url https://pypi.chives.net/simple/ --wheel-dir=wheels .
+      pip install --no-index --find-links=./wheels/ chives-blockchain
     displayName: "Build and install wheels"
 
   - task: NodeTool@0
@@ -108,12 +108,12 @@ steps:
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chives-net/builds/
     displayName: "Upload to S3"
 
   - bash: |
       pip3 install py3createtorrent
-      py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/$CHIVES_VERSION.dmg
+      py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.torrent --webseed https://download-chives-net.s3.us-west-2.amazonaws.com/install/$CHIVES_VERSION.dmg
       ls
     displayName: "Create torrent file"
     condition: contains(variables['build.sourceBranch'], 'refs/tags/')
@@ -122,8 +122,8 @@ steps:
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.sha256 s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.torrent s3://download-chia-net/torrents/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg s3://download-chives-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.sha256 s3://download-chives-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.torrent s3://download-chives-net/torrents/
     displayName: "Upload Release Files"
     condition: contains(variables['build.sourceBranch'], 'refs/tags/')

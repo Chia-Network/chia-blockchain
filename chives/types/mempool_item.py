@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import List
 
-from chia.consensus.cost_calculator import NPCResult
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
-from chia.util.streamable import Streamable, streamable
+from chives.consensus.cost_calculator import NPCResult
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.program import SerializedProgram
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.spend_bundle import SpendBundle
+from chives.util.ints import uint64
+from chives.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

@@ -3,14 +3,14 @@ import asyncio
 import aiohttp
 import pytest
 
-from chia.protocols.shared_protocol import protocol_version
-from chia.server.outbound_message import NodeType
-from chia.server.server import ChiaServer, ssl_context_for_client
-from chia.server.ws_connection import WSChiaConnection
-from chia.ssl.create_ssl import generate_ca_signed_cert
-from chia.types.peer_info import PeerInfo
+from chives.protocols.shared_protocol import protocol_version
+from chives.server.outbound_message import NodeType
+from chives.server.server import ChiaServer, ssl_context_for_client
+from chives.server.ws_connection import WSChiaConnection
+from chives.ssl.create_ssl import generate_ca_signed_cert
+from chives.types.peer_info import PeerInfo
 from tests.block_tools import test_constants
-from chia.util.ints import uint16
+from chives.util.ints import uint16
 from tests.setup_nodes import (
     bt,
     self_hostname,
@@ -105,10 +105,10 @@ class TestSSL:
         pub_crt = farmer_server._private_key_path.parent / "non_valid.crt"
         pub_key = farmer_server._private_key_path.parent / "non_valid.key"
         generate_ca_signed_cert(
-            farmer_server.chia_ca_crt_path.read_bytes(), farmer_server.chia_ca_key_path.read_bytes(), pub_crt, pub_key
+            farmer_server.chives_ca_crt_path.read_bytes(), farmer_server.chives_ca_key_path.read_bytes(), pub_crt, pub_key
         )
         ssl_context = ssl_context_for_client(
-            farmer_server.chia_ca_crt_path, farmer_server.chia_ca_crt_path, pub_crt, pub_key
+            farmer_server.chives_ca_crt_path, farmer_server.chives_ca_crt_path, pub_crt, pub_key
         )
         connected = await establish_connection(farmer_server, 12312, ssl_context)
         assert connected is False
@@ -128,13 +128,13 @@ class TestSSL:
         pub_crt = full_node_server._private_key_path.parent / "p2p.crt"
         pub_key = full_node_server._private_key_path.parent / "p2p.key"
         generate_ca_signed_cert(
-            full_node_server.chia_ca_crt_path.read_bytes(),
-            full_node_server.chia_ca_key_path.read_bytes(),
+            full_node_server.chives_ca_crt_path.read_bytes(),
+            full_node_server.chives_ca_key_path.read_bytes(),
             pub_crt,
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            full_node_server.chia_ca_crt_path, full_node_server.chia_ca_crt_path, pub_crt, pub_key
+            full_node_server.chives_ca_crt_path, full_node_server.chives_ca_crt_path, pub_crt, pub_key
         )
         connected = await establish_connection(full_node_server, 12312, ssl_context)
         assert connected is True
@@ -148,10 +148,10 @@ class TestSSL:
         pub_crt = wallet_server._private_key_path.parent / "p2p.crt"
         pub_key = wallet_server._private_key_path.parent / "p2p.key"
         generate_ca_signed_cert(
-            wallet_server.chia_ca_crt_path.read_bytes(), wallet_server.chia_ca_key_path.read_bytes(), pub_crt, pub_key
+            wallet_server.chives_ca_crt_path.read_bytes(), wallet_server.chives_ca_key_path.read_bytes(), pub_crt, pub_key
         )
         ssl_context = ssl_context_for_client(
-            wallet_server.chia_ca_crt_path, wallet_server.chia_ca_crt_path, pub_crt, pub_key
+            wallet_server.chives_ca_crt_path, wallet_server.chives_ca_crt_path, pub_crt, pub_key
         )
         connected = await establish_connection(wallet_server, 12312, ssl_context)
         assert connected is False
@@ -180,13 +180,13 @@ class TestSSL:
         pub_crt = harvester_server._private_key_path.parent / "p2p.crt"
         pub_key = harvester_server._private_key_path.parent / "p2p.key"
         generate_ca_signed_cert(
-            harvester_server.chia_ca_crt_path.read_bytes(),
-            harvester_server.chia_ca_key_path.read_bytes(),
+            harvester_server.chives_ca_crt_path.read_bytes(),
+            harvester_server.chives_ca_key_path.read_bytes(),
             pub_crt,
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            harvester_server.chia_ca_crt_path, harvester_server.chia_ca_crt_path, pub_crt, pub_key
+            harvester_server.chives_ca_crt_path, harvester_server.chives_ca_crt_path, pub_crt, pub_key
         )
         connected = await establish_connection(harvester_server, 12312, ssl_context)
         assert connected is False
@@ -211,16 +211,16 @@ class TestSSL:
         introducer_api, introducer_server = introducer
 
         # Create not authenticated cert
-        pub_crt = introducer_server.chia_ca_key_path.parent / "p2p.crt"
-        pub_key = introducer_server.chia_ca_key_path.parent / "p2p.key"
+        pub_crt = introducer_server.chives_ca_key_path.parent / "p2p.crt"
+        pub_key = introducer_server.chives_ca_key_path.parent / "p2p.key"
         generate_ca_signed_cert(
-            introducer_server.chia_ca_crt_path.read_bytes(),
-            introducer_server.chia_ca_key_path.read_bytes(),
+            introducer_server.chives_ca_crt_path.read_bytes(),
+            introducer_server.chives_ca_key_path.read_bytes(),
             pub_crt,
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            introducer_server.chia_ca_crt_path, introducer_server.chia_ca_crt_path, pub_crt, pub_key
+            introducer_server.chives_ca_crt_path, introducer_server.chives_ca_crt_path, pub_crt, pub_key
         )
         connected = await establish_connection(introducer_server, 12312, ssl_context)
         assert connected is True
@@ -233,13 +233,13 @@ class TestSSL:
         pub_crt = timelord_server._private_key_path.parent / "p2p.crt"
         pub_key = timelord_server._private_key_path.parent / "p2p.key"
         generate_ca_signed_cert(
-            timelord_server.chia_ca_crt_path.read_bytes(),
-            timelord_server.chia_ca_key_path.read_bytes(),
+            timelord_server.chives_ca_crt_path.read_bytes(),
+            timelord_server.chives_ca_key_path.read_bytes(),
             pub_crt,
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            timelord_server.chia_ca_crt_path, timelord_server.chia_ca_crt_path, pub_crt, pub_key
+            timelord_server.chives_ca_crt_path, timelord_server.chives_ca_crt_path, pub_crt, pub_key
         )
         connected = await establish_connection(timelord_server, 12312, ssl_context)
         assert connected is False

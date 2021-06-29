@@ -6,18 +6,18 @@ from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
-from chia.cmds.init_funcs import chia_full_version_str
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake
-from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.rate_limits import RateLimiter
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint8, uint16
+from chives.cmds.init_funcs import chives_full_version_str
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.protocols.shared_protocol import Capability, Handshake
+from chives.server.outbound_message import Message, NodeType, make_msg
+from chives.server.rate_limits import RateLimiter
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.peer_info import PeerInfo
+from chives.util.errors import Err, ProtocolError
+from chives.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from chia.util.network import class_for_type, is_localhost
+from chives.util.network import class_for_type, is_localhost
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
@@ -110,7 +110,7 @@ class WSChiaConnection:
                 Handshake(
                     network_id,
                     protocol_version,
-                    chia_full_version_str(),
+                    chives_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
                     [(uint16(Capability.BASE.value), "1")],
@@ -148,7 +148,7 @@ class WSChiaConnection:
                 Handshake(
                     network_id,
                     protocol_version,
-                    chia_full_version_str(),
+                    chives_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
                     [(uint16(Capability.BASE.value), "1")],

@@ -1,4 +1,4 @@
-from chia.util.ints import uint64
+from chives.util.ints import uint64
 
 from .constants import ConsensusConstants
 

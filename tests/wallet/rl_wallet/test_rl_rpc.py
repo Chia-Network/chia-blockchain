@@ -2,15 +2,15 @@ import asyncio
 
 import pytest
 
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16
-from chia.wallet.util.wallet_types import WalletType
+from chives.rpc.wallet_rpc_api import WalletRpcApi
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.mempool_inclusion_status import MempoolInclusionStatus
+from chives.types.peer_info import PeerInfo
+from chives.util.bech32m import encode_puzzle_hash
+from chives.util.ints import uint16
+from chives.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.wallet.sync.test_wallet_sync import wallet_height_at_least

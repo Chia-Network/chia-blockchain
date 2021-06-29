@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
-from chia.util.streamable import streamable, Streamable
-from chia.wallet.cc_wallet.ccparent import CCParent
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.ints import uint64
+from chives.util.streamable import streamable, Streamable
+from chives.wallet.cc_wallet.ccparent import CCParent
+from chives.types.blockchain_format.program import Program
+from chives.types.blockchain_format.coin import Coin
 
 
 @dataclass(frozen=True)

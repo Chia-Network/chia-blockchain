@@ -6,20 +6,20 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element
 
-import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.consensus.constants import ConsensusConstants
-from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import load_config, save_config
-from chia.util.ints import uint32, uint64
-from chia.util.keychain import Keychain
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+import chives.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from chives.consensus.coinbase import create_puzzlehash_for_pk
+from chives.consensus.constants import ConsensusConstants
+from chives.protocols import farmer_protocol, harvester_protocol
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import NodeType, make_msg
+from chives.server.ws_connection import WSChiaConnection
+from chives.types.blockchain_format.proof_of_space import ProofOfSpace
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.bech32m import decode_puzzle_hash
+from chives.util.config import load_config, save_config
+from chives.util.ints import uint32, uint64
+from chives.util.keychain import Keychain
+from chives.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class Farmer:
         ]
 
         if len(self.get_public_keys()) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
+            error_str = "No keys exist. Please run 'chives keys generate' or open the UI."
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
@@ -88,7 +88,7 @@ class Farmer:
         assert len(self.farmer_target) == 32
         assert len(self.pool_target) == 32
         if len(self.pool_sks_map) == 0:
-            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
+            error_str = "No keys exist. Please run 'chives keys generate' or open the UI."
             raise RuntimeError(error_str)
 
     async def _start(self):

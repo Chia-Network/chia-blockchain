@@ -15,17 +15,17 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import protocol_version
-from chia.server.introducer_peers import IntroducerPeers
-from chia.server.outbound_message import Message, NodeType
-from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
-from chia.util.network import is_localhost, is_in_network
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.protocols.shared_protocol import protocol_version
+from chives.server.introducer_peers import IntroducerPeers
+from chives.server.outbound_message import Message, NodeType
+from chives.server.ssl_context import private_ssl_paths, public_ssl_paths
+from chives.server.ws_connection import WSChiaConnection
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.peer_info import PeerInfo
+from chives.util.errors import Err, ProtocolError
+from chives.util.ints import uint16
+from chives.util.network import is_localhost, is_in_network
 
 
 def ssl_context_for_server(
@@ -72,7 +72,7 @@ class ChiaServer:
         root_path: Path,
         config: Dict,
         private_ca_crt_key: Tuple[Path, Path],
-        chia_ca_crt_key: Tuple[Path, Path],
+        chives_ca_crt_key: Tuple[Path, Path],
         name: str = None,
         introducer_peers: Optional[IntroducerPeers] = None,
     ):
@@ -122,7 +122,7 @@ class ChiaServer:
         else:
             self.p2p_crt_path, self.p2p_key_path = None, None
         self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
-        self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
+        self.chives_ca_crt_path, self.chives_ca_key_path = chives_ca_crt_key
         self.node_id = self.my_id()
 
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
@@ -203,7 +203,7 @@ class ChiaServer:
         else:
             self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
             ssl_context = ssl_context_for_server(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+                self.chives_ca_crt_path, self.chives_ca_key_path, self.p2p_crt_path, self.p2p_key_path
             )
 
         self.site = web.TCPSite(
@@ -337,7 +337,7 @@ class ChiaServer:
             )
         else:
             ssl_context = ssl_context_for_client(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+                self.chives_ca_crt_path, self.chives_ca_key_path, self.p2p_crt_path, self.p2p_key_path
             )
         session = None
         connection: Optional[WSChiaConnection] = None

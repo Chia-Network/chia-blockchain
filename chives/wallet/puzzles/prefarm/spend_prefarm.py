@@ -3,15 +3,15 @@ import asyncio
 from blspy import G2Element
 from clvm_tools import binutils
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.program import Program
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint32, uint16
+from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chives.rpc.full_node_rpc_client import FullNodeRpcClient
+from chives.types.blockchain_format.program import Program
+from chives.types.coin_solution import CoinSolution
+from chives.types.spend_bundle import SpendBundle
+from chives.util.bech32m import decode_puzzle_hash
+from chives.util.config import load_config
+from chives.util.default_root import DEFAULT_ROOT_PATH
+from chives.util.ints import uint32, uint16
 
 
 async def main() -> None:

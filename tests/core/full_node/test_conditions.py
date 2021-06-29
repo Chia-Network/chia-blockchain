@@ -14,16 +14,16 @@ from blspy import G2Element
 
 from clvm_tools.binutils import assemble
 
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.consensus.constants import ConsensusConstants
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.program import Program
-from chia.types.coin_solution import CoinSolution
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
+from chives.consensus.blockchain import ReceiveBlockResult
+from chives.consensus.constants import ConsensusConstants
+from chives.types.announcement import Announcement
+from chives.types.blockchain_format.program import Program
+from chives.types.coin_solution import CoinSolution
+from chives.types.condition_opcodes import ConditionOpcode
+from chives.types.full_block import FullBlock
+from chives.types.spend_bundle import SpendBundle
 from tests.block_tools import BlockTools, test_constants
-from chia.util.errors import Err
+from chives.util.errors import Err
 
 from .ram_db import create_ram_blockchain
 

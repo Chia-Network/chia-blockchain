@@ -5,19 +5,19 @@ from typing import Callable, List, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from chia.harvester.harvester import Harvester
-from chia.plotting.plot_tools import PlotInfo, parse_plot_info
-from chia.protocols import harvester_protocol
-from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request, peer_required
-from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.derive_keys import master_sk_to_local_sk
+from chives.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from chives.harvester.harvester import Harvester
+from chives.plotting.plot_tools import PlotInfo, parse_plot_info
+from chives.protocols import harvester_protocol
+from chives.protocols.farmer_protocol import FarmingInfo
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import make_msg
+from chives.server.ws_connection import WSChiaConnection
+from chives.types.blockchain_format.proof_of_space import ProofOfSpace
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.api_decorators import api_request, peer_required
+from chives.util.ints import uint8, uint32, uint64
+from chives.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:

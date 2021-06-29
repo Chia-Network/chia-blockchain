@@ -25,7 +25,7 @@ config/keys.yaml
 config/plots.yaml
 
 # Bundled code
-chia-blockchain.tar.gz.tar.gz
+chives-blockchain.tar.gz.tar.gz
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -66,7 +66,7 @@ activate
 .idea
 
 # Packaging
-chia-blockchain.tar.gz
+chives-blockchain.tar.gz
 
 # Timelord utilities
 vdf_bench
@@ -88,13 +88,13 @@ main.sym
 *.recompiled
 
 # Dev config react
-# chia-blockchain-gui/src/dev_config.js
+# chives-blockchain-gui/src/dev_config.js
 # React built app
-chia-blockchain-gui/.eslintcache
-chia-blockchain-gui/build
+chives-blockchain-gui/.eslintcache
+chives-blockchain-gui/build
 build_scripts/dist
 build_scripts/*.Dmg
-chia-blockchain-gui/src/locales/_build
+chives-blockchain-gui/src/locales/_build
 build_scripts\win_build
 build_scripts/win_build
 win_code_sign_cert.p12

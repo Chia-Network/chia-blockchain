@@ -6,13 +6,13 @@ from typing import List
 import aiosqlite
 import pytest
 
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.types.full_block import FullBlock
-from chia.util.db_wrapper import DBWrapper
-from chia.util.path import mkdir
+from chives.consensus.blockchain import Blockchain
+from chives.consensus.constants import ConsensusConstants
+from chives.full_node.block_store import BlockStore
+from chives.full_node.coin_store import CoinStore
+from chives.types.full_block import FullBlock
+from chives.util.db_wrapper import DBWrapper
+from chives.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
 
 

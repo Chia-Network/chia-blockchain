@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import List, Tuple
 
-from chia.util.ints import uint8, uint16
-from chia.util.streamable import Streamable, streamable
+from chives.util.ints import uint8, uint16
+from chives.util.streamable import Streamable, streamable
 
 protocol_version = "0.0.32"
 

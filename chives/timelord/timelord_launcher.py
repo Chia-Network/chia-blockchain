@@ -8,10 +8,10 @@ from typing import Dict, List
 
 import pkg_resources
 
-from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.setproctitle import setproctitle
+from chives.util.chives_logging import initialize_logging
+from chives.util.config import load_config
+from chives.util.default_root import DEFAULT_ROOT_PATH
+from chives.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
@@ -33,7 +33,7 @@ async def kill_processes():
 
 
 def find_vdf_client() -> pathlib.Path:
-    p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
+    p = pathlib.Path(pkg_resources.get_distribution("chivesvdf").location) / "vdf_client"
     if p.is_file():
         return p
     raise FileNotFoundError("can't find vdf_client binary")
@@ -87,7 +87,7 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
 
 def main():
     root_path = DEFAULT_ROOT_PATH
-    setproctitle("chia_timelord_launcher")
+    setproctitle("chives_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
     config = net_config["timelord_launcher"]
     initialize_logging("TLauncher", config["logging"], root_path)

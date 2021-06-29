@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Dict, List
 
-from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash
-from chia.util.ints import uint32, uint64
-from chia.wallet.transaction_record import TransactionRecord
+from chives.rpc.rpc_client import RpcClient
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.bech32m import decode_puzzle_hash
+from chives.util.ints import uint32, uint64
+from chives.wallet.transaction_record import TransactionRecord
 
 
 class WalletRpcClient(RpcClient):
@@ -23,7 +23,7 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
+                {"host": "https://backup.chives.net", "fingerprint": fingerprint, "type": "start"},
             )
 
         except ValueError as e:
@@ -34,7 +34,7 @@ class WalletRpcClient(RpcClient):
             return await self.fetch(
                 "log_in",
                 {
-                    "host": "https://backup.chia.net",
+                    "host": "https://backup.chives.net",
                     "fingerprint": fingerprint,
                     "type": "restore_backup",
                     "file_path": file_path,
@@ -47,7 +47,7 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
+                {"host": "https://backup.chives.net", "fingerprint": fingerprint, "type": "skip"},
             )
         except ValueError as e:
             return e.args[0]

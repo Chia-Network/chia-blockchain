@@ -1,6 +1,6 @@
 from typing import Any, BinaryIO
 
-from chia.util.struct_stream import StructStream
+from chives.util.struct_stream import StructStream
 
 
 class int8(StructStream):

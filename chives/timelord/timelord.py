@@ -7,30 +7,30 @@ import time
 import traceback
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
-from chiavdf import create_discriminant
+from chivesvdf import create_discriminant
 
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
-from chia.protocols import timelord_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.server.server import ChiaServer
-from chia.timelord.iters_from_block import iters_from_block
-from chia.timelord.timelord_state import LastState
-from chia.timelord.types import Chain, IterationType, StateType
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import (
+from chives.consensus.constants import ConsensusConstants
+from chives.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
+from chives.protocols import timelord_protocol
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import NodeType, make_msg
+from chives.server.server import ChiaServer
+from chives.timelord.iters_from_block import iters_from_block
+from chives.timelord.timelord_state import LastState
+from chives.timelord.types import Chain, IterationType, StateType
+from chives.types.blockchain_format.classgroup import ClassgroupElement
+from chives.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chives.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chives.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chives.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chives.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

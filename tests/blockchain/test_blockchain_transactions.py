@@ -4,14 +4,14 @@ import logging
 import pytest
 from clvm.casts import int_to_bytes
 
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.protocols import full_node_protocol
-from chia.types.announcement import Announcement
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
-from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint64
+from chives.consensus.blockchain import ReceiveBlockResult
+from chives.protocols import full_node_protocol
+from chives.types.announcement import Announcement
+from chives.types.condition_opcodes import ConditionOpcode
+from chives.types.condition_with_args import ConditionWithArgs
+from chives.types.spend_bundle import SpendBundle
+from chives.util.errors import ConsensusError, Err
+from chives.util.ints import uint64
 from tests.wallet_tools import WalletTool
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import bt, setup_two_nodes, test_constants

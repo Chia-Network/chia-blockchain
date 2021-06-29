@@ -1,4 +1,4 @@
-from chia.util.byte_types import make_sized_bytes
+from chives.util.byte_types import make_sized_bytes
 
 bytes4 = make_sized_bytes(4)
 bytes8 = make_sized_bytes(8)

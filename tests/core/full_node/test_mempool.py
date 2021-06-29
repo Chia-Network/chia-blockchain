@@ -5,31 +5,31 @@ from typing import Dict, List, Optional, Tuple, Callable
 
 import pytest
 
-import chia.server.ws_connection as ws
+import chives.server.ws_connection as ws
 
-from chia.full_node.mempool import Mempool
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
-from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import conditions_for_solution
-from chia.util.errors import Err
-from chia.util.ints import uint64
-from chia.util.hash import std_hash
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request, peer_required, bytes_required
+from chives.full_node.mempool import Mempool
+from chives.full_node.full_node_api import FullNodeAPI
+from chives.protocols import full_node_protocol
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.announcement import Announcement
+from chives.types.blockchain_format.coin import Coin
+from chives.types.coin_solution import CoinSolution
+from chives.types.condition_opcodes import ConditionOpcode
+from chives.types.condition_with_args import ConditionWithArgs
+from chives.types.spend_bundle import SpendBundle
+from chives.util.clvm import int_to_bytes
+from chives.util.condition_tools import conditions_for_solution
+from chives.util.errors import Err
+from chives.util.ints import uint64
+from chives.util.hash import std_hash
+from chives.types.mempool_inclusion_status import MempoolInclusionStatus
+from chives.util.api_decorators import api_request, peer_required, bytes_required
 
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chives.types.blockchain_format.program import Program, INFINITE_COST
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32

@@ -6,22 +6,22 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
-from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.server.start_full_node import SERVICE_NAME
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.util.block_cache import BlockCache
+from chives.consensus.block_header_validation import validate_finished_header_block
+from chives.consensus.block_record import BlockRecord
+from chives.consensus.blockchain import Blockchain
+from chives.consensus.default_constants import DEFAULT_CONSTANTS
+from chives.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chives.consensus.full_block_to_block_record import block_to_block_record
+from chives.full_node.block_store import BlockStore
+from chives.full_node.coin_store import CoinStore
+from chives.server.start_full_node import SERVICE_NAME
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chives.util.block_cache import BlockCache
 from tests.block_tools import test_constants
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.generator_tools import get_block_header
+from chives.util.config import load_config
+from chives.util.default_root import DEFAULT_ROOT_PATH
+from chives.util.generator_tools import get_block_header
 from tests.setup_nodes import bt
 
 try:
@@ -30,16 +30,16 @@ except ImportError:
     pass
 
 
-from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (  # type: ignore
+from chives.consensus.pot_iterations import calculate_iterations_quality
+from chives.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_sub_epoch_segments,
     _validate_summaries_weight,
 )
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32, uint64
+from chives.types.full_block import FullBlock
+from chives.types.header_block import HeaderBlock
+from chives.util.ints import uint32, uint64
 from tests.core.fixtures import (
     default_400_blocks,
     default_1000_blocks,

@@ -1,9 +1,9 @@
 from typing import Dict, List, Optional
 
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.errors import Err
-from chia.util.merkle_set import MerkleSet
+from chives.types.blockchain_format.coin import Coin, hash_coin_list
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.errors import Err
+from chives.util.merkle_set import MerkleSet
 
 
 def validate_block_merkle_roots(

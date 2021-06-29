@@ -4,13 +4,13 @@ from typing import Optional
 
 from bitstring import BitArray
 from blspy import G1Element
-from chiapos import Verifier
+from chivespos import Verifier
 
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash
-from chia.util.ints import uint8
-from chia.util.streamable import Streamable, streamable
+from chives.consensus.constants import ConsensusConstants
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.hash import std_hash
+from chives.util.ints import uint8
+from chives.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 

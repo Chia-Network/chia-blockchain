@@ -20,7 +20,7 @@ if [ "$(uname -m)" = "armv7l" ]; then
 	echo "WARNING:"
 	echo "The Chives Blockchain requires a 64 bit OS and this is 32 bit armv7l"
 	echo "For more information, see"
-	echo "https://github.com/HiveProject2021/chia-blockchain/wiki/Raspberry-Pi"
+	echo "https://github.com/HiveProject2021/chives-blockchain/wiki/Raspberry-Pi"
 	echo "Exiting."
 	exit 1
 fi
@@ -116,17 +116,17 @@ python -m pip install --upgrade pip
 python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
+python -m pip install --extra-index-url https://pypi.chives.net/simple/ miniupnpc==2.2.2
+python -m pip install -e . --extra-index-url https://pypi.chives.net/simple/
 
 echo ""
 echo "Chives blockchain install.sh complete."
 echo "For assistance join us on Keybase in the #testnet chat channel:"
-echo "https://keybase.io/team/chia_network.public"
+echo "https://keybase.io/team/chives_network.public"
 echo ""
-echo "Try the Quick Start Guide to running chia-blockchain:"
-echo "https://github.com/HiveProject2021/chia-blockchain/wiki/Quick-Start-Guide"
+echo "Try the Quick Start Guide to running chives-blockchain:"
+echo "https://github.com/HiveProject2021/chives-blockchain/wiki/Quick-Start-Guide"
 echo ""
 echo "To install the GUI type 'sh install-gui.sh' after '. ./activate'."
 echo ""
-echo "Type '. ./activate' and then 'chia init' to begin."
+echo "Type '. ./activate' and then 'chives init' to begin."

@@ -7,31 +7,31 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey, G1Element
 
-from chia.cmds.init_funcs import check_keys
-from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
-from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.path import path_from_root
-from chia.util.ws_message import WsRpcMessage, create_payload_dict
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
-from chia.wallet.util.trade_utils import trade_record_to_dict
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
+from chives.cmds.init_funcs import check_keys
+from chives.consensus.block_rewards import calculate_base_farmer_reward
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import NodeType, make_msg
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chives.util.byte_types import hexstr_to_bytes
+from chives.util.ints import uint32, uint64
+from chives.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chives.util.path import path_from_root
+from chives.util.ws_message import WsRpcMessage, create_payload_dict
+from chives.wallet.cc_wallet.cc_wallet import CCWallet
+from chives.wallet.rl_wallet.rl_wallet import RLWallet
+from chives.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+from chives.wallet.did_wallet.did_wallet import DIDWallet
+from chives.wallet.trade_record import TradeRecord
+from chives.wallet.transaction_record import TransactionRecord
+from chives.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
+from chives.wallet.util.trade_utils import trade_record_to_dict
+from chives.wallet.util.transaction_type import TransactionType
+from chives.wallet.util.wallet_types import WalletType
+from chives.wallet.wallet_info import WalletInfo
+from chives.wallet.wallet_node import WalletNode
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -43,7 +43,7 @@ class WalletRpcApi:
     def __init__(self, wallet_node: WalletNode):
         assert wallet_node is not None
         self.service = wallet_node
-        self.service_name = "chia_wallet"
+        self.service_name = "chives_wallet"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
@@ -116,7 +116,7 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
+        return [create_payload_dict("state_changed", data, "chives_wallet", "wallet_ui")]
 
     async def _stop_wallet(self):
         """

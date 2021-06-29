@@ -2,19 +2,19 @@ import pathlib
 from multiprocessing import freeze_support
 from typing import Dict
 
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
-from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config_cli, load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.keychain import Keychain
-from chia.wallet.wallet_node import WalletNode
+from chives.consensus.constants import ConsensusConstants
+from chives.consensus.default_constants import DEFAULT_CONSTANTS
+from chives.rpc.wallet_rpc_api import WalletRpcApi
+from chives.server.outbound_message import NodeType
+from chives.server.start_service import run_service
+from chives.types.peer_info import PeerInfo
+from chives.util.config import load_config_cli, load_config
+from chives.util.default_root import DEFAULT_ROOT_PATH
+from chives.util.keychain import Keychain
+from chives.wallet.wallet_node import WalletNode
 
 # See: https://bugs.python.org/issue29288
-from chia.wallet.wallet_node_api import WalletNodeAPI
+from chives.wallet.wallet_node_api import WalletNodeAPI
 
 "".encode("idna")
 

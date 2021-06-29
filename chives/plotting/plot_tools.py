@@ -9,13 +9,13 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element, PrivateKey
-from chiapos import DiskProver
+from chivespos import DiskProver
 
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, save_config
-from chia.wallet.derive_keys import master_sk_to_local_sk
+from chives.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chives.types.blockchain_format.proof_of_space import ProofOfSpace
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.util.config import load_config, save_config
+from chives.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 

@@ -3,16 +3,16 @@ from typing import Callable, Optional
 
 from blspy import AugSchemeMPL, G2Element
 
-import chia.server.ws_connection as ws
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from chia.farmer.farmer import Farmer
-from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.util.api_decorators import api_request, peer_required
-from chia.util.ints import uint32, uint64
+import chives.server.ws_connection as ws
+from chives.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from chives.farmer.farmer import Farmer
+from chives.protocols import farmer_protocol, harvester_protocol
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import NodeType, make_msg
+from chives.types.blockchain_format.pool_target import PoolTarget
+from chives.types.blockchain_format.proof_of_space import ProofOfSpace
+from chives.util.api_decorators import api_request, peer_required
+from chives.util.ints import uint32, uint64
 
 
 class FarmerAPI:

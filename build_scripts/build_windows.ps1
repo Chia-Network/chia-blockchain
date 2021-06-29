@@ -50,17 +50,17 @@ if(Test-Path '.\build_scripts\dist')			{
 	# Remove-Item '.\build_scripts\dist' -Recurse
 }
 
-if(Test-Path '.\chia-blockchain-gui\daemon')			{
-	Remove-Item '.\chia-blockchain-gui\daemon' -Recurse
+if(Test-Path '.\chives-blockchain-gui\daemon')			{
+	Remove-Item '.\chives-blockchain-gui\daemon' -Recurse
 }
-if(Test-Path '.\chia-blockchain-gui\release-builds')			{
-	# Remove-Item '.\chia-blockchain-gui\release-builds' -Recurse
+if(Test-Path '.\chives-blockchain-gui\release-builds')			{
+	# Remove-Item '.\chives-blockchain-gui\release-builds' -Recurse
 }
-if(Test-Path '.\chia-blockchain-gui\Chia-win32-x64')			{
-	# Remove-Item '.\chia-blockchain-gui\Chia-win32-x64' -Recurse
+if(Test-Path '.\chives-blockchain-gui\Chia-win32-x64')			{
+	# Remove-Item '.\chives-blockchain-gui\Chia-win32-x64' -Recurse
 }
-if(Test-Path '.\chia-blockchain-gui\build')			{
-	# Remove-Item '.\chia-blockchain-gui\build' -Recurse
+if(Test-Path '.\chives-blockchain-gui\build')			{
+	# Remove-Item '.\chives-blockchain-gui\build' -Recurse
 }
 
 Set-Location -Path ".\build_scripts\win_build" -PassThru
@@ -70,7 +70,7 @@ git status
 Write-Output "   ---"
 Write-Output "curl miniupnpc"
 Write-Output "   ---"
-Invoke-WebRequest -Uri "https://pypi.chia.net/simple/miniupnpc/miniupnpc-2.2.2-cp39-cp39-win_amd64.whl" -OutFile "miniupnpc-2.2.2-cp39-cp39-win_amd64.whl"
+Invoke-WebRequest -Uri "https://pypi.chives.net/simple/miniupnpc/miniupnpc-2.2.2-cp39-cp39-win_amd64.whl" -OutFile "miniupnpc-2.2.2-cp39-cp39-win_amd64.whl"
 Write-Output "Using win_amd64 python 3.9 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
 Write-Output "Actual build from https://github.com/miniupnp/miniupnp/commit/7783ac1545f70e3341da5866069bde88244dd848"
 If ($LastExitCode -gt 0){
@@ -106,12 +106,12 @@ Write-Output "Chives Version is: $env:CHIVES_INSTALLER_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"
-Write-Output "Build chia-blockchain wheels"
+Write-Output "Build chives-blockchain wheels"
 Write-Output "   ---"
-pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
+pip wheel --use-pep517 --extra-index-url https://pypi.chives.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
 
 Write-Output "   ---"
-Write-Output "Install chia-blockchain wheels into venv with pip"
+Write-Output "Install chives-blockchain wheels into venv with pip"
 Write-Output "   ---"
 
 Write-Output "pip install miniupnpc"
@@ -120,20 +120,20 @@ pip install --no-index --find-links=.\win_build\ miniupnpc
 # Write-Output "pip install setproctitle"
 # pip install setproctitle==1.2.2
 
-Write-Output "pip install chia-blockchain"
-pip install --no-index --find-links=.\win_build\ chia-blockchain
+Write-Output "pip install chives-blockchain"
+pip install --no-index --find-links=.\win_build\ chives-blockchain
 
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chives .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
+$SPEC_FILE = (python -c 'import chives; print(chives.PYINSTALLER_SPEC_PATH)') -join "`n"
 pyinstaller --paths C:\Python39 --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
-Write-Output "Copy chives executables to chia-blockchain-gui\"
+Write-Output "Copy chives executables to chives-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
-Set-Location -Path "..\chia-blockchain-gui" -PassThru
+Copy-Item "dist\daemon" -Destination "..\chives-blockchain-gui\" -Recurse
+Set-Location -Path "..\chives-blockchain-gui" -PassThru
 
 git pull origin main
 git status
@@ -158,19 +158,19 @@ If ($LastExitCode -gt 0){
 }
 
 Write-Output "   ---"
-Write-Output "Increase the stack for chives command for (chia plots create) chiapos limitations"
+Write-Output "Increase the stack for chives command for (chives plots create) chivespos limitations"
 # editbin.exe needs to be in the path
-editbin.exe /STACK:8000000 daemon\chia.exe
+editbin.exe /STACK:8000000 daemon\chives.exe
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIVES_INSTALLER_VERSION"
-$packageName = "chia-$packageVersion"
+$packageName = "chives-$packageVersion"
 
 Write-Output "packageName is $packageName"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chives --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chives --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chives.ico --app-version=$packageVersion
 Write-Output "   ---"
 
 Write-Output "   ---"

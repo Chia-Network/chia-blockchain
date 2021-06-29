@@ -2,7 +2,7 @@ import asyncio
 import random
 from typing import Any, List, Optional, Tuple
 
-from chia.server.ws_connection import WSChiaConnection
+from chives.server.ws_connection import WSChiaConnection
 
 
 async def send_all_first_reply(

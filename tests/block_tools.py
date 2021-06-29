@@ -13,60 +13,60 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.full_node.bundle_tools import (
+from chives.cmds.init_funcs import create_all_ssl, create_default_chives_config
+from chives.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
     simple_solution_generator,
 )
-from chia.plotting.create_plots import create_plots
-from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.deficit import calculate_deficit
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.pot_iterations import (
+from chives.plotting.create_plots import create_plots
+from chives.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from chives.consensus.block_record import BlockRecord
+from chives.consensus.blockchain_interface import BlockchainInterface
+from chives.consensus.coinbase import create_puzzlehash_for_pk
+from chives.consensus.constants import ConsensusConstants
+from chives.consensus.default_constants import DEFAULT_CONSTANTS
+from chives.consensus.deficit import calculate_deficit
+from chives.consensus.full_block_to_block_record import block_to_block_record
+from chives.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chives.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
-from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
-from chia.full_node.signage_point import SignagePoint
-from chia.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import (
+from chives.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chives.full_node.signage_point import SignagePoint
+from chives.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
+from chives.types.blockchain_format.classgroup import ClassgroupElement
+from chives.types.blockchain_format.coin import Coin
+from chives.types.blockchain_format.pool_target import PoolTarget
+from chives.types.blockchain_format.proof_of_space import ProofOfSpace
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, CompressorArg
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, save_config
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.keychain import Keychain, bytes_to_mnemonic
-from chia.util.path import mkdir
-from chia.util.vdf_prover import get_vdf_info_and_proof
+from chives.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chives.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chives.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chives.types.full_block import FullBlock
+from chives.types.generator_types import BlockGenerator, CompressorArg
+from chives.types.spend_bundle import SpendBundle
+from chives.types.unfinished_block import UnfinishedBlock
+from chives.util.bech32m import encode_puzzle_hash
+from chives.util.block_cache import BlockCache
+from chives.util.config import load_config, save_config
+from chives.util.hash import std_hash
+from chives.util.ints import uint8, uint32, uint64, uint128
+from chives.util.keychain import Keychain, bytes_to_mnemonic
+from chives.util.path import mkdir
+from chives.util.vdf_prover import get_vdf_info_and_proof
 from tests.wallet_tools import WalletTool
-from chia.wallet.derive_keys import (
+from chives.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
@@ -118,7 +118,7 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        create_default_chia_config(root_path)
+        create_default_chives_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)
         self.keychain.delete_all_keys()
         self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
@@ -142,7 +142,7 @@ class BlockTools:
 
         farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            raise RuntimeError("Keys not generated. Run `chives generate keys`")
 
         _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots

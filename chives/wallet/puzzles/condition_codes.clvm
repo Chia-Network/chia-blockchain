@@ -1,4 +1,4 @@
-; See chia/types/condition_opcodes.py
+; See chives/types/condition_opcodes.py
 
 (
     (defconstant AGG_SIG_UNSAFE 49)

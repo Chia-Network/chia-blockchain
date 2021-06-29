@@ -1,12 +1,12 @@
 import pathlib
 from typing import Dict
 
-from chia.introducer.introducer import Introducer
-from chia.introducer.introducer_api import IntroducerAPI
-from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chives.introducer.introducer import Introducer
+from chives.introducer.introducer_api import IntroducerAPI
+from chives.server.outbound_message import NodeType
+from chives.server.start_service import run_service
+from chives.util.config import load_config_cli
+from chives.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

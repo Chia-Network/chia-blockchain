@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Any
 from unittest import TestCase
 
-from chia.full_node.bundle_tools import (
+from chives.full_node.bundle_tools import (
     bundle_suitable_for_compression,
     compressed_coin_solution_entry_list,
     compressed_spend_bundle_solution,
@@ -11,13 +11,13 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
     spend_bundle_to_serialized_coin_solution_entry_list,
 )
-from chia.full_node.generator import run_generator, create_generator_args
-from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
-from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
-from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chives.full_node.generator import run_generator, create_generator_args
+from chives.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
+from chives.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
+from chives.types.spend_bundle import SpendBundle
+from chives.util.byte_types import hexstr_to_bytes
+from chives.util.ints import uint32
+from chives.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
 
@@ -27,17 +27,17 @@ from clvm.serialize import sexp_from_stream
 
 from clvm_tools import binutils
 
-TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_requirement="chia.wallet.puzzles")
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_requirement="chives.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm("chiveslisp_deserialisation.clvm", package_or_requirement="chives.wallet.puzzles")
 
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chives.wallet.puzzles")
+DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="chives.wallet.puzzles")
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="chives.wallet.puzzles"
 )
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
-TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chives.wallet.puzzles")
+TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clvm", package_or_requirement="chives.wallet.puzzles")
 
 Nil = Program.from_bytes(b"\x80")
 

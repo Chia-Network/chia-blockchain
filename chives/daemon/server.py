@@ -16,17 +16,17 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from chia.cmds.init_funcs import chia_init
-from chia.daemon.windows_signal import kill
-from chia.server.server import ssl_context_for_root, ssl_context_for_server
-from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config
-from chia.util.json_util import dict_to_json_str
-from chia.util.path import mkdir
-from chia.util.service_groups import validate_service
-from chia.util.setproctitle import setproctitle
-from chia.util.ws_message import WsRpcMessage, create_payload, format_response
+from chives.cmds.init_funcs import chives_init
+from chives.daemon.windows_signal import kill
+from chives.server.server import ssl_context_for_root, ssl_context_for_server
+from chives.ssl.create_ssl import get_mozilla_ca_crt
+from chives.util.chives_logging import initialize_logging
+from chives.util.config import load_config
+from chives.util.json_util import dict_to_json_str
+from chives.util.path import mkdir
+from chives.util.service_groups import validate_service
+from chives.util.setproctitle import setproctitle
+from chives.util.ws_message import WsRpcMessage, create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -45,7 +45,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-service_plotter = "chia plots create"
+service_plotter = "chives plots create"
 
 
 async def fetch(url: str):
@@ -78,15 +78,15 @@ class PlotEvent(str, Enum):
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
     name_map = {
-        "chia": "chia",
-        "chia_wallet": "start_wallet",
-        "chia_full_node": "start_full_node",
-        "chia_harvester": "start_harvester",
-        "chia_farmer": "start_farmer",
-        "chia_introducer": "start_introducer",
-        "chia_timelord": "start_timelord",
-        "chia_timelord_launcher": "timelord_launcher",
-        "chia_full_node_simulator": "start_simulator",
+        "chives": "chives",
+        "chives_wallet": "start_wallet",
+        "chives_full_node": "start_full_node",
+        "chives_harvester": "start_harvester",
+        "chives_farmer": "start_farmer",
+        "chives_introducer": "start_introducer",
+        "chives_timelord": "start_timelord",
+        "chives_timelord_launcher": "timelord_launcher",
+        "chives_full_node_simulator": "start_simulator",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -692,7 +692,7 @@ class WebSocketServer:
 
         # TODO: fix this hack
         asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
+        log.info("chives daemon exiting in 5 seconds")
 
         response = {"success": True}
         return response
@@ -980,9 +980,9 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
 
 
 async def async_run_daemon(root_path: Path) -> int:
-    chia_init(root_path)
+    chives_init(root_path)
     config = load_config(root_path, "config.yaml")
-    setproctitle("chia_daemon")
+    setproctitle("chives_daemon")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
@@ -1020,7 +1020,7 @@ def run_daemon(root_path: Path) -> int:
 
 
 def main() -> int:
-    from chia.util.default_root import DEFAULT_ROOT_PATH
+    from chives.util.default_root import DEFAULT_ROOT_PATH
 
     return run_daemon(DEFAULT_ROOT_PATH)
 

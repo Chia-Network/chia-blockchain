@@ -1,7 +1,7 @@
 # Based on this specification from Pieter Wuille:
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
 
-from chia.util.bech32m import bech32_decode
+from chives.util.bech32m import bech32_decode
 
 
 def test_valid_imports():

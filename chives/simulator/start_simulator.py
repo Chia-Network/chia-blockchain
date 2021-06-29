@@ -2,14 +2,14 @@ from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Dict
 
-from chia.full_node.full_node import FullNode
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
+from chives.full_node.full_node import FullNode
+from chives.rpc.full_node_rpc_api import FullNodeRpcApi
+from chives.server.outbound_message import NodeType
+from chives.server.start_service import run_service
 from tests.block_tools import BlockTools, test_constants
-from chia.util.config import load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.path import mkdir, path_from_root
+from chives.util.config import load_config_cli
+from chives.util.default_root import DEFAULT_ROOT_PATH
+from chives.util.path import mkdir, path_from_root
 
 from .full_node_simulator import FullNodeSimulator
 

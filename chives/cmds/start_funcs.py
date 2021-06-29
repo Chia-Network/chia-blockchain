@@ -6,15 +6,15 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from chia.util.service_groups import services_for_groups
+from chives.daemon.client import DaemonProxy, connect_to_daemon_and_validate
+from chives.util.service_groups import services_for_groups
 
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIVES_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
     chives = sys.argv[0]
-    process = subprocess.Popen(f"{chia} run_daemon".split(), stdout=subprocess.PIPE)
+    process = subprocess.Popen(f"{chives} run_daemon".split(), stdout=subprocess.PIPE)
     return process
 
 

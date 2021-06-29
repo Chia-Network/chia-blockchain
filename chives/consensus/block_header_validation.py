@@ -5,31 +5,31 @@ from typing import Optional, Tuple
 
 from blspy import AugSchemeMPL
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.deficit import calculate_deficit
-from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
-from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
-from chia.consensus.pot_iterations import (
+from chives.consensus.block_record import BlockRecord
+from chives.consensus.blockchain_interface import BlockchainInterface
+from chives.consensus.constants import ConsensusConstants
+from chives.consensus.deficit import calculate_deficit
+from chives.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
+from chives.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
+from chives.consensus.make_sub_epoch_summary import make_sub_epoch_summary
+from chives.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
-from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.util.errors import Err, ValidationError
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chives.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chives.types.blockchain_format.classgroup import ClassgroupElement
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
+from chives.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chives.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chives.types.header_block import HeaderBlock
+from chives.types.unfinished_header_block import UnfinishedHeaderBlock
+from chives.util.errors import Err, ValidationError
+from chives.util.hash import std_hash
+from chives.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

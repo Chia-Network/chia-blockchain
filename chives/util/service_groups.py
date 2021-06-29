@@ -1,19 +1,19 @@
 from typing import KeysView, Generator
 
 SERVICES_FOR_GROUP = {
-    "all": "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet".split(),
-    "node": "chia_full_node".split(),
-    "harvester": "chia_harvester".split(),
-    "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),
-    "farmer-no-wallet": "chia_harvester chia_farmer chia_full_node".split(),
-    "farmer-only": "chia_farmer".split(),
-    "timelord": "chia_timelord_launcher chia_timelord chia_full_node".split(),
-    "timelord-only": "chia_timelord".split(),
-    "timelord-launcher-only": "chia_timelord_launcher".split(),
-    "wallet": "chia_wallet chia_full_node".split(),
-    "wallet-only": "chia_wallet".split(),
-    "introducer": "chia_introducer".split(),
-    "simulator": "chia_full_node_simulator".split(),
+    "all": "chives_harvester chives_timelord_launcher chives_timelord chives_farmer chives_full_node chives_wallet".split(),
+    "node": "chives_full_node".split(),
+    "harvester": "chives_harvester".split(),
+    "farmer": "chives_harvester chives_farmer chives_full_node chives_wallet".split(),
+    "farmer-no-wallet": "chives_harvester chives_farmer chives_full_node".split(),
+    "farmer-only": "chives_farmer".split(),
+    "timelord": "chives_timelord_launcher chives_timelord chives_full_node".split(),
+    "timelord-only": "chives_timelord".split(),
+    "timelord-launcher-only": "chives_timelord_launcher".split(),
+    "wallet": "chives_wallet chives_full_node".split(),
+    "wallet-only": "chives_wallet".split(),
+    "introducer": "chives_introducer".split(),
+    "simulator": "chives_full_node_simulator".split(),
 }
 
 

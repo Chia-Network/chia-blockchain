@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.util.ints import uint32, uint64
-from chia.util.streamable import Streamable, streamable
+from chives.types.blockchain_format.proof_of_space import ProofOfSpace
+from chives.util.ints import uint32, uint64
+from chives.util.streamable import Streamable, streamable
 
 """
 Protocol between farmer and pool.

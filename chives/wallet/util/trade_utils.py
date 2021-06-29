@@ -1,12 +1,12 @@
 from typing import Dict, Optional, Tuple
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution
-from chia.wallet.cc_wallet import cc_utils
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.trade_status import TradeStatus
+from chives.types.blockchain_format.program import Program, INFINITE_COST
+from chives.types.condition_opcodes import ConditionOpcode
+from chives.types.spend_bundle import SpendBundle
+from chives.util.condition_tools import conditions_dict_for_solution
+from chives.wallet.cc_wallet import cc_utils
+from chives.wallet.trade_record import TradeRecord
+from chives.wallet.trading.trade_status import TradeStatus
 
 
 def trade_status_ui_string(status: TradeStatus):
@@ -83,10 +83,10 @@ def get_discrepancies_for_spend_bundle(
                 coin_amount = coinsol.coin.amount
                 out_amount = get_output_amount_for_puzzle_and_solution(puzzle, solution)
                 diff = coin_amount - out_amount
-                if "chia" in cc_discrepancies:
-                    cc_discrepancies["chia"] = cc_discrepancies["chia"] + diff
+                if "chives" in cc_discrepancies:
+                    cc_discrepancies["chives"] = cc_discrepancies["chives"] + diff
                 else:
-                    cc_discrepancies["chia"] = diff
+                    cc_discrepancies["chives"] = diff
 
         return True, cc_discrepancies, None
     except Exception as e:

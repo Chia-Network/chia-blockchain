@@ -2,7 +2,7 @@
       uses: actions/checkout@v2
       with:
         repository: 'HiveProject2021/test-cache'
-        path: '.chia'
+        path: '.chives'
         ref: '0.26.0'
         fetch-depth: 1
 

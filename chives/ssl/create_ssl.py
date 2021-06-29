@@ -11,9 +11,9 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
 
 
-def get_chia_ca_crt_key() -> Tuple[Any, Any]:
-    crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
-    key = pkg_resources.resource_string(__name__, "chia_ca.key")
+def get_chives_ca_crt_key() -> Tuple[Any, Any]:
+    crt = pkg_resources.resource_string(__name__, "chives_ca.crt")
+    key = pkg_resources.resource_string(__name__, "chives_ca.key")
     return crt, key
 
 
@@ -45,7 +45,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
         .not_valid_before(datetime.datetime.today() - one_day)
         .not_valid_after(datetime.datetime(2100, 8, 2))
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("chia.net")]),
+            x509.SubjectAlternativeName([x509.DNSName("chives.net")]),
             critical=False,
         )
         .sign(root_key, hashes.SHA256(), default_backend())
@@ -99,7 +99,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
 
 
 def main():
-    return make_ca_cert(Path("./chia_ca.crt"), Path("./chia_ca.key"))
+    return make_ca_cert(Path("./chives_ca.crt"), Path("./chives_ca.key"))
 
 
 if __name__ == "__main__":

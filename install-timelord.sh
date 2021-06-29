@@ -12,8 +12,8 @@ PYTHON_VERSION=$(python -c 'import sys; print(f"python{sys.version_info.major}.{
 echo "Python version: $PYTHON_VERSION"
 
 export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring speed
-THE_PATH=$(python -c 'import pkg_resources; print( pkg_resources.get_distribution("chiavdf").location)' 2>/dev/null)/vdf_client
-CHIVESVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
+THE_PATH=$(python -c 'import pkg_resources; print( pkg_resources.get_distribution("chivesvdf").location)' 2>/dev/null)/vdf_client
+CHIVESVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chivesvdf")][0]; print(t)')
 
 ubuntu_cmake_install() {
 	UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
@@ -56,36 +56,36 @@ if [ -e "$THE_PATH" ]; then
 	echo "vdf_client already exists, no action taken"
 else
 	if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN; then
-		echo "Installing chiavdf from source on Ubuntu/Debian"
+		echo "Installing chivesvdf from source on Ubuntu/Debian"
 		# If Ubuntu version is older than 20.04LTS then upgrade CMake
 		ubuntu_cmake_install
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
 		echo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
 		sudo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
-		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
-		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
+		echo venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
+		venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
 	elif [ -e venv/bin/python ] && test $RHEL_BASED; then
-		echo "Installing chiavdf from source on RedHat/CentOS/Fedora"
+		echo "Installing chivesvdf from source on RedHat/CentOS/Fedora"
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
 		echo yum install gcc gcc-c++ gmp-devel python3-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
 		sudo yum install gcc gcc-c++ gmp-devel python3-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
-		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
-		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
+		echo venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
+		venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
 	elif [ -e venv/bin/python ] && test $MACOS && [ "$(brew info boost | grep -c 'Not installed')" -eq 1 ]; then
-		echo "Installing chiavdf requirement boost for MacOS."
+		echo "Installing chivesvdf requirement boost for MacOS."
 		brew install boost
-		echo "Installing chiavdf from source."
+		echo "Installing chivesvdf from source."
 		# User needs to provide required packages
-		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
-		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
+		echo venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
+		venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
 	elif [ -e venv/bin/python ]; then
-		echo "Installing chiavdf from source."
+		echo "Installing chivesvdf from source."
 		# User needs to provide required packages
-		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
-		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIVESVDF_VERSION"
+		echo venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
+		venv/bin/python -m pip install --force --no-binary chivesvdf "$CHIVESVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
 	else
 		echo "No venv created yet, please run install.sh."

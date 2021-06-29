@@ -9,18 +9,18 @@ from typing import Dict, Optional, List, Set
 
 import aiosqlite
 
-import chia.server.ws_connection as ws
+import chives.server.ws_connection as ws
 import dns.asyncresolver
-from chia.protocols import full_node_protocol, introducer_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.address_manager import AddressManager, ExtendedPeerInfo
-from chia.server.address_manager_store import AddressManagerStore
-from chia.server.outbound_message import NodeType, make_msg
-from chia.server.server import ChiaServer
-from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-from chia.util.hash import std_hash
-from chia.util.ints import uint64
-from chia.util.path import mkdir, path_from_root
+from chives.protocols import full_node_protocol, introducer_protocol
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.address_manager import AddressManager, ExtendedPeerInfo
+from chives.server.address_manager_store import AddressManagerStore
+from chives.server.outbound_message import NodeType, make_msg
+from chives.server.server import ChiaServer
+from chives.types.peer_info import PeerInfo, TimestampedPeerInfo
+from chives.util.hash import std_hash
+from chives.util.ints import uint64
+from chives.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000

@@ -4,18 +4,18 @@ from pathlib import Path
 
 import pytest
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint32
+from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chives.rpc.full_node_rpc_api import FullNodeRpcApi
+from chives.rpc.full_node_rpc_client import FullNodeRpcClient
+from chives.rpc.rpc_server import start_rpc_server
+from chives.rpc.wallet_rpc_api import WalletRpcApi
+from chives.rpc.wallet_rpc_client import WalletRpcClient
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.blockchain_format.coin import Coin
+from chives.types.peer_info import PeerInfo
+from chives.types.spend_bundle import SpendBundle
+from chives.util.bech32m import encode_puzzle_hash
+from chives.util.ints import uint16, uint32
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 

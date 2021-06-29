@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
-from chia.full_node.sync_store import SyncStore
-from chia.util.hash import std_hash
+from chives.full_node.sync_store import SyncStore
+from chives.util.hash import std_hash
 
 
 @pytest.fixture(scope="module")

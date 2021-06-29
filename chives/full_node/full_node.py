@@ -10,53 +10,53 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import aiosqlite
 from blspy import AugSchemeMPL
 
-import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from chia.consensus.block_creation import unfinished_block_to_full_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.consensus.pot_iterations import calculate_sp_iters
-from chia.full_node.block_store import BlockStore
-from chia.full_node.bundle_tools import detect_potential_template_generator
-from chia.full_node.coin_store import CoinStore
-from chia.full_node.full_node_store import FullNodeStore
-from chia.full_node.mempool_manager import MempoolManager
-from chia.full_node.signage_point import SignagePoint
-from chia.full_node.sync_store import SyncStore
-from chia.full_node.weight_proof import WeightProofHandler
-from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
-from chia.protocols.full_node_protocol import (
+import chives.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from chives.consensus.block_creation import unfinished_block_to_full_block
+from chives.consensus.block_record import BlockRecord
+from chives.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chives.consensus.constants import ConsensusConstants
+from chives.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chives.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chives.consensus.multiprocess_validation import PreValidationResult
+from chives.consensus.pot_iterations import calculate_sp_iters
+from chives.full_node.block_store import BlockStore
+from chives.full_node.bundle_tools import detect_potential_template_generator
+from chives.full_node.coin_store import CoinStore
+from chives.full_node.full_node_store import FullNodeStore
+from chives.full_node.mempool_manager import MempoolManager
+from chives.full_node.signage_point import SignagePoint
+from chives.full_node.sync_store import SyncStore
+from chives.full_node.weight_proof import WeightProofHandler
+from chives.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
+from chives.protocols.full_node_protocol import (
     RejectBlocks,
     RequestBlocks,
     RespondBlock,
     RespondBlocks,
     RespondSignagePoint,
 )
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.node_discovery import FullNodePeers
-from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.server import ChiaServer
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.db_wrapper import DBWrapper
-from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.path import mkdir, path_from_root
-from chia.util.safe_cancel_task import cancel_task_safe
-from chia.util.profiler import profile_task
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.node_discovery import FullNodePeers
+from chives.server.outbound_message import Message, NodeType, make_msg
+from chives.server.server import ChiaServer
+from chives.types.blockchain_format.classgroup import ClassgroupElement
+from chives.types.blockchain_format.pool_target import PoolTarget
+from chives.types.blockchain_format.sized_bytes import bytes32
+from chives.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chives.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
+from chives.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chives.types.full_block import FullBlock
+from chives.types.header_block import HeaderBlock
+from chives.types.mempool_inclusion_status import MempoolInclusionStatus
+from chives.types.spend_bundle import SpendBundle
+from chives.types.unfinished_block import UnfinishedBlock
+from chives.util.bech32m import encode_puzzle_hash
+from chives.util.db_wrapper import DBWrapper
+from chives.util.errors import ConsensusError, Err
+from chives.util.ints import uint8, uint32, uint64, uint128
+from chives.util.path import mkdir, path_from_root
+from chives.util.safe_cancel_task import cancel_task_safe
+from chives.util.profiler import profile_task
 
 
 class FullNode:

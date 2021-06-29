@@ -4,8 +4,8 @@ import time
 from collections import Counter
 from typing import Optional
 
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message
+from chives.protocols.protocol_message_types import ProtocolMessageTypes
+from chives.server.outbound_message import Message
 
 log = logging.getLogger(__name__)
 

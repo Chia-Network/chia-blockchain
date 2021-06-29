@@ -3,11 +3,11 @@ from pathlib import Path
 
 import click
 
-from chia.util.service_groups import all_groups, services_for_groups
+from chives.util.service_groups import all_groups, services_for_groups
 
 
 async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
-    from chia.daemon.client import connect_to_daemon_and_validate
+    from chives.daemon.client import connect_to_daemon_and_validate
 
     daemon = await connect_to_daemon_and_validate(root_path)
     if daemon is None:

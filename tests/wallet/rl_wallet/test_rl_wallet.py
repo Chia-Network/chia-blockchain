@@ -2,10 +2,10 @@ import asyncio
 
 import pytest
 
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
+from chives.simulator.simulator_protocol import FarmNewBlockProtocol
+from chives.types.peer_info import PeerInfo
+from chives.util.ints import uint16, uint64
+from chives.wallet.rl_wallet.rl_wallet import RLWallet
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
