@@ -22,6 +22,10 @@ export default function PoolAbsorbRewards(props: Props) {
   const history = useHistory();
 
   async function handleAbsorbRewards() {
+    if (!canEdit) {
+      return;
+    }
+
     history.push(`/dashboard/pool/${p2_singleton_puzzle_hash}/absorb-rewards`);
   }
 

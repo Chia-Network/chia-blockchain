@@ -81,8 +81,8 @@ msgid "Add Plot to Queue"
 msgstr "Дадаць дзялянку ў чаргу"
 
 #: src/components/wallet/Wallets.tsx:88
-msgid "Add Wallet"
-msgstr "Дадаць кашалёк"
+#~ msgid "Add Wallet"
+#~ msgstr "Дадаць кашалёк"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
@@ -112,7 +112,7 @@ msgid "Address"
 msgstr "Адрас"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
-#: src/components/wallet/standard/WalletStandard.tsx:495
+#: src/components/wallet/standard/WalletStandard.tsx:500
 msgid "Address / Puzzle hash"
 msgstr "Адрас / Хэш-галаваломка"
 
@@ -122,7 +122,7 @@ msgstr "Адрас / Хэш-галаваломка"
 #: src/components/wallet/WalletHistory.tsx:62
 #: src/components/wallet/create/createNewColouredCoin.jsx:119
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
-#: src/components/wallet/standard/WalletStandard.tsx:505
+#: src/components/wallet/standard/WalletStandard.tsx:510
 msgid "Amount"
 msgstr "Сума"
 
@@ -171,7 +171,6 @@ msgstr "Файл рэзервовай копіі выкарыстоўваецц�
 
 #: src/components/wallet/coloured/WalletColoured.tsx:377
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
-#: src/components/wallet/standard/WalletStandard.tsx:265
 msgid "Balance"
 msgstr "Баланс"
 
@@ -223,7 +222,7 @@ msgstr "Блок з хэшам {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Блока з хэшам {headerHash} не існуе."
 
-#: src/components/fullNode/FullNode.jsx:310
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Blocks"
 msgstr "Блокі"
 
@@ -248,8 +247,8 @@ msgid "Buy"
 msgstr "Купіць"
 
 #: src/components/wallet/Wallets.tsx:49
-msgid "CC Wallet"
-msgstr "Кашалёк каляровай манеты"
+#~ msgid "CC Wallet"
+#~ msgstr "Кашалёк каляровай манеты"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -262,7 +261,7 @@ msgstr "Рэзервовая копія можна быць зроблена ў 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
 #: src/components/farm/FarmManageFarmingRewards.tsx:198
 #: src/components/fullNode/FullNodeAddConnection.tsx:89
-#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
 #: src/components/trading/CreateOffer.jsx:139
 #: src/components/trading/TradingOverview.jsx:400
 #: src/components/trading/ViewOffer.jsx:71
@@ -285,12 +284,12 @@ msgstr "Выпрабаванне"
 msgid "Challenge Hash"
 msgstr "Хэш выпрабавання"
 
-#: src/components/plotNFT/PlotNFTChangePool.tsx:112
+#: src/components/plotNFT/PlotNFTChangePool.tsx:111
 msgid "Change"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:312
-#: src/components/plotNFT/PlotNFTChangePool.tsx:111
+#: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
 msgstr ""
@@ -307,7 +306,6 @@ msgstr "Chia"
 msgid "Chia Blockchain Wiki"
 msgstr "Вікі блокчэйна Chia"
 
-#: src/components/wallet/Wallets.tsx:46
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Chia Wallet"
 msgstr "Кашалёк Chia"
@@ -390,12 +388,11 @@ msgstr "Падлучыцца"
 msgid "Connect to other peers"
 msgstr "Падлучыцца да іншых удзельнікаў сеткі"
 
-#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:115
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
-#: src/components/fullNode/FullNode.jsx:150
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
 msgid "Connected"
 msgstr "Падлучана"
@@ -404,7 +401,6 @@ msgstr "Падлучана"
 msgid "Connecting to wallet"
 msgstr "Ідзе падлучэнне да кашалька"
 
-#: src/components/fullNode/FullNode.jsx:148
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
 msgid "Connection Status"
 msgstr "Стан падлучэння"
@@ -481,7 +477,7 @@ msgstr "Стварыць гандлёвую аферту"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:543
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
-#: src/components/wallet/standard/WalletStandard.tsx:475
+#: src/components/wallet/standard/WalletStandard.tsx:480
 msgid "Create Transaction"
 msgstr "Стварыць трансакцыю"
 
@@ -560,8 +556,8 @@ msgid "DANGER: permanently delete private key"
 msgstr "НЕБЯСПЕЧНА: выдаліць закрыты ключ назаўсёды"
 
 #: src/components/wallet/Wallets.tsx:53
-msgid "DID Wallet"
-msgstr "Кашалёк з дэцэнтралізаваным ідэнтыфікатарам"
+#~ msgid "DID Wallet"
+#~ msgstr "Кашалёк з дэцэнтралізаваным ідэнтыфікатарам"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -622,7 +618,6 @@ msgid "Developer Tools"
 msgstr "Інструменты для распрацоўшчыкаў"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/FullNode.jsx:185
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
 msgid "Difficulty"
 msgstr "Складанасць"
@@ -687,7 +682,7 @@ msgstr "Каб аднавіць свой кашалёк Chia, увядзіце �
 msgid "Error"
 msgstr "Памылка"
 
-#: src/components/wallet/standard/WalletStandard.tsx:448
+#: src/components/wallet/standard/WalletStandard.tsx:453
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Памылка: немагчыма адправіць chia на адрас каляровай манеты. Укажыце адрас chia."
 
@@ -701,10 +696,9 @@ msgid "Estimated Time to Win"
 msgstr "Прыблізны час да выйгрышу"
 
 #: src/components/fullNode/FullNode.jsx:204
-msgid "Estimated network space"
-msgstr "Прыблізны аб'ём сеткі"
+#~ msgid "Estimated network space"
+#~ msgstr "Прыблізны аб'ём сеткі"
 
-#: src/components/fullNode/FullNode.jsx:207
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Прыблізны сумарны аб'ём месца, занятага ўсімі дзялянкамі ўсіх фермераў сеткі"
@@ -724,7 +718,7 @@ msgstr "Не ўдалося адкрыць (дзялянкі з памылкам
 
 #: src/components/dashboard/DashboardSideBar.tsx:55
 #: src/components/wallet/coloured/WalletColoured.tsx:610
-#: src/components/wallet/standard/WalletStandard.tsx:524
+#: src/components/wallet/standard/WalletStandard.tsx:529
 msgid "Farm"
 msgstr "Ферма"
 
@@ -787,15 +781,15 @@ msgstr "Стан фермерства"
 
 #: src/components/core/components/Fee/Fee.tsx:48
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:152
-#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
-#: src/components/pool/PoolInfo.tsx:31
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
+#: src/components/pool/PoolInfo.tsx:17
 #: src/components/wallet/WalletHistory.tsx:66
 #: src/components/wallet/create/createExistingColouredCoin.jsx:123
 #: src/components/wallet/create/createNewColouredCoin.jsx:132
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
-#: src/components/wallet/standard/WalletStandard.tsx:516
+#: src/components/wallet/standard/WalletStandard.tsx:521
 msgid "Fee"
 msgstr "Камісійныя"
 
@@ -848,17 +842,17 @@ msgid "Frequently Asked Questions"
 msgstr "Частыя пытанні"
 
 #: src/components/dashboard/DashboardSideBar.tsx:39
-#: src/components/fullNode/FullNode.jsx:324
+#: src/components/fullNode/FullNode.jsx:327
 msgid "Full Node"
 msgstr "Поўны вузел"
 
-#: src/components/fullNode/FullNode.jsx:327
+#: src/components/fullNode/FullNode.jsx:330
 msgid "Full Node Overview"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
-msgid "Full Node Status"
-msgstr "Стан поўнага вузла"
+#~ msgid "Full Node Status"
+#~ msgstr "Стан поўнага вузла"
 
 #: src/electron/main.tsx:332
 msgid "Full Screen"
@@ -1045,7 +1039,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:165
+#: src/components/wallet/Wallets.tsx:172
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1113,7 +1107,7 @@ msgstr "Кіраванне мэтавымі адрасамі для атрыма
 msgid "MiB Up/Down"
 msgstr "Увах./вых. МіБ"
 
-#: src/components/pool/PoolInfo.tsx:41
+#: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
 msgstr ""
 
@@ -1129,7 +1123,6 @@ msgstr "Большы аб'ём памяці крыху павялічвае ху
 msgid "My Pubkey"
 msgstr "Мой адкрыты ключ"
 
-#: src/components/fullNode/FullNode.jsx:167
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
 msgid "Network Name"
 msgstr "Назва сеткі"
@@ -1203,7 +1196,6 @@ msgstr "Ніводная з вашых дзялянак яшчэ не прайш
 msgid "Not Available"
 msgstr "Недаступны"
 
-#: src/components/fullNode/FullNode.jsx:129
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:36
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
@@ -1218,8 +1210,6 @@ msgid "Not confirmed yet"
 msgstr "Яшчэ не пацверджана"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
-#: src/components/fullNode/FullNode.jsx:152
-#: src/components/fullNode/FullNode.jsx:159
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
 msgid "Not connected"
 msgstr "Падлучэння няма"
@@ -1257,7 +1247,7 @@ msgstr "Аферта"
 msgid "Offers Created"
 msgstr "Аферта створана"
 
-#: src/components/wallet/standard/WalletStandard.tsx:477
+#: src/components/wallet/standard/WalletStandard.tsx:482
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr "У сярэднім паміж кожным блокам трансакцый мінае адна хвіліна. Калі сетка не перагружана, чакаецца, што ваша трансакцыя будзе занесена ў блокчэйн менш чым за хвіліну."
 
@@ -1265,9 +1255,7 @@ msgstr "У сярэднім паміж кожным блокам трансак�
 msgid "Outgoing"
 msgstr "Выходныя"
 
-#: src/components/fullNode/FullNode.jsx:173
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
 msgid "Peak Height"
 msgstr "Крайняя вышыня"
 
@@ -1275,7 +1263,7 @@ msgstr "Крайняя вышыня"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
 msgid "Peak Time"
 msgstr "Крайні час"
 
@@ -1286,19 +1274,16 @@ msgstr "Чаканыя"
 
 #: src/components/wallet/card/WalletCardPendingBalance.tsx:24
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:573
-#: src/components/wallet/standard/WalletStandard.tsx:317
 msgid "Pending Balance"
 msgstr "Чаканы баланс"
 
 #: src/components/wallet/card/WalletCardPendingChange.tsx:24
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:578
-#: src/components/wallet/standard/WalletStandard.tsx:328
 msgid "Pending Change"
 msgstr "Чаканы размен"
 
 #: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:27
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
-#: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "Pending Total Balance"
 msgstr "Чаканы агульны баланс"
 
@@ -1320,7 +1305,7 @@ msgstr "Укажыце дапушчальную суму першапачатк�
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
-#: src/components/wallet/standard/WalletStandard.tsx:424
+#: src/components/wallet/standard/WalletStandard.tsx:429
 msgid "Please enter a valid numeric amount"
 msgstr "Укажыце дапушчальнае лічбавае значэнне"
 
@@ -1328,7 +1313,7 @@ msgstr "Укажыце дапушчальнае лічбавае значэнн�
 #: src/components/wallet/create/createNewColouredCoin.jsx:79
 #: src/components/wallet/create/createRLAdmin.jsx:150
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
-#: src/components/wallet/standard/WalletStandard.tsx:436
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "Please enter a valid numeric fee"
 msgstr "Укажыце дапушчальнае лічбавае значэнне камісійных"
 
@@ -1345,7 +1330,7 @@ msgid "Please enter a valid pubkey"
 msgstr "Укажыце сапраўдны адкрыты ключ"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
-#: src/components/wallet/standard/WalletStandard.tsx:412
+#: src/components/wallet/standard/WalletStandard.tsx:417
 msgid "Please finish syncing before making a transaction"
 msgstr "Завяршыце сінхранізацыю перад выкананнем трансакцыі"
 
@@ -1405,7 +1390,7 @@ msgid "Plot NFT"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
-#: src/components/plotNFT/PlotNFTChangePool.tsx:82
+#: src/components/plotNFT/PlotNFTChangePool.tsx:81
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
 msgstr ""
 
@@ -1548,7 +1533,7 @@ msgid "Port"
 msgstr "Порт"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
-#: src/components/plotNFT/PlotNFTChangePool.tsx:75
+#: src/components/plotNFT/PlotNFTChangePool.tsx:74
 msgid "Preparing Plot NFT"
 msgstr ""
 
@@ -1592,7 +1577,7 @@ msgstr "Памер пацвярджэнне месцам (Proof of Space)"
 msgid "Proofs Found"
 msgstr "Пацвярджэнняў знойдзена"
 
-#: src/components/pool/PoolInfo.tsx:36
+#: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
 msgstr ""
 
@@ -1625,8 +1610,8 @@ msgid "RAM max usage"
 msgstr "Макс. выкарыстанне RAM"
 
 #: src/components/wallet/Wallets.tsx:51
-msgid "RL Wallet"
-msgstr "Кашалёк з абмежаваннямі вываду"
+#~ msgid "RL Wallet"
+#~ msgstr "Кашалёк з абмежаваннямі вываду"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1662,7 +1647,7 @@ msgstr "Аднавіць кашалёк з дэцэнтралізаваным і
 msgid "Refresh Plots"
 msgstr "Абнавіць дзялянкі"
 
-#: src/components/pool/PoolInfo.tsx:46
+#: src/components/pool/PoolInfo.tsx:32
 msgid "Relative Lock Height"
 msgstr ""
 
@@ -1779,7 +1764,7 @@ msgstr "Выбраны"
 msgid "Self Pooling"
 msgstr ""
 
-#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:104
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
 msgstr ""
 
@@ -1791,7 +1776,7 @@ msgstr "Прадаць"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:620
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:534
+#: src/components/wallet/standard/WalletStandard.tsx:539
 msgid "Send"
 msgstr "Адправіць"
 
@@ -1851,7 +1836,6 @@ msgstr "Даступная сума на інтэрвал"
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
 #: src/components/wallet/coloured/WalletColoured.tsx:384
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
-#: src/components/wallet/standard/WalletStandard.tsx:279
 msgid "Spendable Balance"
 msgstr "Даступны баланс"
 
@@ -1873,10 +1857,6 @@ msgstr "Ліміт расходаў (манет chia на інтэрвал): {0}
 msgid "State"
 msgstr "Стан"
 
-#: src/components/fullNode/FullNode.jsx:110
-#: src/components/fullNode/FullNode.jsx:128
-#: src/components/fullNode/FullNode.jsx:136
-#: src/components/fullNode/FullNode.jsx:158
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:61
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
@@ -1885,7 +1865,7 @@ msgstr "Стан"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:118
 msgid "Status"
 msgstr "Стан"
 
@@ -1925,7 +1905,6 @@ msgstr "Стан:"
 msgid "Submit"
 msgstr "Адправіць"
 
-#: src/components/fullNode/FullNode.jsx:137
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:42
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
@@ -1938,7 +1917,6 @@ msgstr "Сінхранізаваны"
 msgid "Syncing"
 msgstr "Ідзе сінхранізацыя"
 
-#: src/components/fullNode/FullNode.jsx:112
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:20
 msgid "Syncing <0/>/<1/>"
 msgstr "Ідзе сінхранізацыя <0/>/<1/>"
@@ -1967,7 +1945,7 @@ msgstr "Ідзе сінхранізацыя <0/>/<1/>"
 #~ msgid "TXCH User Transaction Fees"
 #~ msgstr ""
 
-#: src/components/pool/PoolInfo.tsx:51
+#: src/components/pool/PoolInfo.tsx:37
 msgid "Target Puzzle Hash"
 msgstr ""
 
@@ -1992,12 +1970,10 @@ msgstr "Поўны вузел, да якога ваш фермер падлуч�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Мінімальны дапушчальны памер дзялянкі для асноўнай сетцы (mainnet) — k=32"
 
-#: src/components/fullNode/FullNode.jsx:131
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:38
 msgid "The node is not synced"
 msgstr "Вузел не сінхранізаваны з сеткай"
 
-#: src/components/fullNode/FullNode.jsx:119
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:28
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Вузел сінхранізуецца — гэта азначае, што ён спампоўвае блокі з іншых вузлоў, каб дасягнуць самага апошняга блока ў блокчэйне"
@@ -2050,21 +2026,17 @@ msgid "This feature is available only from the GUI."
 msgstr "Гэтая функцыя даступная толькі праз графічны інтэрфейс."
 
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:26
-#: src/components/wallet/standard/WalletStandard.tsx:282
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "Сума манет Chia, якія вы зараз можаце выкарыстаць для выканання трансакцый. Не ўключае ў сябе чаканыя ўзнагароды за фермерства, чаканыя ўваходныя трансакцыі, а таксама вашы расходы, даныя пра якія яшчэ не былі занесены ў блокчэйн."
 
 #: src/components/wallet/card/WalletCardPendingChange.tsx:26
-#: src/components/wallet/standard/WalletStandard.tsx:331
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "Чаканы размен, то-бок разменныя манеты, адпраўленыя вамі самому сабе, але якія яшчэ не былі пацверджаны."
 
 #: src/components/wallet/card/WalletCardPendingBalance.tsx:26
-#: src/components/wallet/standard/WalletStandard.tsx:320
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Сума ўваходных і выходных чаканых (яшчэ не ўключаных у блокчэйн) трансакцый. Не ўключае ў сябе ўзнагароды за фермерства."
 
-#: src/components/fullNode/FullNode.jsx:180
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
 msgid "This is the time of the latest peak sub block."
 msgstr "Момант часу самага апошняга крайняга падблока."
@@ -2074,12 +2046,10 @@ msgid "This is the time the block was created by the farmer, which is before it 
 msgstr "Момант часу, калі блок быў створаны фермерам, г.зн. да таго, як ён быў завершаны праз пацвярджэнне часам (proof of time)."
 
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:34
-#: src/components/wallet/standard/WalletStandard.tsx:270
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "Агульная сума манет Chia у блокчэйне ў бягучым крайнім падблоку, падкантрольным вашаму закрытаму ключу. Уключае ў сябе замарожаныя ўзнагароды за фермерства, але не ўключае чаканыя ўваходныя і выходныя трансакцыі."
 
 #: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:29
-#: src/components/wallet/standard/WalletStandard.tsx:309
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Агульны баланс + чаканы баланс: гэта тое, якім будзе ваш баланс пасля пацвярджэння ўсіх чаканых трансакцый."
 
@@ -2093,7 +2063,6 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:140
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:45
 msgid "This node is fully caught up and validating the network"
 msgstr "Вузел поўнасцю сінхранізаваўся з сеткай і выконвае праверку сеткі"
@@ -2141,7 +2110,6 @@ msgstr "Каму"
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:32
 #: src/components/wallet/coloured/WalletColoured.tsx:379
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
-#: src/components/wallet/standard/WalletStandard.tsx:267
 msgid "Total Balance"
 msgstr "Агульны баланс"
 
@@ -2149,7 +2117,6 @@ msgstr "Агульны баланс"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:198
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
 msgid "Total Iterations"
 msgstr "Усяго ітэрацый"
@@ -2170,7 +2137,6 @@ msgstr "Агульны памер дзялянак"
 msgid "Total VDF Iterations"
 msgstr "Усяго ітэрацый VDF"
 
-#: src/components/fullNode/FullNode.jsx:200
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
 msgid "Total iterations since the start of the blockchain"
 msgstr "Агульная колькасць ітэрацый з моманту запуску блокчэйна"
@@ -2245,7 +2211,6 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Адкрыты ключ карыстальніка"
 
-#: src/components/fullNode/FullNode.jsx:192
 #: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
 msgid "VDF Sub Slot Iterations"
 msgstr "Ітэрацый VDF падслота"
@@ -2258,7 +2223,7 @@ msgstr "Ітэрацый VDF падслота"
 msgid "Value seems high"
 msgstr ""
 
-#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:155
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
 msgstr ""
 
@@ -2276,7 +2241,6 @@ msgid "View Offer"
 msgstr "Праглядзець аферту"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
-#: src/components/wallet/standard/WalletStandard.tsx:300
 msgid "View pending balances"
 msgstr "Праглядзець чаканы баланс"
 
@@ -2337,7 +2301,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:166
+#: src/components/wallet/Wallets.tsx:173
 msgid "Wallets"
 msgstr "Кашалькі"
 
@@ -2473,16 +2437,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[Памылка 22] Файл не знойдзены. Хутчэй за ўсё, праблема з адной з папак з дзялянкамі, указаных у файле config.yaml."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:138
+#: src/components/wallet/Wallets.tsx:143
 msgid "connections:"
 msgstr "падлучэнні:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:130
+#: src/components/wallet/Wallets.tsx:135
 msgid "height:"
 msgstr "вышыня:"
 
-#: src/components/wallet/Wallets.tsx:124
+#: src/components/wallet/Wallets.tsx:129
 msgid "not synced"
 msgstr "не сінхр."
 
@@ -2491,17 +2455,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:118
+#: src/components/wallet/Wallets.tsx:123
 msgid "status:"
 msgstr "стан:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:123
+#: src/components/wallet/Wallets.tsx:128
 msgid "synced"
 msgstr "сінхр."
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:122
+#: src/components/wallet/Wallets.tsx:127
 msgid "syncing"
 msgstr "ідзе сінхр."
 
@@ -2513,7 +2477,7 @@ msgstr "ідзе сінхр."
 #~ msgid "{0} User Transaction Fees"
 #~ msgstr "{0} User Transaction Fees"
 
-#: src/components/plotNFT/PlotNFTGraph.tsx:109
+#: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
 msgstr ""
 

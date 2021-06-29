@@ -27,6 +27,10 @@ export default function PoolJoin(props: Props) {
   const openDialog = useOpenDialog();
 
   async function handleJoinPool() {
+    if (!canEdit) {
+      return;
+    }
+
     if (isSelfPooling && balance) {
       await openDialog(
         <AlertDialog>

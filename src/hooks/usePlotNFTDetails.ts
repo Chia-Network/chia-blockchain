@@ -38,6 +38,7 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
 
     const poolContractPuzzleHash = `0x${p2_singleton_puzzle_hash}`;
     const isPending = !!target && target !== state;
+    const isLeavingPool = state === PlotNFTState.LEAVING_POOL;
     const isSelfPooling = state === PlotNFTState.SELF_POOLING;
 
     return {
@@ -46,7 +47,7 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
       walletId: wallet_id,
       isSynced: isWalletSynced,
       balance: confirmed_wallet_balance,
-      canEdit: isWalletSynced && !isPending,
+      canEdit: isWalletSynced && (!isPending || isLeavingPool),
       humanName,
       isSelfPooling,
       plots:
