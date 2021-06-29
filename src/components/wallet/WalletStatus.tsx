@@ -6,7 +6,7 @@ import { Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 import getWalletSyncingStatus from '../../util/getWalletSyncingStatus';
 import SyncingStatus from '../../constants/SyncingStatus';
-
+import WalletStatusHeight from './WalletStatusHeight';
 
 type Props = {
   variant?: string;
@@ -21,8 +21,6 @@ export default function WalletStatus(props: Props) {
     (state: RootState) => state.wallet_state,
   );
 
-  const currentHeight = walletState?.status?.height;
-
   const syncingStatus = getWalletSyncingStatus(walletState);
 
   return (
@@ -30,19 +28,22 @@ export default function WalletStatus(props: Props) {
       {syncingStatus === SyncingStatus.NOT_SYNCED && (
         <StateIndicator state={State.WARNING} indicator={indicator}>
           <Trans>Not Synced</Trans>
-          {height ? ` (${currentHeight})` : ''}
+          {' '}
+          {height && <WalletStatusHeight />}
         </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCED && (
         <StateIndicator state={State.SUCCESS} indicator={indicator}>
           <Trans>Synced</Trans>
-          {height ? ` (${currentHeight})` : ''}
+          {' '}
+          {height && <WalletStatusHeight />}
         </StateIndicator>
       )}
       {syncingStatus === SyncingStatus.SYNCING && (
         <StateIndicator state={State.WARNING} indicator={indicator}>
           <Trans>Syncing</Trans>
-          {height ? ` (${currentHeight})` : ''}
+          {' '}
+          {height && <WalletStatusHeight />}
         </StateIndicator>
       )}
     </Typography>

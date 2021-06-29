@@ -157,7 +157,7 @@ export default function PoolOverview() {
                 Wallet Status:
               </Trans>
             </Typography>
-            <WalletStatus />
+            <WalletStatus height />
           </Flex>
         </Flex>
         {showTable ? (
