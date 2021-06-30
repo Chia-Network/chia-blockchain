@@ -8,7 +8,7 @@ msgstr ""
 "Language: bs_BA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 06:03\n"
+"PO-Revision-Date: 2021-06-30 18:02\n"
 "Last-Translator: \n"
 "Language-Team: Bosnian\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -686,7 +686,7 @@ msgstr "GrEšKa"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "GrEšKa: Ne možemo naći obojenu čija adresu. Molim vas unesite chia adresu."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Očekivano vrijeme do uspjeha"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Očekivano vrijme za plotovanje na ovoj mreži"
 
@@ -2212,7 +2212,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
