@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:50\n"
+"PO-Revision-Date: 2021-06-30 06:03\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -82,7 +82,7 @@ msgstr "Tambahkan Plot ke Antrian"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
-#~ msgstr "Tambah Wallet"
+#~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
@@ -457,7 +457,7 @@ msgstr "Buat Tawaran"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
-#~ msgstr "Buat Plot"
+#~ msgstr "Create Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:188
 msgid "Create Rate Limited Admin Wallet"
@@ -557,7 +557,7 @@ msgstr "BAHAYA: menghapus permanen private key"
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
-#~ msgstr "Wallet DID"
+#~ msgstr "DID Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -697,7 +697,7 @@ msgstr "Perkiraan waktu untuk menang"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Estimated network space"
-#~ msgstr "Estimasi besar network"
+#~ msgstr "Estimated network space"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -852,7 +852,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
-#~ msgstr "Status Full Node"
+#~ msgstr "Full Node Status"
 
 #: src/electron/main.tsx:332
 msgid "Full Screen"
@@ -1432,8 +1432,7 @@ msgstr "Plot Diterima Seleksi"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:28
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
-"Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
+msgstr "Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
 "<0>Pelajari lebih lanjut</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:34
@@ -1613,7 +1612,7 @@ msgstr "Penggunaan RAM tertinggi"
 
 #: src/components/wallet/Wallets.tsx:51
 #~ msgid "RL Wallet"
-#~ msgstr "Dompet RL"
+#~ msgstr "RL Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -2220,7 +2219,7 @@ msgstr "Iterasi VDF Sub Slot"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 #~ msgid "Value is too high"
-#~ msgstr ""
+#~ msgstr "Value is too high"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
@@ -2499,3 +2498,4 @@ msgstr "{currencyCode} Biaya Transaksi User"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
