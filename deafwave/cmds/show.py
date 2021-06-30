@@ -62,10 +62,12 @@ async def show_async(
                 print("Current Blockchain Status: Full Node Synced")
                 print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
-                print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
+                print(
+                    f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
                 print("\nSearching for an initial chain\n")
-                print("You may be able to expedite with 'deafwave show -a host:port' using a known node.\n")
+                print(
+                    "You may be able to expedite with 'deafwave show -a host:port' using a known node.\n")
 
             if peak is not None:
                 if peak.is_transaction_block:
@@ -123,7 +125,8 @@ async def show_async(
                 + "      MiB Up|Dwn"
             )
             for con in connections:
-                last_connect_tuple = struct_time(localtime(con["last_message_time"]))
+                last_connect_tuple = struct_time(
+                    localtime(con["last_message_time"]))
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
                 mb_down = con["bytes_read"] / (1024 * 1024)
                 mb_up = con["bytes_written"] / (1024 * 1024)
@@ -185,7 +188,8 @@ async def show_async(
                 connections = await client.get_connections()
                 for con in connections:
                     if remove_connection == con["node_id"].hex()[:8]:
-                        print("Attempting to disconnect", "NodeID", remove_connection)
+                        print("Attempting to disconnect",
+                              "NodeID", remove_connection)
                         try:
                             await client.close_connection(con["node_id"])
                         except Exception:
@@ -199,7 +203,8 @@ async def show_async(
         if block_header_hash_by_height != "":
             block_header = await client.get_block_record_by_height(block_header_hash_by_height)
             if block_header is not None:
-                print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
+                print(
+                    f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
             else:
                 print("Block height", block_header_hash_by_height, "not found")
         if block_by_header_hash != "":
@@ -222,7 +227,8 @@ async def show_async(
                             else None
                         )
                     )
-                    block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                    block_time_string = time.strftime(
+                        "%a %b %d %Y %T %Z", block_time)
                     cost = str(full_block.transactions_info.cost)
                     tx_filter_hash = "Not a transaction block"
                     if full_block.foliage_transaction_block:
@@ -234,8 +240,10 @@ async def show_async(
                     tx_filter_hash = "Not a transaction block"
                     fees = "Not a transaction block"
                 address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-                farmer_address = encode_puzzle_hash(block.farmer_puzzle_hash, address_prefix)
-                pool_address = encode_puzzle_hash(block.pool_puzzle_hash, address_prefix)
+                farmer_address = encode_puzzle_hash(
+                    block.farmer_puzzle_hash, address_prefix)
+                pool_address = encode_puzzle_hash(
+                    block.pool_puzzle_hash, address_prefix)
                 pool_pk = (
                     full_block.reward_chain_block.proof_of_space.pool_public_key
                     if full_block.reward_chain_block.proof_of_space.pool_public_key is not None
@@ -262,11 +270,13 @@ async def show_async(
                     f"Fees Amount            {fees}\n"
                 )
             else:
-                print("Block with header hash", block_header_hash_by_height, "not found")
+                print("Block with header hash",
+                      block_header_hash_by_height, "not found")
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if full node rpc is running at {rpc_port}")
+            print(
+                f"Connection error. Check if full node rpc is running at {rpc_port}")
             print("This is normal if full node is still starting up")
         else:
             tb = traceback.format_exc()

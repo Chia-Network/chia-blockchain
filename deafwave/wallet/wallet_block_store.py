@@ -94,8 +94,10 @@ class WalletBlockStore:
                 header_block_record.header.header_hash.hex(),
                 header_block_record.header.prev_header_hash.hex(),
                 header_block_record.header.height,
-                header_block_record.header.weight.to_bytes(128 // 8, "big", signed=False).hex(),
-                header_block_record.header.total_iters.to_bytes(128 // 8, "big", signed=False).hex(),
+                header_block_record.header.weight.to_bytes(
+                    128 // 8, "big", signed=False).hex(),
+                header_block_record.header.total_iters.to_bytes(
+                    128 // 8, "big", signed=False).hex(),
                 bytes(block_record),
                 None
                 if block_record.sub_epoch_summary_included is None
@@ -266,7 +268,8 @@ class WalletBlockStore:
             hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
             hash_to_height[bytes.fromhex(row[0])] = row[2]
             if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
+                hash_to_summary[bytes.fromhex(
+                    row[0])] = SubEpochSummary.from_bytes(row[3])
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}

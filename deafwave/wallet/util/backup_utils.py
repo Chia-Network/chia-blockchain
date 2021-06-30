@@ -104,7 +104,8 @@ async def download_backup(host: str, private_key: PrivateKey):
         nonce = nonce_response["nonce"]
 
         # Sign nonce
-        signature = bytes(AugSchemeMPL.sign(backup_privkey, std_hash(hexstr_to_bytes(nonce)))).hex()
+        signature = bytes(AugSchemeMPL.sign(
+            backup_privkey, std_hash(hexstr_to_bytes(nonce)))).hex()
         # Request backup url
         get_backup_url = f"{host}/download_backup"
         backup_request = {"pubkey": backup_pubkey, "signature": signature}

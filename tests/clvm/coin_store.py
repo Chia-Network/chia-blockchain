@@ -56,10 +56,12 @@ class CoinStore:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
             conditions_dicts.append(conditions_dict)
             coin_announcements.update(
-                coin_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin.name())
+                coin_announcement_names_for_conditions_dict(
+                    conditions_dict, coin_solution.coin.name())
             )
             puzzle_announcements.update(
-                puzzle_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin.puzzle_hash)
+                puzzle_announcement_names_for_conditions_dict(
+                    conditions_dict, coin_solution.coin.puzzle_hash)
             )
 
         for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):
@@ -86,7 +88,8 @@ class CoinStore:
         for spent_coin in spend_bundle.removals():
             coin_name = spent_coin.name()
             coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
+            self._db[coin_name] = replace(
+                coin_record, spent_block_index=now.height, spent=True)
         for new_coin in spend_bundle.additions():
             self._add_coin_entry(new_coin, now)
 
@@ -103,5 +106,6 @@ class CoinStore:
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
         name = coin.name()
         assert name not in self._db
-        self._db[name] = CoinRecord(coin, uint32(birthday.height), uint32(0), False, False, uint64(birthday.seconds))
+        self._db[name] = CoinRecord(coin, uint32(birthday.height), uint32(
+            0), False, False, uint64(birthday.seconds))
         self._ph_index[coin.puzzle_hash].append(name)

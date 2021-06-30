@@ -30,7 +30,8 @@ NON_TX_MAX_TOTAL_SIZE = 100 * 1024 * 1024
 rate_limits_tx = {
     ProtocolMessageTypes.new_transaction: RLSettings(5000, 100, 5000 * 100),
     ProtocolMessageTypes.request_transaction: RLSettings(5000, 100, 5000 * 100),
-    ProtocolMessageTypes.respond_transaction: RLSettings(5000, 1 * 1024 * 1024, 20 * 1024 * 1024),  # TODO: check this
+    # TODO: check this
+    ProtocolMessageTypes.respond_transaction: RLSettings(5000, 1 * 1024 * 1024, 20 * 1024 * 1024),
     ProtocolMessageTypes.send_transaction: RLSettings(5000, 1024 * 1024),
     ProtocolMessageTypes.transaction_ack: RLSettings(5000, 2048),
 }
@@ -147,7 +148,8 @@ class RateLimiter:
             return True
 
         new_message_counts: int = self.message_counts[message_type] + 1
-        new_cumulative_size: int = self.message_cumulative_sizes[message_type] + len(message.data)
+        new_cumulative_size: int = self.message_cumulative_sizes[message_type] + len(
+            message.data)
         new_non_tx_count: int = self.non_tx_message_counts
         new_non_tx_size: int = self.non_tx_cumulative_size
         proportion_of_limit: float = self.percentage_of_limit / 100
@@ -161,16 +163,19 @@ class RateLimiter:
             elif message_type in rate_limits_other:
                 limits = rate_limits_other[message_type]
                 new_non_tx_count = self.non_tx_message_counts + 1
-                new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
+                new_non_tx_size = self.non_tx_cumulative_size + \
+                    len(message.data)
                 if new_non_tx_count > NON_TX_FREQ * proportion_of_limit:
                     return False
                 if new_non_tx_size > NON_TX_MAX_TOTAL_SIZE * proportion_of_limit:
                     return False
             else:
-                log.warning(f"Message type {message_type} not found in rate limits")
+                log.warning(
+                    f"Message type {message_type} not found in rate limits")
 
             if limits.max_total_size is None:
-                limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
+                limits = dataclasses.replace(
+                    limits, max_total_size=limits.frequency * limits.max_size)
             assert limits.max_total_size is not None
 
             if new_message_counts > limits.frequency * proportion_of_limit:

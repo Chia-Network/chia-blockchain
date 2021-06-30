@@ -45,7 +45,8 @@ class Harvester:
         self.pool_public_keys = []
         self.match_str = None
         self.show_memo: bool = False
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=config["num_threads"])
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
@@ -53,7 +54,8 @@ class Harvester:
         self.log = log
         self.state_changed_callback: Optional[Callable] = None
         self.last_load_time: float = 0
-        self.plot_load_frequency = config.get("plot_loading_frequency_seconds", 120)
+        self.plot_load_frequency = config.get(
+            "plot_loading_frequency_seconds", 120)
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()

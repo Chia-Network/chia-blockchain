@@ -14,7 +14,8 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["DEAFWAVE_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
     deafwave = sys.argv[0]
-    process = subprocess.Popen(f"{deafwave} run_daemon".split(), stdout=subprocess.PIPE)
+    process = subprocess.Popen(
+        f"{deafwave} run_daemon".split(), stdout=subprocess.PIPE)
     return process
 
 

@@ -31,7 +31,8 @@ def plots_cmd(ctx: click.Context):
 
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
-        raise RuntimeError("Please initialize (or migrate) your config directory with 'deafwave init'")
+        raise RuntimeError(
+            "Please initialize (or migrate) your config directory with 'deafwave init'")
     initialize_logging("", {"log_stdout": True}, root_path)
 
 
@@ -153,7 +154,8 @@ def check_cmd(
 ):
     from deafwave.plotting.check_plots import check_plots
 
-    check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
+    check_plots(ctx.obj["root_path"], num, challenge_start,
+                grep_string, list_duplicates, debug_show_memo)
 
 
 @plots_cmd.command("add", short_help="Adds a directory of plots")

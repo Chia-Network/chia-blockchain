@@ -48,7 +48,8 @@ def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_am
 
 def make_clawback_solution(puzzlehash, amount, fee):
     opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
-    solution = sexp(CLAWBACK_MODE, sexp("0x" + opcode_create, "0x" + str(puzzlehash), amount - fee))
+    solution = sexp(CLAWBACK_MODE, sexp("0x" + opcode_create,
+                                        "0x" + str(puzzlehash), amount - fee))
     return Program.to(binutils.assemble(solution))
 
 
@@ -63,8 +64,10 @@ def rl_make_solution_mode_2(
     my_parent_parent_id,
 ):
     my_puzzle_hash = hexlify(my_puzzle_hash).decode("ascii")
-    consolidating_primary_input = hexlify(consolidating_primary_input).decode("ascii")
-    consolidating_coin_puzzle_hash = hexlify(consolidating_coin_puzzle_hash).decode("ascii")
+    consolidating_primary_input = hexlify(
+        consolidating_primary_input).decode("ascii")
+    consolidating_coin_puzzle_hash = hexlify(
+        consolidating_coin_puzzle_hash).decode("ascii")
     primary_input = hexlify(my_primary_input).decode("ascii")
     sol = sexp(
         AGGREGATION_MODE,

@@ -86,7 +86,8 @@ def pkm_pairs_for_conditions_dict(
         assert len(cwa.vars) == 2
         assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
-        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
+        ret.append((G1Element.from_bytes(
+            cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
     return ret
 
 
@@ -163,7 +164,8 @@ def coin_announcement_names_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     input_coin: Coin,
 ) -> List[bytes32]:
-    output = [an.name() for an in coin_announcements_for_conditions_dict(conditions_dict, input_coin)]
+    output = [an.name() for an in coin_announcements_for_conditions_dict(
+        conditions_dict, input_coin)]
     return output
 
 
@@ -171,7 +173,8 @@ def puzzle_announcement_names_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     input_coin: Coin,
 ) -> List[bytes32]:
-    output = [an.name() for an in puzzle_announcements_for_conditions_dict(conditions_dict, input_coin)]
+    output = [an.name() for an in puzzle_announcements_for_conditions_dict(
+        conditions_dict, input_coin)]
     return output
 
 
@@ -180,7 +183,8 @@ def conditions_dict_for_solution(
     solution: SerializedProgram,
     max_cost: int,
 ) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionWithArgs]]], uint64]:
-    error, result, cost = conditions_for_solution(puzzle_reveal, solution, max_cost)
+    error, result, cost = conditions_for_solution(
+        puzzle_reveal, solution, max_cost)
     if error or result is None:
         return error, None, uint64(0)
     return None, conditions_by_opcode(result), cost

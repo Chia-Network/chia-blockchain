@@ -81,11 +81,14 @@ class WalletNodeAPI:
         if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return None
         if status == MempoolInclusionStatus.SUCCESS:
-            self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
+            self.wallet_node.log.info(
+                f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
         elif status == MempoolInclusionStatus.PENDING:
-            self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
+            self.wallet_node.log.info(
+                f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
-            self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
+            self.wallet_node.log.warning(
+                f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
             await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
         else:
@@ -111,7 +114,8 @@ class WalletNodeAPI:
             self.log.info(f"Wallet received {len(request.peer_list)} peers.")
             await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
         else:
-            self.log.info(f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
+            self.log.info(
+                f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
             await self.wallet_node.wallet_peers.ensure_is_closed()
         return None
 

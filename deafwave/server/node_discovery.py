@@ -75,12 +75,15 @@ class FullNodeDiscovery:
         else:
             await self.address_manager_store.clear()
             self.address_manager = AddressManager()
-        self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
+        self.server.set_received_message_callback(
+            self.update_peer_timestamp_on_message)
 
     async def start_tasks(self) -> None:
         random = Random()
-        self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
-        self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
+        self.connect_peers_task = asyncio.create_task(
+            self._connect_to_peers(random))
+        self.serialize_task = asyncio.create_task(
+            self._periodically_serialize(random))
         self.cleanup_task = asyncio.create_task(self._periodically_cleanup())
 
     async def _close_common(self) -> None:
@@ -123,7 +126,8 @@ class FullNodeDiscovery:
             and (self.server._local_type is NodeType.FULL_NODE or self.server._local_type is NodeType.WALLET)
             and self.address_manager is not None
         ):
-            msg = make_msg(ProtocolMessageTypes.request_peers, full_node_protocol.RequestPeers())
+            msg = make_msg(ProtocolMessageTypes.request_peers,
+                           full_node_protocol.RequestPeers())
             await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
@@ -157,7 +161,8 @@ class FullNodeDiscovery:
 
     def _poisson_next_send(self, now, avg_interval_seconds, random):
         return now + (
-            math.log(random.randrange(1 << 48) * -0.0000000000000035527136788 + 1) * avg_interval_seconds * -1000000.0
+            math.log(random.randrange(
+                1 << 48) * -0.0000000000000035527136788 + 1) * avg_interval_seconds * -1000000.0
             + 0.5
         )
 
@@ -166,7 +171,8 @@ class FullNodeDiscovery:
             return None
 
         async def on_connect(peer: ws.WSDeafwaveConnection):
-            msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
+            msg = make_msg(ProtocolMessageTypes.request_peers_introducer,
+                           introducer_protocol.RequestPeersIntroducer())
             await peer.send_message(msg)
 
         await self.server.start_client(self.introducer_info, on_connect)
@@ -219,7 +225,8 @@ class FullNodeDiscovery:
             self.log.error(f"Traceback: {traceback.format_exc()}")
 
     async def _connect_to_peers(self, random) -> None:
-        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
+        next_feeler = self._poisson_next_send(
+            time.time() * 1000 * 1000, 240, random)
         retry_introducers = False
         introducer_attempts: int = 0
         dns_server_index: int = 0
@@ -245,7 +252,8 @@ class FullNodeDiscovery:
                     # next two times query the introducer.
                     if introducer_attempts % 3 == 0 and len(self.dns_servers) > 0:
                         dns_address = self.dns_servers[dns_server_index]
-                        dns_server_index = (dns_server_index + 1) % len(self.dns_servers)
+                        dns_server_index = (
+                            dns_server_index + 1) % len(self.dns_servers)
                         await self._query_dns(dns_address)
                     else:
                         await self._introducer_client()
@@ -296,7 +304,8 @@ class FullNodeDiscovery:
                 has_collision = False
                 if self._num_needed_peers() == 0:
                     if time.time() * 1000 * 1000 > next_feeler:
-                        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
+                        next_feeler = self._poisson_next_send(
+                            time.time() * 1000 * 1000, 240, random)
                         is_feeler = True
 
                 await self.address_manager.resolve_tried_collisions()
@@ -311,7 +320,8 @@ class FullNodeDiscovery:
                     max_tries = 25
                 select_peer_interval = max(0.1, len(groups) * 0.25)
                 while not got_peer and not self.is_closed:
-                    self.log.debug(f"Address manager query count: {tries}. Query limit: {max_tries}")
+                    self.log.debug(
+                        f"Address manager query count: {tries}. Query limit: {max_tries}")
                     try:
                         await asyncio.sleep(select_peer_interval)
                     except asyncio.CancelledError:
@@ -366,7 +376,8 @@ class FullNodeDiscovery:
                 connect_peer_interval = max(0.25, len(groups) * 0.5)
                 if not initiate_connection:
                     connect_peer_interval += 15
-                connect_peer_interval = min(connect_peer_interval, self.peer_connect_interval)
+                connect_peer_interval = min(
+                    connect_peer_interval, self.peer_connect_interval)
                 if addr is not None and initiate_connection:
                     while len(self.pending_outbound_connections) >= MAX_CONCURRENT_OUTBOUND_CONNECTIONS:
                         self.log.debug(
@@ -374,10 +385,12 @@ class FullNodeDiscovery:
                         )
                         await asyncio.sleep(connect_peer_interval)
                     self.log.debug(f"Creating connection task with {addr}.")
-                    asyncio.create_task(self.start_client_async(addr, disconnect_after_handshake))
+                    asyncio.create_task(self.start_client_async(
+                        addr, disconnect_after_handshake))
                 await asyncio.sleep(connect_peer_interval)
             except Exception as e:
-                self.log.error(f"Exception in create outbound connections: {e}")
+                self.log.error(
+                    f"Exception in create outbound connections: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
     async def _periodically_serialize(self, random: Random):
@@ -407,7 +420,8 @@ class FullNodeDiscovery:
             connected = [c for c in connected if c is not None]
             if self.address_manager is not None and len(connected) >= 3:
                 async with self.address_manager.lock:
-                    self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
+                    self.address_manager.cleanup(
+                        max_timestamp_difference, max_consecutive_failures)
 
     async def _respond_peers_common(self, request, peer_src, is_full_node) -> None:
         # Check if we got the peers from a full node or from the introducer.
@@ -421,7 +435,8 @@ class FullNodeDiscovery:
             async with self.lock:
                 if peer_src.host not in self.received_count_from_peers:
                     self.received_count_from_peers[peer_src.host] = 0
-                self.received_count_from_peers[peer_src.host] += len(request.peer_list)
+                self.received_count_from_peers[peer_src.host] += len(
+                    request.peer_list)
                 if self.received_count_from_peers[peer_src.host] > MAX_TOTAL_PEERS_RECEIVED:
                     is_misbehaving = True
         if is_misbehaving:
@@ -481,7 +496,8 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def start(self):
         await self.initialize_address_manager()
-        self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
+        self.self_advertise_task = asyncio.create_task(
+            self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
 
@@ -567,7 +583,8 @@ class FullNodePeers(FullNodeDiscovery):
                     if peer.timestamp > time.time() - 60 * 10:
                         self.relay_queue.put_nowait((peer, 2))
         except Exception as e:
-            self.log.error(f"Respond peers exception: {e}. Traceback: {traceback.format_exc()}")
+            self.log.error(
+                f"Respond peers exception: {e}. Traceback: {traceback.format_exc()}")
 
     async def _address_relay(self):
         while not self.is_closed:

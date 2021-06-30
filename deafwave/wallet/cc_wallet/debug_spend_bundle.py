@@ -12,7 +12,8 @@ from deafwave.types.spend_bundle import SpendBundle
 from deafwave.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from deafwave.util.hash import std_hash
 
-CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
+CONDITIONS = dict((k, bytes(
+    v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -63,8 +64,10 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         print(f"consuming coin {dump_coin(coin)}")
         print(f"  with id {coin_name}")
         print()
-        print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
-        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
+        print(
+            f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
+        error, conditions, cost = conditions_dict_for_solution(
+            puzzle_reveal, solution, INFINITE_COST)
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
@@ -83,13 +86,15 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                         if len(c.vars) == 1:
                             as_prog = Program.to([c.opcode, c.vars[0]])
                         if len(c.vars) == 2:
-                            as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                            as_prog = Program.to(
+                                [c.opcode, c.vars[0], c.vars[1]])
                         print(f"  {disassemble(as_prog)}")
                 created_announcements.extend(
                     [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
                 )
                 asserted_annoucements.extend(
-                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
+                    [_.vars[0].hex() for _ in conditions.get(
+                        ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
                 )
                 print()
             else:
@@ -123,20 +128,23 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
             print(f"  {dump_coin(coin)}")
             print(f"      => created coin id {coin.name()}")
 
-    created_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_announcements]
+    created_announcement_pairs = [
+        (_, std_hash(b"".join(_)).hex()) for _ in created_announcements]
     if created_announcements:
         print("created announcements")
         for announcement, hashed in sorted(created_announcement_pairs, key=lambda _: _[-1]):
             as_hex = [f"0x{_.hex()}" for _ in announcement]
             print(f"  {as_hex} =>\n      {hashed}")
 
-    eor_announcements = sorted(set(_[-1] for _ in created_announcement_pairs) ^ set(asserted_annoucements))
+    eor_announcements = sorted(
+        set(_[-1] for _ in created_announcement_pairs) ^ set(asserted_annoucements))
 
     print()
     print()
     print(f"zero_coin_set = {sorted(zero_coin_set)}")
     print()
-    print(f"created announcements = {sorted([_[-1] for _ in created_announcement_pairs])}")
+    print(
+        f"created announcements = {sorted([_[-1] for _ in created_announcement_pairs])}")
     print()
     print(f"asserted announcements = {sorted(asserted_annoucements)}")
     print()
@@ -145,7 +153,8 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print()
     print("=" * 80)
     print()
-    validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
+    validates = AugSchemeMPL.aggregate_verify(
+        pks, msgs, spend_bundle.aggregated_signature)
     print(f"aggregated signature check pass: {validates}")
 
 

@@ -17,6 +17,8 @@ def _derive_path(sk: PrivateKey, path: List[int]) -> PrivateKey:
     return sk
 
 # For OG plots, we must leave this as 8444 instead of 8620
+
+
 def master_sk_to_farmer_sk(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 0, 0])
 

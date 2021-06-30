@@ -20,7 +20,8 @@ def float_to_str(f):
         digits, exp_str = float_string.split("e")
         digits = digits.replace(".", "").replace("-", "")
         exp = int(exp_str)
-        zero_padding = "0" * (abs(int(exp)) - 1)  # minus 1 for decimal point in the sci notation
+        # minus 1 for decimal point in the sci notation
+        zero_padding = "0" * (abs(int(exp)) - 1)
         sign = "-" if f < 0 else ""
         if exp > 0:
             float_string = "{}{}{}.0".format(sign, digits, zero_padding)
@@ -66,25 +67,35 @@ def benchmark_all_operators():
     " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
     point_add_cost, point_add_time = run_and_return_cost_time(point_add)
     addition_cost, addition_time = run_and_return_cost_time(addition)
-    substraction_cost, substraction_time = run_and_return_cost_time(substraction)
+    substraction_cost, substraction_time = run_and_return_cost_time(
+        substraction)
     multiply_cost, multiply_time = run_and_return_cost_time(multiply)
     greater_cost, greater_time = run_and_return_cost_time(greater)
     equal_cost, equal_time = run_and_return_cost_time(equal)
     if_cost, if_time = run_and_return_cost_time(if_clvm)
     sha256tree_cost, sha256tree_time = run_and_return_cost_time(sha256tree)
-    pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
+    pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(
+        pubkey_for_exp)
 
     one_addition = 1
-    one_substraction = get_cost_compared_to_addition(addition_cost, addition_time, substraction_time) / addition_cost
-    one_multiply = get_cost_compared_to_addition(addition_cost, addition_time, multiply_time) / addition_cost
-    one_greater = get_cost_compared_to_addition(addition_cost, addition_time, greater_time) / addition_cost
-    one_equal = get_cost_compared_to_addition(addition_cost, addition_time, equal_time) / addition_cost
-    one_if = get_cost_compared_to_addition(addition_cost, addition_time, if_time) / addition_cost
-    one_sha256 = get_cost_compared_to_addition(addition_cost, addition_time, sha256tree_time) / addition_cost
+    one_substraction = get_cost_compared_to_addition(
+        addition_cost, addition_time, substraction_time) / addition_cost
+    one_multiply = get_cost_compared_to_addition(
+        addition_cost, addition_time, multiply_time) / addition_cost
+    one_greater = get_cost_compared_to_addition(
+        addition_cost, addition_time, greater_time) / addition_cost
+    one_equal = get_cost_compared_to_addition(
+        addition_cost, addition_time, equal_time) / addition_cost
+    one_if = get_cost_compared_to_addition(
+        addition_cost, addition_time, if_time) / addition_cost
+    one_sha256 = get_cost_compared_to_addition(
+        addition_cost, addition_time, sha256tree_time) / addition_cost
     one_pubkey_for_exp = (
-        get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time) / addition_cost
+        get_cost_compared_to_addition(
+            addition_cost, addition_time, pubkey_for_exp_time) / addition_cost
     )
-    one_point_add = get_cost_compared_to_addition(addition_cost, addition_time, point_add_time) / addition_cost
+    one_point_add = get_cost_compared_to_addition(
+        addition_cost, addition_time, point_add_time) / addition_cost
 
     print(f"cost of addition is: {one_addition}")
     print(f"cost of one_substraction is: {one_substraction}")
@@ -114,7 +125,8 @@ if __name__ == "__main__":
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
-            {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
+            {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionWithArgs(
+                ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
         )
         puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)

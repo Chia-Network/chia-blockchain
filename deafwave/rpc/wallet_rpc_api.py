@@ -165,7 +165,8 @@ class WalletRpcApi:
             try:
                 private_key = self.service.get_key_for_fingerprint(fingerprint)
                 last_recovery = await download_backup(recovery_host, private_key)
-                backup_path = path_from_root(self.service.root_path, "last_recovery")
+                backup_path = path_from_root(
+                    self.service.root_path, "last_recovery")
                 if backup_path.exists():
                     backup_path.unlink()
                 backup_path.write_text(last_recovery)
@@ -183,7 +184,8 @@ class WalletRpcApi:
         return {"success": False, "error": "Unknown Error"}
 
     async def get_public_keys(self, request: Dict):
-        fingerprints = [sk.get_g1().get_fingerprint() for (sk, seed) in self.service.keychain.get_all_private_keys()]
+        fingerprints = [sk.get_g1().get_fingerprint() for (
+            sk, seed) in self.service.keychain.get_all_private_keys()]
         return {"public_key_fingerprints": fingerprints}
 
     async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
@@ -218,7 +220,8 @@ class WalletRpcApi:
         mnemonic = request["mnemonic"]
         passphrase = ""
         try:
-            sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+            sk = self.service.keychain.add_private_key(
+                " ".join(mnemonic), passphrase)
         except KeyError as e:
             return {
                 "success": False,
@@ -260,7 +263,8 @@ class WalletRpcApi:
     async def delete_all_keys(self, request: Dict):
         await self._stop_wallet()
         self.service.keychain.delete_all_keys()
-        path = path_from_root(self.service.root_path, self.service.config["database_path"])
+        path = path_from_root(self.service.root_path,
+                              self.service.config["database_path"])
         if path.exists():
             path.unlink()
         return {}
@@ -363,7 +367,8 @@ class WalletRpcApi:
                         uint64(int(request["limit"])),
                         request["pubkey"],
                         uint64(int(request["amount"])),
-                        uint64(int(request["fee"])) if "fee" in request else uint64(0),
+                        uint64(int(request["fee"])
+                               ) if "fee" in request else uint64(0),
                     )
                     asyncio.create_task(self._create_backup_and_upload(host))
                 assert rl_admin.rl_info.admin_pubkey is not None
@@ -469,7 +474,8 @@ class WalletRpcApi:
 
     async def get_transaction(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
-        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
+        transaction_id: bytes32 = bytes32(
+            hexstr_to_bytes(request["transaction_id"]))
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
@@ -498,7 +504,8 @@ class WalletRpcApi:
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
         for tx in transactions:
             formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
+            formatted["to_address"] = encode_puzzle_hash(
+                tx.to_puzzle_hash, prefix)
             formatted_transactions.append(formatted)
 
         return {
@@ -531,7 +538,8 @@ class WalletRpcApi:
             raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
-            raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
+            raise ValueError(
+                f"Wallet type {wallet.type()} cannot create puzzle hashes")
 
         return {
             "wallet_id": wallet_id,
@@ -542,17 +550,20 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
+            raise ValueError(
+                "Wallet needs to be fully synced before sending transactions")
 
         if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
+            end_date = datetime.fromtimestamp(
+                float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
             raise ValueError(f"No transactions before: {end_date}")
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
+            raise ValueError(
+                "An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
         if "fee" in request:
@@ -605,7 +616,8 @@ class WalletRpcApi:
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
 
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
+            raise ValueError(
+                "An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         if "fee" in request:
             fee = uint64(request["fee"])
@@ -639,7 +651,8 @@ class WalletRpcApi:
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(offer, file_name)
         if success:
-            self.service.wallet_state_manager.trade_manager.write_offer_to_disk(Path(file_name), spend_bundle)
+            self.service.wallet_state_manager.trade_manager.write_offer_to_disk(
+                Path(file_name), spend_bundle)
             return {}
         raise ValueError(error)
 
@@ -717,7 +730,8 @@ class WalletRpcApi:
             mnemonic = request["words"]
             passphrase = ""
             try:
-                sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+                sk = self.service.keychain.add_private_key(
+                    " ".join(mnemonic), passphrase)
             except KeyError as e:
                 return {
                     "success": False,
@@ -743,7 +757,8 @@ class WalletRpcApi:
         for _ in request["new_list"]:
             recovery_list.append(hexstr_to_bytes(_))
         if "num_verifications_required" in request:
-            new_amount_verifications_required = uint64(request["num_verifications_required"])
+            new_amount_verifications_required = uint64(
+                request["num_verifications_required"])
         else:
             new_amount_verifications_required = len(recovery_list)
         async with self.service.wallet_state_manager.lock:
@@ -803,7 +818,8 @@ class WalletRpcApi:
             ) = await wallet.load_attest_files_for_recovery_spend(request["attest_filenames"])
 
             if "pubkey" in request:
-                pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
+                pubkey = G1Element.from_bytes(
+                    hexstr_to_bytes(request["pubkey"]))
             else:
                 assert wallet.did_info.temp_pubkey is not None
                 pubkey = wallet.did_info.temp_pubkey
@@ -837,7 +853,8 @@ class WalletRpcApi:
             coin = hexstr_to_bytes(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             spend_bundle = await wallet.create_attestment(
-                coin, hexstr_to_bytes(request["puzhash"]), pubkey, request["filename"]
+                coin, hexstr_to_bytes(
+                    request["puzhash"]), pubkey, request["filename"]
             )
         if spend_bundle is not None:
             return {
@@ -913,7 +930,8 @@ class WalletRpcApi:
     async def add_rate_limited_funds(self, request):
         wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
+        puzzle_hash = wallet.rl_get_aggregation_puzzlehash(
+            wallet.rl_info.rl_puzzle_hash)
         request["wallet_id"] = 1
         request["puzzle_hash"] = puzzle_hash
         async with self.service.wallet_state_manager.lock:
@@ -928,13 +946,15 @@ class WalletRpcApi:
         fee_amount = 0
         last_height_farmed = 0
         for record in tx_records:
-            height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
+            height = record.height_farmed(
+                self.service.constants.GENESIS_CHALLENGE)
             if height > last_height_farmed:
                 last_height_farmed = height
             if record.type == TransactionType.COINBASE_REWARD:
                 pool_reward_amount += record.amount
             if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
+                fee_amount += record.amount - \
+                    calculate_base_farmer_reward(height)
                 farmer_reward_amount += calculate_base_farmer_reward(height)
             amount += record.amount
 
@@ -965,8 +985,10 @@ class WalletRpcApi:
                 raise ValueError(f"Address must be 32 bytes. {receiver_ph}")
             amount = uint64(addition["amount"])
             if amount > self.service.constants.MAX_COIN_AMOUNT:
-                raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount})
+                raise ValueError(
+                    f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
+            additional_outputs.append(
+                {"puzzlehash": receiver_ph, "amount": amount})
 
         fee = uint64(0)
         if "fee" in request:
@@ -974,7 +996,8 @@ class WalletRpcApi:
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
-            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+            coins = set([Coin.from_json_dict(coin_json)
+                         for coin_json in request["coins"]])
 
         async with self.service.wallet_state_manager.lock:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(

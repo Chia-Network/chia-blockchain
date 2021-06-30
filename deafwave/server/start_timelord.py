@@ -27,7 +27,8 @@ def service_kwargs_for_timelord(
     constants: ConsensusConstants,
 ) -> Dict:
 
-    connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
+    connect_peers = [
+        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 
@@ -51,7 +52,8 @@ def service_kwargs_for_timelord(
 
 def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_timelord(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    kwargs = service_kwargs_for_timelord(
+        DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

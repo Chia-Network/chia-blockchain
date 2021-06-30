@@ -9,7 +9,8 @@ def start_reconnect_task(server: DeafwaveServer, peer_info_arg: PeerInfo, log, a
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
-    peer_info = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
+    peer_info = PeerInfo(socket.gethostbyname(
+        peer_info_arg.host), peer_info_arg.port)
 
     async def connection_check():
         while True:

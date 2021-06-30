@@ -37,7 +37,8 @@ class WSDeafwaveConnection:
         server_port: int,
         log: logging.Logger,
         is_outbound: bool,
-        is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
+        # Special type of connection, that disconnects after the handshake.
+        is_feeler: bool,
         peer_host,
         incoming_queue,
         close_callback: Callable,
@@ -56,7 +57,8 @@ class WSDeafwaveConnection:
 
         peername = self.ws._writer.transport.get_extra_info("peername")
         if peername is None:
-            raise ValueError(f"Was not able to get peername from {self.ws_witer} at {self.peer_host}")
+            raise ValueError(
+                f"Was not able to get peername from {self.ws_witer} at {self.peer_host}")
 
         connection_port = peername[1]
         self.peer_port = connection_port
@@ -100,8 +102,10 @@ class WSDeafwaveConnection:
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
-        self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
-        self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
+        self.outbound_rate_limiter = RateLimiter(
+            incoming=False, percentage_of_limit=outbound_rate_limit_percent)
+        self.inbound_rate_limiter = RateLimiter(
+            incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
@@ -121,7 +125,8 @@ class WSDeafwaveConnection:
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
+            inbound_handshake = Handshake.from_bytes(
+                inbound_handshake_msg.data)
             if ProtocolMessageTypes(inbound_handshake_msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             if inbound_handshake.network_id != network_id:
@@ -249,11 +254,14 @@ class WSDeafwaveConnection:
             timeout = 60
             if "timeout" in kwargs:
                 timeout = kwargs["timeout"]
-            attribute = getattr(class_for_type(self.connection_type), attr_name, None)
+            attribute = getattr(class_for_type(
+                self.connection_type), attr_name, None)
             if attribute is None:
-                raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
+                raise AttributeError(
+                    f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
+            msg = Message(
+                uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
             result = await self.create_request(msg, timeout)
             self.log.debug(
@@ -261,7 +269,8 @@ class WSDeafwaveConnection:
                 f"None? {result is None}"
             )
             if result is not None:
-                ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
+                ret_attr = getattr(class_for_type(
+                    self.local_type), ProtocolMessageTypes(result.type).name, None)
 
                 req_annotations = ret_attr.__annotations__
                 req = None
@@ -288,10 +297,12 @@ class WSDeafwaveConnection:
         # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
         request_id = self.request_nonce
         if self.is_outbound:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 15 - 1) else uint16(0)
+            self.request_nonce = uint16(
+                self.request_nonce + 1) if self.request_nonce != (2 ** 15 - 1) else uint16(0)
         else:
             self.request_nonce = (
-                uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(2 ** 15)
+                uint16(self.request_nonce + 1) if self.request_nonce != (2 **
+                                                                         16 - 1) else uint16(2 ** 15)
             )
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
@@ -319,7 +330,8 @@ class WSDeafwaveConnection:
         if message.id in self.request_results:
             result = self.request_results[message.id]
             assert result is not None
-            self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
+            self.log.debug(
+                f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
             self.request_results.pop(result.id)
 
         return result
@@ -340,7 +352,8 @@ class WSDeafwaveConnection:
             await asyncio.sleep(1)
             await queue.put(msg)
         except Exception as e:
-            self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
+            self.log.debug(
+                f"Exception {e} while waiting to retry sending rate limited message")
             return None
 
     async def _send_message(self, message: Message):
@@ -356,7 +369,8 @@ class WSDeafwaveConnection:
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    asyncio.create_task(self._wait_and_retry(message, self.outgoing_queue))
+                    asyncio.create_task(self._wait_and_retry(
+                        message, self.outgoing_queue))
 
                 return None
             else:
@@ -366,7 +380,8 @@ class WSDeafwaveConnection:
                 )
 
         await self.ws.send_bytes(encoded)
-        self.log.debug(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.debug(
+            f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
@@ -411,7 +426,8 @@ class WSDeafwaveConnection:
             self.bytes_read += len(data)
             self.last_message_time = time.time()
             try:
-                message_type = ProtocolMessageTypes(full_message_loaded.type).name
+                message_type = ProtocolMessageTypes(
+                    full_message_loaded.type).name
             except Exception:
                 message_type = "Unknown"
             if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):

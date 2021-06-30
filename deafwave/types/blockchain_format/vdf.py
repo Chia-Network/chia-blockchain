@@ -71,12 +71,14 @@ class VDFProof(Streamable):
         """
         if target_vdf_info is not None and info != target_vdf_info:
             tb = traceback.format_stack()
-            log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
+            log.error(
+                f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
             return False
         try:
-            disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
+            disc: int = get_discriminant(
+                info.challenge, constants.DISCRIMINANT_SIZE_BITS)
             # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
             return verify_vdf(
                 disc,

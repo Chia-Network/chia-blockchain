@@ -52,7 +52,8 @@ async def setup_daemon(btools):
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     assert lockfile is not None
     create_server_for_daemon(btools.root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    ws_server = WebSocketServer(
+        root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
 
     yield ws_server
@@ -91,9 +92,11 @@ async def setup_full_node(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(
+            local_bt.root_path, config, local_bt)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+        kwargs = service_kwargs_for_full_node(
+            local_bt.root_path, config, updated_constants)
 
     kwargs.update(
         parse_cli_args=False,
@@ -159,7 +162,8 @@ async def setup_wallet_node(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
+    kwargs = service_kwargs_for_wallet(
+        local_bt.root_path, config, consensus_constants, keychain)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
@@ -179,7 +183,8 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools):
-    kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
+    kwargs = service_kwargs_for_harvester(
+        b_tools.root_path, b_tools.config["harvester"], consensus_constants)
     kwargs.update(
         server_listen_ports=[port],
         advertised_port=port,
@@ -208,9 +213,11 @@ async def setup_farmer(
     config_pool = bt.config["pool"]
 
     config["zzz_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "zzz")
-    config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
+    config["pool_public_keys"] = [bytes(pk).hex()
+                                  for pk in b_tools.pool_pubkeys]
     config["port"] = port
-    config_pool["zzz_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "zzz")
+    config_pool["zzz_target_address"] = encode_puzzle_hash(
+        b_tools.pool_ph, "zzz")
 
     if full_node_port:
         config["full_node_peer"]["host"] = self_hostname
@@ -218,7 +225,8 @@ async def setup_farmer(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_farmer(b_tools.root_path, config, config_pool, b_tools.keychain, consensus_constants)
+    kwargs = service_kwargs_for_farmer(
+        b_tools.root_path, config, config_pool, b_tools.keychain, consensus_constants)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
@@ -293,7 +301,8 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     if sanitizer:
         config["vdf_server"]["port"] = 7999
 
-    kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
+    kwargs = service_kwargs_for_timelord(
+        b_tools.root_path, config, consensus_constants)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
@@ -358,8 +367,10 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
 async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None, key_seed=None):
     btools = BlockTools(constants=test_constants)
     node_iters = [
-        setup_full_node(consensus_constants, "blockchain_test.db", 21234, btools, simulator=False),
-        setup_wallet_node(21235, consensus_constants, btools, None, starting_height=starting_height, key_seed=key_seed),
+        setup_full_node(consensus_constants, "blockchain_test.db",
+                        21234, btools, simulator=False),
+        setup_wallet_node(21235, consensus_constants, btools, None,
+                          starting_height=starting_height, key_seed=key_seed),
     ]
 
     full_node_api = await node_iters[0].__anext__()
@@ -386,7 +397,8 @@ async def setup_simulators_and_wallets(
     for index in range(0, simulator_count):
         port = starting_port + index
         db_name = f"blockchain_test_{port}.db"
-        bt_tools = BlockTools(consensus_constants, const_dict=dic)  # block tools modifies constants
+        # block tools modifies constants
+        bt_tools = BlockTools(consensus_constants, const_dict=dic)
         sim = setup_full_node(
             bt_tools.constants,
             db_name,
@@ -403,7 +415,8 @@ async def setup_simulators_and_wallets(
         else:
             seed = key_seed
         port = starting_port + 5000 + index
-        bt_tools = BlockTools(consensus_constants, const_dict=dic)  # block tools modifies constants
+        # block tools modifies constants
+        bt_tools = BlockTools(consensus_constants, const_dict=dic)
         wlt = setup_wallet_node(
             port,
             bt_tools.constants,

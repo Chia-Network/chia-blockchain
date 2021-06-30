@@ -17,7 +17,8 @@ class UnfinishedHeaderBlock(Streamable):
     challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     foliage: Foliage  # Reward chain foliage data
-    foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
+    # Reward chain foliage data (tx block)
+    foliage_transaction_block: Optional[FoliageTransactionBlock]
     transactions_filter: bytes  # Filter for block transactions
 
     @property

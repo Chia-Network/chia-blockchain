@@ -17,7 +17,8 @@ GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 
 def int_to_public_key(index: int) -> blspy.G1Element:
     index = index % GROUP_ORDER
-    private_key_from_int = blspy.PrivateKey.from_bytes(index.to_bytes(32, "big"))
+    private_key_from_int = blspy.PrivateKey.from_bytes(
+        index.to_bytes(32, "big"))
     return private_key_from_int.get_g1()
 
 
@@ -42,7 +43,8 @@ def make_fake_coin(index: int, puzzle_hash_db: dict) -> Coin:
 
 def conditions_for_payment(coin) -> Program:
     d: Dict = {}  # a throwaway db since we don't care
-    new_puzzle_hash = puzzle_hash_for_index(int.from_bytes(coin.puzzle_hash, "big"), d)
+    new_puzzle_hash = puzzle_hash_for_index(
+        int.from_bytes(coin.puzzle_hash, "big"), d)
     return Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])
 
 

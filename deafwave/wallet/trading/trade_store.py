@@ -271,7 +271,8 @@ class TradeStore:
 
         # Delete from storage
         cursor = await self.db_connection.execute(
-            "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
+            "DELETE FROM trade_records WHERE confirmed_at_index>?", (
+                block_index,)
         )
         await cursor.close()
         await self.db_connection.commit()

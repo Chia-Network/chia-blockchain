@@ -117,11 +117,13 @@ class TestBlockStore:
             if random.random() < 0.5:
                 tasks.append(
                     asyncio.create_task(
-                        store.add_full_block(blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i])
+                        store.add_full_block(
+                            blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i])
                     )
                 )
             if random.random() < 0.5:
-                tasks.append(asyncio.create_task(store.get_full_block(blocks[rand_i].header_hash)))
+                tasks.append(asyncio.create_task(
+                    store.get_full_block(blocks[rand_i].header_hash)))
         await asyncio.gather(*tasks)
         await connection.close()
         await connection_2.close()

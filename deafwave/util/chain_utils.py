@@ -15,7 +15,8 @@ def additions_for_solution(
     """
     Checks the conditions created by CoinSolution and returns the list of all coins created
     """
-    err, dic, cost = conditions_dict_for_solution(puzzle_reveal, solution, max_cost)
+    err, dic, cost = conditions_dict_for_solution(
+        puzzle_reveal, solution, max_cost)
     if err or dic is None:
         return []
     return created_outputs_for_conditions_dict(dic, coin_name)

@@ -53,7 +53,8 @@ if __name__ == "__main__":
         try:
             while True:
                 f = io.StringIO()
-                st = pstats.Stats(str(profile_dir / ("slot-%05d.profile" % counter)), stream=f)
+                st = pstats.Stats(
+                    str(profile_dir / ("slot-%05d.profile" % counter)), stream=f)
                 st.strip_dirs()
                 st.sort_stats(pstats.SortKey.CUMULATIVE)
                 st.print_stats()
@@ -101,7 +102,8 @@ if __name__ == "__main__":
 
                 quantized = int(percent // 2)
                 print(
-                    ("%05d: " + color + "%3.0f%% CPU " + Back.WHITE + "%s" + Style.RESET_ALL + "%s|")
+                    ("%05d: " + color + "%3.0f%% CPU " +
+                     Back.WHITE + "%s" + Style.RESET_ALL + "%s|")
                     % (counter, percent, " " * quantized, " " * (50 - quantized))
                 )
 
@@ -123,7 +125,8 @@ if __name__ == "__main__":
             output_file += "-%d" % last
 
         print("generating call tree for slot(s) [%d, %d]" % (first, last))
-        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot"] + files)
+        check_call(["gprof2dot", "-f", "pstats", "-o",
+                    output_file + ".dot"] + files)
         with open(output_file + ".png", "w+") as f:
             check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
         print("output written to: %s.png" % output_file)

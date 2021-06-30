@@ -36,16 +36,20 @@ async def main() -> None:
         ph2 = decode_puzzle_hash(address2)
 
         p_farmer_2 = Program.to(
-            binutils.assemble(f"(q . ((51 0x{ph1.hex()} {farmer_amounts}) (51 0x{ph2.hex()} {farmer_amounts})))")
+            binutils.assemble(
+                f"(q . ((51 0x{ph1.hex()} {farmer_amounts}) (51 0x{ph2.hex()} {farmer_amounts})))")
         )
         p_pool_2 = Program.to(
-            binutils.assemble(f"(q . ((51 0x{ph1.hex()} {pool_amounts}) (51 0x{ph2.hex()} {pool_amounts})))")
+            binutils.assemble(
+                f"(q . ((51 0x{ph1.hex()} {pool_amounts}) (51 0x{ph2.hex()} {pool_amounts})))")
         )
 
         p_solution = Program.to(binutils.assemble("()"))
 
-        sb_farmer = SpendBundle([CoinSolution(farmer_prefarm, p_farmer_2, p_solution)], G2Element())
-        sb_pool = SpendBundle([CoinSolution(pool_prefarm, p_pool_2, p_solution)], G2Element())
+        sb_farmer = SpendBundle(
+            [CoinSolution(farmer_prefarm, p_farmer_2, p_solution)], G2Element())
+        sb_pool = SpendBundle(
+            [CoinSolution(pool_prefarm, p_pool_2, p_solution)], G2Element())
 
         print(sb_pool, sb_farmer)
         res = await client.push_tx(sb_farmer)

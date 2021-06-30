@@ -61,7 +61,8 @@ class TestRpc:
             assert state["sub_slot_iters"] > 0
 
             blocks = bt.get_consecutive_blocks(num_blocks)
-            blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = bt.get_consecutive_blocks(
+                num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             assert len(await client.get_unfinished_block_headers()) == 0
             assert len((await client.get_block_records(0, 100))) == 0
@@ -110,7 +111,8 @@ class TestRpc:
             assert len(additions) >= 2 and len(removals) == 0
 
             wallet = WalletTool(full_node_api_1.full_node.constants)
-            wallet_receiver = WalletTool(full_node_api_1.full_node.constants, AugSchemeMPL.key_gen(std_hash(b"123123")))
+            wallet_receiver = WalletTool(
+                full_node_api_1.full_node.constants, AugSchemeMPL.key_gen(std_hash(b"123123")))
             ph = wallet.get_new_puzzlehash()
             ph_2 = wallet.get_new_puzzlehash()
             ph_receiver = wallet_receiver.get_new_puzzlehash()
@@ -131,7 +133,8 @@ class TestRpc:
 
             coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
 
-            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
+            spend_bundle = wallet.generate_signed_transaction(
+                coin_to_spend.amount, ph_receiver, coin_to_spend)
 
             assert len(await client.get_all_mempool_items()) == 0
             assert len(await client.get_all_mempool_tx_ids()) == 0

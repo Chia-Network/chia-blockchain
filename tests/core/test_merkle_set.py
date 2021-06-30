@@ -21,7 +21,8 @@ class TestMerkleSet:
 
         merkle_set = MerkleSet()
         merkle_set_reverse = MerkleSet()
-        coins = list(itertools.chain.from_iterable(map(lambda block: block.get_included_reward_coins(), blocks)))
+        coins = list(itertools.chain.from_iterable(
+            map(lambda block: block.get_included_reward_coins(), blocks)))
 
         # excluded coin (not present in 'coins' and Merkle sets)
         excl_coin = coins.pop()
@@ -35,10 +36,13 @@ class TestMerkleSet:
         for coin in coins:
             result, proof = merkle_set.is_included_already_hashed(coin.name())
             assert result is True
-            result_excl, proof_excl = merkle_set.is_included_already_hashed(excl_coin.name())
+            result_excl, proof_excl = merkle_set.is_included_already_hashed(
+                excl_coin.name())
             assert result_excl is False
-            validate_proof = confirm_included_already_hashed(merkle_set.get_root(), coin.name(), proof)
-            validate_proof_excl = confirm_included_already_hashed(merkle_set.get_root(), excl_coin.name(), proof_excl)
+            validate_proof = confirm_included_already_hashed(
+                merkle_set.get_root(), coin.name(), proof)
+            validate_proof_excl = confirm_included_already_hashed(
+                merkle_set.get_root(), excl_coin.name(), proof_excl)
             assert validate_proof is True
             assert validate_proof_excl is False
 

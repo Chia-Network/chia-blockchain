@@ -111,7 +111,8 @@ async def validate_block_body(
     # If height == 0, expected_reward_coins will be left empty
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
-        prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
+        prev_transaction_block = blocks.block_record(
+            block.foliage_transaction_block.prev_transaction_block_hash)
         prev_transaction_block_height = prev_transaction_block.height
         assert prev_transaction_block.fees is not None
         pool_coin = create_pool_coin(
@@ -123,7 +124,8 @@ async def validate_block_body(
         farmer_coin = create_farmer_coin(
             prev_transaction_block_height,
             prev_transaction_block.farmer_puzzle_hash,
-            uint64(calculate_base_farmer_reward(prev_transaction_block.height) + prev_transaction_block.fees),
+            uint64(calculate_base_farmer_reward(
+                prev_transaction_block.height) + prev_transaction_block.fees),
             constants.GENESIS_CHALLENGE,
         )
         # Adds the previous block
@@ -200,7 +202,8 @@ async def validate_block_body(
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
 
             # The generator_refs_root must be the hash of the concatenation of the List[uint32]
-            generator_refs_hash = std_hash(b"".join([bytes(i) for i in block.transactions_generator_ref_list]))
+            generator_refs_hash = std_hash(
+                b"".join([bytes(i) for i in block.transactions_generator_ref_list]))
             if block.transactions_info.generator_refs_root != generator_refs_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
             if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
@@ -212,7 +215,8 @@ async def validate_block_body(
             # Get List of names removed, puzzles hashes for removed coins and conditions created
 
             assert npc_result is not None
-            cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)
+            cost = calculate_cost_of_program(
+                block.transactions_generator, npc_result, constants.COST_PER_BYTE)
             npc_list = npc_result.npc_list
 
             # 7. Check that cost <= MAX_BLOCK_COST_CLVM
@@ -232,8 +236,10 @@ async def validate_block_body(
                 removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
 
             additions = additions_for_npc(npc_list)
-            coin_announcement_names = coin_announcements_names_for_npc(npc_list)
-            puzzle_announcement_names = puzzle_announcements_names_for_npc(npc_list)
+            coin_announcement_names = coin_announcements_names_for_npc(
+                npc_list)
+            puzzle_announcement_names = puzzle_announcements_names_for_npc(
+                npc_list)
         else:
             assert npc_result is None
 
@@ -279,7 +285,8 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
 
         # 13. Check for duplicate outputs in additions
-        addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
+        addition_counter = collections.Counter(
+            _.name() for _ in additions + coinbase_additions)
         for k, v in addition_counter.items():
             if v > 1:
                 return Err.DUPLICATE_OUTPUT, None
@@ -297,12 +304,14 @@ async def validate_block_body(
         elif fork_point_with_peak is not None:
             fork_h = fork_point_with_peak
         else:
-            fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
+            fork_h = find_fork_point_in_chain(
+                blocks, peak, blocks.block_record(block.prev_header_hash))
 
         # Get additions and removals since (after) fork_h but not including this block
         # The values include: the coin that was added, the height of the block in which it was confirmed, and the
         # timestamp of the block in which it was confirmed
-        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = {}  # This includes coinbase additions
+        # This includes coinbase additions
+        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = {}
         removals_since_fork: Set[bytes32] = set()
 
         # For height 0, there are no additions and removals before this block, so we can skip
@@ -330,9 +339,11 @@ async def validate_block_body(
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
                     assert curr_block_generator is not None and curr.transactions_info is not None
                     curr_npc_result = get_name_puzzle_conditions(
-                        curr_block_generator, min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost), False
+                        curr_block_generator, min(
+                            constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost), False
                     )
-                    removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
+                    removals_in_curr, additions_in_curr = tx_removals_and_additions(
+                        curr_npc_result.npc_list)
                 else:
                     removals_in_curr = []
                     additions_in_curr = []
@@ -343,7 +354,8 @@ async def validate_block_body(
                 for c in additions_in_curr:
                     assert c.name() not in additions_since_fork
                     assert curr.foliage_transaction_block is not None
-                    additions_since_fork[c.name()] = (c, curr.height, curr.foliage_transaction_block.timestamp)
+                    additions_since_fork[c.name()] = (
+                        c, curr.height, curr.foliage_transaction_block.timestamp)
 
                 for coinbase_coin in curr.get_included_reward_coins():
                     assert coinbase_coin.name() not in additions_since_fork

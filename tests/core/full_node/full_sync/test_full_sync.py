@@ -76,7 +76,7 @@ class TestFullSync:
         )
 
         for block in blocks[
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 : test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
+            test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5: test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
         ]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
@@ -97,7 +97,7 @@ class TestFullSync:
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()
-        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5:]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -126,7 +126,8 @@ class TestFullSync:
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
 
         # Deep reorg, fall back from batch sync to long sync
-        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
+        blocks_node_5 = bt.get_consecutive_blocks(
+            60, block_list_input=blocks[:350], seed=b"node5")
         for block in blocks_node_5:
             await full_node_5.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await server_5.start_client(
@@ -165,7 +166,8 @@ class TestFullSync:
         # Also test request proof of weight
         # Have the request header hash
         res = await full_node_1.request_proof_of_weight(
-            full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
+            full_node_protocol.RequestProofOfWeight(
+                blocks_950[-1].height + 1, blocks_950[-1].header_hash)
         )
         assert res is not None
         validated, _, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(
@@ -175,7 +177,8 @@ class TestFullSync:
 
         # Don't have the request header hash
         res = await full_node_1.request_proof_of_weight(
-            full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, std_hash(b"12"))
+            full_node_protocol.RequestProofOfWeight(
+                blocks_950[-1].height + 1, std_hash(b"12"))
         )
         assert res is None
 
@@ -195,7 +198,8 @@ class TestFullSync:
             await full_node_3.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_3.full_node.blockchain.get_peak().height >= block.height
 
-        log.warning(f"FN3 height {full_node_3.full_node.blockchain.get_peak().height}")
+        log.warning(
+            f"FN3 height {full_node_3.full_node.blockchain.get_peak().height}")
 
         # TODO: fix this flaky test
         await time_out_assert(120, node_height_exactly, True, full_node_3, 999)
@@ -339,7 +343,7 @@ class TestFullSync:
         await full_node_2.full_node.new_peak(peak, con)
         await asyncio.sleep(2)
         assert not full_node_2.full_node.sync_store.get_sync_mode()
-        for block in default_1000_blocks[1000 - num_blocks_initial :]:
+        for block in default_1000_blocks[1000 - num_blocks_initial:]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)

@@ -31,7 +31,8 @@ def get_signage_point_vdf_info(
     if new_sub_slot and not overflow:
         # Case 1: start from start of this slot. Case of no overflow slots. Also includes genesis block after empty
         # slot(s), but not overflowing
-        rc_vdf_challenge: bytes32 = finished_sub_slots[-1].reward_chain.get_hash()
+        rc_vdf_challenge: bytes32 = finished_sub_slots[-1].reward_chain.get_hash(
+        )
         cc_vdf_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()

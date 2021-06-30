@@ -148,7 +148,7 @@ class SerializedProgram:
 
     @classmethod
     def parse(cls, f) -> "SerializedProgram":
-        length = serialized_length(f.getvalue()[f.tell() :])
+        length = serialized_length(f.getvalue()[f.tell():])
         return SerializedProgram.from_bytes(f.read(length))
 
     def stream(self, f):

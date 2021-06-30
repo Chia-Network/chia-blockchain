@@ -64,7 +64,8 @@ def dataclass_from_dict(klass, d):
         i = 0
         klass_properties = []
         for item in d:
-            klass_properties.append(dataclass_from_dict(klass.__args__[i], item))
+            klass_properties.append(
+                dataclass_from_dict(klass.__args__[i], item))
             i = i + 1
         return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
@@ -183,7 +184,8 @@ def parse_bool(f: BinaryIO) -> bool:
 
 def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Optional[Any]:
     is_present_bytes = f.read(1)
-    assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
+    assert is_present_bytes is not None and len(
+        is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
         return None
     elif is_present_bytes == bytes([1]):
@@ -194,7 +196,8 @@ def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -
 
 def parse_bytes(f: BinaryIO) -> bytes:
     list_size_bytes = f.read(4)
-    assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+    assert list_size_bytes is not None and len(
+        list_size_bytes) == 4  # Checks for EOF
     list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
     bytes_read = f.read(list_size)
     assert bytes_read is not None and len(bytes_read) == list_size
@@ -205,7 +208,8 @@ def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Li
     full_list: List = []
     # wjb assert inner_type != get_args(List)[0]
     list_size_bytes = f.read(4)
-    assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+    assert list_size_bytes is not None and len(
+        list_size_bytes) == 4  # Checks for EOF
     list_size = uint32(int.from_bytes(list_size_bytes, "big"))
     for list_index in range(list_size):
         full_list.append(parse_inner_type_f(f))
@@ -227,16 +231,19 @@ def parse_size_hints(f: BinaryIO, f_type: Type, bytes_to_read: int) -> Any:
 
 def parse_str(f: BinaryIO) -> str:
     str_size_bytes = f.read(4)
-    assert str_size_bytes is not None and len(str_size_bytes) == 4  # Checks for EOF
+    assert str_size_bytes is not None and len(
+        str_size_bytes) == 4  # Checks for EOF
     str_size: uint32 = uint32(int.from_bytes(str_size_bytes, "big"))
     str_read_bytes = f.read(str_size)
-    assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
+    assert str_read_bytes is not None and len(
+        str_read_bytes) == str_size  # Checks for EOF
     return bytes.decode(str_read_bytes, "utf-8")
 
 
 class Streamable:
     @classmethod
-    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
+    # type: ignore
+    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):
         """
         This function returns a function taking one argument `f: BinaryIO` that parses
         and returns a value of the given type.
@@ -258,7 +265,8 @@ class Streamable:
             return lambda f: parse_list(f, parse_inner_type_f)
         if is_type_Tuple(f_type):
             inner_types = get_args(f_type)
-            list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
+            list_parse_inner_type_f = [
+                cls.function_to_parse_one_item(_) for _ in inner_types]
             return lambda f: parse_tuple(f, list_parse_inner_type_f)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
@@ -272,7 +280,8 @@ class Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Streamable = object.__new__(cls)
         fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
-        values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        values: Iterator = (parse_f(f)
+                            for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
 
@@ -280,7 +289,8 @@ class Streamable:
         if next(fields, -1) != -1:
             raise ValueError("Failed to parse incomplete Streamable object")
         if next(values, -1) != -1:
-            raise ValueError("Failed to parse unknown data in Streamable object")
+            raise ValueError(
+                "Failed to parse unknown data in Streamable object")
         return obj
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:

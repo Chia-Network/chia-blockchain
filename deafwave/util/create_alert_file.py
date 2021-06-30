@@ -12,7 +12,8 @@ bram_message = None
 
 status = None
 while True:
-    status_input = input("What is the status of this alert? (ready/not ready)").lower()
+    status_input = input(
+        "What is the status of this alert? (ready/not ready)").lower()
     if status_input == "ready":
         status = True
         break
@@ -35,7 +36,8 @@ for sk, seed in private_keys:
 
 selected_key = None
 while True:
-    user_input = input("\nEnter fingerprint of the key you want to use, or enter Q to quit: ").lower()
+    user_input = input(
+        "\nEnter fingerprint of the key you want to use, or enter Q to quit: ").lower()
     if user_input == "q":
         quit()
     for sk, seed in private_keys:
@@ -72,7 +74,8 @@ print("Public key:", selected_key.get_g1())
 # get file path
 file_path = None
 while True:
-    file_path = input("Enter the path where you want to save signed alert file, or q to quit: ")
+    file_path = input(
+        "Enter the path where you want to save signed alert file, or q to quit: ")
     if file_path == "q" or file_path == "Q":
         quit()
     file_path = file_path.strip()

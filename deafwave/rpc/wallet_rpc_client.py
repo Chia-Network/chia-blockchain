@@ -23,7 +23,8 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.deafwave.net", "fingerprint": fingerprint, "type": "start"},
+                {"host": "https://backup.deafwave.net",
+                    "fingerprint": fingerprint, "type": "start"},
             )
 
         except ValueError as e:
@@ -47,7 +48,8 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.deafwave.net", "fingerprint": fingerprint, "type": "skip"},
+                {"host": "https://backup.deafwave.net",
+                    "fingerprint": fingerprint, "type": "skip"},
             )
         except ValueError as e:
             return e.args[0]
@@ -109,7 +111,8 @@ class WalletRpcClient(RpcClient):
         reverted_tx: List[TransactionRecord] = []
         for modified_tx in res["transactions"]:
             # Server returns address instead of ph, but TransactionRecord requires ph
-            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
+            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(
+                modified_tx["to_address"]).hex()
             del modified_tx["to_address"]
             reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
         return reverted_tx
@@ -123,7 +126,8 @@ class WalletRpcClient(RpcClient):
 
         res = await self.fetch(
             "send_transaction",
-            {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
+            {"wallet_id": wallet_id, "amount": amount,
+                "address": address, "fee": fee},
         )
         return TransactionRecord.from_json_dict(res["transaction"])
 
@@ -137,11 +141,13 @@ class WalletRpcClient(RpcClient):
         self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
     ) -> Dict:
         # Converts bytes to hex for puzzle hashes
-        additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        additions_hex = [{"amount": ad["amount"],
+                          "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             return await self.fetch(
-                "create_signed_transaction", {"additions": additions_hex, "coins": coins_json, "fee": fee}
+                "create_signed_transaction", {
+                    "additions": additions_hex, "coins": coins_json, "fee": fee}
             )
         else:
             return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})

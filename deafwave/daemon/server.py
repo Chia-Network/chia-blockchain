@@ -118,14 +118,17 @@ class WebSocketServer:
         self.log = log
         self.services: Dict = dict()
         self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, List[WebSocketServerProtocol]] = dict()  # service_name : [WebSocket]
-        self.remote_address_map: Dict[WebSocketServerProtocol, str] = dict()  # socket: service_name
+        # service_name : [WebSocket]
+        self.connections: Dict[str, List[WebSocketServerProtocol]] = dict()
+        # socket: service_name
+        self.remote_address_map: Dict[WebSocketServerProtocol, str] = dict()
         self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.websocket_server = None
-        self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
+        self.ssl_context = ssl_context_for_server(
+            ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
 
     async def start(self):
@@ -187,7 +190,8 @@ class WebSocketServer:
                             await socket.send(response)
                         except Exception as e:
                             tb = traceback.format_exc()
-                            self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                            self.log.error(
+                                f"Unexpected exception trying to send to websocket: {e} {tb}")
                             self.remove_connection(socket)
                             await socket.close()
         except Exception as e:
@@ -196,9 +200,11 @@ class WebSocketServer:
             if websocket in self.remote_address_map:
                 service_name = self.remote_address_map[websocket]
             if isinstance(e, ConnectionClosedOK):
-                self.log.info(f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
+                self.log.info(
+                    f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
             elif isinstance(e, WebSocketException):
-                self.log.info(f"Websocket exception. Closing websocket with {service_name} {e} {tb}")
+                self.log.info(
+                    f"Websocket exception. Closing websocket with {service_name} {e} {tb}")
             else:
                 self.log.error(f"Unexpected exception in websocket: {e} {tb}")
         finally:
@@ -269,7 +275,8 @@ class WebSocketServer:
             "register_service",
         ]
         if len(data) == 0 and command in commands_with_data:
-            response = {"success": False, "error": f'{command} requires "data"'}
+            response = {"success": False,
+                        "error": f'{command} requires "data"'}
         elif command == "ping":
             response = await ping()
         elif command == "start_service":
@@ -290,7 +297,8 @@ class WebSocketServer:
             response = self.get_status()
         else:
             self.log.error(f"UK>> {message}")
-            response = {"success": False, "error": f"unknown_command {command}"}
+            response = {"success": False,
+                        "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
         return full_response, [websocket]
@@ -344,14 +352,16 @@ class WebSocketServer:
         if message is None:
             return None
 
-        response = create_payload("state_changed", message, service, "wallet_ui")
+        response = create_payload(
+            "state_changed", message, service, "wallet_ui")
 
         for websocket in websockets:
             try:
                 await websocket.send(response)
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                self.log.error(
+                    f"Unexpected exception trying to send to websocket: {e} {tb}")
                 websockets.remove(websocket)
                 await websocket.close()
 
@@ -371,7 +381,8 @@ class WebSocketServer:
             if new_data not in (None, ""):
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
                 config["log_new"] = new_data
-                self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.LOG_CHANGED, id))
+                self.state_changed(service_plotter, self.prepare_plot_state_message(
+                    PlotEvent.LOG_CHANGED, id))
 
             if new_data:
                 for word in final_words:
@@ -459,7 +470,8 @@ class WebSocketServer:
             config = self._get_plots_queue_item(id)
 
             if config is None:
-                raise Exception(f"Plot queue config with ID {id} does not exist")
+                raise Exception(
+                    f"Plot queue config with ID {id} does not exist")
 
             state = config["state"]
             if state is not PlotState.SUBMITTED:
@@ -474,16 +486,21 @@ class WebSocketServer:
 
             service_name = config["service_name"]
             command_args = config["command_args"]
-            self.log.debug(f"command_args before launch_plotter are {command_args}")
-            self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
-            process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            self.log.debug(
+                f"command_args before launch_plotter are {command_args}")
+            self.log.debug(
+                f"self.root_path before launch_plotter is {self.root_path}")
+            process, pid_path = launch_plotter(
+                self.root_path, service_name, command_args, id)
 
             current_process = process
 
             config["state"] = PlotState.RUNNING
-            config["out_file"] = plotter_log_path(self.root_path, id).absolute()
+            config["out_file"] = plotter_log_path(
+                self.root_path, id).absolute()
             config["process"] = process
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(
+                PlotEvent.STATE_CHANGED, id))
 
             if service_name not in self.services:
                 self.services[service_name] = []
@@ -493,14 +510,16 @@ class WebSocketServer:
             await self._track_plotting_progress(config, loop)
 
             config["state"] = PlotState.FINISHED
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(
+                PlotEvent.STATE_CHANGED, id))
 
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
             config["error"] = error
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(
+                PlotEvent.STATE_CHANGED, id))
             raise error
 
         finally:
@@ -538,17 +557,20 @@ class WebSocketServer:
             self.plots_queue.append(config)
 
             # notify GUI about new plot queue item
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(
+                PlotEvent.STATE_CHANGED, id))
 
             # only first item can start when user selected serial plotting
-            can_start_serial_plotting = k == 0 and self._is_serial_plotting_running(queue) is False
+            can_start_serial_plotting = k == 0 and self._is_serial_plotting_running(
+                queue) is False
 
             if parallel is True or can_start_serial_plotting:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 loop = asyncio.get_event_loop()
                 loop.create_task(self._start_plotting(id, loop, queue))
             else:
-                log.info("Plotting will start automatically when previous plotting finish")
+                log.info(
+                    "Plotting will start automatically when previous plotting finish")
 
         response = {
             "success": True,
@@ -576,13 +598,15 @@ class WebSocketServer:
             if process is not None and state == PlotState.RUNNING:
                 run_next = True
                 config["state"] = PlotState.REMOVING
-                self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+                self.state_changed(service_plotter, self.prepare_plot_state_message(
+                    PlotEvent.STATE_CHANGED, id))
                 await kill_process(process, self.root_path, service_plotter, id)
 
             config["state"] = PlotState.FINISHED
             config["deleted"] = True
 
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(
+                PlotEvent.STATE_CHANGED, id))
 
             self.plots_queue.remove(config)
 
@@ -595,7 +619,8 @@ class WebSocketServer:
             log.error(f"Error during killing the plot process: {e}")
             config["state"] = PlotState.FINISHED
             config["error"] = str(e)
-            self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
+            self.state_changed(service_plotter, self.prepare_plot_state_message(
+                PlotEvent.STATE_CHANGED, id))
             return {"success": False}
 
     async def start_service(self, request: Dict[str, Any]):
@@ -631,7 +656,8 @@ class WebSocketServer:
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
 
-        response = {"success": success, "service": service_command, "error": error}
+        response = {"success": success,
+                    "service": service_command, "error": error}
         return response
 
     async def stop_service(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -749,7 +775,8 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(service_array, shell=False, stderr=outfile, stdout=outfile, startupinfo=startupinfo)
+    process = subprocess.Popen(
+        service_array, shell=False, stderr=outfile, stdout=outfile, startupinfo=startupinfo)
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
@@ -772,7 +799,8 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     # we need to pass on the possibly altered DEAFWAVE_ROOT
     os.environ["DEAFWAVE_ROOT"] = str(root_path)
 
-    log.debug(f"Launching service with DEAFWAVE_ROOT: {os.environ['DEAFWAVE_ROOT']}")
+    log.debug(
+        f"Launching service with DEAFWAVE_ROOT: {os.environ['DEAFWAVE_ROOT']}")
 
     lockfile = singleton(service_launch_lock_path(root_path, service_command))
     if lockfile is None:
@@ -973,7 +1001,8 @@ async def async_run_daemon(root_path: Path) -> int:
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    ws_server = WebSocketServer(
+        root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
     assert ws_server.websocket_server is not None
     await ws_server.websocket_server.wait_closed()

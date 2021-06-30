@@ -43,4 +43,5 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
     import asyncio
 
-    sys.exit(asyncio.get_event_loop().run_until_complete(async_stop(ctx.obj["root_path"], group, daemon)))
+    sys.exit(asyncio.get_event_loop().run_until_complete(
+        async_stop(ctx.obj["root_path"], group, daemon)))

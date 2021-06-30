@@ -27,8 +27,10 @@ def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes)
 class TestCoin:
     def test_coin_serialization(self):
 
-        coin_serialize(uint64(0xFFFF), bytes([0, 0xFF, 0xFF]), bytes([0, 0, 0, 0, 0, 0, 0xFF, 0xFF]))
-        coin_serialize(uint64(1337000000), bytes([0x4F, 0xB1, 0x00, 0x40]), bytes([0, 0, 0, 0, 0x4F, 0xB1, 0x00, 0x40]))
+        coin_serialize(uint64(0xFFFF), bytes(
+            [0, 0xFF, 0xFF]), bytes([0, 0, 0, 0, 0, 0, 0xFF, 0xFF]))
+        coin_serialize(uint64(1337000000), bytes([0x4F, 0xB1, 0x00, 0x40]), bytes(
+            [0, 0, 0, 0, 0x4F, 0xB1, 0x00, 0x40]))
 
         # if the amount is 0, the amount is omitted in the "short" format,
         # that's hashed

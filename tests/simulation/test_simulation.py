@@ -83,7 +83,8 @@ class TestSimulation:
         await time_out_assert(1500, has_compact, True, node1, node2)
         node3 = extra_node
         server3 = node3.full_node.server
-        peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
+        peak_height = max(node1.full_node.blockchain.get_peak_height(
+        ), node2.full_node.blockchain.get_peak_height())
         await server3.start_client(PeerInfo(self_hostname, uint16(21237)))
         await server3.start_client(PeerInfo(self_hostname, uint16(21238)))
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)

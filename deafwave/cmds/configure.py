@@ -43,7 +43,8 @@ def configure(
                 config["full_node"]["farmer_peer"]["port"] = int(port)
                 config["harvester"]["farmer_peer"]["host"] = host
                 config["harvester"]["farmer_peer"]["port"] = int(port)
-                print("Farmer peer updated, make sure your harvester has the proper cert installed")
+                print(
+                    "Farmer peer updated, make sure your harvester has the proper cert installed")
                 change_made = True
         except ValueError:
             print("Farmer address must be in format [IP:Port]")
@@ -61,7 +62,8 @@ def configure(
         levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
         if set_log_level in levels:
             config["logging"]["log_level"] = set_log_level
-            print(f"Logging level updated. Check {DEFAULT_ROOT_PATH}/log/debug.log")
+            print(
+                f"Logging level updated. Check {DEFAULT_ROOT_PATH}/log/debug.log")
             change_made = True
         else:
             print(f"Logging level not updated. Use one of: {levels}")
@@ -147,7 +149,8 @@ def configure(
     "--log-level",
     "-log-level",
     help="Set the instance log level",
-    type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]),
+    type=click.Choice(["CRITICAL", "ERROR", "WARNING",
+                       "INFO", "DEBUG", "NOTSET"]),
 )
 @click.option(
     "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])

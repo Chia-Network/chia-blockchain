@@ -27,7 +27,8 @@ from .p2_conditions import puzzle_for_conditions
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
-DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
+# this puzzle `(x)` always fails
+DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()
 
 MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
@@ -53,8 +54,10 @@ def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: by
 def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32) -> PrivateKey:
     secret_exponent = int.from_bytes(bytes(secret_key), "big")
     public_key = secret_key.get_g1()
-    synthetic_offset = calculate_synthetic_offset(public_key, hidden_puzzle_hash)
-    synthetic_secret_exponent = (secret_exponent + synthetic_offset) % GROUP_ORDER
+    synthetic_offset = calculate_synthetic_offset(
+        public_key, hidden_puzzle_hash)
+    synthetic_secret_exponent = (
+        secret_exponent + synthetic_offset) % GROUP_ORDER
     blob = synthetic_secret_exponent.to_bytes(32, "big")
     synthetic_secret_key = PrivateKey.from_bytes(blob)
     return synthetic_secret_key
@@ -65,7 +68,8 @@ def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:
 
 
 def puzzle_for_public_key_and_hidden_puzzle_hash(public_key: G1Element, hidden_puzzle_hash: bytes32) -> Program:
-    synthetic_public_key = calculate_synthetic_public_key(public_key, hidden_puzzle_hash)
+    synthetic_public_key = calculate_synthetic_public_key(
+        public_key, hidden_puzzle_hash)
 
     return puzzle_for_synthetic_public_key(synthetic_public_key)
 

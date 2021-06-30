@@ -57,7 +57,8 @@ def lineage_proof_for_cc_parent(parent_coin: Coin, parent_inner_puzzle_hash: byt
     return Program.to(
         (
             1,
-            [parent_coin.parent_coin_info, parent_inner_puzzle_hash, parent_coin.amount],
+            [parent_coin.parent_coin_info,
+                parent_inner_puzzle_hash, parent_coin.amount],
         )
     )
 
@@ -113,7 +114,8 @@ def spend_bundle_for_spendable_ccs(
     N = len(spendable_cc_list)
 
     if len(inner_solutions) != N:
-        raise ValueError("spendable_cc_list and inner_solutions are different lengths")
+        raise ValueError(
+            "spendable_cc_list and inner_solutions are different lengths")
 
     input_coins = [_.coin for _ in spendable_cc_list]
 
@@ -142,7 +144,8 @@ def spend_bundle_for_spendable_ccs(
     for index in range(N):
         cc_spend_info = spendable_cc_list[index]
 
-        puzzle_reveal = cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, cc_spend_info.inner_puzzle)
+        puzzle_reveal = cc_puzzle_for_inner_puzzle(
+            mod_code, genesis_coin_checker, cc_spend_info.inner_puzzle)
 
         prev_index = (index - 1) % N
         next_index = (index + 1) % N
@@ -157,7 +160,8 @@ def spend_bundle_for_spendable_ccs(
             next_bundle,
             subtotals[index],
         ]
-        coin_solution = CoinSolution(input_coins[index], puzzle_reveal, Program.to(solution))
+        coin_solution = CoinSolution(
+            input_coins[index], puzzle_reveal, Program.to(solution))
         coin_solutions.append(coin_solution)
 
     if sigs is None or sigs == []:
@@ -201,7 +205,8 @@ def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
     r = uncurry_cc(parent_puzzle)
     if r:
         mod_hash, genesis_checker, inner_puzzle = r
-        lineage_proof = lineage_proof_for_cc_parent(parent_coin, inner_puzzle.get_tree_hash())
+        lineage_proof = lineage_proof_for_cc_parent(
+            parent_coin, inner_puzzle.get_tree_hash())
     else:
         if parent_coin.amount == 0:
             lineage_proof = lineage_proof_for_zero(parent_coin)
@@ -211,7 +216,6 @@ def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
 
 
 def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_puzzle_f) -> List[SpendableCC]:
-
     """
     Given a `CoinSolution`, extract out a list of `SpendableCC` objects.
 
@@ -228,7 +232,8 @@ def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_pu
     r = uncurry_cc(puzzle)
     if r:
         mod_hash, genesis_coin_checker, inner_puzzle = r
-        lineage_proof = lineage_proof_for_cc_parent(coin, inner_puzzle.get_tree_hash())
+        lineage_proof = lineage_proof_for_cc_parent(
+            coin, inner_puzzle.get_tree_hash())
     else:
         lineage_proof = lineage_proof_for_coin(coin)
 
@@ -244,9 +249,11 @@ def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_pu
 
         mod_hash, genesis_coin_checker, inner_puzzle = r
 
-        genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker)
+        genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(
+            genesis_coin_checker)
 
-        cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof)
+        cc_spend_info = SpendableCC(
+            new_coin, genesis_coin_id, inner_puzzle, lineage_proof)
         spendable_cc_list.append(cc_spend_info)
 
     return spendable_cc_list

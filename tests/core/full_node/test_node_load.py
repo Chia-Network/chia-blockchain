@@ -42,5 +42,6 @@ class TestNodeLoad:
         for i in range(1, num_blocks):
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
-        print(f"Time taken to process {num_blocks} is {time.time() - start_unf}")
+        print(
+            f"Time taken to process {num_blocks} is {time.time() - start_unf}")
         assert time.time() - start_unf < 100

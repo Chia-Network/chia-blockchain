@@ -35,7 +35,8 @@ def service_kwargs_for_farmer(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    farmer = Farmer(root_path, config, config_pool, keychain, consensus_constants=updated_constants)
+    farmer = Farmer(root_path, config, config_pool, keychain,
+                    consensus_constants=updated_constants)
     peer_api = FarmerAPI(farmer)
     network_id = config["selected_network"]
     kwargs = dict(
@@ -60,7 +61,8 @@ def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     keychain = Keychain()
-    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS)
+    kwargs = service_kwargs_for_farmer(
+        DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

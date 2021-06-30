@@ -19,7 +19,8 @@ log = logging.getLogger(__name__)
 @streamable
 class ProofOfSpace(Streamable):
     challenge: bytes32
-    pool_public_key: Optional[G1Element]  # Only one of these two should be present
+    # Only one of these two should be present
+    pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     size: uint8
@@ -47,7 +48,8 @@ class ProofOfSpace(Streamable):
         if self.size > constants.MAX_PLOT_SIZE:
             return None
         plot_id: bytes32 = self.get_plot_id()
-        new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
+        new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(
+            plot_id, original_challenge_hash, signage_point)
 
         if new_challenge != self.challenge:
             return None
@@ -58,7 +60,8 @@ class ProofOfSpace(Streamable):
         return self.get_quality_string(plot_id)
 
     def get_quality_string(self, plot_id: bytes32) -> Optional[bytes32]:
-        quality_str = Verifier().validate_proof(plot_id, self.size, self.challenge, bytes(self.proof))
+        quality_str = Verifier().validate_proof(
+            plot_id, self.size, self.challenge, bytes(self.proof))
         if not quality_str:
             return None
         return bytes32(quality_str)
@@ -71,7 +74,8 @@ class ProofOfSpace(Streamable):
         signage_point: bytes32,
     ) -> bool:
         plot_filter: BitArray = BitArray(
-            ProofOfSpace.calculate_plot_filter_input(plot_id, challenge_hash, signage_point)
+            ProofOfSpace.calculate_plot_filter_input(
+                plot_id, challenge_hash, signage_point)
         )
         return plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
 

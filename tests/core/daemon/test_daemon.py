@@ -40,18 +40,24 @@ class TestDaemon:
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
 
         async def num_connections():
-            count = len(node2.server.connection_by_type[NodeType.FULL_NODE].items())
+            count = len(
+                node2.server.connection_by_type[NodeType.FULL_NODE].items())
             return count
 
         await time_out_assert_custom_interval(60, 1, num_connections, 1)
 
         await time_out_assert(1500, node_height_at_least, True, node2, 1)
         session = aiohttp.ClientSession()
-        crt_path = b_tools.root_path / b_tools.config["daemon_ssl"]["private_crt"]
-        key_path = b_tools.root_path / b_tools.config["daemon_ssl"]["private_key"]
-        ca_cert_path = b_tools.root_path / b_tools.config["private_ssl_ca"]["crt"]
-        ca_key_path = b_tools.root_path / b_tools.config["private_ssl_ca"]["key"]
-        ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
+        crt_path = b_tools.root_path / \
+            b_tools.config["daemon_ssl"]["private_crt"]
+        key_path = b_tools.root_path / \
+            b_tools.config["daemon_ssl"]["private_key"]
+        ca_cert_path = b_tools.root_path / \
+            b_tools.config["private_ssl_ca"]["crt"]
+        ca_key_path = b_tools.root_path / \
+            b_tools.config["private_ssl_ca"]["key"]
+        ssl_context = ssl_context_for_server(
+            ca_cert_path, ca_key_path, crt_path, key_path)
 
         ws = await session.ws_connect(
             "wss://127.0.0.1:55401",
@@ -63,7 +69,8 @@ class TestDaemon:
         )
         service_name = "test_service_name"
         data = {"service": service_name}
-        payload = create_payload("register_service", data, service_name, "daemon")
+        payload = create_payload(
+            "register_service", data, service_name, "daemon")
         await ws.send_str(payload)
         message_queue = asyncio.Queue()
 
@@ -90,7 +97,8 @@ class TestDaemon:
 
         read_handler = asyncio.create_task(reader(ws, message_queue))
         data = {}
-        payload = create_payload("get_blockchain_state", data, service_name, "deafwave_full_node")
+        payload = create_payload(
+            "get_blockchain_state", data, service_name, "deafwave_full_node")
         await ws.send_str(payload)
 
         await asyncio.sleep(5)

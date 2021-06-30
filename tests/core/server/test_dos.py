@@ -153,15 +153,18 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSDeafwaveConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSDeafwaveConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSDeafwaveConnection = list(
+            server_1.all_connections.values())[0]
+        ws_con_2: WSDeafwaveConnection = list(
+            server_2.all_connections.values())[0]
 
         ws_con.peer_host = "1.2.3.4"
         ws_con_2.peer_host = "1.2.3.4"
 
         new_tx_message = make_msg(
             ProtocolMessageTypes.new_transaction,
-            full_node_protocol.NewTransaction(bytes([9] * 32), uint64(0), uint64(0)),
+            full_node_protocol.NewTransaction(
+                bytes([9] * 32), uint64(0), uint64(0)),
         )
         for i in range(4000):
             await ws_con._send_message(new_tx_message)
@@ -177,7 +180,8 @@ class TestDos:
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
-        ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
+        ws_con.outbound_rate_limiter = RateLimiter(
+            incoming=True, percentage_of_limit=10000)
 
         for i in range(6000):
             await ws_con._send_message(new_tx_message)
@@ -206,8 +210,10 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSDeafwaveConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSDeafwaveConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSDeafwaveConnection = list(
+            server_1.all_connections.values())[0]
+        ws_con_2: WSDeafwaveConnection = list(
+            server_2.all_connections.values())[0]
 
         ws_con.peer_host = "1.2.3.4"
         ws_con_2.peer_host = "1.2.3.4"
@@ -232,7 +238,8 @@ class TestDos:
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
-        ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
+        ws_con.outbound_rate_limiter = RateLimiter(
+            incoming=True, percentage_of_limit=10000)
 
         for i in range(6):
             await ws_con._send_message(new_message)
@@ -255,8 +262,10 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSDeafwaveConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSDeafwaveConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSDeafwaveConnection = list(
+            server_1.all_connections.values())[0]
+        ws_con_2: WSDeafwaveConnection = list(
+            server_2.all_connections.values())[0]
 
         ws_con.peer_host = "1.2.3.4"
         ws_con_2.peer_host = "1.2.3.4"
@@ -266,7 +275,8 @@ class TestDos:
 
         new_message = make_msg(
             ProtocolMessageTypes.request_mempool_transactions,
-            full_node_protocol.RequestMempoolTransactions(bytes([0] * 5 * 1024 * 1024)),
+            full_node_protocol.RequestMempoolTransactions(
+                bytes([0] * 5 * 1024 * 1024)),
         )
         # Tests outbound rate limiting, we will not send big messages
         await ws_con._send_message(new_message)

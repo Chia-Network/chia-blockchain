@@ -42,7 +42,8 @@ class LastState:
         self.last_peak_challenge: bytes32 = constants.GENESIS_CHALLENGE
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
-        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
+        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [
+            (constants.GENESIS_CHALLENGE, uint128(0))]
         self.new_epoch = False
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False
@@ -78,9 +79,11 @@ class LastState:
         elif isinstance(state, EndOfSubSlotBundle):
             self.state_type = StateType.END_OF_SUB_SLOT
             if self.peak is not None:
-                self.total_iters = uint128(self.total_iters - self.get_last_ip() + self.sub_slot_iters)
+                self.total_iters = uint128(
+                    self.total_iters - self.get_last_ip() + self.sub_slot_iters)
             else:
-                self.total_iters = uint128(self.total_iters + self.sub_slot_iters)
+                self.total_iters = uint128(
+                    self.total_iters + self.sub_slot_iters)
             self.peak = None
             self.subslot_end = state
             self.last_ip = uint64(0)
@@ -103,8 +106,10 @@ class LastState:
             self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
             self.new_epoch = False
 
-        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
-        log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
+        self.reward_challenge_cache.append(
+            (self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
+        log.info(
+            f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 

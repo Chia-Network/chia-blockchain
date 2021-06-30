@@ -51,12 +51,14 @@ class TesKeychain(unittest.TestCase):
 
         kc.add_private_key(bytes_to_mnemonic(token_bytes(32)), "my passphrase")
         kc.add_private_key(bytes_to_mnemonic(token_bytes(32)), "")
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)), "third passphrase")
+        kc.add_private_key(bytes_to_mnemonic(
+            token_bytes(32)), "third passphrase")
 
         assert len(kc.get_all_public_keys()) == 3
         assert len(kc.get_all_private_keys()) == 1
         assert len(kc.get_all_private_keys(["my passphrase", ""])) == 2
-        assert len(kc.get_all_private_keys(["my passphrase", "", "third passphrase", "another"])) == 3
+        assert len(kc.get_all_private_keys(
+            ["my passphrase", "", "third passphrase", "another"])) == 3
         assert len(kc.get_all_private_keys(["my passhrase wrong"])) == 0
 
         assert kc.get_first_private_key() is not None
@@ -77,9 +79,11 @@ class TesKeychain(unittest.TestCase):
         master_sk = kc.add_private_key(mnemonic, passphrase)
         tv_master_int = 5399117110774477986698372024995405256382522670366369834617409486544348441851
         tv_child_int = 11812940737387919040225825939013910852517748782307378293770044673328955938106
-        assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
+        assert master_sk == PrivateKey.from_bytes(
+            tv_master_int.to_bytes(32, "big"))
         child_sk = AugSchemeMPL.derive_child_sk(master_sk, 0)
-        assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
+        assert child_sk == PrivateKey.from_bytes(
+            tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors_trezor(self):
         with open("tests/util/bip39_test_vectors.json") as f:

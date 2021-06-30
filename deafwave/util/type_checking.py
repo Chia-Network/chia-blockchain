@@ -48,7 +48,8 @@ def strictdataclass(cls: Any):
                 if not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a list.")
                 for el in item:
-                    collected_list.append(self.parse_item(el, f_name, inner_type))
+                    collected_list.append(
+                        self.parse_item(el, f_name, inner_type))
                 return collected_list
             if is_type_SpecificOptional(f_type):
                 if item is None:
@@ -61,11 +62,13 @@ def strictdataclass(cls: Any):
                 if not is_type_Tuple(type(item)) and not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a tuple.")
                 if len(item) != len(get_args(f_type)):
-                    raise ValueError(f"Wrong number of elements in tuple {f_name}.")
+                    raise ValueError(
+                        f"Wrong number of elements in tuple {f_name}.")
                 for i in range(len(item)):
                     inner_type = get_args(f_type)[i]
                     tuple_item = item[i]
-                    collected_list.append(self.parse_item(tuple_item, f_name, inner_type))
+                    collected_list.append(self.parse_item(
+                        tuple_item, f_name, inner_type))
                 return tuple(collected_list)
             if not isinstance(item, f_type):
                 try:
@@ -90,10 +93,12 @@ def strictdataclass(cls: Any):
                     raise ValueError(f"Field {f_name} not present")
                 try:
                     if not isinstance(data[f_name], f_type):
-                        object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+                        object.__setattr__(self, f_name, self.parse_item(
+                            data[f_name], f_name, f_type))
                 except TypeError:
                     # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
-                    object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+                    object.__setattr__(self, f_name, self.parse_item(
+                        data[f_name], f_name, f_type))
 
     class NoTypeChecking:
         __no_type_check__ = True

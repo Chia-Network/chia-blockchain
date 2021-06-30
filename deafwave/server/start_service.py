@@ -62,14 +62,18 @@ class Service:
         self._log = logging.getLogger(service_name)
 
         if parse_cli_args:
-            service_config = load_config_cli(root_path, "config.yaml", service_name)
+            service_config = load_config_cli(
+                root_path, "config.yaml", service_name)
         else:
-            service_config = load_config(root_path, "config.yaml", service_name)
+            service_config = load_config(
+                root_path, "config.yaml", service_name)
         initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
-        private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
-        deafwave_ca_crt, deafwave_ca_key = deafwave_ssl_ca_paths(root_path, self.config)
+        private_ca_crt, private_ca_key = private_ssl_ca_paths(
+            root_path, self.config)
+        deafwave_ca_crt, deafwave_ca_key = deafwave_ssl_ca_paths(
+            root_path, self.config)
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
         assert inbound_rlp and outbound_rlp
@@ -138,7 +142,8 @@ class Service:
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
         ]
-        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
+        self._log.info(
+            f"Started {self._service_name} service on network_id: {self._network_id}")
 
         self._rpc_close_task = None
         if self._rpc_info:
@@ -212,7 +217,8 @@ class Service:
 
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
-        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
+        self._log.info(
+            f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
 async def async_run_service(*args, **kwargs) -> None:

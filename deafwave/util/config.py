@@ -73,7 +73,8 @@ def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = 
     for prop_name, value in flattened_props.items():
         if type(value) is list:
             continue
-        prop_type: Callable = str2bool if type(value) is bool else type(value)  # type: ignore
+        prop_type: Callable = str2bool if type(
+            value) is bool else type(value)  # type: ignore
         parser.add_argument(f"--{prop_name}", type=prop_type, dest=prop_name)
 
     for key, value in vars(parser.parse_args()).items():

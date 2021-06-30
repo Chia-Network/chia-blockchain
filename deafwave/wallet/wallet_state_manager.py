@@ -144,7 +144,8 @@ class WalletStateManager:
             self.reorg_rollback,
             self.lock,
         )
-        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
+        self.weight_proof_handler = WeightProofHandler(
+            self.constants, self.blockchain)
 
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
@@ -236,7 +237,8 @@ class WalletStateManager:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(puzzle_hash)
         if index_for_puzzlehash is None:
             raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
-        private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
+        private = master_sk_to_wallet_sk(
+            self.private_key, index_for_puzzlehash)
         pubkey = private.get_g1()
         return pubkey, private
 
@@ -281,9 +283,11 @@ class WalletStateManager:
                         break
                     wallet_type = target_wallet.rl_info.type
                     if wallet_type == "user":
-                        rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
+                        rl_pubkey = G1Element.from_bytes(
+                            target_wallet.rl_info.user_pubkey)
                     else:
-                        rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.admin_pubkey)
+                        rl_pubkey = G1Element.from_bytes(
+                            target_wallet.rl_info.admin_pubkey)
                     rl_puzzle: Program = target_wallet.puzzle_for_pk(rl_pubkey)
                     puzzle_hash: bytes32 = rl_puzzle.get_tree_hash()
 
@@ -305,10 +309,12 @@ class WalletStateManager:
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 if puzzle is None:
-                    self.log.warning(f"Unable to create puzzles with wallet {target_wallet}")
+                    self.log.warning(
+                        f"Unable to create puzzles with wallet {target_wallet}")
                     break
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
-                self.log.info(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
+                self.log.info(
+                    f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
                 derivation_paths.append(
                     DerivationRecord(
                         uint32(index),
@@ -338,7 +344,8 @@ class WalletStateManager:
             pubkey: G1Element = self.get_public_key(uint32(index))
             puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
             puzzlehash: bytes32 = puzzle.get_tree_hash()
-            self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
+            self.log.info(
+                f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
             derivation_paths.append(
                 DerivationRecord(
                     uint32(index),
@@ -589,16 +596,20 @@ class WalletStateManager:
 
         if prev is not None:
             # include last block
-            pool_parent = pool_parent_id(uint32(prev.height), self.constants.GENESIS_CHALLENGE)
-            farmer_parent = farmer_parent_id(uint32(prev.height), self.constants.GENESIS_CHALLENGE)
+            pool_parent = pool_parent_id(
+                uint32(prev.height), self.constants.GENESIS_CHALLENGE)
+            farmer_parent = farmer_parent_id(
+                uint32(prev.height), self.constants.GENESIS_CHALLENGE)
             pool_rewards.add(pool_parent)
             farmer_rewards.add(farmer_parent)
             prev = await self.blockchain.get_block_record_from_db(prev.prev_hash)
 
         while prev is not None:
             # step 2 traverse from previous block to the block before it
-            pool_parent = pool_parent_id(uint32(prev.height), self.constants.GENESIS_CHALLENGE)
-            farmer_parent = farmer_parent_id(uint32(prev.height), self.constants.GENESIS_CHALLENGE)
+            pool_parent = pool_parent_id(
+                uint32(prev.height), self.constants.GENESIS_CHALLENGE)
+            farmer_parent = farmer_parent_id(
+                uint32(prev.height), self.constants.GENESIS_CHALLENGE)
             pool_rewards.add(pool_parent)
             farmer_rewards.add(farmer_parent)
             if prev.is_transaction_block:
@@ -631,7 +642,8 @@ class WalletStateManager:
             if info is not None:
                 wallet_id, wallet_type = info
                 added_coin_record = await self.coin_added(
-                    coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, height, all_outgoing_tx[wallet_id]
+                    coin, is_coinbase, is_fee_reward, uint32(
+                        wallet_id), wallet_type, height, all_outgoing_tx[wallet_id]
                 )
                 added.append(added_coin_record)
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin.puzzle_hash)
@@ -659,13 +671,15 @@ class WalletStateManager:
             if coin.name() in trade_removals:
                 trade_coin_removed.append(coin)
             if record is None:
-                self.log.info(f"Record for removed coin {coin.name()} is None. (ephemeral)")
+                self.log.info(
+                    f"Record for removed coin {coin.name()} is None. (ephemeral)")
                 continue
             await self.coin_store.set_spent(coin.name(), height)
             for unconfirmed_record in all_unconfirmed:
                 for rem_coin in unconfirmed_record.removals:
                     if rem_coin.name() == coin.name():
-                        self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
+                        self.log.info(
+                            f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                         await self.tx_store.set_confirmed(unconfirmed_record.name, height)
 
             removed.append(record)
@@ -793,7 +807,8 @@ class WalletStateManager:
         if updated:
             tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
             if tx is not None:
-                self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
+                self.state_changed("tx_update", tx.wallet_id, {
+                                   "transaction": tx})
 
     async def get_send_queue(self) -> List[TransactionRecord]:
         """
@@ -845,7 +860,8 @@ class WalletStateManager:
 
         # Get all blocks after fork point up to but not including this block
         if new_block.height > 0:
-            curr: BlockRecord = self.blockchain.block_record(new_block.prev_hash)
+            curr: BlockRecord = self.blockchain.block_record(
+                new_block.prev_hash)
             reorg_blocks: List[HeaderBlockRecord] = []
             while curr.height > fork_h:
                 header_block_record = await self.block_store.get_header_block_record(curr.header_hash)
@@ -926,7 +942,8 @@ class WalletStateManager:
 
         result: List[Coin] = []
         wallet_coin_records = await self.coin_store.get_unspent_coins_at_height()
-        my_coins: Dict[bytes32, Coin] = {r.coin.name(): r.coin for r in list(wallet_coin_records)}
+        my_coins: Dict[bytes32, Coin] = {
+            r.coin.name(): r.coin for r in list(wallet_coin_records)}
 
         for coin in removals:
             if coin.name() in my_coins:
@@ -1019,10 +1036,12 @@ class WalletStateManager:
         data_bytes = json.dumps(data).encode()
         encrypted = f.encrypt(data_bytes)
 
-        meta_data: Dict[str, Any] = {"timestamp": now, "pubkey": bytes(backup_pk.get_g1()).hex()}
+        meta_data: Dict[str, Any] = {
+            "timestamp": now, "pubkey": bytes(backup_pk.get_g1()).hex()}
 
         meta_data_bytes = json.dumps(meta_data).encode()
-        signature = bytes(AugSchemeMPL.sign(backup_pk, std_hash(encrypted) + std_hash(meta_data_bytes))).hex()
+        signature = bytes(AugSchemeMPL.sign(backup_pk, std_hash(
+            encrypted) + std_hash(meta_data_bytes))).hex()
 
         backup["data"] = encrypted.decode()
         backup["meta_data"] = meta_data
@@ -1069,7 +1088,8 @@ class WalletStateManager:
             peak.header_hash
         )
         while peak_block is not None:
-            tx_filter = PyBIP158([b for b in peak_block.header.transactions_filter])
+            tx_filter = PyBIP158(
+                [b for b in peak_block.header.transactions_filter])
             if tx_filter.Match(bytearray(puzzlehash)) and peak_block.height > heighest_block_height:
                 header_hash_of_interest = peak_block.header_hash
                 heighest_block_height = peak_block.height
@@ -1126,7 +1146,8 @@ class WalletStateManager:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
             if action.name == "request_generator":
-                stored_header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
+                stored_header_hash = bytes32(
+                    hexstr_to_bytes(action_data["header_hash"]))
                 stored_height = uint32(action_data["height"])
                 if stored_header_hash == header_hash and stored_height == height:
                     if action.done:
@@ -1144,7 +1165,8 @@ class WalletStateManager:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
             if action.name == "request_puzzle_solution":
-                stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+                stored_coin_name = bytes32(
+                    hexstr_to_bytes(action_data["coin_name"]))
                 height = uint32(action_data["height"])
                 if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
                     if action.done:

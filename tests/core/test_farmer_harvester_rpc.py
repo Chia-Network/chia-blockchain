@@ -85,7 +85,8 @@ class TestRpc:
                 return len(await client.get_signage_points()) > 0
 
             sp = farmer_protocol.NewSignagePoint(
-                std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
+                std_hash(b"1"), std_hash(b"2"), std_hash(
+                    b"3"), uint64(1), uint64(1000000), uint8(2)
             )
             await farmer_api.new_signage_point(sp)
 
@@ -115,7 +116,8 @@ class TestRpc:
                 str(plot_dir),
                 filename,
                 18,
-                stream_plot_info_pk(bt.pool_pk, bt.farmer_pk, AugSchemeMPL.key_gen(bytes([4] * 32))),
+                stream_plot_info_pk(bt.pool_pk, bt.farmer_pk,
+                                    AugSchemeMPL.key_gen(bytes([4] * 32))),
                 token_bytes(32),
                 128,
                 0,
@@ -132,7 +134,8 @@ class TestRpc:
                 str(plot_dir),
                 filename_2,
                 18,
-                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
+                stream_plot_info_ph(
+                    std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
                 plot_id_2,
                 128,
                 0,
@@ -148,7 +151,8 @@ class TestRpc:
                 str(plot_dir_sub),
                 filename_2,
                 18,
-                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
+                stream_plot_info_ph(
+                    std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
                 plot_id_2,
                 128,
                 0,
@@ -186,7 +190,8 @@ class TestRpc:
             targets_2 = await client.get_reward_targets(True)
             assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
 
-            new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(10)).get_g1())
+            new_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(10)).get_g1())
             new_ph_2: bytes32 = create_puzzlehash_for_pk(
                 master_sk_to_wallet_sk(bt.pool_master_sk, uint32(472)).get_g1()
             )
@@ -198,7 +203,8 @@ class TestRpc:
             assert targets_3["have_pool_sk"] and targets_3["have_farmer_sk"]
 
             new_ph_3: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(bt.pool_master_sk, uint32(1888)).get_g1()
+                master_sk_to_wallet_sk(
+                    bt.pool_master_sk, uint32(1888)).get_g1()
             )
             await client.set_reward_targets(None, encode_puzzle_hash(new_ph_3, "zzz"))
             targets_4 = await client.get_reward_targets(True)
@@ -208,8 +214,10 @@ class TestRpc:
 
             root_path = farmer_api.farmer._root_path
             config = load_config(root_path, "config.yaml")
-            assert config["farmer"]["zzz_target_address"] == encode_puzzle_hash(new_ph, "zzz")
-            assert config["pool"]["zzz_target_address"] == encode_puzzle_hash(new_ph_3, "zzz")
+            assert config["farmer"]["zzz_target_address"] == encode_puzzle_hash(
+                new_ph, "zzz")
+            assert config["pool"]["zzz_target_address"] == encode_puzzle_hash(
+                new_ph_3, "zzz")
 
             new_ph_3_encoded = encode_puzzle_hash(new_ph_3, "zzz")
             added_char = new_ph_3_encoded + "a"

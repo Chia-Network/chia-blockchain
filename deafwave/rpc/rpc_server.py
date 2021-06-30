@@ -36,7 +36,8 @@ class RpcServer:
         self.key_path = root_path / net_config["daemon_ssl"]["private_key"]
         self.ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
         self.ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
-        self.ssl_context = ssl_context_for_server(self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path)
+        self.ssl_context = ssl_context_for_server(
+            self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path)
 
     async def stop(self):
         self.shut_down = True
@@ -165,9 +166,11 @@ class RpcServer:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
-        connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
+        connections_to_close = [c for c in self.rpc_api.service.server.get_connections(
+        ) if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
-            raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
+            raise ValueError(
+                f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
             await connection.close()
         return {}
@@ -232,7 +235,8 @@ class RpcServer:
 
     async def connection(self, ws):
         data = {"service": self.service_name}
-        payload = create_payload("register_service", data, self.service_name, "daemon")
+        payload = create_payload(
+            "register_service", data, self.service_name, "daemon")
         await ws.send_str(payload)
 
         while True:
@@ -282,7 +286,8 @@ class RpcServer:
                 self.websocket = None
                 await session.close()
             except aiohttp.ClientConnectorError:
-                self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
+                self.log.warning(
+                    f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
@@ -307,11 +312,14 @@ async def start_rpc_server(
     query the node.
     """
     app = aiohttp.web.Application()
-    rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-    rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+    rpc_server = RpcServer(rpc_api, rpc_api.service_name,
+                           stop_cb, root_path, net_config)
+    rpc_server.rpc_api.service._set_state_changed_callback(
+        rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
-    routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
+    routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(
+        func)) for (route, func) in http_routes.items()]
     routes += [
         aiohttp.web.post(
             "/get_connections",
@@ -325,15 +333,18 @@ async def start_rpc_server(
             "/close_connection",
             rpc_server._wrap_http_handler(rpc_server.close_connection),
         ),
-        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
+        aiohttp.web.post(
+            "/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
     ]
 
     app.add_routes(routes)
     if connect_to_daemon:
-        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
+        daemon_connection = asyncio.create_task(
+            rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
+    site = aiohttp.web.TCPSite(runner, self_hostname, int(
+        rpc_port), ssl_context=rpc_server.ssl_context)
     await site.start()
 
     async def cleanup():

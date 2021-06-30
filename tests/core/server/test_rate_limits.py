@@ -22,7 +22,8 @@ class TestRateLimits:
     async def test_too_many_messages(self):
         # Too many messages
         r = RateLimiter(incoming=True)
-        new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
+        new_tx_message = make_msg(
+            ProtocolMessageTypes.new_transaction, bytes([1] * 40))
         for i in range(3000):
             assert r.process_msg_and_check(new_tx_message)
 
@@ -35,7 +36,8 @@ class TestRateLimits:
 
         # Non-tx message
         r = RateLimiter(incoming=True)
-        new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
+        new_peak_message = make_msg(
+            ProtocolMessageTypes.new_peak, bytes([1] * 40))
         for i in range(20):
             assert r.process_msg_and_check(new_peak_message)
 
@@ -49,16 +51,20 @@ class TestRateLimits:
     @pytest.mark.asyncio
     async def test_large_message(self):
         # Large tx
-        small_tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
-        large_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 3 * 1024 * 1024))
+        small_tx_message = make_msg(
+            ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
+        large_tx_message = make_msg(
+            ProtocolMessageTypes.new_transaction, bytes([1] * 3 * 1024 * 1024))
 
         r = RateLimiter(incoming=True)
         assert r.process_msg_and_check(small_tx_message)
         assert r.process_msg_and_check(small_tx_message)
         assert not r.process_msg_and_check(large_tx_message)
 
-        small_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 5 * 1024))
-        large_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 600 * 1024))
+        small_vdf_message = make_msg(
+            ProtocolMessageTypes.respond_signage_point, bytes([1] * 5 * 1024))
+        large_vdf_message = make_msg(
+            ProtocolMessageTypes.respond_signage_point, bytes([1] * 600 * 1024))
         r = RateLimiter(incoming=True)
         assert r.process_msg_and_check(small_vdf_message)
         assert r.process_msg_and_check(small_vdf_message)
@@ -68,7 +74,8 @@ class TestRateLimits:
     async def test_too_much_data(self):
         # Too much data
         r = RateLimiter(incoming=True)
-        tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
+        tx_message = make_msg(
+            ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
         for i in range(10):
             assert r.process_msg_and_check(tx_message)
 
@@ -80,7 +87,8 @@ class TestRateLimits:
         assert saw_disconnect
 
         r = RateLimiter(incoming=True)
-        block_message = make_msg(ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
+        block_message = make_msg(
+            ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
         for i in range(10):
             assert r.process_msg_and_check(block_message)
 
@@ -95,9 +103,12 @@ class TestRateLimits:
     async def test_non_tx_aggregate_limits(self):
         # Frequency limits
         r = RateLimiter(incoming=True)
-        message_1 = make_msg(ProtocolMessageTypes.request_additions, bytes([1] * 5 * 1024))
-        message_2 = make_msg(ProtocolMessageTypes.request_removals, bytes([1] * 1024))
-        message_3 = make_msg(ProtocolMessageTypes.respond_additions, bytes([1] * 1024))
+        message_1 = make_msg(
+            ProtocolMessageTypes.request_additions, bytes([1] * 5 * 1024))
+        message_2 = make_msg(
+            ProtocolMessageTypes.request_removals, bytes([1] * 1024))
+        message_3 = make_msg(
+            ProtocolMessageTypes.respond_additions, bytes([1] * 1024))
 
         for i in range(450):
             assert r.process_msg_and_check(message_1)
@@ -113,8 +124,10 @@ class TestRateLimits:
 
         # Size limits
         r = RateLimiter(incoming=True)
-        message_4 = make_msg(ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 49 * 1024 * 1024))
-        message_5 = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 49 * 1024 * 1024))
+        message_4 = make_msg(
+            ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 49 * 1024 * 1024))
+        message_5 = make_msg(
+            ProtocolMessageTypes.respond_blocks, bytes([1] * 49 * 1024 * 1024))
 
         for i in range(2):
             assert r.process_msg_and_check(message_4)
@@ -129,7 +142,8 @@ class TestRateLimits:
     @pytest.mark.asyncio
     async def test_periodic_reset(self):
         r = RateLimiter(True, 5)
-        tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
+        tx_message = make_msg(
+            ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
         for i in range(10):
             assert r.process_msg_and_check(tx_message)
 
@@ -145,7 +159,8 @@ class TestRateLimits:
 
         # Counts reset also
         r = RateLimiter(True, 5)
-        new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
+        new_tx_message = make_msg(
+            ProtocolMessageTypes.new_transaction, bytes([1] * 40))
         for i in range(3000):
             assert r.process_msg_and_check(new_tx_message)
 
@@ -162,7 +177,8 @@ class TestRateLimits:
     @pytest.mark.asyncio
     async def test_percentage_limits(self):
         r = RateLimiter(True, 60, 40)
-        new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
+        new_peak_message = make_msg(
+            ProtocolMessageTypes.new_peak, bytes([1] * 40))
         for i in range(50):
             assert r.process_msg_and_check(new_peak_message)
 
@@ -174,7 +190,8 @@ class TestRateLimits:
         assert saw_disconnect
 
         r = RateLimiter(True, 60, 40)
-        block_message = make_msg(ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
+        block_message = make_msg(
+            ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
         for i in range(5):
             assert r.process_msg_and_check(block_message)
 
@@ -187,9 +204,12 @@ class TestRateLimits:
 
         # Aggregate percentage limit count
         r = RateLimiter(True, 60, 40)
-        message_1 = make_msg(ProtocolMessageTypes.request_additions, bytes([1] * 5 * 1024))
-        message_2 = make_msg(ProtocolMessageTypes.request_removals, bytes([1] * 1024))
-        message_3 = make_msg(ProtocolMessageTypes.respond_additions, bytes([1] * 1024))
+        message_1 = make_msg(
+            ProtocolMessageTypes.request_additions, bytes([1] * 5 * 1024))
+        message_2 = make_msg(
+            ProtocolMessageTypes.request_removals, bytes([1] * 1024))
+        message_3 = make_msg(
+            ProtocolMessageTypes.respond_additions, bytes([1] * 1024))
 
         for i in range(180):
             assert r.process_msg_and_check(message_1)
@@ -205,8 +225,10 @@ class TestRateLimits:
 
         # Aggregate percentage limit max total size
         r = RateLimiter(True, 60, 40)
-        message_4 = make_msg(ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 18 * 1024 * 1024))
-        message_5 = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 24 * 1024 * 1024))
+        message_4 = make_msg(
+            ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 18 * 1024 * 1024))
+        message_5 = make_msg(
+            ProtocolMessageTypes.respond_blocks, bytes([1] * 24 * 1024 * 1024))
 
         for i in range(2):
             assert r.process_msg_and_check(message_4)
@@ -222,7 +244,8 @@ class TestRateLimits:
     async def test_too_many_outgoing_messages(self):
         # Too many messages
         r = RateLimiter(incoming=False)
-        new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
+        new_peers_message = make_msg(
+            ProtocolMessageTypes.respond_peers, bytes([1]))
 
         passed = 0
         blocked = 0
@@ -237,14 +260,16 @@ class TestRateLimits:
 
         # ensure that *another* message type is not blocked because of this
 
-        new_signatures_message = make_msg(ProtocolMessageTypes.respond_signatures, bytes([1]))
+        new_signatures_message = make_msg(
+            ProtocolMessageTypes.respond_signatures, bytes([1]))
         assert r.process_msg_and_check(new_signatures_message)
 
     @pytest.mark.asyncio
     async def test_too_many_incoming_messages(self):
         # Too many messages
         r = RateLimiter(incoming=True)
-        new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
+        new_peers_message = make_msg(
+            ProtocolMessageTypes.respond_peers, bytes([1]))
 
         passed = 0
         blocked = 0
@@ -259,5 +284,6 @@ class TestRateLimits:
 
         # ensure that other message types *are* blocked because of this
 
-        new_signatures_message = make_msg(ProtocolMessageTypes.respond_signatures, bytes([1]))
+        new_signatures_message = make_msg(
+            ProtocolMessageTypes.respond_signatures, bytes([1]))
         assert not r.process_msg_and_check(new_signatures_message)

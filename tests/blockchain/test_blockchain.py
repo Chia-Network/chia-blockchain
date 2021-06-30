@@ -57,7 +57,8 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs_400(self, default_400_blocks):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
+            test_constants, ClassgroupElement.get_default_element(
+            ), test_constants.GENESIS_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
@@ -65,7 +66,8 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs_1000(self, default_1000_blocks):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
+            test_constants, ClassgroupElement.get_default_element(
+            ), test_constants.GENESIS_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
@@ -73,7 +75,8 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs(self):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
+            test_constants, ClassgroupElement.get_default_element(
+            ), test_constants.GENESIS_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
@@ -96,14 +99,16 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=30)[0]
+        genesis = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=30)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(1, force_overflow=True, skip_slots=3)[0]
+        genesis = bt.get_consecutive_blocks(
+            1, force_overflow=True, skip_slots=3)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
@@ -112,7 +117,8 @@ class TestGenesisBlock:
     async def test_genesis_validate_1(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         bad_prev = bytes([1] * 32)
-        genesis = recursive_replace(genesis, "foliage.prev_block_hash", bad_prev)
+        genesis = recursive_replace(
+            genesis, "foliage.prev_block_hash", bad_prev)
         result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err == Err.INVALID_PREV_BLOCK_HASH
 
@@ -133,7 +139,8 @@ class TestBlockHeaderValidation:
                     uint64(10000000),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [
+                        new_finished_ss] + block.finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_NEW_SUB_SLOT_ITERS
@@ -143,7 +150,8 @@ class TestBlockHeaderValidation:
                     uint64(10000000),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [
+                        new_finished_ss_2] + block.finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_2)
                 assert err == Err.INVALID_NEW_DIFFICULTY
@@ -160,7 +168,8 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [
+                        new_finished_ss_3] + block.finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
                 assert err == Err.INVALID_SUB_EPOCH_SUMMARY
@@ -177,7 +186,8 @@ class TestBlockHeaderValidation:
                     new_finished_ss_4.challenge_chain.get_hash(),
                 )
                 block_bad_4 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
+                    block, "finished_sub_slots", [
+                        new_finished_ss_4] + block.finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_4)
                 assert err == Err.INVALID_SUB_EPOCH_SUMMARY or err == Err.INVALID_NEW_SUB_SLOT_ITERS
@@ -214,7 +224,8 @@ class TestBlockHeaderValidation:
         err = validate_res.error
         assert err is None
         result, err, _ = await blockchain.receive_block(block)
-        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, force_overflow=True)
         block = blocks[-1]
         unf = UnfinishedBlock(
             block.finished_sub_slots,
@@ -247,7 +258,8 @@ class TestBlockHeaderValidation:
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(10, skip_slots=2, block_list_input=blocks)
+        blocks = bt.get_consecutive_blocks(
+            10, skip_slots=2, block_list_input=blocks)
         for block in blocks[10:]:
             result, err, _ = await blockchain.receive_block(block)
             assert err is None
@@ -259,7 +271,8 @@ class TestBlockHeaderValidation:
         num_blocks = 20
         blocks = []
         for i in range(num_blocks):
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=1)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
@@ -272,7 +285,8 @@ class TestBlockHeaderValidation:
         num_blocks = 0
         for i in range(1, num_rounds):
             num_blocks += i
-            blocks = bt.get_consecutive_blocks(i, block_list_input=blocks, skip_slots=1, force_overflow=True)
+            blocks = bt.get_consecutive_blocks(
+                i, block_list_input=blocks, skip_slots=1, force_overflow=True)
             for block in blocks[-i:]:
                 result, err, _ = await blockchain.receive_block(block)
                 assert result == ReceiveBlockResult.NEW_PEAK
@@ -288,13 +302,15 @@ class TestBlockHeaderValidation:
             # This creates an overflow block, then a normal block, and then an overflow in the next sub-slot
             # blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, force_overflow=True)
 
             await blockchain.receive_block(blocks[-2])
 
             sb_1 = blockchain.block_record(blocks[-2].header_hash)
 
-            sb_2_next_ss = blocks[-1].total_iters - blocks[-2].total_iters < sb_1.sub_slot_iters
+            sb_2_next_ss = blocks[-1].total_iters - \
+                blocks[-2].total_iters < sb_1.sub_slot_iters
             # We might not get a normal block for sb_2, and we might not get them in the right slots
             # So this while loop keeps trying
             if sb_1.overflow and sb_2_next_ss:
@@ -322,7 +338,8 @@ class TestBlockHeaderValidation:
         num_blocks = 20
         blocks = []
         for i in range(num_blocks):  # Same thing, but 2 sub-slots per block
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=2)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
@@ -333,7 +350,8 @@ class TestBlockHeaderValidation:
         num_blocks = 10
         blocks = []
         for i in range(num_blocks):  # Same thing, but 5 sub-slots per block
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=5)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=5)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
@@ -353,7 +371,8 @@ class TestBlockHeaderValidation:
         num_blocks = 10
         blocks = []
         for i in range(num_blocks):
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2, force_overflow=True)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=2, force_overflow=True)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -364,7 +383,8 @@ class TestBlockHeaderValidation:
         # 1
         blocks = bt.get_consecutive_blocks(2, force_overflow=False)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_1_bad = recursive_replace(blocks[-1], "foliage.prev_block_hash", bytes([0] * 32))
+        block_1_bad = recursive_replace(
+            blocks[-1], "foliage.prev_block_hash", bytes([0] * 32))
 
         result, err, _ = await empty_blockchain.receive_block(block_1_bad)
         assert result == ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -374,7 +394,8 @@ class TestBlockHeaderValidation:
         # 2
         blocks = bt.get_consecutive_blocks(2, force_overflow=False)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_1_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.proof", bytes([0] * 32))
+        block_1_bad = recursive_replace(
+            blocks[-1], "reward_chain_block.proof_of_space.proof", bytes([0] * 32))
 
         result, err, _ = await empty_blockchain.receive_block(block_1_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
@@ -383,14 +404,16 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_genesis(self, empty_blockchain):
         # 2a
-        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=1)
         new_finished_ss = recursive_replace(
             blocks[0].finished_sub_slots[0],
             "challenge_chain.challenge_chain_end_of_slot_vdf.challenge",
             bytes([2] * 32),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+            blocks[0], "finished_sub_slots", [new_finished_ss] +
+            blocks[0].finished_sub_slots[1:]
         )
 
         result, err, _ = await empty_blockchain.receive_block(block_0_bad)
@@ -400,15 +423,18 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_non_genesis(self, empty_blockchain):
         # 2b
-        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
-        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1, block_list_input=blocks)
+        blocks = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=1, block_list_input=blocks)
         new_finished_ss = recursive_replace(
             blocks[1].finished_sub_slots[0],
             "challenge_chain.challenge_chain_end_of_slot_vdf.challenge",
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", [new_finished_ss] + blocks[1].finished_sub_slots[1:]
+            blocks[1], "finished_sub_slots", [new_finished_ss] +
+            blocks[1].finished_sub_slots[1:]
         )
 
         _, _, _ = await empty_blockchain.receive_block(blocks[0])
@@ -419,15 +445,18 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_empty_ss(self, empty_blockchain):
         # 2c
-        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
-        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=2, block_list_input=blocks)
+        blocks = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=2, block_list_input=blocks)
         new_finished_ss = recursive_replace(
             blocks[1].finished_sub_slots[-1],
             "challenge_chain.challenge_chain_end_of_slot_vdf.challenge",
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", blocks[1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[1], "finished_sub_slots", blocks[1].finished_sub_slots[:-
+                                                                          1] + [new_finished_ss]
         )
 
         _, _, _ = await empty_blockchain.receive_block(blocks[0])
@@ -438,7 +467,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_genesis_no_icc(self, empty_blockchain):
         # 2d
-        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(
+            1, force_overflow=False, skip_slots=1)
         new_finished_ss = recursive_replace(
             blocks[0].finished_sub_slots[0],
             "infused_challenge_chain",
@@ -451,7 +481,8 @@ class TestBlockHeaderValidation:
             ),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+            blocks[0], "finished_sub_slots", [new_finished_ss] +
+            blocks[0].finished_sub_slots[1:]
         )
 
         result, err, _ = await empty_blockchain.receive_block(block_0_bad)
@@ -461,7 +492,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_icc_sub_slot_vdf(self):
         bt_high_iters = BlockTools(
-            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14))
+            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(
+                2 ** 12), DIFFICULTY_STARTING=(2 ** 14))
         )
         bc1, connection, db_path = await create_blockchain(bt_high_iters.constants)
         blocks = bt_high_iters.get_consecutive_blocks(10)
@@ -481,7 +513,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss]
                 )
                 result, err, _ = await bc1.receive_block(block_bad)
                 assert err == Err.INVALID_ICC_EOS_VDF
@@ -501,7 +534,8 @@ class TestBlockHeaderValidation:
                 )
                 log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_2]
                 )
                 result, err, _ = await bc1.receive_block(block_bad_2)
                 assert err == Err.INVALID_ICC_EOS_VDF
@@ -520,7 +554,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_3]
                 )
                 result, err, _ = await bc1.receive_block(block_bad_3)
                 assert err == Err.INVALID_ICC_EOS_VDF
@@ -532,7 +567,8 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_5]
                 )
                 result, err, _ = await bc1.receive_block(block_bad_5)
                 assert err == Err.INVALID_ICC_EOS_VDF
@@ -552,7 +588,8 @@ class TestBlockHeaderValidation:
         assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=1)
             block = blocks[-1]
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
                 if block.finished_sub_slots[-1].reward_chain.deficit == test_constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -563,7 +600,8 @@ class TestBlockHeaderValidation:
                         "challenge_chain",
                         replace(
                             block.finished_sub_slots[-1].challenge_chain,
-                            infused_challenge_chain_sub_slot_hash=bytes([1] * 32),
+                            infused_challenge_chain_sub_slot_hash=bytes([
+                                                                        1] * 32),
                         ),
                     )
                 else:
@@ -580,7 +618,8 @@ class TestBlockHeaderValidation:
                         ),
                     )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss]
                 )
                 result, err, _ = await blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_ICC_HASH_CC
@@ -589,10 +628,12 @@ class TestBlockHeaderValidation:
                 new_finished_ss_bad_rc = recursive_replace(
                     block.finished_sub_slots[-1],
                     "reward_chain",
-                    replace(block.finished_sub_slots[-1].reward_chain, infused_challenge_chain_sub_slot_hash=None),
+                    replace(
+                        block.finished_sub_slots[-1].reward_chain, infused_challenge_chain_sub_slot_hash=None),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_bad_rc]
                 )
                 result, err, _ = await blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_ICC_HASH_RC
@@ -607,7 +648,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_cc]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_bad_cc]
                 )
                 result, err, _ = await blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_ICC_HASH_CC
@@ -617,11 +659,13 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[-1],
                     "reward_chain",
                     replace(
-                        block.finished_sub_slots[-1].reward_chain, infused_challenge_chain_sub_slot_hash=bytes([1] * 32)
+                        block.finished_sub_slots[-1].reward_chain, infused_challenge_chain_sub_slot_hash=bytes([
+                                                                                                               1] * 32)
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_bad_rc]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_bad_rc]
                 )
                 result, err, _ = await blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_ICC_HASH_RC
@@ -637,15 +681,18 @@ class TestBlockHeaderValidation:
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(1)
         assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=4)
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, skip_slots=4)
 
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
             "challenge_chain",
-            replace(blocks[-1].finished_sub_slots[-1].challenge_chain, subepoch_summary_hash=std_hash(b"0")),
+            replace(blocks[-1].finished_sub_slots[-1].challenge_chain,
+                    subepoch_summary_hash=std_hash(b"0")),
         )
         block_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-
+                                                                            1] + [new_finished_ss]
         )
         result, err, _ = await blockchain.receive_block(block_bad)
         assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
@@ -656,9 +703,12 @@ class TestBlockHeaderValidation:
         # Tests adding an empty sub slot after the sub-epoch / epoch.
         # Also tests overflow block in epoch
         blocks_base = bt.get_consecutive_blocks(test_constants.EPOCH_BLOCKS)
-        blocks_1 = bt.get_consecutive_blocks(1, block_list_input=blocks_base, force_overflow=True)
-        blocks_2 = bt.get_consecutive_blocks(1, skip_slots=1, block_list_input=blocks_base, force_overflow=True)
-        blocks_3 = bt.get_consecutive_blocks(1, skip_slots=2, block_list_input=blocks_base, force_overflow=True)
+        blocks_1 = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_base, force_overflow=True)
+        blocks_2 = bt.get_consecutive_blocks(
+            1, skip_slots=1, block_list_input=blocks_base, force_overflow=True)
+        blocks_3 = bt.get_consecutive_blocks(
+            1, skip_slots=2, block_list_input=blocks_base, force_overflow=True)
         blocks_4 = bt.get_consecutive_blocks(1, block_list_input=blocks_base)
         for block in blocks_base:
             result, err, _ = await empty_blockchain.receive_block(block)
@@ -673,16 +723,19 @@ class TestBlockHeaderValidation:
         # 2o
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(1, skip_slots=1)
-        blocks = bt.get_consecutive_blocks(1, skip_slots=1, block_list_input=blocks)
+        blocks = bt.get_consecutive_blocks(
+            1, skip_slots=1, block_list_input=blocks)
         assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
             "reward_chain",
-            replace(blocks[-1].finished_sub_slots[-1].reward_chain, challenge_chain_sub_slot_hash=bytes([3] * 32)),
+            replace(blocks[-1].finished_sub_slots[-1].reward_chain,
+                    challenge_chain_sub_slot_hash=bytes([3] * 32)),
         )
         block_1_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+            blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-
+                                                                            1] + [new_finished_ss]
         )
 
         result, err, _ = await blockchain.receive_block(block_1_bad)
@@ -712,7 +765,8 @@ class TestBlockHeaderValidation:
                     new_finished_ss.challenge_chain.get_hash(),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_CC_EOS_VDF
@@ -734,7 +788,8 @@ class TestBlockHeaderValidation:
                     new_finished_ss_2.challenge_chain.get_hash(),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_2]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_2)
                 assert err == Err.INVALID_CC_EOS_VDF
@@ -756,7 +811,8 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_3]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
                 assert err == Err.INVALID_CC_EOS_VDF or err == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
@@ -768,7 +824,8 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_5]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_5)
                 assert err == Err.INVALID_CC_EOS_VDF
@@ -794,7 +851,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_RC_EOS_VDF
@@ -810,7 +868,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_2]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_2)
                 assert err == Err.INVALID_RC_EOS_VDF
@@ -826,7 +885,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_3]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
                 assert err == Err.INVALID_RC_EOS_VDF
@@ -838,7 +898,8 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
+                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [
+                        new_finished_ss_5]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_5)
                 assert err == Err.INVALID_RC_EOS_VDF
@@ -860,7 +921,8 @@ class TestBlockHeaderValidation:
                 test_constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1,
             ),
         )
-        block_bad = recursive_replace(block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss])
+        block_bad = recursive_replace(
+            block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss])
         result, err, _ = await empty_blockchain.receive_block(block_bad)
         assert err == Err.INVALID_DEFICIT
 
@@ -873,7 +935,8 @@ class TestBlockHeaderValidation:
         await empty_blockchain.receive_block(blocks[1])
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, skip_slots=1)
             if len(blocks[-1].finished_sub_slots) > 0:
                 new_finished_ss = recursive_replace(
                     blocks[-1].finished_sub_slots[-1],
@@ -890,7 +953,8 @@ class TestBlockHeaderValidation:
                     case_2 = True
 
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-1] + [new_finished_ss]
+                    blocks[-1], "finished_sub_slots", blocks[-1].finished_sub_slots[:-
+                                                                                    1] + [new_finished_ss]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_DEFICIT or err == Err.INVALID_ICC_HASH_CC
@@ -919,7 +983,8 @@ class TestBlockHeaderValidation:
                 new_finished_ss.reward_chain, challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
             ),
         )
-        block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:])
+        block_bad = recursive_replace(block, "finished_sub_slots", [
+                                      new_finished_ss] + block.finished_sub_slots[1:])
         result, err, _ = await empty_blockchain.receive_block(block_bad)
         assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
 
@@ -951,7 +1016,8 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", [new_finished_ss] + blocks[-1].finished_sub_slots[1:]
+                    blocks[-1], "finished_sub_slots", [new_finished_ss] +
+                    blocks[-1].finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
@@ -969,15 +1035,18 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.challenge", std_hash(b""))
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_block.proof_of_space.challenge", std_hash(b""))
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.proof_of_space.pool_contract_puzzle_hash", std_hash(b"")
+            blocks[-1], "reward_chain_block.proof_of_space.pool_contract_puzzle_hash", std_hash(
+                b"")
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_block.proof_of_space.size", 62)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
         block_bad = recursive_replace(
@@ -1027,11 +1096,13 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].reward_chain_block.signage_point_index == 0:
                 case_1 = True
-                block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
+                block_bad = recursive_replace(
+                    blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_SP_INDEX
             elif not is_overflow_block(test_constants, blocks[-1].reward_chain_block.signage_point_index):
                 case_2 = True
-                block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(0))
+                block_bad = recursive_replace(
+                    blocks[-1], "reward_chain_block.signage_point_index", uint8(0))
                 error_code = (await empty_blockchain.receive_block(block_bad))[1]
                 assert error_code == Err.INVALID_SP_INDEX or error_code == Err.INVALID_POSPACE
             assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1062,7 +1133,8 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].reward_chain_block.signage_point_index != 0:
                 block_bad = recursive_replace(
-                    blocks[-1], "reward_chain_block.reward_chain_sp_vdf.challenge", std_hash(b"1")
+                    blocks[-1], "reward_chain_block.reward_chain_sp_vdf.challenge", std_hash(
+                        b"1")
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
                 block_bad = recursive_replace(
@@ -1091,7 +1163,8 @@ class TestBlockHeaderValidation:
         # 12
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.reward_chain_sp_signature", G2Element.generator())
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_block.reward_chain_sp_signature", G2Element.generator())
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SIGNATURE
 
     @pytest.mark.asyncio
@@ -1105,7 +1178,8 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].reward_chain_block.signage_point_index != 0:
                 block_bad = recursive_replace(
-                    blocks[-1], "reward_chain_block.challenge_chain_sp_vdf.challenge", std_hash(b"1")
+                    blocks[-1], "reward_chain_block.challenge_chain_sp_vdf.challenge", std_hash(
+                        b"1")
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
                 block_bad = recursive_replace(
@@ -1149,7 +1223,8 @@ class TestBlockHeaderValidation:
         # 16
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad = recursive_replace(blocks[-1], "foliage.foliage_block_data_signature", G2Element.generator())
+        block_bad = recursive_replace(
+            blocks[-1], "foliage.foliage_block_data_signature", G2Element.generator())
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PLOT_SIGNATURE
 
     @pytest.mark.asyncio
@@ -1174,11 +1249,14 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage.foliage_block_data.unfinished_reward_block_hash", std_hash(b"2")
+            blocks[-1], "foliage.foliage_block_data.unfinished_reward_block_hash", std_hash(
+                b"2")
         )
         new_m = block_bad.foliage.foliage_block_data.get_hash()
-        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(
+            block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_URSB_HASH
 
     @pytest.mark.asyncio
@@ -1187,10 +1265,13 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(3)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad: FullBlock = recursive_replace(blocks[-1], "foliage.foliage_block_data.pool_target.max_height", 1)
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "foliage.foliage_block_data.pool_target.max_height", 1)
         new_m = block_bad.foliage.foliage_block_data.get_hash()
-        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(
+            block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.OLD_POOL_TARGET
 
     @pytest.mark.asyncio
@@ -1198,11 +1279,14 @@ class TestBlockHeaderValidation:
         # 20a
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", std_hash(b"12")
+            blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", std_hash(
+                b"12")
         )
         new_m = block_bad.foliage.foliage_block_data.get_hash()
-        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(
+            block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREFARM
 
     @pytest.mark.asyncio
@@ -1223,8 +1307,10 @@ class TestBlockHeaderValidation:
                     blocks[-1], "foliage.foliage_block_data.pool_signature", G2Element.generator()
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
-                new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+                new_fsb_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_SIGNATURE
                 return None
             attempts += 1
@@ -1244,11 +1330,14 @@ class TestBlockHeaderValidation:
             )
             if blocks[-1].foliage.foliage_block_data.pool_signature is None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32(token_bytes(32))
+                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32(
+                        token_bytes(32))
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
-                new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+                new_fsb_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_TARGET
                 return None
             attempts += 1
@@ -1263,11 +1352,13 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 case_1 = True
-                block_bad: FullBlock = recursive_replace(blocks[-1], "foliage.foliage_transaction_block_hash", None)
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1], "foliage.foliage_transaction_block_hash", None)
             else:
                 case_2 = True
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_transaction_block_hash", std_hash(b"")
+                    blocks[-1], "foliage.foliage_transaction_block_hash", std_hash(
+                        b"")
                 )
             err_code = (await empty_blockchain.receive_block(block_bad))[1]
             assert err_code == Err.INVALID_FOLIAGE_BLOCK_PRESENCE or err_code == Err.INVALID_IS_TRANSACTION_BLOCK
@@ -1283,12 +1374,15 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_transaction_block_hash", std_hash(b"2")
+                    blocks[-1], "foliage.foliage_transaction_block_hash", std_hash(
+                        b"2")
                 )
 
                 new_m = block_bad.foliage.foliage_transaction_block_hash
-                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                new_fbh_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_FOLIAGE_BLOCK_HASH
                 return None
             await empty_blockchain.receive_block(blocks[-1])
@@ -1298,14 +1392,17 @@ class TestBlockHeaderValidation:
         # 24a
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage_transaction_block.prev_transaction_block_hash", std_hash(b"2")
+            blocks[-1], "foliage_transaction_block.prev_transaction_block_hash", std_hash(
+                b"2")
         )
         block_bad: FullBlock = recursive_replace(
             block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
         )
         new_m = block_bad.foliage.foliage_transaction_block_hash
-        new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+        new_fbh_sig = bt.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(
+            block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREV_BLOCK_HASH
 
     @pytest.mark.asyncio
@@ -1317,14 +1414,17 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage_transaction_block.prev_transaction_block_hash", std_hash(b"2")
+                    blocks[-1], "foliage_transaction_block.prev_transaction_block_hash", std_hash(
+                        b"2")
                 )
                 block_bad: FullBlock = recursive_replace(
                     block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
-                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                new_fbh_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREV_BLOCK_HASH
                 return None
             await empty_blockchain.receive_block(blocks[-1])
@@ -1338,14 +1438,17 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage_transaction_block.filter_hash", std_hash(b"2")
+                    blocks[-1], "foliage_transaction_block.filter_hash", std_hash(
+                        b"2")
                 )
                 block_bad: FullBlock = recursive_replace(
                     block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
-                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                new_fbh_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_TRANSACTIONS_FILTER_HASH
                 return None
             await empty_blockchain.receive_block(blocks[-1])
@@ -1367,8 +1470,10 @@ class TestBlockHeaderValidation:
                     block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
-                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                new_fbh_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.TIMESTAMP_TOO_FAR_IN_PAST
 
                 block_bad: FullBlock = recursive_replace(
@@ -1380,8 +1485,10 @@ class TestBlockHeaderValidation:
                     block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
-                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                new_fbh_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.TIMESTAMP_TOO_FAR_IN_PAST
 
                 block_bad: FullBlock = recursive_replace(
@@ -1393,8 +1500,10 @@ class TestBlockHeaderValidation:
                     block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
-                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                new_fbh_sig = bt.get_plot_signature(
+                    new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.TIMESTAMP_TOO_FAR_IN_FUTURE
                 return None
             await empty_blockchain.receive_block(blocks[-1])
@@ -1404,14 +1513,16 @@ class TestBlockHeaderValidation:
         # 27
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.height", 2)
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "reward_chain_block.height", 2)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_HEIGHT
 
     @pytest.mark.asyncio
     async def test_height_genesis(self, empty_blockchain):
         # 27
         blocks = bt.get_consecutive_blocks(1)
-        block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.height", 1)
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "reward_chain_block.height", 1)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREV_BLOCK_HASH
 
     @pytest.mark.asyncio
@@ -1419,14 +1530,16 @@ class TestBlockHeaderValidation:
         # 28
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.weight", 22131)
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "reward_chain_block.weight", 22131)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_WEIGHT
 
     @pytest.mark.asyncio
     async def test_weight_genesis(self, empty_blockchain):
         # 28
         blocks = bt.get_consecutive_blocks(1)
-        block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.weight", 0)
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "reward_chain_block.weight", 0)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_WEIGHT
 
     @pytest.mark.asyncio
@@ -1436,7 +1549,8 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.challenge_chain_ip_vdf.challenge", std_hash(b"1"))
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_block.challenge_chain_ip_vdf.challenge", std_hash(b"1"))
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_IP_VDF
         block_bad = recursive_replace(
             blocks[-1],
@@ -1464,7 +1578,8 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.reward_chain_ip_vdf.challenge", std_hash(b"1"))
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_block.reward_chain_ip_vdf.challenge", std_hash(b"1"))
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_IP_VDF
         block_bad = recursive_replace(
             blocks[-1],
@@ -1493,7 +1608,8 @@ class TestBlockHeaderValidation:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.infused_challenge_chain_ip_vdf.challenge", std_hash(b"1")
+            blocks[-1], "reward_chain_block.infused_challenge_chain_ip_vdf.challenge", std_hash(
+                b"1")
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
@@ -1521,14 +1637,16 @@ class TestBlockHeaderValidation:
         # 32
         blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad: FullBlock = recursive_replace(blocks[-1], "foliage.reward_block_hash", std_hash(b""))
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "foliage.reward_block_hash", std_hash(b""))
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_REWARD_BLOCK_HASH
 
     @pytest.mark.asyncio
     async def test_reward_block_hash_2(self, empty_blockchain):
         # 33
         blocks = bt.get_consecutive_blocks(1)
-        block_bad: FullBlock = recursive_replace(blocks[0], "reward_chain_block.is_transaction_block", False)
+        block_bad: FullBlock = recursive_replace(
+            blocks[0], "reward_chain_block.is_transaction_block", False)
         block_bad: FullBlock = recursive_replace(
             block_bad, "foliage.reward_block_hash", block_bad.reward_chain_block.get_hash()
         )
@@ -1539,7 +1657,8 @@ class TestBlockHeaderValidation:
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if not blocks[-1].is_transaction_block():
-                block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_block.is_transaction_block", True)
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1], "reward_chain_block.is_transaction_block", True)
                 block_bad: FullBlock = recursive_replace(
                     block_bad, "foliage.reward_block_hash", block_bad.reward_chain_block.get_hash()
                 )
@@ -1607,7 +1726,8 @@ class TestBodyValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         original_block: FullBlock = blocks[-1]
 
-        block = recursive_replace(original_block, "transactions_generator", SerializedProgram())
+        block = recursive_replace(
+            original_block, "transactions_generator", SerializedProgram())
         assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
         h = std_hash(b"")
         i = uint64(1)
@@ -1618,7 +1738,8 @@ class TestBodyValidation:
         )
         assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
 
-        block = recursive_replace(original_block, "transactions_generator_ref_list", [i])
+        block = recursive_replace(
+            original_block, "transactions_generator_ref_list", [i])
         assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
 
     @pytest.mark.asyncio
@@ -1659,11 +1780,14 @@ class TestBodyValidation:
             h,
         )
         block = recursive_replace(
-            block, "foliage.foliage_transaction_block_hash", std_hash(block.foliage_transaction_block)
+            block, "foliage.foliage_transaction_block_hash", std_hash(
+                block.foliage_transaction_block)
         )
         new_m = block.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block = recursive_replace(block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block = recursive_replace(
+            block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block))[1]
         assert err == Err.INVALID_TRANSACTIONS_INFO_HASH
@@ -1675,10 +1799,13 @@ class TestBodyValidation:
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         h = std_hash(b"")
-        block = recursive_replace(blocks[-1], "foliage.foliage_transaction_block_hash", h)
+        block = recursive_replace(
+            blocks[-1], "foliage.foliage_transaction_block_hash", h)
         new_m = block.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block = recursive_replace(block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block = recursive_replace(
+            block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block))[1]
         assert err == Err.INVALID_FOLIAGE_BLOCK_HASH
@@ -1703,8 +1830,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_REWARD_COINS
@@ -1714,7 +1843,8 @@ class TestBodyValidation:
         too_many_reward_claims = block.transactions_info.reward_claims_incorporated + [
             Coin(h, h, too_few_reward_claims[0].amount)
         ]
-        block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", too_many_reward_claims)
+        block_2 = recursive_replace(
+            block, "transactions_info.reward_claims_incorporated", too_many_reward_claims)
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1722,8 +1852,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_REWARD_COINS
@@ -1732,7 +1864,8 @@ class TestBodyValidation:
         duplicate_reward_claims = block.transactions_info.reward_claims_incorporated + [
             block.transactions_info.reward_claims_incorporated[-1]
         ]
-        block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", duplicate_reward_claims)
+        block_2 = recursive_replace(
+            block, "transactions_info.reward_claims_incorporated", duplicate_reward_claims)
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1740,8 +1873,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_REWARD_COINS
@@ -1762,7 +1897,8 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[2].get_included_reward_coins())[0]
         )
         blocks = bt.get_consecutive_blocks(
             1,
@@ -1782,7 +1918,8 @@ class TestBodyValidation:
 
         # No tx should have all zeroes
         block: FullBlock = blocks[-1]
-        block_2 = recursive_replace(block, "transactions_info.generator_root", bytes([1] * 32))
+        block_2 = recursive_replace(
+            block, "transactions_info.generator_root", bytes([1] * 32))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1790,8 +1927,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
@@ -1809,7 +1948,8 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -1817,7 +1957,8 @@ class TestBodyValidation:
 
         # Non empty generator hash must be correct
         block = blocks[-1]
-        block_2 = recursive_replace(block, "transactions_info.generator_root", bytes([0] * 32))
+        block_2 = recursive_replace(
+            block, "transactions_info.generator_root", bytes([0] * 32))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1825,8 +1966,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
@@ -1845,7 +1988,8 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
 
         block: FullBlock = blocks[-1]
-        block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([0] * 32))
+        block_2 = recursive_replace(
+            block, "transactions_info.generator_refs_root", bytes([0] * 32))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1853,14 +1997,17 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
 
         # No generator should have no refs list
-        block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
+        block_2 = recursive_replace(
+            block, "transactions_generator_ref_list", [uint32(0)])
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
@@ -1869,9 +2016,11 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
-        blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
+        blocks = bt.get_consecutive_blocks(
+            5, block_list_input=blocks, guarantee_transaction_block=False)
         for block in blocks[-5:]:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1879,7 +2028,8 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
-        generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
+        generator_arg = detect_potential_template_generator(
+            blocks[-1].height, blocks[-1].transactions_generator)
         assert generator_arg is not None
 
         blocks = bt.get_consecutive_blocks(
@@ -1892,7 +2042,8 @@ class TestBodyValidation:
         block = blocks[-1]
         assert len(block.transactions_generator_ref_list) > 0
 
-        block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([1] * 32))
+        block_2 = recursive_replace(
+            block, "transactions_info.generator_refs_root", bytes([1] * 32))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1900,21 +2051,25 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
 
         # Too many heights
-        block_2 = recursive_replace(block, "transactions_generator_ref_list", [block.height - 2, block.height - 1])
+        block_2 = recursive_replace(block, "transactions_generator_ref_list", [
+                                    block.height - 2, block.height - 1])
         err = (await b.receive_block(block_2))[1]
         assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR
         assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
 
         # Not tx block
         for h in range(0, block.height - 1):
-            block_2 = recursive_replace(block, "transactions_generator_ref_list", [h])
+            block_2 = recursive_replace(
+                block, "transactions_generator_ref_list", [h])
             err = (await b.receive_block(block_2))[1]
             assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR or err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
             assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
@@ -1937,7 +2092,8 @@ class TestBodyValidation:
 
         condition_dict = {ConditionOpcode.CREATE_COIN: []}
         for i in range(7000):
-            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
+            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [
+                                       bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx: SpendBundle = wt.generate_signed_transaction(
@@ -1971,7 +2127,8 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -1980,7 +2137,8 @@ class TestBodyValidation:
         block: FullBlock = blocks[-1]
 
         # zero
-        block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(0))
+        block_2: FullBlock = recursive_replace(
+            block, "transactions_info.cost", uint64(0))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -1988,14 +2146,17 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
-        block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1))
+        block_2: FullBlock = recursive_replace(
+            block, "transactions_info.cost", uint64(1))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -2003,13 +2164,16 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         err = (await b.receive_block(block_2))[1]
         assert err == Err.GENERATOR_RUNTIME_ERROR
 
         # too high
-        block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1000000))
+        block_2: FullBlock = recursive_replace(
+            block, "transactions_info.cost", uint64(1000000))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -2017,8 +2181,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_BLOCK_COST
@@ -2091,7 +2257,8 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2101,26 +2268,32 @@ class TestBodyValidation:
 
         merkle_set = MerkleSet()
         # additions
-        block_2 = recursive_replace(block, "foliage_transaction_block.additions_root", merkle_set.get_root())
+        block_2 = recursive_replace(
+            block, "foliage_transaction_block.additions_root", merkle_set.get_root())
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.BAD_ADDITION_ROOT
 
         # removals
         merkle_set.add_already_hashed(std_hash(b"1"))
-        block_2 = recursive_replace(block, "foliage_transaction_block.removals_root", merkle_set.get_root())
+        block_2 = recursive_replace(
+            block, "foliage_transaction_block.removals_root", merkle_set.get_root())
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.BAD_REMOVAL_ROOT
@@ -2142,20 +2315,24 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
         block: FullBlock = blocks[-1]
-        block_2 = recursive_replace(block, "foliage_transaction_block.filter_hash", std_hash(b"3"))
+        block_2 = recursive_replace(
+            block, "foliage_transaction_block.filter_hash", std_hash(b"3"))
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_TRANSACTIONS_FILTER_HASH
@@ -2178,7 +2355,8 @@ class TestBodyValidation:
 
         condition_dict = {ConditionOpcode.CREATE_COIN: []}
         for i in range(2):
-            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(1)])
+            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [
+                                       bt.pool_ph, int_to_bytes(1)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx: SpendBundle = wt.generate_signed_transaction(
@@ -2207,10 +2385,12 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            11, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            11, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
         agg = SpendBundle.aggregate([tx, tx_2])
 
@@ -2236,7 +2416,8 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2245,7 +2426,8 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
 
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-2].get_included_reward_coins())[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
@@ -2270,7 +2452,8 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -2278,17 +2461,20 @@ class TestBodyValidation:
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
 
         new_coin: Coin = tx.additions()[0]
-        tx_2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), new_coin)
+        tx_2: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), new_coin)
         # This is fine because coin exists
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
         )
         assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
-        blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=True)
+        blocks = bt.get_consecutive_blocks(
+            5, block_list_input=blocks, guarantee_transaction_block=True)
         for block in blocks[-5:]:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
 
-        blocks_reorg = bt.get_consecutive_blocks(2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
+        blocks_reorg = bt.get_consecutive_blocks(
+            2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
         assert (await b.receive_block(blocks_reorg[-2]))[0] == ReceiveBlockResult.ADDED_AS_ORPHAN
         assert (await b.receive_block(blocks_reorg[-1]))[0] == ReceiveBlockResult.ADDED_AS_ORPHAN
 
@@ -2334,7 +2520,8 @@ class TestBodyValidation:
             calculate_base_farmer_reward(blocks_reorg[-1].height),
             bt.constants.GENESIS_CHALLENGE,
         )
-        tx_3: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), farmer_coin)
+        tx_3: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), farmer_coin)
 
         blocks_reorg = bt.get_consecutive_blocks(
             1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_3
@@ -2372,7 +2559,8 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[-1].get_included_reward_coins())[0]
         )
 
         blocks = bt.get_consecutive_blocks(
@@ -2381,7 +2569,8 @@ class TestBodyValidation:
         block: FullBlock = blocks[-1]
 
         # wrong feees
-        block_2: FullBlock = recursive_replace(block, "transactions_info.fees", uint64(1239))
+        block_2: FullBlock = recursive_replace(
+            block, "transactions_info.fees", uint64(1239))
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
@@ -2389,8 +2578,10 @@ class TestBodyValidation:
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
-        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
-        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+        new_fsb_sig = bt.get_plot_signature(
+            new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         err = (await b.receive_block(block_2))[1]
         assert err == Err.INVALID_BLOCK_FEE_AMOUNT
@@ -2406,7 +2597,8 @@ class TestReorgs:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
         assert b.get_peak().height == 14
 
-        blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
             if reorg_block.height < 10:
@@ -2423,9 +2615,11 @@ class TestReorgs:
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
-        num_blocks_chain_1 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 10
+        num_blocks_chain_1 = 3 * test_constants.EPOCH_BLOCKS + \
+            test_constants.MAX_SUB_SLOT_BLOCKS + 10
         num_blocks_chain_2_start = test_constants.EPOCH_BLOCKS - 20
-        num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 8
+        num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + \
+            test_constants.MAX_SUB_SLOT_BLOCKS + 8
 
         assert num_blocks_chain_1 < 10000
         blocks = default_10000_blocks[:num_blocks_chain_1]
@@ -2474,7 +2668,8 @@ class TestReorgs:
     async def test_reorg_from_genesis(self, empty_blockchain):
         b = empty_blockchain
         WALLET_A = WalletTool(b.constants)
-        WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
+        WALLET_A_PUZZLE_HASHES = [
+            WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
         blocks = bt.get_consecutive_blocks(15)
 
@@ -2513,11 +2708,13 @@ class TestReorgs:
     async def test_reorg_transaction(self, empty_blockchain):
         b = empty_blockchain
         wallet_a = WalletTool(b.constants)
-        WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+        WALLET_A_PUZZLE_HASHES = [
+            wallet_a.get_new_puzzlehash() for _ in range(5)]
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
-        blocks = bt.get_consecutive_blocks(10, farmer_reward_puzzle_hash=coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            10, farmer_reward_puzzle_hash=coinbase_puzzlehash)
         blocks = bt.get_consecutive_blocks(
             2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
@@ -2527,7 +2724,8 @@ class TestReorgs:
         for coin in list(spend_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin)
 
         blocks = bt.get_consecutive_blocks(
             2,
@@ -2570,7 +2768,8 @@ class TestReorgs:
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
+            10, wt.get_new_puzzlehash(), list(
+                blocks[2].get_included_reward_coins())[0]
         )
         blocks = bt.get_consecutive_blocks(
             1,

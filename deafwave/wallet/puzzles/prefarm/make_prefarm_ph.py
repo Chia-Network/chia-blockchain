@@ -8,8 +8,10 @@ from deafwave.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from deafwave.util.condition_tools import parse_sexp_to_conditions
 from deafwave.util.ints import uint32
 
-address1 = "txch15gx26ndmacfaqlq8m0yajeggzceu7cvmaz4df0hahkukes695rss6lej7h"  # Gene wallet (m/12381/8444/2/42):
-address2 = "txch1c2cguswhvmdyz9hr3q6hak2h6p9dw4rz82g4707k2xy2sarv705qcce4pn"  # Mariano address (m/12381/8444/2/0)
+# Gene wallet (m/12381/8444/2/42):
+address1 = "txch15gx26ndmacfaqlq8m0yajeggzceu7cvmaz4df0hahkukes695rss6lej7h"
+# Mariano address (m/12381/8444/2/0)
+address2 = "txch1c2cguswhvmdyz9hr3q6hak2h6p9dw4rz82g4707k2xy2sarv705qcce4pn"
 
 ph1 = decode_puzzle_hash(address1)
 ph2 = decode_puzzle_hash(address2)
@@ -58,4 +60,5 @@ total_deafwave += make_puzzle(pool_amounts)
 print("\nFarmer address: ")
 total_deafwave += make_puzzle(farmer_amounts)
 
-assert total_deafwave == calculate_base_farmer_reward(uint32(0)) + calculate_pool_reward(uint32(0))
+assert total_deafwave == calculate_base_farmer_reward(
+    uint32(0)) + calculate_pool_reward(uint32(0))

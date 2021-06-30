@@ -116,12 +116,14 @@ class BlockStore:
         if cached is not None:
             return cached
         cursor = await self.db.execute(
-            "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?", (ses_block_hash.hex(),)
+            "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?", (
+                ses_block_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            challenge_segments = SubEpochSegments.from_bytes(row[0]).challenge_segments
+            challenge_segments = SubEpochSegments.from_bytes(
+                row[0]).challenge_segments
             self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
             return challenge_segments
         return None
@@ -322,7 +324,8 @@ class BlockStore:
             hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
             hash_to_height[bytes.fromhex(row[0])] = row[2]
             if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
+                hash_to_summary[bytes.fromhex(
+                    row[0])] = SubEpochSummary.from_bytes(row[3])
 
         height_to_hash: Dict[uint32, bytes32] = {}
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
@@ -352,7 +355,8 @@ class BlockStore:
 
     async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
         cursor = await self.db.execute(
-            "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (header_hash.hex(),)
+            "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (
+                header_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()

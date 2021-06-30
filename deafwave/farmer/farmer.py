@@ -44,10 +44,12 @@ class Farmer:
         self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
 
         # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
-        self.proofs_of_space: Dict[bytes32, List[Tuple[str, ProofOfSpace]]] = {}
+        self.proofs_of_space: Dict[bytes32,
+                                   List[Tuple[str, ProofOfSpace]]] = {}
 
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
-        self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32, bytes32, bytes32]] = {}
+        self.quality_str_to_identifiers: Dict[bytes32,
+                                              Tuple[str, bytes32, bytes32, bytes32]] = {}
 
         # number of responses to each signage point
         self.number_of_responses: Dict[bytes32, int] = {}
@@ -76,7 +78,8 @@ class Farmer:
         self.farmer_target_encoded = self.config["zzz_target_address"]
         self.farmer_target = decode_puzzle_hash(self.farmer_target_encoded)
 
-        self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
+        self.pool_public_keys = [G1Element.from_bytes(
+            bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
         self.pool_target_encoded = pool_config["zzz_target_address"]
@@ -92,7 +95,8 @@ class Farmer:
             raise RuntimeError(error_str)
 
     async def _start(self):
-        self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())
+        self.cache_clear_task = asyncio.create_task(
+            self._periodically_clear_cache_task())
 
     def _close(self):
         self._shut_down = True
@@ -138,7 +142,8 @@ class Farmer:
                 if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
                     break
                 for sk, _ in all_sks:
-                    ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
+                    ph = create_puzzlehash_for_pk(
+                        master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
 
                     if ph == self.farmer_target:
                         stop_searching_for_farmer = True

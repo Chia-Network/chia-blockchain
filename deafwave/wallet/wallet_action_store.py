@@ -120,7 +120,8 @@ class WalletActionStore:
             return result
 
         for row in rows:
-            action = WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
+            action = WalletAction(row[0], row[1], row[2], WalletType(
+                row[3]), row[4], bool(row[5]), row[6])
             result.append(action)
 
         return result

@@ -74,15 +74,19 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
 
     # This height is guaranteed to be in the next epoch (even when last_b is not actually the last block)
     height_in_next_epoch = (
-        last_b.height + 2 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 5
+        last_b.height + 2 * constants.MAX_SUB_SLOT_BLOCKS +
+        constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 5
     )
-    height_epoch_surpass: uint32 = uint32(height_in_next_epoch - (height_in_next_epoch % constants.EPOCH_BLOCKS))
-    height_prev_epoch_surpass: uint32 = uint32(height_epoch_surpass - constants.EPOCH_BLOCKS)
+    height_epoch_surpass: uint32 = uint32(
+        height_in_next_epoch - (height_in_next_epoch % constants.EPOCH_BLOCKS))
+    height_prev_epoch_surpass: uint32 = uint32(
+        height_epoch_surpass - constants.EPOCH_BLOCKS)
 
     assert height_prev_epoch_surpass % constants.EPOCH_BLOCKS == height_prev_epoch_surpass % constants.EPOCH_BLOCKS == 0
 
     # Sanity check, don't go too far past epoch barrier
-    assert (height_in_next_epoch - height_epoch_surpass) < (5 * constants.MAX_SUB_SLOT_BLOCKS)
+    assert (height_in_next_epoch - height_epoch_surpass) < (5 *
+                                                            constants.MAX_SUB_SLOT_BLOCKS)
 
     if height_prev_epoch_surpass == 0:
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
@@ -103,7 +107,8 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
         blocks,
         last_b,
         uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_BLOCKS - 1),
-        uint32(3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3),
+        uint32(3 * constants.MAX_SUB_SLOT_BLOCKS +
+               constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3),
     )
 
     # We want to find the last block in the slot at which we surpass the height.
@@ -235,7 +240,8 @@ def _get_next_sub_slot_iters(
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
-    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(
+        constants, blocks, prev_b)
 
     # This gets the last transaction block before this block's signage point. Assuming the block at height height
     # is the last block infused in the epoch: If this block ends up being a
@@ -255,15 +261,20 @@ def _get_next_sub_slot_iters(
     )
 
     # Only change by a max factor as a sanity check
-    max_ssi = uint64(constants.DIFFICULTY_CHANGE_MAX_FACTOR * last_block_curr.sub_slot_iters)
-    min_ssi = uint64(last_block_curr.sub_slot_iters // constants.DIFFICULTY_CHANGE_MAX_FACTOR)
+    max_ssi = uint64(constants.DIFFICULTY_CHANGE_MAX_FACTOR *
+                     last_block_curr.sub_slot_iters)
+    min_ssi = uint64(last_block_curr.sub_slot_iters //
+                     constants.DIFFICULTY_CHANGE_MAX_FACTOR)
     if new_ssi_precise >= last_block_curr.sub_slot_iters:
         new_ssi_precise = uint64(min(new_ssi_precise, max_ssi))
     else:
-        new_ssi_precise = uint64(max([constants.NUM_SPS_SUB_SLOT, new_ssi_precise, min_ssi]))
+        new_ssi_precise = uint64(
+            max([constants.NUM_SPS_SUB_SLOT, new_ssi_precise, min_ssi]))
 
-    new_ssi = truncate_to_significant_bits(new_ssi_precise, constants.SIGNIFICANT_BITS)
-    new_ssi = uint64(new_ssi - new_ssi % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
+    new_ssi = truncate_to_significant_bits(
+        new_ssi_precise, constants.SIGNIFICANT_BITS)
+    new_ssi = uint64(new_ssi - new_ssi %
+                     constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
     assert count_significant_bits(new_ssi) <= constants.SIGNIFICANT_BITS
     return new_ssi
 
@@ -315,7 +326,8 @@ def _get_next_difficulty(
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 
-    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(
+        constants, blocks, prev_b)
 
     # This gets the last transaction block before this block's signage point. Assuming the block at height height
     # is the last block infused in the epoch: If this block ends up being a
@@ -328,9 +340,11 @@ def _get_next_difficulty(
 
     assert last_block_curr.timestamp is not None
     assert last_block_prev.timestamp is not None
-    actual_epoch_time: uint64 = uint64(last_block_curr.timestamp - last_block_prev.timestamp)
+    actual_epoch_time: uint64 = uint64(
+        last_block_curr.timestamp - last_block_prev.timestamp)
 
-    old_difficulty = uint64(prev_b.weight - blocks.block_record(prev_b.prev_hash).weight)
+    old_difficulty = uint64(
+        prev_b.weight - blocks.block_record(prev_b.prev_hash).weight)
 
     # Terms are rearranged so there is only one division.
     new_difficulty_precise = uint64(
@@ -346,8 +360,10 @@ def _get_next_difficulty(
     if new_difficulty_precise >= old_difficulty:
         new_difficulty_precise = uint64(min(new_difficulty_precise, max_diff))
     else:
-        new_difficulty_precise = uint64(max([uint64(1), new_difficulty_precise, min_diff]))
-    new_difficulty = truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS)
+        new_difficulty_precise = uint64(
+            max([uint64(1), new_difficulty_precise, min_diff]))
+    new_difficulty = truncate_to_significant_bits(
+        new_difficulty_precise, constants.SIGNIFICANT_BITS)
     assert count_significant_bits(new_difficulty) <= constants.SIGNIFICANT_BITS
     return uint64(new_difficulty)
 
@@ -374,7 +390,8 @@ def get_next_sub_slot_iters_and_difficulty(
         return constants.SUB_SLOT_ITERS_STARTING, constants.DIFFICULTY_STARTING
 
     if prev_b.height != 0:
-        prev_difficulty: uint64 = uint64(prev_b.weight - blocks.block_record(prev_b.prev_hash).weight)
+        prev_difficulty: uint64 = uint64(
+            prev_b.weight - blocks.block_record(prev_b.prev_hash).weight)
     else:
         # prev block is genesis
         prev_difficulty = uint64(prev_b.weight)

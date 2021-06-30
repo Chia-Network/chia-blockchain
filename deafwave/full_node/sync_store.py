@@ -13,12 +13,15 @@ class SyncStore:
     sync_mode: bool
     long_sync: bool
     peak_to_peer: Dict[bytes32, Set[bytes32]]  # Header hash : peer node id
-    peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]  # peer node id : [header_hash, height, weight]
-    sync_target_header_hash: Optional[bytes32]  # Peak hash we are syncing towards
+    # peer node id : [header_hash, height, weight]
+    peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]
+    # Peak hash we are syncing towards
+    sync_target_header_hash: Optional[bytes32]
     sync_target_height: Optional[uint32]  # Peak height we are syncing towards
     peers_changed: asyncio.Event
     batch_syncing: Set[bytes32]  # Set of nodes which we are batch syncing from
-    backtrack_syncing: Dict[bytes32, int]  # Set of nodes which we are backtrack syncing from, and how many threads
+    # Set of nodes which we are backtrack syncing from, and how many threads
+    backtrack_syncing: Dict[bytes32, int]
 
     @classmethod
     async def create(cls):

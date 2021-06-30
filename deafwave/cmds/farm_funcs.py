@@ -24,12 +24,14 @@ async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
         if harvester_rpc_port is None:
             harvester_rpc_port = config["harvester"]["rpc_port"]
         harvester_client = await HarvesterRpcClient.create(
-            self_hostname, uint16(harvester_rpc_port), DEFAULT_ROOT_PATH, config
+            self_hostname, uint16(
+                harvester_rpc_port), DEFAULT_ROOT_PATH, config
         )
         plots = await harvester_client.get_plots()
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if harvester is running at {harvester_rpc_port}")
+            print(
+                f"Connection error. Check if harvester is running at {harvester_rpc_port}")
         else:
             print(f"Exception from 'harvester' {e}")
 
@@ -49,7 +51,8 @@ async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
         blockchain_state = await client.get_blockchain_state()
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if full node is running at {rpc_port}")
+            print(
+                f"Connection error. Check if full node is running at {rpc_port}")
         else:
             print(f"Exception from 'full node' {e}")
 
@@ -93,7 +96,8 @@ async def get_average_block_time(rpc_port: int) -> float:
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if full node is running at {rpc_port}")
+            print(
+                f"Connection error. Check if full node is running at {rpc_port}")
         else:
             print(f"Exception from 'full node' {e}")
 
@@ -113,7 +117,8 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
         amounts = await wallet_client.get_farmed_amount()
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
+            print(
+                f"Connection error. Check if wallet is running at {wallet_rpc_port}")
         else:
             print(f"Exception from 'wallet' {e}")
 
@@ -134,7 +139,8 @@ async def is_farmer_running(farmer_rpc_port: int) -> bool:
         is_running = True
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if farmer is running at {farmer_rpc_port}")
+            print(
+                f"Connection error. Check if farmer is running at {farmer_rpc_port}")
         else:
             print(f"Exception from 'farmer' {e}")
 
@@ -154,7 +160,8 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
         signage_points = await farmer_client.get_signage_points()
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if farmer is running at {farmer_rpc_port}")
+            print(
+                f"Connection error. Check if farmer is running at {farmer_rpc_port}")
         else:
             print(f"Exception from 'farmer' {e}")
 
@@ -200,9 +207,12 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Farming")
 
     if amounts is not None:
-        print(f"Total deafwave farmed: {amounts['farmed_amount'] / units['deafwave']}")
-        print(f"User transaction fees: {amounts['fee_amount'] / units['deafwave']}")
-        print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['deafwave']}")
+        print(
+            f"Total deafwave farmed: {amounts['farmed_amount'] / units['deafwave']}")
+        print(
+            f"User transaction fees: {amounts['fee_amount'] / units['deafwave']}")
+        print(
+            f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['deafwave']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
     else:
         print("Total chia farmed: Unknown")
@@ -219,7 +229,8 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Total size of plots: ", end="")
         plots_space_human_readable = total_plot_size / 1024 ** 3
         if plots_space_human_readable >= 1024 ** 2:
-            plots_space_human_readable = plots_space_human_readable / (1024 ** 2)
+            plots_space_human_readable = plots_space_human_readable / \
+                (1024 ** 2)
             print(f"{plots_space_human_readable:.3f} PiB")
         elif plots_space_human_readable >= 1024:
             plots_space_human_readable = plots_space_human_readable / 1024
@@ -243,7 +254,8 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
 
     minutes = -1
     if blockchain_state is not None and plots is not None:
-        proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        proportion = total_plot_size / \
+            blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
     print("Expected time to win: " + format_minutes(minutes))
     print("Note: log into your key using 'deafwave wallet show' to see rewards for each key")

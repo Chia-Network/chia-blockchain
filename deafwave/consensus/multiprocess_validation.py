@@ -34,7 +34,8 @@ log = logging.getLogger(__name__)
 class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
-    npc_result: Optional[NPCResult]  # Iff error is None and block is a transaction block
+    # Iff error is None and block is a transaction block
+    npc_result: Optional[NPCResult]
 
 
 def batch_pre_validate_blocks(
@@ -52,7 +53,8 @@ def batch_pre_validate_blocks(
     for k, v in blocks_pickled.items():
         blocks[k] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+    constants: ConsensusConstants = dataclass_from_dict(
+        ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:
         assert ValueError("Only one should be passed here")
     if full_blocks_pickled is not None:
@@ -63,10 +65,12 @@ def batch_pre_validate_blocks(
                 removals: List[bytes32] = []
                 npc_result: Optional[NPCResult] = None
                 if block.height in npc_results:
-                    npc_result = NPCResult.from_bytes(npc_results[block.height])
+                    npc_result = NPCResult.from_bytes(
+                        npc_results[block.height])
                     assert npc_result is not None
                     if npc_result.npc_list is not None:
-                        removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                        removals, tx_additions = tx_removals_and_additions(
+                            npc_result.npc_list)
                     else:
                         removals, tx_additions = [], []
 
@@ -74,12 +78,15 @@ def batch_pre_validate_blocks(
                     prev_generator_bytes = prev_transaction_generators[i]
                     assert prev_generator_bytes is not None
                     assert block.transactions_info is not None
-                    block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
+                    block_generator: BlockGenerator = BlockGenerator.from_bytes(
+                        prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
                     npc_result = get_name_puzzle_conditions(
-                        block_generator, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
+                        block_generator, min(
+                            constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
                     )
-                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    removals, tx_additions = tx_removals_and_additions(
+                        npc_result.npc_list)
 
                 header_block = get_block_header(block, tx_additions, removals)
                 required_iters, error = validate_finished_header_block(
@@ -94,11 +101,13 @@ def batch_pre_validate_blocks(
                 if error is not None:
                     error_int = uint16(error.code.value)
 
-                results.append(PreValidationResult(error_int, required_iters, npc_result))
+                results.append(PreValidationResult(
+                    error_int, required_iters, npc_result))
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
-                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+                results.append(PreValidationResult(
+                    uint16(Err.UNKNOWN.value), None, None))
     elif header_blocks_pickled is not None:
         for i in range(len(header_blocks_pickled)):
             try:
@@ -114,11 +123,13 @@ def batch_pre_validate_blocks(
                 error_int = None
                 if error is not None:
                     error_int = uint16(error.code.value)
-                results.append(PreValidationResult(error_int, required_iters, None))
+                results.append(PreValidationResult(
+                    error_int, required_iters, None))
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
-                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+                results.append(PreValidationResult(
+                    uint16(Err.UNKNOWN.value), None, None))
     return [bytes(r) for r in results]
 
 
@@ -178,7 +189,8 @@ async def pre_validate_blocks_multiprocessing(
         recent_blocks_compressed[curr.header_hash] = curr
     block_record_was_present = []
     for block in blocks:
-        block_record_was_present.append(block_records.contains_block(block.header_hash))
+        block_record_was_present.append(
+            block_records.contains_block(block.header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
@@ -191,8 +203,10 @@ async def pre_validate_blocks_multiprocessing(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
         )
 
-        overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
+        overflow = is_overflow_block(
+            constants, block.reward_chain_block.signage_point_index)
+        challenge = get_block_challenge(constants, block, BlockCache(
+            recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:
@@ -223,12 +237,15 @@ async def pre_validate_blocks_multiprocessing(
         )
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
-            block_records.add_block_record(block_rec)  # Temporarily add block to dict
+            # Temporarily add block to dict
+            block_records.add_block_record(block_rec)
             recent_blocks[block_rec.header_hash] = block_rec
             recent_blocks_compressed[block_rec.header_hash] = block_rec
         else:
-            recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
-            recent_blocks_compressed[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
+            recent_blocks[block_rec.header_hash] = block_records.block_record(
+                block_rec.header_hash)
+            recent_blocks_compressed[block_rec.header_hash] = block_records.block_record(
+                block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
@@ -238,7 +255,8 @@ async def pre_validate_blocks_multiprocessing(
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
 
-    recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
+    recent_sb_compressed_pickled = {bytes(k): bytes(
+        v) for k, v in recent_blocks_compressed.items()}
     npc_results_pickled = {}
     for k, v in npc_results.items():
         npc_results_pickled[k] = bytes(v)
@@ -248,7 +266,8 @@ async def pre_validate_blocks_multiprocessing(
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
         if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
-            final_pickled = {bytes(k): bytes(v) for k, v in recent_blocks.items()}
+            final_pickled = {bytes(k): bytes(v)
+                             for k, v in recent_blocks.items()}
         else:
             final_pickled = recent_sb_compressed_pickled
         b_pickled: Optional[List[bytes]] = None

@@ -48,7 +48,8 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
+    async_gen = setup_simulators_and_wallets(
+        1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
@@ -95,7 +96,8 @@ class TestPerformance:
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
-                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(100000000)])
+                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [
+                                           receiver_puzzlehash, int_to_bytes(100000000)])
 
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -163,7 +165,8 @@ class TestPerformance:
         assert peak is not None
         curr: BlockRecord = peak
         while not curr.is_transaction_block:
-            curr = full_node_1.full_node.blockchain.block_record(curr.prev_hash)
+            curr = full_node_1.full_node.blockchain.block_record(
+                curr.prev_hash)
         mempool_bundle = await full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
         if mempool_bundle is None:
             spend_bundle = None

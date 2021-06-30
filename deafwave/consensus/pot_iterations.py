@@ -29,10 +29,13 @@ def calculate_ip_iters(
     required_iters: uint64,
 ) -> uint64:
     # Note that the SSI is for the block passed in, which might be in the previous epoch
-    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
-    sp_interval_iters: uint64 = calculate_sp_interval_iters(constants, sub_slot_iters)
+    sp_iters = calculate_sp_iters(
+        constants, sub_slot_iters, signage_point_index)
+    sp_interval_iters: uint64 = calculate_sp_interval_iters(
+        constants, sub_slot_iters)
     if sp_iters % sp_interval_iters != 0 or sp_iters >= sub_slot_iters:
-        raise ValueError(f"Invalid sp iters {sp_iters} for this ssi {sub_slot_iters}")
+        raise ValueError(
+            f"Invalid sp iters {sp_iters} for this ssi {sub_slot_iters}")
 
     if required_iters >= sp_interval_iters or required_iters == 0:
         raise ValueError(

@@ -22,7 +22,8 @@ class KeyTool(dict):
         secret_exponent = self.get(public_key)
         if not secret_exponent:
             raise ValueError("unknown pubkey %s" % public_key.hex())
-        bls_private_key = PrivateKey.from_bytes(secret_exponent.to_bytes(32, "big"))
+        bls_private_key = PrivateKey.from_bytes(
+            secret_exponent.to_bytes(32, "big"))
         return AugSchemeMPL.sign(bls_private_key, message_hash)
 
     def signature_for_solution(self, coin_solution: CoinSolution, additional_data: bytes) -> AugSchemeMPL:

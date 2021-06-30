@@ -67,7 +67,8 @@ class IntroducerPeers:
             return False
 
     def get_peers(self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999) -> List[VettedPeer]:
-        target_peers = [peer for peer in self._peers if time.time() - peer.time_added < recent_threshold]
+        target_peers = [peer for peer in self._peers if time.time(
+        ) - peer.time_added < recent_threshold]
         if not max_peers or max_peers > len(target_peers):
             max_peers = len(target_peers)
         if randomize:

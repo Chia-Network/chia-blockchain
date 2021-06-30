@@ -89,7 +89,8 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "BLOCKS_CACHE_SIZE": 340 + 3 * 50,  # Coordinate with the above values
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
-        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
+        # H(plot signature of the challenge) must start with these many zeroes
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,
         "MAX_FUTURE_TIME": 3600
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
@@ -123,8 +124,10 @@ class BlockTools:
         self.keychain.delete_all_keys()
         self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
         self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
-        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
+        self.farmer_master_sk = self.keychain.add_private_key(
+            bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
+        self.pool_master_sk = self.keychain.add_private_key(
+            bytes_to_mnemonic(self.pool_master_sk_entropy), "")
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
@@ -137,14 +140,19 @@ class BlockTools:
 
         create_all_ssl(root_path)
 
-        self.all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
-        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
+        self.all_sks: List[PrivateKey] = [sk for sk,
+                                          _ in self.keychain.get_all_private_keys()]
+        self.pool_pubkeys: List[G1Element] = [
+            master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
-        farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+        farmer_pubkeys: List[G1Element] = [
+            master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `deafwave generate keys`")
+            raise RuntimeError(
+                "Keys not generated. Run `deafwave generate keys`")
 
-        _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
+        _, loaded_plots, _, _ = load_plots(
+            {}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
         self.local_sk_cache: Dict[bytes32, PrivateKey] = {}
         self._config = load_config(self.root_path, "config.yaml")
@@ -177,7 +185,8 @@ class BlockTools:
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = num_pool_public_key_plots  # Some plots created to a pool public key, and some to a pool puzzle hash
+        # Some plots created to a pool public key, and some to a pool puzzle hash
+        args.num = num_pool_public_key_plots
         args.buffer = 100
         args.farmer_public_key = bytes(self.farmer_pk).hex()
         args.pool_public_key = bytes(self.pool_pk).hex()
@@ -207,7 +216,8 @@ class BlockTools:
             )
             # Create more plots, but to a pool address instead of public key
             args.pool_public_key = None
-            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "zzz")
+            args.pool_contract_address = encode_puzzle_hash(
+                self.pool_ph, "zzz")
             args.num = num_pool_address_plots
             create_plots(
                 args,
@@ -232,12 +242,16 @@ class BlockTools:
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
                 if plot_info.prover.get_id() in self.local_sk_cache:
-                    local_master_sk = self.local_sk_cache[plot_info.prover.get_id()]
+                    local_master_sk = self.local_sk_cache[plot_info.prover.get_id(
+                    )]
                 else:
-                    _, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
-                    self.local_sk_cache[plot_info.prover.get_id()] = local_master_sk
+                    _, _, local_master_sk = parse_plot_info(
+                        plot_info.prover.get_memo())
+                    self.local_sk_cache[plot_info.prover.get_id()
+                                        ] = local_master_sk
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1())
+                agg_pk = ProofOfSpace.generate_plot_public_key(
+                    local_sk.get_g1(), farmer_sk.get_g1())
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
@@ -273,7 +287,8 @@ class BlockTools:
         time_per_block: Optional[float] = None,
         force_overflow: bool = False,
         skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
-        guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
+        # Force that this block must be a tx block
+        guarantee_transaction_block: bool = False,
         normalized_to_identity_cc_eos: bool = False,
         normalized_to_identity_icc_eos: bool = False,
         normalized_to_identity_cc_sp: bool = False,
@@ -290,7 +305,8 @@ class BlockTools:
         constants = self.constants
         transaction_data_included = False
         if time_per_block is None:
-            time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
+            time_per_block = float(
+                constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
@@ -302,7 +318,8 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
+                timestamp=(uint64(int(time.time()))
+                           if genesis_timestamp is None else genesis_timestamp),
             )
             log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -310,12 +327,14 @@ class BlockTools:
             num_blocks -= 1
         else:
             initial_block_list_len = len(block_list)
-            num_empty_slots_added = uint32(0)  # Allows forcing empty slots in the beginning, for testing purposes
+            # Allows forcing empty slots in the beginning, for testing purposes
+            num_empty_slots_added = uint32(0)
 
         if num_blocks == 0:
             return block_list
 
-        height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
+        height_to_hash, difficulty, blocks = load_block_list(
+            block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -331,11 +350,16 @@ class BlockTools:
             curr = blocks[curr.prev_hash]
             blocks_added_this_sub_slot += 1
 
-        finished_sub_slots_at_sp: List[EndOfSubSlotBundle] = []  # Sub-slots since last block, up to signage point
-        finished_sub_slots_at_ip: List[EndOfSubSlotBundle] = []  # Sub-slots since last block, up to infusion point
-        sub_slot_iters: uint64 = latest_block.sub_slot_iters  # The number of iterations in one sub-slot
-        same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
-        sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(constants)
+        # Sub-slots since last block, up to signage point
+        finished_sub_slots_at_sp: List[EndOfSubSlotBundle] = []
+        # Sub-slots since last block, up to infusion point
+        finished_sub_slots_at_ip: List[EndOfSubSlotBundle] = []
+        # The number of iterations in one sub-slot
+        sub_slot_iters: uint64 = latest_block.sub_slot_iters
+        # Only applies to first slot, to prevent old blocks from being added
+        same_slot_as_last = True
+        sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(
+            constants)
         sub_slots_finished = 0
         pending_ses: bool = False
 
@@ -417,12 +441,15 @@ class BlockTools:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
                                 # address, so continue until a proof of space tied to a pk is found
                                 continue
-                            pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                            pool_target = PoolTarget(
+                                proof_of_space.pool_contract_puzzle_hash, uint32(0))
                         else:
                             if pool_reward_puzzle_hash is not None:
-                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
+                                pool_target = PoolTarget(
+                                    pool_reward_puzzle_hash, uint32(0))
                             else:
-                                pool_target = PoolTarget(self.pool_ph, uint32(0))
+                                pool_target = PoolTarget(
+                                    self.pool_ph, uint32(0))
 
                         if transaction_data is not None:
                             if previous_generator is not None:
@@ -430,7 +457,8 @@ class BlockTools:
                                     previous_generator, transaction_data
                                 )
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
+                                block_generator = simple_solution_generator(
+                                    transaction_data)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -485,8 +513,10 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
-                        log.info(f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
-                        height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                        log.info(
+                            f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
+                        height_to_hash[uint32(
+                            full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
                         num_blocks -= 1
@@ -497,7 +527,8 @@ class BlockTools:
             # End of sub-slot logic
             if len(finished_sub_slots_at_ip) == 0:
                 # Block has been created within this sub-slot
-                eos_iters: uint64 = uint64(sub_slot_iters - (latest_block.total_iters - sub_slot_start_total_iters))
+                eos_iters: uint64 = uint64(
+                    sub_slot_iters - (latest_block.total_iters - sub_slot_start_total_iters))
                 cc_input: ClassgroupElement = latest_block.challenge_vdf_output
                 rc_challenge: bytes32 = latest_block.reward_infusion_new_challenge
             else:
@@ -572,7 +603,8 @@ class BlockTools:
                     while not curr.is_challenge_block(constants) and not curr.first_in_sub_slot:
                         curr = blocks[curr.prev_hash]
                     if curr.is_challenge_block(constants):
-                        icc_eos_iters = uint64(sub_slot_start_total_iters + sub_slot_iters - curr.total_iters)
+                        icc_eos_iters = uint64(
+                            sub_slot_start_total_iters + sub_slot_iters - curr.total_iters)
                     else:
                         icc_eos_iters = sub_slot_iters
                 else:
@@ -591,7 +623,8 @@ class BlockTools:
                         icc_eos_iters,
                         True,
                     )
-                icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_eos_vdf)
+                icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(
+                    icc_eos_vdf)
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_block.deficit == 0 else None
                 cc_sub_slot = ChallengeChainSubSlot(
@@ -604,7 +637,8 @@ class BlockTools:
             else:
                 # No icc
                 icc_sub_slot = None
-                cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, ses_hash, new_sub_slot_iters, new_difficulty)
+                cc_sub_slot = ChallengeChainSubSlot(
+                    cc_vdf, None, ses_hash, new_sub_slot_iters, new_difficulty)
 
             finished_sub_slots_at_ip.append(
                 EndOfSubSlotBundle(
@@ -622,8 +656,10 @@ class BlockTools:
 
             finished_sub_slots_eos = finished_sub_slots_at_ip.copy()
             latest_block_eos = latest_block
-            overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash()
-            overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash()
+            overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash(
+            )
+            overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash(
+            )
             additions = None
             removals = None
             if transaction_data_included:
@@ -681,19 +717,23 @@ class BlockTools:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
                                 # address, so continue until a proof of space tied to a pk is found
                                 continue
-                            pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                            pool_target = PoolTarget(
+                                proof_of_space.pool_contract_puzzle_hash, uint32(0))
                         else:
                             if pool_reward_puzzle_hash is not None:
-                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
+                                pool_target = PoolTarget(
+                                    pool_reward_puzzle_hash, uint32(0))
                             else:
-                                pool_target = PoolTarget(self.pool_ph, uint32(0))
+                                pool_target = PoolTarget(
+                                    self.pool_ph, uint32(0))
                         if transaction_data is not None:
                             if previous_generator is not None:
                                 block_generator = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
+                                block_generator = simple_solution_generator(
+                                    transaction_data)
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -747,19 +787,22 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
+                        log.info(
+                            f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
 
                         blocks[full_block.header_hash] = block_record
-                        height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                        height_to_hash[uint32(
+                            full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
 
             finished_sub_slots_at_sp = finished_sub_slots_eos.copy()
             same_slot_as_last = False
-            sub_slot_start_total_iters = uint128(sub_slot_start_total_iters + sub_slot_iters)
+            sub_slot_start_total_iters = uint128(
+                sub_slot_start_total_iters + sub_slot_iters)
             if num_blocks < prev_num_of_blocks:
                 num_empty_slots_added += 1
 
@@ -786,7 +829,8 @@ class BlockTools:
 
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
-            cc_challenge, rc_challenge = get_challenges(constants, {}, finished_sub_slots, None)
+            cc_challenge, rc_challenge = get_challenges(
+                constants, {}, finished_sub_slots, None)
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
@@ -826,7 +870,8 @@ class BlockTools:
                         uint8(signage_point_index),
                         required_iters,
                     )
-                    is_overflow = is_overflow_block(constants, uint8(signage_point_index))
+                    is_overflow = is_overflow_block(
+                        constants, uint8(signage_point_index))
                     if force_overflow and not is_overflow:
                         continue
                     if len(finished_sub_slots) < skip_slots:
@@ -842,7 +887,8 @@ class BlockTools:
                         proof_of_space,
                         cc_challenge,
                         constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
-                        PoolTarget(constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0)),
+                        PoolTarget(
+                            constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0)),
                         self.get_plot_signature,
                         self.get_pool_key_signature,
                         signage_point,
@@ -859,7 +905,8 @@ class BlockTools:
                             cc_challenge,
                             ip_iters,
                         )
-                        cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
+                        cc_ip_vdf = replace(
+                            cc_ip_vdf, number_of_iterations=ip_iters)
                         rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
                             constants,
                             ClassgroupElement.get_default_element(),
@@ -867,7 +914,8 @@ class BlockTools:
                             ip_iters,
                         )
                         assert unfinished_block is not None
-                        total_iters_sp = uint128(sub_slot_total_iters + sp_iters)
+                        total_iters_sp = uint128(
+                            sub_slot_total_iters + sp_iters)
                         return unfinished_block_to_full_block(
                             unfinished_block,
                             cc_ip_vdf,
@@ -897,7 +945,8 @@ class BlockTools:
                         rc_challenge,
                         constants.SUB_SLOT_ITERS_STARTING,
                     )
-                    cc_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
+                    cc_slot = ChallengeChainSubSlot(
+                        cc_vdf, None, None, None, None)
                     finished_sub_slots.append(
                         EndOfSubSlotBundle(
                             cc_slot,
@@ -947,7 +996,8 @@ class BlockTools:
                         total_iters_sp,
                         constants.DIFFICULTY_STARTING,
                     )
-            sub_slot_total_iters = uint128(sub_slot_total_iters + constants.SUB_SLOT_ITERS_STARTING)
+            sub_slot_total_iters = uint128(
+                sub_slot_total_iters + constants.SUB_SLOT_ITERS_STARTING)
 
     def get_pospaces_for_challenge(
         self,
@@ -966,8 +1016,10 @@ class BlockTools:
         for plot_info in plots:
             plot_id = plot_info.prover.get_id()
             if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
-                new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, challenge_hash, signage_point)
-                qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
+                new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(
+                    plot_id, challenge_hash, signage_point)
+                qualities = plot_info.prover.get_qualities_for_challenge(
+                    new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
 
@@ -979,7 +1031,8 @@ class BlockTools:
                         signage_point,
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
-                        proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+                        proof_xs: bytes = plot_info.prover.get_full_proof(
+                            new_challenge, proof_index)
 
                         # Look up local_sk from plot to save locked memory
                         (
@@ -1005,7 +1058,8 @@ class BlockTools:
         if len(found_proofs) >= 1:
             if random.random() < 0.1:
                 # Removes some proofs of space to create "random" chains, based on the seed
-                random_sample = random.sample(found_proofs, len(found_proofs) - 1)
+                random_sample = random.sample(
+                    found_proofs, len(found_proofs) - 1)
         return random_sample
 
 
@@ -1021,10 +1075,12 @@ def get_signage_point(
 ) -> SignagePoint:
     if signage_point_index == 0:
         return SignagePoint(None, None, None, None)
-    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+    sp_iters = calculate_sp_iters(
+        constants, sub_slot_iters, signage_point_index)
     overflow = is_overflow_block(constants, signage_point_index)
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters +
+        calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     )
 
     (
@@ -1124,7 +1180,8 @@ def finish_block(
         finished_sub_slots,
         latest_block,
         blocks,
-        uint128(sub_slot_start_total_iters + sub_slot_iters) if is_overflow else sub_slot_start_total_iters,
+        uint128(sub_slot_start_total_iters +
+                sub_slot_iters) if is_overflow else sub_slot_start_total_iters,
         deficit,
     )
 
@@ -1136,7 +1193,8 @@ def finish_block(
     )
     assert unfinished_block is not None
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters +
+        calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     )
     full_block: FullBlock = unfinished_block_to_full_block(
         unfinished_block,
@@ -1153,7 +1211,8 @@ def finish_block(
         difficulty,
     )
 
-    block_record = block_to_block_record(constants, BlockCache(blocks), required_iters, full_block, None)
+    block_record = block_to_block_record(
+        constants, BlockCache(blocks), required_iters, full_block, None)
     return full_block, block_record
 
 
@@ -1180,7 +1239,8 @@ def get_challenges(
 
 
 def get_plot_dir() -> Path:
-    cache_path = Path(os.path.expanduser(os.getenv("DEAFWAVE_ROOT", "~/.deafwave/"))) / "test-plots"
+    cache_path = Path(os.path.expanduser(
+        os.getenv("DEAFWAVE_ROOT", "~/.deafwave/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
 
@@ -1195,7 +1255,8 @@ def load_block_list(
         if full_block.height == 0:
             difficulty = uint64(constants.DIFFICULTY_STARTING)
         else:
-            difficulty = full_block.weight - block_list[full_block.height - 1].weight
+            difficulty = full_block.weight - \
+                block_list[full_block.height - 1].weight
         if full_block.reward_chain_block.signage_point_index == 0:
             challenge = full_block.reward_chain_block.pos_ss_cc_challenge_hash
             sp_hash = challenge
@@ -1250,7 +1311,8 @@ def get_icc(
     if len(finished_sub_slots) != 0:
         last_ss = finished_sub_slots[-1]
         assert last_ss.infused_challenge_chain is not None
-        assert finished_sub_slots[-1].reward_chain.deficit <= (constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1)
+        assert finished_sub_slots[-1].reward_chain.deficit <= (
+            constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1)
         return get_vdf_info_and_proof(
             constants,
             ClassgroupElement.get_default_element(),
@@ -1263,7 +1325,8 @@ def get_icc(
         curr = blocks[curr.prev_hash]
     icc_iters = uint64(vdf_end_total_iters - latest_block.total_iters)
     if latest_block.is_challenge_block(constants):
-        icc_input: Optional[ClassgroupElement] = ClassgroupElement.get_default_element()
+        icc_input: Optional[ClassgroupElement] = ClassgroupElement.get_default_element(
+        )
     else:
         icc_input = latest_block.infused_challenge_vdf_output
     assert icc_input is not None
@@ -1316,13 +1379,17 @@ def get_full_block_and_block_record(
 ) -> Tuple[FullBlock, BlockRecord]:
     if current_time is True:
         if prev_block.timestamp is not None:
-            timestamp = uint64(max(int(time.time()), prev_block.timestamp + int(time_per_block)))
+            timestamp = uint64(
+                max(int(time.time()), prev_block.timestamp + int(time_per_block)))
         else:
             timestamp = uint64(int(time.time()))
     else:
-        timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
-    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
-    ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
+        timestamp = uint64(
+            start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
+    sp_iters = calculate_sp_iters(
+        constants, sub_slot_iters, signage_point_index)
+    ip_iters = calculate_ip_iters(
+        constants, sub_slot_iters, signage_point_index, required_iters)
 
     unfinished_block = create_unfinished_block(
         constants,

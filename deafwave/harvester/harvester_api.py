@@ -42,7 +42,8 @@ class HarvesterAPI:
         await self.harvester.refresh_plots()
 
         if len(self.harvester.provers) == 0:
-            self.harvester.log.warning("Not farming any plots on this harvester. Check your configuration.")
+            self.harvester.log.warning(
+                "Not farming any plots on this harvester. Check your configuration.")
             return None
 
     @peer_required
@@ -87,7 +88,8 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 )
                 try:
-                    quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                    quality_strings = plot_info.prover.get_qualities_for_challenge(
+                        sp_challenge_hash)
                 except Exception as e:
                     self.harvester.log.error(f"Error using prover object {e}")
                     self.harvester.log.error(
@@ -114,9 +116,11 @@ class HarvesterAPI:
                             # Found a very good proof of space! will fetch the whole proof from disk,
                             # then send to farmer
                             try:
-                                proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
+                                proof_xs = plot_info.prover.get_full_proof(
+                                    sp_challenge_hash, index)
                             except Exception as e:
-                                self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
+                                self.harvester.log.error(
+                                    f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(
                                     f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
                                     f"plot_info: {plot_info}"
@@ -189,9 +193,11 @@ class HarvesterAPI:
                         new_challenge.sp_hash,
                     ):
                         passed += 1
-                        awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+                        awaitables.append(lookup_challenge(
+                            try_plot_filename, try_plot_info))
             except Exception as e:
-                self.harvester.log.error(f"Error plot file {try_plot_filename} may no longer exist {e}")
+                self.harvester.log.error(
+                    f"Error plot file {try_plot_filename} may no longer exist {e}")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
@@ -209,7 +215,8 @@ class HarvesterAPI:
                 # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time.time() - start}")
             for response in sublist:
                 total_proofs_found += 1
-                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
+                msg = make_msg(
+                    ProtocolMessageTypes.new_proof_of_space, response)
                 await peer.send_message(msg)
 
         now = uint64(int(time.time()))
@@ -240,7 +247,8 @@ class HarvesterAPI:
         try:
             plot_info = self.harvester.provers[plot_filename]
         except KeyError:
-            self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
+            self.harvester.log.warning(
+                f"KeyError plot {plot_filename} does not exist.")
             return None
 
         # Look up local_sk from plot to save locked memory
@@ -251,7 +259,8 @@ class HarvesterAPI:
         ) = parse_plot_info(plot_info.prover.get_memo())
         local_sk = master_sk_to_local_sk(local_master_sk)
 
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
+        agg_pk = ProofOfSpace.generate_plot_public_key(
+            local_sk.get_g1(), farmer_public_key)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.

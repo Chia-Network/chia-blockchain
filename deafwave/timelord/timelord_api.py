@@ -26,7 +26,8 @@ class TimelordAPI:
             if self.timelord.sanitizer_mode:
                 return None
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
-                log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
+                log.info(
+                    "Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(
                     f"New peak: height: {new_peak.reward_chain_block.height} weight: "
                     f"{new_peak.reward_chain_block.weight} "
@@ -62,18 +63,24 @@ class TimelordAPI:
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
                 self.timelord.overflow_blocks.append(new_unfinished_block)
-                log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
+                log.debug(
+                    f"Overflow unfinished block, total {self.timelord.total_unfinished}")
             elif ip_iters > last_ip_iters:
-                new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(
+                    new_unfinished_block)
                 if new_block_iters:
-                    self.timelord.unfinished_blocks.append(new_unfinished_block)
+                    self.timelord.unfinished_blocks.append(
+                        new_unfinished_block)
                     for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
-                        self.timelord.iters_to_submit[chain].append(new_block_iters)
+                        self.timelord.iters_to_submit[chain].append(
+                            new_block_iters)
                     if self.timelord.last_state.get_deficit() < self.timelord.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
-                        self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
+                        self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(
+                            new_block_iters)
                     self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
                     self.timelord.total_unfinished += 1
-                    log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
+                    log.debug(
+                        f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @api_request
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):

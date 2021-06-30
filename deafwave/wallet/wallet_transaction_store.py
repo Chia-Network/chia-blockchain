@@ -20,7 +20,8 @@ class WalletTransactionStore:
     db_connection: aiosqlite.Connection
     db_wrapper: DBWrapper
     tx_record_cache: Dict[bytes32, TransactionRecord]
-    tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
+    # tx_id: [time submitted: count]
+    tx_submitted: Dict[bytes32, Tuple[int, int]]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
 
     @classmethod
@@ -283,7 +284,8 @@ class WalletTransactionStore:
                 else:
                     if count < 5:
                         records.append(record)
-                        self.tx_submitted[record.name] = time_submitted, (count + 1)
+                        self.tx_submitted[record.name] = time_submitted, (
+                            count + 1)
             else:
                 records.append(record)
                 self.tx_submitted[record.name] = current_time, 1
@@ -297,7 +299,8 @@ class WalletTransactionStore:
         fee_int = TransactionType.FEE_REWARD.value
         pool_int = TransactionType.COINBASE_REWARD.value
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=? and (type=? or type=?)", (1, fee_int, pool_int)
+            "SELECT * from transaction_record WHERE confirmed=? and (type=? or type=?)", (
+                1, fee_int, pool_int)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -417,7 +420,8 @@ class WalletTransactionStore:
         # Can be -1 (get all tx)
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
+            "SELECT * from transaction_record WHERE confirmed_at_height>?", (
+                height,)
         )
         rows = await cursor.fetchall()
         await cursor.close()

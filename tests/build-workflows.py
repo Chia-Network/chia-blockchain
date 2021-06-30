@@ -123,7 +123,8 @@ def dir_path(string):
 
 # args
 arg_parser = argparse.ArgumentParser(description="Build github workflows")
-arg_parser.add_argument("--output-dir", "-d", default="../.github/workflows", type=dir_path)
+arg_parser.add_argument("--output-dir", "-d",
+                        default="../.github/workflows", type=dir_path)
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 args = arg_parser.parse_args()
 
@@ -141,7 +142,8 @@ for os in testconfig.oses:
             logging.info(f"Skipping {dir}: no tests collected")
             continue
         conf = update_config(module_dict(testconfig), dir_config(dir))
-        replacements = generate_replacements(default_replacements, conf, dir, test_files)
+        replacements = generate_replacements(
+            default_replacements, conf, dir, test_files)
         txt = transform_template(template_text, replacements)
         logging.info(f"Writing {os}-{test_name(dir)}")
         workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)

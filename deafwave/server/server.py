@@ -31,9 +31,11 @@ from deafwave.util.network import is_localhost, is_in_network
 def ssl_context_for_server(
     ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
 ) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(
+        purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
-    ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
+    ssl_context.load_cert_chain(certfile=str(
+        private_cert_path), keyfile=str(private_key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
 
@@ -41,7 +43,8 @@ def ssl_context_for_server(
 def ssl_context_for_root(
     ca_cert_file: str,
 ) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
+    ssl_context = ssl.create_default_context(
+        purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
 
 
@@ -51,9 +54,11 @@ def ssl_context_for_client(
     private_cert_path: Path,
     private_key_path: Path,
 ) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(
+        purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
-    ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
+    ssl_context.load_cert_chain(certfile=str(
+        private_cert_path), keyfile=str(private_key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
 
@@ -119,9 +124,11 @@ class DeafwaveServer:
             self.introducer_peers = IntroducerPeers()
 
         if self._local_type is not NodeType.INTRODUCER:
-            self._private_cert_path, self._private_key_path = private_ssl_paths(root_path, config)
+            self._private_cert_path, self._private_key_path = private_ssl_paths(
+                root_path, config)
         if self._local_type is not NodeType.HARVESTER:
-            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(root_path, config)
+            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(
+                root_path, config)
         else:
             self.p2p_crt_path, self.p2p_key_path = None, None
         self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
@@ -129,7 +136,8 @@ class DeafwaveServer:
         self.node_id = self.my_id()
 
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
-        self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
+        self.gc_task: asyncio.Task = asyncio.create_task(
+            self.garbage_collect_connections_task())
         self.app: Optional[Application] = None
         self.runner: Optional[web.AppRunner] = None
         self.site: Optional[TCPSite] = None
@@ -152,11 +160,15 @@ class DeafwaveServer:
     def my_id(self) -> bytes32:
         """If node has public cert use that one for id, if not use private."""
         if self.p2p_crt_path is not None:
-            pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
+            pem_cert = x509.load_pem_x509_certificate(
+                self.p2p_crt_path.read_bytes(), default_backend())
         else:
-            pem_cert = x509.load_pem_x509_certificate(self._private_cert_path.read_bytes(), default_backend())
-        der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-        der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
+            pem_cert = x509.load_pem_x509_certificate(
+                self._private_cert_path.read_bytes(), default_backend())
+        der_cert_bytes = pem_cert.public_bytes(
+            encoding=serialization.Encoding.DER)
+        der_cert = x509.load_der_x509_certificate(
+            der_cert_bytes, default_backend())
         return bytes32(der_cert.fingerprint(hashes.SHA256()))
 
     def set_received_message_callback(self, callback: Callable):
@@ -175,7 +187,8 @@ class DeafwaveServer:
                     if time.time() - connection.last_message_time > 1800:
                         to_remove.append(connection)
             for connection in to_remove:
-                self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
+                self.log.debug(
+                    f"Garbage collecting connection {connection.peer_host} due to inactivity")
                 await connection.close()
 
             # Also garbage collect banned_peers dict
@@ -198,13 +211,15 @@ class DeafwaveServer:
         self.app.add_routes(routes)
         self.runner = web.AppRunner(self.app, access_log=None, logger=self.log)
         await self.runner.setup()
-        authenticate = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
+        authenticate = self._local_type not in (
+            NodeType.FULL_NODE, NodeType.INTRODUCER)
         if authenticate:
             ssl_context = ssl_context_for_server(
                 self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
             )
         else:
-            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
+            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(
+                self.root_path, self.config)
             ssl_context = ssl_context_for_server(
                 self.deafwave_ca_crt_path, self.deafwave_ca_key_path, self.p2p_crt_path, self.p2p_key_path
             )
@@ -220,12 +235,14 @@ class DeafwaveServer:
 
     async def incoming_connection(self, request):
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
-            self.log.warning(f"Peer {request.remote} is banned, refusing connection")
+            self.log.warning(
+                f"Peer {request.remote} is banned, refusing connection")
             return None
         ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
         await ws.prepare(request)
         close_event = asyncio.Event()
-        cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
+        cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(
+            True)
         der_cert = x509.load_der_x509_certificate(cert_bytes)
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
@@ -259,7 +276,8 @@ class DeafwaveServer:
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
             ):
-                self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
+                self.log.info(
+                    f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
                 await connection.close()
                 close_event.set()
             else:
@@ -270,16 +288,19 @@ class DeafwaveServer:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
-                self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
+                self.log.warning(
+                    "Invalid handshake with peer. Maybe the peer is running old software.")
                 close_event.set()
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
-                self.log.warning("Incompatible network ID. Maybe the peer is on another network")
+                self.log.warning(
+                    "Incompatible network ID. Maybe the peer is on another network")
                 close_event.set()
             elif e.code == Err.SELF_CONNECTION:
                 close_event.set()
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+                self.log.error(
+                    f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
         except Exception as e:
             if connection is not None:
@@ -303,7 +324,8 @@ class DeafwaveServer:
             if on_connect is not None:
                 await on_connect(connection)
         else:
-            self.log.error(f"Invalid connection type for connection {connection}")
+            self.log.error(
+                f"Invalid connection type for connection {connection}")
 
     def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
         if is_localhost(target_node.host) and target_node.port == self._port:
@@ -312,7 +334,8 @@ class DeafwaveServer:
             return True
         for connection in self.all_connections.values():
             if connection.host == target_node.host and connection.peer_server_port == target_node.port:
-                self.log.debug(f"Not connecting to {target_node}, duplicate connection")
+                self.log.debug(
+                    f"Not connecting to {target_node}, duplicate connection")
                 return True
         return False
 
@@ -331,7 +354,8 @@ class DeafwaveServer:
             return False
 
         if target_node.host in self.banned_peers and time.time() < self.banned_peers[target_node.host]:
-            self.log.warning(f"Peer {target_node.host} is still banned, not connecting to it")
+            self.log.warning(
+                f"Peer {target_node.host} is still banned, not connecting to it")
             return False
 
         if auth:
@@ -350,7 +374,8 @@ class DeafwaveServer:
 
             try:
                 if type(ip_address(target_node.host)) is IPv6Address:
-                    target_node = PeerInfo(f"[{target_node.host}]", target_node.port)
+                    target_node = PeerInfo(
+                        f"[{target_node.host}]", target_node.port)
             except ValueError:
                 pass
 
@@ -361,7 +386,8 @@ class DeafwaveServer:
                     url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except ServerDisconnectedError:
-                self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
+                self.log.debug(
+                    f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
                 await session.close()
                 return False
             except asyncio.TimeoutError:
@@ -371,11 +397,14 @@ class DeafwaveServer:
             if ws is not None:
                 assert ws._response.connection is not None and ws._response.connection.transport is not None
                 transport = ws._response.connection.transport  # type: ignore
-                cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
-                der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+                cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(
+                    True)  # type: ignore
+                der_cert = x509.load_der_x509_certificate(
+                    cert_bytes, default_backend())
                 peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
                 if peer_id == self.node_id:
-                    raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
+                    raise RuntimeError(
+                        f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
                 connection = WSDeafwaveConnection(
                     self._local_type,
@@ -403,7 +432,8 @@ class DeafwaveServer:
                 connection_type_str = ""
                 if connection.connection_type is not None:
                     connection_type_str = connection.connection_type.name.lower()
-                self.log.info(f"Connected with {connection_type_str} {target_node}")
+                self.log.info(
+                    f"Connected with {connection_type_str} {target_node}")
                 if is_feeler:
                     asyncio.create_task(connection.close())
                 return True
@@ -416,14 +446,17 @@ class DeafwaveServer:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
-                self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
+                self.log.warning(
+                    f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
-                self.log.warning("Incompatible network ID. Maybe the peer is on another network")
+                self.log.warning(
+                    "Incompatible network ID. Maybe the peer is on another network")
             elif e.code == Err.SELF_CONNECTION:
                 pass
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+                self.log.error(
+                    f"Exception {e}, exception Stack: {error_stack}")
         except Exception as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
@@ -437,12 +470,15 @@ class DeafwaveServer:
 
     def connection_closed(self, connection: WSDeafwaveConnection, ban_time: int):
         if is_localhost(connection.peer_host) and ban_time != 0:
-            self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
+            self.log.warning(
+                f"Trying to ban localhost for {ban_time}, but will not ban")
             ban_time = 0
-        self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
+        self.log.info(
+            f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
         if ban_time > 0:
             ban_until: float = time.time() + ban_time
-            self.log.warning(f"Banning {connection.peer_host} for {ban_time} seconds")
+            self.log.warning(
+                f"Banning {connection.peer_host} for {ban_time} seconds")
             if connection.peer_host in self.banned_peers:
                 if ban_until > self.banned_peers[connection.peer_host]:
                     self.banned_peers[connection.peer_host] = ban_until
@@ -453,7 +489,8 @@ class DeafwaveServer:
             self.all_connections.pop(connection.peer_node_id)
         if connection.connection_type is not None:
             if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
-                self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
+                self.connection_by_type[connection.connection_type].pop(
+                    connection.peer_node_id)
         else:
             # This means the handshake was enver finished with this peer
             self.log.debug(
@@ -493,17 +530,22 @@ class DeafwaveServer:
                         f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
-                    message_type: str = ProtocolMessageTypes(full_message.type).name
+                    message_type: str = ProtocolMessageTypes(
+                        full_message.type).name
 
                     f = getattr(self.api, message_type, None)
 
                     if f is None:
-                        self.log.error(f"Non existing function: {message_type}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
+                        self.log.error(
+                            f"Non existing function: {message_type}")
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
                     if not hasattr(f, "api_function"):
-                        self.log.error(f"Peer trying to call non api function {message_type}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
+                        self.log.error(
+                            f"Peer trying to call non api function {message_type}")
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
                     # If api is not ready ignore the request
                     if hasattr(self.api, "api_ready"):
@@ -529,7 +571,8 @@ class DeafwaveServer:
                             pass
                         except Exception as e:
                             tb = traceback.format_exc()
-                            connection.log.error(f"Exception: {e}, {connection.get_peer_info()}. {tb}")
+                            connection.log.error(
+                                f"Exception: {e}, {connection.get_peer_info()}. {tb}")
                             raise e
                         return None
 
@@ -540,7 +583,8 @@ class DeafwaveServer:
                     )
 
                     if response is not None:
-                        response_message = Message(response.type, full_message.id, response.data)
+                        response_message = Message(
+                            response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
                 except Exception as e:
                     if self.connection_close_task is None:
@@ -549,19 +593,22 @@ class DeafwaveServer:
                             f"Exception: {e} {type(e)}, closing connection {connection.get_peer_info()}. {tb}"
                         )
                     else:
-                        connection.log.debug(f"Exception: {e} while closing connection")
+                        connection.log.debug(
+                            f"Exception: {e} while closing connection")
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
-                        self.tasks_from_peer[connection.peer_node_id].remove(task_id)
+                        self.tasks_from_peer[connection.peer_node_id].remove(
+                            task_id)
                     if task_id in self.execute_tasks:
                         self.execute_tasks.remove(task_id)
 
             task_id = token_bytes()
-            api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
+            api_task = asyncio.create_task(
+                api_call(payload_inc, connection_inc, task_id))
             self.api_tasks[task_id] = api_task
             if connection_inc.peer_node_id not in self.tasks_from_peer:
                 self.tasks_from_peer[connection_inc.peer_node_id] = set()
@@ -634,9 +681,11 @@ class DeafwaveServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
-        self.connection_close_task = asyncio.create_task(self.close_all_connections())
+        self.connection_close_task = asyncio.create_task(
+            self.close_all_connections())
         if self.runner is not None:
-            self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
+            self.site_shutdown_task = asyncio.create_task(
+                self.runner.cleanup())
         if self.app is not None:
             self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
         for task_id, task in self.api_tasks.items():
@@ -678,7 +727,8 @@ class DeafwaveServer:
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
             return True
-        inbound_count = len([conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound])
+        inbound_count = len(
+            [conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound])
         if node_type == NodeType.FULL_NODE:
             return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
         if node_type == NodeType.WALLET:
@@ -695,10 +745,12 @@ class DeafwaveServer:
         for trusted_peer in trusted_peers:
             cert = self.root_path / trusted_peers[trusted_peer]
             pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
-            cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
+            cert_bytes = pem_cert.public_bytes(
+                encoding=serialization.Encoding.DER)
             der_cert = x509.load_der_x509_certificate(cert_bytes)
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
             if peer_id == peer.peer_node_id:
-                self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
+                self.log.debug(
+                    f"trusted node {peer.peer_node_id} {peer.peer_host}")
                 return True
         return False

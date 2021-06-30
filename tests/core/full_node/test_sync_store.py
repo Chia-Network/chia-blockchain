@@ -54,13 +54,16 @@ class TestStore:
         assert store.get_peak_of_each_peer()[peer_ids[1]][2] == 300
         assert store.get_peak_of_each_peer()[peer_ids[2]][2] == 500
 
-        assert store.get_peers_that_have_peak([std_hash(b"block1")]) == set(peer_ids)
-        assert store.get_peers_that_have_peak([std_hash(b"block10")]) == {peer_ids[0], peer_ids[2]}
+        assert store.get_peers_that_have_peak(
+            [std_hash(b"block1")]) == set(peer_ids)
+        assert store.get_peers_that_have_peak([std_hash(b"block10")]) == {
+            peer_ids[0], peer_ids[2]}
 
         store.peer_disconnected(peer_ids[0])
         assert store.get_heaviest_peak()[2] == 500
         assert len(store.get_peak_of_each_peer()) == 2
-        assert store.get_peers_that_have_peak([std_hash(b"block10")]) == {peer_ids[2]}
+        assert store.get_peers_that_have_peak(
+            [std_hash(b"block10")]) == {peer_ids[2]}
         store.peer_disconnected(peer_ids[2])
         assert store.get_heaviest_peak()[2] == 300
         store.peer_has_block(std_hash(b"block30"), peer_ids[0], 700, 30, True)

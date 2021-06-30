@@ -76,7 +76,8 @@ class TestCoinStore:
                         if coin.puzzle_hash == reward_ph:
                             coins_to_spend.append(coin)
 
-            spend_bundle = wallet_a.generate_signed_transaction(1000, wallet_a.get_new_puzzlehash(), coins_to_spend[0])
+            spend_bundle = wallet_a.generate_signed_transaction(
+                1000, wallet_a.get_new_puzzlehash(), coins_to_spend[0])
 
             db_path = Path("fndb_test.db")
             if db_path.exists():
@@ -102,9 +103,12 @@ class TestCoinStore:
                 should_be_included.add(pool_coin)
                 if block.is_transaction_block():
                     if block.transactions_generator is not None:
-                        block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [])
-                        npc_result = get_name_puzzle_conditions(block_gen, bt.constants.MAX_BLOCK_COST_CLVM, False)
-                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                        block_gen: BlockGenerator = BlockGenerator(
+                            block.transactions_generator, [])
+                        npc_result = get_name_puzzle_conditions(
+                            block_gen, bt.constants.MAX_BLOCK_COST_CLVM, False)
+                        tx_removals, tx_additions = tx_removals_and_additions(
+                            npc_result.npc_list)
                     else:
                         tx_removals, tx_additions = [], []
 
@@ -260,7 +264,8 @@ class TestCoinStore:
 
                 for reorg_block in blocks_reorg_chain:
                     result, error_code, _ = await b.receive_block(reorg_block)
-                    print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
+                    print(
+                        f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
                     if reorg_block.height < initial_block_count - 10:
                         assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
                     elif reorg_block.height < initial_block_count - 1:

@@ -33,25 +33,34 @@ def calculate_cost_of_program(program: SerializedProgram, npc_result: NPCResult,
             elif condition is ConditionOpcode.CREATE_COIN:
                 total_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
             elif condition is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_ABSOLUTE.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_SECONDS_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_RELATIVE.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_SECONDS_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_HEIGHT_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_MY_COIN_ID:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.RESERVE_FEE:
                 total_cost += len(cvp_list) * ConditionCost.RESERVE_FEE.value
             elif condition is ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
-                total_cost += len(cvp_list) * ConditionCost.CREATE_COIN_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.CREATE_COIN_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_COIN_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
-                total_cost += len(cvp_list) * ConditionCost.CREATE_PUZZLE_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.CREATE_PUZZLE_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_PUZZLE_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * \
+                    ConditionCost.ASSERT_PUZZLE_ANNOUNCEMENT.value
             else:
                 # We ignore unknown conditions in order to allow for future soft forks
                 pass

@@ -17,7 +17,8 @@ class RewardChainBlockUnfinished(Streamable):
     signage_point_index: uint8
     pos_ss_cc_challenge_hash: bytes32
     proof_of_space: ProofOfSpace
-    challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
+    # Not present for first sp in slot
+    challenge_chain_sp_vdf: Optional[VDFInfo]
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
     reward_chain_sp_signature: G2Element
@@ -32,7 +33,8 @@ class RewardChainBlock(Streamable):
     signage_point_index: uint8
     pos_ss_cc_challenge_hash: bytes32
     proof_of_space: ProofOfSpace
-    challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
+    # Not present for first sp in slot
+    challenge_chain_sp_vdf: Optional[VDFInfo]
     challenge_chain_sp_signature: G2Element
     challenge_chain_ip_vdf: VDFInfo
     reward_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot

@@ -35,7 +35,8 @@ def block_to_block_record(
     sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
         constants, len(block.finished_sub_slots) > 0, prev_b, blocks
     )
-    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    overflow = is_overflow_block(
+        constants, block.reward_chain_block.signage_point_index)
     deficit = calculate_deficit(
         constants,
         block.height,
@@ -64,7 +65,8 @@ def block_to_block_record(
         assert ses.get_hash() == found_ses_hash
 
     prev_transaction_block_height = uint32(0)
-    curr: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)
+    curr: Optional[BlockRecord] = blocks.try_block_record(
+        block.prev_header_hash)
     while curr is not None and not curr.is_transaction_block:
         curr = blocks.try_block_record(curr.prev_hash)
 

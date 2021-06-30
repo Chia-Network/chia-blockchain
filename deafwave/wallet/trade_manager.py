@@ -142,15 +142,18 @@ class TradeManager:
             if failed is False:
                 # Mark this trade as successful
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
-                self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
+                self.log.info(
+                    f"Trade with id: {trade.trade_id} confirmed at height: {height}")
             else:
                 # Either we canceled this trade or this trade failed
                 if trade.status == TradeStatus.PENDING_CANCEL.value:
                     await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED, True)
-                    self.log.info(f"Trade with id: {trade.trade_id} canceled at height: {height}")
+                    self.log.info(
+                        f"Trade with id: {trade.trade_id} canceled at height: {height}")
                 elif trade.status == TradeStatus.PENDING_CONFIRM.value:
                     await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED, True)
-                    self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {height}")
+                    self.log.warning(
+                        f"Trade with id: {trade.trade_id} failed at height: {height}")
 
     async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
         """ Returns a dictionary of confirmed coins that are locked by a trade. """
@@ -200,7 +203,8 @@ class TradeManager:
 
     async def cancel_pending_offer_safely(self, trade_id: bytes32):
         """ This will create a transaction that includes coins that were offered"""
-        self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
+        self.log.info(
+            f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
         trade = await self.trade_store.get_trade_record(trade_id)
         if trade is None:
             return None
@@ -253,7 +257,8 @@ class TradeManager:
                 if isinstance(wallet, CCWallet):
                     balance = await wallet.get_confirmed_balance()
                     if balance < abs(amount) and amount < 0:
-                        raise Exception(f"insufficient funds in wallet {wallet_id}")
+                        raise Exception(
+                            f"insufficient funds in wallet {wallet_id}")
                     if amount > 0:
                         if spend_bundle is None:
                             to_exclude: List[Coin] = []
@@ -264,7 +269,8 @@ class TradeManager:
                         if spend_bundle is None:
                             spend_bundle = zero_spend_bundle
                         else:
-                            spend_bundle = SpendBundle.aggregate([spend_bundle, zero_spend_bundle])
+                            spend_bundle = SpendBundle.aggregate(
+                                [spend_bundle, zero_spend_bundle])
 
                         additions = zero_spend_bundle.additions()
                         removals = zero_spend_bundle.removals()
@@ -288,7 +294,8 @@ class TradeManager:
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
                 else:
-                    spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
+                    spend_bundle = SpendBundle.aggregate(
+                        [spend_bundle, new_spend_bundle])
 
             if spend_bundle is None:
                 return False, None, None
@@ -327,7 +334,8 @@ class TradeManager:
     async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Program:
         info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash.hex())
         assert info is not None
-        puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(bytes(info.pubkey))
+        puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(
+            bytes(info.pubkey))
         return puzzle
 
     async def maybe_create_wallets_for_offer(self, file_path: Path) -> bool:
@@ -356,14 +364,16 @@ class TradeManager:
         trade_offer = None
         try:
             trade_offer_hex = file_path.read_text()
-            trade_offer = TradeRecord.from_bytes(hexstr_to_bytes(trade_offer_hex))
+            trade_offer = TradeRecord.from_bytes(
+                hexstr_to_bytes(trade_offer_hex))
         except Exception as e:
             return False, None, f"Error: {e}"
         if trade_offer is not None:
             offer_spend_bundle: SpendBundle = trade_offer.spend_bundle
 
         coinsols: List[CoinSolution] = []  # [] of CoinSolutions
-        cc_coinsol_outamounts: Dict[bytes32, List[Tuple[CoinSolution, int]]] = dict()
+        cc_coinsol_outamounts: Dict[bytes32,
+                                    List[Tuple[CoinSolution, int]]] = dict()
         aggsig = offer_spend_bundle.aggregated_signature
         cc_discrepancies: Dict[bytes32, int] = dict()
         deafwave_discrepancy = None
@@ -387,7 +397,8 @@ class TradeManager:
 
                 innersol = solution.first()
 
-                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
+                total = get_output_amount_for_puzzle_and_solution(
+                    inner_puzzle, innersol)
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total
                 else:
@@ -404,9 +415,11 @@ class TradeManager:
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
                 if deafwave_discrepancy is None:
-                    deafwave_discrepancy = get_output_discrepancy_for_puzzle_and_solution(coinsol.coin, puzzle, solution)
+                    deafwave_discrepancy = get_output_discrepancy_for_puzzle_and_solution(
+                        coinsol.coin, puzzle, solution)
                 else:
-                    deafwave_discrepancy += get_output_discrepancy_for_puzzle_and_solution(coinsol.coin, puzzle, solution)
+                    deafwave_discrepancy += get_output_discrepancy_for_puzzle_and_solution(
+                        coinsol.coin, puzzle, solution)
                 coinsols.append(coinsol)
 
         deafwave_spend_bundle: Optional[SpendBundle] = None
@@ -456,10 +469,12 @@ class TradeManager:
             my_output_coin = my_cc_spends.pop()
             spendable_cc_list = []
             innersol_list = []
-            genesis_id = genesis_coin_id_for_genesis_coin_checker(Program.from_bytes(bytes.fromhex(colour)))
+            genesis_id = genesis_coin_id_for_genesis_coin_checker(
+                Program.from_bytes(bytes.fromhex(colour)))
             # Make the rest of the coins assert the output coin is consumed
             for coloured_coin in my_cc_spends:
-                inner_solution = self.wallet_state_manager.main_wallet.make_solution(consumed=[my_output_coin.name()])
+                inner_solution = self.wallet_state_manager.main_wallet.make_solution(
+                    consumed=[my_output_coin.name()])
                 inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(coloured_coin.puzzle_hash)
                 assert inner_puzzle is not None
 
@@ -468,7 +483,8 @@ class TradeManager:
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
                 lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
-                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))
+                spendable_cc_list.append(SpendableCC(
+                    coloured_coin, genesis_id, inner_puzzle, lineage_proof))
                 innersol_list.append(inner_solution)
 
             # Create SpendableCC for each of the coloured coins received
@@ -482,20 +498,24 @@ class TradeManager:
                     mod_hash, genesis_coin_checker, inner_puzzle = r
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
-                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
+                    spendable_cc_list.append(SpendableCC(
+                        cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
                     innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
-            outputamount = sum([c.amount for c in my_cc_spends]) + cc_discrepancies[colour] + my_output_coin.amount
+            outputamount = sum([c.amount for c in my_cc_spends]) + \
+                cc_discrepancies[colour] + my_output_coin.amount
             inner_solution = self.wallet_state_manager.main_wallet.make_solution(
-                primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
+                primaries=[
+                    {"puzzlehash": newinnerpuzhash, "amount": outputamount}]
             )
             inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(my_output_coin.puzzle_hash)
             assert inner_puzzle is not None
 
             lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
-            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))
+            spendable_cc_list.append(SpendableCC(
+                my_output_coin, genesis_id, inner_puzzle, lineage_proof))
             innersol_list.append(inner_solution)
 
             sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())
@@ -517,7 +537,8 @@ class TradeManager:
                     innersol_list,
                     [aggsig],
                 )
-                spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
+                spend_bundle = SpendBundle.aggregate(
+                    [spend_bundle, new_spend_bundle])
             # reset sigs and aggsig so that they aren't included next time around
             sigs = []
             aggsig = AugSchemeMPL.aggregate(sigs)
@@ -532,7 +553,8 @@ class TradeManager:
         # Add transaction history for this trade
         now = uint64(int(time.time()))
         if deafwave_spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, deafwave_spend_bundle])
+            spend_bundle = SpendBundle.aggregate(
+                [spend_bundle, deafwave_spend_bundle])
             # debug_spend_bundle(spend_bundle)
             if deafwave_discrepancy < 0:
                 tx_record = TransactionRecord(

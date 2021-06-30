@@ -23,7 +23,8 @@ class FullNodeRpcClient(RpcClient):
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
         if response["blockchain_state"]["peak"] is not None:
-            response["blockchain_state"]["peak"] = BlockRecord.from_json_dict(response["blockchain_state"]["peak"])
+            response["blockchain_state"]["peak"] = BlockRecord.from_json_dict(
+                response["blockchain_state"]["peak"])
         return response["blockchain_state"]
 
     async def get_block(self, header_hash) -> Optional[FullBlock]:
@@ -79,7 +80,8 @@ class FullNodeRpcClient(RpcClient):
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
     ) -> List:
-        d = {"puzzle_hash": puzzle_hash.hex(), "include_spent_coins": include_spent_coins}
+        d = {"puzzle_hash": puzzle_hash.hex(
+        ), "include_spent_coins": include_spent_coins}
         if start_height is not None:
             d["start_height"] = start_height
         if end_height is not None:
@@ -97,7 +99,8 @@ class FullNodeRpcClient(RpcClient):
         end_height: Optional[int] = None,
     ) -> List:
         puzzle_hashes_hex = [ph.hex() for ph in puzzle_hashes]
-        d = {"puzzle_hashes": puzzle_hashes_hex, "include_spent_coins": include_spent_coins}
+        d = {"puzzle_hashes": puzzle_hashes_hex,
+             "include_spent_coins": include_spent_coins}
         if start_height is not None:
             d["start_height"] = start_height
         if end_height is not None:

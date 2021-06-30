@@ -42,7 +42,8 @@ class Introducer:
                 self.log.info("Vetting random peers.")
                 if self.server.introducer_peers is None:
                     continue
-                raw_peers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
+                raw_peers = self.server.introducer_peers.get_peers(
+                    100, True, 3 * self.recent_peer_threshold)
 
                 if len(raw_peers) == 0:
                     continue
@@ -76,7 +77,8 @@ class Introducer:
                         )
                         w.close()
                     except Exception as e:
-                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{str(e)}")
+                        self.log.warning(
+                            f"Could not vet {peer}, removing. {type(e)}{str(e)}")
                         peer.vetted = min(peer.vetted - 1, -1)
 
                         # if we have failed 6 times in a row, remove the peer

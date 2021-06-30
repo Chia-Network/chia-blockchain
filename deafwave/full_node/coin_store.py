@@ -113,7 +113,8 @@ class CoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(
+                bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             record = CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
             self.coin_record_cache.put(record.coin.name(), record)
             return record
@@ -125,8 +126,10 @@ class CoinStore:
         await cursor.close()
         coins = []
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            coins.append(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(
+                bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.append(CoinRecord(
+                coin, row[1], row[2], row[3], row[4], row[8]))
         return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -137,8 +140,10 @@ class CoinStore:
         for row in rows:
             spent: bool = bool(row[3])
             if spent:
-                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-                coin_record = CoinRecord(coin, row[1], row[2], spent, row[4], row[8])
+                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(
+                    bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+                coin_record = CoinRecord(
+                    coin, row[1], row[2], spent, row[4], row[8])
                 coins.append(coin_record)
         return coins
 
@@ -161,7 +166,8 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(
+                bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
         return list(coins)
 
@@ -188,7 +194,8 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(
+                bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
         return list(coins)
 
@@ -249,9 +256,11 @@ class CoinStore:
     async def _set_spent(self, coin_name: bytes32, index: uint32) -> uint64:
         current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
-            raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
+            raise ValueError(
+                f"Cannot spend a coin that does not exist in db: {coin_name}")
 
-        assert not current.spent  # Redundant sanity check, already checked in block_body_validation
+        # Redundant sanity check, already checked in block_body_validation
+        assert not current.spent
         spent: CoinRecord = CoinRecord(
             current.coin,
             current.confirmed_block_index,

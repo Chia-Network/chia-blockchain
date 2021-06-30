@@ -300,7 +300,8 @@ class TestPeerManager:
         for i in range(1, 8 * 256):
             octet1 = i % 256
             octet2 = i >> 8 % 256
-            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8620, time.time())
+            peer = TimestampedPeerInfo(
+                str(octet1) + "." + str(octet2) + ".1.23", 8620, time.time())
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
                 await addrman.mark_good(PeerInfo(peer.host, peer.port))
@@ -330,7 +331,8 @@ class TestPeerManager:
         # different buckets because they have different keys.
         peer_info2 = ExtendedPeerInfo(t_peer2, source1)
         assert peer1.get_key() != peer2.get_key()
-        assert peer_info1.get_tried_bucket(key1) != peer_info2.get_tried_bucket(key1)
+        assert peer_info1.get_tried_bucket(
+            key1) != peer_info2.get_tried_bucket(key1)
 
         # Test: IP addresses in the same group (\16 prefix for IPv4) should
         # never get more than 8 buckets
@@ -373,7 +375,8 @@ class TestPeerManager:
 
         # Test: Ports should not affect bucket placement in the addr
         peer_info2 = ExtendedPeerInfo(t_peer2, source1)
-        assert peer_info1.get_new_bucket(key1) == peer_info2.get_new_bucket(key1)
+        assert peer_info1.get_new_bucket(
+            key1) == peer_info2.get_new_bucket(key1)
 
         # Test: IP addresses in the same group (\16 prefix for IPv4) should
         # always map to the same bucket.
@@ -392,8 +395,10 @@ class TestPeerManager:
         buckets = []
         for i in range(4 * 255):
             src = PeerInfo("251.4.1.1", 8620)
-            peer = PeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8620)
-            t_peer = TimestampedPeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8620, 0)
+            peer = PeerInfo(str(250 + i // 255) + "." +
+                            str(i % 256) + ".1.1", 8620)
+            t_peer = TimestampedPeerInfo(
+                str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8620, 0)
             extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
             if bucket not in buckets:

@@ -37,22 +37,26 @@ class TestScan(TestCase):
 
     def test_match_transaction(self):
         # match_standard_transaction_exactly_and_return_pubkey(transaction: bytes) -> Optional[bytes]:
-        m = match_standard_transaction_exactly_and_return_pubkey(STANDARD_TRANSACTION_1)
+        m = match_standard_transaction_exactly_and_return_pubkey(
+            STANDARD_TRANSACTION_1)
         assert m == hexstr_to_bytes(
             "b0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         )
 
-        m = match_standard_transaction_exactly_and_return_pubkey(STANDARD_TRANSACTION_1 + b"\xfa")
-        assert m is None
-
-        m = match_standard_transaction_exactly_and_return_pubkey(b"\xba" + STANDARD_TRANSACTION_1 + b"\xfa")
-        assert m is None
-
-        m = match_standard_transaction_exactly_and_return_pubkey(b"\xba" + STANDARD_TRANSACTION_1)
+        m = match_standard_transaction_exactly_and_return_pubkey(
+            STANDARD_TRANSACTION_1 + b"\xfa")
         assert m is None
 
         m = match_standard_transaction_exactly_and_return_pubkey(
-            gen1[EXPECTED_START : EXPECTED_END + PUBKEY_PLUS_SUFFIX]
+            b"\xba" + STANDARD_TRANSACTION_1 + b"\xfa")
+        assert m is None
+
+        m = match_standard_transaction_exactly_and_return_pubkey(
+            b"\xba" + STANDARD_TRANSACTION_1)
+        assert m is None
+
+        m = match_standard_transaction_exactly_and_return_pubkey(
+            gen1[EXPECTED_START: EXPECTED_END + PUBKEY_PLUS_SUFFIX]
         )
         assert m == hexstr_to_bytes(
             "b081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3"

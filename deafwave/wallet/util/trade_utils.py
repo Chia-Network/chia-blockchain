@@ -34,7 +34,8 @@ def trade_record_to_dict(record: TradeRecord) -> Dict:
     result["accepted_at_time"] = record.accepted_at_time
     result["confirmed_at_index"] = record.confirmed_at_index
     result["status"] = trade_status_ui_string(TradeStatus(record.status))
-    success, offer_dict, error = get_discrepancies_for_spend_bundle(record.spend_bundle)
+    success, offer_dict, error = get_discrepancies_for_spend_bundle(
+        record.spend_bundle)
     if success is False or offer_dict is None:
         raise ValueError(error)
     result["offer_dict"] = offer_dict
@@ -43,14 +44,16 @@ def trade_record_to_dict(record: TradeRecord) -> Dict:
 
 # Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
 def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
-    discrepancy = coin.amount - get_output_amount_for_puzzle_and_solution(puzzle, solution)
+    discrepancy = coin.amount - \
+        get_output_amount_for_puzzle_and_solution(puzzle, solution)
     return discrepancy
 
     # Returns the amount of value outputted by a puzzle and solution
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle: Program, solution: Program) -> int:
-    error, conditions, cost = conditions_dict_for_solution(puzzle, solution, INFINITE_COST)
+    error, conditions, cost = conditions_dict_for_solution(
+        puzzle, solution, INFINITE_COST)
     total = 0
     if conditions:
         for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
@@ -73,7 +76,8 @@ def get_discrepancies_for_spend_bundle(
                 mod_hash, genesis_checker, inner_puzzle = r
                 innersol = solution.first()
 
-                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
+                total = get_output_amount_for_puzzle_and_solution(
+                    inner_puzzle, innersol)
                 colour = bytes(genesis_checker).hex()
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total
@@ -81,7 +85,8 @@ def get_discrepancies_for_spend_bundle(
                     cc_discrepancies[colour] = coinsol.coin.amount - total
             else:
                 coin_amount = coinsol.coin.amount
-                out_amount = get_output_amount_for_puzzle_and_solution(puzzle, solution)
+                out_amount = get_output_amount_for_puzzle_and_solution(
+                    puzzle, solution)
                 diff = coin_amount - out_amount
                 if "deafwave" in cc_discrepancies:
                     cc_discrepancies["deafwave"] = cc_discrepancies["deafwave"] + diff

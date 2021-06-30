@@ -60,10 +60,12 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin)
 
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle)
         await full_node_api_1.respond_transaction(tx, peer)
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
@@ -120,10 +122,13 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
-        spend_bundle_double = wallet_a.generate_signed_transaction(1001, receiver_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin)
+        spend_bundle_double = wallet_a.generate_signed_transaction(
+            1001, receiver_puzzlehash, spend_coin)
 
-        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+        block_spendbundle = SpendBundle.aggregate(
+            [spend_bundle, spend_bundle_double])
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -161,10 +166,13 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
-        spend_bundle_double = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin)
+        spend_bundle_double = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin)
 
-        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+        block_spendbundle = SpendBundle.aggregate(
+            [spend_bundle, spend_bundle_double])
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -201,7 +209,8 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin)
 
         blocks_spend = bt.get_consecutive_blocks(
             1,
@@ -312,7 +321,8 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_1_puzzlehash, spend_coin)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -332,7 +342,8 @@ class TestBlockchainTransactions:
                 break
         assert coin_2 is not None
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_2_puzzlehash, coin_2)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_2_puzzlehash, coin_2)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -351,7 +362,8 @@ class TestBlockchainTransactions:
                 break
         assert coin_3 is not None
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_3_puzzlehash, coin_3)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_3_puzzlehash, coin_3)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -371,7 +383,8 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
-        blocks = bt.get_consecutive_blocks(num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
         for block in blocks:
@@ -394,7 +407,8 @@ class TestBlockchainTransactions:
         for coin in list(spend_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_1_puzzlehash, spend_coin)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -427,7 +441,8 @@ class TestBlockchainTransactions:
         for coin in list(spend_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_1_puzzlehash, spend_coin)
 
         new_blocks = bt.get_consecutive_blocks(
             1, blocks, seed=b"", farmer_reward_puzzle_hash=coinbase_puzzlehash, transaction_data=spend_bundle
@@ -485,14 +500,18 @@ class TestBlockchainTransactions:
         for coin in list(bad_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 bad_spend_coin = coin
-        valid_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [spend_coin.name()])
+        valid_cvp = ConditionWithArgs(
+            ConditionOpcode.ASSERT_MY_COIN_ID, [spend_coin.name()])
         valid_dic = {valid_cvp.opcode: [valid_cvp]}
-        bad_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [bad_spend_coin.name()])
+        bad_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [
+                                    bad_spend_coin.name()])
 
         bad_dic = {bad_cvp.opcode: [bad_cvp]}
-        bad_spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin, bad_dic)
+        bad_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin, bad_dic)
 
-        valid_spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin, valid_dic)
+        valid_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin, valid_dic)
 
         assert bad_spend_bundle is not None
         assert valid_spend_bundle is not None
@@ -593,7 +612,8 @@ class TestBlockchainTransactions:
         assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
         # bundle_together contains both transactions
-        bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
+        bundle_together = SpendBundle.aggregate(
+            [block1_spend_bundle, block2_spend_bundle])
 
         # Create another block that includes our transaction
         new_blocks = bt.get_consecutive_blocks(
@@ -677,7 +697,8 @@ class TestBlockchainTransactions:
         assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
         # bundle_together contains both transactions
-        bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
+        bundle_together = SpendBundle.aggregate(
+            [block1_spend_bundle, block2_spend_bundle])
 
         # Create another block that includes our transaction
         new_blocks = bt.get_consecutive_blocks(
@@ -718,7 +739,8 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires block1 coinbase to be spent after index 10
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(10)])
+        block1_cvp = ConditionWithArgs(
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(10)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -787,7 +809,8 @@ class TestBlockchainTransactions:
         # This condition requires block1 coinbase to be spent after index 11
         # This condition requires block1 coinbase to be spent more than 10 block after it was farmed
         # block index has to be greater than (2 + 9 = 11)
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(9)])
+        block1_cvp = ConditionWithArgs(
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(9)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -855,7 +878,8 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires block1 coinbase to be spent 300 seconds after coin creation
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(300)])
+        block1_cvp = ConditionWithArgs(
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(300)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -915,8 +939,10 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires block1 coinbase to be spent after 30 seconds from now
-        current_time_plus3 = uint64(blocks[-1].foliage_transaction_block.timestamp + 30)
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(current_time_plus3)])
+        current_time_plus3 = uint64(
+            blocks[-1].foliage_transaction_block.timestamp + 30)
+        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [
+                                       int_to_bytes(current_time_plus3)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -976,7 +1002,8 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires fee to be 10 mojo
-        cvp_fee = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
+        cvp_fee = ConditionWithArgs(
+            ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
         # This spend bundle has 9 mojo as fee
         block1_dic_bad = {cvp_fee.opcode: [cvp_fee]}
         block1_dic_good = {cvp_fee.opcode: [cvp_fee]}

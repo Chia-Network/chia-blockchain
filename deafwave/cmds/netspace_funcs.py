@@ -40,7 +40,8 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
                     newer_block_height = newer_block.height
 
             newer_block_header = await client.get_block_record_by_height(newer_block_height)
-            older_block_height = max(0, newer_block_height - int(delta_block_height))
+            older_block_height = max(
+                0, newer_block_height - int(delta_block_height))
             older_block_header = await client.get_block_record_by_height(older_block_height)
             network_space_bytes_estimate = await client.get_network_space(
                 newer_block_header.header_hash, older_block_header.header_hash
@@ -64,15 +65,19 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
                 network_space_terabytes_estimate = network_space_terabytes_estimate / 1024
                 if network_space_terabytes_estimate >= 1024:
                     network_space_terabytes_estimate = network_space_terabytes_estimate / 1024
-                    print(f"The network has an estimated {network_space_terabytes_estimate:.3f} EiB")
+                    print(
+                        f"The network has an estimated {network_space_terabytes_estimate:.3f} EiB")
                 else:
-                    print(f"The network has an estimated {network_space_terabytes_estimate:.3f} PiB")
+                    print(
+                        f"The network has an estimated {network_space_terabytes_estimate:.3f} PiB")
             else:
-                print(f"The network has an estimated {network_space_terabytes_estimate:.3f} TiB")
+                print(
+                    f"The network has an estimated {network_space_terabytes_estimate:.3f} TiB")
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if full node rpc is running at {rpc_port}")
+            print(
+                f"Connection error. Check if full node rpc is running at {rpc_port}")
         else:
             print(f"Exception {e}")
 

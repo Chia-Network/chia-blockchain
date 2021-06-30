@@ -175,7 +175,8 @@ class WalletPuzzleStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(
+            ),)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -202,7 +203,8 @@ class WalletPuzzleStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE pubkey=?", (bytes(pubkey).hex(),)
+            "SELECT * from derivation_paths WHERE pubkey=?", (bytes(
+                pubkey).hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -218,7 +220,8 @@ class WalletPuzzleStore:
         Returns None if not present.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(
+            ),)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -255,7 +258,8 @@ class WalletPuzzleStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(
+            ),)
         )
         row = await cursor.fetchone()
         await cursor.close()

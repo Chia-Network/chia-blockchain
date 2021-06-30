@@ -32,7 +32,8 @@ def service_kwargs_for_wallet(
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
     if "trusted_peers" not in config:
-        full_node_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
+        full_node_config = load_config(
+            DEFAULT_ROOT_PATH, "config.yaml", "full_node")
         trusted_peer = full_node_config["ssl"]["public_crt"]
         config["trusted_peers"] = {}
         config["trusted_peers"]["local_node"] = trusted_peer
@@ -88,7 +89,8 @@ def main() -> None:
     else:
         constants = DEFAULT_CONSTANTS
     keychain = Keychain(testing=False)
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
+    kwargs = service_kwargs_for_wallet(
+        DEFAULT_ROOT_PATH, config, constants, keychain)
     return run_service(**kwargs)
 
 

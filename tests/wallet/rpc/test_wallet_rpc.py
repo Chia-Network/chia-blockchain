@@ -49,11 +49,13 @@ class TestWalletRpc:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         initial_funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [calculate_pool_reward(uint32(
+                i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
         initial_funds_eventually = sum(
             [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                calculate_pool_reward(uint32(i)) +
+                calculate_base_farmer_reward(uint32(i))
                 for i in range(1, num_blocks + 1)
             ]
         )
@@ -137,8 +139,10 @@ class TestWalletRpc:
             assert tx_res["success"]
             assert tx_res["signed_tx"]["fee_amount"] == 0
             assert tx_res["signed_tx"]["amount"] == signed_tx_amount
-            assert len(tx_res["signed_tx"]["additions"]) == 2  # The output and the change
-            assert any([addition["amount"] == signed_tx_amount for addition in tx_res["signed_tx"]["additions"]])
+            # The output and the change
+            assert len(tx_res["signed_tx"]["additions"]) == 2
+            assert any(
+                [addition["amount"] == signed_tx_amount for addition in tx_res["signed_tx"]["additions"]])
 
             push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
             assert push_res["success"]
@@ -160,19 +164,24 @@ class TestWalletRpc:
             assert coin_to_spend is not None
 
             tx_res = await client.create_signed_transaction(
-                [{"amount": 444, "puzzle_hash": ph_4}, {"amount": 999, "puzzle_hash": ph_5}],
+                [{"amount": 444, "puzzle_hash": ph_4}, {
+                    "amount": 999, "puzzle_hash": ph_5}],
                 coins=[coin_to_spend],
                 fee=100,
             )
             assert tx_res["success"]
             assert tx_res["signed_tx"]["fee_amount"] == 100
             assert tx_res["signed_tx"]["amount"] == 444 + 999
-            assert len(tx_res["signed_tx"]["additions"]) == 3  # The outputs and the change
-            assert any([addition["amount"] == 444 for addition in tx_res["signed_tx"]["additions"]])
-            assert any([addition["amount"] == 999 for addition in tx_res["signed_tx"]["additions"]])
+            # The outputs and the change
+            assert len(tx_res["signed_tx"]["additions"]) == 3
+            assert any(
+                [addition["amount"] == 444 for addition in tx_res["signed_tx"]["additions"]])
+            assert any(
+                [addition["amount"] == 999 for addition in tx_res["signed_tx"]["additions"]])
             assert (
                 sum([rem["amount"] for rem in tx_res["signed_tx"]["removals"]])
-                - sum([ad["amount"] for ad in tx_res["signed_tx"]["additions"]])
+                - sum([ad["amount"]
+                       for ad in tx_res["signed_tx"]["additions"]])
                 == 100
             )
 
@@ -183,7 +192,8 @@ class TestWalletRpc:
                 await asyncio.sleep(0.5)
 
             await time_out_assert(
-                5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
+                5, eventual_balance, initial_funds_eventually -
+                tx_amount - signed_tx_amount - 444 - 999 - 100
             )
 
             address = await client.get_next_address("1", True)

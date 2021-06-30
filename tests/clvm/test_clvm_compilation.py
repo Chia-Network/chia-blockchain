@@ -36,7 +36,8 @@ wallet_program_files = set(
 )
 
 clvm_include_files = set(
-    ["deafwave/wallet/puzzles/create-lock-puzzlehash.clvm", "deafwave/wallet/puzzles/condition_codes.clvm"]
+    ["deafwave/wallet/puzzles/create-lock-puzzlehash.clvm",
+        "deafwave/wallet/puzzles/condition_codes.clvm"]
 )
 
 CLVM_PROGRAM_ROOT = "deafwave/wallet/puzzles"
@@ -69,10 +70,13 @@ class TestClvmCompilation(TestCase):
         Checks to see if a new .clvm file was added to deafwave/wallet/puzzles, but not added to `wallet_program_files`
         """
         existing_files = list_files(CLVM_PROGRAM_ROOT, "*.clvm")
-        existing_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in existing_files])
+        existing_file_paths = set([Path(x).relative_to(
+            CLVM_PROGRAM_ROOT) for x in existing_files])
 
-        expected_files = set(clvm_include_files).union(set(wallet_program_files))
-        expected_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in expected_files])
+        expected_files = set(clvm_include_files).union(
+            set(wallet_program_files))
+        expected_file_paths = set([Path(x).relative_to(
+            CLVM_PROGRAM_ROOT) for x in expected_files])
 
         self.assertEqual(
             expected_file_paths,
@@ -81,7 +85,8 @@ class TestClvmCompilation(TestCase):
         )
 
     def test_include_and_source_files_separate(self):
-        self.assertEqual(clvm_include_files.intersection(wallet_program_files), set())
+        self.assertEqual(clvm_include_files.intersection(
+            wallet_program_files), set())
 
     # TODO: Test recompilation with all available compiler configurations & implementations
     def test_all_programs_are_compiled(self):
@@ -108,10 +113,12 @@ class TestClvmCompilation(TestCase):
         self.maxDiff = None
         for f in wallet_program_files:
             f = Path(f)
-            compile_clvm(f, path_with_ext(f, ".recompiled"), search_paths=[f.parent])
+            compile_clvm(f, path_with_ext(f, ".recompiled"),
+                         search_paths=[f.parent])
             orig_hex = path_with_ext(f, ".hex").read_text().strip()
             new_hex = path_with_ext(f, ".recompiled").read_text().strip()
-            self.assertEqual(orig_hex, new_hex, msg=f"Compilation of {f} does not match {f}.hex")
+            self.assertEqual(orig_hex, new_hex,
+                             msg=f"Compilation of {f} does not match {f}.hex")
         pass
 
     def test_all_compiled_programs_are_hashed(self):
@@ -141,7 +148,8 @@ class TestClvmCompilation(TestCase):
             p = Program.from_bytes(clvm_blob)
 
             # load the checked-in shatree
-            existing_sha = path_with_ext(prog_path, ".hex.sha256tree").read_text().strip()
+            existing_sha = path_with_ext(
+                prog_path, ".hex.sha256tree").read_text().strip()
 
             self.assertEqual(
                 s.get_tree_hash().hex(),

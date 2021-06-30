@@ -46,7 +46,8 @@ class FarmerRpcApi:
         for _, sps in self.service.sps.items():
             for sp in sps:
                 if sp.challenge_chain_sp == sp_hash:
-                    pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+                    pospaces = self.service.proofs_of_space.get(
+                        sp.challenge_chain_sp, [])
                     return {
                         "signage_point": {
                             "challenge_hash": sp.challenge_hash,
@@ -64,7 +65,8 @@ class FarmerRpcApi:
         result: List = []
         for _, sps in self.service.sps.items():
             for sp in sps:
-                pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+                pospaces = self.service.proofs_of_space.get(
+                    sp.challenge_chain_sp, [])
                 result.append(
                     {
                         "signage_point": {

@@ -57,7 +57,8 @@ def run_daemon_cmd(ctx: click.Context) -> None:
     from deafwave.daemon.server import async_run_daemon
     import asyncio
 
-    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))
+    asyncio.get_event_loop().run_until_complete(
+        async_run_daemon(ctx.obj["root_path"]))
 
 
 cli.add_command(keys_cmd)

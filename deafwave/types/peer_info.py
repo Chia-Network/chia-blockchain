@@ -13,7 +13,8 @@ class PeerInfo(Streamable):
     port: uint16
 
     def is_valid(self, allow_private_subnets=False) -> bool:
-        ip: Optional[Union[ipaddress.IPv6Address, ipaddress.IPv4Address]] = None
+        ip: Optional[Union[ipaddress.IPv6Address,
+                           ipaddress.IPv4Address]] = None
         try:
             ip = ipaddress.IPv6Address(self.host)
         except ValueError:
@@ -39,7 +40,8 @@ class PeerInfo(Streamable):
             ip = ipaddress.IPv6Address(self.host)
         except ValueError:
             ip_v4 = ipaddress.IPv4Address(self.host)
-            ip = ipaddress.IPv6Address(int(ipaddress.IPv6Address("2002::")) | (int(ip_v4) << 80))
+            ip = ipaddress.IPv6Address(
+                int(ipaddress.IPv6Address("2002::")) | (int(ip_v4) << 80))
         key = ip.packed
         key += bytes([self.port // 0x100, self.port & 0x0FF])
         return key

@@ -15,7 +15,8 @@ from deafwave.util.streamable import Streamable, streamable
 class TransactionsInfo(Streamable):
     # Information that goes along with each transaction block
     generator_root: bytes32  # sha256 of the block generator in this block
-    generator_refs_root: bytes32  # sha256 of the concatenation of the generator ref list entries
+    # sha256 of the concatenation of the generator ref list entries
+    generator_refs_root: bytes32
     aggregated_signature: G2Element
     fees: uint64  # This only includes user fees, not block rewards
     cost: uint64  # This is the total cost of running this block in the CLVM

@@ -5,7 +5,8 @@ from deafwave.types.blockchain_format.program import Program
 from deafwave.types.blockchain_format.sized_bytes import bytes32
 from deafwave.wallet.puzzles.load_clvm import load_clvm
 
-MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm", package_or_requirement=__name__)
+MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm",
+                package_or_requirement=__name__)
 
 
 def create_genesis_puzzle_or_zero_coin_checker(genesis_puzzle_hash: bytes32) -> Program:

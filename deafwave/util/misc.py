@@ -25,7 +25,9 @@ def format_minutes(minutes: int) -> str:
         formatted = format_unit_string(unit, count)
         minutes_left = minutes % unit_minutes
         if minutes_left >= next_unit_minutes:
-            formatted += " and " + format_unit_string(next_unit, int(minutes_left / next_unit_minutes))
+            formatted += " and " + \
+                format_unit_string(next_unit, int(
+                    minutes_left / next_unit_minutes))
         return formatted
 
     if years > 0:

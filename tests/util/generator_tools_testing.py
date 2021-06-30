@@ -19,7 +19,8 @@ def run_and_get_removals_and_additions(
         return [], []
 
     if block.transactions_generator is not None:
-        npc_result = get_name_puzzle_conditions(BlockGenerator(block.transactions_generator, []), max_cost, safe_mode)
+        npc_result = get_name_puzzle_conditions(BlockGenerator(
+            block.transactions_generator, []), max_cost, safe_mode)
         # build removals list
         for npc in npc_result.npc_list:
             removals.append(npc.coin_name)

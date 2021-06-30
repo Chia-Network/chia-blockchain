@@ -4,7 +4,8 @@ from deafwave.types.blockchain_format.program import Program, INFINITE_COST
 from deafwave.util.byte_types import hexstr_to_bytes
 from deafwave.wallet.puzzles.load_clvm import load_clvm
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="deafwave.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm(
+    "chialisp_deserialisation.clvm", package_or_requirement="deafwave.wallet.puzzles")
 
 
 def serialized_atom_overflow(size):
@@ -15,7 +16,8 @@ def serialized_atom_overflow(size):
     elif size < 0x2000:
         size_blob = bytes([0xC0 | (size >> 8), (size >> 0) & 0xFF])
     elif size < 0x100000:
-        size_blob = bytes([0xE0 | (size >> 16), (size >> 8) & 0xFF, (size >> 0) & 0xFF])
+        size_blob = bytes([0xE0 | (size >> 16), (size >> 8)
+                           & 0xFF, (size >> 0) & 0xFF])
     elif size < 0x8000000:
         size_blob = bytes(
             [

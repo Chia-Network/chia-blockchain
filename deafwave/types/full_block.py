@@ -22,9 +22,12 @@ class FullBlock(Streamable):
     reward_chain_ip_proof: VDFProof
     infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 4
     foliage: Foliage  # Reward chain foliage data
-    foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
-    transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
-    transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
+    # Reward chain foliage data (tx block)
+    foliage_transaction_block: Optional[FoliageTransactionBlock]
+    # Reward chain foliage data (tx block additional)
+    transactions_info: Optional[TransactionsInfo]
+    # Program that generates transactions
+    transactions_generator: Optional[SerializedProgram]
     transactions_generator_ref_list: List[
         uint32
     ]  # List of block heights of previous generators referenced in this block

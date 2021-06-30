@@ -12,7 +12,8 @@ from deafwave.util.condition_tools import created_outputs_for_conditions_dict
 def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
     # Create filter
     byte_array_tx: List[bytes32] = []
-    addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
+    addition_coins = tx_addition_coins + \
+        list(block.get_included_reward_coins())
     if block.is_transaction_block():
         for coin in addition_coins:
             byte_array_tx.append(bytearray(coin.puzzle_hash))

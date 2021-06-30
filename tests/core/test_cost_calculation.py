@@ -75,9 +75,11 @@ class TestCostCalculation:
         assert spend_bundle is not None
         program: BlockGenerator = simple_solution_generator(spend_bundle)
 
-        npc_result: NPCResult = get_name_puzzle_conditions(program, test_constants.MAX_BLOCK_COST_CLVM, False)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            program, test_constants.MAX_BLOCK_COST_CLVM, False)
 
-        cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
+        cost = calculate_cost_of_program(
+            program.program, npc_result, test_constants.COST_PER_BYTE)
 
         assert npc_result.error is None
         coin_name = npc_result.npc_list[0].coin_name
@@ -130,9 +132,11 @@ class TestCostCalculation:
             ).as_bin()
         )
         generator = BlockGenerator(program, [])
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, True)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, test_constants.MAX_BLOCK_COST_CLVM, True)
         assert npc_result.error is not None
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, False)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, test_constants.MAX_BLOCK_COST_CLVM, False)
         assert npc_result.error is None
 
         coin_name = npc_result.npc_list[0].coin_name
@@ -149,22 +153,27 @@ class TestCostCalculation:
         # if-condition, that depends on executing an unknown operator
         # ("0xfe"). In strict mode, this should fail, but in non-strict
         # mode, the unknown operator should be treated as if it returns ().
-        program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
+        program = SerializedProgram.from_bytes(binutils.assemble(
+            f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         generator = BlockGenerator(program, [])
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, True)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, test_constants.MAX_BLOCK_COST_CLVM, True)
         assert npc_result.error is not None
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, False)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, test_constants.MAX_BLOCK_COST_CLVM, False)
         assert npc_result.error is None
 
     @pytest.mark.asyncio
     async def test_tx_generator_speed(self):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
-        generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
+        generator_bytes = large_block_generator(
+            LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
 
         start_time = time.time()
         generator = BlockGenerator(program, [])
-        npc_result = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, False)
+        npc_result = get_name_puzzle_conditions(
+            generator, test_constants.MAX_BLOCK_COST_CLVM, False)
         end_time = time.time()
         duration = end_time - start_time
         assert npc_result.error is None
@@ -184,19 +193,22 @@ class TestCostCalculation:
         # mode, the unknown operator should be treated as if it returns ().
         # the CLVM program has a cost of 391969
         program = SerializedProgram.from_bytes(
-            binutils.assemble(f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin()
+            binutils.assemble(
+                f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin()
         )
 
         # ensure we fail if the program exceeds the cost
         generator = BlockGenerator(program, [])
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, 10000000, False)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, 10000000, False)
 
         assert npc_result.error is not None
         assert npc_result.clvm_cost == 0
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
-        npc_result: NPCResult = get_name_puzzle_conditions(generator, 20000000, False)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, 20000000, False)
 
         assert npc_result.error is None
         assert npc_result.clvm_cost > 10000000
@@ -207,19 +219,22 @@ class TestCostCalculation:
         public_key = bytes.fromhex(
             "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
         )
-        puzzle_program = SerializedProgram.from_bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(public_key))
+        puzzle_program = SerializedProgram.from_bytes(
+            p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(public_key))
         conditions = binutils.assemble(
             "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
             " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
         )
         solution_program = SerializedProgram.from_bytes(
-            p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
+            p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(
+                conditions)
         )
 
         time_start = time.time()
         total_cost = 0
         for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+            cost, result = puzzle_program.run_with_cost(
+                test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 
         time_end = time.time()

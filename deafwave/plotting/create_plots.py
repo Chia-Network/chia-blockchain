@@ -27,7 +27,8 @@ def get_farmer_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
     else:
         sk_ent = keychain.get_first_private_key()
     if sk_ent is None:
-        raise RuntimeError("No keys, please run 'deafwave keys add', 'deafwave keys generate' or provide a public key with -f")
+        raise RuntimeError(
+            "No keys, please run 'deafwave keys add', 'deafwave keys generate' or provide a public key with -f")
     return master_sk_to_farmer_sk(sk_ent[0]).get_g1()
 
 
@@ -39,7 +40,8 @@ def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
     else:
         sk_ent = keychain.get_first_private_key()
     if sk_ent is None:
-        raise RuntimeError("No keys, please run 'deafwave keys add', 'deafwave keys generate' or provide a public key with -p")
+        raise RuntimeError(
+            "No keys, please run 'deafwave keys add', 'deafwave keys generate' or provide a public key with -p")
     return master_sk_to_pool_sk(sk_ent[0]).get_g1()
 
 
@@ -52,7 +54,8 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
 
     farmer_public_key: G1Element
     if args.farmer_public_key is not None:
-        farmer_public_key = G1Element.from_bytes(bytes.fromhex(args.farmer_public_key))
+        farmer_public_key = G1Element.from_bytes(
+            bytes.fromhex(args.farmer_public_key))
     else:
         farmer_public_key = get_farmer_public_key(args.alt_fingerprint)
 
@@ -60,21 +63,25 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     pool_contract_puzzle_hash: Optional[bytes32] = None
     if args.pool_public_key is not None:
         if args.pool_contract_address is not None:
-            raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
-        pool_public_key = G1Element.from_bytes(bytes.fromhex(args.pool_public_key))
+            raise RuntimeError(
+                "Choose one of pool_contract_address and pool_public_key")
+        pool_public_key = G1Element.from_bytes(
+            bytes.fromhex(args.pool_public_key))
     else:
         if args.pool_contract_address is None:
             # If nothing is set, farms to the provided key (or the first key)
             pool_public_key = get_pool_public_key(args.alt_fingerprint)
         else:
             # If the pool contract puzzle hash is set, use that
-            pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
+            pool_contract_puzzle_hash = decode_puzzle_hash(
+                args.pool_contract_address)
 
     assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
     num = args.num
 
     if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
-        log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
+        log.warning(
+            f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
     if args.size < 22:
         log.warning("k under 22 is not supported. Increasing k to 22")
         args.size = 22
@@ -113,16 +120,21 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             sk = AugSchemeMPL.key_gen(token_bytes(32))
 
         # The plot public key is the combination of the harvester and farmer keys
-        plot_public_key = ProofOfSpace.generate_plot_public_key(master_sk_to_local_sk(sk).get_g1(), farmer_public_key)
+        plot_public_key = ProofOfSpace.generate_plot_public_key(
+            master_sk_to_local_sk(sk).get_g1(), farmer_public_key)
 
         # The plot id is based on the harvester, farmer, and pool keys
         if pool_public_key is not None:
-            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(pool_public_key, plot_public_key)
-            plot_memo: bytes32 = stream_plot_info_pk(pool_public_key, farmer_public_key, sk)
+            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(
+                pool_public_key, plot_public_key)
+            plot_memo: bytes32 = stream_plot_info_pk(
+                pool_public_key, farmer_public_key, sk)
         else:
             assert pool_contract_puzzle_hash is not None
-            plot_id = ProofOfSpace.calculate_plot_id_ph(pool_contract_puzzle_hash, plot_public_key)
-            plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, sk)
+            plot_id = ProofOfSpace.calculate_plot_id_ph(
+                pool_contract_puzzle_hash, plot_public_key)
+            plot_memo = stream_plot_info_ph(
+                pool_contract_puzzle_hash, farmer_public_key, sk)
 
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
@@ -148,13 +160,16 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         plot_directories_list: str = config["harvester"]["plot_directories"]
 
         if args.exclude_final_dir:
-            log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
+            log.info(
+                f"NOT adding directory {resolved_final_dir} to harvester for farming")
             if resolved_final_dir in plot_directories_list:
-                log.warning(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
+                log.warning(
+                    f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
         else:
             if resolved_final_dir not in plot_directories_list:
                 # Adds the directory to the plot directories if it is not present
-                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
+                log.info(
+                    f"Adding directory {resolved_final_dir} to harvester for farming")
                 config = add_plot_directory(resolved_final_dir, root_path)
 
         if not full_path.exists():
@@ -185,13 +200,15 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         try:
             args.tmp_dir.rmdir()
         except Exception:
-            log.info(f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty.")
+            log.info(
+                f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty.")
 
     if tmp2_dir_created:
         try:
             args.tmp2_dir.rmdir()
         except Exception:
-            log.info(f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty.")
+            log.info(
+                f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty.")
 
     log.info(f"Created a total of {len(finished_filenames)} new plots")
     for filename in finished_filenames:

@@ -164,18 +164,21 @@ class AddressManagerStore:
         # address_manager.tried_count = int(metadata["tried_count"])
         address_manager.tried_count = 0
 
-        new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
+        new_table_nodes = [(node_id, info) for node_id,
+                           info in nodes if node_id < address_manager.new_count]
         for n, info in new_table_nodes:
             address_manager.map_addr[info.peer_info.host] = n
             address_manager.map_info[n] = info
             info.random_pos = len(address_manager.random_pos)
             address_manager.random_pos.append(n)
         address_manager.id_count = len(new_table_nodes)
-        tried_table_nodes = [(node_id, info) for node_id, info in nodes if node_id >= address_manager.new_count]
+        tried_table_nodes = [(node_id, info) for node_id,
+                             info in nodes if node_id >= address_manager.new_count]
         # lost_count = 0
         for node_id, info in tried_table_nodes:
             tried_bucket = info.get_tried_bucket(address_manager.key)
-            tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
+            tried_bucket_pos = info.get_bucket_position(
+                address_manager.key, False, tried_bucket)
             if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
                 info.random_pos = len(address_manager.random_pos)
                 info.is_tried = True
@@ -193,7 +196,8 @@ class AddressManagerStore:
         for node_id, bucket in new_table_entries:
             if node_id >= 0 and node_id < address_manager.new_count:
                 info = address_manager.map_info[node_id]
-                bucket_pos = info.get_bucket_position(address_manager.key, True, bucket)
+                bucket_pos = info.get_bucket_position(
+                    address_manager.key, True, bucket)
                 if address_manager.new_matrix[bucket][bucket_pos] == -1 and info.ref_count < NEW_BUCKETS_PER_ADDRESS:
                     info.ref_count += 1
                     address_manager.new_matrix[bucket][bucket_pos] = node_id

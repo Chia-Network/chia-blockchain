@@ -69,7 +69,8 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
 
-    word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
+    word_list = {word: i for i, word in enumerate(
+        bip39_word_list().splitlines())}
     bit_array = BitArray()
     for i in range(0, len(mnemonic)):
         word = mnemonic[i]
@@ -99,7 +100,8 @@ def mnemonic_to_seed(mnemonic: str, passphrase: str) -> bytes:
     """
     salt_str: str = "mnemonic" + passphrase
     salt = unicodedata.normalize("NFKD", salt_str).encode("utf-8")
-    mnemonic_normalized = unicodedata.normalize("NFKD", mnemonic).encode("utf-8")
+    mnemonic_normalized = unicodedata.normalize(
+        "NFKD", mnemonic).encode("utf-8")
     seed = pbkdf2_hmac("sha512", mnemonic_normalized, salt, 2048)
 
     assert len(seed) == 64
@@ -145,7 +147,7 @@ class Keychain:
         str_bytes = bytes.fromhex(read_str)
         return (
             G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
-            str_bytes[G1Element.SIZE :],  # flake8: noqa
+            str_bytes[G1Element.SIZE:],  # flake8: noqa
         )
 
     def _get_private_key_user(self, index: int) -> str:
@@ -295,7 +297,8 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                    keyring.delete_password(
+                        self._get_service(), self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -309,8 +312,10 @@ class Keychain:
         pkent = None
         while True:
             try:
-                pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                pkent = self._get_pk_and_entropy(
+                    self._get_private_key_user(index))
+                keyring.delete_password(
+                    self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -328,7 +333,8 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                keyring.delete_password(
+                    self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True

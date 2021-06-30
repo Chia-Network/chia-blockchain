@@ -37,10 +37,12 @@ class ReceiveBlockResult(Enum):
     """
 
     NEW_PEAK = 1  # Added to the peak of the blockchain
-    ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (not a new peak of the chain)
+    # Added as an orphan/stale block (not a new peak of the chain)
+    ADDED_AS_ORPHAN = 2
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
-    DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
+    # Block's parent (previous pointer) is not in this blockchain
+    DISCONNECTED_BLOCK = 5
 
 
 class WalletBlockchain(BlockchainInterface):
@@ -82,7 +84,8 @@ class WalletBlockchain(BlockchainInterface):
         coin_store: WalletCoinStore,
         tx_store: WalletTransactionStore,
         consensus_constants: ConsensusConstants,
-        coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
+        # f(removals: List[Coin], additions: List[Coin], height: uint32)
+        coins_of_interest_received: Callable,
         reorg_rollback: Callable,
         lock: asyncio.Lock,
     ):
@@ -102,7 +105,8 @@ class WalletBlockchain(BlockchainInterface):
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
         log.info(f"Started {num_workers} processes for block validation")
         self.constants = consensus_constants
-        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
+        self.constants_json = recurse_jsonify(
+            dataclasses.asdict(self.constants))
         self.block_store = block_store
         self._shut_down = False
         self.coins_of_interest_received = coins_of_interest_received
@@ -199,12 +203,14 @@ class WalletBlockchain(BlockchainInterface):
             required_iters, val_error = validate_unfinished_header_block(
                 self.constants, self, unfinished_header_block, False, difficulty, sub_slot_iters, False, True
             )
-            error = ValidationError(Err(val_error)) if val_error is not None else None
+            error = ValidationError(
+                Err(val_error)) if val_error is not None else None
         else:
             assert pre_validation_result is not None
             required_iters = pre_validation_result.required_iters
             error = (
-                ValidationError(Err(pre_validation_result.error)) if pre_validation_result.error is not None else None
+                ValidationError(Err(pre_validation_result.error)
+                                ) if pre_validation_result.error is not None else None
             )
 
         if error is not None:
@@ -226,7 +232,8 @@ class WalletBlockchain(BlockchainInterface):
                     await self.block_store.db_wrapper.begin_transaction()
                     await self.block_store.add_block_record(header_block_record, block_record)
                     self.add_block_record(block_record)
-                    self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
+                    self.clean_block_record(
+                        block_record.height - self.constants.BLOCKS_CACHE_SIZE)
 
                     fork_height: Optional[uint32] = await self._reconsider_peak(
                         block_record, genesis, fork_point_with_peak
@@ -240,7 +247,8 @@ class WalletBlockchain(BlockchainInterface):
                         await self.tx_store.rebuild_tx_cache()
                     raise
             if fork_height is not None:
-                self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
+                self.log.info(
+                    f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
                 return ReceiveBlockResult.NEW_PEAK, None, fork_height
             else:
                 return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
@@ -279,7 +287,8 @@ class WalletBlockchain(BlockchainInterface):
                 fork_h = find_fork_point_in_chain(self, block_record, peak)
 
             # Rollback to fork
-            self.log.debug(f"fork_h: {fork_h}, SB: {block_record.height}, peak: {peak.height}")
+            self.log.debug(
+                f"fork_h: {fork_h}, SB: {block_record.height}, peak: {peak.height}")
             if block_record.prev_hash != peak.header_hash:
                 await self.reorg_rollback(fork_h)
 
@@ -299,7 +308,8 @@ class WalletBlockchain(BlockchainInterface):
                 fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
                 assert fetched_header_block is not None
                 assert fetched_block_record is not None
-                blocks_to_add.append((fetched_header_block, fetched_block_record))
+                blocks_to_add.append(
+                    (fetched_header_block, fetched_block_record))
                 if fetched_header_block.height == 0:
                     # Doing a full reorg, starting at height 0
                     break
@@ -407,10 +417,12 @@ class WalletBlockchain(BlockchainInterface):
         while blocks_to_remove is not None and height >= 0:
             for header_hash in blocks_to_remove:
                 del self.__block_records[header_hash]
-            del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
+            # remove height from heights in cache
+            del self.__heights_in_cache[uint32(height)]
 
             height -= 1
-            blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
+            blocks_to_remove = self.__heights_in_cache.get(
+                uint32(height), None)
 
     def clean_block_records(self):
         """
@@ -450,4 +462,5 @@ class WalletBlockchain(BlockchainInterface):
         self.__block_records[block_record.header_hash] = block_record
         if block_record.height not in self.__heights_in_cache.keys():
             self.__heights_in_cache[block_record.height] = set()
-        self.__heights_in_cache[block_record.height].add(block_record.header_hash)
+        self.__heights_in_cache[block_record.height].add(
+            block_record.header_hash)

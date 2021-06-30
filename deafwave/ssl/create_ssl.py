@@ -18,7 +18,8 @@ def get_deafwave_ca_crt_key() -> Tuple[Any, Any]:
 
 
 def get_mozzila_ca_crt() -> str:
-    mozilla_path = Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
+    mozilla_path = Path(
+        __file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
     return str(mozilla_path)
 
 
@@ -27,12 +28,14 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     root_cert = x509.load_pem_x509_certificate(ca_crt, default_backend())
     root_key = load_pem_private_key(ca_key, None, default_backend())
 
-    cert_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+    cert_key = rsa.generate_private_key(
+        public_exponent=65537, key_size=2048, backend=default_backend())
     new_subject = x509.Name(
         [
             x509.NameAttribute(NameOID.COMMON_NAME, "Deafwave"),
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Deafwave"),
-            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME,
+                               "Organic Farming Division"),
         ]
     )
 
@@ -63,12 +66,14 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
 
 
 def make_ca_cert(cert_path: Path, key_path: Path):
-    root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+    root_key = rsa.generate_private_key(
+        public_exponent=65537, key_size=2048, backend=default_backend())
     subject = issuer = x509.Name(
         [
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Deafwave"),
             x509.NameAttribute(NameOID.COMMON_NAME, "Deafwave CA"),
-            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME,
+                               "Organic Farming Division"),
         ]
     )
     root_cert = (

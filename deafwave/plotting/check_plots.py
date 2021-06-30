@@ -22,10 +22,12 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             log.warning("Not opening plot files")
         else:
             if num < 5:
-                log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
+                log.warning(
+                    f"{num} challenges is too low, setting it to the minimum of 5")
                 num = 5
             if num < 30:
-                log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
+                log.warning(
+                    "Use 30 challenges (our default) for balance of speed and accurate results")
     else:
         num = 30
 
@@ -44,7 +46,8 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     show_memo: bool = debug_show_memo
 
     if list_duplicates:
-        plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config["harvester"])
+        plot_filenames: Dict[Path, List[Path]
+                             ] = get_plot_filenames(config["harvester"])
         all_filenames: List[Path] = []
         for paths in plot_filenames.values():
             all_filenames += paths
@@ -56,8 +59,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
-    pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
-    pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]]
+    pks = [master_sk_to_farmer_sk(sk).get_g1()
+           for sk, _ in kc.get_all_private_keys()]
+    pool_public_keys = [G1Element.from_bytes(bytes.fromhex(
+        pk)) for pk in config["farmer"]["pool_public_keys"]]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
         {},
         {},
@@ -102,10 +107,12 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                     try:
                         proof = pr.get_full_proof(challenge, index)
                         total_proofs += 1
-                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
+                        ver_quality_str = v.validate_proof(
+                            pr.get_id(), pr.get_size(), challenge, proof)
                         assert quality_str == ver_quality_str
                     except AssertionError as e:
-                        log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+                        log.error(
+                            f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
                         caught_exception = True
             except KeyboardInterrupt:
                 log.warning("Interrupted, closing")
@@ -114,23 +121,27 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 log.warning("System is shutting down.")
                 return None
             except Exception as e:
-                log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
+                log.error(
+                    f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                 caught_exception = True
             if caught_exception is True:
                 break
         if total_proofs > 0 and caught_exception is False:
-            log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            log.info(
+                f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
         else:
             total_bad_plots += 1
-            log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            log.error(
+                f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             bad_plots_list.append(plot_path)
     log.info("")
     log.info("")
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
-    log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
+    log.info(
+        f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
     grand_total_bad = total_bad_plots + len(failed_to_open_filenames)
