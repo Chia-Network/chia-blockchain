@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 06:03\n"
+"PO-Revision-Date: 2021-06-30 12:02\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:62
 msgid "(Optional)"
-msgstr ""
+msgstr "（可选）"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:64
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -28,7 +28,7 @@ msgstr "* 想要进一步了解奇亚？来看看一位开源开发者创建的 
 
 #: src/components/plot/add/PlotAddNFT.tsx:127
 msgid "+ Add New Plot NFT"
-msgstr ""
+msgstr "+ 添加新的农田NFT"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -95,7 +95,7 @@ msgstr "开垦农田"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
-msgstr ""
+msgstr "开垦农田NTF"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
