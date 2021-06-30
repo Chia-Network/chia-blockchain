@@ -6,7 +6,6 @@ from sector.cmds.units import units
 from sector.consensus.block_record import BlockRecord
 from sector.rpc.farmer_rpc_client import FarmerRpcClient
 from sector.rpc.full_node_rpc_client import FullNodeRpcClient
-#from sector.rpc.harvester_rpc_client import HarvesterRpcClient
 from sector.rpc.wallet_rpc_client import WalletRpcClient
 from sector.util.config import load_config
 from sector.util.default_root import DEFAULT_ROOT_PATH
@@ -30,9 +29,9 @@ async def get_plots(farmer_rpc_port: int) -> Optional[Dict[str, Any]]:
             print(f"Connection error. Check if farmer is running at {farmer_rpc_port}")
         else:
             print(f"Exception from 'harvester' {e}")
-	return None
-farmer_client.close()
-await farmer_client.await_closed()
+        return None
+    farmer_client.close()
+    await farmer_client.await_closed()
     return plots
 
 
