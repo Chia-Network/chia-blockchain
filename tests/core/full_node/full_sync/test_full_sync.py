@@ -359,6 +359,7 @@ class TestFullSync:
         full_node_2.full_node.sync_store.set_long_sync(True)
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
         wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
+        assert wp
         summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
         summaries2 = summaries1
         s = summaries1[1]
