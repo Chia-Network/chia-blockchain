@@ -99,7 +99,7 @@ steps:
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIVES_VERSION="Chia-"$(<version.txt)
+      export CHIVES_VERSION="Chives-"$(<version.txt)
       shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIVES_VERSION.dmg.sha256
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
     displayName: "Create Checksums"

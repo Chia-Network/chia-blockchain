@@ -45,7 +45,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 electron-packager . Chives --asar.unpack="**/daemon/**" --platform=darwin \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chives.blockchain \
+--icon=src/assets/img/Chives.icns --overwrite --app-bundle-id=net.chives.blockchain \
 --appVersion=$CHIVES_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
@@ -54,7 +54,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 if [ "$NOTARIZE" ]; then
-  electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
+  electron-osx-sign Chives-darwin-x64/Chives.app --platform=darwin \
   --hardened-runtime=true --provisioning-profile=chivesblockchain.provisionprofile \
   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
   --no-gatekeeper-assess
@@ -65,13 +65,13 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv Chia-darwin-x64 ../build_scripts/dist/
+mv Chives-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
 
-DMG_NAME="Chia-$CHIVES_INSTALLER_VERSION.dmg"
+DMG_NAME="Chives-$CHIVES_INSTALLER_VERSION.dmg"
 echo "Create $DMG_NAME"
 mkdir final_installer
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIVES_INSTALLER_VERSION \
+electron-installer-dmg dist/Chives-darwin-x64/Chives.app Chives-$CHIVES_INSTALLER_VERSION \
 --overwrite --out final_installer
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
@@ -93,7 +93,7 @@ fi
 #
 # Ask for username and password. password should be an app specific password.
 # Generate app specific password https://support.apple.com/en-us/HT204397
-# xcrun altool --notarize-app -f Chia-0.1.X.dmg --primary-bundle-id net.chives.blockchain -u username -p password
+# xcrun altool --notarize-app -f Chives-0.1.X.dmg --primary-bundle-id net.chives.blockchain -u username -p password
 # xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command
 #
 # Wait until following command return a success message".
@@ -101,7 +101,7 @@ fi
 # It can take a while, run it every few minutes.
 #
 # Once that is successful, execute the following command":
-# xcrun stapler staple Chia-0.1.X.dmg
+# xcrun stapler staple Chives-0.1.X.dmg
 #
 # Validate DMG:
-# xcrun stapler validate Chia-0.1.X.dmg
+# xcrun stapler validate Chives-0.1.X.dmg

@@ -58,8 +58,8 @@ if(Test-Path '.\chives-blockchain-gui\daemon')			{
 if(Test-Path '.\chives-blockchain-gui\release-builds')			{
 	# Remove-Item '.\chives-blockchain-gui\release-builds' -Recurse
 }
-if(Test-Path '.\chives-blockchain-gui\Chia-win32-x64')			{
-	# Remove-Item '.\chives-blockchain-gui\Chia-win32-x64' -Recurse
+if(Test-Path '.\chives-blockchain-gui\Chives-win32-x64')			{
+	# Remove-Item '.\chives-blockchain-gui\Chives-win32-x64' -Recurse
 }
 if(Test-Path '.\chives-blockchain-gui\build')			{
 	# Remove-Item '.\chives-blockchain-gui\build' -Recurse

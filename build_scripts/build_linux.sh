@@ -67,7 +67,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 electron-packager . chives-blockchain --asar.unpack="**/daemon/**" --platform=linux \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chives.blockchain \
+--icon=src/assets/img/Chives.icns --overwrite --app-bundle-id=net.chives.blockchain \
 --appVersion=$CHIVES_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
