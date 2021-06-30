@@ -12,7 +12,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate
+from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
@@ -67,9 +67,12 @@ def uses_keychain_proxy():
         @wraps(method)
         async def inner(self, *args, **kwargs):
             if not self.keychain_proxy:
-                self.keychain_proxy = await connect_to_keychain_and_validate(
-                    self.root_path, self.log, self.local_keychain
-                )
+                if self.local_keychain:
+                    self.keychain_proxy = wrap_local_keychain(self.local_keychain)
+                else:
+                    self.keychain_proxy = await connect_to_keychain_and_validate(
+                        self.root_path, self.log, self.local_keychain
+                    )
             return await method(self, *args, **kwargs)
 
         return inner
