@@ -1,4 +1,7 @@
-name: MacOS core-consensus Tests
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
+name: Ubuntu core-full_node-performance Test
 
 on:
   push:
@@ -12,15 +15,15 @@ on:
 
 jobs:
   build:
-    name: MacOS core-consensus Tests
+    name: Ubuntu core-full_node-performance Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.8, 3.9]
-        os: [macOS-latest]
+        python-version: [3.7, 3.8, 3.9]
+        os: [ubuntu-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -39,6 +42,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Cache npm
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
     - name: Get pip cache dir
       id: pip-cache
       run: |
@@ -47,7 +58,6 @@ jobs:
     - name: Cache pip
       uses: actions/cache@v2.1.6
       with:
-        # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
@@ -68,12 +78,17 @@ jobs:
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 
+    - name: Install ubuntu dependencies
+      run: |
+        sudo apt-get install software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
-        brew install boost
         sh install.sh
 
     - name: Install timelord
@@ -85,9 +100,14 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
-    - name: Test core-consensus code with pytest
+    - name: Test core-full_node-performance code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/consensus/test_pot_iterations.py -s -v  --durations 0
+        ./venv/bin/py.test tests/core/full_node/performance/test_performance.py -s -v --durations 0 
+
+
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

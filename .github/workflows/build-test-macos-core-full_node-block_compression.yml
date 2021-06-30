@@ -1,4 +1,7 @@
-name: MacOS core-consensus Tests
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
+name: MacOS core-full_node-block_compression Tests
 
 on:
   push:
@@ -12,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: MacOS core-consensus Tests
+    name: MacOS core-full_node-block_compression Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -87,7 +90,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test core-consensus code with pytest
+    - name: Test core-full_node-block_compression code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/consensus/test_pot_iterations.py -s -v  --durations 0
+        ./venv/bin/py.test tests/core/full_node/block_compression/test_block_compression.py -s -v --durations 0 
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

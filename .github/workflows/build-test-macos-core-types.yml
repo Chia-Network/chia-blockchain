@@ -1,6 +1,3 @@
-#
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
-#
 name: MacOS core-types Tests
 
 on:
@@ -93,7 +90,4 @@ jobs:
     - name: Test core-types code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/types/test_coin.py tests/core/types/test_proof_of_space.py -s -v --durations 0 
-#
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
-#
+        ./venv/bin/py.test tests/core/types/test_coin.py tests/core/types/test_proof_of_space.py -s -v  --durations 0
