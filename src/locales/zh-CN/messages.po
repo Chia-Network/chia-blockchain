@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 23:52\n"
+"PO-Revision-Date: 2021-06-30 06:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -82,7 +82,7 @@ msgstr "将农田开垦任务加入队列"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
-#~ msgstr "添加钱包"
+#~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
@@ -248,7 +248,7 @@ msgstr "购买"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
-#~ msgstr "染色币钱包"
+#~ msgstr "CC Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -457,7 +457,7 @@ msgstr "创建报价"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
-#~ msgstr "开垦农田"
+#~ msgstr "Create Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:188
 msgid "Create Rate Limited Admin Wallet"
@@ -557,7 +557,7 @@ msgstr "注意：永久性删除私钥"
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
-#~ msgstr "去中心化标识钱包"
+#~ msgstr "DID Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -697,7 +697,7 @@ msgstr "预计区块发现时间"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Estimated network space"
-#~ msgstr "全网已占用空间（估算）"
+#~ msgstr "Estimated network space"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -852,7 +852,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
-#~ msgstr "全节点状态"
+#~ msgstr "Full Node Status"
 
 #: src/electron/main.tsx:332
 msgid "Full Screen"
@@ -1611,7 +1611,7 @@ msgstr "内存最大使用量"
 
 #: src/components/wallet/Wallets.tsx:51
 #~ msgid "RL Wallet"
-#~ msgstr "费用限定钱包"
+#~ msgstr "RL Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -2218,7 +2218,7 @@ msgstr "VDF子项迭代数"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 #~ msgid "Value is too high"
-#~ msgstr ""
+#~ msgstr "Value is too high"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
@@ -2497,3 +2497,4 @@ msgstr "{currencyCode} 用户交易费用"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
