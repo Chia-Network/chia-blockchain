@@ -36,6 +36,8 @@
 
 $ErrorActionPreference = "Stop"
 
+git submodule update --init --recursive
+	
 if(Test-Path '.\build_scripts\win_build')			{
 	# Remove-Item '.\build_scripts\win_build' -Recurse
 }
@@ -97,6 +99,8 @@ Write-Output "   ---"
 Write-Output "Get CHIVES_INSTALLER_VERSION"
 # The environment variable CHIVES_INSTALLER_VERSION needs to be defined
 $env:CHIVES_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+
+$env:CHIA_INSTALLER_VERSION = "1.1.7.1"
 
 if (-not (Test-Path env:CHIVES_INSTALLER_VERSION)) {
   $env:CHIVES_INSTALLER_VERSION = '0.0.0'
