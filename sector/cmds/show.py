@@ -53,7 +53,7 @@ async def show_async(
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
                 print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
-	    elif peak is not None and sync_mode:
+            elif peak is not None and sync_mode:
                 sync_max_block = blockchain_state["sync"]["sync_tip_height"]
                 sync_current_block = blockchain_state["sync"]["sync_progress_height"]
                 print(f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block}.")
