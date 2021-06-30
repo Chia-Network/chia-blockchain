@@ -106,7 +106,7 @@ jobs:
           cd ./chia-blockchain-gui
           arch -arm64 git status
           cd ../build_scripts
-          arch -arm64 sh build_macos.sh
+          arch -arm64 sh build_macos_m1.sh
 
       - name: Create installer version number
         id: version_number
