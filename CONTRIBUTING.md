@@ -86,7 +86,7 @@ workflow.
 
 ## Testnets and review environments
 
-With the launch of `1.0.0` we will begin running an official `testnet`.  
+With the launch of `1.0.0` we will begin running an official `testnet`.
 Prior to the release of `1.1.0` there will be two running test nets. `testnet` and `transaction-beta-testnet`. The `transaction-beta-testnet` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the current release branch.
 
