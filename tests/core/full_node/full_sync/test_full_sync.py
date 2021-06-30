@@ -352,7 +352,7 @@ class TestFullSync:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = default_1000_blocks
 
-        for block in blocks[:501]:
+        for block in blocks[:601]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         peak1 = full_node_1.full_node.blockchain.get_peak()
