@@ -1,3 +1,5 @@
+# flake8: noqa: E501
+import logging
 from secrets import token_bytes
 
 import pytest
@@ -15,12 +17,15 @@ from chia.rpc.rpc_server import start_rpc_server
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from tests.block_tools import get_plot_dir
-from chia.util.config import load_config
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert
+
+log = logging.getLogger(__name__)
 
 
 class TestRpc:
@@ -160,6 +165,10 @@ class TestRpc:
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots
 
+            # Test farmer get_plots
+            farmer_res = await client.get_plots()
+            assert len(list(farmer_res.values())[0]["plots"]) == num_plots
+
             assert len(await client_2.get_plot_directories()) == 1
 
             await client_2.add_plot_directory(str(plot_dir))
@@ -219,6 +228,35 @@ class TestRpc:
             replaced_char = new_ph_3_encoded[0:-1] + "a"
             with pytest.raises(ValueError):
                 await client.set_reward_targets(None, replaced_char)
+
+            assert len((await client.get_pool_state())["pool_state"]) == 0
+            all_sks = farmer_api.farmer.keychain.get_all_private_keys()
+            auth_sk = master_sk_to_pooling_authentication_sk(all_sks[0][0], 2, 1)
+            pool_list = [
+                {
+                    "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
+                    "authentication_public_key": bytes(auth_sk.get_g1()).hex(),
+                    "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",
+                    "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+                    "pool_url": "localhost",
+                    "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
+                    "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+                }
+            ]
+            config["pool"]["pool_list"] = pool_list
+            save_config(root_path, "config.yaml", config)
+            await farmer_api.farmer.update_pool_state()
+
+            pool_state = (await client.get_pool_state())["pool_state"]
+            assert len(pool_state) == 1
+            assert (
+                pool_state[0]["pool_config"]["payout_instructions"]
+                == "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8"
+            )
+            await client.set_payout_instructions(hexstr_to_bytes(pool_state[0]["pool_config"]["launcher_id"]), "1234vy")
+
+            pool_state = (await client.get_pool_state())["pool_state"]
+            assert pool_state[0]["pool_config"]["payout_instructions"] == "1234vy"
 
         finally:
             # Checks that the RPC manages to stop the node

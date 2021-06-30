@@ -7,7 +7,7 @@ class ProtocolMessageTypes(Enum):
 
     # Harvester protocol (harvester <-> farmer)
     harvester_handshake = 3
-    new_signage_point_harvester = 4
+    # new_signage_point_harvester = 4 Changed to 66 in new protocol
     new_proof_of_space = 5
     request_signatures = 6
     respond_signatures = 7
@@ -82,5 +82,10 @@ class ProtocolMessageTypes(Enum):
     # Simulator protocol
     farm_new_block = 65
 
-    request_proof_of_weight_v2 = 66
-    respond_proof_of_weight_v2 = 67
+    # New harvester protocol
+    new_signage_point_harvester = 66
+    request_plots = 67
+    respond_plots = 68
+
+    request_proof_of_weight_v2 = 69
+    respond_proof_of_weight_v2 = 70

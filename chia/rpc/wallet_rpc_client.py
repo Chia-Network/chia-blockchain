@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Any, Tuple
 
+from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,7 +15,7 @@ class WalletRpcClient(RpcClient):
     Client to Chia RPC, connects to a local wallet. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
     Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
-    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
+    protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
     to the full node.
     """
 
@@ -127,6 +128,30 @@ class WalletRpcClient(RpcClient):
         )
         return TransactionRecord.from_json_dict(res["transaction"])
 
+    async def send_transaction_multi(
+        self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
+    ) -> TransactionRecord:
+        # Converts bytes to hex for puzzle hashes
+        additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
+        if coins is not None and len(coins) > 0:
+            coins_json = [c.to_json_dict() for c in coins]
+            response: Dict = await self.fetch(
+                "send_transaction_multi",
+                {"wallet_id": wallet_id, "additions": additions_hex, "coins": coins_json, "fee": fee},
+            )
+        else:
+            response = await self.fetch(
+                "send_transaction_multi", {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee}
+            )
+        return TransactionRecord.from_json_dict(response["transaction"])
+
+    async def delete_unconfirmed_transactions(self, wallet_id: str) -> None:
+        await self.fetch(
+            "delete_unconfirmed_transactions",
+            {"wallet_id": wallet_id},
+        )
+        return None
+
     async def create_backup(self, file_path: Path) -> None:
         return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
 
@@ -135,16 +160,72 @@ class WalletRpcClient(RpcClient):
 
     async def create_signed_transaction(
         self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
-    ) -> Dict:
+    ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
-            return await self.fetch(
+            response: Dict = await self.fetch(
                 "create_signed_transaction", {"additions": additions_hex, "coins": coins_json, "fee": fee}
             )
         else:
-            return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
+            response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
+        return TransactionRecord.from_json_dict(response["signed_tx"])
 
+    async def create_new_pool_wallet(
+        self,
+        target_puzzlehash: Optional[bytes32],
+        pool_url: Optional[str],
+        relative_lock_height: uint32,
+        backup_host: str,
+        mode: str,
+        state: str,
+        p2_singleton_delay_time: Optional[uint64] = None,
+        p2_singleton_delayed_ph: Optional[bytes32] = None,
+    ) -> TransactionRecord:
 
-# TODO: add APIs for coloured coins and RL wallet
+        request: Dict[str, Any] = {
+            "wallet_type": "pool_wallet",
+            "mode": mode,
+            "host": backup_host,
+            "initial_target_state": {
+                "target_puzzle_hash": target_puzzlehash.hex() if target_puzzlehash else None,
+                "relative_lock_height": relative_lock_height,
+                "pool_url": pool_url,
+                "state": state,
+            },
+        }
+        if p2_singleton_delay_time is not None:
+            request["p2_singleton_delay_time"] = p2_singleton_delay_time
+        if p2_singleton_delayed_ph is not None:
+            request["p2_singleton_delayed_ph"] = p2_singleton_delayed_ph.hex()
+        res = await self.fetch("create_new_wallet", request)
+        return TransactionRecord.from_json_dict(res["transaction"])
+
+    async def pw_self_pool(self, wallet_id: str) -> TransactionRecord:
+        return TransactionRecord.from_json_dict(
+            (await self.fetch("pw_self_pool", {"wallet_id": wallet_id}))["transaction"]
+        )
+
+    async def pw_join_pool(
+        self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32
+    ) -> TransactionRecord:
+        request = {
+            "wallet_id": int(wallet_id),
+            "target_puzzlehash": target_puzzlehash.hex(),
+            "relative_lock_height": relative_lock_height,
+            "pool_url": pool_url,
+        }
+        return TransactionRecord.from_json_dict((await self.fetch("pw_join_pool", request))["transaction"])
+
+    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> TransactionRecord:
+        return TransactionRecord.from_json_dict(
+            (await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee}))["transaction"]
+        )
+
+    async def pw_status(self, wallet_id: str) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
+        json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
+        return (
+            PoolWalletInfo.from_json_dict(json_dict["state"]),
+            [TransactionRecord.from_json_dict(tr) for tr in json_dict["unconfirmed_transactions"]],
+        )

@@ -104,6 +104,7 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
+        self.uncompact_task = None
 
         self.log = logging.getLogger(name if name else __name__)
 
@@ -152,7 +153,6 @@ class FullNode:
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        self.uncompact_task = None
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
@@ -1792,9 +1792,12 @@ class FullNode:
         full_blocks = await self.block_store.get_full_blocks_at([height])
         assert len(full_blocks) > 0
         replaced = False
+        expected_header_hash = self.blockchain.height_to_hash(height)
         for block in full_blocks:
             new_block = None
-            block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
+            if block.header_hash != expected_header_hash:
+                continue
+            block_record = await self.blockchain.get_block_record_from_db(expected_header_hash)
             assert block_record is not None
 
             if field_vdf == CompressibleVDFField.CC_EOS_VDF:
