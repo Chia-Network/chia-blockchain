@@ -26,6 +26,9 @@ mkdir dist
 
 echo "Install pyinstaller and build bootloaders for M1"
 #pip install pyinstaller==4.3
+# Once there is a 4.4, we can clone that tag and build that
+# M1 support isn't in a tag yet.
+# Alternatively, if the m1 bootloaders are distributed with pip in the future, can just use those
 git clone https://github.com/pyinstaller/pyinstaller.git
 cd pyinstaller/bootloader
 python ./waf all
