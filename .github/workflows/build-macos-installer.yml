@@ -126,6 +126,7 @@ jobs:
         sudo installer -pkg AWSCLIV2.pkg -target /
 
     - name: Configure AWS Credentials
+      if: steps.check_secrets.outputs.HAS_SECRET
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}

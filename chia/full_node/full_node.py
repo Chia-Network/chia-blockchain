@@ -1765,9 +1765,12 @@ class FullNode:
         full_blocks = await self.block_store.get_full_blocks_at([height])
         assert len(full_blocks) > 0
         replaced = False
+        expected_header_hash = self.blockchain.height_to_hash(height)
         for block in full_blocks:
             new_block = None
-            block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
+            if block.header_hash != expected_header_hash:
+                continue
+            block_record = await self.blockchain.get_block_record_from_db(expected_header_hash)
             assert block_record is not None
 
             if field_vdf == CompressibleVDFField.CC_EOS_VDF:
