@@ -44,11 +44,11 @@ On the blockchain of the Chives network, there is no upper limit to the total nu
 A block is generated every 18.75 seconds, and each block rewards 200 Chives. Of this, 45% is allocated to miners, another 45% is allocated to the master nodes, and 10% is allocated to the community. Halving of block rewards in 3 years, to a final reward rate of 12.5 Chives every 10 minutes from the 13th year.
 
 # 6 What problems does Chives solve?
-1) Chives officially reserves a large number of coins.
+1) Chia officially reserves a large number of coins.
 
-The official developers of Chives coin reserve 21 Millions coins for their own use, which is unfair to everyone who participates in Chia. The 21 Millions coins officially reserved are equivalent to the total reward of all miners mining for a 12 years straight.
+The official developers of Chia coin reserve 21 Millions coins for their own use, which is unfair to everyone who participates in Chia. The 21 Millions coins officially reserved are equivalent to the total reward of all miners mining for 12 years straight.
 
-2) The problem of concentration of computing power caused by the large-scale mining pool of Chives coin.
+2) The problem of concentration of computing power caused by the large-scale mining pool of Chia coin.
 
 In order to prevent the participation of large mining pools from causing too low returns for retail investors, Chives refers to Dash’s governance model, citing the concept of master nodes and community autonomy.
 
