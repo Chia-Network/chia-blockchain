@@ -117,7 +117,7 @@ jobs:
       - name: Upload MacOS artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: Chia-Installer-on-MacOS-10.15-dmg
+          name: Chia-Installer-MacOS-arm64-dmg
           path: ${{ github.workspace }}/build_scripts/final_installer/
 
 #    - name: Install AWS CLI
