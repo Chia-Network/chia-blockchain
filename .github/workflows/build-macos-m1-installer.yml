@@ -1,0 +1,160 @@
+name: MacOS M1 installer on Python 3.9
+
+on:
+  push:
+    branches:
+      - main
+      - m1 # @TODO remove before merge
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: MacOS M1 installer on Python 3.9
+    runs-on: [m1]
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - name: Cancel previous runs on the same branch
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Cache npm
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: cache-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: ~/.npm
+          key: m1-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            m1-build-${{ env.cache-name }}-
+            m1-build-
+            m1-
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(arch -arm64 pip cache dir)"
+
+      - name: Cache pip
+        uses: actions/cache@v2.1.6
+        with:
+          # Note that new runners may break this https://github.com/actions/cache/issues/292
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: m1-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            m1-pip-
+
+      - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_SECRET
+          if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        env:
+          SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+
+      - name: Import Apple app signing certificate
+        if: steps.check_secrets.outputs.HAS_SECRET
+        uses: Apple-Actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
+          p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
+
+      - name: Run install script
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+          BUILD_VDF_CLIENT: "N"
+        run: |
+          arch -arm64 sh install.sh
+
+      - name: Install node 12.x
+        run: |
+          arch -arm64 brew install node@12
+
+      - name: Build MacOS DMG in Catalina
+        env:
+          NOTARIZE: ${{ steps.check_secrets.outputs.HAS_SECRET }}
+          APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
+          APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
+        run: |
+          arch -arm64 . ./activate
+          cd ./chia-blockchain-gui
+          arch -arm64 git status
+          cd ../build_scripts
+          arch -arm64 sh build_macos.sh
+
+      - name: Create installer version number
+        id: version_number
+        run: |
+          arch -arm64 . ./activate
+          echo "::set-output name=CHIA_INSTALLER_VERSION::$(arch -arm64 chia version)"
+
+      - name: Upload MacOS artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Chia-Installer-on-MacOS-10.15-dmg
+          path: ${{ github.workspace }}/build_scripts/final_installer/
+
+#    - name: Install AWS CLI
+#      run: |
+#        curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+#        sudo installer -pkg AWSCLIV2.pkg -target /
+#
+#    - name: Configure AWS Credentials
+#      if: steps.check_secrets.outputs.HAS_SECRET
+#      uses: aws-actions/configure-aws-credentials@v1
+#      with:
+#        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+#        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+#        aws-region: us-west-2
+#
+#    - name: Rename Artifact
+#      run: |
+#        ls
+#        mv ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg  ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg
+#
+#    - name: Create Checksums
+#      run: |
+#        ls
+#        shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.sha256
+#
+#    - name: Upload to s3
+#      if: steps.check_secrets.outputs.HAS_SECRET
+#      run: |
+#        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg s3://download-chia-net/builds/
+#
+#    - name: Install py3createtorrent
+#      if: startsWith(github.ref, 'refs/tags/')
+#      run: |
+#        pip3 install py3createtorrent
+
+#    - name: Create torrent
+#      if: startsWith(github.ref, 'refs/tags/')
+#      run: |
+#        py3createtorrent -t torrent.chia.net ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.torrent
+
+#Temporarily disable release uploads
+#    - name: Upload Release Files
+#      if: startsWith(github.ref, 'refs/tags/')
+#      run: |
+#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg s3://download-chia-net/install/
+#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.sha256 s3://download-chia-net/install/
+#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.torrent s3://download-chia-net/install/
