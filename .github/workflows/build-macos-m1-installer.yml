@@ -75,7 +75,7 @@ jobs:
       # Done now and at the end of the workflow in case the last workflow fails, and this is still around
       - name: Delete keychain if it already exists
         run:
-          security delete-keychain signing_temp.keychain
+          security delete-keychain signing_temp.keychain || true
 
       - name: Import Apple app signing certificate
         if: steps.check_secrets.outputs.HAS_SECRET
