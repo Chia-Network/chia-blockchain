@@ -3,13 +3,14 @@ import time
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, G1Element
 
 from sector.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from sector.harvester.harvester import Harvester
 from sector.plotting.plot_tools import PlotInfo, parse_plot_info
 from sector.protocols import harvester_protocol
 from sector.protocols.farmer_protocol import FarmingInfo
+from sector.protocols.harvester_protocol import Plot
 from sector.protocols.protocol_message_types import ProtocolMessageTypes
 from sector.server.outbound_message import make_msg
 from sector.server.ws_connection import WSSectorConnection
@@ -98,18 +99,27 @@ class HarvesterAPI:
 
                 responses: List[Tuple[bytes32, ProofOfSpace]] = []
                 if quality_strings is not None:
+                    difficulty = new_challenge.difficulty
+                    sub_slot_iters = new_challenge.sub_slot_iters
+                    if plot_info.pool_contract_puzzle_hash is not None:
+                        # If we are pooling, override the difficulty and sub slot iters with the pool threshold info.
+                        # This will mean more proofs actually get found, but they are only submitted to the pool,
+                        # not the blockchain
+                        for pool_difficulty in new_challenge.pool_difficulties:
+                            if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
+                                difficulty = pool_difficulty.difficulty
+                                sub_slot_iters = pool_difficulty.sub_slot_iters
+
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
                             quality_str,
                             plot_info.prover.get_size(),
-                            new_challenge.difficulty,
+                            difficulty,
                             new_challenge.sp_hash,
                         )
-                        sp_interval_iters = calculate_sp_interval_iters(
-                            self.harvester.constants, new_challenge.sub_slot_iters
-                        )
+                        sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
                             # Found a very good proof of space! will fetch the whole proof from disk,
                             # then send to farmer
@@ -130,8 +140,9 @@ class HarvesterAPI:
                                 local_master_sk,
                             ) = parse_plot_info(plot_info.prover.get_memo())
                             local_sk = master_sk_to_local_sk(local_master_sk)
+                            include_taproot = plot_info.pool_contract_puzzle_hash is not None
                             plot_public_key = ProofOfSpace.generate_plot_public_key(
-                                local_sk.get_g1(), farmer_public_key
+                                local_sk.get_g1(), farmer_public_key, include_taproot
                             )
                             responses.append(
                                 (
@@ -251,7 +262,13 @@ class HarvesterAPI:
         ) = parse_plot_info(plot_info.prover.get_memo())
         local_sk = master_sk_to_local_sk(local_master_sk)
 
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
+        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+            include_taproot = False
+        else:
+            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+            include_taproot = True
+
+        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
@@ -270,3 +287,24 @@ class HarvesterAPI:
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
+
+    @api_request
+    async def request_plots(self, _: harvester_protocol.RequestPlots):
+        plots_response = []
+        plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
+        for plot in plots:
+            plots_response.append(
+                Plot(
+                    plot["filename"],
+                    plot["size"],
+                    plot["plot_id"],
+                    plot["pool_public_key"],
+                    plot["pool_contract_puzzle_hash"],
+                    plot["plot_public_key"],
+                    plot["file_size"],
+                    plot["time_modified"],
+                )
+            )
+
+        response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
+        return make_msg(ProtocolMessageTypes.respond_plots, response)

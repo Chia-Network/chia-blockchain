@@ -56,6 +56,7 @@ class ConsensusConstants:
     NETWORK_TYPE: int
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
+    POOL_SUB_SLOT_ITERS: uint64
 
     def replace(self, **changes) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)

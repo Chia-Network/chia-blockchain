@@ -9,18 +9,22 @@ from sector.util.ints import uint64
 from sector.wallet.puzzles.load_clvm import load_clvm
 from sector.types.condition_opcodes import ConditionOpcode
 
-DID_CORE_MOD = load_clvm("singleton_top_layer.clvm")
+
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clvm")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
+SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
-    return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed)
+    # MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED
+    return DID_INNERPUZ_MOD.curry(pubkey, backup_ids_hash, num_of_backup_ids_needed)
 
 
-def create_fullpuz(innerpuz, genesis_puzhash) -> Program:
-    mod_hash = DID_CORE_MOD.get_tree_hash()
-    return DID_CORE_MOD.curry(mod_hash, genesis_puzhash, innerpuz)
+def create_fullpuz(innerpuz, genesis_id) -> Program:
+    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
+    return SINGLETON_TOP_LAYER_MOD.curry(mod_hash, genesis_id, LAUNCHER_PUZZLE.get_tree_hash(), innerpuz)
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
@@ -41,7 +45,7 @@ def is_did_innerpuz(inner_f: Program):
 
 
 def is_did_core(inner_f: Program):
-    return inner_f == DID_CORE_MOD
+    return inner_f == SINGLETON_TOP_LAYER_MOD
 
 
 def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
@@ -56,7 +60,7 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     if not is_did_innerpuz(inner_f):
         return None
 
-    core_mod, pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
+    pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
     return pubkey, id_list
 
 
@@ -71,8 +75,8 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
     return inner_puzzle
 
 
-def create_recovery_message_puzzle(recovering_coin: bytes32, newpuz: bytes32, pubkey: G1Element):
-    puzstring = f"(q . ((0x{ConditionOpcode.CREATE_COIN_ANNOUNCEMENT.hex()} 0x{recovering_coin.hex()}) (0x{ConditionOpcode.AGG_SIG_UNSAFE.hex()} 0x{bytes(pubkey).hex()} 0x{newpuz.hex()})))"  # noqa
+def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32, pubkey: G1Element):
+    puzstring = f"(q . ((0x{ConditionOpcode.CREATE_COIN_ANNOUNCEMENT.hex()} 0x{recovering_coin_id.hex()}) (0x{ConditionOpcode.AGG_SIG_UNSAFE.hex()} 0x{bytes(pubkey).hex()} 0x{newpuz.hex()})))"  # noqa
     puz = binutils.assemble(puzstring)
     return Program.to(puz)
 

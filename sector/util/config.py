@@ -15,8 +15,8 @@ def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
 
 
-def create_default_sector_config(root_path: Path) -> None:
-    for filename in ["config.yaml"]:
+def create_default_sector_config(root_path: Path, filenames=["config.yaml"]) -> None:
+    for filename in filenames:
         default_config_file_data = initial_config_file(filename)
         path = config_path_for_filename(root_path, filename)
         mkdir(path.parent)

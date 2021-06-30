@@ -1,5 +1,5 @@
 import io
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
 from clvm import run_program as default_run_program
@@ -54,6 +54,9 @@ class Program(SExp):
         assert f.read() == b""
         return result
 
+    def to_serialized_program(self) -> "SerializedProgram":
+        return SerializedProgram.from_bytes(bytes(self))
+
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # type: ignore # noqa
@@ -82,8 +85,11 @@ class Program(SExp):
         cost, r = curry(self, list(args))
         return Program.to(r)
 
-    def uncurry(self) -> Optional[Tuple["Program", "Program"]]:
-        return uncurry(self)
+    def uncurry(self) -> Tuple["Program", "Program"]:
+        r = uncurry(self)
+        if r is None:
+            return self, self.to(0)
+        return r
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
@@ -159,6 +165,18 @@ class SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(blob)
         return ret
+
+    @classmethod
+    def from_program(cls, p: Program) -> "SerializedProgram":
+        ret = SerializedProgram()
+        ret._buf = bytes(p)
+        return ret
+
+    def to_program(self) -> Program:
+        return Program.from_bytes(self._buf)
+
+    def uncurry(self) -> Tuple["Program", "Program"]:
+        return self.to_program().uncurry()
 
     def __bytes__(self) -> bytes:
         return self._buf

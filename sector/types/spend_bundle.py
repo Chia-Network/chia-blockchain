@@ -6,6 +6,7 @@ from blspy import AugSchemeMPL, G2Element
 from sector.types.blockchain_format.coin import Coin
 from sector.types.blockchain_format.sized_bytes import bytes32
 from sector.util.streamable import Streamable, streamable
+from sector.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_solution import CoinSolution
 
@@ -52,6 +53,9 @@ class SpendBundle(Streamable):
 
     def name(self) -> bytes32:
         return self.get_hash()
+
+    def debug(self, agg_sig_additional_data=bytes([3] * 32)):
+        debug_spend_bundle(self, agg_sig_additional_data)
 
     def not_ephemeral_additions(self):
         all_removals = self.removals()

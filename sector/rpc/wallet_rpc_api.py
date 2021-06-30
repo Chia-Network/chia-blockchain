@@ -9,6 +9,8 @@ from blspy import PrivateKey, G1Element
 
 from sector.cmds.init_funcs import check_keys
 from sector.consensus.block_rewards import calculate_base_farmer_reward
+from sector.pools.pool_wallet import PoolWallet
+from sector.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from sector.protocols.protocol_message_types import ProtocolMessageTypes
 from sector.server.outbound_message import NodeType, make_msg
 from sector.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -21,6 +23,7 @@ from sector.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from sector.util.path import path_from_root
 from sector.util.ws_message import WsRpcMessage, create_payload_dict
 from sector.wallet.cc_wallet.cc_wallet import CCWallet
+from sector.wallet.derive_keys import master_sk_to_singleton_owner_sk
 from sector.wallet.rl_wallet.rl_wallet import RLWallet
 from sector.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from sector.wallet.did_wallet.did_wallet import DIDWallet
@@ -70,10 +73,12 @@ class WalletRpcApi:
             "/get_transactions": self.get_transactions,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
+            "/send_transaction_multi": self.send_transaction_multi,
             "/create_backup": self.create_backup,
             "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
+            "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             # Coloured coins and trading
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
@@ -99,6 +104,11 @@ class WalletRpcApi:
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
+            # Pool Wallet
+            "/pw_join_pool": self.pw_join_pool,
+            "/pw_self_pool": self.pw_self_pool,
+            "/pw_absorb_rewards": self.pw_absorb_rewards,
+            "/pw_status": self.pw_status,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -332,10 +342,13 @@ class WalletRpcApi:
 
     async def create_new_wallet(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
+        if "fee" in request:
+            fee: uint64 = request["fee"]
+        else:
+            fee = uint64(0)
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
@@ -447,6 +460,50 @@ class WalletRpcApi:
                     "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
+        elif request["wallet_type"] == "pool_wallet":
+            if request["mode"] == "new":
+                owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
+
+                from sector.pools.pool_wallet_info import initial_pool_state_from_dict
+
+                async with self.service.wallet_state_manager.lock:
+                    last_wallet: Optional[
+                        WalletInfo
+                    ] = await self.service.wallet_state_manager.user_store.get_last_wallet()
+                    assert last_wallet is not None
+
+                    next_id = last_wallet.id + 1
+                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
+                        self.service.wallet_state_manager.private_key, uint32(next_id)
+                    )
+                    owner_pk: G1Element = owner_sk.get_g1()
+
+                    initial_target_state = initial_pool_state_from_dict(
+                        request["initial_target_state"], owner_pk, owner_puzzle_hash
+                    )
+                    assert initial_target_state is not None
+
+                    try:
+                        delayed_address = None
+                        if "p2_singleton_delayed_ph" in request:
+                            delayed_address = hexstr_to_bytes(request["p2_singleton_delayed_ph"])
+                        tr, p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
+                            wallet_state_manager,
+                            main_wallet,
+                            initial_target_state,
+                            fee,
+                            request.get("p2_singleton_delay_time", None),
+                            delayed_address,
+                        )
+                    except Exception as e:
+                        raise ValueError(str(e))
+                    return {
+                        "transaction": tr,
+                        "launcher_id": launcher_id.hex(),
+                        "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
+                    }
+            elif request["mode"] == "recovery":
+                raise ValueError("Need upgraded singleton for on-chain recovery")
 
             else:  # undefined did_type
                 pass
@@ -590,6 +647,46 @@ class WalletRpcApi:
             "transaction": tx,
             "transaction_id": tx.name,
         }
+
+    async def send_transaction_multi(self, request):
+        assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before sending transactions")
+
+        if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
+            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
+            raise ValueError(f"No transactions before: {end_date}")
+
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        async with self.service.wallet_state_manager.lock:
+            transaction: TransactionRecord = (await self.create_signed_transaction(request, hold_lock=False))[
+                "signed_tx"
+            ]
+            await wallet.push_transaction(transaction)
+
+        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
+        return {
+            "transaction": transaction,
+            "transaction_id": transaction.name,
+        }
+
+    async def delete_unconfirmed_transactions(self, request):
+        wallet_id = uint32(request["wallet_id"])
+        if wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet id {wallet_id} does not exist")
+        async with self.service.wallet_state_manager.lock:
+            async with self.service.wallet_state_manager.tx_store.db_wrapper.lock:
+                await self.service.wallet_state_manager.tx_store.db_wrapper.begin_transaction()
+                await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
+                if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
+                    self.service.wallet_state_manager.wallets[wallet_id].target_state = None
+                await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
+                # Update the cache
+                await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
+                return {}
 
     async def get_transaction_count(self, request):
         wallet_id = int(request["wallet_id"])
@@ -948,14 +1045,19 @@ class WalletRpcApi:
         fee_amount = 0
         last_height_farmed = 0
         for record in tx_records:
-            height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
-            if height > last_height_farmed:
-                last_height_farmed = height
+            if record.wallet_id not in self.service.wallet_state_manager.wallets:
+                continue
             if record.type == TransactionType.COINBASE_REWARD:
+                if self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
+                    # Don't add pool rewards for pool wallets.
+                    continue
                 pool_reward_amount += record.amount
+            height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
             if record.type == TransactionType.FEE_REWARD:
                 fee_amount += record.amount - calculate_base_farmer_reward(height)
                 farmer_reward_amount += calculate_base_farmer_reward(height)
+            if height > last_height_farmed:
+                last_height_farmed = height
             amount += record.amount
 
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
@@ -967,7 +1069,7 @@ class WalletRpcApi:
             "last_height_farmed": last_height_farmed,
         }
 
-    async def create_signed_transaction(self, request):
+    async def create_signed_transaction(self, request, hold_lock=True):
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
 
@@ -996,8 +1098,73 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        async with self.service.wallet_state_manager.lock:
+        if hold_lock:
+            async with self.service.wallet_state_manager.lock:
+                signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
+                    amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
+                )
+        else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                 amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
             )
         return {"signed_tx": signed_tx}
+
+    ##########################################################################################
+    # Pool Wallet
+    ##########################################################################################
+    async def pw_join_pool(self, request):
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+        owner_pubkey = pool_wallet_info.current.owner_pubkey
+        target_puzzlehash = None
+        if "target_puzzlehash" in request:
+            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+        new_target_state: PoolState = create_pool_state(
+            FARMING_TO_POOL,
+            target_puzzlehash,
+            owner_pubkey,
+            request["pool_url"],
+            uint32(request["relative_lock_height"]),
+        )
+        async with self.service.wallet_state_manager.lock:
+            tx: TransactionRecord = await wallet.join_pool(new_target_state)
+            return {"transaction": tx}
+
+    async def pw_self_pool(self, request):
+        # Leaving a pool requires two state transitions.
+        # First we transition to PoolSingletonState.LEAVING_POOL
+        # Then we transition to FARMING_TO_POOL or SELF_POOLING
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        async with self.service.wallet_state_manager.lock:
+            tx: TransactionRecord = await wallet.self_pool()
+            return {"transaction": tx}
+
+    async def pw_absorb_rewards(self, request):
+        """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before collecting rewards")
+
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        fee = uint64(request["fee"])
+
+        async with self.service.wallet_state_manager.lock:
+            transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
+            state: PoolWalletInfo = await wallet.get_current_state()
+        return {"state": state.to_json_dict(), "transaction": transaction}
+
+    async def pw_status(self, request):
+        """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
+        wallet_id = uint32(request["wallet_id"])
+        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.POOLING_WALLET.value:
+            raise ValueError(f"wallet_id {wallet_id} is not a pooling wallet")
+        state: PoolWalletInfo = await wallet.get_current_state()
+        unconfirmed_transactions: List[TransactionRecord] = await wallet.get_unconfirmed_transactions()
+        return {
+            "state": state.to_json_dict(),
+            "unconfirmed_transactions": unconfirmed_transactions,
+        }

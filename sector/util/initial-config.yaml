@@ -355,3 +355,5 @@ wallet:
 
   trusted_peers:
     trusted_node_1: "config/ssl/full_node/public_full_node.crt"
+
+  short_sync_blocks_behind_threshold: 20

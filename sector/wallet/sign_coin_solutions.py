@@ -1,7 +1,8 @@
-from typing import Callable, List, Optional
+import inspect
+from typing import List, Any
 
 import blspy
-from blspy import AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL
 
 from sector.types.coin_solution import CoinSolution
 from sector.types.spend_bundle import SpendBundle
@@ -10,7 +11,7 @@ from sector.util.condition_tools import conditions_dict_for_solution, pkm_pairs_
 
 async def sign_coin_solutions(
     coin_solutions: List[CoinSolution],
-    secret_key_for_public_key_f: Callable[[blspy.G1Element], Optional[PrivateKey]],
+    secret_key_for_public_key_f: Any,  # Potentially awaitable function from G1Element => Optional[PrivateKey]
     additional_data: bytes,
     max_cost: int,
 ) -> SpendBundle:
@@ -32,7 +33,10 @@ async def sign_coin_solutions(
         ):
             pk_list.append(pk)
             msg_list.append(msg)
-            secret_key = secret_key_for_public_key_f(pk)
+            if inspect.iscoroutinefunction(secret_key_for_public_key_f):
+                secret_key = await secret_key_for_public_key_f(pk)
+            else:
+                secret_key = secret_key_for_public_key_f(pk)
             if secret_key is None:
                 e_msg = f"no secret key for {pk}"
                 raise ValueError(e_msg)

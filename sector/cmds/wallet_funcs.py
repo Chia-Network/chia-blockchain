@@ -108,6 +108,25 @@ async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     res = await wallet_client.get_next_address(wallet_id, False)
     print(res)
 
+async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["id"]
+    await wallet_client.delete_unconfirmed_transactions(wallet_id)
+    print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
+
+
+def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
+    if typ == WalletType.COLOURED_COIN:
+        return "", units["colouredcoin"]
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+        return address_prefix, units["sector"]
+    return "", units["octet"]
+
+
+def print_balance(amount: int, scale: int, address_prefix: str) -> str:
+    ret = f"{amount/scale} {address_prefix} "
+    if scale > 1:
+        ret += f"({amount} octet)"
+    return ret
 
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()
@@ -120,26 +139,14 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     for summary in summaries_response:
         wallet_id = summary["id"]
         balances = await wallet_client.get_wallet_balance(wallet_id)
-        typ = WalletType(int(summary["type"])).name
-        if typ != "STANDARD_WALLET":
-            print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(f"   -Total Balance: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Spendable Balance: {balances['spendable_balance']/units['colouredcoin']}")
-        else:
-            print(f"Wallet ID {wallet_id} type {typ}")
-            print(
-                f"   -Total Balance: {balances['confirmed_wallet_balance']/units['sector']} {address_prefix} "
-                f"({balances['confirmed_wallet_balance']} octet)"
-            )
-            print(
-                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['sector']} {address_prefix} "
-                f"({balances['unconfirmed_wallet_balance']} octet)"
-            )
-            print(
-                f"   -Spendable: {balances['spendable_balance']/units['sector']} {address_prefix} "
-                f"({balances['spendable_balance']} octet)"
-            )
+        typ = WalletType(int(summary["type"]))
+        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
+        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
+        print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
+        print(
+            f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
+        )
+        print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
@@ -232,7 +239,10 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
         pass
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
+            print(
+                f"Connection error. Check if the wallet is running at {wallet_rpc_port}. "
+                "You can run the wallet via:\n\tchia start wallet"
+            )
         else:
             print(f"Exception from 'wallet' {e}")
     wallet_client.close()

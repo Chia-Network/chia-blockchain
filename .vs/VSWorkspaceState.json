@@ -11,6 +11,6 @@
     "\\tests\\wallet\\rl_wallet",
     "\\tests\\wallet\\rpc"
   ],
-  "SelectedNode": "\\sector",
+  "SelectedNode": "\\install-gui.sh",
   "PreviewInSolutionExplorer": false
 }

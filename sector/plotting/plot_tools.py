@@ -234,7 +234,10 @@ def load_plots(
 
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
+
+                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+                    local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
+                )
 
                 with plot_ids_lock:
                     if prover.get_id() in plot_ids:

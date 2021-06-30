@@ -1,9 +1,12 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from sector.consensus.block_record import BlockRecord
+from sector.full_node.signage_point import SignagePoint
 from sector.rpc.rpc_client import RpcClient
 from sector.types.blockchain_format.sized_bytes import bytes32
 from sector.types.coin_record import CoinRecord
+from sector.types.coin_solution import CoinSolution
+from sector.types.end_of_slot_bundle import EndOfSubSlotBundle
 from sector.types.full_block import FullBlock
 from sector.types.spend_bundle import SpendBundle
 from sector.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -72,6 +75,13 @@ class FullNodeRpcClient(RpcClient):
             return None
         return network_space_bytes_estimate["space"]
 
+    async def get_coin_record_by_name(self, coin_id: bytes32) -> Optional[CoinRecord]:
+        try:
+            response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
+        except Exception:
+            return None
+        return CoinRecord.from_json_dict(response["coin_record"])
+
     async def get_coin_records_by_puzzle_hash(
         self,
         puzzle_hash: bytes32,
@@ -133,6 +143,13 @@ class FullNodeRpcClient(RpcClient):
     async def push_tx(self, spend_bundle: SpendBundle):
         return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
 
+    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinRecord]:
+        try:
+            response = await self.fetch("get_puzzle_and_solution", {"coin_id": coin_id.hex(), "height": height})
+            return CoinSolution.from_json_dict(response["coin_solution"])
+        except Exception:
+            return None
+
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         response = await self.fetch("get_all_mempool_tx_ids", {})
         return [bytes32(hexstr_to_bytes(tx_id_hex)) for tx_id_hex in response["tx_ids"]]
@@ -148,5 +165,28 @@ class FullNodeRpcClient(RpcClient):
         try:
             response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
             return response["mempool_item"]
+        except Exception:
+            return None
+
+    async def get_recent_signage_point_or_eos(
+        self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
+    ) -> Optional[Any]:
+        try:
+            if sp_hash is not None:
+                assert challenge_hash is None
+                response = await self.fetch("get_recent_signage_point_or_eos", {"sp_hash": sp_hash.hex()})
+                return {
+                    "signage_point": SignagePoint.from_json_dict(response["signage_point"]),
+                    "time_received": response["time_received"],
+                    "reverted": response["reverted"],
+                }
+            else:
+                assert challenge_hash is not None
+                response = await self.fetch("get_recent_signage_point_or_eos", {"challenge_hash": challenge_hash.hex()})
+                return {
+                    "eos": EndOfSubSlotBundle.from_json_dict(response["eos"]),
+                    "time_received": response["time_received"],
+                    "reverted": response["reverted"],
+                }
         except Exception:
             return None
