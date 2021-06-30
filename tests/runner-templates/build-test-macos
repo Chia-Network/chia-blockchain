@@ -83,7 +83,7 @@ INSTALL_TIMELORD
     - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test TEST_DIR -s -v --durations 0 PYTEST_PARALLEL_ARGS
+        ./venv/bin/py.test TEST_DIR -s -v PYTEST_PARALLEL_ARGS --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
