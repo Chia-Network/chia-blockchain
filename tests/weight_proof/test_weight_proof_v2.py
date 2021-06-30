@@ -16,11 +16,11 @@ from chia.server.start_full_node import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.block_cache import BlockCache
-from chia.util.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
+from tests.block_tools import test_constants
 from tests.setup_nodes import bt
 from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
