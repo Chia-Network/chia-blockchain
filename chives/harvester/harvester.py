@@ -72,7 +72,7 @@ class Harvester:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    def on_disconnect(self, connection: ws.WSChiaConnection):
+    def on_disconnect(self, connection: ws.WSChivesConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self._state_changed("close_connection")
 

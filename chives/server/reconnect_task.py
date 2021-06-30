@@ -1,11 +1,11 @@
 import asyncio
 import socket
 
-from chives.server.server import ChiaServer
+from chives.server.server import ChivesServer
 from chives.types.peer_info import PeerInfo
 
 
-def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool):
+def start_reconnect_task(server: ChivesServer, peer_info_arg: PeerInfo, log, auth: bool):
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """

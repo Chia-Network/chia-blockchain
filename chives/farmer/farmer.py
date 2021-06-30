@@ -12,7 +12,7 @@ from chives.consensus.constants import ConsensusConstants
 from chives.protocols import farmer_protocol, harvester_protocol
 from chives.protocols.protocol_message_types import ProtocolMessageTypes
 from chives.server.outbound_message import NodeType, make_msg
-from chives.server.ws_connection import WSChiaConnection
+from chives.server.ws_connection import WSChivesConnection
 from chives.types.blockchain_format.proof_of_space import ProofOfSpace
 from chives.types.blockchain_format.sized_bytes import bytes32
 from chives.util.bech32m import decode_puzzle_hash
@@ -103,7 +103,7 @@ class Farmer:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    async def on_connect(self, peer: WSChiaConnection):
+    async def on_connect(self, peer: WSChivesConnection):
         # Sends a handshake to the harvester
         self.state_changed("add_connection", {})
         handshake = harvester_protocol.HarvesterHandshake(
@@ -121,7 +121,7 @@ class Farmer:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, data)
 
-    def on_disconnect(self, connection: ws.WSChiaConnection):
+    def on_disconnect(self, connection: ws.WSChivesConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 

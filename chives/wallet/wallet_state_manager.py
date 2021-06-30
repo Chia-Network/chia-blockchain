@@ -54,7 +54,7 @@ from chives.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chives.wallet.wallet_sync_store import WalletSyncStore
 from chives.wallet.wallet_transaction_store import WalletTransactionStore
 from chives.wallet.wallet_user_store import WalletUserStore
-from chives.server.server import ChiaServer
+from chives.server.server import ChivesServer
 from chives.wallet.did_wallet.did_wallet import DIDWallet
 
 
@@ -99,7 +99,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     weight_proof_handler: Any
-    server: ChiaServer
+    server: ChivesServer
 
     @staticmethod
     async def create(
@@ -107,7 +107,7 @@ class WalletStateManager:
         config: Dict,
         db_path: Path,
         constants: ConsensusConstants,
-        server: ChiaServer,
+        server: ChivesServer,
         name: str = None,
     ):
         self = WalletStateManager()

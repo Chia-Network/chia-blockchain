@@ -15,7 +15,7 @@ except ImportError:
 
 from chives.rpc.rpc_server import start_rpc_server
 from chives.server.outbound_message import NodeType
-from chives.server.server import ChiaServer
+from chives.server.server import ChivesServer
 from chives.server.upnp import UPnP
 from chives.types.peer_info import PeerInfo
 from chives.util.chives_logging import initialize_logging
@@ -79,7 +79,7 @@ class Service:
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
         assert inbound_rlp and outbound_rlp
-        self._server = ChiaServer(
+        self._server = ChivesServer(
             advertised_port,
             node,
             peer_api,
@@ -221,7 +221,7 @@ class Service:
 
         self._log.info("Waiting for socket to be closed (if opened)")
 
-        self._log.info("Waiting for ChiaServer to be closed")
+        self._log.info("Waiting for ChivesServer to be closed")
         await self._server.await_closed()
 
         if self._rpc_close_task:
