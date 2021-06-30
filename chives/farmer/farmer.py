@@ -73,13 +73,13 @@ class Farmer:
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
-        self.farmer_target_encoded = self.config["xch_target_address"]
+        self.farmer_target_encoded = self.config["xcc_target_address"]
         self.farmer_target = decode_puzzle_hash(self.farmer_target_encoded)
 
         self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
-        self.pool_target_encoded = pool_config["xch_target_address"]
+        self.pool_target_encoded = pool_config["xcc_target_address"]
         self.pool_target = decode_puzzle_hash(self.pool_target_encoded)
         self.pool_sks_map: Dict = {}
         for key in self.get_private_keys():
@@ -161,11 +161,11 @@ class Farmer:
         if farmer_target_encoded is not None:
             self.farmer_target_encoded = farmer_target_encoded
             self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
-            config["farmer"]["xch_target_address"] = farmer_target_encoded
+            config["farmer"]["xcc_target_address"] = farmer_target_encoded
         if pool_target_encoded is not None:
             self.pool_target_encoded = pool_target_encoded
             self.pool_target = decode_puzzle_hash(pool_target_encoded)
-            config["pool"]["xch_target_address"] = pool_target_encoded
+            config["pool"]["xcc_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
     async def _periodically_clear_cache_and_refresh_task(self):
