@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -euo pipefail
+
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined.
 # If the env variable NOTARIZE and the username and password variables are
@@ -78,6 +81,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-dmg failed!"
 	exit $LAST_EXIT_CODE
 fi
+
+ls -lh final_installer
 
 if [ "$NOTARIZE" ]; then
 	echo "Notarize $DMG_NAME on ci"
