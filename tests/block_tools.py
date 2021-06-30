@@ -16,7 +16,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate
+from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
@@ -129,7 +129,7 @@ class BlockTools:
         constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
         const_dict=None,
-        connect_to_daemon: bool = False,
+        keychain: Optional[Keychain] = None,
     ):
         self._tempdir = None
         if root_path is None:
@@ -137,7 +137,8 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        self.connect_to_daemon = connect_to_daemon
+        self.local_keychain = keychain
+
         create_default_chia_config(root_path)
 
         asyncio.run(self.init_keys())
@@ -166,14 +167,15 @@ class BlockTools:
         self.constants = updated_constants
 
     async def init_keys(self):
-        keychain_user = "testing-1.8.0"
-        keychain_testing = True
-        local_keychain = (
-            Keychain(user=keychain_user, testing=keychain_testing) if self.connect_to_daemon is False else None
-        )
-        self.keychain_proxy = await connect_to_keychain_and_validate(
-            self.root_path, log, local_keychain, keychain_user, keychain_testing
-        )
+        if self.local_keychain:
+            self.keychain_proxy = wrap_local_keychain(self.local_keychain)
+        else:
+            keychain_user = "testing-1.8.0"
+            keychain_testing = True
+            self.keychain_proxy = await connect_to_keychain_and_validate(
+                self.root_path, log, keychain_user, keychain_testing
+            )
+
         await self.keychain_proxy.delete_all_keys()
         self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
         self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
