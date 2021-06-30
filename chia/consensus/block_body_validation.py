@@ -456,6 +456,7 @@ async def validate_block_body(
         for npc in npc_list:
             assert height is not None
             unspent = removal_coin_records[npc.coin_name]
+            assert unspent.coin.name() == npc.coin_name
             error = mempool_check_conditions_dict(
                 unspent,
                 coin_announcement_names,
