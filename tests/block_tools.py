@@ -141,7 +141,7 @@ class BlockTools:
 
         create_default_chia_config(root_path)
 
-        asyncio.run(self.init_keys())
+        asyncio.get_event_loop().run_until_complete(self.init_keys())
 
         self.init_plots(root_path)
 

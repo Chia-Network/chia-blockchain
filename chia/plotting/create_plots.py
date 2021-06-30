@@ -155,7 +155,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         args.connect_to_daemon,
     )
 
-    asyncio.run(keys_resolver.resolve())
+    asyncio.get_event_loop().run_until_complete(keys_resolver.resolve())
 
     farmer_public_key: G1Element = keys_resolver.farmer_public_key_g1element
     pool_public_key: G1Element = keys_resolver.pool_public_key_g1element
