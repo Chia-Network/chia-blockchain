@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-26 08:32\n"
+"PO-Revision-Date: 2021-06-30 06:04\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -82,7 +82,7 @@ msgstr "Tilføj Plot til Kø"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
-#~ msgstr "Tilføj pung"
+#~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
@@ -248,7 +248,7 @@ msgstr "Køb"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
-#~ msgstr "CC Pung"
+#~ msgstr "CC Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -457,7 +457,7 @@ msgstr "Opret Bud"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
-#~ msgstr "Generer Plotfil"
+#~ msgstr "Create Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:188
 msgid "Create Rate Limited Admin Wallet"
@@ -557,7 +557,7 @@ msgstr "ADVARSEL: permanent sletning af privat nøgle"
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
-#~ msgstr "DID pung"
+#~ msgstr "DID Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -697,7 +697,7 @@ msgstr "Estimeret Tid til Gevinst"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Estimated network space"
-#~ msgstr "Estimeret netværk størrelse"
+#~ msgstr "Estimated network space"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -852,7 +852,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
-#~ msgstr "Fuld Node Status"
+#~ msgstr "Full Node Status"
 
 #: src/electron/main.tsx:332
 msgid "Full Screen"
@@ -1611,7 +1611,7 @@ msgstr "RAM max forbrug"
 
 #: src/components/wallet/Wallets.tsx:51
 #~ msgid "RL Wallet"
-#~ msgstr "RL Pung"
+#~ msgstr "RL Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -2218,7 +2218,7 @@ msgstr "VDF blok iterationer"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 #~ msgid "Value is too high"
-#~ msgstr ""
+#~ msgstr "Value is too high"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
@@ -2497,3 +2497,4 @@ msgstr "{currencyCode} Bruger Transaktionsgebyrer"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
