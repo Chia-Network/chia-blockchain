@@ -65,7 +65,6 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
             print("*** BAD PUZZLE REVEAL")
             print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_spend.coin.puzzle_hash.hex()}")
             print("*" * 80)
-            breakpoint()
             continue
 
         print(f"consuming coin {dump_coin(coin)}")
