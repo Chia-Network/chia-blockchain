@@ -6,12 +6,16 @@ import { FormatLargeNumber } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardDifficulty() {
-  const value = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state?.difficulty,
+  const state = useSelector(
+    (state: RootState) => state.full_node_state.blockchain_state,
   );
+
+  const loading = !state;
+  const value = state?.difficulty;
 
   return (
     <FarmCard
+      loading={loading}
       valueColor="textPrimary"
       title={<Trans>Difficulty</Trans>}
       value={<FormatLargeNumber value={value} />}

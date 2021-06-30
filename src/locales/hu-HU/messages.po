@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Fejlesztői eszközök"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Bonyolultság"
 
@@ -1123,7 +1123,7 @@ msgstr "A több memória kissé növeli a sebességet"
 msgid "My Pubkey"
 msgstr "Publikus kulcsom"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Hálózat neve"
 
@@ -1196,7 +1196,7 @@ msgstr "Még egyik kerted sem ment át a kert szűrőn."
 msgid "Not Available"
 msgstr "Nem elérhető"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Nem szinkronizált"
@@ -1255,7 +1255,7 @@ msgstr "Az egyes tranzakciós blokkok között átlagosan egy perc van. Hacsak n
 msgid "Outgoing"
 msgstr "Kimenő"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Csúcsmagasság"
 
@@ -1263,7 +1263,7 @@ msgstr "Csúcsmagasság"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Csúcsidôszak"
 
@@ -1857,7 +1857,8 @@ msgstr "Költési limit (chia / intervallum): {0}"
 msgid "State"
 msgstr "Megye"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "Állapot:"
 msgid "Submit"
 msgstr "Elküldés"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Szinkronizálva"
@@ -1917,7 +1918,7 @@ msgstr "Szinkronizálva"
 msgid "Syncing"
 msgstr "Szinkronizálás folyamatban"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Szinkronizálás <0/>/<1/>"
 
@@ -1970,11 +1971,11 @@ msgstr "A teljes node, melyhez a farmer csatlakozik. <0>További információ</0
 msgid "The minimum required size for mainnet is k=32"
 msgstr "A mainnet legkisebb megengedett mérete k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "A node nincs szinkronizálva"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "A node szinkronizál, azaz más csomópontokról tölt le blokkokat amíg eléri a legfrissebb blokkot a blokkláncon"
 
@@ -2039,7 +2040,7 @@ msgstr ""
 "Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
 "Nem tartalmazza a termesztési díjakat."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "Ez a legutóbbi csúcs alblokk ideje."
 
@@ -2065,7 +2066,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "Ez a csomópont teljesen felzárkózott és érvényesíti a hálózatot"
 
@@ -2119,7 +2120,7 @@ msgstr "Teljes egyenleg"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Összes ismétlések száma"
 
@@ -2139,7 +2140,7 @@ msgstr "Parcella fájlok összes mérete"
 msgid "Total VDF Iterations"
 msgstr "Összes VDF ismétlések száma"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Összes ismétlések száma a blokklánc indulása óta"
 
@@ -2398,7 +2399,7 @@ msgstr "Jelenleg {0}% tárhely kapacitással rendelkezel a hálózaton, amivel m
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

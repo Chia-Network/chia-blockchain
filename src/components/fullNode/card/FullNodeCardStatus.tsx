@@ -10,10 +10,11 @@ const StyledWarning = styled.span`
   color: #f7ca3e;
 `;
 
-function getData(state) {
-  if (state?.sync && state?.sync?.sync_mode) {
-    const progress = state?.sync?.sync_progress_height;
-    const tip = state?.sync?.sync_tip_height;
+function getData(sync) {
+  if (sync.sync_mode) {
+    const progress = sync.sync_progress_height;
+    const tip = sync.sync_tip_height;
+
     return {
       value: (
         <StyledWarning>
@@ -31,7 +32,7 @@ function getData(state) {
         </Trans>
       ),
     };
-  } else if (!state?.sync?.synced) {
+  } else if (!sync.synced) {
     return {
       value: <Trans>Not Synced</Trans>,
       color: 'error',
@@ -53,7 +54,17 @@ export default function FullNodeCardStatus() {
     (state: RootState) => state.full_node_state.blockchain_state,
   );
 
-  const { value, tooltip, color } = getData(state);
+  const loading = !state || !state.sync;
+  if (loading) {
+    return (
+      <FarmCard
+        loading
+        title={<Trans>Status</Trans>}
+      />
+    );
+  }
+
+  const { value, tooltip, color } = getData(state?.sync);
 
   return (
     <FarmCard

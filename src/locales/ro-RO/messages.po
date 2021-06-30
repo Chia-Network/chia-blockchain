@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Unelte Dezvoltator"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Dificultate"
 
@@ -1123,7 +1123,7 @@ msgstr "Mai multă memorie crește ușor viteza"
 msgid "My Pubkey"
 msgstr "Cheia mea publică"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Nume Rețea"
 
@@ -1196,7 +1196,7 @@ msgstr "Niciuna din parcelele tale nu a trecut încă filtrul."
 msgid "Not Available"
 msgstr "Indisponibil"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Nesincronizat"
@@ -1255,7 +1255,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr "Expedieri"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Înălțimea Vârfului"
 
@@ -1263,7 +1263,7 @@ msgstr "Înălțimea Vârfului"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Timpul Vârfului"
 
@@ -1857,7 +1857,8 @@ msgstr "Limită de cheltuieli (Chia per interval): {0}"
 msgid "State"
 msgstr "Stare"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Trimite"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Sincronizat"
@@ -1917,7 +1918,7 @@ msgstr "Sincronizat"
 msgid "Syncing"
 msgstr "Se sincronizează"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr ""
 
@@ -1970,11 +1971,11 @@ msgstr "Nodul la care este conectat fermierul tău este mai jos. <0> Află mai m
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Dimensiunea minimă necesară pentru mainnet este k = 32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "Nodul nu este sincronizat"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Nodul se sincronizează, ceea ce înseamnă că descarcă blocuri din alte noduri, pentru a ajunge la cel mai recent bloc din lanț"
 
@@ -2037,7 +2038,7 @@ msgstr "Aceasta este schimbarea în așteptare, care sunt monede de schimb pe ca
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Aceasta este suma tranzacțiilor în așteptare primite și expediate (neincluse încă în blockchain). Aceasta nu include recompensele."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "Acesta este momentul celui mai recent subbloc peak."
 
@@ -2063,7 +2064,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "Acest nod este complet prins și validează rețeaua"
 
@@ -2117,7 +2118,7 @@ msgstr "Sold Total"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Iteratii totale"
 
@@ -2137,7 +2138,7 @@ msgstr "Dimensiunea totală a parcelelor"
 msgid "Total VDF Iterations"
 msgstr "Totalul iteratiilor VDF"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Totalul iteratiilor de la inceputul blockchain-ului"
 
@@ -2396,7 +2397,7 @@ msgstr ""
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

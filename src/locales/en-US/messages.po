@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Developer Tools"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Difficulty"
 
@@ -1123,7 +1123,7 @@ msgstr "More memory slightly increases speed"
 msgid "My Pubkey"
 msgstr "My Pubkey"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Network Name"
 
@@ -1196,7 +1196,7 @@ msgstr "None of your plots have passed the plot filter yet."
 msgid "Not Available"
 msgstr "Not Available"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Not Synced"
@@ -1255,7 +1255,7 @@ msgstr "On average there is one minute between each transaction block. Unless th
 msgid "Outgoing"
 msgstr "Outgoing"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Peak Height"
 
@@ -1263,7 +1263,7 @@ msgstr "Peak Height"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Peak Time"
 
@@ -1857,7 +1857,8 @@ msgstr "Spending Limit (chia per interval): {0}"
 msgid "State"
 msgstr "State"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Submit"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Synced"
@@ -1917,7 +1918,7 @@ msgstr "Synced"
 msgid "Syncing"
 msgstr "Syncing"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Syncing <0/>/<1/>"
 
@@ -1970,11 +1971,11 @@ msgstr "The full node that your farmer is connected to is below. <0>Learn more</
 msgid "The minimum required size for mainnet is k=32"
 msgstr "The minimum required size for mainnet is k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "The node is not synced"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 
@@ -2037,7 +2038,7 @@ msgstr "This is the pending change, which are change coins which you have sent t
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "This is the time of the latest peak sub block."
 
@@ -2063,7 +2064,7 @@ msgstr "This is the total number of points this plotNFT has with this pool, sinc
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "This node is fully caught up and validating the network"
 
@@ -2117,7 +2118,7 @@ msgstr "Total Balance"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Total Iterations"
 
@@ -2137,7 +2138,7 @@ msgstr "Total Size of Plots"
 msgid "Total VDF Iterations"
 msgstr "Total VDF Iterations"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Total iterations since the start of the blockchain"
 
@@ -2396,7 +2397,7 @@ msgstr "You have {0}% of the space on the network, so farming a block will take 
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr "You need to claim your rewards first"
 

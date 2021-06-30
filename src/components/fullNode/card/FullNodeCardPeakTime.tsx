@@ -7,15 +7,18 @@ import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardPeakTime() {
   const latestPeakTimestamp = useSelector(
-    (state: RootState) => state.full_node_state.latest_peak_timestamp,
+    (state: RootState) => state.full_node_state?.latest_peak_timestamp,
   );
 
   const value = latestPeakTimestamp
     ? unix_to_short_date(latestPeakTimestamp)
     : '';
+  
+  const loading = value === undefined;
 
   return (
     <FarmCard
+      loading={loading}
       valueColor="textPrimary"
       title={<Trans>Peak Time</Trans>}
       tooltip={<Trans>This is the time of the latest peak sub block.</Trans>}

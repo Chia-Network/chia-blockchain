@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Eines de desenvolupament"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Dificultat"
 
@@ -1123,7 +1123,7 @@ msgstr "Més memòria fa augmentar una mica la velocitat"
 msgid "My Pubkey"
 msgstr "La meva clau pública"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Nom de xarxa"
 
@@ -1196,7 +1196,7 @@ msgstr "Cap de les teves parcel·les ha passat encara el filtre de parcel·les."
 msgid "Not Available"
 msgstr "No disponible"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "No sincronitzat"
@@ -1255,7 +1255,7 @@ msgstr "De mitjana passa un minut entre cada transacció de block. A no ser que 
 msgid "Outgoing"
 msgstr "Sortint"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Alçada màxima"
 
@@ -1263,7 +1263,7 @@ msgstr "Alçada màxima"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Hora punta"
 
@@ -1857,7 +1857,8 @@ msgstr "Límit de despesa (Chia per interval): {0}"
 msgid "State"
 msgstr "Estat"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "Estat:"
 msgid "Submit"
 msgstr "Enviar"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Sincronitzat"
@@ -1917,7 +1918,7 @@ msgstr "Sincronitzat"
 msgid "Syncing"
 msgstr "Sincronitzant"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Sincronitzant <0/>/<1/>"
 
@@ -1970,11 +1971,11 @@ msgstr "El node complet al que s'està connectant el teu pagès és a continuaci
 msgid "The minimum required size for mainnet is k=32"
 msgstr "La mida mínima requerida per la xarxa principal és k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "El node no està sincronitzat"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "El node està sincronitzant, el que significa que està descarregant blocs d'altres nodes, per a assolir l'últim bloc de la cadena"
 
@@ -2037,7 +2038,7 @@ msgstr "Aquest és el canvi pendent, que són monedes que t'has enviat a tu mate
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Aquesta és la suma de les transaccions pendents entrants i sortints (encara no incloses a la cadena de blocs). Això no inclou les recompenses per cultivar."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "Aquesta és l'hora de l'últim sub bloc de punt més alt."
 
@@ -2063,7 +2064,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "Aquest node està al dia i valida la xarxa"
 
@@ -2117,7 +2118,7 @@ msgstr "Saldo total"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Iteracions totals"
 
@@ -2137,7 +2138,7 @@ msgstr "Mida total de les parcel·les"
 msgid "Total VDF Iterations"
 msgstr "Iteracions VDF totals"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Iteracions totals des de l'inici de la cadena de blocs"
 
@@ -2396,7 +2397,7 @@ msgstr "Tens un {0}% de l'espai a la xarxa, per tant trigaràs aproximadament {e
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

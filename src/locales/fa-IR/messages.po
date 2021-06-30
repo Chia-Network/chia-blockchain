@@ -624,7 +624,7 @@ msgid "Developer Tools"
 msgstr "ابزارهای توسعه دهنده"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "سختی"
 
@@ -1129,7 +1129,7 @@ msgstr "حافظه بیشتر سرعت را کمی افزایش می دهد"
 msgid "My Pubkey"
 msgstr "کلید عمومی من"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "نام شبکه"
 
@@ -1202,7 +1202,7 @@ msgstr "هنوز هیچ یک از پلات های شما از فیلتر طرح 
 msgid "Not Available"
 msgstr "در دسترس نیست"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "همگام سازی نشده است"
@@ -1263,7 +1263,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr "در حال خروج"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "حداکثر ارتفاع"
 
@@ -1271,7 +1271,7 @@ msgstr "حداکثر ارتفاع"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "حداکثر زمان"
 
@@ -1865,7 +1865,8 @@ msgstr "محدودیت خرج کردن (چیـا بر فاصله): {0}"
 msgid "State"
 msgstr "حالت"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1913,7 +1914,7 @@ msgstr "وضعیت:"
 msgid "Submit"
 msgstr "ثبت و ارسال"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "همگام سازی شده"
@@ -1925,7 +1926,7 @@ msgstr "همگام سازی شده"
 msgid "Syncing"
 msgstr "در حال همگام‌سازی"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Syncing <0/>/<1/>"
 
@@ -1978,11 +1979,11 @@ msgstr "گره کاملی که مزرعه شما به آن متصل است. <0>�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "حداقل اندازه مورد نیاز برای شبکه اصلی k = 32 است"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "گره همگام سازی نشده"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "گره در حال همگام‌سازی است، به این معنی که بلاک‌ها را از گره‌های دیگر بارگیری می‌کند تا به آخرین بلاک در زنجیره برسد"
 
@@ -2047,7 +2048,7 @@ msgstr ""
 "این مجموع تراکنش‌های در حال واریز و در حال برداشت شما است (که هنوز وارد زنجیره بلاکی نشده‌اند).\n"
 "این شامل پاداش‌های مزرعه‌داری نمی‌شود."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "این مدت زمان به حداکثر رسیدن آخرین زیربلاک است."
 
@@ -2073,7 +2074,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "این گره کاملا درگیر و در حال اعتبار سنجی شبکه است"
 
@@ -2129,7 +2130,7 @@ msgstr "موجودی کل"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "کل تکرار ها"
 
@@ -2149,7 +2150,7 @@ msgstr "جمع اندازه پلات ها"
 msgid "Total VDF Iterations"
 msgstr "کل تکرار های VDF"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "کل تکرارها از زمان شروع زنجیره بلوکی"
 
@@ -2412,7 +2413,7 @@ msgstr ""
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

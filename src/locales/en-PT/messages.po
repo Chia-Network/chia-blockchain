@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Builder Tools"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Pirate-huntin' fleets"
 
@@ -1123,7 +1123,7 @@ msgstr "More memory makes it wee faster"
 msgid "My Pubkey"
 msgstr "My Pubkey"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Ocean"
 
@@ -1196,7 +1196,7 @@ msgstr "None of your barrages has hit a ship."
 msgid "Not Available"
 msgstr "Nothin' 'ere"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Not Over the Horizon Yet"
@@ -1255,7 +1255,7 @@ msgstr "On average we got a transaction booty every minute. If pirates aren't mo
 msgid "Outgoing"
 msgstr "Goin' Out"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Ships taken all o'er the seas"
 
@@ -1263,7 +1263,7 @@ msgstr "Ships taken all o'er the seas"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Time o' last lucky boardin'"
 
@@ -1857,7 +1857,8 @@ msgstr "Squanderin' Limit (chia per interval): {0}"
 msgid "State"
 msgstr "State"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "State o' t'ings:"
 msgid "Submit"
 msgstr "Go Ahead"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Everythin' jolly"
@@ -1917,7 +1918,7 @@ msgstr "Everythin' jolly"
 msgid "Syncing"
 msgstr "Catchin' up wit' other Capt'ns"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Pillagin' <0/>/<1/>"
 
@@ -1970,11 +1971,11 @@ msgstr "The Capt'n that yer Plunderer be connected t' be below. <0>Look fer more
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Minimum size fer mainnet be k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "The Capt'n be three sheets to the wind"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "The capt'n be collectin' reports, which means he's gettin' information o' other capt'ns' boarded ships"
 
@@ -2037,7 +2038,7 @@ msgstr "'tis the pendin' change, which are change doubloons which ye 'ave sent t
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "'tis the sum o' the incomin' 'n outgoin' pendin' transactions (nah yet included into the blockchain). This be nah includin' lootin' rewards."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "'tis the time o' the latest peak sub booty."
 
@@ -2063,7 +2064,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "This pirate be fully caught up 'n scannin' the ocean"
 
@@ -2117,7 +2118,7 @@ msgstr "Ye Whole Treasure"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Thumbs twiddled"
 
@@ -2137,7 +2138,7 @@ msgstr "Yer Strength o' Crew"
 msgid "Total VDF Iterations"
 msgstr "Combined Thumbs Twiddled"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Thumbs twiddled since the beginnin' o' time"
 
@@ -2396,7 +2397,7 @@ msgstr "Ye 'ave {0}% o' all pirates' strength, so getting' booty will take {expe
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

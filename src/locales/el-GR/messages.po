@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Εργαλεία Προγραμματιστή"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Eπίπεδο Δυσκολίας"
 
@@ -1123,7 +1123,7 @@ msgstr "Περισσότερη μνήμη αυξάνει ελαφρώς την �
 msgid "My Pubkey"
 msgstr "Αντιγραφή Pubkey"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Όνομα Δικτύου"
 
@@ -1196,7 +1196,7 @@ msgstr "Κανένα από τα οικόπεδά σας δεν έχει περ�
 msgid "Not Available"
 msgstr "Δεν είναι διαθέσιμο"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Δεν Είναι Συγχρονισμένο"
@@ -1255,7 +1255,7 @@ msgstr "Κατά μέσο όρο υπάρχει ένα λεπτό μεταξύ �
 msgid "Outgoing"
 msgstr "Εξερχόμενες"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Peak Height"
 
@@ -1263,7 +1263,7 @@ msgstr "Peak Height"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Peak Time"
 
@@ -1857,7 +1857,8 @@ msgstr "Όριο δαπανών (chia ανά διάστημα): {0}"
 msgid "State"
 msgstr "Κατάσταση"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "Κατάσταση:"
 msgid "Submit"
 msgstr "Υποβολή"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Συγχρονίστηκε"
@@ -1917,7 +1918,7 @@ msgstr "Συγχρονίστηκε"
 msgid "Syncing"
 msgstr "Συγχρονισμός..."
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr ""
 
@@ -1970,11 +1971,11 @@ msgstr "Ο πλήρης κόμβος στον οποίο είναι συνδεδ
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Το ελάχιστο απαιτούμενο μέγεθος για το mainnet είναι k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "Ο κόμβος δεν είναι συγχρονισμένος"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Ο κόμβος συγχρονίζεται, πράγμα που σημαίνει ότι γίνεται λήψη μπλοκ από άλλους κόμβους, για να φτάσει το τελευταίο μπλοκ στην αλυσίδα"
 
@@ -2037,7 +2038,7 @@ msgstr "Αυτή είναι η αλλαγή που εκκρεμεί, η οποί
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Αυτό είναι το άθροισμα των εισερχόμενων και εξερχόμενων συναλλαγών (που δεν περιλαμβάνονται ακόμη στο blockchain). Αυτό δεν περιλαμβάνει τις farming ανταμοιβές."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "Αυτή είναι η ώρα του τελευταίου υπο-μπλοκ κορυφής."
 
@@ -2063,7 +2064,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "Αυτός ο κόμβος είναι πλήρως παγιδευμένος και επικυρώνει το δίκτυο"
 
@@ -2117,7 +2118,7 @@ msgstr "Συνολικό Υπόλοιπο"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Σύνολο Επαναλήψεων"
 
@@ -2137,7 +2138,7 @@ msgstr "Συνολικό μέγεθος των plots"
 msgid "Total VDF Iterations"
 msgstr "Σύνολο Επαναλήψεων VDF"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Συνολικές επαναλήψεις από την αρχή του blockchain"
 
@@ -2396,7 +2397,7 @@ msgstr "Έχετε {0}% του χώρου στο δίκτυο, έτσι ώστε
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

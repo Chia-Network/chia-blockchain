@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Veglat e Programuesit"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Vështirësia"
 
@@ -1123,7 +1123,7 @@ msgstr "Më shumë memorie rrit pak shpejtësinë"
 msgid "My Pubkey"
 msgstr "Pubkey im"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Emër Rrjeti"
 
@@ -1196,7 +1196,7 @@ msgstr "Asnjë nga plotet tuaja nuk e ka kaluar filtrin akoma."
 msgid "Not Available"
 msgstr "Jo i disponueshëm"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Jo i sinkronizuar"
@@ -1255,7 +1255,7 @@ msgstr "Mesatarisht ka një minutë midis çdo transaksion blloku. Nëse nuk ka 
 msgid "Outgoing"
 msgstr "Dalëse"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Lartësia e majës"
 
@@ -1263,7 +1263,7 @@ msgstr "Lartësia e majës"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Koha e pikut"
 
@@ -1857,7 +1857,8 @@ msgstr "Kufiri i shpenzimeve (chia për interval): {0}"
 msgid "State"
 msgstr "Krahina"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1905,7 +1906,7 @@ msgstr "Statusi:"
 msgid "Submit"
 msgstr "Paraqit"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Sinkronizuar"
@@ -1917,7 +1918,7 @@ msgstr "Sinkronizuar"
 msgid "Syncing"
 msgstr "Sinkronizimi"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Sinkronizimi <0/>/<1/>"
 
@@ -1970,11 +1971,11 @@ msgstr "Nyja e plotë me të cilën është lidhur fermeri juaj është më posh
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Madhësia minimale e kërkuar për rrjetin kryesor është k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "Nyja nuk sinkronizohet"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Nyja po sinkronizohet, që do të thotë se po shkarkon blloqe nga nyjet e tjera, për të arritur bllokun më të fundit në zinxhir"
 
@@ -2037,7 +2038,7 @@ msgstr "Ky është ndryshimi në pritje, të cilat janë monedha ndryshimi që i
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Kjo është shuma e transaksioneve hyrëse dhe dalëse në pritje (nuk janë përfshirë ende në blockchain). Kjo nuk përfshin shpërblimet fermerit."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "Kjo është koha e nën bllokut të pikut të fundit."
 
@@ -2063,7 +2064,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "Kjo nyje është kapur plotësisht dhe po vërteton rrjetin"
 
@@ -2117,7 +2118,7 @@ msgstr "Totali i balances"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Përsëritjet totale"
 
@@ -2137,7 +2138,7 @@ msgstr "Madhësia totale e ploteves"
 msgid "Total VDF Iterations"
 msgstr "Përsëritjet totale të VDF-së"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Përsëritjet totale që nga fillimi i blockchain"
 
@@ -2396,7 +2397,7 @@ msgstr "Ju keni {0}% të hapësirës në rrjet, kështu që prodhimi i një bllo
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

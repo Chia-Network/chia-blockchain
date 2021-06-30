@@ -9,10 +9,12 @@ export default function FullNodeCardNetworkName() {
     (state: RootState) => state.wallet_state.network_info,
   );
 
+  const loading = !networkInfo;
   const networkName = networkInfo?.network_name;
 
   return (
     <FarmCard
+      loading={loading}
       valueColor="textPrimary"
       title={<Trans>Network Name</Trans>}
       value={networkName}

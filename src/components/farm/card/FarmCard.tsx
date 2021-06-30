@@ -26,7 +26,7 @@ const StyledValue = styled(Typography)`
 
 type Props = {
   title: ReactNode;
-  value: ReactNode;
+  value?: ReactNode;
   valueColor?: TypographyProps['color'];
   description?: ReactNode;
   loading?: boolean;
@@ -47,7 +47,7 @@ export default function FarmCard(props: Props) {
         </StyledTitle>
         {loading ? (
           <Box>
-            <CircularProgress color="primary" size={25} />
+            <CircularProgress color="secondary" size={25} />
           </Box>
         ) : (
           <StyledValue variant="h5" color={valueColor}>
@@ -69,4 +69,5 @@ FarmCard.defaultProps = {
   valueColor: 'primary',
   description: undefined,
   loading: false,
+  value: undefined,
 };

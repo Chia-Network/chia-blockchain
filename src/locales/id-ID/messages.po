@@ -618,7 +618,7 @@ msgid "Developer Tools"
 msgstr "Developer Tools"
 
 #: src/components/block/Block.jsx:223
-#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:16
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Tingkat kesulitan"
 
@@ -1123,7 +1123,7 @@ msgstr "Lebih banyak memori sedikit meningkatkan kecepatan"
 msgid "My Pubkey"
 msgstr "Pubkey saya"
 
-#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:17
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
 msgstr "Nama jaringan"
 
@@ -1196,7 +1196,7 @@ msgstr "Anda tidak ada plot yang telah lulus plot filter."
 msgid "Not Available"
 msgstr "Tidak Tersedia"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:36
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
 #: src/components/wallet/WalletStatus.tsx:28
 msgid "Not Synced"
 msgstr "Tidak Disinkronkan"
@@ -1255,7 +1255,7 @@ msgstr "Rata rata ada jarak 1 menit antara masing masing blok transaksi. Kecuali
 msgid "Outgoing"
 msgstr "Keluar"
 
-#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:15
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
 msgstr "Puncak tertinggi"
 
@@ -1263,7 +1263,7 @@ msgstr "Puncak tertinggi"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:20
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
 msgid "Peak Time"
 msgstr "Puncak Masa"
 
@@ -1859,7 +1859,8 @@ msgstr "Batas Pengeluaran (chia per jarak waktu): {0}"
 msgid "State"
 msgstr "Keadaan"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:61
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:90
 #: src/components/plotNFT/PlotNFTCard.tsx:106
@@ -1907,7 +1908,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Kirim"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:42
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
 msgstr "Sinkron"
@@ -1919,7 +1920,7 @@ msgstr "Sinkron"
 msgid "Syncing"
 msgstr "Sinkronisasi"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:20
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
 msgstr "Sinkronisasi <0/>/<1/>"
 
@@ -1972,11 +1973,11 @@ msgstr "Node penuh yang terhubung ke farmer anda di bawah. <0>Pelajari lebih lan
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Ukuran minimum yang di butuhkan untuk mainnet adalah k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:38
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
 msgstr "Node tidak sinkron"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:28
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Node sedang melakukan sinkronisasi, yang berarti node sedang meng unduh blok dari node lainya, untuk mencapai blok terahir dalam rantai"
 
@@ -2039,7 +2040,7 @@ msgstr "Ini adalah perubahan yang tertahan, perubahan koin yang anda kirim ke di
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Ini ada jumlah dari transaksi masuk dan keluar yang masih dalam antrian (belum terdaftar ke dalam blockchain). Tidak berikut penghasilan dari farming."
 
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:21
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
 msgid "This is the time of the latest peak sub block."
 msgstr "Ini adalah waktu dari ketinggian terakhir sub block."
 
@@ -2065,7 +2066,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
 msgstr "Node ini sudah mempunyai data terbaru dan sudah ikut men validasi dalam jaringan"
 
@@ -2119,7 +2120,7 @@ msgstr "Jumlah Saldo"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:17
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
 msgid "Total Iterations"
 msgstr "Jumlah iterasi"
 
@@ -2139,7 +2140,7 @@ msgstr "Jumlah Ukuran Plot-Plot"
 msgid "Total VDF Iterations"
 msgstr "Jumlah iterasi VDF"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:19
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
 msgid "Total iterations since the start of the blockchain"
 msgstr "Jumlah bilangan sejak mula blockchain"
 
@@ -2398,7 +2399,7 @@ msgstr "Anda memiliki {0}% dari total ruang di jaringan, maka farming 1 blok aka
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 #~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
-#: src/components/pool/PoolJoin.tsx:33
+#: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
 msgstr ""
 

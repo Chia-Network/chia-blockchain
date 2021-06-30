@@ -3,14 +3,19 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import FarmCard from '../../farm/card/FarmCard';
 import { FormatBytes } from '@chia/core';
+import { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeEstimatedNetworkSpace() {
-  const value = useSelector(
-    (state) => state.full_node_state.blockchain_state.space,
+  const state = useSelector(
+    (state: RootState) => state.full_node_state.blockchain_state,
   );
+
+  const loading = !state;
+  const value = state?.space;
 
   return (
     <FarmCard
+      loading={loading}
       valueColor="textPrimary"
       title={<Trans>Estimated Network Space</Trans>}
       tooltip={
@@ -19,7 +24,7 @@ export default function FullNodeEstimatedNetworkSpace() {
           network
         </Trans>
       }
-      value={<FormatBytes value={value} precision={3} />}
+      value={value && <FormatBytes value={value} precision={3} />}
     />
   );
 }

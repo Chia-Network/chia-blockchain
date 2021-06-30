@@ -6,13 +6,17 @@ import { FormatLargeNumber } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardTotalIterations() {
-  const value = useSelector(
+  const state = useSelector(
     (state: RootState) =>
-      state.full_node_state.blockchain_state?.peak?.total_iters ?? 0,
+      state.full_node_state.blockchain_state,
   );
+
+  const loading = !state?.peak;
+  const value = state?.peak?.total_iters ?? 0;
 
   return (
     <FarmCard
+      loading={loading}
       valueColor="textPrimary"
       title={<Trans>Total Iterations</Trans>}
       tooltip={
