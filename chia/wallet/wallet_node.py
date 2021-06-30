@@ -11,7 +11,13 @@ from blspy import PrivateKey
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.daemon.keychain_proxy import KeychainProxy, KeyringIsEmpty, KeyringIsLocked, connect_to_keychain_and_validate
+from chia.daemon.keychain_proxy import (
+    KeychainProxy,
+    KeyringIsEmpty,
+    KeyringIsLocked,
+    connect_to_keychain_and_validate,
+    wrap_local_keychain,
+)
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
@@ -65,9 +71,12 @@ def uses_keychain_proxy():
         @wraps(method)
         async def inner(self, *args, **kwargs):
             if not self.keychain_proxy:
-                self.keychain_proxy = await connect_to_keychain_and_validate(
-                    self.root_path, self.log, self.local_keychain
-                )
+                if self.local_keychain:
+                    self.keychain_proxy = wrap_local_keychain(self.local_keychain)
+                else:
+                    self.keychain_proxy = await connect_to_keychain_and_validate(
+                        self.root_path, self.log, self.local_keychain
+                    )
             return await method(self, *args, **kwargs)
 
         return inner

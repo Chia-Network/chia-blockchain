@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import signal
 
 from secrets import token_bytes
@@ -19,12 +20,21 @@ from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from tests.block_tools import BlockTools, test_constants
+from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
 
-bt = BlockTools(constants=test_constants)
+
+def cleanup_keyring(keyring: TempKeyring):
+    keyring.cleanup()
+
+
+temp_keyring = TempKeyring(user="testing-1.8.0", testing=True)
+keychain = temp_keyring.get_keychain()
+atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
+bt = BlockTools(constants=test_constants, keychain=keychain)
 
 self_hostname = bt.config["self_hostname"]
 

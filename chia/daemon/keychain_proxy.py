@@ -33,10 +33,10 @@ class MalformedKeychainResponse(Exception):
 class KeychainProxy(DaemonProxy):
     def __init__(
         self,
-        uri: str,
-        ssl_context: Optional[ssl.SSLContext],
-        log: logging.Logger,
-        local_keychain: Optional[Keychain],
+        uri: Optional[str] = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
+        log: Optional[logging.Logger] = None,
+        local_keychain: Optional[Keychain] = None,
         user: str = None,
         testing: bool = False,
     ):
@@ -252,12 +252,19 @@ class KeychainProxy(DaemonProxy):
         return key
 
 
+def wrap_local_keychain(keychain: Keychain) -> KeychainProxy:
+    """
+    Wrap an existing local Keychain instance in a KeychainProxy to utilize
+    the same interface as a remote Keychain
+    """
+    return KeychainProxy(local_keychain=keychain)
+
+
 async def connect_to_keychain(
     self_hostname: str,
     daemon_port: int,
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
-    local_keychain: Optional[Keychain],
     user: str = None,
     testing: bool = False,
 ) -> KeychainProxy:
@@ -265,13 +272,15 @@ async def connect_to_keychain(
     Connect to the local daemon.
     """
 
-    client = KeychainProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, log, local_keychain, user, testing)
+    client = KeychainProxy(
+        uri=f"wss://{self_hostname}:{daemon_port}", ssl_context=ssl_context, log=log, user=user, testing=testing
+    )
     await client.start()
     return client
 
 
 async def connect_to_keychain_and_validate(
-    root_path: Path, log: logging.Logger, local_keychain: Optional[Keychain], user: str = None, testing: bool = False
+    root_path: Path, log: logging.Logger, user: str = None, testing: bool = False
 ) -> Optional[KeychainProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
@@ -285,7 +294,7 @@ async def connect_to_keychain_and_validate(
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         connection = await connect_to_keychain(
-            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, local_keychain, user, testing
+            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, user, testing
         )
         r = await connection.ping()
 

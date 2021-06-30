@@ -3,10 +3,12 @@ import os
 import tempfile
 
 from chia.util.file_keyring import FileKeyring
+from chia.util.keychain import Keychain
 from chia.util.keyring_wrapper import KeyringWrapper
 from keyring.util import platform_
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from pathlib import Path
+from typing import Optional
 from unittest.mock import patch
 
 
@@ -124,3 +126,64 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
         return inner
 
     return outer
+
+
+class TempKeyring:
+    def __init__(self, user: Optional[str] = None, testing: bool = False):
+        self.keychain = self._patch_and_create_keychain(user, testing)
+        self.cleaned_up = False
+
+    def _patch_and_create_keychain(self, user: Optional[str] = None, testing: bool = False):
+        temp_dir = tempfile.mkdtemp(prefix="test_keyring_wrapper")
+
+        mock_supports_keyring_password_patch = patch("chia.util.keychain.supports_keyring_password")
+        mock_supports_keyring_password = mock_supports_keyring_password_patch.start()
+
+        # Patch supports_keyring_password() to return True
+        mock_supports_keyring_password.return_value = True
+
+        mock_configure_backend_patch = patch.object(KeyringWrapper, "_configure_backend")
+        mock_configure_backend = mock_configure_backend_patch.start()
+        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=False)
+
+        mock_data_root_patch = patch.object(platform_, "data_root")
+        mock_data_root = mock_data_root_patch.start()
+
+        # Mock CryptFileKeyring's file_path indirectly by changing keyring.util.platform_.data_root
+        # We don't want CryptFileKeyring finding the real legacy keyring
+        mock_data_root.return_value = temp_dir
+
+        keychain = Keychain(user=user, testing=testing)
+
+        # Stash the temp_dir in the keychain instance
+        keychain._temp_dir = temp_dir
+
+        # Stash the patches in the keychain instance
+        keychain._mock_supports_keyring_password_patch = mock_supports_keyring_password_patch
+        keychain._mock_configure_backend_patch = mock_configure_backend_patch
+        keychain._mock_data_root_patch = mock_data_root_patch
+
+        return keychain
+
+    def __enter__(self):
+        assert not self.cleaned_up
+        return self.get_keychain()
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.cleanup()
+
+    def get_keychain(self):
+        return self.keychain
+
+    def cleanup(self):
+        assert not self.cleaned_up
+
+        temp_dir = self.keychain._temp_dir
+        print(f"cleaning up keychain in temp dir: {temp_dir}")
+        tempfile.TemporaryDirectory._rmtree(temp_dir)
+
+        self.keychain._mock_supports_keyring_password_patch.stop()
+        self.keychain._mock_configure_backend_patch.stop()
+        self.keychain._mock_data_root_patch.stop()
+
+        self.cleaned_up = True
