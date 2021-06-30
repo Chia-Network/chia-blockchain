@@ -40,7 +40,7 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
-def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) -> None:
+def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) -> str:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
     its clvm.
@@ -54,7 +54,8 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
     created_puzzle_announcements: List[List[bytes]] = []
     asserted_puzzle_announcements = []
 
-    print("=" * 80)
+    debug_msg = ""
+    debug_msg += "=" * 80
     for coin_solution in spend_bundle.coin_solutions:
         coin = coin_solution.coin
         puzzle_reveal = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
@@ -62,37 +63,36 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
         coin_name = coin.name()
 
         if puzzle_reveal.get_tree_hash() != coin_solution.coin.puzzle_hash:
-            print("*** BAD PUZZLE REVEAL")
-            print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_solution.coin.puzzle_hash.hex()}")
-            print("*" * 80)
+            debug_msg += "*** BAD PUZZLE REVEAL"
+            debug_msg += f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_solution.coin.puzzle_hash.hex()}"
+            debug_msg += "*" * 80
             breakpoint()
             continue
 
-        print(f"consuming coin {dump_coin(coin)}")
-        print(f"  with id {coin_name}")
-        print()
-        print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
+        debug_msg += f"consuming coin {dump_coin(coin)}"
+        debug_msg += f"  with id {coin_name}\n"
+        debug_msg += f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'"
         error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
         if error:
-            print(f"*** error {error}")
+            debug_msg += f"*** error {error}"
         elif conditions is not None:
             for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
                 pks.append(pk)
                 msgs.append(m)
-            print()
+            debug_msg += "\n"
             cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
-            print(disassemble(r))
-            print()
+            debug_msg += disassemble(r)
+            debug_msg += "\n"
             if conditions and len(conditions) > 0:
-                print("grouped conditions:")
+                debug_msg += "grouped conditions:"
                 for condition_programs in conditions.values():
-                    print()
+                    debug_msg += "\n"
                     for c in condition_programs:
                         if len(c.vars) == 1:
                             as_prog = Program.to([c.opcode, c.vars[0]])
                         if len(c.vars) == 2:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
-                        print(f"  {disassemble(as_prog)}")
+                        debug_msg += f"  {disassemble(as_prog)}"
                 created_coin_announcements.extend(
                     [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
                 )
@@ -106,11 +106,11 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
                 asserted_puzzle_announcements.extend(
                     [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])]
                 )
-                print()
+                debug_msg += "\n"
             else:
-                print("(no output conditions generated)")
-        print()
-        print("-------")
+                debug_msg += "(no output conditions generated)"
+        debug_msg += "\n"
+        debug_msg += "-------"
 
     created = set(spend_bundle.additions())
     spent = set(spend_bundle.removals())
@@ -120,30 +120,30 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
     ephemeral = created.intersection(spent)
     created.difference_update(ephemeral)
     spent.difference_update(ephemeral)
-    print()
-    print("spent coins")
+    debug_msg += "\n"
+    debug_msg += "spent coins"
     for coin in sorted(spent, key=lambda _: _.name()):
-        print(f"  {dump_coin(coin)}")
-        print(f"      => spent coin id {coin.name()}")
-    print()
-    print("created coins")
+        debug_msg += f"  {dump_coin(coin)}"
+        debug_msg += f"      => spent coin id {coin.name()}"
+    debug_msg += "\n"
+    debug_msg += "created coins"
     for coin in sorted(created, key=lambda _: _.name()):
-        print(f"  {dump_coin(coin)}")
-        print(f"      => created coin id {coin.name()}")
+        debug_msg += f"  {dump_coin(coin)}"
+        debug_msg += f"      => created coin id {coin.name()}"
 
     if ephemeral:
-        print()
-        print("ephemeral coins")
+        debug_msg += "\n"
+        debug_msg += "ephemeral coins"
         for coin in sorted(ephemeral, key=lambda _: _.name()):
-            print(f"  {dump_coin(coin)}")
-            print(f"      => created coin id {coin.name()}")
+            debug_msg += f"  {dump_coin(coin)}"
+            debug_msg += f"      => created coin id {coin.name()}"
 
     created_coin_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_coin_announcements]
     if created_coin_announcement_pairs:
-        print("created coin announcements")
+        debug_msg += "created coin announcements"
         for announcement, hashed in sorted(created_coin_announcement_pairs, key=lambda _: _[-1]):
             as_hex = [f"0x{_.hex()}" for _ in announcement]
-            print(f"  {as_hex} =>\n      {hashed}")
+            debug_msg += f"  {as_hex} =>\n      {hashed}"
 
     eor_coin_announcements = sorted(
         set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_announcements)
@@ -151,44 +151,44 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
 
     created_puzzle_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_puzzle_announcements]
     if created_puzzle_announcements:
-        print("created puzzle announcements")
+        debug_msg += "created puzzle announcements"
         for announcement, hashed in sorted(created_puzzle_announcement_pairs, key=lambda _: _[-1]):
             as_hex = [f"0x{_.hex()}" for _ in announcement]
-            print(f"  {as_hex} =>\n      {hashed}")
+            debug_msg += f"  {as_hex} =>\n      {hashed}"
 
     eor_puzzle_announcements = sorted(
         set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_announcements)
     )
 
-    print()
-    print()
-    print(f"zero_coin_set = {sorted(zero_coin_set)}")
-    print()
+    debug_msg += "\n\n"
+    debug_msg += f"zero_coin_set = {sorted(zero_coin_set)}"
+    debug_msg += "\n"
     if created_coin_announcement_pairs or asserted_coin_announcements:
-        print(f"created  coin announcements = {sorted([_[-1] for _ in created_coin_announcement_pairs])}")
-        print()
-        print(f"asserted coin announcements = {sorted(asserted_coin_announcements)}")
-        print()
-        print(f"symdiff of coin announcements = {sorted(eor_coin_announcements)}")
-        print()
+        debug_msg += f"created  coin announcements = {sorted([_[-1] for _ in created_coin_announcement_pairs])}"
+        debug_msg += "\n"
+        debug_msg += f"asserted coin announcements = {sorted(asserted_coin_announcements)}"
+        debug_msg += "\n"
+        debug_msg += f"symdiff of coin announcements = {sorted(eor_coin_announcements)}"
+        debug_msg += "\n"
     if created_puzzle_announcement_pairs or asserted_puzzle_announcements:
-        print(f"created  puzzle announcements = {sorted([_[-1] for _ in created_puzzle_announcement_pairs])}")
-        print()
-        print(f"asserted puzzle announcements = {sorted(asserted_puzzle_announcements)}")
-        print()
-        print(f"symdiff of puzzle announcements = {sorted(eor_puzzle_announcements)}")
-        print()
-    print()
-    print("=" * 80)
-    print()
+        debug_msg += f"created  puzzle announcements = {sorted([_[-1] for _ in created_puzzle_announcement_pairs])}"
+        debug_msg += "\n"
+        debug_msg += f"asserted puzzle announcements = {sorted(asserted_puzzle_announcements)}"
+        debug_msg += "\n"
+        debug_msg += f"symdiff of puzzle announcements = {sorted(eor_puzzle_announcements)}"
+        debug_msg += "\n"
+    debug_msg += "\n"
+    debug_msg += "=" * 80
+    debug_msg += "\n"
     validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
-    print(f"aggregated signature check pass: {validates}")
-    print(f"pks: {pks}")
-    print(f"msgs: {[msg.hex() for msg in msgs]}")
-    print(f"  msg_data: {[msg.hex()[:-128] for msg in msgs]}")
-    print(f"  coin_ids: {[msg.hex()[-128:-64] for msg in msgs]}")
-    print(f"  add_data: {[msg.hex()[-64:] for msg in msgs]}")
-    print(f"signature: {spend_bundle.aggregated_signature}")
+    debug_msg += f"aggregated signature check pass: {validates}"
+    debug_msg += f"pks: {pks}"
+    debug_msg += f"msgs: {[msg.hex() for msg in msgs]}"
+    debug_msg += f"  msg_data: {[msg.hex()[:-128] for msg in msgs]}"
+    debug_msg += f"  coin_ids: {[msg.hex()[-128:-64] for msg in msgs]}"
+    debug_msg += f"  add_data: {[msg.hex()[-64:] for msg in msgs]}"
+    debug_msg += f"signature: {spend_bundle.aggregated_signature}"
+    return debug_msg
 
 
 def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:

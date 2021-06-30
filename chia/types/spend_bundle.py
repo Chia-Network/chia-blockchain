@@ -55,7 +55,12 @@ class SpendBundle(Streamable):
         return self.get_hash()
 
     def debug(self, agg_sig_additional_data=bytes([3] * 32)):
-        debug_spend_bundle(self, agg_sig_additional_data)
+        """This method uses a global return value from logging.getLogger"""
+        import logging
+
+        log = logging.getLogger(__name__)
+        debug_msg = debug_spend_bundle(self, agg_sig_additional_data)
+        log.info(debug_msg)
 
     def not_ephemeral_additions(self):
         all_removals = self.removals()
