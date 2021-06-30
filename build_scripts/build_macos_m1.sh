@@ -24,8 +24,15 @@ echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
+echo "Install pyinstaller and build bootloaders for M1"
+#pip install pyinstaller==4.3
+git clone https://github.com/pyinstaller/pyinstaller.git
+cd pyinstaller/bootloader
+python ./waf all
+pip install ..
+cd ../..
+
 echo "Create executables with pyinstaller"
-pip install pyinstaller==4.3
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
