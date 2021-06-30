@@ -686,7 +686,7 @@ msgstr "Gabim"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Gabim: Nuk mund te dergojmë Chia në Adresën e dhënë. Ju lutemi vendosni një adresë Chia."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Koha e parashikuar për të fituar"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Madhësia e hapsirës së ruajtur së të gjithë Ploteve të të gjithë fermerve në rrjet"
 
@@ -2212,7 +2212,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Përdoruesi Pubkey"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "Përsëritjet e VDF Nën Slot"
 
@@ -2497,4 +2497,3 @@ msgstr "{currencyCode} Tarifat e Transaksionit të Përdoruesit"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

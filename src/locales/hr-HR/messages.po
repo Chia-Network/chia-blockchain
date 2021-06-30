@@ -686,7 +686,7 @@ msgstr "Greška"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Greška: Nemogu poslati Chia na obojanu adresu. Unesi Chia adresu."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Procijenjeno Vrijeme za Pobjedu"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Procijenjen zbroj svih uzgojenih diskovnih prostora od svih farmera na mreži"
 
@@ -2212,7 +2212,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Korisnički Pubkey"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Pod Slot Ponavljanja"
 
@@ -2497,4 +2497,3 @@ msgstr "{currencyCode} Korisničke naknade transakcija"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

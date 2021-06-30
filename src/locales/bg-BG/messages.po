@@ -686,7 +686,7 @@ msgstr "Грешка"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Грешка: Неуспешно изпращане на Chia до избрания адрес. Моля въведете Chia адрес."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Приблизително време за печалба"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Приблизително сумиране на всички дискове на всички фермери в мрежата"
 
@@ -1307,7 +1307,8 @@ msgstr "Моля, въведете валидна първоначална су�
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:429
 msgid "Please enter a valid numeric amount"
-msgstr "35 / 5000\n"
+msgstr ""
+"35 / 5000\n"
 "Моля, въведете валидна числова сума"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
@@ -2213,7 +2214,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Публичен ключ на потребител"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF под групова итерация"
 
@@ -2498,4 +2499,3 @@ msgstr "{currencyCode} Такси на потребителя за транза�
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

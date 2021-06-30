@@ -686,7 +686,7 @@ msgstr "Erreur"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Erreur: Impossible d'envoyer du chia à une adresse colorée. Merci d'entrer une adresse chia valide."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Durée prévue pour gagner"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Espace disque total de tous les fermiers du réseau"
 
@@ -2212,7 +2212,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Clé publique utilisateur"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "Itération du sous emplacement VDF"
 
@@ -2497,4 +2497,3 @@ msgstr "{currencyCode} Frais de transaction utilisateur"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

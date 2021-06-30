@@ -686,7 +686,7 @@ msgstr "錯誤"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "錯誤：不能發送 Chia 到有色地址。請輸入 Chia 地址。"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr "估計的網路空間"
 
@@ -699,7 +699,7 @@ msgstr "預計贏取時間"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "網路中所有農夫的所有耕地磁盤空間估計總和"
 
@@ -2212,7 +2212,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "使用者公鑰"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF 子欄位疊代次數"
 
@@ -2497,4 +2497,3 @@ msgstr "{currencyCode} 使用者交易費用"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

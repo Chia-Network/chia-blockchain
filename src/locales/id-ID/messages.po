@@ -686,7 +686,7 @@ msgstr "Error"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Error: Tidak dapat mengirim Chia ke alamat berwarna. Mohon masukkan sebuah alamat Chia."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Perkiraan waktu untuk menang"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Estimasi jumlah total ruang penyimpanan yang sudah diplot oleh seluruh farmer di network"
 
@@ -1432,7 +1432,8 @@ msgstr "Plot Diterima Seleksi"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:28
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr "Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
+msgstr ""
+"Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
 "<0>Pelajari lebih lanjut</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:34
@@ -2213,7 +2214,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Pubkey User"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "Iterasi VDF Sub Slot"
 
@@ -2498,4 +2499,3 @@ msgstr "{currencyCode} Biaya Transaksi User"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

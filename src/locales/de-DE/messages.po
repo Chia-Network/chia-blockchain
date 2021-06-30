@@ -603,13 +603,15 @@ msgstr "Lösche Schlüssel"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Alle Schlüssel löschen entfernt alle Schlüssel unwiederbringlich vom Computer. \n"
+msgstr ""
+"Alle Schlüssel löschen entfernt alle Schlüssel unwiederbringlich vom Computer. \n"
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
 #: src/components/selectKey/SelectKey.tsx:65
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich vom Computer. \n"
+msgstr ""
+"Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich vom Computer. \n"
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
@@ -690,7 +692,7 @@ msgstr "Fehler"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Fehler: Chia kann nicht zu der farbigen Adresse geschickt werden. Bitte gib eine Chia Adresse ein."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -703,7 +705,7 @@ msgstr "Geschätzte Zeit bis Gewinn"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Geschätzter Speicherplatzverbrauch der Summe aller Plots aller Farmer"
 
@@ -1448,7 +1450,8 @@ msgstr "Paralleles plotten kann Zeit sparen. Andernfalls kannst du Plots der War
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:174
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr "Das Plotten mit aktiviertem Bitfeld benötigt etwa 30 % weniger Schreibvorgänge und ist jetzt fast immer schneller. Möglicherweise ist der Speicherbedarf reduziert, wenn das Bitfeld-Plotten deaktiviert ist. Es wird empfohlen das Bitfeld-Plotten zu deaktivieren, wenn ihre CPU-Architektur\n"
+msgstr ""
+"Das Plotten mit aktiviertem Bitfeld benötigt etwa 30 % weniger Schreibvorgänge und ist jetzt fast immer schneller. Möglicherweise ist der Speicherbedarf reduziert, wenn das Bitfeld-Plotten deaktiviert ist. Es wird empfohlen das Bitfeld-Plotten zu deaktivieren, wenn ihre CPU-Architektur\n"
 "vor 2010 entwickelt wurde."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
@@ -2217,7 +2220,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Benutzer Pubkey"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterationen"
 
@@ -2502,4 +2505,3 @@ msgstr "{currencyCode} Benutzer Transaktionsgebühren"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

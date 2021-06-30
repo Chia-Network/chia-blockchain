@@ -686,7 +686,7 @@ msgstr "Chyba"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chyba: Chia nie je možné odoslať na farebnú adresu. Zadajte prosím Chia adresu."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr "Odhadovaná velkosť siete"
 
@@ -699,7 +699,7 @@ msgstr "Očakávaný čas na výhru"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
@@ -2212,7 +2212,7 @@ msgstr "Neuložené zmeny"
 msgid "User Pubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF dielčie iterácie slotu"
 
@@ -2497,4 +2497,3 @@ msgstr "{currencyCode} Užívateľské poplatky za transakcie"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} few {mojos} many {mojos} other {mojos}}"
-

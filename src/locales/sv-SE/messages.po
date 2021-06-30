@@ -686,7 +686,7 @@ msgstr "Fel"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Fel: det går inte att skicka chia till färgad adress. Ange en chia-adress."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Förväntad tid till vinst"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Uppskattad summa av allt plottat diskutrymme hos alla odlare i nätverket"
 
@@ -2212,7 +2212,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Publik nyckel för användare"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF-underslot-iterationer"
 
@@ -2375,7 +2375,8 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
+msgstr ""
+"Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
@@ -2498,4 +2499,3 @@ msgstr "{currencyCode} Transaktionsavgifter för användare"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-

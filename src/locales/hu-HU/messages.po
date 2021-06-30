@@ -686,7 +686,7 @@ msgstr "Hiba"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Hiba: A chia nem küldhető színes címre. Kérjük, adjon meg másik chia címet."
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:15
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "Becsült idő a győzelemre"
 #~ msgid "Estimated network space"
 #~ msgstr "Estimated network space"
 
-#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "A hálózat becsült összes lemezterületének összege"
 
@@ -2036,7 +2036,8 @@ msgstr "Ez a függőben lévő változás, amely olyan pénzérme, amelyet Ön k
 
 #: src/components/wallet/card/WalletCardPendingBalance.tsx:26
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
+msgstr ""
+"Ez a függőben lévő, bejövő és kimenő ügyletek összesítése. (Még nem a blokklánc részei)\n"
 "Nem tartalmazza a termesztési díjakat."
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
@@ -2213,7 +2214,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Felhasználó publikus kulcsa"
 
-#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:15
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF alhelyi ismétlések"
 
@@ -2498,4 +2499,3 @@ msgstr "Felhasználói tranzakciós díjak {currencyCode}"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-
