@@ -8,7 +8,7 @@ msgstr ""
 "Language: sr_SP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:51\n"
+"PO-Revision-Date: 2021-06-30 06:03\n"
 "Last-Translator: \n"
 "Language-Team: Serbian (Cyrillic)\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -82,7 +82,7 @@ msgstr "Додај плот на чекање"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
-#~ msgstr "Додај новчаник"
+#~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
@@ -248,7 +248,7 @@ msgstr "Купи"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
-#~ msgstr "CC новчаник"
+#~ msgstr "CC Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -457,7 +457,7 @@ msgstr "Креирај понуду"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
-#~ msgstr "Креирај плот"
+#~ msgstr "Create Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:188
 msgid "Create Rate Limited Admin Wallet"
@@ -557,7 +557,7 @@ msgstr "ОПАСНОСТ: трајно брисање приватног кљу�
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
-#~ msgstr "DID новчаник"
+#~ msgstr "DID Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -697,7 +697,7 @@ msgstr "Процењено време за победу"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Estimated network space"
-#~ msgstr "Процењени мрежни простор"
+#~ msgstr "Estimated network space"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -852,7 +852,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
-#~ msgstr "Статус пуног чвора"
+#~ msgstr "Full Node Status"
 
 #: src/electron/main.tsx:332
 msgid "Full Screen"
@@ -1611,7 +1611,7 @@ msgstr "Максимална меморија"
 
 #: src/components/wallet/Wallets.tsx:51
 #~ msgid "RL Wallet"
-#~ msgstr "Ограничени новчаник"
+#~ msgstr "RL Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -2218,7 +2218,7 @@ msgstr "Подслотови VDF понављања"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 #~ msgid "Value is too high"
-#~ msgstr ""
+#~ msgstr "Value is too high"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
@@ -2497,3 +2497,4 @@ msgstr "{currencyCode} накнаде за трансакције корисни
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
