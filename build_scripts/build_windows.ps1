@@ -100,7 +100,7 @@ Write-Output "Get CHIVES_INSTALLER_VERSION"
 # The environment variable CHIVES_INSTALLER_VERSION needs to be defined
 $env:CHIVES_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
 
-$env:CHIA_INSTALLER_VERSION = "1.1.7.1"
+# $env:CHIVES_INSTALLER_VERSION = "1.1.7.1"
 
 if (-not (Test-Path env:CHIVES_INSTALLER_VERSION)) {
   $env:CHIVES_INSTALLER_VERSION = '0.0.0'
@@ -139,6 +139,7 @@ Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chives-blockchain-gui\" -Recurse
 Set-Location -Path "..\chives-blockchain-gui" -PassThru
 
+git stash
 git pull origin main
 git status
 
@@ -150,6 +151,7 @@ npm install -g electron-packager
 npm install
 npm audit fix
 
+git stash
 git pull origin main
 git status
 

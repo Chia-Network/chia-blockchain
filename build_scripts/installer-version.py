@@ -65,7 +65,7 @@ def main():
             dev_release_number = dev_release_number_digits
         install_release_number += dev_release_number
 
-    print(str(install_release_number))
+    print(str(left_full_version[0]))
 
 
 if __name__ == "__main__":
