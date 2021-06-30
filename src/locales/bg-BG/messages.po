@@ -8,7 +8,7 @@ msgstr ""
 "Language: bg_BG\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-21 17:51\n"
+"PO-Revision-Date: 2021-06-30 06:03\n"
 "Last-Translator: \n"
 "Language-Team: Bulgarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -82,7 +82,7 @@ msgstr "Добавяне на плот към опашката"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
-#~ msgstr "Добави портфейл"
+#~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
@@ -248,7 +248,7 @@ msgstr "Купи"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
-#~ msgstr "CC портфейл"
+#~ msgstr "CC Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -457,7 +457,7 @@ msgstr "Създай оферта"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
-#~ msgstr "Създай плот"
+#~ msgstr "Create Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:188
 msgid "Create Rate Limited Admin Wallet"
@@ -557,7 +557,7 @@ msgstr "ОПАСНОСТ: Необратимо изтриване на личе�
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
-#~ msgstr "DID портфейл"
+#~ msgstr "DID Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -697,7 +697,7 @@ msgstr "Приблизително време за печалба"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Estimated network space"
-#~ msgstr "Приблизително мрежово място"
+#~ msgstr "Estimated network space"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:17
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -852,7 +852,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
-#~ msgstr "Статус на цялостния възел"
+#~ msgstr "Full Node Status"
 
 #: src/electron/main.tsx:332
 msgid "Full Screen"
@@ -1307,8 +1307,7 @@ msgstr "Моля, въведете валидна първоначална су�
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:429
 msgid "Please enter a valid numeric amount"
-msgstr ""
-"35 / 5000\n"
+msgstr "35 / 5000\n"
 "Моля, въведете валидна числова сума"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
@@ -1613,7 +1612,7 @@ msgstr "Максимално използване на RAM памет"
 
 #: src/components/wallet/Wallets.tsx:51
 #~ msgid "RL Wallet"
-#~ msgstr "RL Портфейл"
+#~ msgstr "RL Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -2220,7 +2219,7 @@ msgstr "VDF под групова итерация"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 #~ msgid "Value is too high"
-#~ msgstr ""
+#~ msgstr "Value is too high"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
@@ -2499,3 +2498,4 @@ msgstr "{currencyCode} Такси на потребителя за транза�
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
