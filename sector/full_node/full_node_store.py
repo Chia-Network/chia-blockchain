@@ -23,6 +23,7 @@ from sector.types.full_block import FullBlock
 from sector.types.generator_types import CompressorArg
 from sector.types.unfinished_block import UnfinishedBlock
 from sector.util.ints import uint8, uint32, uint64, uint128
+from sector.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 

@@ -9,12 +9,12 @@ import traceback
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-import sector.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from sector.consensus.coinbase import create_puzzlehash_for_pk
-from sector.consensus.constants import ConsensusConstants
-from sector.pools.pool_config import PoolWalletConfig, load_pool_config
-from sector.protocols import farmer_protocol, harvester_protocol
-from sector.protocols.pool_protocol import (
+import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.consensus.constants import ConsensusConstants
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config
+from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.pool_protocol import (
     ErrorResponse,
     get_current_authentication_token,
     GetFarmerResponse,
@@ -25,24 +25,24 @@ from sector.protocols.pool_protocol import (
     PutFarmerRequest,
     AuthenticationPayload,
 )
-from sector.protocols.protocol_message_types import ProtocolMessageTypes
-from sector.server.outbound_message import NodeType, make_msg
-from sector.server.ws_connection import WSSectorConnection
-from sector.types.blockchain_format.proof_of_space import ProofOfSpace
-from sector.types.blockchain_format.sized_bytes import bytes32
-from sector.util.bech32m import decode_puzzle_hash
-from sector.util.config import load_config, save_config, config_path_for_filename
-from sector.util.hash import std_hash
-from sector.util.ints import uint8, uint16, uint32, uint64
-from sector.util.keychain import Keychain
-from sector.wallet.derive_keys import (
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash
+from chia.util.config import load_config, save_config, config_path_for_filename
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.keychain import Keychain
+from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
     find_authentication_sk,
     find_owner_sk,
 )
-from sector.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
@@ -50,7 +50,6 @@ log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
-
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
@@ -85,7 +84,7 @@ class Farmer:
         self.cache_add_time: Dict[bytes32, uint64] = {}
 
         self.cache_clear_task: asyncio.Task
-	self.update_pool_state_task: asyncio.Task
+        self.update_pool_state_task: asyncio.Task
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
@@ -109,7 +108,7 @@ class Farmer:
         self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
         # This is the self pooling configuration, which is only used for original self-pooled plots
-        self.pool_target_encoded = pool_config["xsc_target_address"]
+        self.pool_target_encoded = pool_config["xch_target_address"]
         self.pool_target = decode_puzzle_hash(self.pool_target_encoded)
         self.pool_sks_map: Dict = {}
         for key in self.get_private_keys():
@@ -133,7 +132,7 @@ class Farmer:
         self.last_config_access_time: uint64 = uint64(0)
 
     async def _start(self):
-	self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
+        self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
 
     def _close(self):
@@ -141,6 +140,7 @@ class Farmer:
 
     async def _await_closed(self):
         await self.cache_clear_task
+        await self.update_pool_state_task
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -169,7 +169,7 @@ class Farmer:
             ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict()
         )
 
-    def on_disconnect(self, connection: ws.WSSectorConnection):
+    def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 
@@ -518,7 +518,6 @@ class Farmer:
                 time_slept = uint64(0)
             time_slept += 1
             await asyncio.sleep(1)
-
 
     async def _periodically_clear_cache_and_refresh_task(self):
         time_slept: uint64 = uint64(0)

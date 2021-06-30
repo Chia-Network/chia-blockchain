@@ -83,8 +83,7 @@ class FarmerAPI:
                 new_proof_of_space.sp_hash,
             )
 
-
-             # If the iters are good enough to make a block, proceed with the block making flow
+            # If the iters are good enough to make a block, proceed with the block making flow
             if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
                 # Proceed at getting the signatures for this PoSpace
                 request = harvester_protocol.RequestSignatures(
@@ -94,7 +93,7 @@ class FarmerAPI:
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
                 )
 
-             if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
+                if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
                     self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = []
                 self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
                     (
@@ -102,16 +101,16 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
-            self.farmer.quality_str_to_identifiers[computed_quality_string] = (
-                new_proof_of_space.plot_identifier,
-                new_proof_of_space.challenge_hash,
-                new_proof_of_space.sp_hash,
-                peer.peer_node_id,
-            )
-            self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+                self.farmer.quality_str_to_identifiers[computed_quality_string] = (
+                    new_proof_of_space.plot_identifier,
+                    new_proof_of_space.challenge_hash,
+                    new_proof_of_space.sp_hash,
+                    peer.peer_node_id,
+                )
+                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
-                           await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
+                await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
 
             p2_singleton_puzzle_hash = new_proof_of_space.proof.pool_contract_puzzle_hash
             if p2_singleton_puzzle_hash is not None:
@@ -274,8 +273,7 @@ class FarmerAPI:
             if plot_identifier == response.plot_identifier:
                 pospace = candidate_pospace
         assert pospace is not None
-	include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
-
+        include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = pospace.verify_and_get_quality_string(
             self.farmer.constants, response.challenge_hash, response.sp_hash
@@ -293,9 +291,9 @@ class FarmerAPI:
             for sk in self.farmer.get_private_keys():
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
-		    agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk, include_taproot)
+                    agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk, include_taproot)
                     assert agg_pk == pospace.plot_public_key
-		    if include_taproot:
+                    if include_taproot:
                         taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(response.local_pk, pk)
                         taproot_share_cc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, challenge_chain_sp, agg_pk)
                         taproot_share_rc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, reward_chain_sp, agg_pk)
@@ -366,7 +364,7 @@ class FarmerAPI:
                 if pk == response.farmer_pk:
                     agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk, include_taproot)
                     assert agg_pk == pospace.plot_public_key
-		    if include_taproot:
+                    if include_taproot:
                         taproot_sk = ProofOfSpace.generate_taproot_sk(response.local_pk, pk)
                         foliage_sig_taproot: G2Element = AugSchemeMPL.sign(taproot_sk, foliage_block_data_hash, agg_pk)
                         foliage_transaction_block_sig_taproot: G2Element = AugSchemeMPL.sign(
@@ -378,6 +376,7 @@ class FarmerAPI:
 
                     foliage_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_data_hash, agg_pk)
                     foliage_transaction_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_transaction_block_hash, agg_pk)
+
                     foliage_agg_sig = AugSchemeMPL.aggregate(
                         [foliage_sig_harvester, foliage_sig_farmer, foliage_sig_taproot]
                     )
@@ -432,7 +431,7 @@ class FarmerAPI:
             new_signage_point.sub_slot_iters,
             new_signage_point.signage_point_index,
             new_signage_point.challenge_chain_sp,
-	    pool_difficulties,
+            pool_difficulties,
         )
 
         msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
