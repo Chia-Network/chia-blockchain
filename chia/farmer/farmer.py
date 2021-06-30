@@ -436,7 +436,7 @@ class Farmer:
     def get_reward_targets(self, search_for_private_key: bool) -> Dict:
         if search_for_private_key:
             assert self.keychain_proxy is not None  # An offering to the mypy gods
-            all_sks = asyncio.run(self.keychain_proxy.get_all_private_keys())
+            all_sks = asyncio.get_event_loop().run_until_complete(self.keychain_proxy.get_all_private_keys())
             stop_searching_for_farmer, stop_searching_for_pool = False, False
             for i in range(500):
                 if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
