@@ -20,5 +20,7 @@ fi
 
 echo -e "\n===================================================="
 echo "Type '. ./activate' to enter the virtual environment"
+echo "Type 'deactivate' to leave the virtual environment"
+
 echo -e "\n"
 silicoin -h
