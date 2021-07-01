@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - m1 # @TODO remove before merge
     tags:
       - '**'
   pull_request:
