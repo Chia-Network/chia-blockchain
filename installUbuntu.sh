@@ -13,8 +13,8 @@ pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10
 pip install git+https://github.com/silicoin-network/silicoin-blockchain.git@v0.0.4
 
-if [ ! -f "venv/bin/silicoin" ]; then
-	ln -s chia venv/bin/silicoin
+if [ ! -f "venv/bin/sit" ]; then
+	ln -s chia venv/bin/sit
 fi
 
 
@@ -23,4 +23,4 @@ echo "Type '. ./activate' to enter the virtual environment"
 echo "Type 'deactivate' to leave the virtual environment"
 
 echo -e "\n"
-silicoin -h
+sit -h
