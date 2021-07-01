@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 12:15\n"
+"PO-Revision-Date: 2021-07-01 18:29\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:62
 msgid "(Optional)"
-msgstr "（選用）"
+msgstr "(選用)"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:64
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -995,7 +995,7 @@ msgstr "加入礦池並獲得持續的 XCH 耕種獎勵。雖然平均報酬一�
 
 #: src/components/plot/add/PlotAddNFT.tsx:137
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr "加入礦池並獲得更多持續的 XCH 耕種獎勵。建立一個耕地NFT 並且允許將新的耕地加入分組。"
+msgstr "加入礦池並獲得更多持續的 XCH 耕種獎勵。建立一個耕地NFT並且允許將新的耕地加入分組。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
