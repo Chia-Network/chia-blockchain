@@ -12,9 +12,13 @@ fi
 pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10
 pip install git+https://github.com/silicoin-network/silicoin-blockchain.git@v0.0.4
-ln -s chia venv/bin/silicoin
 
+if [ ! -f "venv/bin/silicoin" ]; then
+	ln -s chia venv/bin/silicoin
+fi
+
+
+echo -e "\n===================================================="
 echo "Type '. ./activate' to enter the virtual environment"
-echo "Type 'silicoin init' to begin"
-echo "Type 'silicoin plots add -d /path/to/plots' to plots"
-echo "Type 'silicoin start farmer' to start farmer"
+echo -e "\n"
+silicoin -h
