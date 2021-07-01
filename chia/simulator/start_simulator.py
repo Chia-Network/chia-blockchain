@@ -1,26 +1,17 @@
-import os
 import sys
 from pathlib import Path
-
-# Workaround import path conflict between tests.* and site-packages/tests (installed by 'fasteners')
-chia_blockchain_import_path = str(Path.resolve(Path(os.path.dirname(os.path.abspath(__file__))) / ".." / ".."))
-
-if chia_blockchain_import_path in sys.path:
-    sys.path.remove(chia_blockchain_import_path)
-    sys.path.insert(0, chia_blockchain_import_path)
-
 from multiprocessing import freeze_support
-
 from typing import Dict
 
 from chia.full_node.full_node import FullNode
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
-from tests.block_tools import BlockTools, test_constants
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import mkdir, path_from_root
+from tests.block_tools import BlockTools, create_block_tools, test_constants
+from tests.util.keyring import TempKeyring
 
 from .full_node_simulator import FullNodeSimulator
 
@@ -59,23 +50,26 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
 
 
 def main() -> None:
-    connect_to_daemon = False
-    if "-D" in sys.argv:
-        connect_to_daemon = True
-        sys.argv.remove("-D")
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    config["database_path"] = config["simulator_database_path"]
-    config["peer_db_path"] = config["simulator_peer_db_path"]
-    config["introducer_peer"]["host"] = "127.0.0.1"
-    config["introducer_peer"]["port"] = 58555
-    config["selected_network"] = "testnet0"
-    config["simulation"] = True
-    kwargs = service_kwargs_for_full_node_simulator(
-        DEFAULT_ROOT_PATH,
-        config,
-        BlockTools(test_constants, root_path=DEFAULT_ROOT_PATH, connect_to_daemon=connect_to_daemon),
-    )
-    return run_service(**kwargs)
+    # Use a temp keychain which will be deleted when it exits scope
+    with TempKeyring() as keychain:
+        # If launched with -D, we should connect to the keychain via the daemon instead
+        # of using a local keychain
+        if "-D" in sys.argv:
+            keychain = None
+            sys.argv.remove("-D")  # Remove -D to avoid conflicting with load_config_cli's argparse usage
+        config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        config["database_path"] = config["simulator_database_path"]
+        config["peer_db_path"] = config["simulator_peer_db_path"]
+        config["introducer_peer"]["host"] = "127.0.0.1"
+        config["introducer_peer"]["port"] = 58555
+        config["selected_network"] = "testnet0"
+        config["simulation"] = True
+        kwargs = service_kwargs_for_full_node_simulator(
+            DEFAULT_ROOT_PATH,
+            config,
+            create_block_tools(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
+        )
+        return run_service(**kwargs)
 
 
 if __name__ == "__main__":

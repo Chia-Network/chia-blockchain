@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -137,7 +136,7 @@ class PlotKeysResolver:
         return master_sk_to_pool_sk(sk).get_g1()
 
 
-def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
+async def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
 
     config_filename = config_path_for_filename(root_path, "config.yaml")
     config = load_config(root_path, config_filename)
@@ -155,7 +154,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         args.connect_to_daemon,
     )
 
-    asyncio.get_event_loop().run_until_complete(keys_resolver.resolve())
+    await keys_resolver.resolve()
 
     farmer_public_key: G1Element = keys_resolver.farmer_public_key_g1element
     pool_public_key: G1Element = keys_resolver.pool_public_key_g1element
