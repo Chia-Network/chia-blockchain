@@ -7,6 +7,8 @@
 [**Commuity Autonomy**](https://www.chivescoin.org/community/)
 [*Get Chives For Free(7.15 Publish)*](https://game.chivescoin.org/)
 
+[**Worked Version!!!**](https://github.com/HiveProject2021/chives-blockchain/releases)
+
 # 1 Name：Chives
 * English name: Chives
 * English abbreviation: XCC (XCC Chives)
