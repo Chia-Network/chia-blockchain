@@ -302,6 +302,8 @@ class WebSocketServer:
             response = await self.unlock_keyring(cast(Dict[str, Any], data))
         elif command == "set_keyring_passphrase":
             response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
+        elif command == "remove_keyring_passphrase":
+            response = await self.remove_keyring_passphrase(cast(Dict[str, Any], data))
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
@@ -357,12 +359,12 @@ class WebSocketServer:
         current_passphrase = None
         new_passphrase = None
 
-        if not error and Keychain.has_master_password():
+        if error is None and Keychain.has_master_password():
             current_passphrase = request.get("current_passphrase", None)
             if type(current_passphrase) is not str:
                 error = "missing current_passphrase"
 
-        if not error:
+        if error is None:
             new_passphrase = request.get("new_passphrase", None)
             if type(new_passphrase) is not str:
                 error = "missing new_passphrase"
@@ -378,6 +380,33 @@ class WebSocketServer:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Failed to set keyring passphrase: {e} {tb}")
+            else:
+                success = True
+
+        response = {"success": success, "error": error}
+        return response
+
+    async def remove_keyring_passphrase(self, request: Dict[str, Any]):
+        success = False
+        error = None
+        current_passphrase = None
+
+        if error is None and not Keychain.has_master_password():
+            error = "passphrase not set"
+
+        if error is None:
+            current_passphrase = request.get("current_passphrase", None)
+            if type(current_passphrase) is not str:
+                error = "missing current_passphrase"
+
+        if error is None:
+            try:
+                Keychain.remove_master_password(current_passphrase)
+            except KeyringCurrentPassphaseIsInvalid:
+                error = "current passphrase is invalid"
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Failed to remove keyring passphrase: {e} {tb}")
             else:
                 success = True
 
