@@ -42,7 +42,7 @@ def loads_keyring(method):
     def inner(self, *args, **kwargs):
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
-            log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
+            # log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
             if (self.has_content() and not self.payload_cache) or self.needs_load_keyring:
                 self.load_keyring()
         return method(self, *args, **kwargs)
@@ -54,26 +54,26 @@ def loads_keyring(method):
 def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
     result = None
-    log.warning(f"[pid:{os.getpid()}] in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
+    # log.warning(f"[pid:{os.getpid()}] in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
     for i in range(0, max_iters):
-        log.warning(f"[pid:{os.getpid()} attempting to acquire writer lock (attempt={i})")
+        # log.warning(f"[pid:{os.getpid()} attempting to acquire writer lock (attempt={i})")
         if lock.acquire_write_lock(timeout=timeout):
-            log.warning(f"[pid:{os.getpid()}] lock acquired")
-            log.warning(f"[pid:{os.getpid()}] calling method")
+            # log.warning(f"[pid:{os.getpid()}] lock acquired")
+            # log.warning(f"[pid:{os.getpid()}] calling method")
             yield  # <----
-            log.warning(f"[pid:{os.getpid()}] method returned: {result}")
+            # log.warning(f"[pid:{os.getpid()}] method returned: {result}")
             lock.release_write_lock()
             try:
-                log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
+                # log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
             except Exception:
                 pass
             break
         else:
-            log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring writer lock after {timeout} seconds")
+            # log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring writer lock after {timeout} seconds")
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
-                log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
+                # log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
                 print(f" Remaining attempts: {max_iters - 1 - i}")
             else:
                 print("")
@@ -85,26 +85,26 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
 def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
     result = None
-    log.warning(f"[pid:{os.getpid()}] in acquire_reader_lock: lock_path: {lock_path}, max_iters: {max_iters}")
+    # log.warning(f"[pid:{os.getpid()}] in acquire_reader_lock: lock_path: {lock_path}, max_iters: {max_iters}")
     for i in range(0, max_iters):
-        log.warning(f"[pid:{os.getpid()} attempting to acquire reader lock (attempt={i})")
+        # log.warning(f"[pid:{os.getpid()} attempting to acquire reader lock (attempt={i})")
         if lock.acquire_read_lock(timeout=timeout):
-            log.warning(f"[pid:{os.getpid()}] lock acquired")
-            log.warning(f"[pid:{os.getpid()}] calling method")
+            # log.warning(f"[pid:{os.getpid()}] lock acquired")
+            # log.warning(f"[pid:{os.getpid()}] calling method")
             yield  # <----
-            log.warning(f"[pid:{os.getpid()}] method returned: {result}")
+            # log.warning(f"[pid:{os.getpid()}] method returned: {result}")
             lock.release_read_lock()
             try:
-                log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
+                # log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
             except Exception:
                 pass
             break
         else:
-            log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring reader lock after {timeout} seconds")
+            # log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring reader lock after {timeout} seconds")
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
-                log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
+                # log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
                 print(f" Remaining attempts: {max_iters - 1 - i}")
             else:
                 print("")
@@ -182,7 +182,7 @@ class FileKeyring(FileSystemEventHandler):
         self.setup_keyring_file_watcher()
 
     def setup_keyring_file_watcher(self):
-        log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher on thread: {threading.get_ident()}")
+        # log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher on thread: {threading.get_ident()}")
 
         observer = Observer()
         observer.schedule(self, self.keyring_path)
@@ -191,7 +191,7 @@ class FileKeyring(FileSystemEventHandler):
         self.keyring_observer = Observer()
 
     def on_modified(self, event):
-        log.warning(f"[pid:{os.getpid()}] on_modified called on thread: {threading.get_ident()}")
+        # log.warning(f"[pid:{os.getpid()}] on_modified called on thread: {threading.get_ident()}")
         with self.load_keyring_lock:
             self.needs_load_keyring = True
 
@@ -234,16 +234,16 @@ class FileKeyring(FileSystemEventHandler):
 
     @loads_keyring
     def _inner_get_password(self, service: str, user: str) -> Optional[str]:
-        log.warning(f"[pid:{os.getpid()}] get_password: service: {service}, user: {user}")
-        log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
-        log.warning(
-            f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..):"
-            f" {self.ensure_cached_keys_dict().get(service, {})}"
-        )
-        log.warning(
-            f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user):"
-            f" {self.ensure_cached_keys_dict().get(service, {}).get(user)}"
-        )
+        # log.warning(f"[pid:{os.getpid()}] get_password: service: {service}, user: {user}")
+        # log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
+        # log.warning(
+        #     f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..):"
+        #     f" {self.ensure_cached_keys_dict().get(service, {})}"
+        # )
+        # log.warning(
+        #     f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user):"
+        #     f" {self.ensure_cached_keys_dict().get(service, {}).get(user)}"
+        # )
 
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
@@ -260,7 +260,7 @@ class FileKeyring(FileSystemEventHandler):
         keys = self.ensure_cached_keys_dict()
         # Convert the password to a string (if necessary)
         password = password_bytes.hex() if type(password_bytes) == bytes else str(password_bytes)
-        log.warning(f"[pid:{os.getpid()}] do_set_password: user: {user}, password: {password}")
+        # log.warning(f"[pid:{os.getpid()}] do_set_password: user: {user}, password: {password}")
 
         # Ensure a dictionary exists for the 'service'
         if keys.get(service) is None:
