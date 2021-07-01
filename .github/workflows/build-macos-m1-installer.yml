@@ -65,11 +65,16 @@ jobs:
         id: check_secrets
         shell: bash
         run: |
-          unset HAS_SECRET
-          if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+          unset HAS_APPLE_SECRET
+          unset HAS_AWS_SECRET
+          if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
+          echo ::set-output name=HAS_APPLE_SECRET::${HAS_APPLE_SECRET}
+
+          if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+          echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
         env:
-          SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+          APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+          AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
 
       - name: Create installer version number
         id: version_number
@@ -87,7 +92,7 @@ jobs:
           security delete-keychain signing_temp.keychain || true
 
       - name: Import Apple app signing certificate
-        if: steps.check_secrets.outputs.HAS_SECRET
+        if: steps.check_secrets.outputs.HAS_APPLE_SECRET
         uses: Apple-Actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
@@ -106,7 +111,7 @@ jobs:
 
       - name: Build MacOS DMG in Catalina
         env:
-          NOTARIZE: ${{ steps.check_secrets.outputs.HAS_SECRET }}
+          NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
           APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
           APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
         run: |
@@ -124,7 +129,7 @@ jobs:
           path: ${{ github.workspace }}/build_scripts/final_installer/
 
       - name: Install AWS CLI
-        if: steps.check_secrets.outputs.HAS_SECRET
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
           arch -arm64 brew install awscli
 
@@ -134,7 +139,7 @@ jobs:
           arch -arm64 shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.sha256
 
       - name: Upload to s3
-        if: steps.check_secrets.outputs.HAS_SECRET
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
@@ -154,7 +159,7 @@ jobs:
           ls ${{ github.workspace }}/build_scripts/final_installer/
 
       - name: Upload Release Files
-        if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
