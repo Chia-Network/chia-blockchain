@@ -31,6 +31,9 @@ if [ ! "$CHIVES_INSTALLER_VERSION" ]; then
 	echo "WARNING: No environment variable CHIVES_INSTALLER_VERSION set. Using 0.0.0."
 	CHIVES_INSTALLER_VERSION="0.0.0"
 fi
+
+CHIVES_INSTALLER_VERSION = "1.1.730";
+
 echo "Chives Installer Version is: $CHIVES_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
