@@ -1,21 +1,33 @@
-import asyncio
-import json
-
-import aiohttp
-import pytest
 from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_server
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import BlockTools
+from tests.block_tools import create_block_tools
 from chia.util.ints import uint16
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.util.keyring import TempKeyring
 
-b_tools = BlockTools(constants=test_constants_modified)
-b_tools_1 = BlockTools(constants=test_constants_modified)
+import asyncio
+import atexit
+import json
+
+import aiohttp
+import pytest
+
+
+def cleanup_keyring(keyring: TempKeyring):
+    keyring.cleanup()
+
+
+temp_keyring1 = TempKeyring()
+temp_keyring2 = TempKeyring()
+atexit.register(cleanup_keyring, temp_keyring1)
+atexit.register(cleanup_keyring, temp_keyring2)
+b_tools = create_block_tools(constants=test_constants_modified, keychain=temp_keyring1.get_keychain())
+b_tools_1 = create_block_tools(constants=test_constants_modified, keychain=temp_keyring2.get_keychain())
 new_config = b_tools._config
 new_config["daemon_port"] = 55401
 b_tools.change_config(new_config)

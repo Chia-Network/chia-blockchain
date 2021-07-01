@@ -140,20 +140,9 @@ class BlockTools:
         self.local_keychain = keychain
 
         create_default_chia_config(root_path)
-
-        asyncio.get_event_loop().run_until_complete(self.init_keys())
-
-        self.init_plots(root_path)
-
         create_all_ssl(root_path)
 
-        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
-        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
-
-        self.load_plots()
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
-
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
@@ -166,14 +155,12 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-    async def init_keys(self):
+    async def setup_keys(self):
         if self.local_keychain:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain)
         else:
-            keychain_user = "testing-1.8.0"
-            keychain_testing = True
             self.keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, keychain_user, keychain_testing
+                self.root_path, log, user="testing-1.8.0", testing=True
             )
 
         await self.keychain_proxy.delete_all_keys()
@@ -207,11 +194,7 @@ class BlockTools:
         self.constants = updated_constants
         save_config(self.root_path, "config.yaml", self._config)
 
-    def load_plots(self):
-        _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
-        self.plots: Dict[Path, PlotInfo] = loaded_plots
-
-    def init_plots(self, root_path: Path):
+    async def setup_plots(self):
         plot_dir = get_plot_dir()
         mkdir(plot_dir)
         temp_dir = get_plot_tmp_dir()
@@ -246,9 +229,9 @@ class BlockTools:
         ]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
-            create_plots(
+            await create_plots(
                 args,
-                root_path,
+                self.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[:num_pool_public_key_plots],
             )
@@ -256,15 +239,18 @@ class BlockTools:
             args.pool_public_key = None
             args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
             args.num = num_pool_address_plots
-            create_plots(
+            await create_plots(
                 args,
-                root_path,
+                self.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
+
+        _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
+        self.plots: Dict[Path, PlotInfo] = loaded_plots
 
     @property
     def config(self) -> Dict:
@@ -1863,3 +1849,30 @@ def create_test_unfinished_block(
         block_generator.program if block_generator else None,
         block_generator.block_height_list() if block_generator else [],
     )
+
+
+async def create_block_tools_async(
+    constants: ConsensusConstants = test_constants,
+    root_path: Optional[Path] = None,
+    const_dict=None,
+    keychain: Optional[Keychain] = None,
+) -> BlockTools:
+    bt = BlockTools(constants, root_path, const_dict, keychain)
+    await bt.setup_keys()
+    await bt.setup_plots()
+
+    return bt
+
+
+def create_block_tools(
+    constants: ConsensusConstants = test_constants,
+    root_path: Optional[Path] = None,
+    const_dict=None,
+    keychain: Optional[Keychain] = None,
+) -> BlockTools:
+    bt = BlockTools(constants, root_path, const_dict, keychain)
+
+    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
+    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
+
+    return bt
