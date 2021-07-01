@@ -9,6 +9,8 @@
 
 [**Worked Version!!! Chives Releases!!!**](https://github.com/HiveProject2021/chives-blockchain/releases)
 
+### HI CHIVES MINERS, IF YOU IF TESTING VERSION,PLEASE DELETE THEM ASAP, AND DOWNLOAD THE NEW VERSION.!!!!!!!!
+
 # 1 Name：Chives
 * English name: Chives
 * English abbreviation: XCC (XCC Chives)
