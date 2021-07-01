@@ -129,7 +129,7 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
 
 
 class TempKeyring:
-    def __init__(self, user: Optional[str] = None, testing: bool = False):
+    def __init__(self, user: str = "testing-1.8.0", testing: bool = True):
         self.keychain = self._patch_and_create_keychain(user, testing)
         self.cleaned_up = False
 
@@ -179,7 +179,7 @@ class TempKeyring:
         assert not self.cleaned_up
 
         temp_dir = self.keychain._temp_dir
-        print(f"cleaning up keychain in temp dir: {temp_dir}")
+        print(f"Cleaning up temp keychain in dir: {temp_dir}")
         tempfile.TemporaryDirectory._rmtree(temp_dir)
 
         self.keychain._mock_supports_keyring_password_patch.stop()
