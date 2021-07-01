@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 00:18\n"
+"PO-Revision-Date: 2021-07-01 06:17\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2184,12 +2184,12 @@ msgstr "类别"
 
 #: src/components/plot/add/PlotAdd.tsx:101
 msgid "Unable to create plot NFT"
-msgstr ""
+msgstr "无法创建农田NFT"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:111
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
-msgstr ""
+msgstr "未申领奖励"
 
 #: src/components/fullNode/FullNode.jsx:98
 msgid "Unfinished"
@@ -2205,7 +2205,7 @@ msgstr "未知"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 msgid "Unsaved Changes"
-msgstr ""
+msgstr "未保存的更改"
 
 #: src/components/wallet/create/createRLAdmin.jsx:281
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
@@ -2222,11 +2222,11 @@ msgstr "VDF子项迭代数"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
-msgstr ""
+msgstr "值似乎过高"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
-msgstr ""
+msgstr "验证耕种池详情"
 
 #: src/electron/main.tsx:295
 msgid "View"
@@ -2266,12 +2266,12 @@ msgstr "等待同步"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
 msgid "Waiting for the transaction to be confirmed"
-msgstr ""
+msgstr "正在等待交易确认"
 
 #: src/components/pool/PoolOverview.tsx:185
 #: src/components/wallet/standard/WalletStandard.tsx:657
 msgid "Wallet Status:"
-msgstr ""
+msgstr "钱包状态："
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2312,7 +2312,7 @@ msgstr "钱包"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:57
 msgid "Want to Join a Pool? Create a Plot NFT"
-msgstr ""
+msgstr "想要加入耕种池？创建一个农田NFT"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:133
 msgid "Want to earn more Chia? Add more plots to your farm."
@@ -2363,11 +2363,11 @@ msgstr ""
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr ""
+msgstr "你目前没有自耕种"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:328
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
-msgstr ""
+msgstr "你现在可以使用这个农田NFT开垦新农田，但是在同步完成前，你不能进行任何更改。"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -2379,7 +2379,7 @@ msgstr "不需要同步或者连接到网络节点就可以开垦农田。在开
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
 msgid "You have made changes. Do you want to discard them?"
-msgstr ""
+msgstr "你已经做了一些更改。你确定要放弃这些修改吗？"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2399,7 +2399,7 @@ msgstr "您在网络上拥有{0}%的空间，因此收割一个区块所花费�
 
 #: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
-msgstr ""
+msgstr "你需要先领取你的奖励。"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
@@ -2407,11 +2407,11 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:135
 msgid "You will recieve <0/> to {0}"
-msgstr ""
+msgstr "你将会收到 <0/> 至 {0}"
 
 #: src/hooks/useAbsorbRewards.tsx:49
 msgid "You will recieve <0/> to {address}"
-msgstr ""
+msgstr "你将会收到 <0/> 至 {address}"
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
@@ -2427,7 +2427,7 @@ msgstr "你的收割网络"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr ""
+msgstr "你的耕种池概览"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2453,7 +2453,7 @@ msgstr "未同步"
 
 #: src/components/plot/add/PlotAdd.tsx:105
 msgid "p2_singleton_puzzle_hash is not defined"
-msgstr ""
+msgstr "p2_singleton_puzzle_hash 未定义"
 
 #: src/components/wallet/WalletStatusCard.tsx:27
 #: src/components/wallet/Wallets.tsx:123
@@ -2480,7 +2480,7 @@ msgstr "同步中"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
-msgstr ""
+msgstr "{0} 积分 {1} - {2} 小时前"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 msgid "{currencyCode} Block Rewards"
