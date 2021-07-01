@@ -57,7 +57,7 @@ class DIDWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-
+        self.log.info("Creating new DID wallet")
         if amount & 1 == 0:
             raise ValueError("DID amount must be odd number")
         self.wallet_state_manager = wallet_state_manager
@@ -67,6 +67,7 @@ class DIDWallet:
             raise ValueError("Cannot require more IDs than are known.")
         self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None)
         info_as_string = json.dumps(self.did_info.to_json_dict())
+        self.log.info("creating DID in wallet state manager")
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
@@ -77,9 +78,11 @@ class DIDWallet:
         if amount > bal:
             raise ValueError("Not enough balance")
 
+        self.log.info("generating DID generation tx")
         spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
+        self.log.info("spend bundle generated")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
@@ -121,8 +124,10 @@ class DIDWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
         )
+        self.log.info("pushing DID tx")
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
+        self.log.info("pushed DID tx")
         return self
 
     @staticmethod
