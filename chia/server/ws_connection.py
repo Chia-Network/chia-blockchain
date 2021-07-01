@@ -128,9 +128,9 @@ class WSChiaConnection:
                 message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
             except Exception:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            else:
-                if message_type != ProtocolMessageTypes.handshake:
-                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+            if message_type != ProtocolMessageTypes.handshake:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
@@ -152,9 +152,9 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(message.type)
             except Exception:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            else:
-                if message_type != ProtocolMessageTypes.handshake:
-                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+            if message_type != ProtocolMessageTypes.handshake:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
