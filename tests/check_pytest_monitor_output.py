@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/env python3
 import sys
 
 ret = 0
@@ -8,8 +8,8 @@ ret = 0
 for ln in sys.stdin:
     line = ln.strip().split()
 
-    print(f"{float(line[1]) * 100.0: 7.2f}% CPU {float(line[2]):6.2f}s {line[3]:6.5} MB RAM {line[0]}")
-    if float(line[3]) > 1500:
+    print(f"{float(line[1]) * 100.0: 8.1f}% CPU {float(line[2]):7.1f}s {float(line[3]): 8.2f} MB RAM  {line[0]}")
+    if float(line[3]) > 800:
         print("   ERROR: ^^ exceeded RAM limit ^^ \n")
         ret += 1
 
