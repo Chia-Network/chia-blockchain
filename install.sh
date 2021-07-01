@@ -122,7 +122,7 @@ python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
 echo ""
 echo "Deafwave blockchain install.sh complete."
 echo "For assistance join us on Discord in the #testnet chat channel:"
-echo "https://discord.gg/hVe8Pnra5r"
+echo "https://discord.gg/2d9VVMgDdx"
 echo ""
 echo "Try the Quick Start Guide to running deafwave-blockchain:"
 echo "https://github.com/ChandlerFerry/deafwave-blockchain/wiki/Quick-Start-Guide"

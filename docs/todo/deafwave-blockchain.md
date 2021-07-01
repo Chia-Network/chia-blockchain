@@ -24,7 +24,7 @@ dns-introducer.deafwave.net
 ### Initial
 
 Keybase -> Discord
-https://keybase.io/team/chia_network.public -> https://discord.gg/hVe8Pnra5r
+https://keybase.io/team/chia_network.public -> https://discord.gg/2d9VVMgDdx
 CHIA -> DEAFWAVE
 Chia -> Deafwave
 chia -> deafwave

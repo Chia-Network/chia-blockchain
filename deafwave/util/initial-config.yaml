@@ -19,10 +19,10 @@ network_overrides: &network_overrides
       GENESIS_CHALLENGE: 15c1626e087d479980667bbdde8464b8cf737066c20622e520feaa096e9f9a3e
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 144801a15097959bc17dcb810c633af7e0f557165313b4be5f0f057de735e4b6
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 44366e3ebaef79725e7919de5fd530da0edb58510b1e111bc1e5195ec2dd0782
-      DIFFICULTY_CONSTANT_FACTOR: 2 ** 57
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
       MIN_PLOT_SIZE: 18
       EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 1
+      DIFFICULTY_STARTING: 14335
   config:
     mainnet:
       address_prefix: "zzz"
@@ -53,7 +53,7 @@ daemon_ssl:
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
-  log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_level: "INFO"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
 
 harvester:
