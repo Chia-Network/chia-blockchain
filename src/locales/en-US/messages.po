@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:02\n"
+"PO-Revision-Date: 2021-07-01 12:15\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1392,7 +1392,7 @@ msgstr "Plot NFT"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
 #: src/components/plotNFT/PlotNFTChangePool.tsx:81
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
-msgstr "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+msgstr "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exist"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -2018,7 +2018,7 @@ msgstr "This allows you to add a directory that has plots in it. If you have not
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:107
 #: src/components/plotNFT/PlotNFTCard.tsx:133
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+msgstr "This difficulty is an artificially lower difficulty than on the real network and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 
 #: src/components/trading/CreateOffer.jsx:123
 #: src/hooks/useSelectDirectory.tsx:31
@@ -2407,11 +2407,11 @@ msgstr "You need to claim your rewards first"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:135
 msgid "You will recieve <0/> to {0}"
-msgstr "You will recieve <0/> to {0}"
+msgstr "You will receive <0/> to {0}"
 
 #: src/hooks/useAbsorbRewards.tsx:49
 msgid "You will recieve <0/> to {address}"
-msgstr "You will recieve <0/> to {address}"
+msgstr "You will receive <0/> to {address}"
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
