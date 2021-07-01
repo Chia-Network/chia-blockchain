@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -142,7 +143,7 @@ def create_cmd(
         print("Error: The minimum k size allowed from the cli is k=25.")
         sys.exit(1)
 
-    create_plots(Params(), ctx.obj["root_path"])
+    asyncio.get_event_loop().run_until_complete(create_plots(Params(), ctx.obj["root_path"]))
 
 
 @plots_cmd.command("check", short_help="Checks plots")
