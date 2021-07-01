@@ -3,21 +3,26 @@ import socket
 
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
+from chia.server.outbound_message import NodeType
 
 
 def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool):
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
-    peer_info = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
+    peer_info_src = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
 
-    async def connection_check():
+    async def connection_check(peer_info: PeerInfo):
         while True:
             peer_retry = True
             for _, connection in server.all_connections.items():
                 if connection.get_peer_info() == peer_info or connection.get_peer_info() == peer_info_arg:
                     peer_retry = False
             if peer_retry:
+                if server._local_type == NodeType.HARVESTER:
+                    host = socket.gethostbyname(peer_info_arg.host)
+                    if host != peer_info.host:
+                        peer_info = PeerInfo(host, peer_info.port)
                 log.info(f"Reconnecting to peer {peer_info}")
                 try:
                     await server.start_client(peer_info, None, auth=auth)
@@ -25,4 +30,4 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
                     log.info(f"Failed to connect to {peer_info} {e}")
             await asyncio.sleep(3)
 
-    return asyncio.create_task(connection_check())
+    return asyncio.create_task(connection_check(peer_info_src))
