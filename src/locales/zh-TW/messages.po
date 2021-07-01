@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 00:18\n"
+"PO-Revision-Date: 2021-07-01 12:15\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -292,7 +292,7 @@ msgstr "變更"
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
-msgstr "變更池"
+msgstr "變更礦池"
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
@@ -390,7 +390,7 @@ msgstr "連線到其他同儕"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
-msgstr "連線到池"
+msgstr "連線至礦池"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
@@ -527,11 +527,11 @@ msgstr "由我們創造："
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr "建立一塊耕地 NFT 並加入池"
+msgstr "建立一塊耕地 NFT 並加入礦池"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
-msgstr "建立一塊耕地 NFT 並加入自己池"
+msgstr "正在為自身礦池建立耕地 NFT"
 
 #: src/components/plot/add/PlotAdd.tsx:86
 msgid "Currency code is not defined"
@@ -977,25 +977,25 @@ msgstr "無效狀態"
 #: src/components/plotNFT/PlotNFTCard.tsx:310
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr "加入池"
+msgstr "加入礦池"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:145
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr "加入一個池"
+msgstr "加入一個礦池"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
-msgstr "加入礦池並獲得公平的 XCH 耕耘獎勵。平均回報相同但波動性會小很多。"
+msgstr "加入礦池並獲得持續的 XCH 耕種獎勵。雖然平均報酬一樣但波動較小相對穩定。"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:59
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr "加入礦池以獲得持續性的 XCH 耕耘獎勵。。分配耕地到耕地 NFT。您可以簡單的免重新耕地切換礦池。"
+msgstr "加入礦池並獲得持續的 XCH 耕種獎勵。雖然平均報酬一樣但波動較小相對穩定。分配耕地到耕地 NFT。你可以更輕鬆的轉換礦池而不用重新進行耕地。"
 
 #: src/components/plot/add/PlotAddNFT.tsx:137
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr "加入礦池以獲得更多持續性的 XCH 耕耘獎勵。建立耕地 NFT 並分配您的新耕地到群組。"
+msgstr "加入礦池並獲得更多持續的 XCH 耕種獎勵。建立一個耕地NFT 並且允許將新的耕地加入分組。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
@@ -1029,7 +1029,7 @@ msgstr "啟動器 ID"
 
 #: src/components/plotNFT/PlotNFTState.tsx:55
 msgid "Leaving Pool"
-msgstr "離開池"
+msgstr "離開礦池"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "List view"
@@ -1220,7 +1220,7 @@ msgstr "沒找到的耕地"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:186
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr "請注意，這不會變更您的礦池支付位址。這只會影響舊的格式耕地和 0.25XCH 的池耕地獎勵。"
+msgstr "請注意，這不會變更您的礦池支付位址。這只會影響舊的耕地格式和 0.25XCH 的礦池耕地獎勵。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:95
 #: src/components/plotNFT/PlotNFTCard.tsx:121
@@ -1392,7 +1392,7 @@ msgstr "耕地 NFT"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
 #: src/components/plotNFT/PlotNFTChangePool.tsx:81
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
-msgstr "耕地 NFT 的 p2_singleton_puzzle_hash {plotNFTId} 不存在"
+msgstr "有 p2_singleton_puzzle_hash {plotNFTId} 的耕地 NFT 不存在"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1420,7 +1420,7 @@ msgstr "耕地與 {0} 重複"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state)"
-msgstr "耕地 NFT 正在過去到（目標狀態）"
+msgstr "耕地 NFT 正在過度到（目標狀態）"
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -1453,21 +1453,21 @@ msgstr "以 bitfield 規劃耕地可減少約 30％ 的總寫入量且如今也�
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:177
 msgid "Points Found Since Start"
-msgstr "自開始以後發現的點數"
+msgstr "自開始以來所發現的點數"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:162
 #: src/components/plotNFT/PlotNFTCard.tsx:188
 msgid "Points Found in Last 24 Hours"
-msgstr "最近 24 小時內發現點數"
+msgstr "最近 24 小時內所發現的積分"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr "池"
+msgstr "礦池"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:94
 msgid "Pool Contract Address"
-msgstr "池合約位址"
+msgstr "礦池合約位址"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:81
 msgid "Pool Key"
@@ -1504,21 +1504,21 @@ msgstr "池獎勵數量"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:36
 msgid "Pool does not provide relative_lock_height."
-msgstr "礦池未提供 relative_lock_height。"
+msgstr "礦池未提供 相對_鎖定_高度。"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:33
 msgid "Pool does not provide target_puzzle_hash."
-msgstr "礦池未提供 target_puzzle_hash。"
+msgstr "礦池未提供 目標_拼圖_雜湊值。"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr "池公鑰:"
+msgstr "礦池公鑰:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:203
 #: src/components/plotNFT/PlotNFTCard.tsx:242
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
-msgstr "池："
+msgstr "礦池："
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:56
@@ -1751,7 +1751,7 @@ msgstr "選擇您的耕地 NFT"
 
 #: src/components/plot/add/PlotAddNFT.tsx:76
 msgid "Select your Plot NFT from the dropdown or create a new one."
-msgstr "在下拉式選單中選擇你的耕地NFT或是創建一個新的耕地"
+msgstr "在下拉式選單中選擇你的耕地 NFT 或是創建一個新的耕地。"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
@@ -1762,11 +1762,11 @@ msgstr "已選擇"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:54
 msgid "Self Pooling"
-msgstr "自己池"
+msgstr "自聚礦池"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
-msgstr "自池。當你出塊時你將獲得 XCH 獎勵。"
+msgstr "自聚礦池。當你贏取一個區塊時你將獲得 XCH 獎勵。"
 
 #: src/components/trading/CreateOffer.jsx:164
 #: src/components/trading/TradesTable.tsx:47
@@ -1981,15 +1981,15 @@ msgstr "節點同步中，這代表正從其他節點中下載區塊，直到到
 
 #: src/hooks/usePoolInfo.ts:37
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr "礦池網址 \"{normalizedUrl}\" 錯誤。這是礦池嗎? 錯誤: \"{0}\""
+msgstr "礦池網址：「 {normalizedUrl} 」錯誤。這是礦池嗎？錯誤碼： {0}"
 
 #: src/hooks/usePoolInfo.ts:23
 msgid "The pool URL speciefied is not valid. {poolUrl}"
-msgstr "礦池網址無效。{poolUrl}"
+msgstr "礦池網址無效。 {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
-msgstr "切換礦池操作已被取消，請重新更換礦池或是切換自身礦池。"
+msgstr "切換礦池操作已被取消，請重試切換礦池或自聚礦池。"
 
 #: src/components/block/Block.jsx:304
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2018,7 +2018,7 @@ msgstr "這允許你增加已存有耕地的資料夾。如果你還沒建立任
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:107
 #: src/components/plotNFT/PlotNFTCard.tsx:133
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr "如果在耕種時使用，為了找到更多的證明並將他們傳送到礦池，將難度人為降低於真實網路。你擁有的耕地越多，你的難度就越高。 但是，難度不影響獎勵。"
+msgstr "為了在耕種時找到更多證明以傳送至網路，此處難度與實際網路相比已人工降低過。你擁有的耕地越多，你的難度就越高。 但是，難度不影響獎勵。"
 
 #: src/components/trading/CreateOffer.jsx:123
 #: src/hooks/useSelectDirectory.tsx:31
@@ -2057,7 +2057,7 @@ msgstr "這是總餘額 + 未結餘額：這是在全部未結交易結清後你
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:126
 #: src/components/plotNFT/PlotNFTCard.tsx:152
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr "自上次支付以來該耕地NFT 在該池中的總積分。礦池在支付過後將重置積分。"
+msgstr "自上次支付以來該耕地 NFT 在該池中的總積分。礦池在支付過後將重置積分。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:143
 #: src/components/plotNFT/PlotNFTCard.tsx:169
@@ -2226,7 +2226,7 @@ msgstr "數值太高"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
-msgstr "驗證礦池的詳細情形"
+msgstr "驗證礦池細節"
 
 #: src/electron/main.tsx:295
 msgid "View"
@@ -2266,7 +2266,7 @@ msgstr "等待同步中"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
 msgid "Waiting for the transaction to be confirmed"
-msgstr "正在等待交易被確認"
+msgstr "正在等待交易結算"
 
 #: src/components/pool/PoolOverview.tsx:185
 #: src/components/wallet/standard/WalletStandard.tsx:657
@@ -2363,7 +2363,7 @@ msgstr "您處於待確認的狀態。請等待確認"
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr "你目前不在自身礦池。"
+msgstr "你尚未自聚礦池。"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:328
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
@@ -2399,7 +2399,7 @@ msgstr "你擁有 {0} ％的網路空間，耕種一個區塊預計要 {expected
 
 #: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
-msgstr "您需要先申請獎勵"
+msgstr "您需要先領取你的獎勵"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
@@ -2407,11 +2407,11 @@ msgstr "您需要先申請獎勵"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:135
 msgid "You will recieve <0/> to {0}"
-msgstr "您將會收到 <0/> 到 {0}"
+msgstr "你將會收取 <0/> 至 {0}"
 
 #: src/hooks/useAbsorbRewards.tsx:49
 msgid "You will recieve <0/> to {address}"
-msgstr "您將會收到 <0/> 到 {address}"
+msgstr "你將會收取 <0/> 至 {address}"
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
@@ -2427,7 +2427,7 @@ msgstr "你的收割機網路"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr "您的礦池概觀"
+msgstr "你的礦池概觀"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2480,7 +2480,7 @@ msgstr "同步中"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
-msgstr "{0} 點 {1} - {2} 小時前"
+msgstr "{0} 積分 {1} - {2} 小時前"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 msgid "{currencyCode} Block Rewards"
