@@ -290,7 +290,7 @@ class FileKeyring(FileSystemEventHandler):
             self.payload_cache["keys"] = keys
             self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
-    def delete_password(self, service: str, user: str):
+    def delete_passphrase(self, service: str, user: str):
         """
         Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
