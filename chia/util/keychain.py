@@ -480,12 +480,14 @@ class Keychain:
         KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase)
 
     @staticmethod
-    def set_master_password(current_password: Optional[str], new_password: str, allow_migration: bool = True) -> None:
+    def set_master_passphrase(
+        current_passphrase: Optional[str], new_passphrase: str, allow_migration: bool = True
+    ) -> None:
         """
-        Encrypts the keyring contents to new password, provided that the current
-        password can decrypt the contents
+        Encrypts the keyring contents to new passphrase, provided that the current
+        passphrase can decrypt the contents
         """
-        KeyringWrapper.get_shared_instance().set_master_password(current_password, new_password, allow_migration)
+        KeyringWrapper.get_shared_instance().set_master_passphrase(current_passphrase, new_passphrase, allow_migration)
 
     @staticmethod
     def remove_master_password(current_password: Optional[str]) -> None:
