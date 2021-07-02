@@ -401,7 +401,7 @@ class WebSocketServer:
 
         if error is None:
             try:
-                Keychain.remove_master_password(current_passphrase)
+                Keychain.remove_master_passphrase(current_passphrase)
             except KeyringCurrentPassphaseIsInvalid:
                 error = "current passphrase is invalid"
             except Exception as e:
