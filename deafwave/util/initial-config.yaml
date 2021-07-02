@@ -21,7 +21,7 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
     testnet1:
       NETWORK_TYPE: 1
-      GENESIS_CHALLENGE: 12fe82abb176fb61a8ce568cc5407e3f4862517aeb45c9dd79f4c3af3932a945
+      GENESIS_CHALLENGE: null
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 1
   config:
@@ -31,8 +31,8 @@ network_overrides: &network_overrides
       address_prefix: "tzzz"
 
 selected_network: &selected_network "mainnet"
-ALERTS_URL: https://download.deafwave.net/notify/mainnet_alert.txt
-DEAFWAVE_ALERTS_PUBKEY: null
+ALERTS_URL: https://storage.googleapis.com/download.deafwave.net/notify/testnet_alert.txt
+DEAFWAVE_ALERTS_PUBKEY: a1ec27c6fc05f5485cc85e73b760285c9429852f7cb2e411fbc33bbe19922018c65f4025bc5629e8529af33b516c7320
 
 # public ssl ca is included in source code
 # Private ssl ca is used for trusted connections between machines user owns
