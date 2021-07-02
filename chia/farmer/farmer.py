@@ -44,6 +44,7 @@ from chia.wallet.derive_keys import (
     find_owner_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
+from functools import wraps
 
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
@@ -335,7 +336,7 @@ class Farmer:
         return None
 
     async def update_pool_state(self):
-        pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
+        pool_config_list: List[PoolWalletConfig] = load_pool_config(self.root_path)
         for pool_config in pool_config_list:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
@@ -474,7 +475,7 @@ class Farmer:
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
-                config = load_config(self._root_path, "config.yaml")
+                config = load_config(self.root_path, "config.yaml")
                 new_list = []
                 for list_element in config["pool"]["pool_list"]:
                     if bytes.fromhex(list_element["launcher_id"]) == bytes(launcher_id):
@@ -482,7 +483,7 @@ class Farmer:
                     new_list.append(list_element)
 
                 config["pool"]["pool_list"] = new_list
-                save_config(self._root_path, "config.yaml", config)
+                save_config(self.root_path, "config.yaml", config)
                 await self.update_pool_state()
                 return
 
@@ -536,7 +537,7 @@ class Farmer:
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
-        config_path: Path = config_path_for_filename(self._root_path, "config.yaml")
+        config_path: Path = config_path_for_filename(self.root_path, "config.yaml")
         while not self._shut_down:
             # Every time the config file changes, read it to check the pool state
             stat_info = config_path.stat()

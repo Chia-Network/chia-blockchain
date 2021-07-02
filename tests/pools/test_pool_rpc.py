@@ -173,7 +173,7 @@ class TestPoolWalletRpc:
         except KeyboardInterrupt:
             shuil.rmtree(plot_dir, ignore_errors=True)
             raise
-        bt.load_plots()
+        bt.setup_plots()
         return plot_id
 
     def delete_plot(self, plot_id: bytes32):
