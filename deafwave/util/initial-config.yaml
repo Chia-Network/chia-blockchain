@@ -29,6 +29,8 @@ network_overrides: &network_overrides
       address_prefix: "zzz"
     testnet0:
       address_prefix: "tzzz"
+    testnet1:
+      address_prefix: "tzzz"
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://storage.googleapis.com/download.deafwave.net/notify/testnet_alert.txt
