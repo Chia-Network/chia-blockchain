@@ -97,7 +97,7 @@ if status is True:
     print("")
     print("___________ Chandler MESSAGE ____________")
     while True:
-        chandler_message = input("Insert message from Bram: ")
+        chandler_message = input("Insert message from Chandler: ")
         print(f"Chandler message = {chandler_message}")
         y_n = input("Does this look good (y/n): ").lower()
         if y_n == "y":
