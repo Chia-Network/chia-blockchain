@@ -186,12 +186,12 @@ class KeyringWrapper:
                 self.keyring.load_keyring(password=current_passphrase)
                 self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
 
-    def remove_master_password(self, current_password: Optional[str]) -> None:
+    def remove_master_passphrase(self, current_passphrase: Optional[str]) -> None:
         """
-        Remove the user-specific master password. We still keep the keyring contents encrypted
-        using the default password.
+        Remove the user-specific master passphrase. We still keep the keyring contents encrypted
+        using the default passphrase.
         """
-        self.set_master_passphrase(current_password, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
+        self.set_master_passphrase(current_passphrase, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
 
     # Legacy keyring migration
 

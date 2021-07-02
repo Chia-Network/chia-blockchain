@@ -240,13 +240,13 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
-    def test_remove_master_password_from_empty_keyring(self):
+    def test_remove_master_passphrase_from_empty_keyring(self):
         """
         An empty keyring doesn't require a current password to remove the master password.
         Removing the master password will set the default master password on the keyring.
         """
         # When: removing the master password from an empty keyring, current password isn't necessary
-        KeyringWrapper.get_shared_instance().remove_master_password(None)
+        KeyringWrapper.get_shared_instance().remove_master_passphrase(None)
 
         # Expect: default master password is set
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
@@ -260,7 +260,7 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a populated keyring
     @using_temp_file_keyring(populate=True)
-    def test_remove_master_password_from_populated_keyring(self):
+    def test_remove_master_passphrase_from_populated_keyring(self):
         """
         A populated keyring will require a current password when removing the master password.
         Removing the master password will set the default master password on the keyring.
@@ -271,7 +271,7 @@ class TestKeyringWrapper(unittest.TestCase):
         )
 
         # When: removing the master password
-        KeyringWrapper.get_shared_instance().remove_master_password("It's dangerous to go alone, take this!")
+        KeyringWrapper.get_shared_instance().remove_master_passphrase("It's dangerous to go alone, take this!")
 
         # Expect: default master password is set, old password doesn't validate
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (

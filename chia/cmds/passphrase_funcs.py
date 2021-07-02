@@ -127,7 +127,7 @@ def remove_passphrase(current_passphrase: Optional[str]) -> None:
                 print(f"Unable to confirm current passphrase: {e}")
 
         try:
-            Keychain.remove_master_password(current_passphrase)
+            Keychain.remove_master_passphrase(current_passphrase)
         except Exception as e:
             print(f"Unable to remove passphrase: {e}")
 
