@@ -190,20 +190,20 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: creating a new unpopulated keyring
     @using_temp_file_keyring()
-    def test_set_master_password_on_empty_keyring(self):
+    def test_set_master_passphrase_on_empty_keyring(self):
         """
         Setting a master password should cache the password and be usable to unlock
         the keyring. Using an old password should not unlock the keyring.
         """
         # When: setting the master password
-        KeyringWrapper.get_shared_instance().set_master_password(None, "testing one two three")
+        KeyringWrapper.get_shared_instance().set_master_passphrase(None, "testing one two three")
 
         # Expect: the master password is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is True
 
         # When: changing the master password
-        KeyringWrapper.get_shared_instance().set_master_password("testing one two three", "potato potato potato")
+        KeyringWrapper.get_shared_instance().set_master_passphrase("testing one two three", "potato potato potato")
 
         # Expect: the new master password is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("potato potato potato", True)
@@ -214,13 +214,13 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a populated keyring
     @using_temp_file_keyring(populate=True)
-    def test_set_master_password_on_keyring(self):
+    def test_set_master_passphrase_on_keyring(self):
         """
         Setting a master password should cache the password and be usable to unlock
         the keyring. Using an old password should not unlock the keyring.
         """
         # When: setting the master password
-        KeyringWrapper.get_shared_instance().set_master_password(
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "testing one two three"
         )
 
@@ -229,7 +229,7 @@ class TestKeyringWrapper(unittest.TestCase):
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is True
 
         # When: changing the master password
-        KeyringWrapper.get_shared_instance().set_master_password("testing one two three", "potato potato potato")
+        KeyringWrapper.get_shared_instance().set_master_passphrase("testing one two three", "potato potato potato")
 
         # Expect: the new master password is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("potato potato potato", True)
@@ -266,7 +266,7 @@ class TestKeyringWrapper(unittest.TestCase):
         Removing the master password will set the default master password on the keyring.
         """
         # When: the master password is set
-        KeyringWrapper.get_shared_instance().set_master_password(
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "It's dangerous to go alone, take this!"
         )
 

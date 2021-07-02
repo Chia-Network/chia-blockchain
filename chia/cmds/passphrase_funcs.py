@@ -80,7 +80,7 @@ def initialize_passphrase() -> None:
     if not passphrase or passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
         passphrase = prompt_for_new_passphrase()
 
-    Keychain.set_master_password(current_password=None, new_password=passphrase)
+    Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase)
 
 
 def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> None:
@@ -106,7 +106,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
         if new_passphrase == current_passphrase:
             raise ValueError("passphrase is unchanged")
 
-        Keychain.set_master_password(current_password=current_passphrase, new_password=new_passphrase)
+        Keychain.set_master_passphrase(current_passphrase=current_passphrase, new_passphrase=new_passphrase)
     except Exception as e:
         print(f"Unable to set or update passphrase: {e}")
 
