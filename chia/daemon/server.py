@@ -338,7 +338,7 @@ class WebSocketServer:
                     error = "bad passphrase"
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Keyring password validation failed: {e} {tb}")
+                self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
                 error = "validation exception"
 
         if success and self.run_check_keys_on_unlock:
