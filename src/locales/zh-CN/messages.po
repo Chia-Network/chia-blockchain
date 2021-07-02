@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 18:29\n"
+"PO-Revision-Date: 2021-07-02 19:01\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -40,7 +40,7 @@ msgstr "排序桶数量推荐设置为128"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:98
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "收割机是一个在存有农田文件的机器上运行的服务。农场主和收割机通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割机。了解更多"
+msgstr "收割机是一个在存有农田文件的机器上运行的服务。农民和收割机通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割机。了解更多"
 
 #: src/electron/main.tsx:422
 #: src/electron/main.tsx:509
@@ -545,7 +545,7 @@ msgstr "当前难度"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:133
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Current Points Balance"
-msgstr "当前积分余额"
+msgstr "当前积点余额"
 
 #: src/components/trading/TradingOverview.jsx:182
 msgid "Current trade status"
@@ -701,7 +701,7 @@ msgstr "预计区块发现时间"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr "估计网络中所有农场主已开垦农田占用磁盘空间量"
+msgstr "估计网络中所有农民已开垦农田占用磁盘空间量"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:193
 msgid "Exclude final directory"
@@ -724,19 +724,19 @@ msgstr "农场"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
 msgid "Farmer Public Key"
-msgstr "农场主公钥"
+msgstr "农民公钥"
 
 #: src/components/block/Block.jsx:269
 msgid "Farmer Puzzle Hash"
-msgstr "农场主解谜哈希"
+msgstr "农民解谜哈希"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:165
 msgid "Farmer Reward Address"
-msgstr "农场主奖励地址"
+msgstr "农民奖励地址"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:139
 msgid "Farmer Reward Address is not properly formatted."
-msgstr "农场主奖励地址格式不正确。"
+msgstr "农民奖励地址格式不正确。"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -744,21 +744,21 @@ msgstr "农场主奖励地址格式不正确。"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 msgid "Farmer Reward Address must not be empty."
-msgstr "农场主奖励地址不能为空。"
+msgstr "农民奖励地址不能为空。"
 
 #: src/components/farm/card/FarmCardStatus.tsx:38
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "农场主节点无法连接"
+msgstr "农民节点无法连接"
 
 #: src/components/farm/card/FarmCardStatus.tsx:52
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "农场主节点没有运行"
+msgstr "农民节点没有运行"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr "农场主公钥："
+msgstr "农民公钥："
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:33
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1453,12 +1453,12 @@ msgstr "在开垦农田时启用位域会减少约30%的磁盘写入，而且大
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:177
 msgid "Points Found Since Start"
-msgstr "从开始以来获取的积分"
+msgstr "从开始以来获取的积点"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:162
 #: src/components/plotNFT/PlotNFTCard.tsx:188
 msgid "Points Found in Last 24 Hours"
-msgstr "最近24小时获取的积分"
+msgstr "最近24小时获取的积点"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
@@ -2005,7 +2005,7 @@ msgstr "本区块上花费的总VDF(延迟验证函数) 或时间验证的迭代
 
 #: src/components/block/Block.jsx:326
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr "本区块上奖励给农场主的全部交易费用。"
+msgstr "本区块上奖励给农民的全部交易费用。"
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2018,7 +2018,7 @@ msgstr "在这里可以把事先准备好的农田文件添加进来。如果还
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:107
 #: src/components/plotNFT/PlotNFTCard.tsx:133
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr ""
+msgstr "此难度是比实际网络难度人为降低的难度，它将被用于耕作中，用来发现尽量多的验证数据并发送给矿池。你的农田越多，你的难度就会越高。这个难度不会影响你的耕作奖励。"
 
 #: src/components/trading/CreateOffer.jsx:123
 #: src/hooks/useSelectDirectory.tsx:31
@@ -2044,7 +2044,7 @@ msgstr "最新的子块时间."
 
 #: src/components/block/Block.jsx:196
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr "此时间是该区块被农场主创建的时间，因此，此时间会早于其被时间认证机制最终确认的时间。"
+msgstr "此时间是该区块被农民创建的时间，因此，此时间会早于其被时间认证机制最终确认的时间。"
 
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:34
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -2057,12 +2057,12 @@ msgstr "目前结余+待处理的结余: 在链上确认完成后就是你的最
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:126
 #: src/components/plotNFT/PlotNFTCard.tsx:152
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "这是此农田NFT自从上次支付奖励后在当前耕作池中持有的总积点数。在耕作池支付奖励后，此积点数会归零。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:143
 #: src/components/plotNFT/PlotNFTCard.tsx:169
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
-msgstr ""
+msgstr "这是你的农民在这个农田NFT对应的农田中找到的总积点数。一个k32的农田每天大约会得到10个积点。也就是说，如果你拥有10TiB的农田，你每天大约会获得1000积点，也就是每小时41积点。"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
@@ -2070,7 +2070,7 @@ msgstr "本节点完全同步好了"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:239
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
-msgstr ""
+msgstr "此农田NFT绑定了其它密钥。你仍然可以用此农田NFT开垦农田，但是你无法进行任何更改。"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2480,7 +2480,7 @@ msgstr "同步中"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
-msgstr "{0} 积分 {1} - {2} 小时前"
+msgstr "{0} 积点 {1} - {2} 小时前"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 msgid "{currencyCode} Block Rewards"
