@@ -64,11 +64,11 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
             # Cached passphrase needs to be validated
             if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
-                KeyringWrapper.get_shared_instance().set_cached_master_password(passphrase, validated=True)
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
                 return passphrase
             else:
                 # Cached passphrase is bad, clear the cache
-                KeyringWrapper.get_shared_instance().set_cached_master_password(None)
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
 
     # Prompt interactively with up to MAX_RETRIES attempts
     for i in range(MAX_RETRIES):
@@ -79,7 +79,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
         if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
             # If using the passphrase cache, and the user inputted a passphrase, update the cache
             if use_passphrase_cache:
-                KeyringWrapper.get_shared_instance().set_cached_master_password(passphrase, validated=True)
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
             return passphrase
 
         sleep(FAILED_ATTEMPT_DELAY)
@@ -473,11 +473,11 @@ class Keychain:
         return password
 
     @staticmethod
-    def set_cached_master_password(password: Optional[str]) -> None:
+    def set_cached_master_passphrase(passphrase: Optional[str]) -> None:
         """
-        Caches the provided master password
+        Caches the provided master passphrase
         """
-        KeyringWrapper.get_shared_instance().set_cached_master_password(password)
+        KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase)
 
     @staticmethod
     def set_master_password(current_password: Optional[str], new_password: str, allow_migration: bool = True) -> None:

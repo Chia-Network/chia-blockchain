@@ -154,18 +154,18 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a file keyring
     @using_temp_file_keyring()
-    def test_set_cached_master_password(self):
+    def test_set_cached_master_passphrase(self):
         """
         Setting and retrieving the cached master password should work
         """
         # When: setting the cached master password
-        KeyringWrapper.get_shared_instance().set_cached_master_password("testing one two three")
+        KeyringWrapper.get_shared_instance().set_cached_master_passphrase("testing one two three")
 
         # Expect: cached password should match
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", False)
 
         # When: setting a validated (successfully decrypted the content) master password
-        KeyringWrapper.get_shared_instance().set_cached_master_password("apple banana orange grape", validated=True)
+        KeyringWrapper.get_shared_instance().set_cached_master_passphrase("apple banana orange grape", validated=True)
 
         # Expect: cached password should match and be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (

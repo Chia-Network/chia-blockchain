@@ -133,4 +133,4 @@ def remove_passphrase(current_passphrase: Optional[str]) -> None:
 
 
 def cache_passphrase(passphrase: str) -> None:
-    Keychain.set_cached_master_password(passphrase)
+    Keychain.set_cached_master_passphrase(passphrase)

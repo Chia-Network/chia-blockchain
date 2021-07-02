@@ -128,12 +128,12 @@ class KeyringWrapper:
         """
         return self.cached_password, self.cached_password_is_validated
 
-    def set_cached_master_password(self, password: Optional[str], validated=False) -> None:
+    def set_cached_master_passphrase(self, passphrase: Optional[str], validated=False) -> None:
         """
-        Cache the provided password and optionally indicate whether the password
+        Cache the provided passphrase and optionally indicate whether the passphrase
         has been validated.
         """
-        self.cached_password = password
+        self.cached_password = passphrase
         self.cached_password_is_validated = validated
 
     def has_cached_master_password(self) -> bool:
@@ -171,7 +171,7 @@ class KeyringWrapper:
         ):
             raise KeyringCurrentPassphaseIsInvalid("invalid current password")
 
-        self.set_cached_master_password(new_password, validated=True)
+        self.set_cached_master_passphrase(new_password, validated=True)
 
         if write_to_keyring:
             # We'll migrate the legacy contents to the new keyring at this point
