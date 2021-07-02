@@ -103,12 +103,12 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a file keyring
     @using_temp_file_keyring()
-    def test_file_keyring_supports_master_password(self):
+    def test_file_keyring_supports_master_passphrase(self):
         """
         File keyrings should support setting a master password
         """
         # Expect: keyring supports a master password
-        assert KeyringWrapper.get_shared_instance().keyring_supports_master_password() is True
+        assert KeyringWrapper.get_shared_instance().keyring_supports_master_passphrase() is True
 
     # When: creating a new/unpopulated file keyring
     @using_temp_file_keyring()
@@ -137,7 +137,7 @@ class TestKeyringWrapper(unittest.TestCase):
         # Expect: legacy keyring in use and master password is not supported
         assert KeyringWrapper.get_shared_instance().legacy_keyring is not None
         assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is True
-        assert KeyringWrapper.get_shared_instance().keyring_supports_master_password() is False
+        assert KeyringWrapper.get_shared_instance().keyring_supports_master_passphrase() is False
 
     # When: creating a new file keyring
     @using_temp_file_keyring()
@@ -177,15 +177,15 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring(populate=True)
     def test_master_passphrase_is_valid(self):
         """
-        The default master password should unlock the populated keyring (without any keys)
+        The default master passphrase should unlock the populated keyring (without any keys)
         """
-        # Expect: default master password should validate
+        # Expect: default master passphrase should validate
         assert (
             KeyringWrapper.get_shared_instance().master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
             is True
         )
 
-        # Expect: bogus password should not validate
+        # Expect: bogus passphrase should not validate
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("foobarbaz") is False
 
     # When: creating a new unpopulated keyring

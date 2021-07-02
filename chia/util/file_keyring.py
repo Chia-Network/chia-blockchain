@@ -115,7 +115,7 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
 class FileKeyring(FileSystemEventHandler):
     """
     FileKeyring provides an file-based keyring store that is encrypted to a key derived
-    from the user-provided master password. The public interface is intended to align
+    from the user-provided master passphrase. The public interface is intended to align
     with the API provided by the keyring module such that the KeyringWrapper class can
     pick an appropriate keyring store backend based on the OS.
 
@@ -124,7 +124,7 @@ class FileKeyring(FileSystemEventHandler):
         # Keyring file version, currently 1
         version: <int>
 
-        # Random salt used as a PBKDF2 parameter. Updated when the master password changes
+        # Random salt used as a PBKDF2 parameter. Updated when the master passphrase changes
         salt: <hex string of 16 bytes>
 
         # Random nonce used as a ChaCha20Poly1305 parameter. Updated on each write to the file
@@ -136,8 +136,8 @@ class FileKeyring(FileSystemEventHandler):
         data: <base64-encoded string of encrypted inner-payload>
 
     The file is encrypted using ChaCha20Poly1305. The symmetric key is derived from the
-    master password using PBKDF2. The nonce is updated each time the file is written-to.
-    The salt is updated each time the master password is changed.
+    master passphrase using PBKDF2. The nonce is updated each time the file is written-to.
+    The salt is updated each time the master passphrase is changed.
     """
 
     keyring_path: Optional[Path] = None
@@ -210,7 +210,7 @@ class FileKeyring(FileSystemEventHandler):
     @staticmethod
     def generate_salt() -> bytes:
         """
-        Creates a salt to be used in combination with the master password to derive
+        Creates a salt to be used in combination with the master passphrase to derive
         a symmetric key using PBKDF2
         """
         return token_bytes(SALT_BYTES)
@@ -233,8 +233,8 @@ class FileKeyring(FileSystemEventHandler):
         return self.payload_cache["keys"]
 
     @loads_keyring
-    def _inner_get_password(self, service: str, user: str) -> Optional[str]:
-        # log.warning(f"[pid:{os.getpid()}] get_password: service: {service}, user: {user}")
+    def _inner_get_passphrase(self, service: str, user: str) -> Optional[str]:
+        # log.warning(f"[pid:{os.getpid()}] get_passphrase: service: {service}, user: {user}")
         # log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
         # log.warning(
         #     f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..):"
@@ -249,38 +249,38 @@ class FileKeyring(FileSystemEventHandler):
 
     def get_password(self, service: str, user: str) -> Optional[str]:
         """
-        Returns the password named by the 'user' parameter from the cached
+        Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
         with acquire_reader_lock(lock_path=self.keyring_lock_path):
-            return self._inner_get_password(service, user)
+            return self._inner_get_passphrase(service, user)
 
     @loads_keyring
-    def _inner_set_password(self, service: str, user: str, password_bytes: bytes, *args, **kwargs):
+    def _inner_set_passphrase(self, service: str, user: str, passphrase_bytes: bytes, *args, **kwargs):
         keys = self.ensure_cached_keys_dict()
-        # Convert the password to a string (if necessary)
-        password = password_bytes.hex() if type(password_bytes) == bytes else str(password_bytes)
-        # log.warning(f"[pid:{os.getpid()}] do_set_password: user: {user}, password: {password}")
+        # Convert the passphrase to a string (if necessary)
+        passphrase = passphrase_bytes.hex() if type(passphrase_bytes) == bytes else str(passphrase_bytes)
+        # log.warning(f"[pid:{os.getpid()}] do_set_passphrase: user: {user}, passphrase: {passphrase}")
 
         # Ensure a dictionary exists for the 'service'
         if keys.get(service) is None:
             keys[service] = {}
         service_dict = keys[service]
-        service_dict[user] = password
+        service_dict[user] = passphrase
         keys[service] = service_dict
         self.payload_cache["keys"] = keys
         self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
     def set_password(self, service: str, user: str, password_bytes: bytes):
         """
-        Store the password to the keyring data using the name specified by the
+        Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
         with acquire_writer_lock(lock_path=self.keyring_lock_path):
-            self._inner_set_password(service, user, password_bytes)
+            self._inner_set_passphrase(service, user, password_bytes)
 
     @loads_keyring
-    def _inner_delete_password(self, service: str, user: str):
+    def _inner_delete_passphrase(self, service: str, user: str):
         keys = self.ensure_cached_keys_dict()
 
         service_dict = keys.get(service, {})
@@ -292,15 +292,15 @@ class FileKeyring(FileSystemEventHandler):
 
     def delete_password(self, service: str, user: str):
         """
-        Deletes the password named by the 'user' parameter from the keyring data
+        Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
         """
         with acquire_writer_lock(lock_path=self.keyring_lock_path):
-            self._inner_delete_password(service, user)
+            self._inner_delete_passphrase(service, user)
 
-    def check_password(self, password: str) -> bool:
+    def check_passphrase(self, passphrase: str) -> bool:
         """
-        Attempts to validate the password by decrypting the outer_payload_cache["data"]
+        Attempts to validate the passphrase by decrypting the outer_payload_cache["data"]
         contents and checking the checkbytes value
         """
         if len(self.outer_payload_cache) == 0:
@@ -317,7 +317,7 @@ class FileKeyring(FileSystemEventHandler):
         if not nonce:
             return False
 
-        key = FileKeyring.symmetric_key_from_password(password, self.salt)
+        key = FileKeyring.symmetric_key_from_passphrase(passphrase, self.salt)
         encrypted_data = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
 
         try:
@@ -331,8 +331,8 @@ class FileKeyring(FileSystemEventHandler):
         return checkbytes == CHECKBYTES_VALUE
 
     @staticmethod
-    def symmetric_key_from_password(password: str, salt: bytes) -> bytes:
-        return pbkdf2_hmac("sha256", password.encode(), salt, HASH_ITERS)
+    def symmetric_key_from_passphrase(passphrase: str, salt: bytes) -> bytes:
+        return pbkdf2_hmac("sha256", passphrase.encode(), salt, HASH_ITERS)
 
     @staticmethod
     def get_symmetric_key(salt: bytes) -> bytes:
@@ -344,7 +344,7 @@ class FileKeyring(FileSystemEventHandler):
             print(f"Unable to unlock the keyring: {e}")
             sys.exit(1)
 
-        return FileKeyring.symmetric_key_from_password(passphrase, salt)
+        return FileKeyring.symmetric_key_from_passphrase(passphrase, salt)
 
     def encrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         encryptor = ChaCha20Poly1305(key)
@@ -375,7 +375,7 @@ class FileKeyring(FileSystemEventHandler):
         if salt:
             self.salt = bytes.fromhex(salt)
 
-    def load_keyring(self, password: str = None):
+    def load_keyring(self, passphrase: str = None):
         with self.load_keyring_lock:
             self.needs_load_keyring = False
 
@@ -391,8 +391,8 @@ class FileKeyring(FileSystemEventHandler):
         nonce = bytes.fromhex(nonce_str)
         key = None
 
-        if password:
-            key = FileKeyring.symmetric_key_from_password(password, salt)
+        if passphrase:
+            key = FileKeyring.symmetric_key_from_passphrase(passphrase, salt)
         else:
             key = FileKeyring.get_symmetric_key(salt)
 
@@ -415,20 +415,20 @@ class FileKeyring(FileSystemEventHandler):
         nonce = FileKeyring.generate_nonce()
         key = None
 
-        # Update the salt when changing the master password or when the keyring is new (empty)
+        # Update the salt when changing the master passphrase or when the keyring is new (empty)
         if fresh_salt or not self.salt:
             self.salt = FileKeyring.generate_salt()
 
         salt = self.salt
 
-        # When writing for the first time, we should have a cached password which hasn't been
+        # When writing for the first time, we should have a cached passphrase which hasn't been
         # validated (because it can't be validated yet...)
         if self.is_first_write() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():
-            key = FileKeyring.symmetric_key_from_password(
+            key = FileKeyring.symmetric_key_from_passphrase(
                 KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0], self.salt
             )
         else:
-            # Prompt for the password interactively and derive the key
+            # Prompt for the passphrase interactively and derive the key
             key = FileKeyring.get_symmetric_key(salt)
 
         encrypted_inner_payload = self.encrypt_data(CHECKBYTES_VALUE + inner_payload_yaml.encode(), key, nonce)
