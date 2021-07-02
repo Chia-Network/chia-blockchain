@@ -157,7 +157,7 @@ class BlockTools:
 
     async def setup_keys(self):
         if self.local_keychain:
-            self.keychain_proxy = wrap_local_keychain(self.local_keychain)
+            self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
         else:
             self.keychain_proxy = await connect_to_keychain_and_validate(
                 self.root_path, log, user="testing-1.8.0", testing=True
