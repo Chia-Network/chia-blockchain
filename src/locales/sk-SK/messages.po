@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-02 12:45\n"
+"PO-Revision-Date: 2021-07-02 19:01\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -1037,7 +1037,7 @@ msgstr "Zobraziť ako zoznam"
 
 #: src/components/pool/Pool.tsx:21
 msgid "Loading Plot NFTs"
-msgstr "Načítanie NFT polí"
+msgstr "Načítavanie NFT polí"
 
 #: src/components/wallet/Wallets.tsx:172
 msgid "Loading list of wallets"
