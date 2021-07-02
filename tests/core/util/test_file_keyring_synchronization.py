@@ -19,22 +19,22 @@ log = logging.getLogger(__name__)
 DUMMY_SLEEP_VALUE = 1
 
 
-def dummy_set_password(service, user, password):
+def dummy_set_passphrase(service, user, passphrase):
     # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
     # otherwise file events won't be detected in the child process
     KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
 
     log.warning(
-        f"[pid:{os.getpid()}] received: {service}, {user}, {password}, "
+        f"[pid:{os.getpid()}] received: {service}, {user}, {passphrase}, "
         f"keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}"
     )
-    KeyringWrapper.get_shared_instance().set_password(service=service, user=user, password_bytes=password)
+    KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase_bytes=passphrase)
 
     # Wait a short while between writing and reading. Without proper locking, this helps ensure
     # the concurrent processes get into a bad state
     sleep(random.random() * 10 % 3)
 
-    assert KeyringWrapper.get_shared_instance().get_passphrase(service, user) == password
+    assert KeyringWrapper.get_shared_instance().get_passphrase(service, user) == passphrase
 
 
 def dummy_fn_requiring_writer_lock(*args, **kwargs):
@@ -77,7 +77,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
         # When: spinning off children to each set a password concurrently
         with Pool(processes=num_workers) as pool:
-            res = pool.starmap_async(dummy_set_password, password_list)
+            res = pool.starmap_async(dummy_set_passphrase, password_list)
             res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
 
         # Expect: parent process should be able to find all passwords that were set by the child processes
