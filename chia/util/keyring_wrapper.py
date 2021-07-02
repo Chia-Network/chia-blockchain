@@ -31,8 +31,8 @@ class KeyringWrapper:
     # Instance members
     keys_root_path: Path
     keyring: Union[Any, FileKeyring] = None
-    cached_password: Optional[str] = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-    cached_password_is_validated: bool = False
+    cached_passphase: Optional[str] = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+    cached_passphase_is_validated: bool = False
     legacy_keyring = None
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
@@ -126,15 +126,15 @@ class KeyringWrapper:
         Returns a tuple including the currently cached passphrase and a bool
         indicating whether the passphrase has been previously validated.
         """
-        return self.cached_password, self.cached_password_is_validated
+        return self.cached_passphase, self.cached_passphase_is_validated
 
     def set_cached_master_passphrase(self, passphrase: Optional[str], validated=False) -> None:
         """
         Cache the provided passphrase and optionally indicate whether the passphrase
         has been validated.
         """
-        self.cached_password = passphrase
-        self.cached_password_is_validated = validated
+        self.cached_passphase = passphrase
+        self.cached_passphase_is_validated = validated
 
     def has_cached_master_passphrase(self) -> bool:
         passphrase = self.get_cached_master_passphrase()
@@ -204,8 +204,8 @@ class KeyringWrapper:
         the passphrase prior to beginning migration.
         """
 
-        master_password, _ = self.get_cached_master_passphrase()
-        if master_password == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
+        master_passphrase, _ = self.get_cached_master_passphrase()
+        if master_passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
             print(
                 "\nYour existing keys need to be migrated to a new keyring that is optionally secured by a master "
                 "passphrase."
@@ -266,23 +266,23 @@ class KeyringWrapper:
         # to read, the legacy keyring will be preferred over the new keyring.
         original_private_keys = keychain.get_all_private_keys()
         service = keychain._get_service()
-        user_password_pairs = []
+        user_passphrase_pairs = []
         index = 0
         user = keychain._get_private_key_user(index)
         while index <= MAX_KEYS:
             # Build up a list of user/passphrase tuples from the legacy keyring contents
             if user is not None:
-                password = self.get_password(service, user)
+                passphrase = self.get_passphrase(service, user)
 
-            if password is not None:
-                user_password_pairs.append((user, password))
+            if passphrase is not None:
+                user_passphrase_pairs.append((user, passphrase))
 
             index += 1
             user = keychain._get_private_key_user(index)
 
         # Write the keys directly to the new keyring (self.keyring)
-        for (user, password) in user_password_pairs:
-            self.keyring.set_password(service, user, password)
+        for (user, passphrase) in user_passphrase_pairs:
+            self.keyring.set_password(service, user, passphrase)
 
         # Stop using the legacy keyring. This will direct subsequent reads to the new keyring.
         old_keyring = self.legacy_keyring
@@ -304,7 +304,7 @@ class KeyringWrapper:
         print(f"Keyring migration completed successfully ({str(self.keyring.keyring_path)})\n")
 
         # Ask if we should clean up the legacy keyring
-        self.confirm_legacy_keyring_cleanup(old_keyring, service, [user for (user, _) in user_password_pairs])
+        self.confirm_legacy_keyring_cleanup(old_keyring, service, [user for (user, _) in user_passphrase_pairs])
 
     def confirm_legacy_keyring_cleanup(self, legacy_keyring, service, users):
         """
@@ -326,13 +326,13 @@ class KeyringWrapper:
 
     # Keyring interface
 
-    def get_password(self, service: str, user: str) -> str:
+    def get_passphrase(self, service: str, user: str) -> str:
         # Continue reading from the legacy keyring until we want to write something,
         # at which point we'll migrate the legacy contents to the new keyring
         if self.using_legacy_keyring():
-            return self.legacy_keyring.get_password(service, user)  # type: ignore
+            return self.legacy_keyring.get_passphrase(service, user)  # type: ignore
 
-        return self.get_keyring().get_password(service, user)
+        return self.get_keyring().get_passphrase(service, user)
 
     def set_password(self, service: str, user: str, password_bytes: bytes):
         # On the first write while using the legacy keyring, we'll start migration
