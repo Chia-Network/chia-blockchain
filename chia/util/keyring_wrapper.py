@@ -147,8 +147,8 @@ class KeyringWrapper:
         """
         return self.keyring_supports_master_password() and self.keyring.has_content()
 
-    def master_password_is_valid(self, password: str) -> bool:
-        return self.keyring.check_password(password)
+    def master_passphrase_is_valid(self, passphrase: str) -> bool:
+        return self.keyring.check_password(passphrase)
 
     def set_master_password(
         self,
@@ -167,7 +167,7 @@ class KeyringWrapper:
         if (
             self.has_master_passphrase()
             and current_password is not None
-            and not self.master_password_is_valid(current_password)
+            and not self.master_passphrase_is_valid(current_password)
         ):
             raise KeyringCurrentPassphaseIsInvalid("invalid current password")
 
