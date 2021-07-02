@@ -87,7 +87,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
     # Prompt for the current passphrase, if necessary
     if Keychain.has_master_passphrase():
         # Try the default passphrase first
-        if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
+        if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
             current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
         if not current_passphrase:
@@ -116,7 +116,7 @@ def remove_passphrase(current_passphrase: Optional[str]) -> None:
         print("Passphrase is not currently set")
     else:
         # Try the default passphrase first
-        if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
+        if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
             current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
         # Prompt for the current passphrase, if necessary

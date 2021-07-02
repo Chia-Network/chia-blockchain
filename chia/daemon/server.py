@@ -331,7 +331,7 @@ class WebSocketServer:
 
         if error is None:
             try:
-                if Keychain.master_password_is_valid(key):
+                if Keychain.master_passphrase_is_valid(key):
                     Keychain.set_cached_master_password(key)
                     success = True
                 else:
