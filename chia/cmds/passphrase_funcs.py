@@ -65,7 +65,7 @@ def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
 
 
 def initialize_passphrase() -> None:
-    if Keychain.has_master_password():
+    if Keychain.has_master_passphrase():
         print("Keyring is already protected by a passphrase")
         print("\nUse 'chia passphrase set' or 'chia passphrase remove' to update or remove your passphrase")
         sys.exit(1)
@@ -85,7 +85,7 @@ def initialize_passphrase() -> None:
 
 def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> None:
     # Prompt for the current passphrase, if necessary
-    if Keychain.has_master_password():
+    if Keychain.has_master_passphrase():
         # Try the default passphrase first
         if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
             current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
@@ -112,7 +112,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
 
 
 def remove_passphrase(current_passphrase: Optional[str]) -> None:
-    if not Keychain.has_master_password():
+    if not Keychain.has_master_passphrase():
         print("Passphrase is not currently set")
     else:
         # Try the default passphrase first

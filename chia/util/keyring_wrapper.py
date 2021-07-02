@@ -140,7 +140,7 @@ class KeyringWrapper:
         password = self.get_cached_master_password()
         return password is not None and len(password) > 0
 
-    def has_master_password(self) -> bool:
+    def has_master_passphrase(self) -> bool:
         """
         Returns a bool indicating whether the underlying keyring data
         is secured by a master password.
@@ -165,7 +165,7 @@ class KeyringWrapper:
 
         # Require a valid current_password
         if (
-            self.has_master_password()
+            self.has_master_passphrase()
             and current_password is not None
             and not self.master_password_is_valid(current_password)
         ):

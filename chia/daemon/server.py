@@ -359,7 +359,7 @@ class WebSocketServer:
         current_passphrase = None
         new_passphrase = None
 
-        if error is None and Keychain.has_master_password():
+        if error is None and Keychain.has_master_passphrase():
             current_passphrase = request.get("current_passphrase", None)
             if type(current_passphrase) is not str:
                 error = "missing current_passphrase"
@@ -391,7 +391,7 @@ class WebSocketServer:
         error = None
         current_passphrase = None
 
-        if error is None and not Keychain.has_master_password():
+        if error is None and not Keychain.has_master_passphrase():
             error = "passphrase not set"
 
         if error is None:
