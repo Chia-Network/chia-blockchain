@@ -16,7 +16,7 @@ def event_loop():
     yield loop
 
 
-class TestCCWallet:
+class TestRLWallet:
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
@@ -67,9 +67,9 @@ class TestCCWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
         await time_out_assert(15, rl_user.get_confirmed_balance, 100)
-        balance = await rl_user.rl_available_balance()
 
-        tx_record = await rl_user.generate_signed_transaction(1, 32 * b"\0")
+        new_coins = [{"puzzlehash": 32 * b"\0", "amount": 1}]
+        tx_record = await rl_user.generate_signed_transaction(new_coins, 0)
 
         await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 

@@ -2,6 +2,7 @@ import asyncio
 import pytest
 import time
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.condition_costs import ConditionCost
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -114,9 +115,10 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
+        new_ph = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        new_coins = [{"puzzlehash": new_ph, "amount": 10}]
         tx = await wallet.generate_signed_transaction(
-            10,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            new_coins,
             0,
         )
         await wallet.push_transaction(tx)
@@ -206,7 +208,8 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, 32 * b"0", 0)
+        new_coins = [{"puzzlehash": 32 * b"0", "amount": 10}]
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(new_coins, 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
@@ -251,10 +254,11 @@ class TestWalletSimulator:
 
         assert await wallet_0.get_confirmed_balance() == funds
         assert await wallet_0.get_unconfirmed_balance() == funds
+        new_ph = await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        new_coins = [{"puzzlehash": new_ph, "amount": 10}]
 
         tx = await wallet_0.generate_signed_transaction(
-            10,
-            await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            new_coins,
             0,
         )
 
@@ -280,7 +284,9 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, new_funds - 10)
         await time_out_assert(5, wallet_1.get_confirmed_balance, 10)
 
-        tx = await wallet_1.generate_signed_transaction(5, await wallet_0.get_new_puzzlehash(), 0)
+        new_ph = await wallet_0.get_new_puzzlehash()
+        new_coins = [{"puzzlehash": new_ph, "amount": 5}]
+        tx = await wallet_1.generate_signed_transaction(new_coins, 0)
         await wallet_1.push_transaction(tx)
 
         for i in range(0, 4):
@@ -356,20 +362,21 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
         tx_amount = 3200000000000
-        tx_fee = 10
-        tx = await wallet.generate_signed_transaction(
-            tx_amount,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_fee,
+        new_ph = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        tx_fee_rate = 1
+        new_coins = [{"puzzlehash": new_ph, "amount": tx_amount}]
+
+        tx: TransactionRecord = await wallet.generate_signed_transaction(
+            new_coins,
+            tx_fee_rate,
         )
 
         fees = tx.spend_bundle.fees()
-        assert fees == tx_fee
 
         await wallet.push_transaction(tx)
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - tx_amount - tx_fee)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - tx_amount - fees)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -381,8 +388,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(5, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
+        await time_out_assert(5, wallet.get_confirmed_balance, new_funds - tx_amount - fees)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - tx_amount - fees)
 
     @pytest.mark.asyncio
     async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes):
@@ -405,11 +412,11 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
-        primaries = []
+        new_coins = []
         for i in range(0, 600):
-            primaries.append({"puzzlehash": ph, "amount": 100000000 + i})
-
-        tx_split_coins = await wallet.generate_signed_transaction(1, ph, 0, primaries=primaries)
+            new_coins.append({"puzzlehash": ph, "amount": 100000000 + i})
+        new_coins.append({"puzzlehash": ph, "amount": 1})
+        tx_split_coins = await wallet.generate_signed_transaction(new_coins, 0)
 
         await wallet.push_transaction(tx_split_coins)
         await time_out_assert(
@@ -427,13 +434,12 @@ class TestWalletSimulator:
 
         await time_out_assert(90, wallet.get_confirmed_balance, funds)
         max_sent_amount = await wallet.get_max_send_amount()
-
+        new_coins = [{"puzzlehash": ph, "amount": max_sent_amount - 1}]
         # 1) Generate transaction that is under the limit
         under_limit_tx = None
         try:
             under_limit_tx = await wallet.generate_signed_transaction(
-                max_sent_amount - 1,
-                ph,
+                new_coins,
                 0,
             )
         except ValueError:
@@ -443,10 +449,10 @@ class TestWalletSimulator:
 
         # 2) Generate transaction that is equal to limit
         at_limit_tx = None
+        new_coins = [{"puzzlehash": ph, "amount": max_sent_amount}]
         try:
             at_limit_tx = await wallet.generate_signed_transaction(
-                max_sent_amount,
-                ph,
+                new_coins,
                 0,
             )
         except ValueError:
@@ -454,12 +460,12 @@ class TestWalletSimulator:
 
         assert at_limit_tx is not None
 
+        new_coins = [{"puzzlehash": ph, "amount": max_sent_amount + 1}]
         # 3) Generate transaction that is greater than limit
         above_limit_tx = None
         try:
             above_limit_tx = await wallet.generate_signed_transaction(
-                max_sent_amount + 1,
-                ph,
+                new_coins,
                 0,
             )
         except ValueError:
@@ -492,10 +498,11 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
         tx_amount = 3200000000000
-        tx_fee = 300000000000
+        tx_fee = 10
+        new_ph = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        new_coins = [{"puzzlehash": new_ph, "amount": tx_amount}]
         tx = await wallet.generate_signed_transaction(
-            tx_amount,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            new_coins,
             tx_fee,
         )
 
@@ -569,7 +576,8 @@ class TestWalletSimulator:
         coin = list(all_blocks[-3].get_included_reward_coins())[0]
         await asyncio.sleep(5)
 
-        tx = await wallet.generate_signed_transaction(1000, ph2, coins={coin})
+        new_coins = [{"puzzlehash": ph2, "amount": 1000}]
+        tx = await wallet.generate_signed_transaction(new_coins, 0, coins={coin})
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)

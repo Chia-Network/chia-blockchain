@@ -160,9 +160,9 @@ class RLWallet:
         limit: uint64,
         user_pubkey: str,
         amount: uint64,
-        fee: uint64,
+        fee_rate: float,
     ) -> bool:
-        coins = await self.wallet_state_manager.main_wallet.select_coins(amount)
+        coins, total_fee = await self.wallet_state_manager.main_wallet.select_coins(amount, fee_rate)
         if coins is None:
             return False
 
@@ -196,7 +196,10 @@ class RLWallet:
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
-        spend_bundle = await self.main_wallet.generate_signed_transaction(amount, rl_puzzle_hash, fee, origin_id, coins)
+        new_coin = [{"puzzlehash": rl_puzzle_hash, "amount": amount}]
+        spend_bundle = await self.main_wallet.generate_signed_transaction(
+            new_coin, fee_rate, origin_id=origin_id, coins=coins
+        )
         if spend_bundle is None:
             return False
 
@@ -517,10 +520,15 @@ class RLWallet:
         spends.append(CoinSolution(coin, puzzle, solution))
         return spends
 
-    async def generate_signed_transaction(self, amount, to_puzzle_hash, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def generate_signed_transaction(self, new_coins, fee: uint64 = uint64(0)) -> TransactionRecord:
         self.rl_coin_record = await self._get_rl_coin_record()
         if not self.rl_coin_record:
             raise ValueError("No unspent coin (zero balance)")
+
+        assert len(new_coins) == 1
+        new_coin = new_coins[0]
+        amount = new_coin["amount"]
+        to_puzzle_hash = new_coin["puzzlehash"]
         if amount > self.rl_coin_record.coin.amount:
             raise ValueError(f"Coin value not sufficient: {amount} > {self.rl_coin_record.coin.amount}")
         transaction = await self.rl_generate_unsigned_transaction(to_puzzle_hash, amount, fee)
@@ -681,7 +689,8 @@ class RLWallet:
         return puzzle_hash
 
     async def rl_add_funds(self, amount, puzzle_hash, fee):
-        spend_bundle = await self.main_wallet.generate_signed_transaction(amount, puzzle_hash, fee)
+        new_coins = [{"puzzlehash": puzzle_hash, "amount": amount}]
+        spend_bundle = await self.main_wallet.generate_signed_transaction(new_coins, fee)
         if spend_bundle is None:
             return False
 

@@ -11,7 +11,7 @@ from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import mkdir, path_from_root
 
-from .full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

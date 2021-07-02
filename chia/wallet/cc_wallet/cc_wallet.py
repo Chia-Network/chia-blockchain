@@ -376,7 +376,7 @@ class CCWallet:
             raise ValueError("My genesis checker is None")
         if exclude is None:
             exclude = []
-        coins = await self.standard_wallet.select_coins(0, exclude)
+        coins, fee = await self.standard_wallet.select_coins(0, exclude=exclude)
 
         assert coins != set()
 
@@ -388,8 +388,9 @@ class CCWallet:
             CC_MOD, self.cc_info.my_genesis_checker, cc_inner
         )
 
+        new_coins = [{"puzzlehash": cc_puzzle_hash, "amount": uint64(0)}]
         tx: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
-            uint64(0), cc_puzzle_hash, uint64(0), origin_id, coins
+            new_coins, 0.0, origin_id=origin_id, coins=coins
         )
         assert tx.spend_bundle is not None
         full_spend: SpendBundle = tx.spend_bundle
@@ -595,13 +596,13 @@ class CCWallet:
 
         total_amount = sum([x.amount for x in selected_coins])
         change = total_amount - total_outgoing
-        primaries = []
+        new_coins = []
         for amount, puzzle_hash in zip(amounts, puzzle_hashes):
-            primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
+            new_coins.append({"puzzlehash": puzzle_hash, "amount": amount})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+            new_coins.append({"puzzlehash": changepuzzlehash, "amount": change})
 
         coin = list(selected_coins)[0]
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
@@ -620,9 +621,9 @@ class CCWallet:
             if first:
                 first = False
                 if fee > 0:
-                    innersol = self.standard_wallet.make_solution(primaries=primaries, fee=fee)
+                    innersol = self.standard_wallet.make_solution(create_coins=new_coins, fee=fee)
                 else:
-                    innersol = self.standard_wallet.make_solution(primaries=primaries)
+                    innersol = self.standard_wallet.make_solution(create_coins=new_coins)
             else:
                 innersol = self.standard_wallet.make_solution()
             innersol_list.append(innersol)
@@ -673,7 +674,7 @@ class CCWallet:
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
 
     async def generate_new_coloured_coin(self, amount: uint64) -> SpendBundle:
-        coins = await self.standard_wallet.select_coins(amount)
+        coins, fee = await self.standard_wallet.select_coins(amount)
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -684,8 +685,9 @@ class CCWallet:
 
         minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(CC_MOD, genesis_coin_checker, cc_inner_hash)
 
+        new_coin = [{"puzzlehash": minted_cc_puzzle_hash, "amount": amount}]
         tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
-            amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
+            new_coin, 0.0, origin_id, coins
         )
         assert tx_record.spend_bundle is not None
 
@@ -721,7 +723,7 @@ class CCWallet:
             if output_created is None:
                 newinnerpuzhash = await self.get_new_inner_hash()
                 innersol = self.standard_wallet.make_solution(
-                    primaries=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
+                    create_coins=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
                 )
                 output_created = coin
             else:

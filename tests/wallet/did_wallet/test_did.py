@@ -553,7 +553,8 @@ class XTestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
 
-        tx_record = await wallet.generate_signed_transaction(101, id_puzhash)
+        new_coins = [{"puzzlehash": id_puzhash, "amount": 101}]
+        tx_record = await wallet.generate_signed_transaction(new_coins, 0)
         await wallet.push_transaction(tx_record)
 
         for i in range(1, num_blocks):

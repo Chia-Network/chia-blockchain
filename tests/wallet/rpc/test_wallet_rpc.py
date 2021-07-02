@@ -165,7 +165,7 @@ class TestWalletRpc:
             tx_res = await client.create_signed_transaction(
                 [{"amount": 444, "puzzle_hash": ph_4}, {"amount": 999, "puzzle_hash": ph_5}],
                 coins=[coin_to_spend],
-                fee=100,
+                fee=0,
             )
             assert tx_res.fee_amount == 100
             assert tx_res.amount == 444 + 999

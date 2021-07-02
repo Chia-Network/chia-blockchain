@@ -109,6 +109,7 @@ class WalletStateManager:
     weight_proof_handler: Any
     server: ChiaServer
     root_path: Path
+    constructed_transactions: Dict[bytes32, TransactionRecord]
 
     @staticmethod
     async def create(
@@ -127,6 +128,8 @@ class WalletStateManager:
         self.server = server
         self.root_path = root_path
         self.log = logging.getLogger(name if name else __name__)
+        self.constructed_transactions = {}
+
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
@@ -253,6 +256,12 @@ class WalletStateManager:
         private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
         pubkey = private.get_g1()
         return pubkey, private
+
+    def clear_constructed_transactions(self):
+        self.constructed_transactions = {}
+
+    def add_constructed_transaction(self, unique_id: bytes32, tx: TransactionRecord):
+        self.constructed_transactions[unique_id] = tx
 
     async def create_more_puzzle_hashes(self, from_zero: bool = False, in_transaction=False):
         """

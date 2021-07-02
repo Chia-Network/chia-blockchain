@@ -216,9 +216,8 @@ class TradeManager:
                     [coin.amount], [new_ph], 0, coins={coin}, ignore_max_send_amount=True
                 )
             else:
-                tx = await wallet.generate_signed_transaction(
-                    coin.amount, new_ph, 0, coins={coin}, ignore_max_send_amount=True
-                )
+                new_coins = [{"puzzlehash": new_ph, "amount": coin.amount}]
+                tx = await wallet.generate_signed_transaction(new_coins, 0, coins={coin})
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL, False)
@@ -487,7 +486,7 @@ class TradeManager:
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
             outputamount = sum([c.amount for c in my_cc_spends]) + cc_discrepancies[colour] + my_output_coin.amount
             inner_solution = self.wallet_state_manager.main_wallet.make_solution(
-                primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
+                create_coins=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
             )
             inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(my_output_coin.puzzle_hash)
             assert inner_puzzle is not None
