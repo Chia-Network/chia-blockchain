@@ -107,7 +107,7 @@ jobs:
         cd ./chia-blockchain-gui
         git status
         cd ../build_scripts
-        sh build_linux.sh amd64
+        sh build_linux_deb.sh amd64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
