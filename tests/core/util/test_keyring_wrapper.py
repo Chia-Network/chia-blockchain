@@ -297,7 +297,9 @@ class TestKeyringWrapper(unittest.TestCase):
         assert KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz") is None
 
         # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-abc", "user-xyz", "super secret passphrase".encode())
+        KeyringWrapper.get_shared_instance().set_passphrase(
+            "service-abc", "user-xyz", "super secret passphrase".encode()
+        )
 
         # Expect: passphrase lookup should succeed
         assert (
@@ -306,7 +308,9 @@ class TestKeyringWrapper(unittest.TestCase):
         )
 
         # Expect: non-existent passphrase lookup should fail
-        assert KeyringWrapper.get_shared_instance().get_passphrase("service-123", "some non-existent passphrase") is None
+        assert (
+            KeyringWrapper.get_shared_instance().get_passphrase("service-123", "some non-existent passphrase") is None
+        )
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -334,12 +338,12 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
-    def test_delete_password(self):
+    def test_delete_passphrase(self):
         """
         Deleting a non-existent passphrase should fail gracefully (no exceptions)
         """
         # Expect: deleting a non-existent passphrase should fail gracefully
-        KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
+        KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
 
         # When: setting a passphrase
         KeyringWrapper.get_shared_instance().set_passphrase("some service", "some user", "500p3r 53cr37".encode())
@@ -351,7 +355,7 @@ class TestKeyringWrapper(unittest.TestCase):
         )
 
         # When: deleting the passphrase
-        KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
+        KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
 
         # Expect: passphrase retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") is None

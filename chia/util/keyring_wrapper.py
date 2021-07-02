@@ -316,7 +316,7 @@ class KeyringWrapper:
 
         if response:
             for user in users:
-                legacy_keyring.delete_password(service, user)
+                legacy_keyring.delete_passphrase(service, user)
             print("Removed keys from old keyring")
         else:
             print("Keys in old keyring left intact")
@@ -341,9 +341,9 @@ class KeyringWrapper:
 
         self.get_keyring().set_passphrase(service, user, passphrase_bytes)
 
-    def delete_password(self, service: str, user: str):
+    def delete_passphrase(self, service: str, user: str):
         # On the first write while using the legacy keyring, we'll start migration
         if self.using_legacy_keyring() and self.has_cached_master_passphrase():
             self.migrate_legacy_keyring()
 
-        self.get_keyring().delete_password(service, user)
+        self.get_keyring().delete_passphrase(service, user)

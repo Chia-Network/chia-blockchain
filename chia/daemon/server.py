@@ -335,7 +335,7 @@ class WebSocketServer:
                     Keychain.set_cached_master_passphrase(key)
                     success = True
                 else:
-                    error = "bad password"
+                    error = "bad passphrase"
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Keyring password validation failed: {e} {tb}")
