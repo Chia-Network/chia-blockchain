@@ -15,8 +15,8 @@ from time import sleep
 from typing import List, Optional, Tuple
 
 
-DEFAULT_PASSWORD_PROMPT = (
-    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Password: "
+DEFAULT_PASSPHRASE_PROMPT = (
+    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
 )  # noqa: E501
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
@@ -48,46 +48,46 @@ def set_keys_root_path(keys_root_path: Path) -> None:
     KeyringWrapper.set_keys_root_path(keys_root_path)
 
 
-def obtain_current_password(prompt: str = DEFAULT_PASSWORD_PROMPT, use_password_cache: bool = False) -> str:
+def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
     """
-    Obtains the master password for the keyring, optionally using the cached
-    value (if previously set). If the password isn't already cached, the user is
-    prompted interactively to enter their password a max of MAX_RETRIES times
+    Obtains the master passphrase for the keyring, optionally using the cached
+    value (if previously set). If the passphrase isn't already cached, the user is
+    prompted interactively to enter their passphrase a max of MAX_RETRIES times
     before failing.
     """
-    if use_password_cache:
-        password, validated = KeyringWrapper.get_shared_instance().get_cached_master_password()
-        if password:
-            # If the cached password was previously validated, we assume it's... valid
+    if use_passphrase_cache:
+        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_password()
+        if passphrase:
+            # If the cached passphrase was previously validated, we assume it's... valid
             if validated:
-                return password
+                return passphrase
 
-            # Cached password needs to be validated
-            if KeyringWrapper.get_shared_instance().master_password_is_valid(password):
-                KeyringWrapper.get_shared_instance().set_cached_master_password(password, validated=True)
-                return password
+            # Cached passphrase needs to be validated
+            if KeyringWrapper.get_shared_instance().master_password_is_valid(passphrase):
+                KeyringWrapper.get_shared_instance().set_cached_master_password(passphrase, validated=True)
+                return passphrase
             else:
-                # Cached password is bad, clear the cache
+                # Cached passphrase is bad, clear the cache
                 KeyringWrapper.get_shared_instance().set_cached_master_password(None)
 
     # Prompt interactively with up to MAX_RETRIES attempts
     for i in range(MAX_RETRIES):
         colorama.init()
 
-        password = getpass(prompt)
+        passphrase = getpass(prompt)
 
-        if KeyringWrapper.get_shared_instance().master_password_is_valid(password):
-            # If using the password cache, and the user inputted a password, update the cache
-            if use_password_cache:
-                KeyringWrapper.get_shared_instance().set_cached_master_password(password, validated=True)
-            return password
+        if KeyringWrapper.get_shared_instance().master_password_is_valid(passphrase):
+            # If using the passphrase cache, and the user inputted a passphrase, update the cache
+            if use_passphrase_cache:
+                KeyringWrapper.get_shared_instance().set_cached_master_password(passphrase, validated=True)
+            return passphrase
 
         sleep(FAILED_ATTEMPT_DELAY)
-        print("Incorrect password\n")
-    raise ValueError("maximum password attempts reached")
+        print("Incorrect passphrase\n")
+    raise ValueError("maximum passphrase attempts reached")
 
 
-def unlocks_keyring(use_password_cache=False):
+def unlocks_keyring(use_passphrase_cache=False):
     """
     Decorator used to unlock the keyring interactively, if necessary
     """
@@ -96,7 +96,7 @@ def unlocks_keyring(use_password_cache=False):
         def wrapper(*args, **kwargs):
             try:
                 if KeyringWrapper.get_shared_instance().has_master_password():
-                    obtain_current_password(use_password_cache=use_password_cache)
+                    obtain_current_passphrase(use_passphrase_cache=use_passphrase_cache)
             except Exception as e:
                 print(f"Unable to unlock the keyring: {e}")
                 sys.exit(1)
@@ -213,7 +213,7 @@ class Keychain:
         else:
             return f"chia-{self.user}"
 
-    @unlocks_keyring(use_password_cache=True)
+    @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
         Returns the keychain contents for a specific 'user' (key index). The contents
@@ -250,7 +250,7 @@ class Keychain:
                 return index
             index += 1
 
-    @unlocks_keyring(use_password_cache=True)
+    @unlocks_keyring(use_passphrase_cache=True)
     def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
