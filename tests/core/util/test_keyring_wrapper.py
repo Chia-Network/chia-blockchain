@@ -359,3 +359,35 @@ class TestKeyringWrapper(unittest.TestCase):
 
         # Expect: passphrase retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") is None
+
+    @using_temp_file_keyring()
+    def test_emoji_master_passphrase(self):
+        """
+        Emoji master passphrases should just work 😀
+        """
+        # When: setting a passphrase containing emojis
+        KeyringWrapper.get_shared_instance().set_master_passphrase(None, "🥳🤩🤪🤯😎😝😀")
+
+        # Expect: the master passphrase is cached and can be validated
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("🥳🤩🤪🤯😎😝😀", True)
+        assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("🥳🤩🤪🤯😎😝😀") is True
+
+        # Expect: an invalid passphrase containing an emoji should fail validation
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("🦄🦄🦄🦄🦄🦄🦄🦄", True)        
+        assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("🦄🦄🦄🦄🦄🦄🦄🦄") is False
+
+    @using_temp_file_keyring()
+    def test_japanese_master_passphrase(self):
+        """
+        Non-ascii master passphrases should just work
+        """
+        # When: setting a passphrase containing non-ascii characters
+        KeyringWrapper.get_shared_instance().set_master_passphrase(None, "私は幸せな農夫です")
+
+        # Expect: the master passphrase is cached and can be validated
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("私は幸せな農夫です", True)
+        assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫です") is True
+
+        # Expect: an invalid passphrase containing an non-ascii characters should fail validation
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("私は幸せな農夫ではありません", True)
+        assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫ではありません") is False
