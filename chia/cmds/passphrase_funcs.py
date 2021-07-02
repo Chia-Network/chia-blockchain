@@ -1,6 +1,6 @@
 import sys
 
-from chia.util.keychain import Keychain, obtain_current_password
+from chia.util.keychain import Keychain, obtain_current_passphrase
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from getpass import getpass
 from io import TextIOWrapper
@@ -92,7 +92,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
 
         if not current_passphrase:
             try:
-                current_passphrase = obtain_current_password("Current Passphrase: ")
+                current_passphrase = obtain_current_passphrase("Current Passphrase: ")
             except Exception as e:
                 print(f"Unable to confirm current passphrase: {e}")
                 sys.exit(1)
@@ -122,7 +122,7 @@ def remove_passphrase(current_passphrase: Optional[str]) -> None:
         # Prompt for the current passphrase, if necessary
         if not current_passphrase:
             try:
-                current_passphrase = obtain_current_password("Current Passphrase: ")
+                current_passphrase = obtain_current_passphrase("Current Passphrase: ")
             except Exception as e:
                 print(f"Unable to confirm current passphrase: {e}")
 

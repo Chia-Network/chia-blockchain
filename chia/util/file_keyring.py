@@ -336,15 +336,15 @@ class FileKeyring(FileSystemEventHandler):
 
     @staticmethod
     def get_symmetric_key(salt: bytes) -> bytes:
-        from chia.util.keychain import obtain_current_password
+        from chia.util.keychain import obtain_current_passphrase
 
         try:
-            password = obtain_current_password(use_password_cache=True)
+            passphrase = obtain_current_passphrase(use_passphrase_cache=True)
         except Exception as e:
             print(f"Unable to unlock the keyring: {e}")
             sys.exit(1)
 
-        return FileKeyring.symmetric_key_from_password(password, salt)
+        return FileKeyring.symmetric_key_from_password(passphrase, salt)
 
     def encrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         encryptor = ChaCha20Poly1305(key)

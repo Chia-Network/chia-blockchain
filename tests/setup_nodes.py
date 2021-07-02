@@ -23,7 +23,7 @@ from tests.block_tools import create_block_tools, create_block_tools_async, test
 from tests.util.keyring import TempKeyring
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic
+from chia.util.keychain import bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
 
 

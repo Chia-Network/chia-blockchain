@@ -25,7 +25,7 @@ def generate_and_print():
     return mnemonic
 
 
-@unlocks_keyring(use_password_cache=True)
+@unlocks_keyring(use_passphrase_cache=True)
 def generate_and_add():
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
@@ -36,13 +36,13 @@ def generate_and_add():
     add_private_key_seed(mnemonic)
 
 
-@unlocks_keyring(use_password_cache=True)
+@unlocks_keyring(use_passphrase_cache=True)
 def query_and_add_private_key_seed():
     mnemonic = input("Enter the mnemonic you want to use: ")
     add_private_key_seed(mnemonic)
 
 
-@unlocks_keyring(use_password_cache=True)
+@unlocks_keyring(use_passphrase_cache=True)
 def add_private_key_seed(mnemonic: str):
     """
     Add a private key seed to the keyring, with the given mnemonic.
@@ -59,7 +59,7 @@ def add_private_key_seed(mnemonic: str):
         return None
 
 
-@unlocks_keyring(use_password_cache=True)
+@unlocks_keyring(use_passphrase_cache=True)
 def show_all_keys(show_mnemonic: bool):
     """
     Prints all keys and mnemonics (if available).
@@ -101,7 +101,7 @@ def show_all_keys(show_mnemonic: bool):
             print(mnemonic)
 
 
-@unlocks_keyring(use_password_cache=True)
+@unlocks_keyring(use_passphrase_cache=True)
 def delete(fingerprint: int):
     """
     Delete a key by its public key fingerprint (which is an integer).
@@ -110,7 +110,7 @@ def delete(fingerprint: int):
     keychain.delete_key_by_fingerprint(fingerprint)
 
 
-@unlocks_keyring(use_password_cache=True)
+@unlocks_keyring(use_passphrase_cache=True)
 def sign(message: str, fingerprint: int, hd_path: str):
     k = Keychain()
     private_keys = k.get_all_private_keys()
