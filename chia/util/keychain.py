@@ -446,7 +446,7 @@ class Keychain:
     def has_master_passphrase() -> bool:
         """
         Returns a bool indicating whether the underlying keyring data
-        is secured by a password.
+        is secured by a passphrase.
         """
         return KeyringWrapper.get_shared_instance().has_master_passphrase()
 
@@ -460,17 +460,17 @@ class Keychain:
     @staticmethod
     def has_cached_passphrase() -> bool:
         """
-        Returns whether the master password has been cached (it may need to be validated)
+        Returns whether the master passphrase has been cached (it may need to be validated)
         """
-        return KeyringWrapper.get_shared_instance().has_cached_master_password()
+        return KeyringWrapper.get_shared_instance().has_cached_master_passphrase()
 
     @staticmethod
     def get_cached_master_passphrase() -> str:
         """
-        Returns the cached master password
+        Returns the cached master passphrase
         """
-        password, _ = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
-        return password
+        passphrase, _ = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
+        return passphrase
 
     @staticmethod
     def set_cached_master_passphrase(passphrase: Optional[str]) -> None:

@@ -136,9 +136,9 @@ class KeyringWrapper:
         self.cached_password = passphrase
         self.cached_password_is_validated = validated
 
-    def has_cached_master_password(self) -> bool:
-        password = self.get_cached_master_passphrase()
-        return password is not None and len(password) > 0
+    def has_cached_master_passphrase(self) -> bool:
+        passphrase = self.get_cached_master_passphrase()
+        return passphrase is not None and len(passphrase) > 0
 
     def has_master_passphrase(self) -> bool:
         """
@@ -334,14 +334,14 @@ class KeyringWrapper:
 
     def set_password(self, service: str, user: str, password_bytes: bytes):
         # On the first write while using the legacy keyring, we'll start migration
-        if self.using_legacy_keyring() and self.has_cached_master_password():
+        if self.using_legacy_keyring() and self.has_cached_master_passphrase():
             self.migrate_legacy_keyring()
 
         self.get_keyring().set_password(service, user, password_bytes)
 
     def delete_password(self, service: str, user: str):
         # On the first write while using the legacy keyring, we'll start migration
-        if self.using_legacy_keyring() and self.has_cached_master_password():
+        if self.using_legacy_keyring() and self.has_cached_master_passphrase():
             self.migrate_legacy_keyring()
 
         self.get_keyring().delete_password(service, user)
