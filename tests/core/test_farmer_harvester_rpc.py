@@ -230,7 +230,7 @@ class TestRpc:
                 await client.set_reward_targets(None, replaced_char)
 
             assert len((await client.get_pool_state())["pool_state"]) == 0
-            all_sks = farmer_api.farmer.keychain.get_all_private_keys()
+            all_sks = farmer_api.farmer.local_keychain.get_all_private_keys()
             auth_sk = master_sk_to_pooling_authentication_sk(all_sks[0][0], 2, 1)
             pool_list = [
                 {

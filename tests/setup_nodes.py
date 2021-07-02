@@ -131,61 +131,61 @@ async def setup_wallet_node(
     key_seed=None,
     starting_height=None,
 ):
-    config = bt.config["wallet"]
-    config["port"] = port
-    config["rpc_port"] = port + 1000
-    if starting_height is not None:
-        config["starting_height"] = starting_height
-    config["initial_num_public_keys"] = 5
+    with TempKeyring() as keychain:
+        config = bt.config["wallet"]
+        config["port"] = port
+        config["rpc_port"] = port + 1000
+        if starting_height is not None:
+            config["starting_height"] = starting_height
+        config["initial_num_public_keys"] = 5
 
-    entropy = token_bytes(32)
-    keychain = Keychain(user=entropy.hex(), testing=True)
-    if key_seed is None:
-        key_seed = entropy
-    keychain.add_private_key(bytes_to_mnemonic(key_seed), "")
-    first_pk = keychain.get_first_public_key()
-    assert first_pk is not None
-    db_path_key_suffix = str(first_pk.get_fingerprint())
-    db_name = f"test-wallet-db-{port}-KEY.sqlite"
-    db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
-    db_path = bt.root_path / db_path_replaced
+        entropy = token_bytes(32)
+        if key_seed is None:
+            key_seed = entropy
+        keychain.add_private_key(bytes_to_mnemonic(key_seed), "")
+        first_pk = keychain.get_first_public_key()
+        assert first_pk is not None
+        db_path_key_suffix = str(first_pk.get_fingerprint())
+        db_name = f"test-wallet-db-{port}-KEY.sqlite"
+        db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
+        db_path = bt.root_path / db_path_replaced
 
-    if db_path.exists():
-        db_path.unlink()
-    config["database_path"] = str(db_name)
-    config["testing"] = True
+        if db_path.exists():
+            db_path.unlink()
+        config["database_path"] = str(db_name)
+        config["testing"] = True
 
-    config["introducer_peer"]["host"] = self_hostname
-    if introducer_port is not None:
-        config["introducer_peer"]["port"] = introducer_port
-        config["peer_connect_interval"] = 10
-    else:
-        config["introducer_peer"] = None
+        config["introducer_peer"]["host"] = self_hostname
+        if introducer_port is not None:
+            config["introducer_peer"]["port"] = introducer_port
+            config["peer_connect_interval"] = 10
+        else:
+            config["introducer_peer"] = None
 
-    if full_node_port is not None:
-        config["full_node_peer"] = {}
-        config["full_node_peer"]["host"] = self_hostname
-        config["full_node_peer"]["port"] = full_node_port
-    else:
-        del config["full_node_peer"]
+        if full_node_port is not None:
+            config["full_node_peer"] = {}
+            config["full_node_peer"]["host"] = self_hostname
+            config["full_node_peer"]["port"] = full_node_port
+        else:
+            del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
-    kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False,
-    )
+        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
+        kwargs.update(
+            parse_cli_args=False,
+            connect_to_daemon=False,
+        )
 
-    service = Service(**kwargs)
+        service = Service(**kwargs)
 
-    await service.start(new_wallet=True)
+        await service.start(new_wallet=True)
 
-    yield service._node, service._node.server
+        yield service._node, service._node.server
 
-    service.stop()
-    await service.wait_closed()
-    if db_path.exists():
-        db_path.unlink()
-    keychain.delete_all_keys()
+        service.stop()
+        await service.wait_closed()
+        if db_path.exists():
+            db_path.unlink()
+        keychain.delete_all_keys()
 
 
 async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools):
