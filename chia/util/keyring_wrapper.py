@@ -150,28 +150,28 @@ class KeyringWrapper:
     def master_passphrase_is_valid(self, passphrase: str) -> bool:
         return self.keyring.check_password(passphrase)
 
-    def set_master_password(
+    def set_master_passphrase(
         self,
-        current_password: Optional[str],
-        new_password: str,
+        current_passphrase: Optional[str],
+        new_passphrase: str,
         write_to_keyring: bool = True,
         allow_migration: bool = True,
     ) -> None:
         """
-        Sets a new master password for the keyring
+        Sets a new master passphrase for the keyring
         """
 
         from chia.util.keychain import KeyringCurrentPassphaseIsInvalid, KeyringRequiresMigration
 
-        # Require a valid current_password
+        # Require a valid current_passphrase
         if (
             self.has_master_passphrase()
-            and current_password is not None
-            and not self.master_passphrase_is_valid(current_password)
+            and current_passphrase is not None
+            and not self.master_passphrase_is_valid(current_passphrase)
         ):
-            raise KeyringCurrentPassphaseIsInvalid("invalid current password")
+            raise KeyringCurrentPassphaseIsInvalid("invalid current passphrase")
 
-        self.set_cached_master_passphrase(new_password, validated=True)
+        self.set_cached_master_passphrase(new_passphrase, validated=True)
 
         if write_to_keyring:
             # We'll migrate the legacy contents to the new keyring at this point
@@ -181,17 +181,17 @@ class KeyringWrapper:
 
                 self.migrate_legacy_keyring()
             else:
-                # We're reencrypting the keyring contents using the new password. Ensure that the
-                # payload has been decrypted by calling load_keyring with the current password.
-                self.keyring.load_keyring(password=current_password)
-                self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the password
+                # We're reencrypting the keyring contents using the new passphrase. Ensure that the
+                # payload has been decrypted by calling load_keyring with the current passphrase.
+                self.keyring.load_keyring(password=current_passphrase)
+                self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
 
     def remove_master_password(self, current_password: Optional[str]) -> None:
         """
         Remove the user-specific master password. We still keep the keyring contents encrypted
         using the default password.
         """
-        self.set_master_password(current_password, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
+        self.set_master_passphrase(current_password, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
 
     # Legacy keyring migration
 
@@ -218,9 +218,13 @@ class KeyringWrapper:
 
                 # Prompt for a master password and cache it
                 new_passphrase = prompt_for_new_passphrase()
-                self.set_master_password(current_password=None, new_password=new_passphrase, write_to_keyring=False)
+                self.set_master_passphrase(
+                    current_passphrase=None, new_passphrase=new_passphrase, write_to_keyring=False
+                )
             else:
-                print("Will skip setting a master password. Use 'chia password set' to set the master password.\n")
+                print(
+                    "Will skip setting a master passphrase. Use 'chia passphrase set' to set the master passphrase.\n"
+                )
         else:
             import colorama
 
