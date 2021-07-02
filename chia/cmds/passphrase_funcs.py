@@ -74,8 +74,8 @@ def initialize_passphrase() -> None:
     # bootstrapping the keyring encryption process
     print("Setting keyring passphrase")
     passphrase = None
-    if Keychain.has_cached_password():
-        passphrase = Keychain.get_cached_master_password()
+    if Keychain.has_cached_passphrase():
+        passphrase = Keychain.get_cached_master_passphrase()
 
     if not passphrase or passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
         passphrase = prompt_for_new_passphrase()

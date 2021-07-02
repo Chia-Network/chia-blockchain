@@ -56,7 +56,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     before failing.
     """
     if use_passphrase_cache:
-        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_password()
+        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
         if passphrase:
             # If the cached passphrase was previously validated, we assume it's... valid
             if validated:
@@ -434,7 +434,7 @@ class Keychain:
         """
         # Unlocked: If a master password isn't set, or if the cached password is valid
         if not Keychain.has_master_passphrase() or (
-            Keychain.has_cached_password() and Keychain.master_password_is_valid(Keychain.get_cached_master_password())
+            Keychain.has_cached_passphrase() and Keychain.master_password_is_valid(Keychain.get_cached_master_passphrase())
         ):
             return False
 
@@ -457,18 +457,18 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().master_password_is_valid(password)
 
     @staticmethod
-    def has_cached_password() -> bool:
+    def has_cached_passphrase() -> bool:
         """
         Returns whether the master password has been cached (it may need to be validated)
         """
         return KeyringWrapper.get_shared_instance().has_cached_master_password()
 
     @staticmethod
-    def get_cached_master_password() -> str:
+    def get_cached_master_passphrase() -> str:
         """
         Returns the cached master password
         """
-        password, _ = KeyringWrapper.get_shared_instance().get_cached_master_password()
+        password, _ = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
         return password
 
     @staticmethod
