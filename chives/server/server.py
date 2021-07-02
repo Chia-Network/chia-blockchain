@@ -327,7 +327,7 @@ class ChivesServer:
         # Chives Network Code 
         # To Ban The Other Fork Of Chia To Join In
         if(int(target_node.port)==8444 or int(target_node.port)==6888 or int(target_node.port)==8744):
-                self.log.warning(f"Tring to connect a other fork of Chia blockchain in server.py {target_node.host}:{target_node.port}. Disconnected.")
+            self.log.warning(f"Tring to connect a other fork of Chia blockchain in server.py {target_node.host}:{target_node.port}. Disconnected.")
             return False
             
         if self.is_duplicate_or_self_connection(target_node):
