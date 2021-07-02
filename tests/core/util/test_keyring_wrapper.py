@@ -146,7 +146,7 @@ class TestKeyringWrapper(unittest.TestCase):
         The default password DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE is set
         """
         # Expect: cached password set to DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE by default
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == (
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             False,
         )
@@ -162,13 +162,13 @@ class TestKeyringWrapper(unittest.TestCase):
         KeyringWrapper.get_shared_instance().set_cached_master_password("testing one two three")
 
         # Expect: cached password should match
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == ("testing one two three", False)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", False)
 
         # When: setting a validated (successfully decrypted the content) master password
         KeyringWrapper.get_shared_instance().set_cached_master_password("apple banana orange grape", validated=True)
 
         # Expect: cached password should match and be validated
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == ("apple banana orange grape", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("apple banana orange grape", True)
 
     # When: using a populated file keyring
     @using_temp_file_keyring(populate=True)
@@ -196,14 +196,14 @@ class TestKeyringWrapper(unittest.TestCase):
         KeyringWrapper.get_shared_instance().set_master_password(None, "testing one two three")
 
         # Expect: the master password is cached and can be validated
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == ("testing one two three", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", True)
         assert KeyringWrapper.get_shared_instance().master_password_is_valid("testing one two three") is True
 
         # When: changing the master password
         KeyringWrapper.get_shared_instance().set_master_password("testing one two three", "potato potato potato")
 
         # Expect: the new master password is cached and can be validated
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == ("potato potato potato", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("potato potato potato", True)
         assert KeyringWrapper.get_shared_instance().master_password_is_valid("potato potato potato") is True
 
         # Expect: old password should not validate
@@ -222,14 +222,14 @@ class TestKeyringWrapper(unittest.TestCase):
         )
 
         # Expect: the master password is cached and can be validated
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == ("testing one two three", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", True)
         assert KeyringWrapper.get_shared_instance().master_password_is_valid("testing one two three") is True
 
         # When: changing the master password
         KeyringWrapper.get_shared_instance().set_master_password("testing one two three", "potato potato potato")
 
         # Expect: the new master password is cached and can be validated
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == ("potato potato potato", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("potato potato potato", True)
         assert KeyringWrapper.get_shared_instance().master_password_is_valid("potato potato potato") is True
 
         # Expect: old password should not validate
@@ -246,7 +246,7 @@ class TestKeyringWrapper(unittest.TestCase):
         KeyringWrapper.get_shared_instance().remove_master_password(None)
 
         # Expect: default master password is set
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == (
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             True,
         )
@@ -271,7 +271,7 @@ class TestKeyringWrapper(unittest.TestCase):
         KeyringWrapper.get_shared_instance().remove_master_password("It's dangerous to go alone, take this!")
 
         # Expect: default master password is set, old password doesn't validate
-        assert KeyringWrapper.get_shared_instance().get_cached_master_password() == (
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             True,
         )

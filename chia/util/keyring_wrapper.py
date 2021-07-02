@@ -121,7 +121,7 @@ class KeyringWrapper:
     def keyring_supports_master_password(self) -> bool:
         return type(self.get_keyring()) in [FileKeyring]
 
-    def get_cached_master_password(self) -> Tuple[Optional[str], bool]:
+    def get_cached_master_passphrase(self) -> Tuple[Optional[str], bool]:
         """
         Returns a tuple including the currently cached password and a bool
         indicating whether the password has been previously validated.
@@ -137,7 +137,7 @@ class KeyringWrapper:
         self.cached_password_is_validated = validated
 
     def has_cached_master_password(self) -> bool:
-        password = self.get_cached_master_password()
+        password = self.get_cached_master_passphrase()
         return password is not None and len(password) > 0
 
     def has_master_passphrase(self) -> bool:
@@ -204,7 +204,7 @@ class KeyringWrapper:
         the password prior to beginning migration.
         """
 
-        master_password, _ = self.get_cached_master_password()
+        master_password, _ = self.get_cached_master_passphrase()
         if master_password == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
             print(
                 "\nYour existing keys need to be migrated to a new keyring that is optionally secured by a master "
