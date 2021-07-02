@@ -8,7 +8,6 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from keyring.util import platform_
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from pathlib import Path
-from typing import Optional
 from unittest.mock import patch
 
 
@@ -133,7 +132,7 @@ class TempKeyring:
         self.keychain = self._patch_and_create_keychain(user, testing)
         self.cleaned_up = False
 
-    def _patch_and_create_keychain(self, user: Optional[str] = None, testing: bool = False):
+    def _patch_and_create_keychain(self, user: str, testing: bool):
         temp_dir = tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
         mock_supports_keyring_password_patch = patch("chia.util.keychain.supports_keyring_password")
@@ -156,12 +155,12 @@ class TempKeyring:
         keychain = Keychain(user=user, testing=testing)
 
         # Stash the temp_dir in the keychain instance
-        keychain._temp_dir = temp_dir
+        keychain._temp_dir = temp_dir  # type: ignore
 
         # Stash the patches in the keychain instance
-        keychain._mock_supports_keyring_password_patch = mock_supports_keyring_password_patch
-        keychain._mock_configure_backend_patch = mock_configure_backend_patch
-        keychain._mock_data_root_patch = mock_data_root_patch
+        keychain._mock_supports_keyring_password_patch = mock_supports_keyring_password_patch  # type: ignore
+        keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore
+        keychain._mock_data_root_patch = mock_data_root_patch  # type: ignore
 
         return keychain
 

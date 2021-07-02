@@ -52,7 +52,7 @@ class PlotKeysResolver:
         if self.connect_to_daemon:
             keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:
-            keychain_proxy = wrap_local_keychain(Keychain())
+            keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
         farmer_public_key: G1Element
         if self.farmer_public_key is not None:
