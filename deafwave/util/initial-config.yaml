@@ -33,8 +33,8 @@ network_overrides: &network_overrides
       address_prefix: "tzzz"
 
 selected_network: &selected_network "mainnet"
-ALERTS_URL: https://storage.googleapis.com/download.deafwave.net/notify/testnet_alert.txt
-DEAFWAVE_ALERTS_PUBKEY: a1ec27c6fc05f5485cc85e73b760285c9429852f7cb2e411fbc33bbe19922018c65f4025bc5629e8529af33b516c7320
+ALERTS_URL: https://storage.googleapis.com/download.deafwave.net/notify/testnet4_alert.txt
+DEAFWAVE_ALERTS_PUBKEY: a73af497a8ee31ec0357db7aa1af6d4a9afbad86e4200f46b42773e658998da487670dedf8af0c99fa782bcffe7ea7f6
 
 # public ssl ca is included in source code
 # Private ssl ca is used for trusted connections between machines user owns
