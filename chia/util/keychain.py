@@ -490,10 +490,10 @@ class Keychain:
         KeyringWrapper.get_shared_instance().set_master_passphrase(current_passphrase, new_passphrase, allow_migration)
 
     @staticmethod
-    def remove_master_password(current_password: Optional[str]) -> None:
+    def remove_master_passphrase(current_passphrase: Optional[str]) -> None:
         """
-        Removes the user-provided master password, and replaces it with the default
-        master password. The keyring contents will remain encrypted, but to the
-        default password.
+        Removes the user-provided master passphrase, and replaces it with the default
+        master passphrase. The keyring contents will remain encrypted, but to the
+        default passphrase.
         """
-        KeyringWrapper.get_shared_instance().remove_master_password(current_password)
+        KeyringWrapper.get_shared_instance().remove_master_passphrase(current_passphrase)
