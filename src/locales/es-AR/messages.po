@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:02\n"
+"PO-Revision-Date: 2021-07-02 00:45\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -286,13 +286,13 @@ msgstr "Hash del desafío"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:111
 msgid "Change"
-msgstr ""
+msgstr "Cambio"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:312
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
-msgstr ""
+msgstr "Cambiar de Grupo"
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
@@ -632,7 +632,7 @@ msgstr "Deshabilitar ploteo bitfield"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:26
 msgid "Discard"
-msgstr ""
+msgstr "Descartar"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -688,7 +688,7 @@ msgstr "Error: No se puede enviar chia a la dirección de color. Ingresa una dir
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
-msgstr ""
+msgstr "Espacio de Red Estimado"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
@@ -1109,7 +1109,7 @@ msgstr "MiB Carga/Descarga"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
-msgstr ""
+msgstr "Dificultad Mínima"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
 msgid "Minutes"
@@ -1183,7 +1183,7 @@ msgstr "ID de Nodo"
 
 #: src/components/plot/add/PlotAddNFT.tsx:90
 msgid "None"
-msgstr ""
+msgstr "Ninguna"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:68
 msgid "None of your plots have passed the plot filter yet."
@@ -1387,7 +1387,7 @@ msgstr "Llave de Parcela"
 
 #: src/components/pool/PoolOverview.tsx:40
 msgid "Plot NFT"
-msgstr ""
+msgstr "Plot NFT"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
 #: src/components/plotNFT/PlotNFTChangePool.tsx:81
@@ -1463,7 +1463,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr ""
+msgstr "Piscina"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:94
 msgid "Pool Contract Address"
