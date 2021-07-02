@@ -9,8 +9,8 @@ from sys import exit, platform
 from typing import Any, Optional, Tuple, Union
 
 
-# We want to protect the keyring, even if a user-specified master password isn't provided
-DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD = "$ chia password set # all the cool kids are doing it!"
+# We want to protect the keyring, even if a user-specified master passphrase isn't provided
+DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE = "$ chia passphrase set # all the cool kids are doing it!"
 
 
 class KeyringWrapper:
@@ -31,7 +31,7 @@ class KeyringWrapper:
     # Instance members
     keys_root_path: Path
     keyring: Union[Any, FileKeyring] = None
-    cached_password: Optional[str] = DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+    cached_password: Optional[str] = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
     cached_password_is_validated: bool = False
     legacy_keyring = None
 
@@ -192,7 +192,7 @@ class KeyringWrapper:
         Remove the user-specific master password. We still keep the keyring contents encrypted
         using the default password.
         """
-        self.set_master_password(current_password, DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD)
+        self.set_master_password(current_password, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
 
     # Legacy keyring migration
 
@@ -206,7 +206,7 @@ class KeyringWrapper:
         """
 
         master_password, _ = self.get_cached_master_password()
-        if master_password == DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD:
+        if master_password == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
             print(
                 "\nYour existing keys need to be migrated to a new keyring that is optionally secured by a master "
                 "password."
@@ -215,7 +215,7 @@ class KeyringWrapper:
 
             response = prompt_yes_no("Set keyring master password? (y/n) ")
             if response:
-                from chia.cmds.password_funcs import prompt_for_new_password
+                from chia.cmds.passphrase_funcs import prompt_for_new_password
 
                 # Prompt for a master password and cache it
                 new_password = prompt_for_new_password()

@@ -6,8 +6,8 @@ from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
-from chia.cmds.password import password_cmd
-from chia.cmds.password_funcs import remove_passwords_options_from_cmd
+from chia.cmds.passphrase import passphrase_cmd
+from chia.cmds.passphrase_funcs import remove_passwords_options_from_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
@@ -54,7 +54,7 @@ def monkey_patch_click() -> None:
 @click.option(
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )
-@click.option("--password-file", type=click.File("r"), help="File or descriptor to read the keyring password from")
+@click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the keyring passphase from")
 @click.pass_context
 def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
     from pathlib import Path
@@ -66,12 +66,12 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
     if keys_root_path:
         set_keys_root_path(Path(keys_root_path))
 
-    password_file = kwargs.get("password_file")
-    if password_file:
-        from .password_funcs import cache_password, read_password_from_file
+    passphrase_file = kwargs.get("passphrase_file")
+    if passphrase_file:
+        from .passphrase_funcs import cache_password, read_password_from_file
 
         try:
-            cache_password(read_password_from_file(password_file))
+            cache_password(read_password_from_file(passphrase_file))
         except Exception as e:
             print(f"Failed to read password: {e}")
 
@@ -108,7 +108,7 @@ cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
 
 if supports_keyring_password():
-    cli.add_command(password_cmd)
+    cli.add_command(passphrase_cmd)
 
 
 def main() -> None:
