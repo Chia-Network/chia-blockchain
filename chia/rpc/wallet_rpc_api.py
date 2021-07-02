@@ -176,7 +176,7 @@ class WalletRpcApi:
             backup_info = None
             backup_path = None
             try:
-                private_key = self.service.get_key_for_fingerprint(fingerprint)
+                private_key = await self.service.get_key_for_fingerprint(fingerprint)
                 last_recovery = await download_backup(recovery_host, private_key)
                 backup_path = path_from_root(self.service.root_path, "last_recovery")
                 if backup_path.exists():
