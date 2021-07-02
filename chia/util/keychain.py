@@ -95,7 +95,7 @@ def unlocks_keyring(use_passphrase_cache=False):
     def inner(func):
         def wrapper(*args, **kwargs):
             try:
-                if KeyringWrapper.get_shared_instance().has_master_password():
+                if KeyringWrapper.get_shared_instance().has_master_passphrase():
                     obtain_current_passphrase(use_passphrase_cache=use_passphrase_cache)
             except Exception as e:
                 print(f"Unable to unlock the keyring: {e}")
@@ -433,7 +433,7 @@ class Keychain:
         or if a master password is set and the cached password is valid, the keyring is "unlocked"
         """
         # Unlocked: If a master password isn't set, or if the cached password is valid
-        if not Keychain.has_master_password() or (
+        if not Keychain.has_master_passphrase() or (
             Keychain.has_cached_password() and Keychain.master_password_is_valid(Keychain.get_cached_master_password())
         ):
             return False
@@ -442,12 +442,12 @@ class Keychain:
         return True
 
     @staticmethod
-    def has_master_password() -> bool:
+    def has_master_passphrase() -> bool:
         """
         Returns a bool indicating whether the underlying keyring data
         is secured by a password.
         """
-        return KeyringWrapper.get_shared_instance().has_master_password()
+        return KeyringWrapper.get_shared_instance().has_master_passphrase()
 
     @staticmethod
     def master_password_is_valid(password: str) -> bool:
