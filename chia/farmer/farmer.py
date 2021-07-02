@@ -67,7 +67,7 @@ def uses_keychain_proxy():
         async def inner(self, *args, **kwargs):
             if not self.keychain_proxy:
                 if self.local_keychain:
-                    self.keychain_proxy = wrap_local_keychain(self.local_keychain)
+                    self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
                 else:
                     self.keychain_proxy = await connect_to_keychain_and_validate(
                         self.root_path, self.log, self.local_keychain

@@ -33,9 +33,9 @@ class MalformedKeychainResponse(Exception):
 class KeychainProxy(DaemonProxy):
     def __init__(
         self,
-        uri: Optional[str] = None,
+        log: logging.Logger,
+        uri: str = None,
         ssl_context: Optional[ssl.SSLContext] = None,
-        log: Optional[logging.Logger] = None,
         local_keychain: Optional[Keychain] = None,
         user: str = None,
         testing: bool = False,
@@ -49,7 +49,7 @@ class KeychainProxy(DaemonProxy):
             self.keychain = None  # type: ignore
         self.keychain_user = user
         self.keychain_testing = testing
-        super().__init__(uri, ssl_context)
+        super().__init__(uri or "", ssl_context)
 
     def use_local_keychain(self) -> bool:
         return self.keychain is not None
@@ -252,12 +252,12 @@ class KeychainProxy(DaemonProxy):
         return key
 
 
-def wrap_local_keychain(keychain: Keychain) -> KeychainProxy:
+def wrap_local_keychain(keychain: Keychain, log: logging.Logger) -> KeychainProxy:
     """
     Wrap an existing local Keychain instance in a KeychainProxy to utilize
     the same interface as a remote Keychain
     """
-    return KeychainProxy(local_keychain=keychain)
+    return KeychainProxy(local_keychain=keychain, log=log)
 
 
 async def connect_to_keychain(
