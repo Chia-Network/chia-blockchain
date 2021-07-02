@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 18:29\n"
+"PO-Revision-Date: 2021-07-02 19:01\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -535,17 +535,17 @@ msgstr ""
 
 #: src/components/plot/add/PlotAdd.tsx:86
 msgid "Currency code is not defined"
-msgstr ""
+msgstr "O código da moeda não está definido"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:116
 #: src/components/plotNFT/PlotNFTCard.tsx:142
 msgid "Current Difficulty"
-msgstr ""
+msgstr "Dificuldade Atual"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:133
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Current Points Balance"
-msgstr ""
+msgstr "Saldo de Pontos Atual"
 
 #: src/components/trading/TradingOverview.jsx:182
 msgid "Current trade status"
@@ -590,7 +590,7 @@ msgstr "Apagar Lote"
 #: src/components/plotNFT/PlotNFTCard.tsx:230
 #: src/components/wallet/standard/WalletStandard.tsx:646
 msgid "Delete Unconfirmed Transactions"
-msgstr ""
+msgstr "Apagar transações não confirmadas"
 
 #: src/components/selectKey/SelectKey.tsx:81
 #: src/components/selectKey/SelectKey.tsx:202
@@ -688,7 +688,7 @@ msgstr "Erro: Não é possível enviar chia para endereço colorido. Por favor, 
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
-msgstr ""
+msgstr "Espaço de rede estimado"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
@@ -939,7 +939,7 @@ msgstr "Entrada"
 
 #: src/components/core/components/Fee/Fee.tsx:36
 msgid "Incorrect value"
-msgstr ""
+msgstr "Valor incorreto"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:18
 msgid "Index"
@@ -972,18 +972,18 @@ msgstr "Intervalo"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
-msgstr ""
+msgstr "Estado inválido"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:310
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr ""
+msgstr "Juntar-se à Pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:145
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr ""
+msgstr "Junte-se a uma Pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
@@ -2423,7 +2423,7 @@ msgstr "Sua conexão de nó completo"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "Your Harvester Network"
-msgstr "Sua Rede de Coletores"
+msgstr "Sua Rede Harvester"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
