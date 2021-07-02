@@ -38,7 +38,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
             "w",
         ) as f:
             f.write(
-                # Encrypted using DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD. Data holds an empty keyring.
+                # Encrypted using DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE. Data holds an empty keyring.
                 "data: Re+on6HbYfUm58bGVEfPoOwI+y2GrR1QUByZ8Qq8AgFnKc9tMnkk3ss=\n"
                 "nonce: 41a01a265e74ad324b24cbe0\n"
                 "salt: e1ca9b308dee7968e22a05bde98df3eb\n"

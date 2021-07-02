@@ -1,12 +1,12 @@
 import sys
 
 from chia.util.keychain import Keychain, obtain_current_password
-from chia.util.keyring_wrapper import DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from getpass import getpass
 from io import TextIOWrapper
 from typing import Optional, Tuple
 
-MIN_PASSWORD_LEN = 8
+MIN_PASSPHRASE_LEN = 8
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-password -> 'set_password'
 PASSWORD_CLI_OPTION_NAMES = ["keys_root_path", "set_password", "password_file", "current_password_file"]
 
@@ -21,14 +21,14 @@ def remove_passwords_options_from_cmd(cmd) -> None:
 
 def verify_password_meets_requirements(new_password: str, confirmation_password: str) -> Tuple[bool, Optional[str]]:
     match = new_password == confirmation_password
-    meets_len_requirement = len(new_password) >= MIN_PASSWORD_LEN
+    meets_len_requirement = len(new_password) >= MIN_PASSPHRASE_LEN
 
     if match and meets_len_requirement:
         return True, None
     elif not match:
         return False, "Passwords do not match"
     elif not meets_len_requirement:
-        return False, f"Minimum password length is {MIN_PASSWORD_LEN}"
+        return False, f"Minimum password length is {MIN_PASSPHRASE_LEN}"
     else:
         raise Exception("Unexpected password verification case")
 
@@ -42,8 +42,8 @@ def tidy_password(password: str) -> str:
 
 
 def prompt_for_new_password() -> str:
-    if MIN_PASSWORD_LEN > 0:
-        print(f"\nPasswords must be {MIN_PASSWORD_LEN} or more characters in length")
+    if MIN_PASSPHRASE_LEN > 0:
+        print(f"\nPasswords must be {MIN_PASSPHRASE_LEN} or more characters in length")
     while True:
         password = tidy_password(getpass("New Password: "))
         confirmation = tidy_password(getpass("Confirm Password: "))
@@ -75,7 +75,7 @@ def initialize_password() -> None:
     if Keychain.has_cached_password():
         password = Keychain.get_cached_master_password()
 
-    if not password or password == DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD:
+    if not password or password == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
         password = prompt_for_new_password()
 
     Keychain.set_master_password(current_password=None, new_password=password)
@@ -85,8 +85,8 @@ def set_or_update_password(password: Optional[str], current_password: Optional[s
     # Prompt for the current password, if necessary
     if Keychain.has_master_password():
         # Try the default password first
-        if Keychain.master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD):
-            current_password = DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+        if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
+            current_password = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
         if not current_password:
             try:
@@ -114,8 +114,8 @@ def remove_password(current_password: Optional[str]) -> None:
         print("Password is not currently set")
     else:
         # Try the default password first
-        if Keychain.master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD):
-            current_password = DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+        if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
+            current_password = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
         # Prompt for the current password, if necessary
         if not current_password:
