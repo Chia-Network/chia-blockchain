@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 56400
+daemon_port: 56600
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -72,7 +72,7 @@ network_overrides: &network_overrides
   config:
     mainnet:
       address_prefix: "xcc"
-      default_full_node_port: 9444
+      default_full_node_port: 9699
     testnet0:
       address_prefix: "txcc"
     testnet1:
@@ -85,7 +85,7 @@ network_overrides: &network_overrides
       address_prefix: "txcc"
     testnet7:
       address_prefix: "txcc"
-      default_full_node_port: 59444
+      default_full_node_port: 59699
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chivescoin.org/notify/mainnet_alert.txt
@@ -119,14 +119,14 @@ logging: &logging
 
 harvester:
   # The harvester server (if run) will run on this port
-  port: 9448
+  port: 9648
   farmer_peer:
     host: *self_hostname
-    port: 9447
+    port: 9647
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 9560
+  rpc_port: 9760
   num_threads: 30
   plot_loading_frequency_seconds: 120
 
@@ -159,14 +159,14 @@ pool:
 
 farmer:
   # The farmer server (if run) will run on this port
-  port: 9447
+  port: 9647
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 9444
+    port: 9699
   harvester_peer:
     host: *self_hostname
-    port: 9448
+    port: 9648
 
   pool_public_keys: []
 
@@ -175,7 +175,7 @@ farmer:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 9559
+  rpc_port: 9759
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -192,7 +192,7 @@ farmer:
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
   # The server where the VDF clients will connect to.
-  port: 9000
+  port: 9200
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
@@ -200,7 +200,7 @@ timelord_launcher:
 
 timelord:
   # The timelord server (if run) will run on this port
-  port: 9446
+  port: 9646
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -212,13 +212,13 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 9444
+      port: 9699
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
   vdf_server:
     host: *self_hostname
-    port: 9000
+    port: 9200
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -247,7 +247,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 9444
+  port: 9699
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -257,7 +257,7 @@ full_node:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 9555
+  rpc_port: 9755
 
   # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
@@ -305,16 +305,16 @@ full_node:
     - "dns-introducer.chivescoin.org"
   farmer_peer:
       host: *self_hostname
-      port: 9447
+      port: 9647
   timelord_peer:
       host: *self_hostname
-      port: 9446
+      port: 9646
   introducer_peer:
       host: introducer.chivescoin.org  # Chives AWS introducer IPv4/IPv6
-      port: 9444
+      port: 9699
   wallet_peer:
     host: *self_hostname
-    port: 9449
+    port: 9649
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -330,7 +330,7 @@ ui:
   port: 8222
 
   # Which port to use to communicate with the full node
-  rpc_port: 9555
+  rpc_port: 9755
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
@@ -341,14 +341,14 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 56400
+  daemon_port: 56600
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
 
 introducer:
   host: *self_hostname
-  port: 9445
+  port: 9645
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
@@ -362,8 +362,8 @@ introducer:
     public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 9449
-  rpc_port: 9356
+  port: 9649
+  rpc_port: 9856
 
   enable_profiler: False
 
@@ -377,7 +377,7 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 9444
+    port: 9699
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
@@ -395,7 +395,7 @@ wallet:
 
   introducer_peer:
     host: introducer.chivescoin.org # Chives AWS introducer IPv4/IPv6
-    port: 9444
+    port: 9699
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
