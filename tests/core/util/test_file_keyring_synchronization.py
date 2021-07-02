@@ -73,18 +73,18 @@ class TestFileKeyringSynchronization(unittest.TestCase):
     @using_temp_file_keyring()
     def test_multiple_writers(self):
         num_workers = 10
-        password_list = list(map(lambda x: ("test-service", f"test-user-{x}", f"password {x}"), range(num_workers)))
+        passphrase_list = list(map(lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}"), range(num_workers)))
 
-        # When: spinning off children to each set a password concurrently
+        # When: spinning off children to each set a passphrase concurrently
         with Pool(processes=num_workers) as pool:
-            res = pool.starmap_async(dummy_set_passphrase, password_list)
+            res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
             res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
 
-        # Expect: parent process should be able to find all passwords that were set by the child processes
-        for item in password_list:
-            expected_password = item[2]
-            actual_password = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
-            assert expected_password == actual_password
+        # Expect: parent process should be able to find all passphrases that were set by the child processes
+        for item in passphrase_list:
+            expected_passphrase = item[2]
+            actual_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
+            assert expected_passphrase == actual_passphrase
 
     # When: using a new empty keyring
     @using_temp_file_keyring()

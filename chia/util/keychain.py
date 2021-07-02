@@ -377,7 +377,7 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    KeyringWrapper.get_shared_instance().delete_password(
+                    KeyringWrapper.get_shared_instance().delete_passphrase(
                         self._get_service(), self._get_private_key_user(index)
                     )
             index += 1
@@ -394,7 +394,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                KeyringWrapper.get_shared_instance().delete_password(
+                KeyringWrapper.get_shared_instance().delete_passphrase(
                     self._get_service(), self._get_private_key_user(index)
                 )
             except Exception:
@@ -414,7 +414,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                KeyringWrapper.get_shared_instance().delete_password(
+                KeyringWrapper.get_shared_instance().delete_passphrase(
                     self._get_service(), self._get_private_key_user(index)
                 )
             except Exception:

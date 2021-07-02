@@ -55,7 +55,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
-    # Prompts interactively if the keyring is protected by a master password. To use the daemon
+    # Prompts interactively if the keyring is protected by a master passphrase. To use the daemon
     # for keychain access, KeychainProxy/connect_to_keychain should be used instead of Keychain.
     kc: Keychain = Keychain()
     pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
