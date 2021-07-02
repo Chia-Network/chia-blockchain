@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-02 00:45\n"
+"PO-Revision-Date: 2021-07-02 06:43\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,7 +28,7 @@ msgstr "¿Querés explorar más, los bloques de Chia? Mirá <0>Chia Explorer</0>
 
 #: src/components/plot/add/PlotAddNFT.tsx:127
 msgid "+ Add New Plot NFT"
-msgstr ""
+msgstr "Agregar Nueva Parcela NFT"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -95,7 +95,7 @@ msgstr "Añadir una parcela"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
-msgstr ""
+msgstr "Agregar una parcela NFT"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
@@ -972,7 +972,7 @@ msgstr "Intervalo"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
-msgstr ""
+msgstr "Estado Inválido"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:310
 #: src/components/pool/PoolOverview.tsx:113
@@ -1225,7 +1225,7 @@ msgstr ""
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:95
 #: src/components/plotNFT/PlotNFTCard.tsx:121
 msgid "Number of Plots"
-msgstr ""
+msgstr "Número de Parcelas"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
 msgid "Number of buckets"
@@ -1289,7 +1289,7 @@ msgstr "Saldo Pendiente Total"
 
 #: src/hooks/useAbsorbRewards.tsx:45
 msgid "Please Confirm"
-msgstr ""
+msgstr "Confirme Por Favor"
 
 #: src/components/trading/CreateOffer.jsx:100
 msgid "Please add a trade pair"
@@ -1579,7 +1579,7 @@ msgstr "Pruebas Encontradas"
 
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
-msgstr ""
+msgstr "Versión de Protocolo"
 
 #: src/components/wallet/create/createRLAdmin.jsx:297
 msgid "Pubkey"
@@ -1747,7 +1747,7 @@ msgstr "Seleccione el destino temporal de la carpeta en la que desea que se alma
 
 #: src/components/plot/add/PlotAddNFT.tsx:85
 msgid "Select your Plot NFT"
-msgstr ""
+msgstr "Seleccione su parcela NFT"
 
 #: src/components/plot/add/PlotAddNFT.tsx:76
 msgid "Select your Plot NFT from the dropdown or create a new one."
