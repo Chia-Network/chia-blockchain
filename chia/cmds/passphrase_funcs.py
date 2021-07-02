@@ -7,128 +7,130 @@ from io import TextIOWrapper
 from typing import Optional, Tuple
 
 MIN_PASSPHRASE_LEN = 8
-# Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-password -> 'set_password'
-PASSWORD_CLI_OPTION_NAMES = ["keys_root_path", "set_password", "password_file", "current_password_file"]
+# Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
+PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
 
 
-def remove_passwords_options_from_cmd(cmd) -> None:
+def remove_passphrase_options_from_cmd(cmd) -> None:
     # TODO: Click doesn't seem to have a great way of adding/removing params using an
     # existing command, and using the decorator-supported construction of options doesn't
-    # allow for conditionally including options. Once keyring password management is
+    # allow for conditionally including options. Once keyring passphrase management is
     # rolled out to all platforms this can be removed.
-    cmd.params = [param for param in cmd.params if param.name not in PASSWORD_CLI_OPTION_NAMES]
+    cmd.params = [param for param in cmd.params if param.name not in PASSPHRASE_CLI_OPTION_NAMES]
 
 
-def verify_password_meets_requirements(new_password: str, confirmation_password: str) -> Tuple[bool, Optional[str]]:
-    match = new_password == confirmation_password
-    meets_len_requirement = len(new_password) >= MIN_PASSPHRASE_LEN
+def verify_passphrase_meets_requirements(
+    new_passphrase: str, confirmation_passphrase: str
+) -> Tuple[bool, Optional[str]]:
+    match = new_passphrase == confirmation_passphrase
+    meets_len_requirement = len(new_passphrase) >= MIN_PASSPHRASE_LEN
 
     if match and meets_len_requirement:
         return True, None
     elif not match:
-        return False, "Passwords do not match"
+        return False, "Passphrases do not match"
     elif not meets_len_requirement:
-        return False, f"Minimum password length is {MIN_PASSPHRASE_LEN}"
+        return False, f"Minimum passphrase length is {MIN_PASSPHRASE_LEN}"
     else:
-        raise Exception("Unexpected password verification case")
+        raise Exception("Unexpected passphrase verification case")
 
 
-def tidy_password(password: str) -> str:
+def tidy_passphrase(passphrase: str) -> str:
     """
-    Perform any string processing we want to apply to the entered password.
+    Perform any string processing we want to apply to the entered passphrase.
     Currently we strip leading/trailing whitespace.
     """
-    return password.strip()
+    return passphrase.strip()
 
 
-def prompt_for_new_password() -> str:
+def prompt_for_new_passphrase() -> str:
     if MIN_PASSPHRASE_LEN > 0:
-        print(f"\nPasswords must be {MIN_PASSPHRASE_LEN} or more characters in length")
+        print(f"\nPassphrases must be {MIN_PASSPHRASE_LEN} or more characters in length")
     while True:
-        password = tidy_password(getpass("New Password: "))
-        confirmation = tidy_password(getpass("Confirm Password: "))
+        passphrase = tidy_passphrase(getpass("New Passphrase: "))
+        confirmation = tidy_passphrase(getpass("Confirm Passphrase: "))
 
-        valid_password, error_msg = verify_password_meets_requirements(password, confirmation)
+        valid_passphrase, error_msg = verify_passphrase_meets_requirements(passphrase, confirmation)
 
-        if valid_password:
-            return password
+        if valid_passphrase:
+            return passphrase
         elif error_msg:
             print(f"{error_msg}\n")
 
 
-def read_password_from_file(password_file: TextIOWrapper) -> str:
-    password = tidy_password(password_file.read())
-    password_file.close()
-    return password
+def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
+    passphrase = tidy_passphrase(passphrase_file.read())
+    passphrase_file.close()
+    return passphrase
 
 
-def initialize_password() -> None:
+def initialize_passphrase() -> None:
     if Keychain.has_master_password():
-        print("Keyring is already protected by a password")
-        print("\nUse 'chia password set' or 'chia password remove' to update or remove your password")
+        print("Keyring is already protected by a passphrase")
+        print("\nUse 'chia passphrase set' or 'chia passphrase remove' to update or remove your passphrase")
         sys.exit(1)
 
-    # We'll rely on Keyring initialization to leverage the cached password for
+    # We'll rely on Keyring initialization to leverage the cached passphrase for
     # bootstrapping the keyring encryption process
-    print("Setting keyring password")
-    password = None
+    print("Setting keyring passphrase")
+    passphrase = None
     if Keychain.has_cached_password():
-        password = Keychain.get_cached_master_password()
+        passphrase = Keychain.get_cached_master_password()
 
-    if not password or password == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
-        password = prompt_for_new_password()
+    if not passphrase or passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
+        passphrase = prompt_for_new_passphrase()
 
-    Keychain.set_master_password(current_password=None, new_password=password)
+    Keychain.set_master_password(current_password=None, new_password=passphrase)
 
 
-def set_or_update_password(password: Optional[str], current_password: Optional[str]) -> None:
-    # Prompt for the current password, if necessary
+def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> None:
+    # Prompt for the current passphrase, if necessary
     if Keychain.has_master_password():
-        # Try the default password first
+        # Try the default passphrase first
         if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
-            current_password = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+            current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
-        if not current_password:
+        if not current_passphrase:
             try:
-                current_password = obtain_current_password("Current Password: ")
+                current_passphrase = obtain_current_password("Current Passphrase: ")
             except Exception as e:
-                print(f"Unable to confirm current password: {e}")
+                print(f"Unable to confirm current passphrase: {e}")
                 sys.exit(1)
 
-    new_password = password
+    new_passphrase = passphrase
     try:
-        # Prompt for the new password, if necessary
-        if not new_password:
-            new_password = prompt_for_new_password()
+        # Prompt for the new passphrase, if necessary
+        if not new_passphrase:
+            new_passphrase = prompt_for_new_passphrase()
 
-        if new_password == current_password:
-            raise ValueError("password is unchanged")
+        if new_passphrase == current_passphrase:
+            raise ValueError("passphrase is unchanged")
 
-        Keychain.set_master_password(current_password=current_password, new_password=new_password)
+        Keychain.set_master_password(current_password=current_passphrase, new_password=new_passphrase)
     except Exception as e:
-        print(f"Unable to set or update password: {e}")
+        print(f"Unable to set or update passphrase: {e}")
 
 
-def remove_password(current_password: Optional[str]) -> None:
+def remove_passphrase(current_passphrase: Optional[str]) -> None:
     if not Keychain.has_master_password():
-        print("Password is not currently set")
+        print("Passphrase is not currently set")
     else:
-        # Try the default password first
+        # Try the default passphrase first
         if Keychain.master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
-            current_password = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+            current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 
-        # Prompt for the current password, if necessary
-        if not current_password:
+        # Prompt for the current passphrase, if necessary
+        if not current_passphrase:
             try:
-                current_password = obtain_current_password("Current Password: ")
+                current_passphrase = obtain_current_password("Current Passphrase: ")
             except Exception as e:
-                print(f"Unable to confirm current password: {e}")
+                print(f"Unable to confirm current passphrase: {e}")
 
         try:
-            Keychain.remove_master_password(current_password)
+            Keychain.remove_master_password(current_passphrase)
         except Exception as e:
-            print(f"Unable to remove password: {e}")
+            print(f"Unable to remove passphrase: {e}")
 
 
-def cache_password(password: str) -> None:
-    Keychain.set_cached_master_password(password)
+def cache_passphrase(passphrase: str) -> None:
+    Keychain.set_cached_master_password(passphrase)

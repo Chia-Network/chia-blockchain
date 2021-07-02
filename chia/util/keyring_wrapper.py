@@ -41,8 +41,6 @@ class KeyringWrapper:
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
-        from chia.util.keychain import supports_keyring_password
-
         self.keys_root_path = keys_root_path
         self.keyring = self._configure_backend()
 
@@ -88,7 +86,7 @@ class KeyringWrapper:
                 # After migrating content from legacy_keyring, we'll prompt to clear those keys
                 old_keyring.keyring_key = "your keyring password"  # type: ignore
                 return old_keyring
-        
+
         return None
 
     @staticmethod
@@ -216,11 +214,11 @@ class KeyringWrapper:
 
             response = prompt_yes_no("Set keyring master password? (y/n) ")
             if response:
-                from chia.cmds.passphrase_funcs import prompt_for_new_password
+                from chia.cmds.passphrase_funcs import prompt_for_new_passphrase
 
                 # Prompt for a master password and cache it
-                new_password = prompt_for_new_password()
-                self.set_master_password(current_password=None, new_password=new_password, write_to_keyring=False)
+                new_passphrase = prompt_for_new_passphrase()
+                self.set_master_password(current_password=None, new_password=new_passphrase, write_to_keyring=False)
             else:
                 print("Will skip setting a master password. Use 'chia password set' to set the master password.\n")
         else:
