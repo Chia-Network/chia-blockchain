@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:03\n"
+"PO-Revision-Date: 2021-07-02 12:45\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -2128,7 +2128,7 @@ msgstr "Celková veľkosť siete"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:140
 msgid "Total Plot Size:"
-msgstr "Celková veľkosť poľa:"
+msgstr "Celková veľkosť polí:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
 msgid "Total Size of Plots"
@@ -2427,7 +2427,7 @@ msgstr "Sieť vašich zberačov"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr "Prehľad vášho združenia"
+msgstr "Prehľad vašich združení"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
