@@ -35,7 +35,7 @@ class KeyringCurrentPassphaseIsInvalid(Exception):
     pass
 
 
-def supports_keyring_password() -> bool:
+def supports_keyring_passphrase() -> bool:
     from sys import platform
 
     return platform == "linux" or platform == "darwin"

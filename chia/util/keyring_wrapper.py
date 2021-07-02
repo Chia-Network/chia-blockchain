@@ -50,7 +50,7 @@ class KeyringWrapper:
         KeyringWrapper.__shared_instance = self
 
     def _configure_backend(self) -> Union[Any, FileKeyring]:
-        from chia.util.keychain import supports_keyring_password
+        from chia.util.keychain import supports_keyring_passphrase
 
         if self.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
@@ -60,14 +60,14 @@ class KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
         elif platform == "darwin":
-            if supports_keyring_password():
+            if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
             else:
                 import keyring.backends.macOS
 
                 keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
-            if supports_keyring_password():
+            if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
             else:
                 keyring = CryptFileKeyring()
