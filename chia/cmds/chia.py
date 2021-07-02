@@ -7,7 +7,7 @@ from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
 from chia.cmds.passphrase import passphrase_cmd
-from chia.cmds.passphrase_funcs import remove_passwords_options_from_cmd
+from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
@@ -59,17 +59,17 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
 
     passphrase_file = kwargs.get("passphrase_file")
     if passphrase_file:
-        from .passphrase_funcs import cache_password, read_password_from_file
+        from .passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
         try:
-            cache_password(read_password_from_file(passphrase_file))
+            cache_passphrase(read_passphrase_from_file(passphrase_file))
         except Exception as e:
-            print(f"Failed to read password: {e}")
+            print(f"Failed to read passphrase: {e}")
 
 
 if not supports_keyring_password():
-    # TODO: Remove once keyring password management is rolled out to all platforms
-    remove_passwords_options_from_cmd(cli)
+    # TODO: Remove once keyring passphrase management is rolled out to all platforms
+    remove_passphrase_options_from_cmd(cli)
 
 
 @cli.command("version", short_help="Show chia version")

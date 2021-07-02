@@ -20,18 +20,22 @@ def passphrase_cmd():
     "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
 )
 def set_cmd(passphrase_file: Optional[TextIOWrapper], current_passphrase_file: Optional[TextIOWrapper]) -> None:
-    from .passphrase_funcs import read_password_from_file, set_or_update_password, verify_password_meets_requirements
+    from .passphrase_funcs import (
+        read_passphrase_from_file,
+        set_or_update_passphrase,
+        verify_passphrase_meets_requirements,
+    )
 
     current_passphrase = None
     if current_passphrase_file:
-        current_passphrase = read_password_from_file(current_passphrase_file)
+        current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
     if passphrase_file:
         new_passphrase = None
         try:
             # Read the passphrase from a file and verify it
-            new_passphrase = read_password_from_file(passphrase_file)
-            valid_passphrase, error_msg = verify_password_meets_requirements(
+            new_passphrase = read_passphrase_from_file(passphrase_file)
+            valid_passphrase, error_msg = verify_passphrase_meets_requirements(
                 new_passphrase, new_passphrase
             )  # new_passphrase provided for both args since we don't have a separate confirmation passphrase
 
@@ -43,9 +47,9 @@ def set_cmd(passphrase_file: Optional[TextIOWrapper], current_passphrase_file: O
             print(f"Failed to read passphrase: {e}")
         else:
             # Interactively prompt for the current passphrase (if set)
-            set_or_update_password(password=new_passphrase, current_password=current_passphrase)
+            set_or_update_passphrase(passphrase=new_passphrase, current_passphrase=current_passphrase)
     else:
-        set_or_update_password(password=None, current_password=current_passphrase)
+        set_or_update_passphrase(passphrase=None, current_passphrase=current_passphrase)
 
 
 @passphrase_cmd.command(
@@ -58,10 +62,10 @@ def set_cmd(passphrase_file: Optional[TextIOWrapper], current_passphrase_file: O
     "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
 )
 def remove_cmd(current_passphrase_file: Optional[TextIOWrapper]) -> None:
-    from .passphrase_funcs import read_password_from_file, remove_password
+    from .passphrase_funcs import read_passphrase_from_file, remove_passphrase
 
     current_passphrase = None
     if current_passphrase_file:
-        current_passphrase = read_password_from_file(current_passphrase_file)
+        current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
-    remove_password(current_passphrase)
+    remove_passphrase(current_passphrase)
