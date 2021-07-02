@@ -12,7 +12,13 @@ from chia.daemon.keychain_server import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
-from chia.util.keychain import Keychain, KeyringIsLocked, bytes_to_mnemonic, mnemonic_to_seed, supports_keyring_passphrase
+from chia.util.keychain import (
+    Keychain,
+    KeyringIsLocked,
+    bytes_to_mnemonic,
+    mnemonic_to_seed,
+    supports_keyring_passphrase,
+)
 from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple

@@ -434,7 +434,8 @@ class Keychain:
         """
         # Unlocked: If a master password isn't set, or if the cached password is valid
         if not Keychain.has_master_passphrase() or (
-            Keychain.has_cached_passphrase() and Keychain.master_password_is_valid(Keychain.get_cached_master_passphrase())
+            Keychain.has_cached_passphrase()
+            and Keychain.master_password_is_valid(Keychain.get_cached_master_passphrase())
         ):
             return False
 

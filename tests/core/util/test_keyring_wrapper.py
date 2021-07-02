@@ -168,7 +168,10 @@ class TestKeyringWrapper(unittest.TestCase):
         KeyringWrapper.get_shared_instance().set_cached_master_password("apple banana orange grape", validated=True)
 
         # Expect: cached password should match and be validated
-        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("apple banana orange grape", True)
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
+            "apple banana orange grape",
+            True,
+        )
 
     # When: using a populated file keyring
     @using_temp_file_keyring(populate=True)
