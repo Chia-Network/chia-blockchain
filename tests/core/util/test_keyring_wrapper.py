@@ -117,16 +117,16 @@ class TestKeyringWrapper(unittest.TestCase):
         A new/unpopulated file keyring should not have a master password set
         """
         # Expect: no master password set
-        assert KeyringWrapper.get_shared_instance().has_master_password() is False
+        assert KeyringWrapper.get_shared_instance().has_master_passphrase() is False
 
     # When: using a populated file keyring
     @using_temp_file_keyring(populate=True)
-    def test_populated_file_keyring_has_master_password(self):
+    def test_populated_file_keyring_has_master_passphrase(self):
         """
         Populated keyring should have the default master password set
         """
         # Expect: master password is set
-        assert KeyringWrapper.get_shared_instance().has_master_password() is True
+        assert KeyringWrapper.get_shared_instance().has_master_passphrase() is True
 
     # When: creating a new file keyring with a legacy keyring in place
     @using_temp_file_keyring_and_cryptfilekeyring
