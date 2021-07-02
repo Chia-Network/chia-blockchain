@@ -15,7 +15,7 @@ from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
-from chia.util.keychain import set_keys_root_path, supports_keyring_password
+from chia.util.keychain import set_keys_root_path, supports_keyring_passphrase
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -67,7 +67,7 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
             print(f"Failed to read passphrase: {e}")
 
 
-if not supports_keyring_password():
+if not supports_keyring_passphrase():
     # TODO: Remove once keyring passphrase management is rolled out to all platforms
     remove_passphrase_options_from_cmd(cli)
 
@@ -98,7 +98,7 @@ cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
 
-if supports_keyring_password():
+if supports_keyring_passphrase():
     cli.add_command(passphrase_cmd)
 
 

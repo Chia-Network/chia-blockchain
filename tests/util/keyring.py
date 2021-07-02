@@ -65,7 +65,7 @@ def using_temp_keyring_dir(func):
 
 def using_temp_file_keyring(populate=False):
     def outer(func):
-        @patch("chia.util.keychain.supports_keyring_password")
+        @patch("chia.util.keychain.supports_keyring_passphrase")
         @patch.object(KeyringWrapper, "_configure_backend")
         @patch.object(platform_, "data_root")
         @using_temp_keyring_dir
@@ -73,13 +73,13 @@ def using_temp_file_keyring(populate=False):
             self,
             mock_data_root,
             mock_configure_backend,
-            mock_supports_keyring_password,
+            mock_supports_keyring_passphrase,
             temp_file_keyring_dir,
             *args,
             **kwargs,
         ):
-            # Patch supports_keyring_password() to return True
-            mock_supports_keyring_password.return_value = True
+            # Patch supports_keyring_passphrase() to return True
+            mock_supports_keyring_passphrase.return_value = True
 
             setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=populate)
 
@@ -96,7 +96,7 @@ def using_temp_file_keyring(populate=False):
 
 def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
     def outer(func):
-        @patch("chia.util.keychain.supports_keyring_password")
+        @patch("chia.util.keychain.supports_keyring_passphrase")
         @patch.object(KeyringWrapper, "_configure_backend")
         @patch.object(platform_, "data_root")
         @using_temp_keyring_dir
@@ -104,13 +104,13 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
             self,
             mock_data_root,
             mock_configure_backend,
-            mock_supports_keyring_password,
+            mock_supports_keyring_passphrase,
             temp_file_keyring_dir,
             *args,
             **kwargs,
         ):
-            # Patch supports_keyring_password() to return True
-            mock_supports_keyring_password.return_value = True
+            # Patch supports_keyring_passphrase() to return True
+            mock_supports_keyring_passphrase.return_value = True
 
             setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir)
 
@@ -135,11 +135,11 @@ class TempKeyring:
     def _patch_and_create_keychain(self, user: str, testing: bool):
         temp_dir = tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
-        mock_supports_keyring_password_patch = patch("chia.util.keychain.supports_keyring_password")
-        mock_supports_keyring_password = mock_supports_keyring_password_patch.start()
+        mock_supports_keyring_passphrase_patch = patch("chia.util.keychain.supports_keyring_passphrase")
+        mock_supports_keyring_passphrase = mock_supports_keyring_passphrase_patch.start()
 
-        # Patch supports_keyring_password() to return True
-        mock_supports_keyring_password.return_value = True
+        # Patch supports_keyring_passphrase() to return True
+        mock_supports_keyring_passphrase.return_value = True
 
         mock_configure_backend_patch = patch.object(KeyringWrapper, "_configure_backend")
         mock_configure_backend = mock_configure_backend_patch.start()
@@ -158,7 +158,7 @@ class TempKeyring:
         keychain._temp_dir = temp_dir  # type: ignore
 
         # Stash the patches in the keychain instance
-        keychain._mock_supports_keyring_password_patch = mock_supports_keyring_password_patch  # type: ignore
+        keychain._mock_supports_keyring_passphrase_patch = mock_supports_keyring_passphrase_patch  # type: ignore
         keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore
         keychain._mock_data_root_patch = mock_data_root_patch  # type: ignore
 
@@ -181,7 +181,7 @@ class TempKeyring:
         print(f"Cleaning up temp keychain in dir: {temp_dir}")
         tempfile.TemporaryDirectory._rmtree(temp_dir)
 
-        self.keychain._mock_supports_keyring_password_patch.stop()
+        self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()
         self.keychain._mock_data_root_patch.stop()
 
