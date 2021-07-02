@@ -247,7 +247,7 @@ class FileKeyring(FileSystemEventHandler):
 
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
-    def get_password(self, service: str, user: str) -> Optional[str]:
+    def get_passphrase(self, service: str, user: str) -> Optional[str]:
         """
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)

@@ -289,24 +289,24 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
-    def test_get_password(self):
+    def test_get_passphrase(self):
         """
         Simple password setting and retrieval
         """
         # Expect: password lookup should return None
-        assert KeyringWrapper.get_shared_instance().get_password("service-abc", "user-xyz") is None
+        assert KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz") is None
 
         # When: setting a password
         KeyringWrapper.get_shared_instance().set_password("service-abc", "user-xyz", "super secret password".encode())
 
         # Expect: password lookup should succeed
         assert (
-            KeyringWrapper.get_shared_instance().get_password("service-abc", "user-xyz")
+            KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz")
             == "super secret password".encode().hex()
         )
 
         # Expect: non-existent password lookup should fail
-        assert KeyringWrapper.get_shared_instance().get_password("service-123", "some non-existent password") is None
+        assert KeyringWrapper.get_shared_instance().get_passphrase("service-123", "some non-existent password") is None
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -319,7 +319,7 @@ class TestKeyringWrapper(unittest.TestCase):
 
         # Expect: password lookup should succeed
         assert (
-            KeyringWrapper.get_shared_instance().get_password("service-xyz", "user-123")
+            KeyringWrapper.get_shared_instance().get_passphrase("service-xyz", "user-123")
             == "initial password".encode().hex()
         )
 
@@ -328,7 +328,7 @@ class TestKeyringWrapper(unittest.TestCase):
 
         # Expect: the updated password should be retrieved
         assert (
-            KeyringWrapper.get_shared_instance().get_password("service-xyz", "user-123")
+            KeyringWrapper.get_shared_instance().get_passphrase("service-xyz", "user-123")
             == "updated password".encode().hex()
         )
 
@@ -346,7 +346,7 @@ class TestKeyringWrapper(unittest.TestCase):
 
         # Expect: password retrieval should succeed
         assert (
-            KeyringWrapper.get_shared_instance().get_password("some service", "some user")
+            KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user")
             == "500p3r 53cr37".encode().hex()
         )
 
@@ -354,4 +354,4 @@ class TestKeyringWrapper(unittest.TestCase):
         KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
 
         # Expect: password retrieval should fail gracefully
-        assert KeyringWrapper.get_shared_instance().get_password("some service", "some user") is None
+        assert KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") is None

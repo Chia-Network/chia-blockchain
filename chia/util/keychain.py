@@ -220,7 +220,7 @@ class Keychain:
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = KeyringWrapper.get_shared_instance().get_password(self._get_service(), user)
+        read_str = KeyringWrapper.get_shared_instance().get_passphrase(self._get_service(), user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)

@@ -34,7 +34,7 @@ def dummy_set_password(service, user, password):
     # the concurrent processes get into a bad state
     sleep(random.random() * 10 % 3)
 
-    assert KeyringWrapper.get_shared_instance().get_password(service, user) == password
+    assert KeyringWrapper.get_shared_instance().get_passphrase(service, user) == password
 
 
 def dummy_fn_requiring_writer_lock(*args, **kwargs):
@@ -83,7 +83,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         # Expect: parent process should be able to find all passwords that were set by the child processes
         for item in password_list:
             expected_password = item[2]
-            actual_password = KeyringWrapper.get_shared_instance().get_password(service=item[0], user=item[1])
+            actual_password = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
             assert expected_password == actual_password
 
     # When: using a new empty keyring
