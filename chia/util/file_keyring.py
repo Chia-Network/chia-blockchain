@@ -423,7 +423,7 @@ class FileKeyring(FileSystemEventHandler):
 
         # When writing for the first time, we should have a cached password which hasn't been
         # validated (because it can't be validated yet...)
-        if self.is_first_write() and KeyringWrapper.get_shared_instance().has_cached_master_password():
+        if self.is_first_write() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():
             key = FileKeyring.symmetric_key_from_password(
                 KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0], self.salt
             )

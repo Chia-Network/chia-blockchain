@@ -150,7 +150,7 @@ class TestKeyringWrapper(unittest.TestCase):
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             False,
         )
-        assert KeyringWrapper.get_shared_instance().has_cached_master_password() is True
+        assert KeyringWrapper.get_shared_instance().has_cached_master_passphrase() is True
 
     # When: using a file keyring
     @using_temp_file_keyring()
