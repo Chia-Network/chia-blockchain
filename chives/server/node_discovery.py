@@ -230,7 +230,7 @@ class FullNodeDiscovery:
             # Chives Network Code 
             # To Ban The Other Fork Of Chia To Join In
             if(int(addr.port)==8444 or int(addr.port)==6888 or int(addr.port)==8744):
-                self.log.warning("Tring to connect a other fork of Chia blockchain in Node Discovery.")
+                self.log.warning(f"Tring to connect a other fork of Chia blockchain in Node Discovery {addr.host}:{addr.port}. Disconnected.")
                 return False
             if self.address_manager is None:
                 return
