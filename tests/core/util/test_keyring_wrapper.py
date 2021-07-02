@@ -105,47 +105,47 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring()
     def test_file_keyring_supports_master_passphrase(self):
         """
-        File keyrings should support setting a master password
+        File keyrings should support setting a master passphrase
         """
-        # Expect: keyring supports a master password
+        # Expect: keyring supports a master passphrase
         assert KeyringWrapper.get_shared_instance().keyring_supports_master_passphrase() is True
 
     # When: creating a new/unpopulated file keyring
     @using_temp_file_keyring()
-    def test_empty_file_keyring_doesnt_have_master_password(self):
+    def test_empty_file_keyring_doesnt_have_master_passphrase(self):
         """
-        A new/unpopulated file keyring should not have a master password set
+        A new/unpopulated file keyring should not have a master passphrase set
         """
-        # Expect: no master password set
+        # Expect: no master passphrase set
         assert KeyringWrapper.get_shared_instance().has_master_passphrase() is False
 
     # When: using a populated file keyring
     @using_temp_file_keyring(populate=True)
     def test_populated_file_keyring_has_master_passphrase(self):
         """
-        Populated keyring should have the default master password set
+        Populated keyring should have the default master passphrase set
         """
-        # Expect: master password is set
+        # Expect: master passphrase is set
         assert KeyringWrapper.get_shared_instance().has_master_passphrase() is True
 
     # When: creating a new file keyring with a legacy keyring in place
     @using_temp_file_keyring_and_cryptfilekeyring
-    def test_legacy_keyring_does_not_support_master_password(self):
+    def test_legacy_keyring_does_not_support_master_passphrase(self):
         """
-        CryptFileKeyring (legacy keyring) should not support setting a master password
+        CryptFileKeyring (legacy keyring) should not support setting a master passphrase
         """
-        # Expect: legacy keyring in use and master password is not supported
+        # Expect: legacy keyring in use and master passphrase is not supported
         assert KeyringWrapper.get_shared_instance().legacy_keyring is not None
         assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is True
         assert KeyringWrapper.get_shared_instance().keyring_supports_master_passphrase() is False
 
     # When: creating a new file keyring
     @using_temp_file_keyring()
-    def test_default_cached_master_password(self):
+    def test_default_cached_master_passphrase(self):
         """
-        The default password DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE is set
+        The default passphrase DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE is set
         """
-        # Expect: cached password set to DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE by default
+        # Expect: cached passphrase set to DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE by default
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             False,
@@ -156,18 +156,18 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring()
     def test_set_cached_master_passphrase(self):
         """
-        Setting and retrieving the cached master password should work
+        Setting and retrieving the cached master passphrase should work
         """
-        # When: setting the cached master password
+        # When: setting the cached master passphrase
         KeyringWrapper.get_shared_instance().set_cached_master_passphrase("testing one two three")
 
-        # Expect: cached password should match
+        # Expect: cached passphrase should match
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", False)
 
-        # When: setting a validated (successfully decrypted the content) master password
+        # When: setting a validated (successfully decrypted the content) master passphrase
         KeyringWrapper.get_shared_instance().set_cached_master_passphrase("apple banana orange grape", validated=True)
 
-        # Expect: cached password should match and be validated
+        # Expect: cached passphrase should match and be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             "apple banana orange grape",
             True,
@@ -192,63 +192,63 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring()
     def test_set_master_passphrase_on_empty_keyring(self):
         """
-        Setting a master password should cache the password and be usable to unlock
-        the keyring. Using an old password should not unlock the keyring.
+        Setting a master passphrase should cache the passphrase and be usable to unlock
+        the keyring. Using an old passphrase should not unlock the keyring.
         """
-        # When: setting the master password
+        # When: setting the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase(None, "testing one two three")
 
-        # Expect: the master password is cached and can be validated
+        # Expect: the master passphrase is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is True
 
-        # When: changing the master password
+        # When: changing the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase("testing one two three", "potato potato potato")
 
-        # Expect: the new master password is cached and can be validated
+        # Expect: the new master passphrase is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("potato potato potato", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("potato potato potato") is True
 
-        # Expect: old password should not validate
+        # Expect: old passphrase should not validate
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is False
 
     # When: using a populated keyring
     @using_temp_file_keyring(populate=True)
     def test_set_master_passphrase_on_keyring(self):
         """
-        Setting a master password should cache the password and be usable to unlock
-        the keyring. Using an old password should not unlock the keyring.
+        Setting a master passphrase should cache the passphrase and be usable to unlock
+        the keyring. Using an old passphrase should not unlock the keyring.
         """
-        # When: setting the master password
+        # When: setting the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase(
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "testing one two three"
         )
 
-        # Expect: the master password is cached and can be validated
+        # Expect: the master passphrase is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("testing one two three", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is True
 
-        # When: changing the master password
+        # When: changing the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase("testing one two three", "potato potato potato")
 
-        # Expect: the new master password is cached and can be validated
+        # Expect: the new master passphrase is cached and can be validated
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == ("potato potato potato", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("potato potato potato") is True
 
-        # Expect: old password should not validate
+        # Expect: old passphrase should not validate
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is False
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_remove_master_passphrase_from_empty_keyring(self):
         """
-        An empty keyring doesn't require a current password to remove the master password.
-        Removing the master password will set the default master password on the keyring.
+        An empty keyring doesn't require a current passphrase to remove the master passphrase.
+        Removing the master passphrase will set the default master passphrase on the keyring.
         """
-        # When: removing the master password from an empty keyring, current password isn't necessary
+        # When: removing the master passphrase from an empty keyring, current passphrase isn't necessary
         KeyringWrapper.get_shared_instance().remove_master_passphrase(None)
 
-        # Expect: default master password is set
+        # Expect: default master passphrase is set
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             True,
@@ -262,18 +262,18 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring(populate=True)
     def test_remove_master_passphrase_from_populated_keyring(self):
         """
-        A populated keyring will require a current password when removing the master password.
-        Removing the master password will set the default master password on the keyring.
+        A populated keyring will require a current passphrase when removing the master passphrase.
+        Removing the master passphrase will set the default master passphrase on the keyring.
         """
-        # When: the master password is set
+        # When: the master passphrase is set
         KeyringWrapper.get_shared_instance().set_master_passphrase(
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "It's dangerous to go alone, take this!"
         )
 
-        # When: removing the master password
+        # When: removing the master passphrase
         KeyringWrapper.get_shared_instance().remove_master_passphrase("It's dangerous to go alone, take this!")
 
-        # Expect: default master password is set, old password doesn't validate
+        # Expect: default master passphrase is set, old passphrase doesn't validate
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() == (
             DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             True,
@@ -291,67 +291,67 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring()
     def test_get_passphrase(self):
         """
-        Simple password setting and retrieval
+        Simple passphrase setting and retrieval
         """
-        # Expect: password lookup should return None
+        # Expect: passphrase lookup should return None
         assert KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz") is None
 
-        # When: setting a password
-        KeyringWrapper.get_shared_instance().set_password("service-abc", "user-xyz", "super secret password".encode())
+        # When: setting a passphrase
+        KeyringWrapper.get_shared_instance().set_passphrase("service-abc", "user-xyz", "super secret passphrase".encode())
 
-        # Expect: password lookup should succeed
+        # Expect: passphrase lookup should succeed
         assert (
             KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz")
-            == "super secret password".encode().hex()
+            == "super secret passphrase".encode().hex()
         )
 
-        # Expect: non-existent password lookup should fail
-        assert KeyringWrapper.get_shared_instance().get_passphrase("service-123", "some non-existent password") is None
+        # Expect: non-existent passphrase lookup should fail
+        assert KeyringWrapper.get_shared_instance().get_passphrase("service-123", "some non-existent passphrase") is None
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
-    def test_set_password_overwrite(self):
+    def test_set_passphrase_overwrite(self):
         """
-        Overwriting a previously-set password should work
+        Overwriting a previously-set passphrase should work
         """
-        # When: initially setting the password
-        KeyringWrapper.get_shared_instance().set_password("service-xyz", "user-123", "initial password".encode())
+        # When: initially setting the passphrase
+        KeyringWrapper.get_shared_instance().set_passphrase("service-xyz", "user-123", "initial passphrase".encode())
 
-        # Expect: password lookup should succeed
+        # Expect: passphrase lookup should succeed
         assert (
             KeyringWrapper.get_shared_instance().get_passphrase("service-xyz", "user-123")
-            == "initial password".encode().hex()
+            == "initial passphrase".encode().hex()
         )
 
-        # When: updating the same password
-        KeyringWrapper.get_shared_instance().set_password("service-xyz", "user-123", "updated password".encode())
+        # When: updating the same passphrase
+        KeyringWrapper.get_shared_instance().set_passphrase("service-xyz", "user-123", "updated passphrase".encode())
 
-        # Expect: the updated password should be retrieved
+        # Expect: the updated passphrase should be retrieved
         assert (
             KeyringWrapper.get_shared_instance().get_passphrase("service-xyz", "user-123")
-            == "updated password".encode().hex()
+            == "updated passphrase".encode().hex()
         )
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_delete_password(self):
         """
-        Deleting a non-existent password should fail gracefully (no exceptions)
+        Deleting a non-existent passphrase should fail gracefully (no exceptions)
         """
-        # Expect: deleting a non-existent password should fail gracefully
+        # Expect: deleting a non-existent passphrase should fail gracefully
         KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
 
-        # When: setting a password
-        KeyringWrapper.get_shared_instance().set_password("some service", "some user", "500p3r 53cr37".encode())
+        # When: setting a passphrase
+        KeyringWrapper.get_shared_instance().set_passphrase("some service", "some user", "500p3r 53cr37".encode())
 
-        # Expect: password retrieval should succeed
+        # Expect: passphrase retrieval should succeed
         assert (
             KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user")
             == "500p3r 53cr37".encode().hex()
         )
 
-        # When: deleting the password
+        # When: deleting the passphrase
         KeyringWrapper.get_shared_instance().delete_password("some service", "some user")
 
-        # Expect: password retrieval should fail gracefully
+        # Expect: passphrase retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") is None

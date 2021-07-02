@@ -271,13 +271,13 @@ class FileKeyring(FileSystemEventHandler):
         self.payload_cache["keys"] = keys
         self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
-    def set_password(self, service: str, user: str, password_bytes: bytes):
+    def set_passphrase(self, service: str, user: str, passphrase_bytes: bytes):
         """
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
         with acquire_writer_lock(lock_path=self.keyring_lock_path):
-            self._inner_set_passphrase(service, user, password_bytes)
+            self._inner_set_passphrase(service, user, passphrase_bytes)
 
     @loads_keyring
     def _inner_delete_passphrase(self, service: str, user: str):

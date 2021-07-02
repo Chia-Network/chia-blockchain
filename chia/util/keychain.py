@@ -267,7 +267,7 @@ class Keychain:
             # Prevents duplicate add
             return key
 
-        KeyringWrapper.get_shared_instance().set_password(
+        KeyringWrapper.get_shared_instance().set_passphrase(
             self._get_service(),
             self._get_private_key_user(index),
             bytes(key.get_g1()).hex() + entropy.hex(),

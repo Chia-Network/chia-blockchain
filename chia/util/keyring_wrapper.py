@@ -282,7 +282,7 @@ class KeyringWrapper:
 
         # Write the keys directly to the new keyring (self.keyring)
         for (user, passphrase) in user_passphrase_pairs:
-            self.keyring.set_password(service, user, passphrase)
+            self.keyring.set_passphrase(service, user, passphrase)
 
         # Stop using the legacy keyring. This will direct subsequent reads to the new keyring.
         old_keyring = self.legacy_keyring
@@ -334,12 +334,12 @@ class KeyringWrapper:
 
         return self.get_keyring().get_passphrase(service, user)
 
-    def set_password(self, service: str, user: str, password_bytes: bytes):
+    def set_passphrase(self, service: str, user: str, passphrase_bytes: bytes):
         # On the first write while using the legacy keyring, we'll start migration
         if self.using_legacy_keyring() and self.has_cached_master_passphrase():
             self.migrate_legacy_keyring()
 
-        self.get_keyring().set_password(service, user, password_bytes)
+        self.get_keyring().set_passphrase(service, user, passphrase_bytes)
 
     def delete_password(self, service: str, user: str):
         # On the first write while using the legacy keyring, we'll start migration
