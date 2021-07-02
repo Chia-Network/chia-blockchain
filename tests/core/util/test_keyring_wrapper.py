@@ -1,7 +1,7 @@
 import logging
 import unittest
 
-from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD
+from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from pathlib import Path
 from tests.util.keyring import using_temp_file_keyring, using_temp_file_keyring_and_cryptfilekeyring
 
@@ -143,11 +143,11 @@ class TestKeyringWrapper(unittest.TestCase):
     @using_temp_file_keyring()
     def test_default_cached_master_password(self):
         """
-        The default password DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD is set
+        The default password DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE is set
         """
-        # Expect: cached password set to DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD by default
+        # Expect: cached password set to DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE by default
         assert KeyringWrapper.get_shared_instance().get_cached_master_password() == (
-            DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD,
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             False,
         )
         assert KeyringWrapper.get_shared_instance().has_cached_master_password() is True
@@ -178,7 +178,7 @@ class TestKeyringWrapper(unittest.TestCase):
         """
         # Expect: default master password should validate
         assert (
-            KeyringWrapper.get_shared_instance().master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD)
+            KeyringWrapper.get_shared_instance().master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
             is True
         )
 
@@ -218,7 +218,7 @@ class TestKeyringWrapper(unittest.TestCase):
         """
         # When: setting the master password
         KeyringWrapper.get_shared_instance().set_master_password(
-            DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD, "testing one two three"
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "testing one two three"
         )
 
         # Expect: the master password is cached and can be validated
@@ -247,11 +247,11 @@ class TestKeyringWrapper(unittest.TestCase):
 
         # Expect: default master password is set
         assert KeyringWrapper.get_shared_instance().get_cached_master_password() == (
-            DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD,
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             True,
         )
         assert (
-            KeyringWrapper.get_shared_instance().master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD)
+            KeyringWrapper.get_shared_instance().master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
             is True
         )
 
@@ -264,7 +264,7 @@ class TestKeyringWrapper(unittest.TestCase):
         """
         # When: the master password is set
         KeyringWrapper.get_shared_instance().set_master_password(
-            DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD, "It's dangerous to go alone, take this!"
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "It's dangerous to go alone, take this!"
         )
 
         # When: removing the master password
@@ -272,11 +272,11 @@ class TestKeyringWrapper(unittest.TestCase):
 
         # Expect: default master password is set, old password doesn't validate
         assert KeyringWrapper.get_shared_instance().get_cached_master_password() == (
-            DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD,
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
             True,
         )
         assert (
-            KeyringWrapper.get_shared_instance().master_password_is_valid(DEFAULT_PASSWORD_IF_NO_MASTER_PASSWORD)
+            KeyringWrapper.get_shared_instance().master_password_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
             is True
         )
         assert (
