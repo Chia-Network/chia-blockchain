@@ -46,8 +46,8 @@ class KeyringWrapper:
         self.keys_root_path = keys_root_path
         self.keyring = self._configure_backend()
 
-        if not supports_keyring_password():
-            self.legacy_keyring = self._configure_legacy_backend()
+        # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
+        self.legacy_keyring = self._configure_legacy_backend()
 
         KeyringWrapper.__shared_instance = self
 
@@ -88,6 +88,7 @@ class KeyringWrapper:
                 # After migrating content from legacy_keyring, we'll prompt to clear those keys
                 old_keyring.keyring_key = "your keyring password"  # type: ignore
                 return old_keyring
+        
         return None
 
     @staticmethod
