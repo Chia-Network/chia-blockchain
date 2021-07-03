@@ -108,6 +108,7 @@ async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     res = await wallet_client.get_next_address(wallet_id, False)
     print(res)
 
+
 async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     await wallet_client.delete_unconfirmed_transactions(wallet_id)
@@ -127,6 +128,7 @@ def print_balance(amount: int, scale: int, address_prefix: str) -> str:
     if scale > 1:
         ret += f"({amount} octet)"
     return ret
+
 
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()

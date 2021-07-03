@@ -28,10 +28,14 @@ def mempool_assert_announcement(condition: ConditionWithArgs, announcements: Set
     Check if an announcement is included in the list of announcements
     """
     announcement_hash = bytes32(condition.vars[0])
+
     if announcement_hash not in announcements:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     return None
+
+
+log = logging.getLogger(__name__)
 
 
 def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
@@ -39,6 +43,7 @@ def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord)
     Checks if CoinID matches the id from the condition
     """
     if unspent.coin.name() != condition.vars[0]:
+        log.warning(f"My name: {unspent.coin.name()} got: {condition.vars[0].hex()}")
         return Err.ASSERT_MY_COIN_ID_FAILED
     return None
 
@@ -135,6 +140,13 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
     return None
 
 
+def sanitize_int(n: SExp, safe_mode: bool) -> int:
+    buf = n.atom
+    if safe_mode and len(buf) > 2 and buf[0] == 0 and buf[1] == 0:
+        raise ValidationError(Err.INVALID_CONDITION)
+    return n.as_int()
+
+
 def parse_aggsig(args: SExp) -> List[bytes]:
     pubkey = args.first().atom
     args = args.rest()
@@ -146,12 +158,12 @@ def parse_aggsig(args: SExp) -> List[bytes]:
     return [pubkey, message]
 
 
-def parse_create_coin(args: SExp) -> List[bytes]:
+def parse_create_coin(args: SExp, safe_mode: bool) -> List[bytes]:
     puzzle_hash = args.first().atom
     args = args.rest()
     if len(puzzle_hash) != 32:
         raise ValidationError(Err.INVALID_CONDITION)
-    amount_int = args.first().as_int()
+    amount_int = sanitize_int(args.first(), safe_mode)
     if amount_int >= 2 ** 64:
         raise ValidationError(Err.COIN_AMOUNT_EXCEEDS_MAXIMUM)
     if amount_int < 0:
@@ -161,8 +173,8 @@ def parse_create_coin(args: SExp) -> List[bytes]:
     return [puzzle_hash, int_to_bytes(amount_int)]
 
 
-def parse_seconds(args: SExp, error_code: Err) -> Optional[List[bytes]]:
-    seconds_int = args.first().as_int()
+def parse_seconds(args: SExp, safe_mode: bool, error_code: Err) -> Optional[List[bytes]]:
+    seconds_int = sanitize_int(args.first(), safe_mode)
     # this condition is inherently satisified, there is no need to keep it
     if seconds_int <= 0:
         return None
@@ -173,8 +185,8 @@ def parse_seconds(args: SExp, error_code: Err) -> Optional[List[bytes]]:
     return [int_to_bytes(seconds_int)]
 
 
-def parse_height(args: SExp, error_code: Err) -> Optional[List[bytes]]:
-    height_int = args.first().as_int()
+def parse_height(args: SExp, safe_mode: bool, error_code: Err) -> Optional[List[bytes]]:
+    height_int = sanitize_int(args.first(), safe_mode)
     # this condition is inherently satisified, there is no need to keep it
     if height_int <= 0:
         return None
@@ -185,8 +197,8 @@ def parse_height(args: SExp, error_code: Err) -> Optional[List[bytes]]:
     return [int_to_bytes(height_int)]
 
 
-def parse_fee(args: SExp) -> List[bytes]:
-    fee_int = args.first().as_int()
+def parse_fee(args: SExp, safe_mode: bool) -> List[bytes]:
+    fee_int = sanitize_int(args.first(), safe_mode)
     if fee_int >= 2 ** 64 or fee_int < 0:
         raise ValidationError(Err.RESERVE_FEE_CONDITION_FAILED)
     # note that this may change the representation of the fee. If the original
@@ -201,8 +213,8 @@ def parse_hash(args: SExp, error_code: Err) -> List[bytes]:
     return [h]
 
 
-def parse_amount(args: SExp) -> List[bytes]:
-    amount_int = args.first().as_int()
+def parse_amount(args: SExp, safe_mode: bool) -> List[bytes]:
+    amount_int = sanitize_int(args.first(), safe_mode)
     if amount_int < 0:
         raise ValidationError(Err.ASSERT_MY_AMOUNT_FAILED)
     if amount_int >= 2 ** 64:
@@ -219,7 +231,7 @@ def parse_announcement(args: SExp) -> List[bytes]:
     return [msg]
 
 
-def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, Optional[List[bytes]]]:
+def parse_condition_args(args: SExp, condition: ConditionOpcode, safe_mode: bool) -> Tuple[int, Optional[List[bytes]]]:
     """
     Parse a list with exactly the expected args, given opcode,
     from an SExp into a list of bytes. If there are fewer or more elements in
@@ -231,19 +243,19 @@ def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, O
     if condition is op.AGG_SIG_UNSAFE or condition is op.AGG_SIG_ME:
         return cc.AGG_SIG.value, parse_aggsig(args)
     elif condition is op.CREATE_COIN:
-        return cc.CREATE_COIN.value, parse_create_coin(args)
+        return cc.CREATE_COIN.value, parse_create_coin(args, safe_mode)
     elif condition is op.ASSERT_SECONDS_ABSOLUTE:
-        return cc.ASSERT_SECONDS_ABSOLUTE.value, parse_seconds(args, Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
+        return cc.ASSERT_SECONDS_ABSOLUTE.value, parse_seconds(args, safe_mode, Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
     elif condition is op.ASSERT_SECONDS_RELATIVE:
-        return cc.ASSERT_SECONDS_RELATIVE.value, parse_seconds(args, Err.ASSERT_SECONDS_RELATIVE_FAILED)
+        return cc.ASSERT_SECONDS_RELATIVE.value, parse_seconds(args, safe_mode, Err.ASSERT_SECONDS_RELATIVE_FAILED)
     elif condition is op.ASSERT_HEIGHT_ABSOLUTE:
-        return cc.ASSERT_HEIGHT_ABSOLUTE.value, parse_height(args, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED)
+        return cc.ASSERT_HEIGHT_ABSOLUTE.value, parse_height(args, safe_mode, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED)
     elif condition is op.ASSERT_HEIGHT_RELATIVE:
-        return cc.ASSERT_HEIGHT_RELATIVE.value, parse_height(args, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
+        return cc.ASSERT_HEIGHT_RELATIVE.value, parse_height(args, safe_mode, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
     elif condition is op.ASSERT_MY_COIN_ID:
         return cc.ASSERT_MY_COIN_ID.value, parse_hash(args, Err.ASSERT_MY_COIN_ID_FAILED)
     elif condition is op.RESERVE_FEE:
-        return cc.RESERVE_FEE.value, parse_fee(args)
+        return cc.RESERVE_FEE.value, parse_fee(args, safe_mode)
     elif condition is op.CREATE_COIN_ANNOUNCEMENT:
         return cc.CREATE_COIN_ANNOUNCEMENT.value, parse_announcement(args)
     elif condition is op.ASSERT_COIN_ANNOUNCEMENT:
@@ -257,7 +269,7 @@ def parse_condition_args(args: SExp, condition: ConditionOpcode) -> Tuple[int, O
     elif condition is op.ASSERT_MY_PUZZLEHASH:
         return cc.ASSERT_MY_PUZZLEHASH.value, parse_hash(args, Err.ASSERT_MY_PUZZLEHASH_FAILED)
     elif condition is op.ASSERT_MY_AMOUNT:
-        return cc.ASSERT_MY_AMOUNT.value, parse_amount(args)
+        return cc.ASSERT_MY_AMOUNT.value, parse_amount(args, safe_mode)
     else:
         raise ValidationError(Err.INVALID_CONDITION)
 
@@ -269,7 +281,7 @@ def parse_condition(cond: SExp, safe_mode: bool) -> Tuple[int, Optional[Conditio
     condition = cond.first().as_atom()
     if condition in CONDITION_OPCODES:
         opcode: ConditionOpcode = ConditionOpcode(condition)
-        cost, args = parse_condition_args(cond.rest(), opcode)
+        cost, args = parse_condition_args(cond.rest(), opcode, safe_mode)
         cvl = ConditionWithArgs(opcode, args) if args is not None else None
     elif not safe_mode:
         opcode = ConditionOpcode.UNKNOWN
@@ -320,7 +332,7 @@ def get_name_puzzle_conditions(
                 raise ValidationError(Err.INVALID_CONDITION)
             spent_coin_puzzle_hash: bytes32 = res.first().as_atom()
             res = res.rest()
-            spent_coin_amount: uint64 = uint64(res.first().as_int())
+            spent_coin_amount: uint64 = uint64(sanitize_int(res.first(), safe_mode))
             res = res.rest()
             spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
 

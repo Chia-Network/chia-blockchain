@@ -121,6 +121,7 @@ def get_address_cmd(wallet_rpc_port: int, id, fingerprint: int) -> None:
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
 
+
 @wallet_cmd.command(
     "delete_unconfirmed_transactions", short_help="Deletes all unconfirmed transactions for this wallet ID"
 )

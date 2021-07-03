@@ -34,8 +34,6 @@ from sector.wallet.util.wallet_types import WalletType
 from sector.wallet.wallet import Wallet
 from sector.wallet.wallet_coin_record import WalletCoinRecord
 
-# from sector.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
-
 
 class TradeManager:
     wallet_state_manager: Any
@@ -533,7 +531,6 @@ class TradeManager:
         now = uint64(int(time.time()))
         if sector_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, sector_spend_bundle])
-            # debug_spend_bundle(spend_bundle)
             if sector_discrepancy < 0:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
