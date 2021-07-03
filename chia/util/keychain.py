@@ -451,11 +451,13 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().has_master_passphrase()
 
     @staticmethod
-    def master_passphrase_is_valid(passphrase: str) -> bool:
+    def master_passphrase_is_valid(passphrase: str, force_reload: bool = False) -> bool:
         """
-        Checks whether the provided passphrase can unlock the keyring
+        Checks whether the provided passphrase can unlock the keyring. If force_reload
+        is true, the keyring payload will be re-read from the backing file. If false,
+        the passphrase will be checked against the in-memory payload.
         """
-        return KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase)
+        return KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase, force_reload=force_reload)
 
     @staticmethod
     def has_cached_passphrase() -> bool:

@@ -1,9 +1,11 @@
 import sys
 
+from chia.daemon.client import connect_to_daemon_and_validate
 from chia.util.keychain import Keychain, obtain_current_passphrase
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from getpass import getpass
 from io import TextIOWrapper
+from pathlib import Path
 from typing import Optional, Tuple
 
 MIN_PASSPHRASE_LEN = 8
@@ -83,7 +85,7 @@ def initialize_passphrase() -> None:
     Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase)
 
 
-def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> None:
+def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> bool:
     # Prompt for the current passphrase, if necessary
     if Keychain.has_master_passphrase():
         # Try the default passphrase first
@@ -97,6 +99,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
                 print(f"Unable to confirm current passphrase: {e}")
                 sys.exit(1)
 
+    success = False
     new_passphrase = passphrase
     try:
         # Prompt for the new passphrase, if necessary
@@ -107,13 +110,20 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
             raise ValueError("passphrase is unchanged")
 
         Keychain.set_master_passphrase(current_passphrase=current_passphrase, new_passphrase=new_passphrase)
+        success = True
     except Exception as e:
         print(f"Unable to set or update passphrase: {e}")
+        success = False
+
+    return success
 
 
-def remove_passphrase(current_passphrase: Optional[str]) -> None:
+def remove_passphrase(current_passphrase: Optional[str]) -> bool:
+    success = False
+
     if not Keychain.has_master_passphrase():
         print("Passphrase is not currently set")
+        success = False
     else:
         # Try the default passphrase first
         if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
@@ -125,12 +135,41 @@ def remove_passphrase(current_passphrase: Optional[str]) -> None:
                 current_passphrase = obtain_current_passphrase("Current Passphrase: ")
             except Exception as e:
                 print(f"Unable to confirm current passphrase: {e}")
+                success = False
 
-        try:
-            Keychain.remove_master_passphrase(current_passphrase)
-        except Exception as e:
-            print(f"Unable to remove passphrase: {e}")
+        if current_passphrase:
+            try:
+                Keychain.remove_master_passphrase(current_passphrase)
+                success = True
+            except Exception as e:
+                print(f"Unable to remove passphrase: {e}")
+                success = False
+
+    return success
 
 
 def cache_passphrase(passphrase: str) -> None:
     Keychain.set_cached_master_passphrase(passphrase)
+
+
+async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
+    new_passphrase = Keychain.get_cached_master_passphrase()
+    assert new_passphrase is not None
+
+    daemon = None
+    try:
+        daemon = await connect_to_daemon_and_validate(root_path, quiet=True)
+        if daemon:
+            response = await daemon.unlock_keyring(new_passphrase)
+
+            if not response:
+                raise Exception("daemon didn't respond")
+
+            if response["data"].get("success", False) is False:
+                error = response["data"].get("error", "unknown error")
+                raise Exception(error)
+    except Exception as e:
+        print(f"Failed to notify daemon of updated keyring passphrase: {e}")
+
+    if daemon:
+        await daemon.close()
