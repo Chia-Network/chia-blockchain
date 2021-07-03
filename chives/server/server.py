@@ -256,7 +256,7 @@ class ChivesServer:
             
             # Chives Network Code 
             # To Ban The Other Fork Of Chia To Join In
-            if connection.peer_port == 8444 or connection.peer_server_port == 8444 or connection.peer_port == 6888 or connection.peer_server_port == 6888 or connection.peer_port == 8744 or connection.peer_server_port == 8744:                
+            if connection.peer_port == 9444 or connection.peer_server_port == 9444 or connection.peer_port == 8444 or connection.peer_server_port == 8444 or connection.peer_port == 6888 or connection.peer_server_port == 6888 or connection.peer_port == 8744 or connection.peer_server_port == 8744:                
                 self.log.info(f"Stop communicating with other fork of chia: {connection.get_peer_info()} Connection Type: {connection.connection_type}. ")
                 await connection.close()
                 close_event.set()
@@ -335,8 +335,8 @@ class ChivesServer:
         """
         # Chives Network Code 
         # To Ban The Other Fork Of Chia To Join In
-        if(int(target_node.port)==8444 or int(target_node.port)==6888 or int(target_node.port)==8744 or int(target_node.port)==80):
-            self.log.warning(f"Tring to connect a other fork of Chia blockchain in server.py {target_node.host}:{target_node.port}. Disconnected.")
+        if(int(target_node.port)==9444 or int(target_node.port)==8444 or int(target_node.port)==6888 or int(target_node.port)==8744 or int(target_node.port)==80):
+            self.log.warning(f"Disconnected fork of Chia in server.py {target_node.host}:{target_node.port}. Disconnected.")
             return False
             
         if self.is_duplicate_or_self_connection(target_node):

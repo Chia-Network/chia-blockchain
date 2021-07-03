@@ -229,7 +229,7 @@ class FullNodeDiscovery:
         try:
             # Chives Network Code 
             # To Ban The Other Fork Of Chia To Join In
-            if(int(addr.port)==8444 or int(addr.port)==6888 or int(addr.port)==8744 or int(addr.port)==80):
+            if(int(addr.port)==9444 or int(addr.port)==8444 or int(addr.port)==6888 or int(addr.port)==8744 or int(addr.port)==80):
                 # self.log.warning(f"Disconnected fork Chia in Node Discovery {addr.host}:{addr.port}.")
                 return False
             if self.address_manager is None:
@@ -318,7 +318,7 @@ class FullNodeDiscovery:
                         continue
                     # Chives Network Code 
                     # To Ban The Other Fork Of Chia To Join In
-                    if peer.port == 8444 or conn.server_port == 8444 or peer.port == 6888 or conn.server_port == 6888 or peer.port == 8744 or conn.server_port == 8744: 
+                    if peer.port == 9444 or conn.server_port == 9444 or peer.port == 8444 or conn.server_port == 8444 or peer.port == 6888 or conn.server_port == 6888 or peer.port == 8744 or conn.server_port == 8744: 
                         continue
                     group = peer.get_group()
                     groups.add(group)
