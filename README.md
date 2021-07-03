@@ -19,7 +19,7 @@
 * Description: Forked from Chia
 * Block time: **18.75 seconds** (same as Chia)
 * Block reward: **200 Chives** (Chia: 2 XCC)
-* Block allocation(Stage 1 & 2): **90% is allocated to miners, and 10% is allocated to the community**
+* Block allocation(Stage 1 & 2): **90% is allocated to miners, and 10% is allocated to the community** (One of the ten blocks (height is a multiple of 10) is allocated to the community)
 * Block allocation(Stage 3): 45% is allocated to miners, 45% is allocated to the master nodes, and 10% is allocated to the community
 * Reward halving: Halving in 3 years, to a block reward of 12.5 Chives from the 13th year (same as Chia)
 * Total issuance: No upper limit (same as Chia)
