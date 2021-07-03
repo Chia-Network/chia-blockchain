@@ -318,7 +318,7 @@ def chia_init(root_path: Path, skip_check_keys: bool = False):
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
 
-    skip_check_keys can be set to False to avoid blocking when accessing a password
+    skip_check_keys can be set to False to avoid blocking when accessing a passphrase
     protected Keychain. When launching the daemon from the GUI, we want the GUI to
     handle unlocking the keychain.
     """
