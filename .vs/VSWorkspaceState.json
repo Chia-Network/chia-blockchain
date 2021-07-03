@@ -1,16 +1,17 @@
 {
   "ExpandedNodes": [
     "",
-    "\\sector\\cmds",
-    "\\sector\\wallet",
-    "\\sector\\wallet\\puzzles",
-    "\\sector\\wallet\\puzzles\\prefarm",
-    "\\tests\\blockchain",
-    "\\tests\\core",
+    "\\sector",
+    "\\sector-blockchain-gui",
+    "\\sector-blockchain-gui\\src",
+    "\\sector-blockchain-gui\\src\\components",
+    "\\sector-blockchain-gui\\src\\components\\farm",
+    "\\sector-blockchain-gui\\src\\components\\farm\\card",
+    "\\sector\\rpc",
+    "\\tests",
     "\\tests\\wallet",
-    "\\tests\\wallet\\rl_wallet",
     "\\tests\\wallet\\rpc"
   ],
-  "SelectedNode": "\\install-gui.sh",
+  "SelectedNode": "\\sector\\rpc\\wallet_rpc_client.py",
   "PreviewInSolutionExplorer": false
 }

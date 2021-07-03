@@ -4,6 +4,7 @@ $ErrorActionPreference = "Stop"
 
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
+Write-Output Get-Location
 
 git status
 
@@ -13,12 +14,13 @@ Write-Output "   ---"
 Invoke-WebRequest -Uri "https://pypi.chia.net/simple/miniupnpc/miniupnpc-2.2.2-cp39-cp39-win_amd64.whl" -OutFile "miniupnpc-2.2.2-cp39-cp39-win_amd64.whl"
 Write-Output "Using win_amd64 python 3.9 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
 Write-Output "Actual build from https://github.com/miniupnp/miniupnp/commit/7783ac1545f70e3341da5866069bde88244dd848"
+
 If ($LastExitCode -gt 0){
     Throw "Failed to download miniupnpc!"
 }
 else
 {
-    Set-Location -Path - -PassThru
+    Set-Location -Path C:\Users\smurr\chia-new\sector-blockchain\ -PassThru
     Write-Output "miniupnpc download successful."
 }
 
@@ -32,61 +34,50 @@ pip install wheel pep517
 pip install pywin32
 pip install pyinstaller==4.2
 pip install setuptools_scm
-
 Write-Output "   ---"
-Write-Output "Get CHIA_INSTALLER_VERSION"
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined
-$env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
-
-if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
-  $env:CHIA_INSTALLER_VERSION = '0.0.0'
-  Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
+Write-Output "Get SECTOR_INSTALLER_VERSION"
+# The environment variable SECTOR_INSTALLER_VERSION needs to be defined
+$env:SECTOR_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+if (-not (Test-Path env:SECTOR_INSTALLER_VERSION)) {
+  $env:SECTOR_INSTALLER_VERSION = '1.0.0'
+  Write-Output "WARNING: No environment variable SECTOR_INSTALLER_VERSION set. Using 1.0.0"
   }
-Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
+Write-Output "Sector Version is: $env:SECTOR_INSTALLER_VERSION"
 Write-Output "   ---"
-
 Write-Output "   ---"
-Write-Output "Build chia-blockchain wheels"
+Write-Output "Build sector-blockchain wheels"
 Write-Output "   ---"
 pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
-
 Write-Output "   ---"
-Write-Output "Install chia-blockchain wheels into venv with pip"
+Write-Output "Install sector-blockchain wheels into venv with pip"
 Write-Output "   ---"
-
 Write-Output "pip install miniupnpc"
 Set-Location -Path ".\build_scripts" -PassThru
 pip install --no-index --find-links=.\win_build\ miniupnpc
 # Write-Output "pip install setproctitle"
 # pip install setproctitle==1.2.2
-
-Write-Output "pip install chia-blockchain"
-pip install --no-index --find-links=.\win_build\ chia-blockchain
-
+Write-Output "pip install sector-blockchain"
+pip install --no-index --find-links=.\win_build\ sector-blockchain
 Write-Output "   ---"
-Write-Output "Use pyinstaller to create chia .exe's"
+Write-Output "Use pyinstaller to create sector .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
+$SPEC_FILE = (python -c 'import sector; print(sector.PYINSTALLER_SPEC_PATH)') -join "`n"
 pyinstaller --log-level INFO $SPEC_FILE
-
 Write-Output "   ---"
-Write-Output "Copy chia executables to chia-blockchain-gui\"
+Write-Output "Copy sector executables to sector-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
-Set-Location -Path "..\chia-blockchain-gui" -PassThru
-
+Copy-Item "dist\daemon" -Destination "C:\Users\smurr\chia-new\sector-blockchain\sector-blockchain-gui\" -Recurse
+Set-Location -Path "C:\Users\smurr\chia-new\sector-blockchain\sector-blockchain-gui\" -PassThru
 git status
-
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
+$Env:NODE_OPTIONS = "--max-old-space-size=3000"
 npm install --save-dev electron-winstaller
 npm install -g electron-packager
 npm install
 npm audit fix
-
 git status
-
 Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
 Write-Output "   ---"
@@ -94,42 +85,33 @@ npm run build
 If ($LastExitCode -gt 0){
     Throw "npm run build failed!"
 }
-
 Write-Output "   ---"
-Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
+Write-Output "Increase the stack for sector command for (sector plots create) chiapos limitations"
 # editbin.exe needs to be in the path
-editbin.exe /STACK:8000000 daemon\chia.exe
+editbin.exe /STACK:8000000 daemon\sector.exe
 Write-Output "   ---"
-
-$packageVersion = "$env:CHIA_INSTALLER_VERSION"
-$packageName = "Chia-$packageVersion"
-
+$packageVersion = "$env:SECTOR_INSTALLER_VERSION"
+$packageName = "Sector-$packageVersion"
 Write-Output "packageName is $packageName"
-
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Sector --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\sector.ico --app-version=$packageVersion
 Write-Output "   ---"
-
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
-
 git status
-
-If ($env:HAS_SECRET) {
-   Write-Output "   ---"
-   Write-Output "Add timestamp and verify signature"
-   Write-Output "   ---"
-   signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
-   signtool.exe verify /v /pa .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
-   }   Else    {
-   Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
-}
-
-git status
-
+#If ($env:HAS_SECRET) {
 Write-Output "   ---"
-Write-Output "Windows Installer complete"
+Write-Output "Add timestamp and verify signature"
+Write-Output "   ---"
+signtool.exe timestamp /v /t http://timestamp.sectigo.com/ .\release-builds\windows-installer\SectorSetup-$packageVersion.exe
+signtool.exe verify /v /pa .\release-builds\windows-installer\SectorSetup-$packageVersion.exe
+   #}   Else    {
+Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
+#}
+git status
+Write-Output "   ---"
+Write-Output "Windows Installer complete1"
 Write-Output "   ---"

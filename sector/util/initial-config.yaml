@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 55400
+daemon_port: 56800
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -12,13 +12,13 @@ network_overrides: &network_overrides
     mainnet:
       NETWORK_TYPE: 0
       GENESIS_CHALLENGE: 8c63fdfef6e0f9a484ecbb19836c01449dfd7694f6acff0c15b5f4654ad74b9b
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "23488e10f5cd50456acee848b381c316ba9eed4f1f93db90ab1685c350a5d362"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "23488e10f5cd50456acee848b381c316ba9eed4f1f93db90ab1685c350a5d362"
     testnet0:
       GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "23488e10f5cd50456acee848b381c316ba9eed4f1f93db90ab1685c350a5d362"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "23488e10f5cd50456acee848b381c316ba9eed4f1f93db90ab1685c350a5d362"
   config:
     mainnet:
       address_prefix: "xsc"

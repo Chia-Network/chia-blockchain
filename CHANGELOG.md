@@ -421,7 +421,7 @@ for setuptools_scm/PEP 440 reasons.
 - The RC5 release is a new breaking change/hard fork blockchain. Plots and keys from previous chains will work fine on RC5 but balances of TXSC will not come forward.
 - We now support a "green flag" chain launch process. A new version of the software will poll download.chia.net/notify/ for a signed json file that will be the genesis block of the chain for that version. This will allow unattended start at mainnet.
 - Bluebox Timelords are back. These are Timelords most anyone can run. They search through the historical chain and find large proofs of times and compact them down to their smallest representation. This significantly speeds up syncing for newly started nodes. Currently this is only supported on Linux and MacOS x86_64 but we will expand that. Any desktop or server of any age will be fast enough to be a useful Bluebox Timelord.
-- Thanks to @jespino there is now `chia farm summary`. You can now get almost exactly the same farming information on the CLI as the GUI.
+- Thanks to @jespino there is now `sector farm summary`. You can now get almost exactly the same farming information on the CLI as the GUI.
 - We have added Romanian to the GUI translations. Thank you to @bicilis on [Crowdin](https://crowdin.com/project/chia-blockchain). We also added a couple of additional target languages. Klingon anyone?
 - `chia wallet` now takes get_address to get a new wallet receive address from the CLI.
 - `chia plots check` will list out all the failed plot filenames at the end of the report. Thanks for the PR go to @eFishCent.
@@ -440,7 +440,7 @@ for setuptools_scm/PEP 440 reasons.
 - We made two HashPrime optimizations in chiavdf. This forces numbers being tested for primality to be odd and avoids an unnecessary update of the sprout vector by stopping after the first non-zero value. This is a breaking change as it changes the prime numbers generated from a given seed. We believe this is the final breaking change for chiavdf.
 - chiabip158 was set to a gold 1.0 version.
 - Comments to Chialisp and clvm source have been updated for all of the Chialisp changes over the proceeding three weeks.
-- And thanks yet again to @jespino for a host of PRs to add more detailed typing to various components in chia-blockchain.
+- And thanks yet again to @jespino for a host of PRs to add more detailed typing to various components in sector-blockchain.
 - aiohttp was updated to 3.7.4 to address a low severity [security issue](https://github.com/advisories/GHSA-v6wp-4m6f-gcjg).
 - calccrypto/uint128_t was updated in the Windows chiapos implementation. Chiapos required some changes its build process to support MacOS ARM64.
 
@@ -449,13 +449,13 @@ for setuptools_scm/PEP 440 reasons.
 - Harvester would crash if it encountered more than 16,000 plot files or 256 directories.
 - Nodes that were interrupted by a network crash or standby on a laptop were not syncing upon reconnection in RC4.
 - Sync issues could stop syncing from restarting and could lead to a peer host that you could not remove.
-- Adding Click changed the behavior of `chia keys add -m`. The help now makes it clear that the 24 word mnemonic needs to be surrounded by a pair of quotes.
-- Python root CA certificates have issues so we have added the Mozilla certificate store via curl.se and use that to connect to backup.chia.net via https, for example.
+- Adding Click changed the behavior of `sector keys add -m`. The help now makes it clear that the 24 word mnemonic needs to be surrounded by a pair of quotes.
+- Python root CA certificates have issues so we have added the Mozilla certificate store via curl.se and use that to connect to backup.sectornetwork.world via https, for example.
 - The difficulty adjustment calculation was simplified.
 - All of the chia sub repositories that were attempting to build MacOS Universal wheels were only generating x86_64 wheels internally. We have moved back to only generating x86_64 MacOS wheels on CI.
-- However, we have updated and test compiled all Chia dependencies on Apple Silicon and will be making available a test .dmg for MacOS ARM64 shortly.
+- However, we have updated and test compiled all Sector dependencies on Apple Silicon and will be making available a test .dmg for MacOS ARM64 shortly.
 - Various weight proof edge cases have been fixed.
-- Various typos and style clean ups were made to the Click CLI implementation. `chia -upnp f` was added to disable uPnP.
+- Various typos and style clean ups were made to the Click CLI implementation. `sector -upnp f` was added to disable uPnP.
 - `chia plots check` shouldn't crash when encountering plots that cause RuntimeError. PR again thanks to @eFishCent.
 - Coloured coin announcements had a bug that would allow counterfeiting.
 
@@ -474,7 +474,7 @@ for setuptools_scm/PEP 440 reasons.
 - A new RPC api: /push_tx. Using this RPC, you can spend custom chialisp programs. You need to make a SpendBundle, which includes the puzzle reveal (chialisp), a solution (chialisp) and a signature.
 - You can now use the RPC apis to query the mempool.
 - There are now Swedish, Spanish, and Slovak translations. Huge thanks to @ordtrogen (Swedish), @jespino and @dvd101x (Spanish), and our own @seeden (Slovak). Also thanks were due to @f00b4r (Finnish), @A-Caccese (Italian), and @Bibop182 and @LeonidShamis (Russian). Quite a few more are almost complete and ready for inclusion. You can help translate and review translations at our [crowdin project](https://crowdin.com/project/chia-blockchain).
-- You can obtain a new wallet receive address on the command line with `chia wallet new_address`. Thanks to @jespino for this and a lot more in the next section below.
+- You can obtain a new wallet receive address on the command line with `sector wallet new_address`. Thanks to @jespino for this and a lot more in the next section below.
 - You will now see Your Harvester Network in the GUI even if you have no plots.
 
 ### Changed
@@ -488,9 +488,9 @@ for setuptools_scm/PEP 440 reasons.
 - If you run install-gui.sh or install-timelord.sh without being in the venv, the script will warn you that you need to `. ./activate` and exit with error.
 - If you attempt to install on a 32 bit Pi/ARM OS, the installer exits with a helpful error message. You  can still fail when running under a 64 bit kernel but using a 32 bit Python 3.
 - The application is now more aware of whether it is running a testnet or mainnet. This impacts wallet's display behavior and certain blockchain validation rules.
-- Interface improvements for `chia netspace`.
+- Interface improvements for `sector netspace`.
 - Now that aiosqlite included our upstream improvements we install version 0.17.0.
-- `chia init` only migrates release candidate directories. The versioned sub directories under `~/chia` will be going away before mainnet.
+- `chia init` only migrates release candidate directories. The versioned sub directories under `~/sector` will be going away before mainnet.
 
 ### Fixed
 
@@ -523,12 +523,12 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 - This is the first release in our release candidate series. There are still a few things that will change at the edges but the blockchain, clvm, and chialisp are in release form. We have one major change to chialisp/clvm that we have chosen to schedule for the next release as in this release we're breaking the way q/quote works. We also have one more revision to the VDF that will decrease the sizes of the proofs of time. We expect a few more releases in the release candidate series.
-- Installers will now be of the pattern ChiaSetup-0.2.1.exe. `0.2` is release candidate and the final `.1` is the first release candidate.
+- Installers will now be of the pattern SectorSetup-0.2.1.exe. `0.2` is release candidate and the final `.1` is the first release candidate.
 - Use 'chia wallet get_transactions' in the command line to see your transactions.
 - 'chia wallet show' now shows your wallet's height.
 - Last Attempted Proof is now above Latest Block Challenge on the Farm page of the GUI.
 - The GUI now detects duplicate plots and also only counts unique plots and unique plot size.
-- We have integrated with crowdin to make it easier to translate the GUI. Check out [Chia Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
+- We have integrated with crowdin to make it easier to translate the GUI. Check out [Sector Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
 - We have added Italian, Russian, and Finnish. More to come soon.
 - There is now remote UI support. [Documents](https://github.com/Chia-Network/chia-blockchain-gui/blob/main/remote.md) will temporarily live in the repository but have moved to the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Connecting-the-UI-to-a-remote-daemon). Thanks to @dkackman for this excellent addition!
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block

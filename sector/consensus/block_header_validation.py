@@ -754,7 +754,7 @@ def validate_unfinished_header_block(
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
     else:
-        # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
+        # 20b. If pospace has a pool pk, check pool target signature. Should not check this for genesis block.
         if header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
             assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
             if not AugSchemeMPL.verify(
