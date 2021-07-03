@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:03\n"
+"PO-Revision-Date: 2021-07-03 13:26\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -292,7 +292,7 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
-msgstr ""
+msgstr "Changer de pool"
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
