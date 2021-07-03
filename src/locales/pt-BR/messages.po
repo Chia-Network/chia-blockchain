@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-02 19:01\n"
+"PO-Revision-Date: 2021-07-03 00:57\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -40,7 +40,7 @@ msgstr "É recomendado 128 buckets"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:98
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Harvester é um serviço executado em uma máquina onde os plots estão realmente armazenados. Os serviços de farmer e harvester conversam com um nó completo para ver o estado da blockchain. Veja sua rede de harvesters conectados abaixo Saiba mais"
+msgstr "A colhedora é um serviço executado em uma máquina onde os lotes estão realmente armazenados. Um fazendeiro e uma colheitadeira conversam com um nó completo para ver o estado da corrente. Veja sua rede de colheitadeiras conectadas abaixo Saiba mais"
 
 #: src/electron/main.tsx:422
 #: src/electron/main.tsx:509
@@ -95,7 +95,7 @@ msgstr "Adicionar Lote"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
-msgstr "Adicionar Plot NFT"
+msgstr "Capinar"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
@@ -321,7 +321,7 @@ msgstr "Escolha o tamanho do lote"
 #: src/components/plotNFT/PlotNFTCard.tsx:288
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
-msgstr "Reivindicar recompensas"
+msgstr "Resgatar recompensas"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
@@ -390,7 +390,7 @@ msgstr "Conecte-se a outros pares"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
-msgstr "Conectar ao banco de dados"
+msgstr "Conectar ao bolão"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
@@ -487,7 +487,7 @@ msgstr "Crie um backup"
 
 #: src/components/plot/add/PlotAddNFT.tsx:42
 msgid "Create a Plot NFT"
-msgstr "Criar um banco de NFT"
+msgstr "Criar um lote de NFT"
 
 #: src/components/selectKey/SelectKey.tsx:184
 msgid "Create a new private key"
@@ -527,7 +527,7 @@ msgstr "Criado por:"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr "Criando NFT e juntando-se ao banco de dados"
+msgstr "Criando Lote NFT e juntando-se ao pool"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
@@ -545,7 +545,7 @@ msgstr "Dificuldade Atual"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:133
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Current Points Balance"
-msgstr "Saldo de Pontos Atual"
+msgstr "Saldo de Pontos"
 
 #: src/components/trading/TradingOverview.jsx:182
 msgid "Current trade status"
@@ -732,7 +732,7 @@ msgstr "Puzzle Hash do fazendeiro"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:165
 msgid "Farmer Reward Address"
-msgstr "Endereço de recompensa do farmer"
+msgstr "Endereço de recompensa do fazendeiro"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:139
 msgid "Farmer Reward Address is not properly formatted."
@@ -977,13 +977,13 @@ msgstr "Estado inválido"
 #: src/components/plotNFT/PlotNFTCard.tsx:310
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr "Juntar-se à Pool"
+msgstr "Juntar-se ao bolão"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:145
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr "Junte-se a uma Pool"
+msgstr "Juntar-se ao bolão"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
@@ -1387,7 +1387,7 @@ msgstr "Chave do lote"
 
 #: src/components/pool/PoolOverview.tsx:40
 msgid "Plot NFT"
-msgstr "Plot NFT"
+msgstr "Lote NFT"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
 #: src/components/plotNFT/PlotNFTChangePool.tsx:81
@@ -1440,7 +1440,7 @@ msgstr "Plotagem"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr "Plotar em paralelo pode economizar tempo. Caso contrário, adicione plot(s) à fila."
+msgstr "Lotear em paralelo pode economizar tempo. Caso contrário, adicione lotes (s) à fila."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:174
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
@@ -1518,12 +1518,12 @@ msgstr "Chave pública do pool:"
 #: src/components/plotNFT/PlotNFTCard.tsx:242
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
-msgstr ""
+msgstr "Bolão:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:56
 msgid "Pooling"
-msgstr ""
+msgstr "Participando do bolão"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
@@ -1535,11 +1535,11 @@ msgstr "Porta"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
 #: src/components/plotNFT/PlotNFTChangePool.tsx:74
 msgid "Preparing Plot NFT"
-msgstr ""
+msgstr "Preparando o Lote NFT"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
 msgid "Preparing standard wallet"
-msgstr ""
+msgstr "Preparando a carteira padrão"
 
 #: src/components/block/Block.jsx:349
 msgid "Previous"
@@ -1649,7 +1649,7 @@ msgstr "Atualizar Lotes"
 
 #: src/components/pool/PoolInfo.tsx:32
 msgid "Relative Lock Height"
-msgstr ""
+msgstr "Altura relativa bloqueada"
 
 #: src/electron/main.tsx:374
 msgid "Release Notes"
@@ -1747,11 +1747,11 @@ msgstr "Selecione a pasta onde você gostaria que o lote temporário seja armaze
 
 #: src/components/plot/add/PlotAddNFT.tsx:85
 msgid "Select your Plot NFT"
-msgstr "Selecione seu Plot NFT"
+msgstr "Selecione seu Lote NFT"
 
 #: src/components/plot/add/PlotAddNFT.tsx:76
 msgid "Select your Plot NFT from the dropdown or create a new one."
-msgstr "Selecione o seu Plot NFT no menu suspenso ou crie um novo."
+msgstr "Selecione o seu Lote NFT no menu ou crie um novo."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
@@ -1762,11 +1762,11 @@ msgstr "Selecionado"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:54
 msgid "Self Pooling"
-msgstr ""
+msgstr "Bolão próprio"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
-msgstr ""
+msgstr "Bolão próprio. Quando você ganhar um bloco, você receberá recompensas em XCH."
 
 #: src/components/trading/CreateOffer.jsx:164
 #: src/components/trading/TradesTable.tsx:47
@@ -1819,7 +1819,7 @@ msgstr "Ignorar adicionando um diretório final para os coletores da fazenda"
 
 #: src/components/pool/PoolHero.tsx:26
 msgid "Smooth out your XCH farming rewards by joining a pool."
-msgstr ""
+msgstr "Suavize suas recompensas de coleta XCH ao se juntar a um bolão."
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -1948,7 +1948,7 @@ msgstr "Sincronizando <0/>/<1/>"
 
 #: src/components/pool/PoolInfo.tsx:37
 msgid "Target Puzzle Hash"
-msgstr ""
+msgstr "Puzzle Hash do fazendeiro"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1981,15 +1981,15 @@ msgstr "O nó está sincronizando, o que significa que está baixando blocos de 
 
 #: src/hooks/usePoolInfo.ts:37
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr ""
+msgstr "A URL do bolão \"{normalizedUrl}\" não está funcionando. Isso é um bolão? Erro: {0}"
 
 #: src/hooks/usePoolInfo.ts:23
 msgid "The pool URL speciefied is not valid. {poolUrl}"
-msgstr ""
+msgstr "A URL especifica do bolão não é válida. {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
-msgstr ""
+msgstr "A operação de troca de bolão foi cancelada. Por favor, tente novamente alterando o bolão participante ou o bolão próprio"
 
 #: src/components/block/Block.jsx:304
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2018,7 +2018,7 @@ msgstr "Isso permite que você adicione um diretório que contenha lotes. Se voc
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:107
 #: src/components/plotNFT/PlotNFTCard.tsx:133
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr ""
+msgstr "Essa dificuldade é uma dificuldade artificialmente menor do que na rede real, e é usado no cultivo, para encontrar mais provas e enviá-las para o bolão. Quanto mais lotes você tiver, maior a dificuldade você terá, no entanto, a dificuldade não afeta as recompensas."
 
 #: src/components/trading/CreateOffer.jsx:123
 #: src/hooks/useSelectDirectory.tsx:31
@@ -2057,7 +2057,7 @@ msgstr "Este é o saldo total + saldo pendente: é isso que o seu saldo será de
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:126
 #: src/components/plotNFT/PlotNFTCard.tsx:152
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "Este é o número total de pontos que este loteNFT tem com este bolão, desde o último pagamento. O bolão irá definir os pontos depois de fazer um pagamento."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:143
 #: src/components/plotNFT/PlotNFTCard.tsx:169
@@ -2423,7 +2423,7 @@ msgstr "Sua conexão de nó completo"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "Your Harvester Network"
-msgstr "Sua Rede Harvester"
+msgstr "Sua Rede de Coletores"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
