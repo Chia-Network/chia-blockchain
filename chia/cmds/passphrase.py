@@ -1,4 +1,6 @@
+import asyncio
 import click
+import sys
 from io import TextIOWrapper
 from typing import Optional
 
@@ -19,19 +21,24 @@ def passphrase_cmd():
 @click.option(
     "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
 )
-def set_cmd(passphrase_file: Optional[TextIOWrapper], current_passphrase_file: Optional[TextIOWrapper]) -> None:
+@click.pass_context
+def set_cmd(
+    ctx: click.Context, passphrase_file: Optional[TextIOWrapper], current_passphrase_file: Optional[TextIOWrapper]
+) -> None:
     from .passphrase_funcs import (
+        async_update_daemon_passphrase_cache_if_running,
         read_passphrase_from_file,
         set_or_update_passphrase,
         verify_passphrase_meets_requirements,
     )
 
+    success = False
     current_passphrase = None
+    new_passphrase = None
     if current_passphrase_file:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
     if passphrase_file:
-        new_passphrase = None
         try:
             # Read the passphrase from a file and verify it
             new_passphrase = read_passphrase_from_file(passphrase_file)
@@ -47,9 +54,17 @@ def set_cmd(passphrase_file: Optional[TextIOWrapper], current_passphrase_file: O
             print(f"Failed to read passphrase: {e}")
         else:
             # Interactively prompt for the current passphrase (if set)
-            set_or_update_passphrase(passphrase=new_passphrase, current_passphrase=current_passphrase)
+            success = set_or_update_passphrase(passphrase=new_passphrase, current_passphrase=current_passphrase)
     else:
-        set_or_update_passphrase(passphrase=None, current_passphrase=current_passphrase)
+        success = set_or_update_passphrase(passphrase=None, current_passphrase=current_passphrase)
+
+    if success:
+        # Attempt to update the daemon's passphrase cache
+        sys.exit(
+            asyncio.get_event_loop().run_until_complete(
+                async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])
+            )
+        )
 
 
 @passphrase_cmd.command(
@@ -61,11 +76,25 @@ def set_cmd(passphrase_file: Optional[TextIOWrapper], current_passphrase_file: O
 @click.option(
     "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
 )
-def remove_cmd(current_passphrase_file: Optional[TextIOWrapper]) -> None:
-    from .passphrase_funcs import read_passphrase_from_file, remove_passphrase
+@click.pass_context
+def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapper]) -> None:
+    from .passphrase_funcs import (
+        async_update_daemon_passphrase_cache_if_running,
+        read_passphrase_from_file,
+        remove_passphrase,
+    )
 
+    success = False
     current_passphrase = None
     if current_passphrase_file:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
-    remove_passphrase(current_passphrase)
+    success = remove_passphrase(current_passphrase)
+
+    if success:
+        # Attempt to update the daemon's passphrase cache
+        sys.exit(
+            asyncio.get_event_loop().run_until_complete(
+                async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])
+            )
+        )

@@ -147,8 +147,8 @@ class KeyringWrapper:
         """
         return self.keyring_supports_master_passphrase() and self.keyring.has_content()
 
-    def master_passphrase_is_valid(self, passphrase: str) -> bool:
-        return self.keyring.check_passphrase(passphrase)
+    def master_passphrase_is_valid(self, passphrase: str, force_reload: bool = False) -> bool:
+        return self.keyring.check_passphrase(passphrase, force_reload=force_reload)
 
     def set_master_passphrase(
         self,
