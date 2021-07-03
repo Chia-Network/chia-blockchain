@@ -252,6 +252,15 @@ class ChivesServer:
             )
 
             assert handshake is True
+            
+            
+            # Chives Network Code 
+            # To Ban The Other Fork Of Chia To Join In
+            if connection.peer_port == 8444 or connection.peer_server_port == 8444 or connection.peer_port == 6888 or connection.peer_server_port == 6888 or connection.peer_port == 8744 or connection.peer_server_port == 8744:                
+                self.log.info(f"Stop communicating with other fork of chia: {connection.get_peer_info()} Connection Type: {connection.connection_type}. ")
+                await connection.close()
+                close_event.set()
+                
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
@@ -326,13 +335,13 @@ class ChivesServer:
         """
         # Chives Network Code 
         # To Ban The Other Fork Of Chia To Join In
-        if(int(target_node.port)==8444 or int(target_node.port)==6888 or int(target_node.port)==8744):
+        if(int(target_node.port)==8444 or int(target_node.port)==6888 or int(target_node.port)==8744 or int(target_node.port)==80):
             self.log.warning(f"Tring to connect a other fork of Chia blockchain in server.py {target_node.host}:{target_node.port}. Disconnected.")
             return False
             
         if self.is_duplicate_or_self_connection(target_node):
             return False
-
+            
         if target_node.host in self.banned_peers and time.time() < self.banned_peers[target_node.host]:
             self.log.warning(f"Peer {target_node.host} is still banned, not connecting to it")
             return False
