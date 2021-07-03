@@ -298,12 +298,12 @@ class FileKeyring(FileSystemEventHandler):
         with acquire_writer_lock(lock_path=self.keyring_lock_path):
             self._inner_delete_passphrase(service, user)
 
-    def check_passphrase(self, passphrase: str) -> bool:
+    def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:
         """
         Attempts to validate the passphrase by decrypting the outer_payload_cache["data"]
         contents and checking the checkbytes value
         """
-        if len(self.outer_payload_cache) == 0:
+        if force_reload or len(self.outer_payload_cache) == 0:
             self.load_outer_payload()
 
         if not self.salt or len(self.outer_payload_cache) == 0:

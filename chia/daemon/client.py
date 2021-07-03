@@ -87,6 +87,12 @@ class DaemonProxy:
             return bool(response["data"]["is_running"])
         return False
 
+    async def unlock_keyring(self, passphrase: str) -> WsRpcMessage:
+        data = {"key": passphrase}
+        request = self.format_request("unlock_keyring", data)
+        response = await self._get(request)
+        return response
+
     async def ping(self) -> WsRpcMessage:
         request = self.format_request("ping", {})
         response = await self._get(request)
@@ -110,7 +116,7 @@ async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: O
     return client
 
 
-async def connect_to_daemon_and_validate(root_path: Path) -> Optional[DaemonProxy]:
+async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -> Optional[DaemonProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
@@ -128,6 +134,7 @@ async def connect_to_daemon_and_validate(root_path: Path) -> Optional[DaemonProx
         if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
     except Exception:
-        print("Daemon not started yet")
+        if not quiet:
+            print("Daemon not started yet")
         return None
     return None

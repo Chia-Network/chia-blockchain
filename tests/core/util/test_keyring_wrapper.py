@@ -373,7 +373,7 @@ class TestKeyringWrapper(unittest.TestCase):
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("🥳🤩🤪🤯😎😝😀") is True
 
         # Expect: an invalid passphrase containing an emoji should fail validation
-        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("🦄🦄🦄🦄🦄🦄🦄🦄", True)        
+        assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("🦄🦄🦄🦄🦄🦄🦄🦄", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("🦄🦄🦄🦄🦄🦄🦄🦄") is False
 
     @using_temp_file_keyring()
