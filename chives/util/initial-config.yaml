@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 56600
+daemon_port: 56900
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -341,7 +341,7 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 56600
+  daemon_port: 56900
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
