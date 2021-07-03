@@ -7,23 +7,23 @@
 [**Commuity Autonomy**](https://www.chivescoin.org/community/)
 [*Get Chives For Free(7.15 Publish)*](https://game.chivescoin.org/)
 
-[**Worked Version!!! Chives Releases!!!**](https://github.com/HiveProject2021/chives-blockchain/releases)
+[**Chives Releases!!! Change Port To 9699 From 9444!!!**](https://github.com/HiveProject2021/chives-blockchain/releases)
 
 ### HI CHIVES MINERS, IF YOU IF TESTING VERSION,PLEASE DELETE THEM ASAP, AND DOWNLOAD THE NEW VERSION.!!!!!!!!
 
 # 1 Name：Chives
 * English name: Chives
 * English abbreviation: XCC (XCC Chives)
-* ICO: No
-* Pre-Mine: No
+* **ICO: No**
+* **Pre-Mine: No**
 * Description: Forked from Chia
-* Block time: 18.75 seconds (same as Chia)
-* Block reward: 200 Chives (Chia: 2 XCC)
-* Block allocation(Stage 1 & 2): 90% is allocated to miners, and 10% is allocated to the community
+* Block time: **18.75 seconds** (same as Chia)
+* Block reward: **200 Chives** (Chia: 2 XCC)
+* Block allocation(Stage 1 & 2): **90% is allocated to miners, and 10% is allocated to the community**
 * Block allocation(Stage 3): 45% is allocated to miners, 45% is allocated to the master nodes, and 10% is allocated to the community
 * Reward halving: Halving in 3 years, to a block reward of 12.5 Chives from the 13th year (same as Chia)
 * Total issuance: No upper limit (same as Chia)
-* Need to Replot(Can not use chia plots)
+* **Need to Replot**(Can not use chia plots)
 
 Chives is a hard fork created by volunteers in the community using Chives code. As a completely decentralized, no reservation, no ICO, and community autonomy cryptocurrency, it can create a low-power, green and environmentally friendly blockchain system with Chia™.
 
