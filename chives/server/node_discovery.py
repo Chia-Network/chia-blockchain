@@ -229,8 +229,8 @@ class FullNodeDiscovery:
         try:
             # Chives Network Code 
             # To Ban The Other Fork Of Chia To Join In
-            if(int(addr.port)==8444 or int(addr.port)==6888 or int(addr.port)==8744):
-                self.log.warning(f"Tring to connect a other fork of Chia blockchain in Node Discovery {addr.host}:{addr.port}. Disconnected.")
+            if(int(addr.port)==8444 or int(addr.port)==6888 or int(addr.port)==8744 or int(addr.port)==80):
+                self.log.warning(f"Disconnected fork Chia in Node Discovery {addr.host}:{addr.port}.")
                 return False
             if self.address_manager is None:
                 return
@@ -266,7 +266,8 @@ class FullNodeDiscovery:
         last_collision_timestamp = 0
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
-
+        
+        self.log.debug("local_peerinfo")
         introducer_backoff = 1
         while not self.is_closed:
             try:
@@ -346,6 +347,8 @@ class FullNodeDiscovery:
                 now = time.time()
                 got_peer = False
                 addr: Optional[PeerInfo] = None
+                self.log.debug("350")
+                self.log.debug(addr)
                 max_tries = 50
                 if len(groups) < 3:
                     max_tries = 10
@@ -376,6 +379,8 @@ class FullNodeDiscovery:
                     # Require outbound connections, other than feelers,
                     # to be to distinct network groups.
                     addr = info.peer_info
+                    self.log.debug("peer_info")
+                    self.log.debug(addr)
                     if has_collision:
                         break
                     if addr is not None and not addr.is_valid():
@@ -393,6 +398,10 @@ class FullNodeDiscovery:
                     if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
                         local_peerinfo = await self.server.get_peer_info()
                         last_timestamp_local_info = uint64(int(time.time()))
+                        self.log.debug("local_peerinfo 396")
+                        self.log.debug(local_peerinfo)
+                        self.log.debug(last_timestamp_local_info)
+                        self.log.debug(addr)
                     if local_peerinfo is not None and addr == local_peerinfo:
                         continue
                     got_peer = True

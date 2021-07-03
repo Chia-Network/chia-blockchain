@@ -474,19 +474,30 @@ class FullNode:
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
         if curr is None:
             return False
-
+        peakBlock = curr
+        self.log.warning(f"peakBlock.height:{peakBlock.height} peakBlock.prev_hash:{peakBlock.prev_hash} peakBlock.timestamp:{peakBlock.timestamp} peakBlock.is_transaction_block: {peakBlock.is_transaction_block}. ")
+        
         while curr is not None and not curr.is_transaction_block:
             curr = self.blockchain.try_block_record(curr.prev_hash)
-
+        
+        self.log.warning(f"curr.height:{curr.height} curr.prev_hash:{curr.prev_hash} curr.timestamp:{curr.timestamp} curr.is_transaction_block: {curr.is_transaction_block}. ")
         now = time.time()
+        
         if (
             curr is None
             or curr.timestamp is None
-            or curr.timestamp < uint64(int(now - 60 * 7))
+            #or curr.timestamp < uint64(int(now - 60 * 7))
+            or (curr.height+12) < peakBlock.height
             or self.sync_store.get_sync_mode()
         ):
+            self.log.warning(f"curr is None:{curr is None}. ")
+            self.log.warning(f"curr.timestamp is None:{curr.timestamp is None}. ")
+            self.log.warning(f"curr.timestamp < uint64(int(now - 60 * 7)):{curr.timestamp < uint64(int(now - 60 * 7))}. ")
+            self.log.warning(f"self.sync_store.get_sync_mode():{self.sync_store.get_sync_mode()}. ")
+            self.log.warning(f"(curr.height+12) < peakBlock.height:{(curr.height+12) < peakBlock.height}. ")
             return False
         else:
+            self.log.warning(f"Full Node Status: Return Synced. ")
             return True
 
     async def on_connect(self, connection: ws.WSChivesConnection):
