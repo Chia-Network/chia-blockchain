@@ -805,12 +805,13 @@ class FullNodeAPI:
                     uint32(0),
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-            elif ( prev_b.height % 10 == 9 ) :
+            elif ( int(time.time()) % 10 == 0 ) :
                 # prev_b.height % 10 == 9
                 # Every 10 blocks reward community 1 block 
                 # Chives Network Code
                 # Chives Log Output
-                self.log.warning("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                # Random 10% miners to mining the Community Block, Not just the Height %10 == 9 
+                self.log.warning("Begin to Mining Community Block. Thanks to your contribution.")
                 self.log.warning(f"Previous Block Heigh: {prev_b.height}")
                 self.log.warning(f"Previous Block % 10  : {prev_b.height % 10 == 9}")
                 # self.log.warning(prev_b)
