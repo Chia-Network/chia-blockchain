@@ -82,7 +82,7 @@ jobs:
             pip install . --extra-index-url https://pypi.chia.net/simple/ && \
             ldd --version && \
             cd build_scripts && \
-            sh build_linux.sh arm64 \
+            sh build_linux_deb.sh arm64 \
           '
 
     - name: Upload Linux artifacts
