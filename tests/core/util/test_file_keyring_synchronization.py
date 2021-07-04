@@ -27,11 +27,6 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path):
             # otherwise file events won't be detected in the child process
             KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
 
-        log.warning(
-            f"[pid:{os.getpid()}] received: {service}, {user}, {passphrase}, "
-            f"keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}"
-        )
-
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase_bytes=passphrase)
 
         # Wait a short while between writing and reading. Without proper locking, this helps ensure
@@ -39,8 +34,6 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path):
         sleep(random.random() * 10 % 3)
 
         found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
-        log.warning(f"[pid:{os.getpid()}] received: get_passphrase: {found_passphrase}, expected: {passphrase}")
-        log.warning(f"[pid:{os.getpid()}] inner_payload: {KeyringWrapper.get_shared_instance().keyring.payload_cache}")
         if found_passphrase != passphrase:
             log.error(
                 f"[pid:{os.getpid()}] error: didn't get expected passphrase: get_passphrase: {found_passphrase}"
@@ -50,18 +43,15 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path):
 
 
 def dummy_fn_requiring_writer_lock(*args, **kwargs):
-    log.warning(f"[pid:{os.getpid()}] in dummy_fn_requiring_writer_lock")
     return "A winner is you!"
 
 
 def dummy_sleep_fn(*args, **kwargs):
-    log.warning(f"[pid:{os.getpid()}] in dummy_sleep_fn")
     sleep(DUMMY_SLEEP_VALUE)
     return "I'm awake!"
 
 
 def dummy_abort_fn(*args, **kwargs):
-    log.warning(f"[pid:{os.getpid()}] dummy_abort_fn: aborting on purpose. Lock should be released...")
     sleep(0.25)
     os.abort()
 
@@ -109,7 +99,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         the same lock, failing after n attempts
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -138,7 +127,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         same lock once the lock is released by the current holder
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -170,7 +158,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         holder should not be able to quickly reacquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -201,7 +188,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         acquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -233,7 +219,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             return
 
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -265,7 +250,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         to acquire the lock for writing
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a reader lock is already held
@@ -291,7 +275,6 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         to acquire the lock for writing until the reader releases its lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a reader lock is already acquired
