@@ -1070,13 +1070,8 @@ def _validate_challenge_sub_slot_data(
         if is_overflow:
             sp_challenge = prev_challenge
         if sub_slot_idx > 0 and not sub_slot_data.cc_signage_point.normalized_to_identity:
-            prev_ssd_end_of_slot = False
-            if prev_ssd is not None:
-                prev_ssd_end_of_slot = prev_ssd.is_end_of_slot()
             sp_total_iters = get_sp_total_iters(sp_iters, is_overflow, ssi, sub_slot_data)
-            input, iterations = sub_slot_data_vdf_info(
-                sub_slot_idx, sub_slots, is_overflow, prev_ssd_end_of_slot, sp_total_iters, sp_iters
-            )
+            input, iterations = sub_slot_data_vdf_info(sub_slot_idx, sub_slots, is_overflow, sp_total_iters, sp_iters)
         cc_sp_vdf_info = VDFInfo(sp_challenge, iterations, sub_slot_data.cc_sp_vdf_output)
         if not sub_slot_data.cc_signage_point.is_valid(constants, input, cc_sp_vdf_info):
             log.error(f"failed cc signage point vdf validation  {cc_sp_vdf_info}")
@@ -1141,9 +1136,7 @@ def _validate_sub_slot_data(
             challenge = prev_cc_sub_slot_hash
         if not sub_slot_data.cc_signage_point.normalized_to_identity:
             sp_total_iters = get_sp_total_iters(sp_iters, is_overflow, ssi, sub_slot_data)
-            input, iterations = sub_slot_data_vdf_info(
-                sub_slot_idx, sub_slots, is_overflow, prev_ssd.is_end_of_slot(), sp_total_iters, sp_iters
-            )
+            input, iterations = sub_slot_data_vdf_info(sub_slot_idx, sub_slots, is_overflow, sp_total_iters, sp_iters)
         cc_sp_vdf_info = VDFInfo(
             challenge,
             iterations,
@@ -1174,24 +1167,13 @@ def sub_slot_data_vdf_info(
     sub_slot_idx: int,
     sub_slots: List[SubSlotDataV2],
     is_overflow: bool,
-    new_sub_slot: bool,
     sp_total_iters: uint128,
     sp_iters: uint64,
 ) -> Tuple[ClassgroupElement, uint64]:
     ssd: Optional[SubSlotDataV2] = None
-    if is_overflow and new_sub_slot:
-        if sub_slot_idx >= 2 and not sub_slots[sub_slot_idx - 2].is_end_of_slot():
-            # pass sub_slot_idx - 1 to ignore prev slot end (because this is an oveflow block)
-            return get_iters_and_input(sub_slot_idx - 1, sub_slots, sp_iters, sp_total_iters)
-    elif not is_overflow and not new_sub_slot:
-        return get_iters_and_input(sub_slot_idx, sub_slots, sp_iters, sp_total_iters)
-    elif not new_sub_slot and is_overflow:
-        # pass slots_n = 2 to look in two prev sub slots
-        return get_iters_and_input(sub_slot_idx, sub_slots, sp_iters, sp_total_iters, slots_n=2)
-    return ClassgroupElement.get_default_element(), sp_iters
-
-
-def get_iters_and_input(sub_slot_idx:int, sub_slots: List[SubSlotDataV2], sp_iters:uint64, sp_total_iters:uint128, slots_n:int=1):
+    slots_n = 1
+    if is_overflow:
+        slots_n = 2
     slots_seen = 0
     for ssd_idx in reversed(range(0, sub_slot_idx)):
         ssd = sub_slots[ssd_idx]
@@ -1208,9 +1190,9 @@ def get_iters_and_input(sub_slot_idx:int, sub_slots: List[SubSlotDataV2], sp_ite
     if not ssd.is_end_of_slot():
         assert ssd.total_iters
         if ssd.total_iters < sp_total_iters:
-            return ssd.cc_ip_vdf_output, uint64(sp_total_iters - ssd.total_iters)    
+            assert ssd.cc_ip_vdf_output
+            return ssd.cc_ip_vdf_output, uint64(sp_total_iters - ssd.total_iters)
     return ClassgroupElement.get_default_element(), sp_iters
-
 
 def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
