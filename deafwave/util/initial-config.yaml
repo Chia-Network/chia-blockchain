@@ -21,12 +21,12 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
     testnet3:
       NETWORK_TYPE: 1
-      GENESIS_CHALLENGE: 0d18a25e587838d169f94186019a4bcfdbbdce2066dc2dea1a48cfe9ec72fd79
+      GENESIS_CHALLENGE: null
       GENESIS_POST_FARM_PUZZLE_HASH: 95c259eaf17836095a7bfb5b1254b53c554985364c349f4a6764787c21d425ad
       EPOCH_BLOCKS_INITIAL: 768
       EPOCH_BLOCKS: 4608
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      DIFFICULTY_STARTING: 229360
+      DIFFICULTY_STARTING: 1027600
       DIFFICULTY_CHANGE_BLOCK: 1536
 
   config:
@@ -38,7 +38,7 @@ network_overrides: &network_overrides
       address_prefix: "tzzz"
 
 selected_network: &selected_network "mainnet"
-ALERTS_URL: https://storage.googleapis.com/download.deafwave.net/notify/testnet_alert2.txt
+ALERTS_URL: https://storage.googleapis.com/download.deafwave.net/notify/testnet_alert3.txt
 DEAFWAVE_ALERTS_PUBKEY: a73af497a8ee31ec0357db7aa1af6d4a9afbad86e4200f46b42773e658998da487670dedf8af0c99fa782bcffe7ea7f6
 
 # public ssl ca is included in source code
