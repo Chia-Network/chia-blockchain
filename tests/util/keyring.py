@@ -8,6 +8,7 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from keyring.util import platform_
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from pathlib import Path
+from typing import Optional
 from unittest.mock import patch
 
 
@@ -128,12 +129,20 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
 
 
 class TempKeyring:
-    def __init__(self, user: str = "testing-1.8.0", testing: bool = True):
-        self.keychain = self._patch_and_create_keychain(user, testing)
+    def __init__(
+        self,
+        user: str = "testing-1.8.0",
+        testing: bool = True,
+        existing_keyring_path: str = None,
+        delete_on_cleanup: bool = True,
+    ):
+        self.keychain = self._patch_and_create_keychain(user, testing, existing_keyring_path)
+        self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
-    def _patch_and_create_keychain(self, user: str, testing: bool):
-        temp_dir = tempfile.mkdtemp(prefix="test_keyring_wrapper")
+    def _patch_and_create_keychain(self, user: str, testing: bool, existing_keyring_path: Optional[str]):
+        existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
+        temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
         mock_supports_keyring_passphrase_patch = patch("chia.util.keychain.supports_keyring_passphrase")
         mock_supports_keyring_passphrase = mock_supports_keyring_passphrase_patch.start()
@@ -177,9 +186,10 @@ class TempKeyring:
     def cleanup(self):
         assert not self.cleaned_up
 
-        temp_dir = self.keychain._temp_dir
-        print(f"Cleaning up temp keychain in dir: {temp_dir}")
-        tempfile.TemporaryDirectory._rmtree(temp_dir)
+        if self.delete_on_cleanup:
+            temp_dir = self.keychain._temp_dir
+            print(f"Cleaning up temp keychain in dir: {temp_dir}")
+            tempfile.TemporaryDirectory._rmtree(temp_dir)
 
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()

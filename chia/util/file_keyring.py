@@ -40,9 +40,14 @@ def loads_keyring(method):
 
     @wraps(method)
     def inner(self, *args, **kwargs):
+        # Watchdog's event dispatch timing is unreliable on macOS. Force a file modification time check for macOS.
+        if sys.platform == "darwin":
+            self.check_if_keyring_file_modified()
+
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
-            # log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
+            log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
+            log.warning(f"[pid:{os.getpid()}] keyring file {self.keyring_path}")
             if (self.has_content() and not self.payload_cache) or self.needs_load_keyring:
                 self.load_keyring()
         return method(self, *args, **kwargs)
@@ -170,6 +175,7 @@ class FileKeyring(FileSystemEventHandler):
         self.keyring_lock_path = FileKeyring.lockfile_path_for_file_path(self.keyring_path)
         self.payload_cache = {}  # This is used as a building block for adding keys etc if the keyring is empty
         self.load_keyring_lock = threading.RLock()
+        self.keyring_last_mod_time = None
 
         if not self.keyring_path.exists():
             # Super simple payload if starting from scratch
@@ -182,18 +188,26 @@ class FileKeyring(FileSystemEventHandler):
         self.setup_keyring_file_watcher()
 
     def setup_keyring_file_watcher(self):
-        # log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher on thread: {threading.get_ident()}")
-
+        # log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher called on thread: {threading.get_ident()}")
         observer = Observer()
-        observer.schedule(self, self.keyring_path)
+        # log.warning(f"[pid:{os.getpid()}] watching keyring_path: {self.keyring_path.parent}")
+        # recursive=True necessary for macOS support
+        observer.schedule(self, self.keyring_path.parent, recursive=True)
         observer.start()
 
         self.keyring_observer = Observer()
 
     def on_modified(self, event):
-        # log.warning(f"[pid:{os.getpid()}] on_modified called on thread: {threading.get_ident()}")
-        with self.load_keyring_lock:
-            self.needs_load_keyring = True
+        # log.warning(f"[pid:{os.getpid()}] on_modified called on thread: {threading.get_ident()}, event: {event}")
+        self.check_if_keyring_file_modified()
+
+    def check_if_keyring_file_modified(self):
+        if self.keyring_path.exists():
+            last_modified = os.stat(self.keyring_path).st_mtime
+            if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
+                self.keyring_last_mod_time = last_modified
+                with self.load_keyring_lock:
+                    self.needs_load_keyring = True
 
     @staticmethod
     def default_outer_payload() -> dict:
@@ -376,6 +390,7 @@ class FileKeyring(FileSystemEventHandler):
             self.salt = bytes.fromhex(salt)
 
     def load_keyring(self, passphrase: str = None):
+        log.warning(f"[pid:{os.getpid()}] in load_keyring")
         with self.load_keyring_lock:
             self.needs_load_keyring = False
 
