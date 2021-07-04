@@ -78,7 +78,7 @@ def configure(
         if testnet == "true" or testnet == "t":
             print("Setting Testnet")
             testnet_port = "58620"
-            testnet_introducer = "beta3_introducer.deafwave.net"
+            testnet_introducer = "beta_introducer.deafwave.net"
             testnet = "testnet3"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
