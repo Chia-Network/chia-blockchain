@@ -14,7 +14,7 @@ from cryptography.fernet import Fernet
 
 from deafwave import __version__
 from deafwave.consensus.block_record import BlockRecord
-from deafwave.consensus.coinbase import pool_parent_id, farmer_parent_id
+from deafwave.consensus.coinbase import pool_parent_id, farmer_parent_id, postfarm_parent_id
 from deafwave.consensus.constants import ConsensusConstants
 from deafwave.consensus.find_fork_point import find_fork_point_in_chain
 from deafwave.full_node.weight_proof import WeightProofHandler
@@ -583,6 +583,7 @@ class WalletStateManager:
 
         pool_rewards = set()
         farmer_rewards = set()
+        postfarm_rewards = set()
         added = []
 
         prev = await self.blockchain.get_block_record_from_db(block.prev_hash)
@@ -600,8 +601,11 @@ class WalletStateManager:
                 uint32(prev.height), self.constants.GENESIS_CHALLENGE)
             farmer_parent = farmer_parent_id(
                 uint32(prev.height), self.constants.GENESIS_CHALLENGE)
+            postfarm_parent = postfarm_parent_id(
+                uint32(prev.height), self.constants.GENESIS_CHALLENGE)
             pool_rewards.add(pool_parent)
             farmer_rewards.add(farmer_parent)
+            postfarm_rewards.add(postfarm_parent)
             prev = await self.blockchain.get_block_record_from_db(prev.prev_hash)
 
         while prev is not None:
@@ -610,8 +614,11 @@ class WalletStateManager:
                 uint32(prev.height), self.constants.GENESIS_CHALLENGE)
             farmer_parent = farmer_parent_id(
                 uint32(prev.height), self.constants.GENESIS_CHALLENGE)
+            postfarm_parent = postfarm_parent_id(
+                uint32(prev.height), self.constants.GENESIS_CHALLENGE)
             pool_rewards.add(pool_parent)
             farmer_rewards.add(farmer_parent)
+            postfarm_rewards.add(postfarm_parent)
             if prev.is_transaction_block:
                 break
             prev = await self.blockchain.get_block_record_from_db(prev.prev_hash)
@@ -633,16 +640,21 @@ class WalletStateManager:
 
             is_coinbase = False
             is_fee_reward = False
+            is_postfarm_reward = False
             if coin.parent_coin_info in pool_rewards:
                 is_coinbase = True
             if coin.parent_coin_info in farmer_rewards:
                 is_fee_reward = True
+            if coin.parent_coin_info in postfarm_rewards:
+                is_postfarm_reward = True
+
+            self.log.info(f"DEAFWAVE:  || COINBASE: {is_coinbase} || FEE: {is_fee_reward} || POSTFARM: {is_postfarm_reward}")
 
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
             if info is not None:
                 wallet_id, wallet_type = info
                 added_coin_record = await self.coin_added(
-                    coin, is_coinbase, is_fee_reward, uint32(
+                    coin, is_coinbase, is_fee_reward, is_postfarm_reward, uint32(
                         wallet_id), wallet_type, height, all_outgoing_tx[wallet_id]
                 )
                 added.append(added_coin_record)
@@ -691,6 +703,7 @@ class WalletStateManager:
         coin: Coin,
         coinbase: bool,
         fee_reward: bool,
+        postfarm_reward: bool,
         wallet_id: uint32,
         wallet_type: WalletType,
         height: uint32,
@@ -701,11 +714,13 @@ class WalletStateManager:
         """
         self.log.info(f"Adding coin: {coin} at {height}")
         farm_reward = False
-        if coinbase or fee_reward:
+        if coinbase or fee_reward or postfarm_reward:
             farm_reward = True
             now = uint64(int(time.time()))
             if coinbase:
                 tx_type: int = TransactionType.COINBASE_REWARD.value
+            elif postfarm_reward:
+                tx_type: int = TransactionType.POSTFARM_REWARD.value
             else:
                 tx_type = TransactionType.FEE_REWARD.value
             tx_record = TransactionRecord(

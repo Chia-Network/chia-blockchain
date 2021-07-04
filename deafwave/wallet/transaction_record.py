@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from deafwave.consensus.coinbase import pool_parent_id, farmer_parent_id
+from deafwave.consensus.coinbase import pool_parent_id, farmer_parent_id, postfarm_parent_id
 from deafwave.types.blockchain_format.coin import Coin
 from deafwave.types.blockchain_format.sized_bytes import bytes32
 from deafwave.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -56,8 +56,12 @@ class TransactionRecord(Streamable):
                     uint32(block_index), genesis_challenge)
                 farmer_parent = farmer_parent_id(
                     uint32(block_index), genesis_challenge)
+                postfarm_parent = postfarm_parent_id(
+                    uint32(block_index), genesis_challenge)
                 if pool_parent == self.additions[0].parent_coin_info:
                     return uint32(block_index)
                 if farmer_parent == self.additions[0].parent_coin_info:
+                    return uint32(block_index)
+                if postfarm_parent == self.additions[0].parent_coin_info:
                     return uint32(block_index)
         return None
