@@ -19,24 +19,20 @@ network_overrides: &network_overrides
       GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
-    testnet1:
-      NETWORK_TYPE: 1
-      GENESIS_CHALLENGE: 58bf0d3a71e9fe03dcd6c641d672a123e5229e5757906951d0c931077464cfeb
-      EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 1
-    testnet2:
-      GENESIS_CHALLENGE: null
+    testnet3:
+      GENESIS_CHALLENGE: 0d18a25e587838d169f94186019a4bcfdbbdce2066dc2dea1a48cfe9ec72fd79
+      EPOCH_BLOCKS_INITIAL: 768
+      EPOCH_BLOCKS: 4608
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 57340
+      DIFFICULTY_STARTING: 229360
+      DIFFICULTY_CHANGE_BLOCK: 1536
+
   config:
     mainnet:
       address_prefix: "zzz"
     testnet0:
       address_prefix: "tzzz"
-    testnet1:
-      address_prefix: "tzzz"
-    testnet2:
+    testnet3:
       address_prefix: "tzzz"
 
 selected_network: &selected_network "mainnet"
