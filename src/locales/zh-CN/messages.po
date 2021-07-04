@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-02 19:01\n"
+"PO-Revision-Date: 2021-07-04 10:40\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2496,5 +2496,5 @@ msgstr "{currencyCode} 用户交易费用"
 
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{mojo, plural, one {mojo} other {mojos}}"
 
