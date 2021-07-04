@@ -96,15 +96,16 @@ def show_all_keys(show_mnemonic: bool):
             create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()),
         )
         assert seed is not None
-        if show_mnemonic:
-            print("Master private key (m):", bytes(sk).hex())
-            print(
-                "First wallet secret key (m/12381/9699/2/0):",
-                master_sk_to_wallet_sk(sk, uint32(0)),
-            )
-            mnemonic = bytes_to_mnemonic(seed)
-            print("  Mnemonic seed (24 secret words):")
-            print(mnemonic)
+        
+        print("-----------------------------------------------------------------------")
+        print("Master private key (m):", bytes(sk).hex())
+        print(
+            "First wallet secret key (m/12381/9699/2/0):",
+            master_sk_to_wallet_sk(sk, uint32(0)),
+        )
+        mnemonic = bytes_to_mnemonic(seed)
+        print("  Mnemonic seed (24 secret words):")
+        print(mnemonic)
 
 
 def delete(fingerprint: int):
