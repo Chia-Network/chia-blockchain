@@ -17,7 +17,7 @@ from time import sleep
 log = logging.getLogger(__name__)
 
 
-DUMMY_SLEEP_VALUE = 1
+DUMMY_SLEEP_VALUE = 2
 
 
 def dummy_set_passphrase(service, user, passphrase, keyring_path):
@@ -55,7 +55,7 @@ def dummy_fn_requiring_writer_lock(*args, **kwargs):
 
 
 def dummy_sleep_fn(*args, **kwargs):
-    log.warning("in dummy_sleep_fn")
+    log.warning(f"[pid:{os.getpid()}] in dummy_sleep_fn")
     sleep(DUMMY_SLEEP_VALUE)
     return "I'm awake!"
 
@@ -178,7 +178,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
         child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
         timeout = 0.25
-        attempts = 4
+        attempts = 8
 
         with Pool(processes=1) as pool:
             # When: a child process attempts to acquire the same writer lock, failing after 1 second
@@ -188,7 +188,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             lock.release_write_lock()
 
             # Brief delay to allow the child to acquire the lock
-            sleep(0.25)
+            sleep(1)
 
             # Expect: Reacquiring the lock should fail due to the child holding the lock and sleeping
             assert lock.acquire_write_lock(timeout=0.25) is False
