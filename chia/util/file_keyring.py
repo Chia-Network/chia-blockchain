@@ -1,6 +1,5 @@
 import base64
 import fasteners
-import logging  # TODO remove: logging just for test debugging atm
 import os
 import shutil
 import sys
@@ -26,9 +25,6 @@ CHECKBYTES_VALUE = b"5f365b8292ee505b"  # Randomly generated
 MAX_SUPPORTED_VERSION = 1  # Max supported file format version
 
 
-log = logging.getLogger(__name__)
-
-
 class FileKeyringLockTimeout(Exception):
     pass
 
@@ -46,8 +42,6 @@ def loads_keyring(method):
 
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
-            log.warning(f"[pid:{os.getpid()}] needs_load_keyring? {self.needs_load_keyring}")
-            log.warning(f"[pid:{os.getpid()}] keyring file {self.keyring_path}")
             if (self.has_content() and not self.payload_cache) or self.needs_load_keyring:
                 self.load_keyring()
         return method(self, *args, **kwargs)
@@ -59,26 +53,18 @@ def loads_keyring(method):
 def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
     result = None
-    # log.warning(f"[pid:{os.getpid()}] in acquire_writer_lock: lock_path: {lock_path}, max_iters: {max_iters}")
     for i in range(0, max_iters):
-        # log.warning(f"[pid:{os.getpid()} attempting to acquire writer lock (attempt={i})")
         if lock.acquire_write_lock(timeout=timeout):
-            # log.warning(f"[pid:{os.getpid()}] lock acquired")
-            # log.warning(f"[pid:{os.getpid()}] calling method")
             yield  # <----
-            # log.warning(f"[pid:{os.getpid()}] method returned: {result}")
             lock.release_write_lock()
             try:
-                # log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
             except Exception:
                 pass
             break
         else:
-            # log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring writer lock after {timeout} seconds")
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
-                # log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
                 print(f" Remaining attempts: {max_iters - 1 - i}")
             else:
                 print("")
@@ -90,26 +76,18 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
 def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
     lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
     result = None
-    # log.warning(f"[pid:{os.getpid()}] in acquire_reader_lock: lock_path: {lock_path}, max_iters: {max_iters}")
     for i in range(0, max_iters):
-        # log.warning(f"[pid:{os.getpid()} attempting to acquire reader lock (attempt={i})")
         if lock.acquire_read_lock(timeout=timeout):
-            # log.warning(f"[pid:{os.getpid()}] lock acquired")
-            # log.warning(f"[pid:{os.getpid()}] calling method")
             yield  # <----
-            # log.warning(f"[pid:{os.getpid()}] method returned: {result}")
             lock.release_read_lock()
             try:
-                # log.warning(f"[pid:{os.getpid()}] attempting to remove lock file")
                 os.remove(lock_path)
             except Exception:
                 pass
             break
         else:
-            # log.warning(f"[pid:{os.getpid()}] Failed to acquire keyring reader lock after {timeout} seconds")
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
-                # log.warning(f"[pid:{os.getpid()}] Remaining attempts: {max_iters - 1 - i}")
                 print(f" Remaining attempts: {max_iters - 1 - i}")
             else:
                 print("")
@@ -188,9 +166,7 @@ class FileKeyring(FileSystemEventHandler):
         self.setup_keyring_file_watcher()
 
     def setup_keyring_file_watcher(self):
-        # log.warning(f"[pid:{os.getpid()}] setup_keyring_file_watcher called on thread: {threading.get_ident()}")
         observer = Observer()
-        # log.warning(f"[pid:{os.getpid()}] watching keyring_path: {self.keyring_path.parent}")
         # recursive=True necessary for macOS support
         observer.schedule(self, self.keyring_path.parent, recursive=True)
         observer.start()
@@ -198,7 +174,6 @@ class FileKeyring(FileSystemEventHandler):
         self.keyring_observer = Observer()
 
     def on_modified(self, event):
-        # log.warning(f"[pid:{os.getpid()}] on_modified called on thread: {threading.get_ident()}, event: {event}")
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self):
@@ -248,17 +223,6 @@ class FileKeyring(FileSystemEventHandler):
 
     @loads_keyring
     def _inner_get_passphrase(self, service: str, user: str) -> Optional[str]:
-        # log.warning(f"[pid:{os.getpid()}] get_passphrase: service: {service}, user: {user}")
-        # log.warning(f"[pid:{os.getpid()}] ensure_cached_keys_dict: {self.ensure_cached_keys_dict()}")
-        # log.warning(
-        #     f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..):"
-        #     f" {self.ensure_cached_keys_dict().get(service, {})}"
-        # )
-        # log.warning(
-        #     f"[pid:{os.getpid()}] ensure_cached_keys_dict.get(service, ..).get(user):"
-        #     f" {self.ensure_cached_keys_dict().get(service, {}).get(user)}"
-        # )
-
         return self.ensure_cached_keys_dict().get(service, {}).get(user)
 
     def get_passphrase(self, service: str, user: str) -> Optional[str]:
@@ -274,7 +238,6 @@ class FileKeyring(FileSystemEventHandler):
         keys = self.ensure_cached_keys_dict()
         # Convert the passphrase to a string (if necessary)
         passphrase = passphrase_bytes.hex() if type(passphrase_bytes) == bytes else str(passphrase_bytes)
-        # log.warning(f"[pid:{os.getpid()}] do_set_passphrase: user: {user}, passphrase: {passphrase}")
 
         # Ensure a dictionary exists for the 'service'
         if keys.get(service) is None:
@@ -390,7 +353,6 @@ class FileKeyring(FileSystemEventHandler):
             self.salt = bytes.fromhex(salt)
 
     def load_keyring(self, passphrase: str = None):
-        log.warning(f"[pid:{os.getpid()}] in load_keyring")
         with self.load_keyring_lock:
             self.needs_load_keyring = False
 

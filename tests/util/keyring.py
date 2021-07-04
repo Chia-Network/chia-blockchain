@@ -1,4 +1,3 @@
-import logging
 import os
 import tempfile
 
@@ -10,9 +9,6 @@ from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMiss
 from pathlib import Path
 from typing import Optional
 from unittest.mock import patch
-
-
-log = logging.getLogger(__name__)
 
 
 def create_empty_cryptfilekeyring():
@@ -58,7 +54,6 @@ def using_temp_keyring_dir(func):
 
     def inner(*args, **kwargs):
         with tempfile.TemporaryDirectory(prefix="test_keyring_wrapper") as temp_file_keyring_dir:
-            log.warning(f"[pid:{os.getpid()}] using temp keyring dir: {temp_file_keyring_dir}")
             func(*args, **dict(kwargs, temp_file_keyring_dir=temp_file_keyring_dir))
 
     return inner
