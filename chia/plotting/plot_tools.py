@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from random import shuffle
 import traceback
 from dataclasses import dataclass
 from functools import reduce
@@ -155,6 +156,7 @@ def load_plots(
     all_filenames: List[Path] = []
     for paths in plot_filenames.values():
         all_filenames += paths
+    shuffle(all_filenames)# large number of plots from multiple drives, this will increase the efficiency of Harverter to load the plot quickly.
     plot_ids: Set[bytes32] = set()
     plot_ids_lock = threading.Lock()
 
