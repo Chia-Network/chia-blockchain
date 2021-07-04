@@ -18,7 +18,7 @@ def farmer_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32
     return bytes32(genesis_challenge[16:] + block_height.to_bytes(16, "big"))
 
 def postfarm_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32:
-    return bytes32(genesis_challenge[8:8] + block_height.to_bytes(16, "big"))
+    return bytes32(genesis_challenge[8:24] + block_height.to_bytes(16, "big"))
 
 
 def create_pool_coin(block_height: uint32, puzzle_hash: bytes32, reward: uint64, genesis_challenge: bytes32):
