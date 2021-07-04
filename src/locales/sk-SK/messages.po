@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-04 16:44\n"
+"PO-Revision-Date: 2021-07-04 22:48\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -1453,7 +1453,7 @@ msgstr "Vykresľovanie s bitovým poľom umožňuje okolo 30% menej zápisov a j
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:177
 msgid "Points Found Since Start"
-msgstr "Body nájdené od začiatku"
+msgstr "Body nájdené od spustenia"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:162
 #: src/components/plotNFT/PlotNFTCard.tsx:188
