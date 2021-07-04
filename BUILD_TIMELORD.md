@@ -1,5 +1,7 @@
 # Building timelords
 
+Timelords are not required to run Sector. The installation is the same as for Chia.
+
 The Linux and MacOS chiavdf binary wheels currently exclude an executable
 required to run a [Timelord](https://github.com/Chia-Network/chia-blockchain/wiki/Timelords).
 If you want to run a Timelord on Linux or MacOS, you must install the wheel

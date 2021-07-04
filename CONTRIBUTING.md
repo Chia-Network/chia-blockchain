@@ -1,40 +1,20 @@
 # Introduction
 
-Welcome to the chia-blockchain project!
-We are happy that you are taking a look at the code for Chia, a proof of space and time cryptocurrency.
 
-A lot of fascinating new cryptography and blockchain concepts are used and implemented here.
-This repo includes the code for the Chia full node, farmer, and timelord (in chia folder), which are all written in python.
-It also includes a verifiable delay function implementation that it imports from the [chiavdf repo](https://github.com/Chia-Network/chiavdf) (in c/c++), and a proof of space implementation that it imports from the [chiapos repo](https://github.com/Chia-Network/chiapos). BLS signatures are imported from the [bls-signatures repo](https://github.com/Chia-Network/bls-signatures) as blspy. There is an additional dependency on the [chiabip158 repo](https://github.com/Chia-Network/chiabip158). For major platforms, binary and source wheels are shipped to PyPI from each dependent repo. Then chia-blockchain can pip install those from PyPI or they can be prepackaged as is done for the Windows installer. On unsupported platforms, pip will fall back to the source distributions, to be compiled locally.
-
-If you want to learn more about this project, read the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki), or check out the [green paper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
+If you want to learn more about this project we will update the wiki and green paper. While not available yet they will be found at: [wiki](https://github.com/Sector-Network/sector-blockchain/wiki), [green paper](https://www.sectornetwork.world/assets/SectorGreenPaper.pdf).
 
 ## Contributions
 
-Please review this [diagram](https://drive.google.com/file/d/1r7AXTrj7gtD0Xy-9BtTZR6yv7WXMPgeM/view?usp=sharing), to better understand the git workflow.
-
-We would be pleased to accept code contributions to this project.
-As we have now released, the main priority is improving the mainnet blockchain.
-You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a sense of what is in the backlog.
-Generally, things to the left are in progress or done. Some things go through "Coming up soon", but some will come directly out of other columns.
-Usually, the things closer to the top of each column are the ones that will be worked on soonest.
-If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
-Contact any of the team members on [Keybase](https://keybase.io/team/chia_network.public), which we use as the main communication method. You can also comment on any Trello card.
+We would like to thank all the contributors of the Chia Network. Without them the Sector Network would not be around.
 
 We ask that external contributors create a fork of the `main` branch for any feature work they wish to take on.
 
-Members of the Chia organization may create feature branches from the `main` branch.
-
-In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `1.0.0`.
-
 ## Branching Strategy
-
-[Branching Strategy Diagram](https://drive.google.com/file/d/1mYmTi-aFgcyCc39pHyBaaBjV-vjvllBT/view?usp=sharing)
 
 1. All changes go into the main branch.
 2. Main is stable at all times, all tests pass.
 3. Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
-4. Chia Network's nodes on the public testnet are running the latest version `x.y.z`.
+4. Sector Network's nodes on the public testnet are running the latest version `x.y.z`.
 5. The `main` branch will have a long running `beta testnet` to allow previewing of changes.
 6. Pull Request events may require a `beta testnet` review environment. At the moment this is at the discretion of the reviewer.
 7. Hotfixes land in the release branch they fix, and all later versions. (This will be achieved by regularly merging from `1.0.x` to main).
