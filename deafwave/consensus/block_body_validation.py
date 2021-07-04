@@ -130,7 +130,7 @@ async def validate_block_body(
         )
         postfarm_coin = create_postfarm_coin(
             prev_transaction_block_height,
-            constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
+            constants.GENESIS_POST_FARM_PUZZLE_HASH,
             calculate_postfarm_reward(prev_transaction_block.height),
             constants.GENESIS_CHALLENGE,
         )
@@ -162,7 +162,7 @@ async def validate_block_body(
                 expected_reward_coins.add(
                     create_postfarm_coin(
                         curr_b.height,
-                        constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
+                        constants.GENESIS_POST_FARM_PUZZLE_HASH,
                         calculate_postfarm_reward(curr_b.height),
                         constants.GENESIS_CHALLENGE,
                     )

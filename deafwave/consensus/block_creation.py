@@ -163,7 +163,7 @@ def create_foliage(
             )
             postfarm_coin = create_postfarm_coin(
                 curr.height,
-                constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
+                constants.GENESIS_POST_FARM_PUZZLE_HASH,
                 calculate_postfarm_reward(curr.height),
                 constants.GENESIS_CHALLENGE,
             )
@@ -188,7 +188,7 @@ def create_foliage(
                     )
                     postfarm_coin = create_postfarm_coin(
                         curr.height,
-                        constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
+                        constants.GENESIS_POST_FARM_PUZZLE_HASH,
                         calculate_postfarm_reward(curr.height),
                         constants.GENESIS_CHALLENGE,
                     )
