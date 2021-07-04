@@ -8,9 +8,9 @@ from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from deafwave.consensus.block_record import BlockRecord
-from deafwave.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from deafwave.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward, calculate_postfarm_reward
 from deafwave.consensus.blockchain_interface import BlockchainInterface
-from deafwave.consensus.coinbase import create_farmer_coin, create_pool_coin
+from deafwave.consensus.coinbase import create_farmer_coin, create_pool_coin, create_postfarm_coin
 from deafwave.consensus.constants import ConsensusConstants
 from deafwave.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from deafwave.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -161,8 +161,14 @@ def create_foliage(
                 uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
                 constants.GENESIS_CHALLENGE,
             )
+            postfarm_coin = create_postfarm_coin(
+                curr.height,
+                constants.GENESIS_POST_FARM_PUZZLE_HASH,
+                calculate_postfarm_reward(curr.height),
+                constants.GENESIS_CHALLENGE,
+            )
             assert curr.header_hash == prev_transaction_block.header_hash
-            reward_claims_incorporated += [pool_coin, farmer_coin]
+            reward_claims_incorporated += [pool_coin, farmer_coin, postfarm_coin]
 
             if curr.height > 0:
                 curr = blocks.block_record(curr.prev_hash)
@@ -180,7 +186,13 @@ def create_foliage(
                         calculate_base_farmer_reward(curr.height),
                         constants.GENESIS_CHALLENGE,
                     )
-                    reward_claims_incorporated += [pool_coin, farmer_coin]
+                    postfarm_coin = create_postfarm_coin(
+                        curr.height,
+                        constants.GENESIS_POST_FARM_PUZZLE_HASH,
+                        calculate_postfarm_reward(curr.height),
+                        constants.GENESIS_CHALLENGE,
+                    )
+                    reward_claims_incorporated += [pool_coin, farmer_coin, postfarm_coin]
                     curr = blocks.block_record(curr.prev_hash)
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:

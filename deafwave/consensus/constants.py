@@ -20,10 +20,12 @@ class ConsensusConstants:
     # Multiplied by the difficulty to get iterations
     DIFFICULTY_CONSTANT_FACTOR: uint128
     DIFFICULTY_STARTING: uint64  # The difficulty for the first epoch
+    DIFFICULTY_CHANGE_BLOCK: uint32
     # The maximum factor by which difficulty and sub_slot_iters can change per epoch
     DIFFICULTY_CHANGE_MAX_FACTOR: uint32
     SUB_EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch
     # The number of blocks per sub-epoch, must be a multiple of SUB_EPOCH_BLOCKS
+    EPOCH_BLOCKS_INITIAL: uint32
     EPOCH_BLOCKS: uint32
 
     # The number of bits to look at in difficulty and min iters. The rest are zeroed
@@ -45,6 +47,9 @@ class ConsensusConstants:
     GENESIS_CHALLENGE: bytes32
     # Forks of deafwave should change this value to provide replay attack protection
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
+    # Post farm puzzle hash
+    GENESIS_POST_FARM_PUZZLE_HASH: bytes32
+    ## TODO: DELETE
     # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32
     # The block at height must pay out to this farmer puzzle hash

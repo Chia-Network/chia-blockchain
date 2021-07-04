@@ -13,11 +13,13 @@ testnet_kwargs = {
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
     "DIFFICULTY_CONSTANT_FACTOR": 2 ** 67,
     "DIFFICULTY_STARTING": 7,
+    "DIFFICULTY_CHANGE_BLOCK": 9216,
     # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     "DIFFICULTY_CHANGE_MAX_FACTOR": 3,
     # These 3 constants must be changed at the same time
     "SUB_EPOCH_BLOCKS": 384,  # The number of blocks per sub-epoch, mainnet 384
     # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
+    "EPOCH_BLOCKS_INITIAL": 768,
     "EPOCH_BLOCKS": 4608,
     # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "SIGNIFICANT_BITS": 8,
@@ -38,11 +40,15 @@ testnet_kwargs = {
     "GENESIS_CHALLENGE": bytes.fromhex("15c1626e087d479980667bbdde8464b8cf737066c20622e520feaa096e9f9a3e"),
     # Forks of deafwave should change this value to provide replay attack protection. This is set to mainnet genesis chall
     "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("299fc7442fd638bc739f7bdcff8ccad332e50f6f91556ad0c5267538f5421baa"),
+    "GENESIS_POST_FARM_PUZZLE_HASH": bytes.fromhex(
+        "95c259eaf17836095a7bfb5b1254b53c554985364c349f4a6764787c21d425ad"
+    ),
+    ## TODO: DELETE
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "144801a15097959bc17dcb810c633af7e0f557165313b4be5f0f057de735e4b6"
+        "95c259eaf17836095a7bfb5b1254b53c554985364c349f4a6764787c21d425ad"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "44366e3ebaef79725e7919de5fd530da0edb58510b1e111bc1e5195ec2dd0782"
+        "95c259eaf17836095a7bfb5b1254b53c554985364c349f4a6764787c21d425ad"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Size of mempool = 50x the size of block
