@@ -20,7 +20,7 @@ If ($LastExitCode -gt 0){
 }
 else
 {
-    Set-Location -Path C:\Users\smurr\chia-new\sector-blockchain\ -PassThru
+    Set-Location -Path - -PassThru
     Write-Output "miniupnpc download successful."
 }
 
@@ -66,8 +66,8 @@ pyinstaller --log-level INFO $SPEC_FILE
 Write-Output "   ---"
 Write-Output "Copy sector executables to sector-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "C:\Users\smurr\chia-new\sector-blockchain\sector-blockchain-gui\" -Recurse
-Set-Location -Path "C:\Users\smurr\chia-new\sector-blockchain\sector-blockchain-gui\" -PassThru
+Copy-Item "dist\daemon" -Destination "..\sector-blockchain-gui\" -Recurse
+Set-Location -Path "..sector-blockchain-gui\" -PassThru
 git status
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
