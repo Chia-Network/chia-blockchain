@@ -77,15 +77,15 @@ def show_all_keys(show_mnemonic: bool):
         print("Fingerprint:", sk.get_g1().get_fingerprint())
         print("Master public key (m):", sk.get_g1())
         print(
-            "Farmer public key (m/12381/9444/0/0):",
+            "Farmer public key (m/12381/9699/0/0):",
             master_sk_to_farmer_sk(sk).get_g1(),
         )
         print(
-            "Farmer puzzle hash (m/12381/9444/0/0):",
+            "Farmer puzzle hash (m/12381/9699/0/0):",
             create_puzzlehash_for_pk(master_sk_to_farmer_sk(sk).get_g1()),
         )
-        print("Pool public key (m/12381/9444/1/0):", master_sk_to_pool_sk(sk).get_g1())
-        print("Pool puzzle hash (m/12381/9444/1/0):", create_puzzlehash_for_pk(master_sk_to_pool_sk(sk).get_g1()))
+        print("Pool public key (m/12381/9699/1/0):", master_sk_to_pool_sk(sk).get_g1())
+        print("Pool puzzle hash (m/12381/9699/1/0):", create_puzzlehash_for_pk(master_sk_to_pool_sk(sk).get_g1()))
         
         print(
             "First wallet address:",
@@ -99,7 +99,7 @@ def show_all_keys(show_mnemonic: bool):
         if show_mnemonic:
             print("Master private key (m):", bytes(sk).hex())
             print(
-                "First wallet secret key (m/12381/9444/2/0):",
+                "First wallet secret key (m/12381/9699/2/0):",
                 master_sk_to_wallet_sk(sk, uint32(0)),
             )
             mnemonic = bytes_to_mnemonic(seed)

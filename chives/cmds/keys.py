@@ -100,7 +100,7 @@ def generate_and_print_cmd():
     type=int,
     required=True,
 )
-@click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/9444/n/n'", type=str, required=True)
+@click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/9699/n/n'", type=str, required=True)
 def sign_cmd(message: str, fingerprint: int, hd_path: str):
     from .keys_funcs import sign
 
