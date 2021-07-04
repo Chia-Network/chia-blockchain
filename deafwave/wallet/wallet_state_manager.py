@@ -648,8 +648,6 @@ class WalletStateManager:
             if coin.parent_coin_info in postfarm_rewards:
                 is_postfarm_reward = True
 
-            self.log.info(f"DEAFWAVE:  || COINBASE: {is_coinbase} || FEE: {is_fee_reward} || POSTFARM: {is_postfarm_reward}")
-
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
             if info is not None:
                 wallet_id, wallet_type = info
