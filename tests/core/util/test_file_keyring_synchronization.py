@@ -9,7 +9,8 @@ from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
-from tests.util.keyring import using_temp_file_keyring
+from sys import platform
+from tests.util.keyring import TempKeyring, using_temp_file_keyring
 from time import sleep
 
 
@@ -19,22 +20,33 @@ log = logging.getLogger(__name__)
 DUMMY_SLEEP_VALUE = 1
 
 
-def dummy_set_passphrase(service, user, passphrase):
-    # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
-    # otherwise file events won't be detected in the child process
-    KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
+def dummy_set_passphrase(service, user, passphrase, keyring_path):
+    with TempKeyring(existing_keyring_path=keyring_path, delete_on_cleanup=False):
+        if platform == "linux":
+            # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
+            # otherwise file events won't be detected in the child process
+            KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
 
-    log.warning(
-        f"[pid:{os.getpid()}] received: {service}, {user}, {passphrase}, "
-        f"keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}"
-    )
-    KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase_bytes=passphrase)
+        log.warning(
+            f"[pid:{os.getpid()}] received: {service}, {user}, {passphrase}, "
+            f"keyring location: {KeyringWrapper.get_shared_instance().keyring.keyring_path}"
+        )
 
-    # Wait a short while between writing and reading. Without proper locking, this helps ensure
-    # the concurrent processes get into a bad state
-    sleep(random.random() * 10 % 3)
+        KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase_bytes=passphrase)
 
-    assert KeyringWrapper.get_shared_instance().get_passphrase(service, user) == passphrase
+        # Wait a short while between writing and reading. Without proper locking, this helps ensure
+        # the concurrent processes get into a bad state
+        sleep(random.random() * 10 % 3)
+
+        found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
+        log.warning(f"[pid:{os.getpid()}] received: get_passphrase: {found_passphrase}, expected: {passphrase}")
+        log.warning(f"[pid:{os.getpid()}] inner_payload: {KeyringWrapper.get_shared_instance().keyring.payload_cache}")
+        if found_passphrase != passphrase:
+            log.error(
+                f"[pid:{os.getpid()}] error: didn't get expected passphrase: get_passphrase: {found_passphrase}"
+                f", expected: {passphrase}"
+            )
+        assert found_passphrase == passphrase
 
 
 def dummy_fn_requiring_writer_lock(*args, **kwargs):
@@ -72,8 +84,11 @@ class TestFileKeyringSynchronization(unittest.TestCase):
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_multiple_writers(self):
-        num_workers = 10
-        passphrase_list = list(map(lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}"), range(num_workers)))
+        num_workers = 20
+        keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        passphrase_list = list(
+            map(lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}", keyring_path), range(num_workers))
+        )
 
         # When: spinning off children to each set a passphrase concurrently
         with Pool(processes=num_workers) as pool:
@@ -213,6 +228,10 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         When a child process is holding the lock and aborts/crashes, we should be
         able to acquire the lock
         """
+        # Avoid running on macOS: calling abort() triggers the CrashReporter prompt, interfering with automated testing
+        if platform == "darwin":
+            return
+
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         log.warning(f"[pid:{os.getpid()}] lock_path: {lock_path}")
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
