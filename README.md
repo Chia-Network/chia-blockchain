@@ -25,11 +25,6 @@
 * Total issuance: No upper limit (same as Chia)
 * **Need to Replot**(Can not use chia plots)
 
-* Due to technical reasons, the extraction of 10% of the code from each block has some flaws, so it is modified to extract six months of community fees to the founding block at a time, but the specific uses and costs are still carried out as planned , And pay according to time, and cannot be paid in advance. The calculation method is:
-* **Address1: 3600 X 24 X 200 / 18.75 X 90 X 0.1 = 8294400 Community Rewards 3 Months**
-* **Address2: 3600 X 24 X 200 / 18.75 X 90 X 0.1 = 8294400 Community Rewards 3 Months**
-* We will complete the software improvement work within six months, and activate the new rules in six months, that is, **10% of each block** will be drawn to the community
-
 Chives is a hard fork created by volunteers in the community using Chives code. As a completely decentralized, no reservation, no ICO, and community autonomy cryptocurrency, it can create a low-power, green and environmentally friendly blockchain system with Chia™.
 
 # 2 What is a Chives Farm?
