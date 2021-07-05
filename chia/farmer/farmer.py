@@ -497,8 +497,8 @@ class Farmer:
                 # If the peer cache hasn't been updated for 10x interval, drop it since the harvester doesn't respond
                 if time.time() - last_update > UPDATE_HARVESTER_CACHE_INTERVAL * 10:
                     remove_peers.append(peer_id)
-                for key in remove_peers:
-                    del host_cache[key]
+            for key in remove_peers:
+                del host_cache[key]
             if len(host_cache) == 0:
                 remove_hosts.append(host)
         for key in remove_hosts:
