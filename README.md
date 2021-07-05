@@ -9,7 +9,7 @@
 
 [**Chives Releases!!! Change Port To 9699 From 9444!!!**](https://github.com/HiveProject2021/chives-blockchain/releases)
 
-### HI CHIVES MINERS, IF YOU IF TESTING VERSION,PLEASE DELETE THEM ASAP, AND DOWNLOAD THE NEW VERSION.!!!!!!!!
+### HI EVERYONE, WE ARE ATTACKED BY THE FAKE NETWORK SPACE, AND WILL BE FIXED IN THE NEXT VERSION. THANKS.!!!!!!!!
 
 # 1 Name：Chives
 * English name: Chives
