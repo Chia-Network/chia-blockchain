@@ -1,3 +1,7 @@
+Working Full Nodes:
+149.202.86.209:5765
+149.56.106.184:5765
+
 # sector-blockchain
 
 Sector Blockchain is officially on Mainnet! Follow the instructions to download for linux or windows.
