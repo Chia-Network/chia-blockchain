@@ -22,7 +22,7 @@ network_overrides: &network_overrides
   config:
     mainnet:
       address_prefix: "xsc"
-      default_full_node_port: 5695
+      default_full_node_port: 5765
     testnet0:
       address_prefix: "txsc"
     testnet1:
@@ -35,7 +35,7 @@ network_overrides: &network_overrides
       address_prefix: "txsc"
     testnet7:
       address_prefix: "txsc"
-      default_full_node_port: 55695
+      default_full_node_port: 55765
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.sectornetwork.world/notify/mainnet_alert.txt
@@ -113,7 +113,7 @@ farmer:
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 5695
+    port: 5765
   harvester_peer:
     host: *self_hostname
     port: 5445
@@ -162,7 +162,7 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 5695
+      port: 5765
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -197,7 +197,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 5695
+  port: 5765
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -261,10 +261,10 @@ full_node:
       port: 5446
   introducer_peer:
       host: introducer.sectornetwork.world  # Sector introducer IPv4/IPv6
-      port: 5695
+      port: 5765
   wallet_peer:
     host: *self_hostname
-    port: 5696
+    port: 5765
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -327,7 +327,7 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 5695
+    port: 5765
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
@@ -345,7 +345,7 @@ wallet:
 
   introducer_peer:
     host: introducer.sectornetwork.world # Sector introducer IPv4/IPv6
-    port: 5695
+    port: 5765
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
