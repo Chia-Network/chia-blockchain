@@ -130,9 +130,10 @@ class BlockTools:
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
         )
-        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+        self.community_ph: bytes32 = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.community_master_sk, uint32(0)).get_g1()
         )
+        self.pool_ph: bytes32 = constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH
         self.init_plots(root_path)
 
         create_all_ssl(root_path)
@@ -267,6 +268,7 @@ class BlockTools:
         num_blocks: int,
         block_list_input: List[FullBlock] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
+        community_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         transaction_data: Optional[SpendBundle] = None,
         seed: bytes = b"",
@@ -294,7 +296,9 @@ class BlockTools:
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
-
+        if community_reward_puzzle_hash is None:
+            community_reward_puzzle_hash = self.community_ph
+        
         if len(block_list) == 0:
             initial_block_list_len = 0
             genesis = self.create_genesis_block(
@@ -842,6 +846,7 @@ class BlockTools:
                         proof_of_space,
                         cc_challenge,
                         constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
+                        constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH,
                         PoolTarget(constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0)),
                         self.get_plot_signature,
                         self.get_pool_key_signature,
@@ -1291,6 +1296,7 @@ def get_full_block_and_block_record(
     slot_cc_challenge: bytes32,
     slot_rc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
+    community_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
     start_timestamp: uint64,
     start_height: uint32,
@@ -1334,6 +1340,7 @@ def get_full_block_and_block_record(
         proof_of_space,
         slot_cc_challenge,
         farmer_reward_puzzle_hash,
+        community_reward_puzzle_hash,
         pool_target,
         get_plot_signature,
         get_pool_signature,

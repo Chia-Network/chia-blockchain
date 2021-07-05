@@ -8,7 +8,7 @@ from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chives.consensus.block_record import BlockRecord
-from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chives.consensus.block_rewards import calculate_base_community_reward, calculate_base_farmer_reward, calculate_pool_reward
 from chives.consensus.blockchain_interface import BlockchainInterface
 from chives.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chives.consensus.constants import ConsensusConstants
@@ -47,6 +47,7 @@ def create_foliage(
     total_iters_sp: uint128,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
+    community_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
@@ -67,6 +68,7 @@ def create_foliage(
         total_iters_sp: total iters at the signage point
         timestamp: timestamp to put into the foliage block
         farmer_reward_puzzlehash: where to pay out farming reward
+        community_reward_puzzlehash: where to pay out community reward
         pool_target: where to pay out pool reward
         get_plot_signature: retrieve the signature corresponding to the plot public key
         get_pool_signature: retrieve the signature corresponding to the pool public key
@@ -105,6 +107,7 @@ def create_foliage(
         pool_target,
         pool_target_signature,
         farmer_reward_puzzlehash,
+        community_reward_puzzlehash,
         extension_data,
     )
 
@@ -158,8 +161,16 @@ def create_foliage(
                 uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
                 constants.GENESIS_CHALLENGE,
             )
+            
+            community_coin = create_community_coin(
+                curr.height,
+                curr.community_puzzle_hash,
+                uint64(calculate_base_community_reward(curr.height) + curr.fees),
+                constants.GENESIS_CHALLENGE,
+            )
+            
             assert curr.header_hash == prev_transaction_block.header_hash
-            reward_claims_incorporated += [pool_coin, farmer_coin]
+            reward_claims_incorporated += [pool_coin, farmer_coin, community_coin]
 
             if curr.height > 0:
                 curr = blocks.block_record(curr.prev_hash)
@@ -177,7 +188,13 @@ def create_foliage(
                         calculate_base_farmer_reward(curr.height),
                         constants.GENESIS_CHALLENGE,
                     )
-                    reward_claims_incorporated += [pool_coin, farmer_coin]
+                    community_coin = create_community_coin(
+                        curr.height,
+                        curr.community_puzzle_hash,
+                        calculate_base_community_reward(curr.height),
+                        constants.GENESIS_CHALLENGE,
+                    )
+                    reward_claims_incorporated += [pool_coin, farmer_coin, community_coin]
                     curr = blocks.block_record(curr.prev_hash)
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
@@ -283,6 +300,7 @@ def create_unfinished_block(
     proof_of_space: ProofOfSpace,
     slot_cc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
+    community_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
@@ -311,6 +329,7 @@ def create_unfinished_block(
         proof_of_space: proof of space of the block to create
         slot_cc_challenge: challenge hash at the sp sub-slot
         farmer_reward_puzzle_hash: where to pay out farmer rewards
+        community_reward_puzzle_hash: where to pay out community rewards
         pool_target: where to pay out pool rewards
         get_plot_signature: function that returns signature corresponding to plot public key
         get_pool_signature: function that returns signature corresponding to pool public key
@@ -395,6 +414,7 @@ def create_unfinished_block(
         total_iters_sp,
         timestamp,
         farmer_reward_puzzle_hash,
+        community_reward_puzzle_hash,
         pool_target,
         get_plot_signature,
         get_pool_signature,

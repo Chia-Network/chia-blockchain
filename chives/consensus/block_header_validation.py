@@ -753,22 +753,18 @@ def validate_unfinished_header_block(
             != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
-    elif ( prev_b.height % 10 == 9 ) :
-        # Every 10 blocks reward community 1 block 
-        # Chives Network Code
-        log.warning(f"Every 10 blocks reward community 1 block. Previous Block Heigh: {prev_b.height}")
         if (
-            header_block.foliage.foliage_block_data.pool_target.puzzle_hash
-            != constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH
+            header_block.foliage.foliage_block_data.community_reward_puzzle_hash
+            != constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH
         ):
-            log.error(f"Pool target {header_block.foliage.foliage_block_data.pool_target} hb {header_block}")
-            return None, ValidationError(Err.INVALID_PREFARM)
-        if (
-            header_block.foliage.foliage_block_data.farmer_reward_puzzle_hash
-            != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-        ):
-            return None, ValidationError(Err.INVALID_PREFARM)
+            return None, ValidationError(Err.INVALID_COMMUNITY)
     else:
+        #20A. Check Community Reward Puzzle Hash
+        if (
+            header_block.foliage.foliage_block_data.community_reward_puzzle_hash
+            != constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH
+        ):
+            return None, ValidationError(Err.INVALID_COMMUNITY)
         # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
         if header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
             assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None

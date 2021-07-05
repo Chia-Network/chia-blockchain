@@ -8,7 +8,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from blspy import PrivateKey, G1Element
 
 from chives.cmds.init_funcs import check_keys
-from chives.consensus.block_rewards import calculate_base_farmer_reward
+from chives.consensus.block_rewards import calculate_base_community_reward, calculate_base_farmer_reward, calculate_pool_reward
 from chives.protocols.protocol_message_types import ProtocolMessageTypes
 from chives.server.outbound_message import NodeType, make_msg
 from chives.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -945,6 +945,7 @@ class WalletRpcApi:
         amount = 0
         pool_reward_amount = 0
         farmer_reward_amount = 0
+        community_reward_amount = 0
         fee_amount = 0
         last_height_farmed = 0
         for record in tx_records:
@@ -954,15 +955,17 @@ class WalletRpcApi:
             if record.type == TransactionType.COINBASE_REWARD:
                 pool_reward_amount += record.amount
             if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
+                fee_amount += record.amount - calculate_base_farmer_reward(height) - calculate_base_community_reward(height)
                 farmer_reward_amount += calculate_base_farmer_reward(height)
+                community_reward_amount += calculate_base_community_reward(height)
             amount += record.amount
 
-        assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
+        assert amount == pool_reward_amount + farmer_reward_amount + community_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
             "pool_reward_amount": pool_reward_amount,
             "farmer_reward_amount": farmer_reward_amount,
+            "community_reward_amount": community_reward_amount,
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
         }

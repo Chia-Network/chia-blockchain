@@ -805,25 +805,10 @@ class FullNodeAPI:
                     uint32(0),
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-            elif ( int(time.time()) % 3 == 0 ) :
-                # prev_b.height % 10 == 9
-                # Every 10 blocks reward community 1 block 
-                # Chives Network Code
-                # Chives Log Output
-                # Random 10% miners to mining the Community Block, Not just the Height %10 == 9 
-                self.log.warning("Begin to Mining Community Block. Thanks to your contribution.")
-                self.log.warning(f"Previous Block Heigh: {prev_b.height}")
-                self.log.warning(f"Previous Block % 10  : {prev_b.height % 10 == 9}")
-                # self.log.warning(prev_b)
-                pool_target = PoolTarget(
-                    self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
-                    uint32(prev_b.height + 1),
-                )
-                farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
-                self.log.warning(f"farmer_ph: {farmer_ph}")
-                self.log.warning(pool_target)
+                community_ph = self.full_node.constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH
             else:
                 farmer_ph = request.farmer_puzzle_hash
+                community_ph = self.full_node.constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH
                 if request.proof_of_space.pool_contract_puzzle_hash is not None:
                     pool_target = PoolTarget(request.proof_of_space.pool_contract_puzzle_hash, uint32(0))
                 else:
@@ -878,6 +863,7 @@ class FullNodeAPI:
                 request.proof_of_space,
                 cc_challenge_hash,
                 farmer_ph,
+                community_ph,
                 pool_target,
                 get_plot_sig,
                 get_pool_sig,
@@ -924,6 +910,7 @@ class FullNodeAPI:
                     request.proof_of_space,
                     cc_challenge_hash,
                     farmer_ph,
+                    community_ph,
                     pool_target,
                     get_plot_sig,
                     get_pool_sig,
