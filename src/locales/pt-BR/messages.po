@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-03 07:08\n"
+"PO-Revision-Date: 2021-07-05 23:34\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -40,7 +40,7 @@ msgstr "É recomendado 128 buckets"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:98
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "A colhedora é um serviço executado em uma máquina onde os lotes estão realmente armazenados. Um fazendeiro e uma colheitadeira conversam com um nó completo para ver o estado da corrente. Veja sua rede de colheitadeiras conectadas abaixo Saiba mais"
+msgstr "Harvester é um serviço executado em uma máquina onde os plots estão realmente armazenados. Os serviços de farmer e harvester conversam com um nó completo para ver o estado da blockchain. Veja sua rede de harvesters conectados abaixo Saiba mais"
 
 #: src/electron/main.tsx:422
 #: src/electron/main.tsx:509
@@ -292,7 +292,7 @@ msgstr "Alterar"
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
-msgstr "Alterar banco de dados"
+msgstr "Trocar Pool"
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
@@ -2423,7 +2423,7 @@ msgstr "Sua conexão de nó completo"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "Your Harvester Network"
-msgstr "Sua Rede de Coletores"
+msgstr "Sua Rede Harvester"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
@@ -2431,11 +2431,11 @@ msgstr "Visão geral do seu bolão"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "[Erro 13] Permissão negada. Você está tentando acessar um arquivo / diretório sem ter as permissões necessárias. Provavelmente, uma das pastas do loteamento no seu config.yaml está com problemas."
+msgstr "[Erro 13] Permissão negada. Você está tentando acessar um arquivo / diretório sem ter as permissões necessárias. Provavelmente, uma das pastas de plotagem em seu config.yaml está com problemas."
 
 #: src/util/getDescriptiveError.ts:8
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "[Erro 22] Arquivo não encontrado. Provavelmente, uma das pastas do loteamento em seu config.yaml está com problemas."
+msgstr "[Erro 22] Arquivo não encontrado. Provavelmente, uma das pastas de plotagem em seu config.yaml está com problemas."
 
 #: src/components/wallet/WalletStatusCard.tsx:41
 #: src/components/wallet/Wallets.tsx:143
