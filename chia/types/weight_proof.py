@@ -117,7 +117,7 @@ class SubSlotDataV2(Streamable):
     cc_sp_vdf_output: Optional[ClassgroupElement]  # if is end of slot
     cc_ip_vdf_output: Optional[ClassgroupElement]  # if is end of slot
     cc_slot_end_output: Optional[ClassgroupElement]  # if is end of slot
-    icc_slot_end_info: Optional[VDFInfo]  # if is end of slot
+    icc_slot_end_info_hash: Optional[bytes32]  # if is end of slot
 
     # needed to find correct sp input and iterations
     ip_iters: Optional[uint64]  # if block

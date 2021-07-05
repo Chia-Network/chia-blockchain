@@ -750,9 +750,9 @@ async def _challenge_block_vdfs(
 
 
 def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, prev_deficit: uint8):
-    curr_icc_info = None
+    curr_icc_info_hash = None
     if end_of_slot.infused_challenge_chain is not None:
-        curr_icc_info = end_of_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+        curr_icc_info_hash = end_of_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.get_hash()
     return SubSlotDataV2(
         None,
         None,
@@ -762,7 +762,7 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, prev_deficit: uint8):
         None,
         None,
         end_of_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
-        curr_icc_info if prev_deficit == 0 else None,
+        curr_icc_info_hash if prev_deficit == 0 else None,
         None,
         None,
     )
@@ -1004,15 +1004,11 @@ def _validate_segment(
 
         if ssd.is_end_of_slot():
             prev_hash = cc_sub_slot_hash
-            icc_vdf = ssd.icc_slot_end_info
-            icc_vdf_hash: Optional[bytes32] = None
-            if icc_vdf is not None:
-                icc_vdf_hash = icc_vdf.get_hash()
             assert ssd.cc_slot_end_output
             cc_vdf_info = VDFInfo(prev_hash, curr_ssi, ssd.cc_slot_end_output)
             cc_sub_slot = ChallengeChainSubSlot(
                 cc_vdf_info,
-                icc_vdf_hash,
+                ssd.icc_slot_end_info_hash,
                 None if ses is None else ses.get_hash(),
                 None if ses is None else ses.new_sub_slot_iters,
                 None if ses is None else ses.new_difficulty,
@@ -1385,17 +1381,15 @@ def __get_rc_sub_slot(
 
     assert challenge_slot is not None
     assert challenge_slot.cc_slot_end_output is not None
-    icc_slot_end__hash = None
     assert segment.rc_slot_end_info is not None
     assert segment.cc_slot_end_iterations
     cc_vdf_info = VDFInfo(
         segment.cc_slot_end_challenge, segment.cc_slot_end_iterations, challenge_slot.cc_slot_end_output
     )
-    if challenge_slot.icc_slot_end_info is not None:
-        icc_slot_end__hash = challenge_slot.icc_slot_end_info.get_hash()
+
     cc_sub_slot = ChallengeChainSubSlot(
         cc_vdf_info,
-        icc_slot_end__hash,
+        challenge_slot.icc_slot_end_info_hash,
         ses_hash,
         new_ssi,
         new_diff,
@@ -1404,7 +1398,7 @@ def __get_rc_sub_slot(
     rc_sub_slot = RewardChainSubSlot(
         segment.rc_slot_end_info,
         cc_sub_slot.get_hash(),
-        icc_slot_end__hash,
+        challenge_slot.icc_slot_end_info_hash,
         constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK,
     )
     log.debug(f"sub epoch start, cc sub slot {cc_sub_slot}")
