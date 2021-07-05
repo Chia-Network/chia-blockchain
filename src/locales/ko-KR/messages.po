@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:03\n"
+"PO-Revision-Date: 2021-07-05 11:12\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -724,7 +724,7 @@ msgstr "농장"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
 msgid "Farmer Public Key"
-msgstr ""
+msgstr "파머 공개 키"
 
 #: src/components/block/Block.jsx:269
 msgid "Farmer Puzzle Hash"
