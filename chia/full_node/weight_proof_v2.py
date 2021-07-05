@@ -1190,6 +1190,7 @@ def sub_slot_data_vdf_info(
             return ssd.cc_ip_vdf_output, uint64(sp_total_iters - ssd.total_iters)
     return ClassgroupElement.get_default_element(), sp_iters
 
+
 def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
