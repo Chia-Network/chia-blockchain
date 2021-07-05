@@ -7,7 +7,7 @@ from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
 from chives.consensus.block_record import BlockRecord
-from chives.consensus.block_rewards import calculate_base_community_rewardcalculate_base_farmer_reward, calculate_pool_reward
+from chives.consensus.block_rewards import calculate_base_community_reward, calculate_base_farmer_reward, calculate_pool_reward
 from chives.consensus.block_root_validation import validate_block_merkle_roots
 from chives.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chives.consensus.blockchain_interface import BlockchainInterface
