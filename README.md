@@ -56,4 +56,4 @@ npm run electron&
 
 ##Windows Installer
 
-Download the EXE http://sectornetwork.world/windows/
+Download the EXE https://github.com/Sector-Network/sector-blockchain/releases/tag/Window-Release
