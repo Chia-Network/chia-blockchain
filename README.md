@@ -1,5 +1,7 @@
 # sector-blockchain
 
+Sector Blockchain is officially on Mainnet! Follow the instructions to download for linux or windows.
+
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
 
 Sector is a modern cryptocurrency built from Chia, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
