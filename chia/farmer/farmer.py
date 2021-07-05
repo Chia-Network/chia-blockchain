@@ -575,31 +575,34 @@ class Farmer:
         time_slept: uint64 = uint64(0)
         refresh_slept = 0
         while not self._shut_down:
-            if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
-                now = time.time()
-                removed_keys: List[bytes32] = []
-                for key, add_time in self.cache_add_time.items():
-                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
-                        self.sps.pop(key, None)
-                        self.proofs_of_space.pop(key, None)
-                        self.quality_str_to_identifiers.pop(key, None)
-                        self.number_of_responses.pop(key, None)
-                        removed_keys.append(key)
-                for key in removed_keys:
-                    self.cache_add_time.pop(key, None)
-                time_slept = uint64(0)
-                log.debug(
-                    f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
-                    f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
-                )
-            time_slept += 1
-            refresh_slept += 1
-            # Periodically refresh GUI to show the correct download/upload rate.
-            if refresh_slept >= 30:
-                self.state_changed("add_connection", {})
-                refresh_slept = 0
+            try:
+                if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
+                    now = time.time()
+                    removed_keys: List[bytes32] = []
+                    for key, add_time in self.cache_add_time.items():
+                        if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
+                            self.sps.pop(key, None)
+                            self.proofs_of_space.pop(key, None)
+                            self.quality_str_to_identifiers.pop(key, None)
+                            self.number_of_responses.pop(key, None)
+                            removed_keys.append(key)
+                    for key in removed_keys:
+                        self.cache_add_time.pop(key, None)
+                    time_slept = uint64(0)
+                    log.debug(
+                        f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
+                        f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
+                    )
+                time_slept += 1
+                refresh_slept += 1
+                # Periodically refresh GUI to show the correct download/upload rate.
+                if refresh_slept >= 30:
+                    self.state_changed("add_connection", {})
+                    refresh_slept = 0
 
-            # Handles harvester plots cache cleanup and updates
-            await self.update_cached_harvesters()
+                # Handles harvester plots cache cleanup and updates
+                await self.update_cached_harvesters()
+            except Exception:
+                log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.print_exc()}")
 
             await asyncio.sleep(1)
