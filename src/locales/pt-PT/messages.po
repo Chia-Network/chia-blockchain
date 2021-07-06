@@ -86,9 +86,9 @@ msgstr "Adicionar Plot à fila"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
-#: src/components/plot/add/PlotAdd.tsx:166
+#: src/components/plot/add/PlotAdd.tsx:164
 #: src/components/plot/overview/PlotOverviewHero.tsx:41
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:222
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:227
 #: src/components/plotNFT/PlotNFTCard.tsx:269
 msgid "Add a Plot"
 msgstr "Adicionar um Plot"
@@ -105,7 +105,7 @@ msgstr "Adicionar um plot"
 msgid "Add plot directory"
 msgstr "Adicionar diretório de plots"
 
-#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:49
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
 msgstr ""
 
@@ -271,7 +271,7 @@ msgstr "Pode ser feito backup para semente mnemônica"
 #: src/components/farm/FarmManageFarmingRewards.tsx:198
 #: src/components/fullNode/FullNodeAddConnection.tsx:89
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
-#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:30
 #: src/components/trading/CreateOffer.jsx:139
 #: src/components/trading/TradingOverview.jsx:400
 #: src/components/trading/ViewOffer.jsx:71
@@ -316,7 +316,7 @@ msgstr "Chia"
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki da Chia Blockchain"
 
-#: src/components/wallet/standard/WalletStandard.tsx:649
+#: src/components/wallet/standard/WalletStandard.tsx:647
 msgid "Chia Wallet"
 msgstr "Carteira Chia"
 
@@ -453,8 +453,8 @@ msgid "Copy to Clipboard"
 msgstr "Copiar para área de transferência"
 
 #: src/components/backup/BackupCreate.tsx:78
-#: src/components/plot/add/PlotAdd.tsx:183
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+#: src/components/plot/add/PlotAdd.tsx:181
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:175
 #: src/components/wallet/create/createExistingColouredCoin.jsx:133
 #: src/components/wallet/create/createNewColouredCoin.jsx:142
 #: src/components/wallet/create/createRLAdmin.jsx:307
@@ -552,13 +552,13 @@ msgstr "Criando Plot NFT para Auto-Pool"
 msgid "Currency code is not defined"
 msgstr "O código da moeda não está definido"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:133
-#: src/components/plotNFT/PlotNFTCard.tsx:180
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:136
+#: src/components/plotNFT/PlotNFTCard.tsx:178
 msgid "Current Difficulty"
 msgstr "Dificuldade atual"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:150
-#: src/components/plotNFT/PlotNFTCard.tsx:197
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:153
+#: src/components/plotNFT/PlotNFTCard.tsx:195
 msgid "Current Points Balance"
 msgstr "Saldo de Pontos Atuais"
 
@@ -605,7 +605,7 @@ msgid "Delete Plot"
 msgstr "Eliminar Plot"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:312
-#: src/components/wallet/standard/WalletStandard.tsx:665
+#: src/components/wallet/standard/WalletStandard.tsx:663
 msgid "Delete Unconfirmed Transactions"
 msgstr "Excluir transações não confirmadas"
 
@@ -995,7 +995,7 @@ msgstr "Intervalo"
 msgid "Invalid state"
 msgstr "Estado Inválido"
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:95
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:92
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 msgstr ""
 
@@ -1047,17 +1047,17 @@ msgstr "Última altura cultivada"
 msgid "Latest Block Challenges"
 msgstr "Desafios de bloco mais recentes"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:287
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:292
 #: src/components/plotNFT/PlotNFTCard.tsx:347
 msgid "Launcher Id"
 msgstr "ID do Launcher"
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:106
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:95
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:103
 msgid "Learn More"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTState.tsx:59
+#: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
 msgstr "Saindo da Pool"
 
@@ -1252,8 +1252,8 @@ msgstr "Plots não encontrados"
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Note que isto não muda os seus endereços de pagamento de pooling. isto afeta apenas plots no formato antigo e a recompensa de 0.25XCH de plots em pooling."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:112
-#: src/components/plotNFT/PlotNFTCard.tsx:159
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
+#: src/components/plotNFT/PlotNFTCard.tsx:157
 msgid "Number of Plots"
 msgstr "Número de Plots"
 
@@ -1266,8 +1266,8 @@ msgid "Number of threads"
 msgstr "Número de processos"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:119
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:108
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:113
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:116
 msgid "OK"
 msgstr "OK"
 
@@ -1487,18 +1487,18 @@ msgstr "Efetuar Plotting com bitfield habilitado irá efetuar menos de 30% de es
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
-#: src/components/plotNFT/PlotNFTCard.tsx:215
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:171
+#: src/components/plotNFT/PlotNFTCard.tsx:213
 msgid "Points Found Since Start"
 msgstr "Pontos encontrados desde o Início"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:179
-#: src/components/plotNFT/PlotNFTCard.tsx:226
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:182
+#: src/components/plotNFT/PlotNFTCard.tsx:224
 msgid "Points Found in Last 24 Hours"
 msgstr "Pontos encontrados nas últimas 24 horas"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:188
-#: src/components/plotNFT/PlotNFTCard.tsx:235
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:191
+#: src/components/plotNFT/PlotNFTCard.tsx:233
 msgid "Points Successful in Last 24 Hours"
 msgstr ""
 
@@ -1515,12 +1515,12 @@ msgstr "Endereço do Contrato da Pool"
 msgid "Pool Key"
 msgstr "Chave da Pool"
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:78
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:60
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:74
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:65
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:79
 msgid "Pool Payout Instructions"
 msgstr ""
 
@@ -1565,14 +1565,14 @@ msgstr "A Pool não fornece target_puzzle_hash."
 msgid "Pool public key:"
 msgstr "Chave Pública da Pool:"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:264
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:269
 #: src/components/plotNFT/PlotNFTCard.tsx:324
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
 msgstr "Pool:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
-#: src/components/plotNFT/PlotNFTState.tsx:60
+#: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
 msgstr "Pooling"
 
@@ -1811,7 +1811,7 @@ msgid "Selected"
 msgstr "Selecionado"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
-#: src/components/plotNFT/PlotNFTState.tsx:58
+#: src/components/plotNFT/PlotNFTState.tsx:57
 msgid "Self Pooling"
 msgstr "Auto Pooling"
 
@@ -1872,7 +1872,7 @@ msgstr "Ignora a adição de um diretório final ao harvester para farming"
 msgid "Smooth out your XCH farming rewards by joining a pool."
 msgstr "Suavize as suas recompensas de recompensas XCH ao se juntar a uma pool."
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:56
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
 msgstr ""
 
@@ -1912,11 +1912,11 @@ msgstr "Limite de gastos (chia por intervalo): {0}"
 msgid "State"
 msgstr "Estado"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:62
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:72
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:59
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:104
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:107
-#: src/components/plotNFT/PlotNFTCard.tsx:144
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:110
+#: src/components/plotNFT/PlotNFTCard.tsx:142
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
@@ -2034,15 +2034,15 @@ msgstr "O nó não está sincronizado"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "O nó está sincronizando, o que significa que está baixando blocos de outros nós, para chegar ao bloco mais recente da cadeia"
 
-#: src/hooks/usePoolInfo.ts:55
+#: src/hooks/usePoolInfo.ts:59
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
 msgstr "A URL da pool \"{normalizedUrl}\" não está funcionando. É uma pool? Erro: {0}"
 
-#: src/hooks/usePoolInfo.ts:38
+#: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
 msgstr ""
 
-#: src/hooks/usePoolInfo.ts:41
+#: src/hooks/usePoolInfo.ts:44
 msgid "The pool URL speciefied is not valid. {normalizedUrl}"
 msgstr ""
 
@@ -2070,7 +2070,7 @@ msgstr "O número total de VDF (função de atraso verificável) ou prova de ite
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "As taxas de transações totais neste bloco. Recompensa para o farmer."
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:86
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:91
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr ""
 
@@ -2082,8 +2082,8 @@ msgstr "Esses plots são inválidos, você pode querer excluí-los."
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "Isso permite que você adicione um diretório que contenha plots. Se você não criou nenhuns plots, vá para o ecrã de plotting."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:124
-#: src/components/plotNFT/PlotNFTCard.tsx:171
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:127
+#: src/components/plotNFT/PlotNFTCard.tsx:169
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "Essa dificuldade é uma dificuldade artificalmente menor do que na rede real, e é usado no farming, para encontrar mais provas e enviá-las para a pool. Quanto mais plots você tiver, maior a dificuldade você terá, no entanto, a dificuldade não afeta as recompensas."
 
@@ -2121,13 +2121,13 @@ msgstr "Esta é a quantidade total de chia no blockchain no sub-bloco de pico at
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Este é o saldo total + saldo pendente: é o seu saldo após a confirmação de todas as transações pendentes."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:143
-#: src/components/plotNFT/PlotNFTCard.tsx:190
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:146
+#: src/components/plotNFT/PlotNFTCard.tsx:188
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "Este é o número total de pontos que esta plotNFT tem com este pool, desde o último pagamento. A pool irá redefinir os pontos depois de fazer um pagamento."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:160
-#: src/components/plotNFT/PlotNFTCard.tsx:207
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:163
+#: src/components/plotNFT/PlotNFTCard.tsx:205
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "Este é o número total de pontos que o seu farmer encontrou para esta plataforma NFT. Cada gráfico k32 obterá cerca de 10 pontos por dia, portanto se você tiver 10TiB, deve esperar cerca de 1000 pontos por dia, ou 41 pontos por hora."
 
@@ -2135,11 +2135,11 @@ msgstr "Este é o número total de pontos que o seu farmer encontrou para esta p
 msgid "This node is fully caught up and validating the network"
 msgstr "Este nó está totalmente atualizado e validando a rede"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:300
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:305
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "Este gráfico de NFT está atribuído a uma chave diferente. Você ainda pode criar um lote de NFT, mas não pode fazer alterações."
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:48
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
 msgstr ""
 
@@ -2189,7 +2189,7 @@ msgstr "Balanço Total"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:21
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:20
 msgid "Total Iterations"
 msgstr "Iterações Totais"
 
@@ -2209,7 +2209,7 @@ msgstr "Tamanho total dos Plots"
 msgid "Total VDF Iterations"
 msgstr "Total de iterações VDF"
 
-#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:23
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:22
 msgid "Total iterations since the start of the blockchain"
 msgstr "Total de iterações desde o início do blockchain"
 
@@ -2257,7 +2257,7 @@ msgstr "Tipo"
 msgid "Unable to create plot NFT"
 msgstr "Não foi possível criar um plot NFT"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:149
+#: src/components/plotNFT/PlotNFTCard.tsx:147
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
 msgstr "Recompensas não reclamadas"
@@ -2312,12 +2312,12 @@ msgstr "Ver Registo"
 msgid "View Offer"
 msgstr "Ver oferta"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:251
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 msgid "View Payout Instructions"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:236
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:241
 #: src/components/plotNFT/PlotNFTCard.tsx:283
 msgid "View Pool Login Link"
 msgstr ""
@@ -2350,7 +2350,7 @@ msgid "Waiting for the transaction to be confirmed"
 msgstr "Aguardando a confirmação da transação"
 
 #: src/components/pool/PoolOverview.tsx:185
-#: src/components/wallet/standard/WalletStandard.tsx:676
+#: src/components/wallet/standard/WalletStandard.tsx:674
 msgid "Wallet Status:"
 msgstr "Estado da carteira:"
 
@@ -2486,7 +2486,7 @@ msgstr "Você precisa resgatar as suas recompensas primeiro"
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
 #~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
-#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:44
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
 msgstr ""
 
