@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 05:46\n"
+"PO-Revision-Date: 2021-07-06 23:46\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -384,7 +384,7 @@ msgstr "Confirmar desconexão"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Confirmação"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -879,6 +879,10 @@ msgstr "Tela Cheia"
 msgid "Generate New Colour"
 msgstr "Gerar Nova Cor"
 
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
 #: src/components/pool/PoolOverview.tsx:176
 msgid "Grid view"
 msgstr "Visualização em grade"
@@ -1051,7 +1055,7 @@ msgstr "Id do lançador"
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
-msgstr ""
+msgstr "Saiba Mais"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1449,7 +1453,7 @@ msgstr "O lote é duplicado de {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
-#~ msgstr "LoteNFT está transicionando para (estado alvo)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
@@ -1870,7 +1874,7 @@ msgstr "Suavize suas recompensas de coleta XCH ao se juntar a um bolão."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Algo deu errado"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2044,7 +2048,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
-#~ msgstr "A URL especifica do bolão não é válida. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
@@ -2578,3 +2582,4 @@ msgstr "{currencyCode} Taxas de transação do usuário"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
