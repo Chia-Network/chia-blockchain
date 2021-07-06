@@ -173,11 +173,7 @@ class Farmer:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 
-    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig, *, enforce_https=True) -> Optional[Dict]:
-        if enforce_https and not pool_config.pool_url.startswith("https://"):
-            error_msg = f"Pooling configuration URLs must be HTTPS on mainnet {pool_config.pool_url}"
-            self.handle_failed_pool_response(pool_config.p2_singleton_puzzle_hash, error_msg)
-            return None
+    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
@@ -344,11 +340,15 @@ class Farmer:
                 if pool_config.pool_url == "":
                     continue
 
+                enforce_https = config["full_node"]["selected_network"] == "mainnet"
+                if enforce_https and not pool_config.pool_url.startswith("https://"):
+                    self.log.error(f"Pool URLs must be HTTPS on mainnet {pool_config.pool_url}")
+                    continue
+
                 # TODO: Improve error handling below, inform about unexpected failures
                 if time.time() >= pool_state["next_pool_info_update"]:
                     # Makes a GET request to the pool to get the updated information
-                    enforce_https = config["full_node"]["selected_network"] == "mainnet"
-                    pool_info = await self._pool_get_pool_info(pool_config, enforce_https=enforce_https)
+                    pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
                         pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
