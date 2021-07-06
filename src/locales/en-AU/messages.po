@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_AU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 12:15\n"
+"PO-Revision-Date: 2021-07-06 23:47\n"
 "Last-Translator: \n"
 "Language-Team: English, Australia\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -878,6 +878,10 @@ msgstr "Full Screen"
 #: src/components/wallet/create/createNewColouredCoin.jsx:102
 msgid "Generate New Colour"
 msgstr "Generate New Colour"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "Grid view"
@@ -2578,3 +2582,4 @@ msgstr "{currencyCode} User Transaction Fees, extra beer money"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
