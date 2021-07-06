@@ -1267,7 +1267,6 @@ class FullNode:
                 + str(round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3))
                 + "%"
             )
-            self.log.warning("block.transactions_info is not None 1270")
             if block.transactions_info is not None
             else ""
         )
