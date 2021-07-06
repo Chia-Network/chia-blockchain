@@ -122,6 +122,7 @@ class TestRpc:
                 block_list_input=blocks,
                 guarantee_transaction_block=True,
                 farmer_reward_puzzle_hash=ph,
+                community_reward_puzzle_hash=ph,
                 pool_reward_puzzle_hash=ph,
             )
             for block in blocks[-2:]:

@@ -26,6 +26,7 @@ class FarmerRpcClient(RpcClient):
         response = await self.fetch("get_reward_targets", {"search_for_private_key": search_for_private_key})
         return_dict = {
             "farmer_target": response["farmer_target"],
+            "community_target": response["community_target"],
             "pool_target": response["pool_target"],
         }
         if "have_pool_sk" in response:

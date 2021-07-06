@@ -190,6 +190,7 @@ class FarmerAPI:
                         agg_sig_cc_sp,
                         agg_sig_rc_sp,
                         self.farmer.farmer_target,
+                        self.farmer.community_target,
                         pool_target,
                         pool_target_signature,
                     )

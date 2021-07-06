@@ -147,12 +147,14 @@ class Farmer:
                         stop_searching_for_pool = True
             return {
                 "farmer_target": self.farmer_target_encoded,
+                "community_target": self.constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH,
                 "pool_target": self.pool_target_encoded,
                 "have_farmer_sk": stop_searching_for_farmer,
                 "have_pool_sk": stop_searching_for_pool,
             }
         return {
             "farmer_target": self.farmer_target_encoded,
+            "community_target": self.constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH,
             "pool_target": self.pool_target_encoded,
         }
 

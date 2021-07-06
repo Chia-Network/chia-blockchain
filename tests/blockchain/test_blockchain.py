@@ -10,7 +10,7 @@ import pytest
 from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
-from chives.consensus.block_rewards import calculate_base_farmer_reward
+from chives.consensus.block_rewards import calculate_base_farmer_reward, calculate_base_community_reward
 from chives.consensus.blockchain import ReceiveBlockResult
 from chives.consensus.coinbase import create_community_coin, create_farmer_coin, create_pool_coin
 from chives.consensus.pot_iterations import is_overflow_block
@@ -1755,6 +1755,7 @@ class TestBodyValidation:
             guarantee_transaction_block=True,
             pool_reward_puzzle_hash=bt.pool_ph,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             genesis_timestamp=time.time() - 1000,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1802,6 +1803,7 @@ class TestBodyValidation:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1839,6 +1841,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1927,6 +1930,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1962,6 +1966,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2034,17 +2039,18 @@ class TestBodyValidation:
         pass
         #
         # new_test_constants = test_constants.replace(
-        #     **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH": bt.community_ph}
         # )
         # b, connection, db_path = await create_blockchain(new_test_constants)
         # bt_2 = BlockTools(new_test_constants)
         # bt_2.constants = bt_2.constants.replace(
-        #     **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH": bt.community_ph}
         # )
         # blocks = bt_2.get_consecutive_blocks(
         #     3,
         #     guarantee_transaction_block=True,
         #     farmer_reward_puzzle_hash=bt.pool_ph,
+        #     community_reward_puzzle_hash=bt.pool_ph,
         #     pool_reward_puzzle_hash=bt.pool_ph,
         # )
         # assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2082,6 +2088,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2133,6 +2140,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2168,6 +2176,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2198,6 +2207,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2227,6 +2237,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2261,6 +2272,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2317,6 +2329,7 @@ class TestBodyValidation:
             block_list_input=blocks_reorg[:-1],
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=rewards_ph,
+            community_reward_puzzle_hash=bt.community_ph,
         )
         for block in blocks_reorg[-10:]:
             r, e, _ = await b.receive_block(block)
@@ -2363,6 +2376,7 @@ class TestBodyValidation:
             3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -2533,6 +2547,7 @@ class TestReorgs:
             2,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            community_reward_puzzle_hash=bt.community_ph,
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
@@ -2544,6 +2559,7 @@ class TestReorgs:
             2,
             blocks_fork,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            community_reward_puzzle_hash=bt.community_ph,
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
             seed=b"1245",
@@ -2564,6 +2580,7 @@ class TestReorgs:
             guarantee_transaction_block=True,
             pool_reward_puzzle_hash=bt.pool_ph,
             farmer_reward_puzzle_hash=bt.pool_ph,
+            community_reward_puzzle_hash=bt.community_ph,
         )
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK

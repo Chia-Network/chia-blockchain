@@ -31,6 +31,7 @@ class TestFilter:
             10,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=ph,
+            community_reward_puzzle_hash=ph,
             pool_reward_puzzle_hash=ph,
         )
         for i in range(1, num_blocks):
