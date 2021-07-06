@@ -12,7 +12,7 @@ from clvm.casts import int_to_bytes
 
 from chives.consensus.block_rewards import calculate_base_farmer_reward
 from chives.consensus.blockchain import ReceiveBlockResult
-from chives.consensus.coinbase import create_farmer_coin
+from chives.consensus.coinbase import create_community_coin, create_farmer_coin, create_pool_coin
 from chives.consensus.pot_iterations import is_overflow_block
 from chives.full_node.bundle_tools import detect_potential_template_generator
 from chives.types.blockchain_format.classgroup import ClassgroupElement

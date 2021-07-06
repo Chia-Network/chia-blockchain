@@ -11,7 +11,7 @@ from chives.consensus.block_rewards import calculate_base_community_reward, calc
 from chives.consensus.block_root_validation import validate_block_merkle_roots
 from chives.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chives.consensus.blockchain_interface import BlockchainInterface
-from chives.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chives.consensus.coinbase import create_community_coin, create_farmer_coin, create_pool_coin
 from chives.consensus.constants import ConsensusConstants
 from chives.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from chives.consensus.find_fork_point import find_fork_point_in_chain
