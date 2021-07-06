@@ -1130,11 +1130,13 @@ class FullNode:
         """
         block: FullBlock = respond_block.block
         if self.sync_store.get_sync_mode():
+            self.log.warning("self.sync_store.get_sync_mode() CODE:FULL_NODE.PY")
             return None
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
         if self.blockchain.contains_block(header_hash):
+            self.log.warning("self.blockchain.contains_block(header_hash)")
             return None
 
         pre_validation_result: Optional[PreValidationResult] = None
@@ -1144,6 +1146,7 @@ class FullNode:
             and block.transactions_info.generator_root != bytes([0] * 32)
             and block.transactions_generator is None
         ):
+            self.log.warning("This is the case where we already had the unfinished block, and asked for this block without")
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
@@ -1153,6 +1156,7 @@ class FullNode:
                 and unf_block.transactions_generator is not None
                 and unf_block.foliage_transaction_block == block.foliage_transaction_block
             ):
+                self.log.warning("pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)")
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1161,6 +1165,7 @@ class FullNode:
                     transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
                 )
             else:
+                self.log.warning("We still do not have the correct information for this block, perhaps there is a duplicate block")
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
                 # with the same unfinished block hash in the cache, so we need to fetch the correct one
                 if peer is None:
@@ -1188,6 +1193,7 @@ class FullNode:
                 return await self.respond_block(block_response, peer)
 
         async with self.blockchain.lock:
+            self.log.warning("After acquiring the lock, check again, because another asyncio thread might have added it")
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
@@ -1224,7 +1230,7 @@ class FullNode:
                 ):
                     self.full_node_store.previous_generator = None
             validation_time = time.time() - validation_start
-
+            self.log.warning("if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:")
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
                 return None
             elif added == ReceiveBlockResult.INVALID_BLOCK:
@@ -1535,7 +1541,9 @@ class FullNode:
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
         try:
-            await self.respond_block(full_node_protocol.RespondBlock(block))
+            RespondBlock_FullNode = full_node_protocol.RespondBlock(block)
+            self.log.warning(RespondBlock_FullNode)
+            await self.respond_block(RespondBlock_FullNode)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
             if timelord_peer is not None:
