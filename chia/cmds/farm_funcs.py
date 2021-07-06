@@ -12,6 +12,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.misc import format_bytes
 from chia.util.misc import format_minutes
+from chia.util.network import is_localhost
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
@@ -211,27 +212,40 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
 
-    total_plot_size = 0
-    total_plots = 0
+    class PlotStats:
+        total_plot_size = 0
+        total_plots = 0
+
     if all_harvesters is not None:
-        harvesters_by_ip: dict = {}
+        harvesters_local: dict = {}
+        harvesters_remote: dict = {}
         for harvester in all_harvesters["harvesters"]:
             ip = harvester["connection"]["host"]
-            if ip not in harvesters_by_ip:
-                harvesters_by_ip[ip] = {}
-            harvesters_by_ip[ip][harvester["connection"]["node_id"]] = harvester
-        for harvester_ip, harvester_peers in harvesters_by_ip.items():
-            print(f"Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
-            for harvester_peer_id, plots in harvester_peers.items():
+            if is_localhost(ip):
+                harvesters_local[harvester["connection"]["node_id"]] = harvester
+            else:
+                if ip not in harvesters_remote:
+                    harvesters_remote[ip] = {}
+                harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
+
+        def print_harvesters(harvester_peers_in: dict):
+            for harvester_peer_id, plots in harvester_peers_in.items():
                 total_plot_size_harvester = sum(map(lambda x: x["file_size"], plots["plots"]))
-                total_plot_size += total_plot_size_harvester
-                total_plots += len(plots["plots"])
+                PlotStats.total_plot_size += total_plot_size_harvester
+                PlotStats.total_plots += len(plots["plots"])
                 print(f"   {len(plots['plots'])} plots of size: {format_bytes(total_plot_size_harvester)}")
 
-        print(f"Plot count for all harvesters: {total_plots}")
+        if len(harvesters_local):
+            print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
+            print_harvesters(harvesters_local)
+        for harvester_ip, harvester_peers in harvesters_remote.items():
+            print(f"Remote Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
+            print_harvesters(harvester_peers)
+
+        print(f"Plot count for all harvesters: {PlotStats.total_plots}")
 
         print("Total size of plots: ", end="")
-        print(format_bytes(total_plot_size))
+        print(format_bytes(PlotStats.total_plot_size))
     else:
         print("Plot count: Unknown")
         print("Total size of plots: Unknown")
@@ -244,10 +258,10 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
 
     minutes = -1
     if blockchain_state is not None and all_harvesters is not None:
-        proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        proportion = PlotStats.total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
 
-    if all_harvesters is not None and total_plots == 0:
+    if all_harvesters is not None and PlotStats.total_plots == 0:
         print("Expected time to win: Never (no plots)")
     else:
         print("Expected time to win: " + format_minutes(minutes))
