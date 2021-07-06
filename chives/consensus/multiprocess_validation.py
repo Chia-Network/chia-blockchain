@@ -156,8 +156,8 @@ async def pre_validate_blocks_multiprocessing(
     recent_blocks_compressed: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
-    log.error("############################################")
-    log.error(blocks)
+    log.info("############################################ 159")
+    log.info(blocks)
     if blocks[0].height > 0:
         if not block_records.contains_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
@@ -184,8 +184,8 @@ async def pre_validate_blocks_multiprocessing(
     for block in blocks:
         block_record_was_present.append(block_records.contains_block(block.header_hash))
     
-    log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    log.error(blocks)
+    log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 187")
+    log.info(blocks)
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
@@ -206,6 +206,8 @@ async def pre_validate_blocks_multiprocessing(
         q_str: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
             constants, challenge, cc_sp_hash
         )
+        log.info("!!q_str 209")
+        log.info(q_str)
         if q_str is None:
             for i, block_i in enumerate(blocks):
                 if not block_record_was_present[i] and block_records.contains_block(block_i.header_hash):
@@ -244,18 +246,24 @@ async def pre_validate_blocks_multiprocessing(
             recent_blocks_compressed[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
-
+        
+    log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 250")
+    log.info(blocks)
     block_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
     for i, block in enumerate(blocks):
         block_dict[block.header_hash] = block
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
-
+            
+    log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 258")
+    log.info(blocks)
     recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
     npc_results_pickled = {}
     for k, v in npc_results.items():
         npc_results_pickled[k] = bytes(v)
     futures = []
+    log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 265")
+    log.info(blocks)
     # Pool of workers to validate blocks concurrently
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
