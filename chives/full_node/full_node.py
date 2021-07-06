@@ -1212,6 +1212,7 @@ class FullNode:
                     added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
                     error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     fork_height: Optional[uint32] = None
+                    self.log.warning("error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH")
                 else:
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
@@ -1229,6 +1230,7 @@ class FullNode:
                     and fork_height < self.full_node_store.previous_generator.block_height
                 ):
                     self.full_node_store.previous_generator = None
+                    self.log.warning("self.full_node_store.previous_generator = None")
             validation_time = time.time() - validation_start
             self.log.warning("if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:")
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
