@@ -259,7 +259,7 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"POST /farmer response: {response}")  # todo which wallet / nft
+                        self.log.info(f"POST /farmer response: {response}")
                         if "error_code" in response:
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
                         return response
