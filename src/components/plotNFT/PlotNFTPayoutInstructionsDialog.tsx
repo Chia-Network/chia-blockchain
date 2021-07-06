@@ -18,7 +18,6 @@ import {
   DialogContent,
   Typography,
 } from '@material-ui/core';
-import { useDispatch } from 'react-redux';
 import PlotNFT from '../../types/PlotNFT';
 import PlotNFTExternal from '../../types/PlotNFTExternal';
 
