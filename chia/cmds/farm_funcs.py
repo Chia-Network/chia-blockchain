@@ -235,7 +235,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
                 PlotStats.total_plots += len(plots["plots"])
                 print(f"   {len(plots['plots'])} plots of size: {format_bytes(total_plot_size_harvester)}")
 
-        if len(harvesters_local):
+        if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
             print_harvesters(harvesters_local)
         for harvester_ip, harvester_peers in harvesters_remote.items():
