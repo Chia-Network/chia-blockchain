@@ -228,7 +228,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
                     harvesters_remote[ip] = {}
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
-        def print_harvesters(harvester_peers_in: dict):
+        def process_harvesters(harvester_peers_in: dict):
             for harvester_peer_id, plots in harvester_peers_in.items():
                 total_plot_size_harvester = sum(map(lambda x: x["file_size"], plots["plots"]))
                 PlotStats.total_plot_size += total_plot_size_harvester
@@ -237,10 +237,10 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
 
         if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
-            print_harvesters(harvesters_local)
+            process_harvesters(harvesters_local)
         for harvester_ip, harvester_peers in harvesters_remote.items():
             print(f"Remote Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
-            print_harvesters(harvester_peers)
+            process_harvesters(harvester_peers)
 
         print(f"Plot count for all harvesters: {PlotStats.total_plots}")
 
