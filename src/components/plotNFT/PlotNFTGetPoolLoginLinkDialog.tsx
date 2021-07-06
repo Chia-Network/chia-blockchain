@@ -33,7 +33,11 @@ export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
   const [error, setError] = useState<Error | undefined>(undefined);
   const [loginLink, setLoginLink] = useState<string | undefined>(undefined);
 
-  const { pool_state: { pool_config: { pool_url, launcher_id } } } = nft;
+  const {
+    pool_state: {
+      pool_config: { pool_url, launcher_id },
+    },
+  } = nft;
 
   function handleClose() {
     onClose();
@@ -68,12 +72,7 @@ export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
   }, [pool_url]); // eslint-disable-line
 
   return (
-    <Dialog
-      disableBackdropClick
-      disableEscapeKeyDown
-      maxWidth="md"
-      open={open}
-    >
+    <Dialog disableBackdropClick disableEscapeKeyDown maxWidth="md" open={open}>
       <DialogTitle>
         <Trans>Pool Login Link</Trans>
       </DialogTitle>
@@ -87,17 +86,14 @@ export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
             <Flex flexDirection="column" gap={2}>
               {error && <Alert severity="error">{error.message}</Alert>}
 
-              <StyledLoginLink variant="body2">
-                {loginLink}
-              </StyledLoginLink>
+              <StyledLoginLink variant="body2">{loginLink}</StyledLoginLink>
 
               <Typography variant="body2" color="textSecondary">
                 <Trans>
-                  It is a one-time login link that can be used to log in to a pool's website.
-                  It contains a signature using the farmer's key from the plot NFT.
-                  Not all pools support this feature.
-                </Trans>
-                {' '}
+                  It is a one-time login link that can be used to log in to a
+                  pool's website. It contains a signature using the farmer's key
+                  from the plot NFT. Not all pools support this feature.
+                </Trans>{' '}
                 <Link
                   target="_blank"
                   href="https://github.com/Chia-Network/pool-reference/blob/main/SPECIFICATION.md#get-login"
@@ -111,10 +107,8 @@ export default function PlotNFTGetPoolLoginLinkDialog(props: Props) {
         </Flex>
       </DialogContent>
       <DialogActions>
-        {loginLink && (
-          <CopyToClipboard value={loginLink} size="medium" />
-        )}
-        
+        {loginLink && <CopyToClipboard value={loginLink} size="medium" />}
+
         <Button onClick={handleClose} color="secondary">
           <Trans>OK</Trans>
         </Button>

@@ -13,7 +13,7 @@ export default function FullNodeCardPeakTime() {
   const value = latestPeakTimestamp
     ? unix_to_short_date(latestPeakTimestamp)
     : '';
-  
+
   const loading = value === undefined;
 
   return (

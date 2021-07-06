@@ -629,9 +629,7 @@ export default function StandardWallet(props: StandardWalletProps) {
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
       >
-        <Trans>
-          Are you sure you want to delete unconfirmed transactions?
-        </Trans>
+        <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
       </ConfirmDialog>,
     );
 

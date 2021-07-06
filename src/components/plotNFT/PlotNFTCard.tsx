@@ -81,10 +81,7 @@ export default function PlotNFTCard(props: Props) {
     nft: {
       pool_state: {
         p2_singleton_puzzle_hash,
-        pool_config: {
-          launcher_id,
-          pool_url,
-        },
+        pool_config: { launcher_id, pool_url },
         points_found_24h,
         points_acknowledged_24h,
       },
@@ -92,7 +89,10 @@ export default function PlotNFTCard(props: Props) {
     },
   } = props;
 
-  const percentPointsSuccessful24 = getPercentPointsSuccessfull(points_acknowledged_24h, points_found_24h);
+  const percentPointsSuccessful24 = getPercentPointsSuccessfull(
+    points_acknowledged_24h,
+    points_found_24h,
+  );
 
   const history = useHistory();
   const openDialog = useOpenDialog();
@@ -119,9 +119,7 @@ export default function PlotNFTCard(props: Props) {
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
       >
-        <Trans>
-          Are you sure you want to delete unconfirmed transactions?
-        </Trans>
+        <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
       </ConfirmDialog>,
     );
 
@@ -237,7 +235,9 @@ export default function PlotNFTCard(props: Props) {
       ),
       value: (
         <>
-          <FormatLargeNumber value={Number(percentPointsSuccessful24 * 100).toFixed(2)} />
+          <FormatLargeNumber
+            value={Number(percentPointsSuccessful24 * 100).toFixed(2)}
+          />
           {' %'}
         </>
       ),

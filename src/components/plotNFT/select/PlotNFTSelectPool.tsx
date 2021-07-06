@@ -119,9 +119,7 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   }
 
   if (walletLoading) {
-    return (
-      <Loading />
-    );
+    return <Loading />;
   }
 
   if (!hasBalance) {

@@ -27,7 +27,7 @@ export default function usePoolInfo(poolUrl?: string): {
     };
 
     if (isMainnet) {
-      isUrlOptions.protocols = ['https'];  
+      isUrlOptions.protocols = ['https'];
     }
 
     const normalizedUrl = normalizeUrl(poolUrl);
@@ -35,10 +35,14 @@ export default function usePoolInfo(poolUrl?: string): {
 
     if (!isValidUrl) {
       if (isMainnet && !normalizedUrl.startsWith('https:')) {
-        throw new Error(t`The pool URL needs to use protocol https. ${normalizedUrl}`);
+        throw new Error(
+          t`The pool URL needs to use protocol https. ${normalizedUrl}`,
+        );
       }
 
-      throw new Error(t`The pool URL speciefied is not valid. ${normalizedUrl}`);
+      throw new Error(
+        t`The pool URL speciefied is not valid. ${normalizedUrl}`,
+      );
     }
 
     try {

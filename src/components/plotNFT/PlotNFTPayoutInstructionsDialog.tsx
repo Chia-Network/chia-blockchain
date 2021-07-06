@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { Alert } from '@material-ui/lab';
-import { CopyToClipboard, Flex, Link, Loading, TextField, Form } from '@chia/core';
+import {
+  CopyToClipboard,
+  Flex,
+  Link,
+  Loading,
+  TextField,
+  Form,
+} from '@chia/core';
 import {
   Button,
   Dialog,
@@ -27,7 +34,11 @@ type Props = {
 
 export default function PlotNFTPayoutInstructionsDialog(props: Props) {
   const { onClose, open, nft } = props;
-  const { pool_state: { pool_config: { pool_payout_instructions } } } = nft;
+  const {
+    pool_state: {
+      pool_config: { pool_payout_instructions },
+    },
+  } = nft;
 
   const dispatch = useDispatch();
   const [loading, setLoading] = useState<boolean>(false);
@@ -46,16 +57,10 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
     onClose();
   }
 
-  function handleSubmit() {
-  }
+  function handleSubmit() {}
 
   return (
-    <Dialog
-      disableBackdropClick
-      disableEscapeKeyDown
-      maxWidth="md"
-      open={open}
-    >
+    <Dialog disableBackdropClick disableEscapeKeyDown maxWidth="md" open={open}>
       <DialogTitle>
         <Trans>Pool Payout Instructions</Trans>
       </DialogTitle>
@@ -84,9 +89,12 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
 
               <Typography variant="body2" color="textSecondary">
                 <Trans>
-                  These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier.
-                </Trans>
-                {' '}
+                  These are the instructions for how the farmer wants to get
+                  paid. By default this will be an XCH address, but it can be
+                  set to any string with a size of less than 1024 characters, so
+                  it can represent another blockchain or payment system
+                  identifier.
+                </Trans>{' '}
                 <Link
                   target="_blank"
                   href="https://github.com/Chia-Network/pool-reference/blob/main/SPECIFICATION.md#payloadpayout_instructions"
@@ -103,7 +111,7 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
         {loginLink && (
           <CopyToClipboard value={pool_payout_instructions} size="medium" />
         )}
-        
+
         <Button onClick={handleClose} color="secondary">
           <Trans>OK</Trans>
         </Button>

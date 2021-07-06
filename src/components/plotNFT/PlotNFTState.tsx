@@ -44,8 +44,7 @@ export default function PlotNFTState(props: Props) {
         </StateTypography>
         <TooltipIcon>
           <Trans>
-            PlotNFT is transitioning to (target state).
-            This can take a while. 
+            PlotNFT is transitioning to (target state). This can take a while.
             Please do not close the application until this is finalized.
           </Trans>
         </TooltipIcon>

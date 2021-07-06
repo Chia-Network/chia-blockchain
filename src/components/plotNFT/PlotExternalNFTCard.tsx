@@ -20,7 +20,7 @@ import {
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
-import { Link as LinkIcon, Payment as PaymentIcon, } from '@material-ui/icons';
+import { Link as LinkIcon, Payment as PaymentIcon } from '@material-ui/icons';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTExternalState from './PlotNFTExternalState';
 import PlotIcon from '../icons/Plot';
@@ -74,7 +74,10 @@ export default function PlotExternalNFTCard(props: Props) {
     },
   } = props;
 
-  const percentPointsSuccessful24 = getPercentPointsSuccessfull(points_acknowledged_24h, points_found_24h);
+  const percentPointsSuccessful24 = getPercentPointsSuccessfull(
+    points_acknowledged_24h,
+    points_found_24h,
+  );
 
   const history = useHistory();
   const openDialog = useOpenDialog();
@@ -190,7 +193,9 @@ export default function PlotExternalNFTCard(props: Props) {
       ),
       value: (
         <>
-          <FormatLargeNumber value={Number(percentPointsSuccessful24 * 100).toFixed(2)} />
+          <FormatLargeNumber
+            value={Number(percentPointsSuccessful24 * 100).toFixed(2)}
+          />
           {' %'}
         </>
       ),

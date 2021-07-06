@@ -142,9 +142,7 @@ export default function PlotAdd() {
 
       history.push('/dashboard/plot');
     } catch (error) {
-      await openDialog((
-        <AlertDialog>{error.message}</AlertDialog>
-      ));
+      await openDialog(<AlertDialog>{error.message}</AlertDialog>);
     } finally {
       setLoading(false);
     }
