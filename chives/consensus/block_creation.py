@@ -152,7 +152,10 @@ def create_foliage(
 
             assert curr.fees is not None
             pool_coin = create_pool_coin(
-                curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height), constants.GENESIS_CHALLENGE
+                curr.height, 
+                curr.pool_puzzle_hash, 
+                calculate_pool_reward(curr.height), 
+                constants.GENESIS_CHALLENGE,
             )
 
             farmer_coin = create_farmer_coin(
