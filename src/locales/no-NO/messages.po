@@ -371,7 +371,7 @@ msgstr "Farget mynt"
 msgid "Coloured Coin Options"
 msgstr "Farget mynt alternativer"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:166
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:168
 #: src/electron/main.tsx:195
 #: src/hooks/useAbsorbRewards.tsx:46
 msgid "Confirm"
@@ -797,7 +797,7 @@ msgid "Farming Status"
 msgstr "Jordbruk status"
 
 #: src/components/core/components/Fee/Fee.tsx:48
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:152
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:154
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
 #: src/components/pool/PoolInfo.tsx:17
 #: src/components/wallet/WalletHistory.tsx:66
@@ -1319,6 +1319,7 @@ msgstr ""
 msgid "Pending Total Balance"
 msgstr ""
 
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
 #: src/hooks/useAbsorbRewards.tsx:45
 msgid "Please Confirm"
 msgstr ""
@@ -2489,7 +2490,7 @@ msgstr ""
 msgid "You need {currencyCode} to join a pool."
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:135
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
 msgstr ""
 
@@ -2581,4 +2582,3 @@ msgstr "{currencyCode} brukertransaksjonsgebyr"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-
