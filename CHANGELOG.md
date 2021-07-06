@@ -21,7 +21,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
-- We update chiapos to version 1.0.3. This adds parallel reads to GetFullProof. Thanks to @marcoabreu ! We now print target/final directory early in the logs refs and log process ID. Thanks to @grayfallstown ! We are now using Gulrak 1.5.6.
+- We updated chiapos to version 1.0.3. This adds parallel reads to GetFullProof. Thanks to @marcoabreu ! We now print target/final directory early in the logs refs and log process ID. Thanks to @grayfallstown ! We are now using Gulrak 1.5.6.
 @683280 optimized code in phase1.hpp. @jespino and @mrhacky started migrating to flags instead of booleans parameters for `show_progress` and `nobitfield`. If you are providing third-party tools you may need to make adjustments if relying on the chiapos log.
 - Updated chiavdf to version 1.0.2 to fix certain tests.
 - Windows builds now rely upon Python 3.9 which obviates the fix in 1.1.7.
