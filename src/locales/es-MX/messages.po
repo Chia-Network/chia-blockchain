@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-03 19:34\n"
+"PO-Revision-Date: 2021-07-06 23:46\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -879,6 +879,10 @@ msgstr "Pantalla Completa"
 msgid "Generate New Colour"
 msgstr "Generar Nuevo Color"
 
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
 #: src/components/pool/PoolOverview.tsx:176
 msgid "Grid view"
 msgstr "Vista de cuadrícula"
@@ -1449,7 +1453,7 @@ msgstr "La parcela es un duplicado de {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
-#~ msgstr "ParcelaNFT está pasando a (estado de destino)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
@@ -2044,7 +2048,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
-#~ msgstr "La URL del conjunto especificada no es válida. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
@@ -2578,3 +2582,4 @@ msgstr "{currencyCode} Tarifas de Transacción del Usuario"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
