@@ -1196,6 +1196,7 @@ class FullNode:
             self.log.warning("After acquiring the lock, check again, because another asyncio thread might have added it")
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
+                self.log.warning("self.blockchain.contains_block(header_hash) 1199")
                 return None
             validation_start = time.time()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
@@ -1234,6 +1235,7 @@ class FullNode:
             validation_time = time.time() - validation_start
             self.log.warning("if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:")
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
+                self.log.warning("added == ReceiveBlockResult.ALREADY_HAVE_BLOCK: 1238")
                 return None
             elif added == ReceiveBlockResult.INVALID_BLOCK:
                 assert error_code is not None
@@ -1244,6 +1246,7 @@ class FullNode:
                 self.log.info(f"Disconnected block {header_hash} at height {block.height}")
                 return None
             elif added == ReceiveBlockResult.NEW_PEAK:
+                self.log.warning("added == ReceiveBlockResult.NEW_PEAK: 1249")
                 # Only propagate blocks which extend the blockchain (becomes one of the heads)
                 new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 assert new_peak is not None and fork_height is not None
@@ -1255,6 +1258,7 @@ class FullNode:
                     f"Received orphan block of height {block.height} rh " f"{block.reward_chain_block.get_hash()}"
                 )
             else:
+                self.log.warning("# Should never reach here, all the cases are covered 1261")
                 # Should never reach here, all the cases are covered
                 raise RuntimeError(f"Invalid result from receive_block {added}")
         percent_full_str = (
@@ -1263,6 +1267,7 @@ class FullNode:
                 + str(round(100.0 * float(block.transactions_info.cost) / self.constants.MAX_BLOCK_COST_CLVM, 3))
                 + "%"
             )
+            self.log.warning("block.transactions_info is not None 1270")
             if block.transactions_info is not None
             else ""
         )
