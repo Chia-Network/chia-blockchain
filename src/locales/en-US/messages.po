@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-01 12:15\n"
+"PO-Revision-Date: 2021-07-06 23:46\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -154,7 +154,7 @@ msgstr "Are you sure you want to disconnect?"
 
 #: src/electron/main.tsx:197
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr "Are you sure you want to quit? GUI plotting and farming will stop."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -1246,7 +1246,7 @@ msgstr "Not connected"
 
 #: src/components/plot/PlotsNotFound.tsx:37
 msgid "Not found Plots"
-msgstr "Not found Plots"
+msgstr "Missing Plots"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:186
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
@@ -1449,7 +1449,7 @@ msgstr "Plot in Parallel"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:46
 msgid "Plot is duplicate of {0}"
-msgstr "Plot is duplicate of {0}"
+msgstr "Plot is a duplicate of {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
@@ -1733,7 +1733,7 @@ msgstr "Restore Metadata for Colored Coins and other Smart Wallets from Backup"
 
 #: src/components/backup/BackupRestore.tsx:186
 msgid "Safe To Skip"
-msgstr "Safe To Skip"
+msgstr "Safe to Skip"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:201
 #: src/components/trading/CreateOffer.jsx:142
@@ -1786,7 +1786,7 @@ msgstr "Select Wallet Type"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:25
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
+msgstr "Select the final destination folder to store your plots for farming. We recommend you use a large slow hard drive (like an external HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 #~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
@@ -1794,7 +1794,7 @@ msgstr "Select the final destination for the folder where you would like the plo
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "Select a temporary folder for plot creation. We recommend you use a fast drive."
 
 #: src/components/plot/add/PlotAddNFT.tsx:85
 msgid "Select your Plot NFT"
@@ -1886,7 +1886,7 @@ msgstr "Spendable Amount"
 
 #: src/components/wallet/create/createRLAdmin.jsx:202
 msgid "Spendable Amount Per Interval"
-msgstr "Spendable Amount Per Interval"
+msgstr "Spendable Amount per Interval"
 
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
 #: src/components/wallet/coloured/WalletColoured.tsx:384
@@ -2032,7 +2032,7 @@ msgstr "The node is not synced"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+msgstr "The node is syncing to reach the latest block in the chain by downloading blocks from other nodes"
 
 #: src/hooks/usePoolInfo.ts:59
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2076,7 +2076,7 @@ msgstr "These are the instructions for how the farmer wants to get paid. By defa
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
-msgstr "These plots are invalid, you might want to delete them."
+msgstr "These plots are invalid, you may want to delete them."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:72
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
@@ -2456,7 +2456,7 @@ msgstr "You can still create plots for this plot NFT, but you can not make chang
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+msgstr "You do not need to be synced or connected to plot. Plotting process creates temporary files which are larger than the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
 msgid "You have made changes. Do you want to discard them?"
@@ -2516,7 +2516,7 @@ msgstr "Your Pool Overview"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Error 13] Permission denied. You are trying to access a file/directory without the required permissions. Most likely one of the plot folders in your config.yaml has an issue."
 
 #: src/util/getDescriptiveError.ts:8
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2582,3 +2582,4 @@ msgstr "{currencyCode} User Transaction Fees"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
