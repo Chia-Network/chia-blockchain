@@ -59,7 +59,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
         enforce_https = config["full_node"]["selected_network"] == "mainnet"
         pool_url = str(args["pool_url"])
         if enforce_https and not pool_url.startswith("https://"):
-            print(f"Pooling configuration URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+            print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
             return
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
