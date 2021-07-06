@@ -165,7 +165,7 @@ def create_foliage(
             community_coin = create_community_coin(
                 curr.height,
                 curr.community_puzzle_hash,
-                uint64(calculate_base_community_reward(curr.height)),
+                calculate_base_community_reward(curr.height),
                 constants.GENESIS_CHALLENGE,
             )
             

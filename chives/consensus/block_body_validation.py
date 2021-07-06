@@ -129,7 +129,7 @@ async def validate_block_body(
         community_coin = create_community_coin(
             prev_transaction_block_height,
             prev_transaction_block.community_puzzle_hash,
-            uint64(calculate_base_community_reward(prev_transaction_block.height)),
+            calculate_base_community_reward(prev_transaction_block.height),
             constants.GENESIS_CHALLENGE,
         )
         # Adds the previous block
@@ -166,7 +166,10 @@ async def validate_block_body(
                     )
                 )
                 curr_b = blocks.block_record(curr_b.prev_hash)
-
+    
+    log.warning("block.transactions_info.reward_claims_incorporated");
+    log.warning(block.transactions_info.reward_claims_incorporated);
+    log.warning(expected_reward_coins);
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS, None
 
