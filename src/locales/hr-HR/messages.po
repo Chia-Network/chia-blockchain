@@ -8,7 +8,7 @@ msgstr ""
 "Language: hr_HR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:02\n"
+"PO-Revision-Date: 2021-07-06 23:46\n"
 "Last-Translator: \n"
 "Language-Team: Croatian\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
@@ -881,7 +881,7 @@ msgstr "Generiraj novu boju"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
-#~ msgstr ""
+#~ msgstr "Get Pool Login Link"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "Grid view"
@@ -1453,7 +1453,7 @@ msgstr "Zemljište je duplikat od {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
-#~ msgstr ""
+#~ msgstr "PlotNFT is transitioning to (target state)"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
@@ -2048,7 +2048,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
-#~ msgstr ""
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
@@ -2582,3 +2582,4 @@ msgstr "{currencyCode} Korisničke naknade transakcija"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
