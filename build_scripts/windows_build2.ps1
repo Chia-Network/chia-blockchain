@@ -23,7 +23,7 @@ Write-Output "Increase the stack for chia command for (chia plots create) chiapo
 editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
-$env:CHIA_INSTALLER_VERSION = "0.0.4"
+$env:CHIA_INSTALLER_VERSION = "0.0.5"
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
 $packageName = "Silicoin-$packageVersion"
 
@@ -40,11 +40,11 @@ node winstaller.js
 
 
 
-Write-Output "   ---"
-Write-Output "Add timestamp and verify signature"
-Write-Output "   ---"
-signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\SilicoinSetup-$packageVersion.exe
-signtool.exe verify /v /pa .\release-builds\windows-installer\SilicoinSetup-$packageVersion.exe
+#Write-Output "   ---"
+#Write-Output "Add timestamp and verify signature"
+#Write-Output "   ---"
+#signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\SilicoinSetup-$packageVersion.exe
+#signtool.exe verify /v /pa .\release-builds\windows-installer\SilicoinSetup-$packageVersion.exe
  
 
 git status
