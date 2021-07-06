@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:02\n"
+"PO-Revision-Date: 2021-07-06 23:46\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -881,7 +881,7 @@ msgstr "Skapa ny färg"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
-#~ msgstr ""
+#~ msgstr "Get Pool Login Link"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "Grid view"
@@ -1453,7 +1453,7 @@ msgstr "Plotten är en dubblett av {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
-#~ msgstr ""
+#~ msgstr "PlotNFT is transitioning to (target state)"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
@@ -2048,7 +2048,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
-#~ msgstr ""
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
@@ -2456,8 +2456,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
-"Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
+msgstr "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
@@ -2584,3 +2583,4 @@ msgstr "{currencyCode} Transaktionsavgifter för användare"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
