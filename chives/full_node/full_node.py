@@ -1194,6 +1194,7 @@ class FullNode:
 
         async with self.blockchain.lock:
             self.log.warning("After acquiring the lock, check again, because another asyncio thread might have added it")
+            self.log.warning(self.blockchain.contains_block(header_hash))
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 self.log.warning("self.blockchain.contains_block(header_hash) 1199")
@@ -1201,11 +1202,15 @@ class FullNode:
             validation_start = time.time()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
             npc_results = {}
+            self.log.warning("if pre_validation_result is not None and pre_validation_result.npc_result is not None:")
+            self.log.warning(pre_validation_result is not None)
+            self.log.warning(pre_validation_result.npc_result is not None)
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results: Optional[
                 List[PreValidationResult]
             ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+            self.log.warning("if pre_validation_results is None:")
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
@@ -1215,6 +1220,7 @@ class FullNode:
                     fork_height: Optional[uint32] = None
                     self.log.warning("error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH")
                 else:
+                    self.log.warning("Failed to validate block")
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
                         f"{block.height}: {Err(pre_validation_results[0].error).name}"
@@ -1223,6 +1229,7 @@ class FullNode:
                 result_to_validate = (
                     pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                 )
+                self.log.warning("assert result_to_validate.required_iters == pre_validation_results[0].required_iters")
                 assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                 added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
                 if (
