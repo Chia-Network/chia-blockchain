@@ -209,7 +209,7 @@ class FarmerAPI:
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
                 post_partial_body = json.dumps(post_partial_request.to_json_dict())
                 self.farmer.log.info(
-                    f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
+                    f"Submitting partial from harvester {peer.peer_node_id} for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
