@@ -128,7 +128,7 @@ async def validate_block_body(
         )
         community_coin = create_community_coin(
             prev_transaction_block_height,
-            prev_transaction_block.community_puzzle_hash,
+            constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH,
             calculate_base_community_reward(prev_transaction_block.height),
             constants.GENESIS_CHALLENGE,
         )
@@ -160,7 +160,7 @@ async def validate_block_body(
                 expected_reward_coins.add(
                     create_community_coin(
                         curr_b.height,
-                        curr_b.community_puzzle_hash,
+                        constants.GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH,
                         calculate_base_community_reward(curr_b.height),
                         constants.GENESIS_CHALLENGE,
                     )
@@ -171,9 +171,9 @@ async def validate_block_body(
     log.warning(block.transactions_info.reward_claims_incorporated);
     log.warning(expected_reward_coins);
     log.warning("-------------------------------------------------------------");
-    log.warning(pool_coin);
-    log.warning(farmer_coin);
-    log.warning(community_coin);
+    #log.warning(pool_coin);
+    #log.warning(farmer_coin);
+    #log.warning(community_coin);
     log.warning("-------------------------------------------------------------");
     log.warning(f"len(block.transactions_info.reward_claims_incorporated):{len(block.transactions_info.reward_claims_incorporated)}");
     log.warning(f"len(expected_reward_coins):{len(expected_reward_coins)}");
