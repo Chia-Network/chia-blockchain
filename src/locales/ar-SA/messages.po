@@ -1053,7 +1053,7 @@ msgid "Launcher Id"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:103
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "عدد مسارات المعالج"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:113
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:116
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:115
 msgid "OK"
 msgstr "موافق"
 
@@ -1519,8 +1519,8 @@ msgstr "مفتاح التجميع"
 msgid "Pool Login Link"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:65
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:79
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:64
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:78
 msgid "Pool Payout Instructions"
 msgstr ""
 
@@ -2070,7 +2070,7 @@ msgstr "العدد الإجمالي لـ VDF (وظيفة تأخير يمكن ا�
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "مجموع رسوم المعاملات في هذه الكتلة. مكافأة للمزارع."
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:91
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:90
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr ""
 

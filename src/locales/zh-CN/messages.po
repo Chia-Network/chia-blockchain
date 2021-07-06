@@ -1049,7 +1049,7 @@ msgid "Launcher Id"
 msgstr "启动器ID"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:103
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
 msgstr ""
 
@@ -1263,7 +1263,7 @@ msgstr "线程数量"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:113
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:116
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:115
 msgid "OK"
 msgstr "确定"
 
@@ -1515,8 +1515,8 @@ msgstr "矿池密钥"
 msgid "Pool Login Link"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:65
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:79
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:64
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:78
 msgid "Pool Payout Instructions"
 msgstr ""
 
@@ -2066,7 +2066,7 @@ msgstr "本区块上花费的总VDF(延迟验证函数) 或时间验证的迭代
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "本区块上奖励给农民的全部交易费用。"
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:91
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:90
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr ""
 

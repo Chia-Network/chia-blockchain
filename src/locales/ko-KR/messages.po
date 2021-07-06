@@ -1053,7 +1053,7 @@ msgid "Launcher Id"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:103
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
 msgstr ""
 
@@ -1267,7 +1267,7 @@ msgstr "쓰레드 갯수"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:113
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:116
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:115
 msgid "OK"
 msgstr "확인"
 
@@ -1519,8 +1519,8 @@ msgstr "풀 키"
 msgid "Pool Login Link"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:65
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:79
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:64
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:78
 msgid "Pool Payout Instructions"
 msgstr ""
 
@@ -2070,7 +2070,7 @@ msgstr "VDF (확인 가능한 지연 함수) 의 총 수 또는이 블록의 시
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "이 블록의 총 거래 수수료. 농부에게 보상."
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:91
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:90
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr ""
 
