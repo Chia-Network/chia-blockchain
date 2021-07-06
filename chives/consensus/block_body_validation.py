@@ -129,7 +129,7 @@ async def validate_block_body(
         community_coin = create_community_coin(
             prev_transaction_block_height,
             prev_transaction_block.community_puzzle_hash,
-            uint64(calculate_base_community_reward(prev_transaction_block.height) + prev_transaction_block.fees),
+            uint64(calculate_base_community_reward(prev_transaction_block.height)),
             constants.GENESIS_CHALLENGE,
         )
         # Adds the previous block
@@ -161,7 +161,7 @@ async def validate_block_body(
                     create_community_coin(
                         curr_b.height,
                         curr_b.community_puzzle_hash,
-                        calculate_base_farmer_reward(curr_b.height),
+                        calculate_base_community_reward(curr_b.height),
                         constants.GENESIS_CHALLENGE,
                     )
                 )
