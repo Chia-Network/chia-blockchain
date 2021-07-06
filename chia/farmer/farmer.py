@@ -173,7 +173,11 @@ class Farmer:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 
-    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
+    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig, *, enforce_https=True) -> Optional[Dict]:
+        if enforce_https and not pool_config.pool_url.startswith("https://"):
+            error_msg = f"Pooling configuration URLs must be HTTPS on mainnet {pool_config.pool_url}"
+            self.handle_failed_pool_response(pool_config.p2_singleton_puzzle_hash, error_msg)
+            return None
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
@@ -255,7 +259,7 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"POST /farmer response: {response}")
+                        self.log.info(f"POST /farmer response: {response}")  # todo which wallet / nft
                         if "error_code" in response:
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
                         return response
@@ -306,6 +310,7 @@ class Farmer:
         return None
 
     async def update_pool_state(self):
+        config = load_config(self._root_path, "config.yaml")
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
@@ -342,7 +347,8 @@ class Farmer:
                 # TODO: Improve error handling below, inform about unexpected failures
                 if time.time() >= pool_state["next_pool_info_update"]:
                     # Makes a GET request to the pool to get the updated information
-                    pool_info = await self._pool_get_pool_info(pool_config)
+                    enforce_https = config["full_node"]["selected_network"] == "mainnet"
+                    pool_info = await self._pool_get_pool_info(pool_config, enforce_https=enforce_https)
                     if pool_info is not None and "error_code" not in pool_info:
                         pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
