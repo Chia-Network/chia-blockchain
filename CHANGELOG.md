@@ -6,11 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.2.0 Chia blockchain 2021-07-XX
+## 1.2.0 Chia blockchain 2021-07-0X
 
 ### Added
 
-- Portable pooled plots are now available using our new plot NFT. These allow you to plot new plots to an NFT that can join and leave pools, allowing pooling or self farming operation. During development, there were changes to the plot NFT so portable pool plots (those made with the previously unsupported `-c` option to `chia plots create`) using code prior to this release will be invalid on mainnet. OG (non-pooling) plots made before this release can continue to be farmed side by side with the new portable pool plots but can not join pools using the official pooling protocol. You can learn more as a farmer by checking out the [pool user guide](https://github.com/Chia-Network/chia-blockchain/wiki/Pooling-User-Guide). Pool operators and those wanting to understand how the official pooling protocol operates should check out our [pooling implementation reference repository](https://github.com/Chia-Network/pool-reference).
+Portable pooled plots are now available using our new plot NFT. These allow you to plot new plots to an NFT that can either self farm or join and leave pools. During development there were changes to the plot NFT so portable pool plots (those made with `-c` option to `chia plots create`) using pre-release code prior to this release are likely invalid on mainnet. OG plots made before this release can continue to be farmed side by side with the new portable pool plots but can not join pools using the official pooling protocol. You can learn more as a farmer by checking out the [pool user guide](https://github.com/Chia-Network/chia-blockchain/wiki/Pooling-User-Guide). Pool operators and those wanting to understand how the official pooling protocol operates should check out our [pooling implementation reference repository](https://github.com/Chia-Network/pool-reference). If you plan to use plot NFT, all your farmers and harvesters must be on 1.2.0 to function properly for portable pool plots.
 - `chia configure` now supports command line updates to peer count and target peer count.
 - Thank you @gldecurtins for adding logging support for remote syslog.
 - Thanks to @maran and @Animazing for adding farmer and pool public key display to the RPC.
