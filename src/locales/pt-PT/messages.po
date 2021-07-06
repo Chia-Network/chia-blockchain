@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-06-30 18:03\n"
+"PO-Revision-Date: 2021-07-06 23:47\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -107,7 +107,7 @@ msgstr "Adicionar diretório de plots"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "Adicione {currencyCode} da Faucet"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
@@ -146,7 +146,7 @@ msgstr "Tem certeza que deseja apagar o plot? O plot não poderá ser recuperado
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "Tem certeza que deseja excluir as transações não confirmadas?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
@@ -384,7 +384,7 @@ msgstr "Confirmar desconexão"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Confirmação"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -881,7 +881,7 @@ msgstr "Gerar Nova Cor"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
-#~ msgstr ""
+#~ msgstr "Get Pool Login Link"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "Grid view"
@@ -997,7 +997,7 @@ msgstr "Estado Inválido"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:92
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "É um link de login único que pode ser usado para fazer login no site da pool. Contém uma assinatura que usa a chave do farmer no plot NFT. Nem todas as pools suportam esta função."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:392
 #: src/components/pool/PoolOverview.tsx:113
@@ -1055,7 +1055,7 @@ msgstr "ID do Launcher"
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
-msgstr ""
+msgstr "Saiba mais"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1453,11 +1453,11 @@ msgstr "O Plot é duplicado de {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
-#~ msgstr "PlotNFT está transitando para (estado alvo)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
-msgstr ""
+msgstr "PlotNFT está transicionando para (estado de destino). Isto pode levar um tempo. Por favor não feche a aplicação até que esta seja finalizada."
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -1500,7 +1500,7 @@ msgstr "Pontos encontrados nas últimas 24 horas"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:191
 #: src/components/plotNFT/PlotNFTCard.tsx:233
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Pontos encontrados nas últimas 24 horas"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
@@ -1517,12 +1517,12 @@ msgstr "Chave da Pool"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Link de Login da Pool"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:64
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:78
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Instruções de pagamento da pool"
 
 #: src/components/block/Block.jsx:265
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1874,7 +1874,7 @@ msgstr "Suavize as suas recompensas de recompensas XCH ao se juntar a uma pool."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Algo correu mal"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2040,15 +2040,15 @@ msgstr "A URL da pool \"{normalizedUrl}\" não está funcionando. É uma pool? E
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "A URL da pool precisa usar o protocolo https. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "A URL da pool especificada não é válida. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
-#~ msgstr "A URL do pool especificada não é válida. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
@@ -2072,7 +2072,7 @@ msgstr "As taxas de transações totais neste bloco. Recompensa para o farmer."
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:90
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "Estas são as instruções sobre como o farmer quer ser pago. Por padrão este será um endereço XCH, mas pode ser definido como qualquer sequência de caracteres com menos de 1024 caracteres, assim, ele pode representar outro blockchain ou identificador do sistema de pagamento."
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2141,7 +2141,7 @@ msgstr "Este gráfico de NFT está atribuído a uma chave diferente. Você ainda
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Este plot de NFT não está conectado à pool"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2315,12 +2315,12 @@ msgstr "Ver oferta"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 msgid "View Payout Instructions"
-msgstr ""
+msgstr "Instruções de pagamento da pool"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:241
 #: src/components/plotNFT/PlotNFTCard.tsx:283
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Link de Login da Pool"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2488,7 +2488,7 @@ msgstr "Você precisa resgatar as suas recompensas primeiro"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
-msgstr ""
+msgstr "Você precisa de {currencyCode} para entrar em uma pool."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
@@ -2582,3 +2582,4 @@ msgstr "{currencyCode} Taxas de transação do utilizador"
 #: src/components/core/components/Amount/Amount.tsx:52
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
