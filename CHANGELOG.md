@@ -43,7 +43,7 @@ for setuptools_scm/PEP 440 reasons.
 
 - The delete plots button in the Windows GUI has been fixed and re-enabled.
 - Correctly display private key in `chia keys show`.
-- Thanks to @gldcurtis for removing a default print out of the private key mnemonic in `chia keys show`.
+- Thanks to @gldecurtins for removing a default print out of the private key mnemonic in `chia keys show`.
 - Shutting down the full node is cleaner and manages uPnP better.
 - DNS introducer could fail.
 - Fixed a potential timelord bug that could lead to a chain stall.
