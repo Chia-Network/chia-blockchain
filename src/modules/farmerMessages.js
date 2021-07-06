@@ -114,7 +114,7 @@ export const setPoolPayoutInstructions = (
   };
 };
 
-export const getPlots = () => {
+export function getPlots() {
   return async (dispatch) => {
     const { data } = await async_api(
       dispatch,
@@ -126,4 +126,21 @@ export const getPlots = () => {
 
     return data;
   };
-};
+}
+
+export function getPoolLoginLink(launcherId) {
+  return async (dispatch) => {
+    const { data } = await async_api(
+      dispatch,
+      farmerMessage({
+        command: 'get_pool_login_link',
+        data: {
+          launcher_id: launcherId,
+        },
+      }),
+      false,
+    );
+
+    return data;
+  };
+}

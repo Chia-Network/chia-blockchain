@@ -365,10 +365,10 @@ export const login_and_skip_action = (fingerprint) => (dispatch) => {
 
 export const login_action = (fingerprint) => (dispatch) => {
   dispatch(selectFingerprint(fingerprint));
-  return async_api(dispatch, log_in(fingerprint), true).then((response) => {
+  return async_api(dispatch, log_in(fingerprint), true).then(async (response) => {
     if (response.data.success) {
       // Go to wallet
-      dispatch(refreshAllState());
+      await dispatch(refreshAllState());
       dispatch(push('/dashboard'));
     } else {
       const { error } = response.data;

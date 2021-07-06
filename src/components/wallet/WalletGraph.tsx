@@ -197,7 +197,7 @@ function prepareGraphPoints(
   const points = [
     {
       x: peak.height,
-      y: mojo_to_chia(start),
+      y: Math.max(0, mojo_to_chia(start)),
       tooltip: mojo_to_chia(balance),
     },
   ];
@@ -209,7 +209,7 @@ function prepareGraphPoints(
 
     points.push({
       x: timestamp,
-      y: mojo_to_chia(start),
+      y: Math.max(0, mojo_to_chia(start)),
       tooltip: mojo_to_chia(start),
     });
   });

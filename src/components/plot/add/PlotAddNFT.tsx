@@ -21,7 +21,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
   const [showCreatePlotNFT, setShowCreatePlotNFT] = useState<boolean>(false);
   const { setValue } = useFormContext();
 
-  const hasNFTs = !!nfts?.length || !external?.length;
+  const hasNFTs = !!nfts?.length || !!external?.length;
 
   function handleJoinPool() {
     setShowCreatePlotNFT(true);

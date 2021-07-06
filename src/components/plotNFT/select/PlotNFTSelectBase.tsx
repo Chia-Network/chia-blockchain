@@ -126,7 +126,7 @@ export default function PlotNFTSelectBase(props: Props) {
                           name="poolUrl"
                           label="Pool URL"
                           variant="filled"
-                          autoComplete="pool-url"
+                          autoComplete="on"
                           onClick={handleDisableSelfPooling}
                           onChange={handleDisableSelfPooling}
                           fullWidth

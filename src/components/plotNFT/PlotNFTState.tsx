@@ -43,7 +43,11 @@ export default function PlotNFTState(props: Props) {
           <Trans>Pending</Trans>
         </StateTypography>
         <TooltipIcon>
-          <Trans>PlotNFT is transitioning to (target state)</Trans>
+          <Trans>
+            PlotNFT is transitioning to (target state).
+            This can take a while. 
+            Please do not close the application until this is finalized.
+          </Trans>
         </TooltipIcon>
       </Flex>
     );

@@ -6,15 +6,19 @@ import WalletType from '../constants/WalletType';
 export default function useStandardWallet(): {
   loading: boolean;
   wallet?: Wallet;
+  balance?: number;
 } {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
-  const standardWallet = wallets?.find(
+  const wallet = wallets?.find(
     (wallet) => wallet?.type === WalletType.STANDARD_WALLET,
   );
 
+  const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
+
   return {
     loading: !wallets,
-    wallet: standardWallet,
+    wallet,
+    balance,
   };
 }

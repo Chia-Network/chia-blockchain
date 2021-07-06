@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
-import { Alert } from '@material-ui/lab';
+import { AlertDialog } from '@chia/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton, Loading } from '@chia/core';
@@ -142,7 +142,9 @@ export default function PlotAdd() {
 
       history.push('/dashboard/plot');
     } catch (error) {
-      await openDialog(<Alert severity="warning">{error.message}</Alert>);
+      await openDialog((
+        <AlertDialog>{error.message}</AlertDialog>
+      ));
     } finally {
       setLoading(false);
     }

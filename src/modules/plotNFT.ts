@@ -14,7 +14,8 @@ import type WalletBalance from '../types/WalletBalance';
 import type PoolState from '../types/PoolState';
 import type PoolWalletStatus from '../types/PoolWalletStatus';
 import type InitialTargetState from '../types/InitialTargetState';
-import PlotNFTExternal from 'types/PlotNFTExternal';
+import PlotNFTExternal from '../types/PlotNFTExternal';
+import normalizePoolState from '../util/normalizePoolState';
 
 export function getPlotNFTs() {
   return async (dispatch) => {
@@ -47,20 +48,20 @@ export function getPlotNFTs() {
       );
       if (!poolWalletStatus) {
         external.push({
-          pool_state: poolStateItem,
+          pool_state: normalizePoolState(poolStateItem),
         });
         return;
       }
 
       const walletBalance = walletBalances.find(
-        (item) => item.wallet_id === poolWalletStatus.wallet_id,
+        (item) => item?.wallet_id === poolWalletStatus.wallet_id,
       );
       if (!walletBalance) {
         throw new Error('Wallet balance is not defined');
       }
 
       nfts.push({
-        pool_state: poolStateItem,
+        pool_state: normalizePoolState(poolStateItem),
         pool_wallet_status: poolWalletStatus,
         wallet_balance: walletBalance,
       });
