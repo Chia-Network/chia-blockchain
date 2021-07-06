@@ -143,7 +143,7 @@ class PoolWallet:
         elif state.relative_lock_height > cls.MAXIMUM_RELATIVE_LOCK_HEIGHT:
             err += (
                 f" Pool relative_lock_height ({state.relative_lock_height})"
-                f"is greater than recommended maximum ({cls.MINIMUM_RELATIVE_LOCK_HEIGHT})"
+                f"is greater than recommended maximum ({cls.MAXIMUM_RELATIVE_LOCK_HEIGHT})"
             )
 
         if state.pool_url in [None, ""]:
