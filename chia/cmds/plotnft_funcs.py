@@ -269,7 +269,7 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     enforce_https = config["full_node"]["selected_network"] == "mainnet"
     pool_url: str = args["pool_url"]
     if enforce_https and not pool_url.startswith("https://"):
-        print(f"Pooling configuration URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+        print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
         return
     wallet_id = args.get("id", None)
     prompt = not args.get("yes", False)
