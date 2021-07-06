@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { t, Trans } from '@lingui/macro';
+import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { Alert } from '@material-ui/lab';
 import {
@@ -40,10 +40,9 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
     },
   } = nft;
 
-  const dispatch = useDispatch();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | undefined>(undefined);
-  const [loginLink, setLoginLink] = useState<string | undefined>(undefined);
+  const [loading] = useState<boolean>(false);
+  const [error] = useState<Error | undefined>(undefined);
+  const [loginLink] = useState<string | undefined>(undefined);
 
   const methods = useForm<FormData>({
     mode: 'onChange',
@@ -79,9 +78,9 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
                   label={<Trans>Pool Payout Instructions</Trans>}
                   name="pool_payout_instructions"
                   variant="filled"
-                  inputProps={{ spellCheck: false }}
                   inputProps={{
                     readOnly: true,
+                    spellCheck: false,
                   }}
                   fullWidth
                 />
