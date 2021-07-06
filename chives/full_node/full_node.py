@@ -1204,7 +1204,6 @@ class FullNode:
             npc_results = {}
             self.log.warning("if pre_validation_result is not None and pre_validation_result.npc_result is not None:")
             self.log.warning(pre_validation_result is not None)
-            self.log.warning(pre_validation_result.npc_result is not None)
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results: Optional[

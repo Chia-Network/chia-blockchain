@@ -156,6 +156,8 @@ async def pre_validate_blocks_multiprocessing(
     recent_blocks_compressed: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
+    log.error("############################################")
+    log.error(blocks)
     if blocks[0].height > 0:
         if not block_records.contains_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
@@ -181,7 +183,9 @@ async def pre_validate_blocks_multiprocessing(
     block_record_was_present = []
     for block in blocks:
         block_record_was_present.append(block_records.contains_block(block.header_hash))
-
+    
+    log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    log.error(blocks)
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
