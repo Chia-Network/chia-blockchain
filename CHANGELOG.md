@@ -1,10 +1,67 @@
-# Changelog
+appropriateCorrectlyCorrectly# Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
+
+## 1.2.0 Chia blockchain 2021-07-XX
+
+### Added
+
+- Portable pooled plots are now available using our new plot NFT. These allow you to plot new plots to an NFT that can either self farm or join and leave pools. During development there were changes to the plot NFT so portable pool plots (those made with `-c` option to `chia plots create`) using pre-release code prior to this release are likely invalid on mainnet. OG plots made before this release can continue to be farmed side by side with the new portable pool plots but can not join pools using the official pooling protocol. You can learn more as a farmer by checking out the [pool user guide](https://github.com/Chia-Network/chia-blockchain/wiki/Pooling-User-Guide). Pool operators and those wanting to understand how the official pooling protocol operates should check out our [pooling implementation reference repository](https://github.com/Chia-Network/pool-reference).
+- `chia configure` now supports command line updates to peer count and target peer count.
+- Than you @gldecurtins for adding logging support for remote syslog.
+- Thanks to @maran and @Animazing for adding farmer and pool public key display to the RPC.
+- We added a new RPC to check keys prior to deleting them.
+- We have added translations for Hungarian, Belarusian, Catalan and Albanian.  For Hungarian thanks to @SirGeoff, @azazio @onokaxxx, @rolandfarkasCOM, @HUNDavid , @horvathpalzsolt, @stishun74, @tusdavgaming, @idotitusz, @rasocsabi, @mail.kope, @gsprblnt, @mbudahazi, @csiberius, @tomatos83, @zok42, @ocel0t, @rwtoptomi, @djxpitke, @ftamas85, @zotya0330, @fnni, @kapabeates, @zamery, @viktor.gonczi, @pal.suta, @miv, and @Joeman_. For Belarusian thanks to @shurix83, @haxycgm, and @metalomaniax. For Catalan thank you to @Poliwhirl, @Pep-33, @marqmarti, @meuca, @Guiwdin, @carlescampi, @jairobtx, @Neoares, @darknsis, @augustfarrerasgimeno, and @fornons. Finally for Albanian thanks to @ATSHOOTER and @lakedeejay. We apologize if we missed anyone and welcome corrections.
+- Our release process is now fully automated from tagging a release to publishing installers to all of the appropriate locations and now makes the release artifacts available via torrents as well.
+- All Chia repositories now automatically build M1 wheels and create a new MacOS M1 native installer.
+
+### Changed
+
+- We update chiapos to version to 1.0.3. This adds parallel reads to GetFullProof. Thanks to @marcoabreu ! We now print target/final directory early in the logs refs and log process ID. Thanks to @grayfallstown ! We are now using Gulrak 1.5.6.
+@683280 optimized code in phase1.hpp. @jespino and @mrhacky started migrating to flags instead of booleans parameters for show_progress and nobitfield. If you are providing third party tools you may need to make adjustments if relying on the chiapos log.
+- Updated chiavdf to version 1.0.2 to fix certain tests.
+- Windows builds now rely upon Python 3.9 which obviates the fix in 1.1.7.
+- We are now using miniupnpc version 2.2.2.
+- We updated to clvm 0.9.6 and clvm_rs 0.1.8. CLVMObject now lazily converts python types to CLVM types as elements are inspected in clvm. cvlm_rs now returns python objects rather than a serialized object.
+- We now have rudimentary checks that fees are less than the amount being spent.
+- The harvester API no longer relies upon time:time with thanks to @x1957.
+- We have increased the strictness of validating Chialisp in the mempool and clvm.
+- Thanks to @ruslanskorb for improvements to the human readable forms in the CLI.
+- Thanks to @etr2460 for improvements to the plotting progress bar in the GUI and enhancements to human readable sizes.
+- @dkackman changed the way that configuration was found on startup.
+- We now delay peer start for wallet until after backup init and make sure only one copy is started.
+- Wallets now trust the local node more for enhanced wallet sync speed.
+- We now store tasks used to initiate peer connections to ensure they are kept alive and to be able to wait for them if we hit the upper limit on number of pending outgoing connections.
+- We improved weight proof validation.
+- @cvet changed the wallet to take `override` instead of `confirm`.
+
+### Fixed
+
+- The delete plots button in the Windows GUI has been fixed and re-enabled.
+- Correctly display private key in `chia keys show`.
+- Thanks to @gldcurtis for removing a default print out of the private key mnemonic in `chia keys show`.
+- Shutting down the full node is cleaner and manages uPnP better.
+- DNS introducer could fail.
+- Fixed a potential timelord bug that could lead to a chain stall.
+- Add an explicit error message when mnemonic words are not in the dictionary; should help users self-service issues like #3425 faster. Thank you to @elliotback for this PR.
+- Thank you to @Nikolaj-K for various typo corrections around the Mozilla CA, code simplifications and improvements in converting to human readable size estimations, and clean up in the RPCs and logging.
+- Thank you to @ChiaMineJP for various improvements.
+- @asdf2014 removed some useless code in the wallet node API.
+- Thanks to @willi123yao for a fix to under development pool wallets.
+- `chia farm summary` better handles wallet errors.
+- @Hoinor fixed formatting issues around the Chinese translation in the GUI.
+- Sometimes the GUI would stop refreshing certain fields.
+- We have better error handling for misbehaving peers from naive forks/clones.
+
+### 1.1.7 Chia Blockchain 2021-06-05
+
+### Fixed
+
+Batch process weight proof epochs in groups of 900 to fit below May 2020 sqlite limit (999 for Python 3.7 on Windows). Fixes sqlite3.OperationalError: too many SQL variables error and resulting issues with syncing wallets on Windows.
 
 ## 1.1.6 Chia Blockchain 2021-05-20
 
