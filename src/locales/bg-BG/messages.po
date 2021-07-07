@@ -87,8 +87,8 @@ msgstr "Добавяне на плот към опашката"
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
 #: src/components/plot/add/PlotAdd.tsx:162
-#: src/components/plot/overview/PlotOverviewHero.tsx:41
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:229
+#: src/components/plot/overview/PlotOverviewHero.tsx:49
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
 #: src/components/plotNFT/PlotNFTCard.tsx:271
 msgid "Add a Plot"
 msgstr "Добави Плот"
@@ -552,12 +552,12 @@ msgstr ""
 msgid "Currency code is not defined"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:138
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
 #: src/components/plotNFT/PlotNFTCard.tsx:180
 msgid "Current Difficulty"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:155
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
 #: src/components/plotNFT/PlotNFTCard.tsx:197
 msgid "Current Points Balance"
 msgstr ""
@@ -664,7 +664,7 @@ msgid "Distributed Identity Options"
 msgstr "Опции за Разпределена Идентичност"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:52
-#: src/components/plot/overview/PlotOverviewHero.tsx:47
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "Имате ли съществуващи полета на този компютър? <0>Добавете директория с полета</0>"
 
@@ -1051,7 +1051,7 @@ msgstr "Последна височина на изфармен блок"
 msgid "Latest Block Challenges"
 msgstr "Последни блокови задачи"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:294
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTCard.tsx:349
 msgid "Launcher Id"
 msgstr ""
@@ -1260,7 +1260,7 @@ msgstr "Няма намерени полета"
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:117
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Number of Plots"
 msgstr ""
@@ -1477,7 +1477,7 @@ msgstr "Полета"
 msgid "Plots Passed Filter"
 msgstr "Филтър за преминали плотове"
 
-#: src/components/plot/overview/PlotOverviewHero.tsx:28
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Плотовете са разпределено място на вашия хард диск, които се ползват за фармете и печелене на Чиа. <0>Научете повече</0>"
 
@@ -1497,17 +1497,17 @@ msgstr ""
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:173
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
 #: src/components/plotNFT/PlotNFTCard.tsx:215
 msgid "Points Found Since Start"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:184
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
 #: src/components/plotNFT/PlotNFTCard.tsx:226
 msgid "Points Found in Last 24 Hours"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:193
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
 msgstr ""
@@ -1575,7 +1575,7 @@ msgstr ""
 msgid "Pool public key:"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:271
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
@@ -1705,6 +1705,7 @@ msgid "Recover DID wallet"
 msgstr "Възстановете DID портфейла"
 
 #: src/components/plot/PlotHeader.tsx:78
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
 msgid "Refresh Plots"
 msgstr "Обнови полета"
 
@@ -1925,7 +1926,7 @@ msgstr "Състояние"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:112
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
 #: src/components/plotNFT/PlotNFTCard.tsx:144
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
@@ -2096,7 +2097,7 @@ msgstr "Тези полета са невалидни, може би искат�
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "Това ви позволява да добавите директория, в която има полета. Ако не сте създали никакви полета, отидете на екрана за създаване на полета."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:129
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
 #: src/components/plotNFT/PlotNFTCard.tsx:171
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr ""
@@ -2135,12 +2136,12 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:148
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:165
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
@@ -2149,7 +2150,7 @@ msgstr ""
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:307
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr ""
 
@@ -2331,7 +2332,6 @@ msgstr "Виж предложения"
 #~ msgid "View Payout Instructions"
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:243
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
 msgstr ""

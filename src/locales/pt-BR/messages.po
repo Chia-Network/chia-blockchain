@@ -87,8 +87,8 @@ msgstr "Adicionar lote à fila"
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
 #: src/components/plot/add/PlotAdd.tsx:162
-#: src/components/plot/overview/PlotOverviewHero.tsx:41
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:229
+#: src/components/plot/overview/PlotOverviewHero.tsx:49
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
 #: src/components/plotNFT/PlotNFTCard.tsx:271
 msgid "Add a Plot"
 msgstr "Adicionar Lote"
@@ -552,12 +552,12 @@ msgstr "Criando lote NFT para bolão próprio"
 msgid "Currency code is not defined"
 msgstr "O código da moeda não está definido"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:138
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
 #: src/components/plotNFT/PlotNFTCard.tsx:180
 msgid "Current Difficulty"
 msgstr "Dificuldade Atual"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:155
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
 #: src/components/plotNFT/PlotNFTCard.tsx:197
 msgid "Current Points Balance"
 msgstr "Saldo de Pontos"
@@ -664,7 +664,7 @@ msgid "Distributed Identity Options"
 msgstr "Opções de identidade distribuída"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:52
-#: src/components/plot/overview/PlotOverviewHero.tsx:47
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "Você tem lotes existentes nesta máquina? <0> Adicionar diretório do lote</0>"
 
@@ -1051,7 +1051,7 @@ msgstr "Última altura cultivada"
 msgid "Latest Block Challenges"
 msgstr "Desafios de bloco mais recentes"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:294
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTCard.tsx:349
 msgid "Launcher Id"
 msgstr "Id do lançador"
@@ -1260,7 +1260,7 @@ msgstr "Lotes não encontrados"
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Note que isso não muda seus endereços de pagamento no bolão. Isso afeta apenas os lotes de formato antigo e a recompensa 0.25XCH por agrupamento de pontos."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:117
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Number of Plots"
 msgstr "Número de Lotes"
@@ -1475,7 +1475,7 @@ msgstr "Lotes"
 msgid "Plots Passed Filter"
 msgstr "Lotes Aprovados no Filtro"
 
-#: src/components/plot/overview/PlotOverviewHero.tsx:28
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Os lotes usam o espaço alocado em seu disco rígido para cultivar e ganhar Chia. <0> Saiba mais </0>"
 
@@ -1495,17 +1495,17 @@ msgstr "Plotar com o bitfield habilitado consome aproximadamente 30% a menos de 
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:173
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
 #: src/components/plotNFT/PlotNFTCard.tsx:215
 msgid "Points Found Since Start"
 msgstr "Pontos encontrados desde o início"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:184
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
 #: src/components/plotNFT/PlotNFTCard.tsx:226
 msgid "Points Found in Last 24 Hours"
 msgstr "Pontos encontrados nas últimas 24 horas"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:193
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
 msgstr ""
@@ -1573,7 +1573,7 @@ msgstr "O bolão não fornece o alvo_desafio_hash."
 msgid "Pool public key:"
 msgstr "Chave pública do pool:"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:271
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
@@ -1703,6 +1703,7 @@ msgid "Recover DID wallet"
 msgstr "Recuperar carteira DID"
 
 #: src/components/plot/PlotHeader.tsx:78
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
 msgid "Refresh Plots"
 msgstr "Atualizar Lotes"
 
@@ -1923,7 +1924,7 @@ msgstr "Estado"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:112
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
 #: src/components/plotNFT/PlotNFTCard.tsx:144
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
@@ -2094,7 +2095,7 @@ msgstr "Esses lotes são inválidos, você pode querer excluí-los."
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "Isso permite que você adicione um diretório que contenha lotes. Se você não criou nenhum loteamento, vá para a tela de Adicionar Lotes."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:129
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
 #: src/components/plotNFT/PlotNFTCard.tsx:171
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "Essa dificuldade é uma dificuldade artificialmente menor do que na rede real, e é usado no cultivo, para encontrar mais provas e enviá-las para o bolão. Quanto mais lotes você tiver, maior a dificuldade você terá, no entanto, a dificuldade não afeta as recompensas."
@@ -2133,12 +2134,12 @@ msgstr "Essa é a quantidade total de chia na blockchain o pico do sub bloco atu
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Este é o saldo total + saldo pendente: é isso que o seu saldo será depois que todas as transações pendentes forem confirmadas."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:148
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "Este é o número total de pontos que este loteNFT tem com este bolão, desde o último pagamento. O bolão irá definir os pontos depois de fazer um pagamento."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:165
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "Este é o número total de pontos que o seu fazendeiro encontrou para esta plataforma NFT. Cada gráfico k32 obterá cerca de 10 pontos por dia, portanto se você tiver 10TiB, deve esperar cerca de 1000 pontos por dia, ou 41 pontos por hora."
@@ -2147,7 +2148,7 @@ msgstr "Este é o número total de pontos que o seu fazendeiro encontrou para es
 msgid "This node is fully caught up and validating the network"
 msgstr "Este nó está totalmente preso e validando a rede"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:307
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "Este lote NFT está atribuído a uma chave diferente. Você ainda pode criar um lote de NFT, mas não pode fazer alterações."
 
@@ -2329,7 +2330,6 @@ msgstr "Ver oferta"
 #~ msgid "View Payout Instructions"
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:243
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
 msgstr ""

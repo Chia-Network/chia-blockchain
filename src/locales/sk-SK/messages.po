@@ -87,8 +87,8 @@ msgstr "Pridať pole do fronty"
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
 #: src/components/plot/add/PlotAdd.tsx:162
-#: src/components/plot/overview/PlotOverviewHero.tsx:41
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:229
+#: src/components/plot/overview/PlotOverviewHero.tsx:49
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
 #: src/components/plotNFT/PlotNFTCard.tsx:271
 msgid "Add a Plot"
 msgstr "Pridať pole"
@@ -552,12 +552,12 @@ msgstr "Vytváranie NFT poľa osobného združenia"
 msgid "Currency code is not defined"
 msgstr "Kód meny nie je definovaný"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:138
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
 #: src/components/plotNFT/PlotNFTCard.tsx:180
 msgid "Current Difficulty"
 msgstr "Aktuálna zložitosť"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:155
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
 #: src/components/plotNFT/PlotNFTCard.tsx:197
 msgid "Current Points Balance"
 msgstr "Aktuálny počet bodov"
@@ -664,7 +664,7 @@ msgid "Distributed Identity Options"
 msgstr "Možnosti distribuovanej identity"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:52
-#: src/components/plot/overview/PlotOverviewHero.tsx:47
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "Máte existujúce ploty na tomto stroji? <0>Pridaj Adresár s Plotmi</0>"
 
@@ -1051,7 +1051,7 @@ msgstr "Posledná vyfarmárčená pozícia"
 msgid "Latest Block Challenges"
 msgstr "Najnovšie blokové výzvy"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:294
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTCard.tsx:349
 msgid "Launcher Id"
 msgstr "Id spúšťača"
@@ -1260,7 +1260,7 @@ msgstr "Polia sa nenašli"
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Toto však nezmení vaše platobné adresy združovania. Ovplyvňuje to iba polia v starom formáte, a odmenu 0,25 XCH za združovanie polí."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:117
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Number of Plots"
 msgstr "Počet polí"
@@ -1475,7 +1475,7 @@ msgstr "Polia"
 msgid "Plots Passed Filter"
 msgstr "Polia, ktoré prešli filtrom"
 
-#: src/components/plot/overview/PlotOverviewHero.tsx:28
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Polia sú pridelené priestory na vašom pevnom disku používanom na ťažbu a zarábanie Chia. <0>Ďalšie informácie</0>"
 
@@ -1495,17 +1495,17 @@ msgstr "Vykresľovanie s bitovým poľom umožňuje okolo 30% menej zápisov a j
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:173
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
 #: src/components/plotNFT/PlotNFTCard.tsx:215
 msgid "Points Found Since Start"
 msgstr "Body nájdené od spustenia"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:184
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
 #: src/components/plotNFT/PlotNFTCard.tsx:226
 msgid "Points Found in Last 24 Hours"
 msgstr "Body nájdené za posledných 24 hodín"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:193
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
 msgstr "Úspešné body za posledných 24 hodín"
@@ -1573,7 +1573,7 @@ msgstr "Združenie neposkytuje target_puzzle_hash."
 msgid "Pool public key:"
 msgstr "Verejný kľúč združenia:"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:271
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
@@ -1703,6 +1703,7 @@ msgid "Recover DID wallet"
 msgstr "Obnoviť Peňaženku DID"
 
 #: src/components/plot/PlotHeader.tsx:78
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
 msgid "Refresh Plots"
 msgstr "Obnoviť polia"
 
@@ -1923,7 +1924,7 @@ msgstr "Stav"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:112
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
 #: src/components/plotNFT/PlotNFTCard.tsx:144
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
@@ -2094,7 +2095,7 @@ msgstr "Tieto polia sú neplatné, asi ich budete chcieť vymazať."
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "Toto umožňuje pridať adresár, ktorý obsahuje už vykreslené polia. Ak ste ešte nevytvorili žiadne polia, prejdite na obrazovku vykresľovania polí."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:129
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
 #: src/components/plotNFT/PlotNFTCard.tsx:171
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "Táto zložitosť je umelo nižšou zložitosťou ako v skutočnej sieti a používa sa pri farmárčení na vyhľadanie ďalších dôkazov a ich odoslanie do združenia. Čím viac polí máte, tým vyššia zložitosť. Zložitosť však nemá vplyv na odmeny."
@@ -2133,12 +2134,12 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v aktuálne najnovšom či
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:148
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "Toto je celkový počet bodov, ktoré má tento NFT v tomto združení od poslednej výplaty. Združenie vynuluje body po vykonaní výplaty."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:165
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "Toto je celkový počet bodov, ktoré váš farmár našiel pre tento NFT poľa. Každé k32 pole získa okolo 10 bodov za deň, takže ak máte 10TiB, mali by ste očakávať okolo 1000 bodov za deň, alebo 41 bodov za hodinu."
@@ -2147,7 +2148,7 @@ msgstr "Toto je celkový počet bodov, ktoré váš farmár našiel pre tento NF
 msgid "This node is fully caught up and validating the network"
 msgstr "Tento uzol je plne aktualizovaný a overuje sieť"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:307
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "Tento NFT poľa je priradený inému kľúču. Stále môžete vytvárať polia pre tento NFT, nemôžete však robiť zmeny."
 
@@ -2329,7 +2330,6 @@ msgstr "Zobraziť ponuku"
 #~ msgid "View Payout Instructions"
 #~ msgstr "Zobraziť platobné pokyny"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:243
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
 msgstr "Zobraziť odkaz na prihlásenie do združenia"

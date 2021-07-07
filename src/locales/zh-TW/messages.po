@@ -87,8 +87,8 @@ msgstr "新增耕地至隊列"
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
 #: src/components/plot/PlotHeader.tsx:63
 #: src/components/plot/add/PlotAdd.tsx:162
-#: src/components/plot/overview/PlotOverviewHero.tsx:41
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:229
+#: src/components/plot/overview/PlotOverviewHero.tsx:49
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
 #: src/components/plotNFT/PlotNFTCard.tsx:271
 msgid "Add a Plot"
 msgstr "新增耕地"
@@ -552,12 +552,12 @@ msgstr "正在為自己的農會建立農場"
 msgid "Currency code is not defined"
 msgstr "未定義貨幣代碼"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:138
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
 #: src/components/plotNFT/PlotNFTCard.tsx:180
 msgid "Current Difficulty"
 msgstr "目前難度"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:155
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
 #: src/components/plotNFT/PlotNFTCard.tsx:197
 msgid "Current Points Balance"
 msgstr "目前點數餘額"
@@ -664,7 +664,7 @@ msgid "Distributed Identity Options"
 msgstr "分散式識別選項"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:52
-#: src/components/plot/overview/PlotOverviewHero.tsx:47
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "你有已存在的耕地在本機上？ <0>增加耕地資料夾</0>"
 
@@ -1051,7 +1051,7 @@ msgstr "最後耕種高度"
 msgid "Latest Block Challenges"
 msgstr "最新區塊挑戰"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:294
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTCard.tsx:349
 msgid "Launcher Id"
 msgstr "啟動器 ID"
@@ -1260,7 +1260,7 @@ msgstr "沒找到的耕地"
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "請注意，這不會變更您的農會支付位址。這只會影響舊的耕地格式和 0.25XCH 的農會耕地獎勵。"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:117
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Number of Plots"
 msgstr "耕地數量"
@@ -1475,7 +1475,7 @@ msgstr "耕地"
 msgid "Plots Passed Filter"
 msgstr "已通過篩選耕地"
 
-#: src/components/plot/overview/PlotOverviewHero.tsx:28
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "耕地是在你硬碟上劃出的空間，用於耕種來賺取 Chia 。 <0>了解更多</0>"
 
@@ -1495,17 +1495,17 @@ msgstr "以 bitfield 規劃耕地可減少約 30％ 的總寫入量且如今也�
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:173
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
 #: src/components/plotNFT/PlotNFTCard.tsx:215
 msgid "Points Found Since Start"
 msgstr "自開始以來所發現的積分"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:184
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
 #: src/components/plotNFT/PlotNFTCard.tsx:226
 msgid "Points Found in Last 24 Hours"
 msgstr "最近 24 小時內所發現的積分"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:193
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
 msgstr "過去24小時有效的積分"
@@ -1573,7 +1573,7 @@ msgstr "礦池未提供 目標_拼圖_雜湊值。"
 msgid "Pool public key:"
 msgstr "礦池公鑰:"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:271
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
@@ -1703,6 +1703,7 @@ msgid "Recover DID wallet"
 msgstr "恢復 DID 錢包"
 
 #: src/components/plot/PlotHeader.tsx:78
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
 msgid "Refresh Plots"
 msgstr "刷新耕地"
 
@@ -1923,7 +1924,7 @@ msgstr "狀態"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:112
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
 #: src/components/plotNFT/PlotNFTCard.tsx:144
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
@@ -2094,7 +2095,7 @@ msgstr "這些耕地是無效的，你可能想要刪除他們。"
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "這允許你增加已存有耕地的資料夾。如果你還沒建立任何的耕地，去耕地規劃畫面吧。"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:129
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
 #: src/components/plotNFT/PlotNFTCard.tsx:171
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "為了在耕種時找到更多證明以傳送至網路，此處難度與實際網路相比已人工降低過。你擁有的耕地越多，你的難度就越高。 但是，難度不影響獎勵。"
@@ -2133,12 +2134,12 @@ msgstr "這是由你的私鑰控制的目前峰值子區塊中區塊鏈中 Chia 
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "這是總餘額 + 未結餘額：這是在全部未結交易結清後你的餘額。"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:148
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "自上次支付以來該農場在該池中的總積分。農會在支付過後將重置積分。"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:165
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "這是您的農夫為此農場找到的總積分。 每個 K32 圖每天將獲得大約 10 點積分，所以如果您有 10TiB，則每天大約 1000 點積分，或每小時 41 點積分。"
@@ -2147,7 +2148,7 @@ msgstr "這是您的農夫為此農場找到的總積分。 每個 K32 圖每天
 msgid "This node is fully caught up and validating the network"
 msgstr "此節點已完全跟上和驗證網路"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:307
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "此農場分配給其他的金鑰。你仍然可以為此農場建立耕地，但不能進行更改。"
 
@@ -2329,7 +2330,6 @@ msgstr "檢視提案"
 #~ msgid "View Payout Instructions"
 #~ msgstr "查看支付指示"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:243
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
 msgstr "顯示農會登入連結"
