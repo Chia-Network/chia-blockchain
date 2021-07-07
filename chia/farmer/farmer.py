@@ -23,7 +23,6 @@ from chia.protocols.pool_protocol import (
     PostFarmerRequest,
     PutFarmerPayload,
     PutFarmerRequest,
-    PutFarmerResponse,
     AuthenticationPayload,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -411,10 +410,15 @@ class Farmer:
                                 pool_config, authentication_token_timeout, owner_sk
                             )
                             try:
-                                put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
-                                    put_farmer_response_dict
-                                )
-                                if put_farmer_response.payout_instructions:
+                                # put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
+                                #     put_farmer_response_dict
+                                # )
+                                # if put_farmer_response.payout_instructions:
+                                #     self.log.info(
+                                #         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
+                                #     )
+                                # TODO: Fix Streamable implementation and recover the above.
+                                if put_farmer_response_dict["payout_instructions"]:
                                     self.log.info(
                                         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
                                     )
