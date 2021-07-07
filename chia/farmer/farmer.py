@@ -362,22 +362,32 @@ class Farmer:
                 if time.time() >= pool_state["next_farmer_update"]:
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
-                    async def update_pool_farmer_info() -> Optional[dict]:
+                    async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[bool]]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
                         response = await self._pool_get_farmer(
                             pool_config, authentication_token_timeout, authentication_sk
                         )
-                        if response is not None and "error_code" not in response:
-                            farmer_info: GetFarmerResponse = GetFarmerResponse.from_json_dict(response)
-                            pool_state["current_difficulty"] = farmer_info.current_difficulty
-                            pool_state["current_points"] = farmer_info.current_points
-                            pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
-                        return response
+                        farmer_response: Optional[GetFarmerResponse] = None
+                        farmer_known: Optional[bool] = None
+                        if response is not None:
+                            if "error_code" not in response:
+                                farmer_response = GetFarmerResponse.from_json_dict(response)
+                                if farmer_response is not None:
+                                    pool_state["current_difficulty"] = farmer_response.current_difficulty
+                                    pool_state["current_points"] = farmer_response.current_points
+                                    pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
+                            else:
+                                farmer_known = response["error_code"] != PoolErrorCode.FARMER_NOT_KNOWN.value
+                                self.log.error(
+                                    "update_pool_farmer_info failed: "
+                                    f"{response['error_code']}, {response['error_message']}"
+                                )
+
+                        return farmer_response, farmer_known
 
                     if authentication_token_timeout is not None:
-                        update_response = await update_pool_farmer_info()
-                        is_error = update_response is not None and "error_code" in update_response
-                        if is_error and update_response["error_code"] == PoolErrorCode.FARMER_NOT_KNOWN.value:
+                        farmer_info, farmer_is_known = await update_pool_farmer_info()
+                        if farmer_info is None and farmer_is_known is not None and not farmer_is_known:
                             # Make the farmer known on the pool with a POST /farmer
                             owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             post_response = await self._pool_post_farmer(
@@ -389,13 +399,39 @@ class Farmer:
                                     f"{post_response['welcome_message']}"
                                 )
                                 # Now we should be able to update the local farmer info
-                                update_response = await update_pool_farmer_info()
-                                if update_response is not None and "error_code" in update_response:
-                                    self.log.error(
-                                        f"Failed to update farmer info after POST /farmer: "
-                                        f"{update_response['error_code']}, "
-                                        f"{update_response['error_message']}"
+                                farmer_info, farmer_is_known = await update_pool_farmer_info()
+                                if farmer_info is None and not farmer_is_known:
+                                    self.log.error("Failed to update farmer info after POST /farmer.")
+
+                        # Update the payout instructions on the pool if required
+                        if (
+                            farmer_info is not None
+                            and pool_config.payout_instructions != farmer_info.payout_instructions
+                        ):
+                            owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
+                            put_farmer_response_dict = await self._pool_put_farmer(
+                                pool_config, authentication_token_timeout, owner_sk
+                            )
+                            try:
+                                # put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
+                                #     put_farmer_response_dict
+                                # )
+                                # if put_farmer_response.payout_instructions:
+                                #     self.log.info(
+                                #         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
+                                #     )
+                                # TODO: Fix Streamable implementation and recover the above.
+                                if put_farmer_response_dict["payout_instructions"]:
+                                    self.log.info(
+                                        f"Farmer information successfully updated on the pool {pool_config.pool_url}"
                                     )
+                                else:
+                                    raise Exception
+                            except Exception:
+                                self.log.error(
+                                    f"Failed to update farmer information on the pool {pool_config.pool_url}"
+                                )
+
                     else:
                         self.log.warning(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
@@ -461,7 +497,8 @@ class Farmer:
 
                 config["pool"]["pool_list"] = new_list
                 save_config(self._root_path, "config.yaml", config)
-                await self.update_pool_state()
+                # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
+                pool_state_dict["next_farmer_update"] = 0
                 return
 
         self.log.warning(f"Launcher id: {launcher_id} not found")
