@@ -84,7 +84,7 @@ def join_cmd(wallet_rpc_port: int, fingerprint: int, id: int, pool_url: str, yes
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, join_pool))
 
 
-@plotnft_cmd.command("leave", short_help="Make a plot NFT and return to self-farming")
+@plotnft_cmd.command("leave", short_help="Leave a pool and return to self-farming")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
