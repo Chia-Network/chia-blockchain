@@ -11,9 +11,7 @@ import {
   removePlotDirectory,
   refreshPlots,
 } from './harvesterMessages';
-import {
-  getHarvesters,
-} from './farmerMessages';
+import { getHarvesters } from './farmerMessages';
 import {
   setBackupInfo,
   changeBackupView,

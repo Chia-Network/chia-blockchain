@@ -14,7 +14,11 @@ function combineHarvesters(harvesters): {
   const notFoundFilenames: string[] = [];
 
   harvesters.forEach((harvester) => {
-    const { plots: harvesterPlots, failed_to_open_filenames, no_key_filenames } = harvester;
+    const {
+      plots: harvesterPlots,
+      failed_to_open_filenames,
+      no_key_filenames,
+    } = harvester;
 
     harvesterPlots.forEach((plot) => {
       plots.push({

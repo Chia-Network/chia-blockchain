@@ -27,8 +27,9 @@ export function getPlotNFTs() {
 
       // filter pool wallets
       const poolWallets =
-        wallets?.filter((wallet) => wallet.type === WalletType.POOLING_WALLET) ??
-        [];
+        wallets?.filter(
+          (wallet) => wallet.type === WalletType.POOLING_WALLET,
+        ) ?? [];
 
       const [poolWalletStates, walletBalances] = await Promise.all([
         await Promise.all<PoolWalletStatus>(

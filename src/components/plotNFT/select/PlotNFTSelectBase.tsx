@@ -158,9 +158,7 @@ export default function PlotNFTSelectBase(props: Props) {
             <Alert severity="warning">{poolInfo.error.message}</Alert>
           )}
 
-          {poolInfo.loading && (
-            <Loading center />
-          )}
+          {poolInfo.loading && <Loading center />}
 
           {poolInfo.poolInfo && <PoolInfo poolInfo={poolInfo.poolInfo} />}
         </CardStep>

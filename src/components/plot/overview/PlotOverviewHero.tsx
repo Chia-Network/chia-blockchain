@@ -25,7 +25,7 @@ export default function PlotOverviewHero() {
   function handleRefreshPlots() {
     dispatch(refreshPlots());
   }
-  
+
   return (
     <Grid container>
       <Grid xs={12} md={6} lg={5} item>
@@ -45,10 +45,20 @@ export default function PlotOverviewHero() {
             </Trans>
           </Typography>
           <Flex gap={1}>
-            <Button onClick={handleAddPlot} variant="contained" color="primary" fullWidth>
+            <Button
+              onClick={handleAddPlot}
+              variant="contained"
+              color="primary"
+              fullWidth
+            >
               <Trans>Add a Plot</Trans>
             </Button>
-            <Button onClick={handleRefreshPlots} variant="outlined" color="primary" fullWidth>
+            <Button
+              onClick={handleRefreshPlots}
+              variant="outlined"
+              color="primary"
+              fullWidth
+            >
               <Trans>Refresh Plots</Trans>
             </Button>
           </Flex>

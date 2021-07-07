@@ -33,15 +33,17 @@ export default function Loading(props: Props) {
 
   if (center) {
     return (
-      <Flex flexDirection="column" gap={1} alignItems={center ? 'center' : 'flex-start'}>
+      <Flex
+        flexDirection="column"
+        gap={1}
+        alignItems={center ? 'center' : 'flex-start'}
+      >
         <StyledCircularProgress {...rest} />
       </Flex>
     );
   }
 
-  return (
-    <StyledCircularProgress {...rest} />
-  );
+  return <StyledCircularProgress {...rest} />;
 }
 
 Loading.defaultProps = {

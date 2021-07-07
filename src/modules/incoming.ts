@@ -44,7 +44,12 @@ export function getPwStatus(walletId: number) {
 
 export function getWallets() {
   return async (dispatch): Promise<Wallet[]> => {
-    const { data } = await async_api(dispatch, getWalletsMessage(), false, true);
+    const { data } = await async_api(
+      dispatch,
+      getWalletsMessage(),
+      false,
+      true,
+    );
 
     return data?.wallets;
   };

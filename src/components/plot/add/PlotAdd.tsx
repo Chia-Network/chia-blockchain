@@ -149,9 +149,7 @@ export default function PlotAdd() {
   };
 
   if (!currencyCode) {
-    return (
-      <Loading center />
-    );
+    return <Loading center />;
   }
 
   return (
