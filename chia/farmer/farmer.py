@@ -23,6 +23,7 @@ from chia.protocols.pool_protocol import (
     PostFarmerRequest,
     PutFarmerPayload,
     PutFarmerRequest,
+    PutFarmerResponse,
     AuthenticationPayload,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -399,6 +400,30 @@ class Farmer:
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()
                                 if farmer_info is None and not farmer_is_known:
                                     self.log.error("Failed to update farmer info after POST /farmer.")
+
+                        # Update the payout instructions on the pool if required
+                        if (
+                            farmer_info is not None
+                            and pool_config.payout_instructions != farmer_info.payout_instructions
+                        ):
+                            owner_sk = await find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
+                            put_farmer_response_dict = await self._pool_put_farmer(
+                                pool_config, authentication_token_timeout, owner_sk
+                            )
+                            try:
+                                put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
+                                    put_farmer_response_dict
+                                )
+                                if put_farmer_response.payout_instructions:
+                                    self.log.info(
+                                        f"Farmer information successfully updated on the pool {pool_config.pool_url}"
+                                    )
+                                else:
+                                    raise Exception
+                            except Exception:
+                                self.log.error(
+                                    f"Failed to update farmer information on the pool {pool_config.pool_url}"
+                                )
 
                     else:
                         self.log.warning(
