@@ -13,6 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 Portable pooled plots are now available using our new plot NFT. These allow you to plot new plots to an NFT that can either self farm or join and leave pools. During development there were changes to the plot NFT so portable pool plots (those made with `-c` option to `chia plots create`) using code from before June 25th are invalid on mainnet.
 OG plots made before this release can continue to be farmed side by side with the new portable pool plots but can not join pools using the official pooling protocol. You can learn more as a farmer by checking out the [pool user guide](https://github.com/Chia-Network/chia-blockchain/wiki/Pooling-User-Guide). Pool operators and those wanting to understand how the official pooling protocol operates should check out our [pooling implementation reference repository](https://github.com/Chia-Network/pool-reference). If you plan to use plot NFT, all your farmers and harvesters must be on 1.2.0 to function properly for portable pool plots.
 - The exact commit after which Plot NFTs should be valid is the `89f7a4b3d6329493cd2b4bc5f346a819c99d3e7b` commit (in which `pools.testnet9` branch was merged to main) or `5d62b3d1481c1e225d8354a012727ab263342c0a` within the `pools.testnet9` branch.
+- `chia farm summary` and the GUI now use a new RPC endpoint to properly show plots for local and remote harvesters.
 - `chia configure` now supports command line updates to peer count and target peer count.
 - Thank you @gldecurtins for adding logging support for remote syslog.
 - Thanks to @maran and @Animazing for adding farmer and pool public key display to the RPC.
@@ -34,9 +35,9 @@ OG plots made before this release can continue to be farmed side by side with th
 @683280 optimized code in phase1.hpp. @jespino and @mrhacky started migrating to flags instead of booleans parameters for `show_progress` and `nobitfield`. If you are providing third-party tools you may need to make adjustments if relying on the chiapos log.
 - Updated chiavdf to version 1.0.2 to fix certain tests.
 - Windows builds now rely upon Python 3.9 which obviates the fix in 1.1.7.
-- We are now using miniupnpc version 2.2.2.
+- We are now using miniupnpc version 2.2.2 so that we can support Python 3.9 on Windows.
 - We updated to clvm 0.9.6 and clvm_rs 0.1.8. CLVMObject now lazily converts python types to CLVM types as elements are inspected in clvm. cvlm_rs now returns python objects rather than a serialized object.
-- We now have rudimentary checks that fees are less than the amount being spent.
+- We now have rudimentary checks to makes sure that fees are less than the amount being spent.
 - The harvester API no longer relies upon time:time with thanks to @x1957.
 - We have increased the strictness of validating Chialisp in the mempool and clvm.
 - Thanks to @ruslanskorb for improvements to the human-readable forms in the CLI.
@@ -51,6 +52,7 @@ OG plots made before this release can continue to be farmed side by side with th
 ### Fixed
 
 - The delete plots button in the Windows GUI has been fixed and re-enabled.
+- Sometimes upon startup, the GUI takes a while to load the plots to display. We've made a temporary improvement that adds a "Refresh Plots" button whenever the GUI has not yet found plots.
 - Correctly display private key in `chia keys show`.
 - Thanks to @gldecurtins for removing a default printout of the private key mnemonic in `chia keys show`.
 - Shutting down the full node is cleaner and manages uPnP better.
@@ -62,7 +64,6 @@ OG plots made before this release can continue to be farmed side by side with th
 - @asdf2014 removed some useless code in the wallet node API.
 - Thanks to @willi123yao for a fix to under development pool wallets.
 - `chia farm summary` better handles wallet errors.
-- `chia farm summary` now shows remote harvester plots.
 - @Hoinor fixed formatting issues around the Chinese translation in the GUI.
 - Sometimes the GUI would stop refreshing certain fields.
 - We have better error handling for misbehaving peers from naive forks/clones.
