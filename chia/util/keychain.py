@@ -493,7 +493,9 @@ class Keychain:
         Encrypts the keyring contents to new passphrase, provided that the current
         passphrase can decrypt the contents
         """
-        KeyringWrapper.get_shared_instance().set_master_passphrase(current_passphrase, new_passphrase, allow_migration)
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            current_passphrase, new_passphrase, allow_migration=allow_migration
+        )
 
     @staticmethod
     def remove_master_passphrase(current_passphrase: Optional[str]) -> None:
