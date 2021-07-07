@@ -1202,14 +1202,14 @@ class FullNode:
             validation_start = time.time()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
             npc_results = {}
-            self.log.warning("if pre_validation_result is not None and pre_validation_result.npc_result is not None:")
-            self.log.warning(pre_validation_result is not None)
+            # self.log.warning("if pre_validation_result is not None and pre_validation_result.npc_result is not None:")
+            # self.log.warning(pre_validation_result is not None)
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results: Optional[
                 List[PreValidationResult]
             ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
-            self.log.warning("if pre_validation_results is None:")
+            # self.log.warning("if pre_validation_results is None:")
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
@@ -1228,7 +1228,7 @@ class FullNode:
                 result_to_validate = (
                     pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                 )
-                self.log.warning("assert result_to_validate.required_iters == pre_validation_results[0].required_iters")
+                # self.log.warning("assert result_to_validate.required_iters == pre_validation_results[0].required_iters")
                 assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                 added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
                 if (
@@ -1237,7 +1237,7 @@ class FullNode:
                     and fork_height < self.full_node_store.previous_generator.block_height
                 ):
                     self.full_node_store.previous_generator = None
-                    self.log.warning("self.full_node_store.previous_generator = None")
+                    # self.log.warning("self.full_node_store.previous_generator = None")
             validation_time = time.time() - validation_start
             self.log.warning("if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:")
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
@@ -1252,7 +1252,7 @@ class FullNode:
                 self.log.info(f"Disconnected block {header_hash} at height {block.height}")
                 return None
             elif added == ReceiveBlockResult.NEW_PEAK:
-                self.log.warning("added == ReceiveBlockResult.NEW_PEAK: 1249")
+                # self.log.warning("added == ReceiveBlockResult.NEW_PEAK: 1249")
                 # Only propagate blocks which extend the blockchain (becomes one of the heads)
                 new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 assert new_peak is not None and fork_height is not None
