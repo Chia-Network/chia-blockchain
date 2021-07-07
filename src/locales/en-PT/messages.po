@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 17:38\n"
+"PO-Revision-Date: 2021-07-07 23:36\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,7 +28,7 @@ msgstr "*Wants t' explore taken booty further? See <0>Chia Explorer</0> by a mig
 
 #: src/components/plot/add/PlotAddNFT.tsx:123
 msgid "+ Add New Plot NFT"
-msgstr ""
+msgstr "Give yer Crewdog a no-so-loyal NFT tag"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -302,7 +302,7 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
-msgstr ""
+msgstr "Time to find new fleet"
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
@@ -331,7 +331,7 @@ msgstr "Choose Strength o' Crewdog"
 #: src/components/plotNFT/PlotNFTCard.tsx:372
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
-msgstr ""
+msgstr "Claim yar booty"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
@@ -405,7 +405,7 @@ msgstr "Say ahoy to other peers"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
-msgstr ""
+msgstr "Signal da fleet"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
@@ -1010,7 +1010,7 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr ""
+msgstr "Find yer self a fleet"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:141
@@ -1058,16 +1058,16 @@ msgstr "Latest Ships to Plunder"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTCard.tsx:349
 msgid "Launcher Id"
-msgstr ""
+msgstr "Yar Jolly Roger"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
 msgid "Learn More"
-msgstr ""
+msgstr "Read thee scroll"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
-msgstr ""
+msgstr "Abandon da fleet"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "List view"
@@ -1075,11 +1075,11 @@ msgstr ""
 
 #: src/components/pool/Pool.tsx:21
 msgid "Loading Plot NFTs"
-msgstr ""
+msgstr "Reading thee NFT voodoos"
 
 #: src/components/wallet/Wallets.tsx:172
 msgid "Loading list of wallets"
-msgstr ""
+msgstr "Show others treasure boxes"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:41
 msgid "Loading..."
@@ -1087,7 +1087,7 @@ msgstr "Unrolling Treasure Maps..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
-#~ msgstr "Current Ship Crew"
+#~ msgstr "Local Harvester Plots"
 
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
@@ -1334,7 +1334,7 @@ msgstr "All Yer Under Way Treasure"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
 #: src/hooks/useAbsorbRewards.tsx:45
 msgid "Please Confirm"
-msgstr ""
+msgstr "Yar sure about this cap'tin"
 
 #: src/components/trading/CreateOffer.jsx:100
 msgid "Please add a trade pair"
@@ -1502,26 +1502,26 @@ msgstr "Recruitin' wit' bitfield on makes about 30% less overall writes 'n be no
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:176
 #: src/components/plotNFT/PlotNFTCard.tsx:215
 msgid "Points Found Since Start"
-msgstr ""
+msgstr "Booty looted from join thee fleet"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:187
 #: src/components/plotNFT/PlotNFTCard.tsx:226
 msgid "Points Found in Last 24 Hours"
-msgstr ""
+msgstr "Booty looted from last 24 bottle o rum"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Booty at yar feet from last 24 bottle o rum"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr ""
+msgstr "Fleets"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
-msgstr ""
+msgstr "Fleet Jolly Roger (PCA)"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:81
 msgid "Pool Key"
@@ -1586,7 +1586,7 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
-msgstr ""
+msgstr "Sailing with thee mighty fleet"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
@@ -1642,7 +1642,7 @@ msgstr "Lucky Boardin's"
 
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
-msgstr ""
+msgstr "What pirate accord yar signed"
 
 #: src/components/wallet/create/createRLAdmin.jsx:297
 msgid "Pubkey"
@@ -1826,11 +1826,11 @@ msgstr "Aye"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
 msgid "Self Pooling"
-msgstr ""
+msgstr "Just me n me trusty crewdogs"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
-msgstr ""
+msgstr "Sailing solo, yar keep all booty when yar loot the treasure."
 
 #: src/components/trading/CreateOffer.jsx:164
 #: src/components/trading/TradesTable.tsx:47
@@ -1887,7 +1887,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Aren't no feel good here mate"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2061,7 +2061,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-#~ msgstr ""
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
@@ -2332,7 +2332,7 @@ msgstr "Look at Offer"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #~ msgid "View Payout Instructions"
-#~ msgstr ""
+#~ msgstr "View Payout Instructions"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
@@ -2610,3 +2610,4 @@ msgstr "{currencyCode} Earned On The Side"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
