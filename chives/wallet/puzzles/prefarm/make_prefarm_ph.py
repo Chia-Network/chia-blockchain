@@ -8,8 +8,8 @@ from chives.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chives.util.condition_tools import parse_sexp_to_conditions
 from chives.util.ints import uint32
 
-address1 = "xcc1c8crq4ptus00k0cywccgl4hhttxpw6pnhvm69nv5ys0lvgkfeqyqk92x3v"  # Gene wallet (m/12381/8444/2/42):
-address2 = "xcc1fuymfnu5mltetvmvrqw0hmz8dlslyqmjzrcuz9eqh4487df4x24q5he3fj"  # Mariano address (m/12381/8444/2/0)
+address1 = "xcc1c8crq4ptus00k0cywccgl4hhttxpw6pnhvm69nv5ys0lvgkfeqyqk92x3v"  # Gene wallet (m/12381/9699/2/42):
+address2 = "xcc1fuymfnu5mltetvmvrqw0hmz8dlslyqmjzrcuz9eqh4487df4x24q5he3fj"  # Mariano address (m/12381/9699/2/0)
 
 ph1 = decode_puzzle_hash(address1)
 ph2 = decode_puzzle_hash(address2)
