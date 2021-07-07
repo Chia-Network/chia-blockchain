@@ -860,7 +860,7 @@ class TestPoolWalletRpc:
         pool_b_ph = await wallets[1].get_new_puzzlehash()
 
         full_node_api = full_nodes[0]
-        WAIT_SECS = 10
+        WAIT_SECS = 30
 
         try:
             summaries_response = await client.get_wallets()
