@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:47\n"
+"PO-Revision-Date: 2021-07-07 23:37\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -1087,7 +1087,7 @@ msgstr "Wczytywanie..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
-#~ msgstr "Twoje działki"
+#~ msgstr "Local Harvester Plots"
 
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
@@ -2061,7 +2061,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-#~ msgstr ""
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
@@ -2332,7 +2332,7 @@ msgstr "Zobacz Ofertę"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #~ msgid "View Payout Instructions"
-#~ msgstr ""
+#~ msgstr "View Payout Instructions"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
@@ -2610,3 +2610,4 @@ msgstr "{currencyCode} Opłaty za transakcje użytkownika"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
