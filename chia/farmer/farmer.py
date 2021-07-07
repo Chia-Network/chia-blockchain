@@ -490,7 +490,8 @@ class Farmer:
 
                 config["pool"]["pool_list"] = new_list
                 save_config(self._root_path, "config.yaml", config)
-                await self.update_pool_state()
+                # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
+                pool_state_dict["next_farmer_update"] = 0
                 return
 
         self.log.warning(f"Launcher id: {launcher_id} not found")
