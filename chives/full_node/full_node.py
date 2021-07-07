@@ -1193,8 +1193,8 @@ class FullNode:
                 return await self.respond_block(block_response, peer)
 
         async with self.blockchain.lock:
-            self.log.warning("After acquiring the lock, check again, because another asyncio thread might have added it")
-            self.log.warning(self.blockchain.contains_block(header_hash))
+            # self.log.warning("After acquiring the lock, check again, because another asyncio thread might have added it")
+            # self.log.warning(self.blockchain.contains_block(header_hash))
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 self.log.warning("self.blockchain.contains_block(header_hash) 1199")
