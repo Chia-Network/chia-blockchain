@@ -1103,8 +1103,8 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
     return f
 
 
-async def async_run_daemon(root_path: Path, have_gui: bool = False) -> int:
-    chia_init(root_path, skip_check_keys=have_gui)
+async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
+    chia_init(root_path, skip_check_keys=wait_for_unlock)
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
@@ -1132,24 +1132,27 @@ async def async_run_daemon(root_path: Path, have_gui: bool = False) -> int:
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
     ws_server = WebSocketServer(
-        root_path, ca_crt_path, ca_key_path, crt_path, key_path, run_check_keys_on_unlock=have_gui
+        root_path, ca_crt_path, ca_key_path, crt_path, key_path, run_check_keys_on_unlock=wait_for_unlock
     )
     await ws_server.start()
     assert ws_server.websocket_server is not None
     await ws_server.websocket_server.wait_closed()
     log.info("Daemon WebSocketServer closed")
+    # sys.stdout.close()
     return 0
 
 
-def run_daemon(root_path: Path, have_gui: bool = False) -> int:
-    return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, have_gui))
+def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
+    result = asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, wait_for_unlock))
+    return result
 
 
 def main(argv) -> int:
     from chia.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.keychain import Keychain
 
-    have_gui = "--have-gui" in argv
-    return run_daemon(DEFAULT_ROOT_PATH, have_gui)
+    wait_for_unlock = "--wait-for-unlock" in argv and Keychain.is_keyring_locked()
+    return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
 
 
 if __name__ == "__main__":

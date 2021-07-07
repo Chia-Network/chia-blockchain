@@ -152,6 +152,23 @@ def cache_passphrase(passphrase: str) -> None:
     Keychain.set_cached_master_passphrase(passphrase)
 
 
+def get_current_passphrase() -> Optional[str]:
+    if not Keychain.has_master_passphrase():
+        return None
+
+    current_passphrase = None
+    if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
+        current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+    else:
+        try:
+            current_passphrase = obtain_current_passphrase()
+        except Exception as e:
+            print(f"Unable to confirm current passphrase: {e}")
+            raise e
+
+    return current_passphrase
+
+
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
     new_passphrase = Keychain.get_cached_master_passphrase()
     assert new_passphrase is not None

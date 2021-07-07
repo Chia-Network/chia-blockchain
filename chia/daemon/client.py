@@ -87,6 +87,14 @@ class DaemonProxy:
             return bool(response["data"]["is_running"])
         return False
 
+    async def is_keyring_locked(self) -> bool:
+        data = {}
+        request = self.format_request("is_keyring_locked", data)
+        response = await self._get(request)
+        if "is_keyring_locked" in response["data"]:
+            return bool(response["data"]["is_keyring_locked"])
+        return False
+
     async def unlock_keyring(self, passphrase: str) -> WsRpcMessage:
         data = {"key": passphrase}
         request = self.format_request("unlock_keyring", data)
