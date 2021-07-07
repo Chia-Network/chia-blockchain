@@ -56,8 +56,12 @@ export function getPlotNFTs() {
       const walletBalance = walletBalances.find(
         (item) => item?.wallet_id === poolWalletStatus.wallet_id,
       );
+
       if (!walletBalance) {
-        throw new Error('Wallet balance is not defined');
+        external.push({
+          pool_state: normalizePoolState(poolStateItem),
+        });
+        return;
       }
 
       nfts.push({

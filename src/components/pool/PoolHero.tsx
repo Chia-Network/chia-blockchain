@@ -19,7 +19,7 @@ export default function PoolHero() {
 
   return (
     <Grid container>
-      <Grid xs={12} md={6} lg={4} item>
+      <Grid xs={12} md={6} lg={5} item>
         <CardHero>
           <StyledPoolIcon color="primary" />
           <Typography variant="body1">

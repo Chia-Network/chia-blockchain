@@ -26,7 +26,7 @@ export default function FarmOverviewHero() {
 
   return (
     <Grid container>
-      <Grid xs={12} md={6} lg={4} item>
+      <Grid xs={12} md={6} lg={5} item>
         <CardHero>
           <StyledImage src={heroSrc} />
           <Typography variant="body1">

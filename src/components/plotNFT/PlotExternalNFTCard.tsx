@@ -20,14 +20,15 @@ import {
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
-import { Link as LinkIcon, Payment as PaymentIcon } from '@material-ui/icons';
+// import { Link as LinkIcon, Payment as PaymentIcon } from '@material-ui/icons';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTExternalState from './PlotNFTExternalState';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
-import useOpenDialog from '../../hooks/useOpenDialog';
+import PlotNFTExternal from '../../types/PlotNFTExternal';
+// import useOpenDialog from '../../hooks/useOpenDialog';
 import PlotNFTGraph from './PlotNFTGraph';
-import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
+// import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
 // import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
 import getPercentPointsSuccessfull from '../../util/getPercentPointsSuccessfull';
 
@@ -80,7 +81,7 @@ export default function PlotExternalNFTCard(props: Props) {
   );
 
   const history = useHistory();
-  const openDialog = useOpenDialog();
+  // const openDialog = useOpenDialog();
   const { plots, isSelfPooling } = usePlotNFTExternalDetails(nft);
   const totalPointsFound24 = points_found_24h.reduce(
     (accumulator, item) => accumulator + item[1],
@@ -96,9 +97,11 @@ export default function PlotExternalNFTCard(props: Props) {
     });
   }
 
+  /*
   function handleGetPoolLoginLink() {
     openDialog(<PlotNFTGetPoolLoginLinkDialog nft={nft} />);
   }
+  */
 
   /*
   function handlePayoutInstructions() {
@@ -229,7 +232,7 @@ export default function PlotExternalNFTCard(props: Props) {
                         <Trans>Add a Plot</Trans>
                       </Typography>
                     </MenuItem>
-                    {!isSelfPooling && (
+                    {/*!isSelfPooling && (
                       <MenuItem
                         onClick={() => {
                           onClose();
@@ -243,7 +246,7 @@ export default function PlotExternalNFTCard(props: Props) {
                           <Trans>View Pool Login Link</Trans>
                         </Typography>
                       </MenuItem>
-                    )}
+                    )*/}
                     {/* !isSelfPooling && (
                       <MenuItem
                         onClick={() => {
