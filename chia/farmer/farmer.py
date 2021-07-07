@@ -50,6 +50,7 @@ log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
+UPDATE_HARVESTER_CACHE_INTERVAL: int = 60
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
@@ -130,6 +131,8 @@ class Farmer:
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
+
+        self.harvester_cache: Dict[str, Dict[str, Tuple[Dict, float]]] = {}
 
     async def _start(self):
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
@@ -490,24 +493,71 @@ class Farmer:
 
         return None
 
-    async def get_plots(self) -> Dict:
-        rpc_response = {}
+    async def update_cached_harvesters(self):
+        # First remove outdated cache entries
+        remove_hosts = []
+        for host, host_cache in self.harvester_cache.items():
+            remove_peers = []
+            for peer_id, peer_cache in host_cache.items():
+                _, last_update = peer_cache
+                # If the peer cache hasn't been updated for 10x interval, drop it since the harvester doesn't respond
+                if time.time() - last_update > UPDATE_HARVESTER_CACHE_INTERVAL * 10:
+                    remove_peers.append(peer_id)
+            for key in remove_peers:
+                del host_cache[key]
+            if len(host_cache) == 0:
+                remove_hosts.append(host)
+        for key in remove_hosts:
+            del self.harvester_cache[key]
+        # Now query each harvester and update caches
         for connection in self.server.get_connections():
-            if connection.connection_type == NodeType.HARVESTER:
-                peer_host = connection.peer_host
-                peer_port = connection.peer_port
-                peer_full = f"{peer_host}:{peer_port}"
+            if connection.connection_type != NodeType.HARVESTER:
+                continue
+            cache_entry = await self.get_cached_harvesters(connection)
+            if cache_entry is None or time.time() - cache_entry[1] > UPDATE_HARVESTER_CACHE_INTERVAL:
                 response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
-                if response is None:
+                if response is not None:
+                    if isinstance(response, harvester_protocol.RespondPlots):
+                        if connection.peer_host not in self.harvester_cache:
+                            self.harvester_cache[connection.peer_host] = {}
+
+                        self.harvester_cache[connection.peer_host][connection.peer_node_id.hex()] = (
+                            response.to_json_dict(),
+                            time.time(),
+                        )
+                    else:
+                        self.log.error(
+                            f"Invalid response from harvester:"
+                            f"peer_host {connection.peer_host}, peer_node_id {connection.peer_node_id}"
+                        )
+                else:
                     self.log.error(
                         "Harvester did not respond. You might need to update harvester to the latest version"
                     )
-                    continue
-                if not isinstance(response, harvester_protocol.RespondPlots):
-                    self.log.error(f"Invalid response from harvester: {peer_host}:{peer_port}")
-                    continue
-                rpc_response[peer_full] = response.to_json_dict()
-        return rpc_response
+
+    async def get_cached_harvesters(self, connection: WSChiaConnection) -> Optional[Tuple[Dict, float]]:
+        host_cache = self.harvester_cache.get(connection.peer_host)
+        if host_cache is None:
+            return None
+        return host_cache.get(connection.peer_node_id.hex())
+
+    async def get_harvesters(self) -> Dict:
+        harvesters: List = []
+        for connection in self.server.get_connections():
+            if connection.connection_type != NodeType.HARVESTER:
+                continue
+
+            cache_entry = await self.get_cached_harvesters(connection)
+            if cache_entry is not None:
+                harvester_object: dict = dict(cache_entry[0])
+                harvester_object["connection"] = {
+                    "node_id": connection.peer_node_id.hex(),
+                    "host": connection.peer_host,
+                    "port": connection.peer_port,
+                }
+                harvesters.append(harvester_object)
+
+        return {"harvesters": harvesters}
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
@@ -531,27 +581,34 @@ class Farmer:
         time_slept: uint64 = uint64(0)
         refresh_slept = 0
         while not self._shut_down:
-            if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
-                now = time.time()
-                removed_keys: List[bytes32] = []
-                for key, add_time in self.cache_add_time.items():
-                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
-                        self.sps.pop(key, None)
-                        self.proofs_of_space.pop(key, None)
-                        self.quality_str_to_identifiers.pop(key, None)
-                        self.number_of_responses.pop(key, None)
-                        removed_keys.append(key)
-                for key in removed_keys:
-                    self.cache_add_time.pop(key, None)
-                time_slept = uint64(0)
-                log.debug(
-                    f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
-                    f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
-                )
-            time_slept += 1
-            refresh_slept += 1
-            # Periodically refresh GUI to show the correct download/upload rate.
-            if refresh_slept >= 30:
-                self.state_changed("add_connection", {})
-                refresh_slept = 0
+            try:
+                if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
+                    now = time.time()
+                    removed_keys: List[bytes32] = []
+                    for key, add_time in self.cache_add_time.items():
+                        if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
+                            self.sps.pop(key, None)
+                            self.proofs_of_space.pop(key, None)
+                            self.quality_str_to_identifiers.pop(key, None)
+                            self.number_of_responses.pop(key, None)
+                            removed_keys.append(key)
+                    for key in removed_keys:
+                        self.cache_add_time.pop(key, None)
+                    time_slept = uint64(0)
+                    log.debug(
+                        f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
+                        f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
+                    )
+                time_slept += 1
+                refresh_slept += 1
+                # Periodically refresh GUI to show the correct download/upload rate.
+                if refresh_slept >= 30:
+                    self.state_changed("add_connection", {})
+                    refresh_slept = 0
+
+                # Handles harvester plots cache cleanup and updates
+                await self.update_cached_harvesters()
+            except Exception:
+                log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.print_exc()}")
+
             await asyncio.sleep(1)
