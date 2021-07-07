@@ -65,7 +65,7 @@ class UPnP:
             return
         self.queue.put(("shutdown",))
         log.info("UPnP, shutting down thread")
-        self.thread.join()
+        self.thread.join(1)
         self.thread = None
 
     # this is here just in case the UPnP object is destroyed non-gracefully,
