@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:47\n"
+"PO-Revision-Date: 2021-07-07 17:38\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -384,7 +384,7 @@ msgstr "Confirmar Desconexión"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Confirmación"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -405,7 +405,7 @@ msgstr "Conectar a otros pares"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
-msgstr ""
+msgstr "Conectar al pool"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
@@ -649,7 +649,7 @@ msgstr "Des-habilitar sembrado de bitfield"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:26
 msgid "Discard"
-msgstr ""
+msgstr "Descartar"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
