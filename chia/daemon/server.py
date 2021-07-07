@@ -283,7 +283,7 @@ class WebSocketServer:
         ]
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
-        elif command in keychain_commands:
+        elif command in keychain_commands:  # Keychain commands should be handled by KeychainServer
             response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()

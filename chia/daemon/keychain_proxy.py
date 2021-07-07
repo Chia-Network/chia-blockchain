@@ -37,6 +37,13 @@ class MalformedKeychainResponse(Exception):
 
 
 class KeychainProxy(DaemonProxy):
+    """
+    KeychainProxy can act on behalf of a local or remote keychain. In the case of
+    wrapping a local keychain, the proxy object simply forwards-along the calls to
+    the underlying local keychain. In the remote case, calls are made to the daemon
+    over the RPC interface, allowing the daemon to act as the keychain authority.
+    """
+
     def __init__(
         self,
         log: logging.Logger,
@@ -58,9 +65,15 @@ class KeychainProxy(DaemonProxy):
         super().__init__(uri or "", ssl_context)
 
     def use_local_keychain(self) -> bool:
+        """
+        Indicates whether the proxy forwards calls to a local keychain
+        """
         return self.keychain is not None
 
     def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+        """
+        Overrides DaemonProxy.format_request() to add keychain-specific RPC params
+        """
         if data is None:
             data = {}
 
@@ -70,10 +83,19 @@ class KeychainProxy(DaemonProxy):
 
         return super().format_request(command, data)
 
+    async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
+        request = self.format_request(request_name, data)
+        response = await self._get(request)
+        success = response["data"].get("success", False)
+        return response, success
+
     def handle_error(self, response: WsRpcMessage):
+        """
+        Common error handling for RPC responses
+        """
         error = response["data"].get("error", None)
-        error_details = response["data"].get("error_details", {})
         if error:
+            error_details = response["data"].get("error_details", {})
             if error == KEYCHAIN_ERR_LOCKED:
                 raise KeyringIsLocked()
             elif error == KEYCHAIN_ERR_NO_KEYS:
@@ -87,14 +109,16 @@ class KeychainProxy(DaemonProxy):
                 raise Exception(f"{err}")
 
     async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+        """
+        Forwards to Keychain.add_private_key()
+        """
         key: PrivateKey
         if self.use_local_keychain():
             key = self.keychain.add_private_key(mnemonic, passphrase)
         else:
-            data = {"mnemonic": mnemonic, "passphrase": passphrase}
-            request = self.format_request("add_private_key", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request(
+                "add_private_key", {"mnemonic": mnemonic, "passphrase": passphrase}
+            )
             if success:
                 seed = mnemonic_to_seed(mnemonic, passphrase)
                 key = AugSchemeMPL.key_gen(seed)
@@ -110,47 +134,49 @@ class KeychainProxy(DaemonProxy):
         return key
 
     async def check_keys(self, root_path):
+        """
+        Forwards to init_funcs.check_keys()
+        """
         if self.use_local_keychain():
             check_keys(root_path)
         else:
-            data = {"root_path": str(root_path)}
-            request = self.format_request("check_keys", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request("check_keys", {"root_path": str(root_path)})
             if not success:
                 self.handle_error(response)
 
     async def delete_all_keys(self):
+        """
+        Forwards to Keychain.delete_all_keys()
+        """
         if self.use_local_keychain():
             self.keychain.delete_all_keys()
         else:
-            data = {}
-            request = self.format_request("delete_all_keys", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request("delete_all_keys", {})
             if not success:
                 self.handle_error(response)
 
     async def delete_key_by_fingerprint(self, fingerprint: int):
+        """
+        Forwards to Keychain.delete_key_by_fingerprint()
+        """
         if self.use_local_keychain():
             self.keychain.delete_key_by_fingerprint(fingerprint)
         else:
-            data = {"fingerprint": fingerprint}
-            request = self.format_request("delete_key_by_fingerprint", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request(
+                "delete_key_by_fingerprint", {"fingerprint": fingerprint}
+            )
             if not success:
                 self.handle_error(response)
 
     async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+        """
+        Forwards to Keychain.get_all_private_keys()
+        """
         keys: List[Tuple[PrivateKey, bytes]] = []
         if self.use_local_keychain():
             keys = self.keychain.get_all_private_keys()
         else:
-            data: Dict[str, Any] = {}
-            request = self.format_request("get_all_private_keys", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request("get_all_private_keys", {})
             if success:
                 private_keys = response["data"].get("private_keys", None)
                 if private_keys is None:
@@ -180,16 +206,16 @@ class KeychainProxy(DaemonProxy):
         return keys
 
     async def get_first_private_key(self) -> Optional[PrivateKey]:
+        """
+        Forwards to Keychain.get_first_private_key()
+        """
         key: Optional[PrivateKey] = None
         if self.use_local_keychain():
             sk_ent = self.keychain.get_first_private_key()
             if sk_ent:
                 key = sk_ent[0]
         else:
-            data: Dict[str, Any] = {}
-            request = self.format_request("get_first_private_key", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request("get_first_private_key", {})
             if success:
                 private_key = response["data"].get("private_key", None)
                 if private_key is None:
@@ -218,6 +244,9 @@ class KeychainProxy(DaemonProxy):
         return key
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        """
+        Locates and returns a private key matching the provided fingerprint
+        """
         key: Optional[PrivateKey] = None
         if self.use_local_keychain():
             private_keys = self.keychain.get_all_private_keys()
@@ -232,10 +261,9 @@ class KeychainProxy(DaemonProxy):
                 else:
                     key = private_keys[0][0]
         else:
-            data = {"fingerprint": fingerprint}
-            request = self.format_request("get_key_for_fingerprint", data)
-            response = await self._get(request)
-            success = response["data"].get("success", False)
+            response, success = await self.get_response_for_request(
+                "get_key_for_fingerprint", {"fingerprint": fingerprint}
+            )
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)

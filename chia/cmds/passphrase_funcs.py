@@ -14,6 +14,9 @@ PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_f
 
 
 def remove_passphrase_options_from_cmd(cmd) -> None:
+    """
+    Filters-out passphrase optiosn from a given Click command object
+    """
     # TODO: Click doesn't seem to have a great way of adding/removing params using an
     # existing command, and using the decorator-supported construction of options doesn't
     # allow for conditionally including options. Once keyring passphrase management is
@@ -79,7 +82,7 @@ def initialize_passphrase() -> None:
     if Keychain.has_cached_passphrase():
         passphrase = Keychain.get_cached_master_passphrase()
 
-    if not passphrase or passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
+    if not passphrase or passphrase == default_passphrase():
         passphrase = prompt_for_new_passphrase()
 
     Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase)
@@ -89,8 +92,8 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
     # Prompt for the current passphrase, if necessary
     if Keychain.has_master_passphrase():
         # Try the default passphrase first
-        if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
-            current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+        if using_default_passphrase():
+            current_passphrase = default_passphrase()
 
         if not current_passphrase:
             try:
@@ -119,15 +122,18 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
 
 
 def remove_passphrase(current_passphrase: Optional[str]) -> bool:
+    """
+    Removes the user's keyring passphrase. The keyring will be re-encrypted to the default passphrase.
+    """
     success = False
 
-    if not Keychain.has_master_passphrase():
+    if not Keychain.has_master_passphrase() or using_default_passphrase():
         print("Passphrase is not currently set")
         success = False
     else:
         # Try the default passphrase first
-        if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
-            current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+        if using_default_passphrase():
+            current_passphrase = default_passphrase()
 
         # Prompt for the current passphrase, if necessary
         if not current_passphrase:
@@ -157,8 +163,8 @@ def get_current_passphrase() -> Optional[str]:
         return None
 
     current_passphrase = None
-    if Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE):
-        current_passphrase = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+    if using_default_passphrase():
+        current_passphrase = default_passphrase()
     else:
         try:
             current_passphrase = obtain_current_passphrase()
@@ -177,7 +183,7 @@ def using_default_passphrase() -> bool:
     if not Keychain.has_master_passphrase():
         return False
 
-    return Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
+    return Keychain.master_passphrase_is_valid(default_passphrase())
 
 
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:

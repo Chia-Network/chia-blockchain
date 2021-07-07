@@ -6,6 +6,7 @@ from chia.util.keychain import Keychain
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
+# Commands that are handled by the KeychainServer
 keychain_commands = [
     "add_private_key",
     "check_keys",
@@ -25,6 +26,10 @@ KEYCHAIN_ERR_MALFORMED_REQUEST = "malformed request"
 
 
 class KeychainServer:
+    """
+    Implements a remote keychain service for clients to perform key operations on
+    """
+
     def __init__(self):
         self._default_keychain = Keychain()
         self._alt_keychains = {}
