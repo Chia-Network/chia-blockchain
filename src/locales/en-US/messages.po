@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 05:45\n"
+"PO-Revision-Date: 2021-07-07 17:38\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -36,7 +36,7 @@ msgstr "+ Add New Plot NFT"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
 msgid "128 buckets is recommended"
-msgstr "128 buckets is recommended 256 is better"
+msgstr "128 buckets is recommended"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:98
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -331,7 +331,7 @@ msgstr "Choose Plot Size"
 #: src/components/plotNFT/PlotNFTCard.tsx:370
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
-msgstr "Change Pool"
+msgstr ""
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
@@ -997,7 +997,7 @@ msgstr "Invalid state"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:92
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr "It is a one-time login link to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
+msgstr "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:392
 #: src/components/pool/PoolOverview.tsx:113
@@ -1246,7 +1246,7 @@ msgstr "Not connected"
 
 #: src/components/plot/PlotsNotFound.tsx:37
 msgid "Not found Plots"
-msgstr "Missing Plots"
+msgstr "Not found Plots"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:186
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
