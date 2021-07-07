@@ -99,7 +99,7 @@ class TestWalletRpc:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xcc")
             tx_amount = 15600000
             try:
-                await client.send_transaction("1", 100000000000000001, addr)
+                await client.send_transaction("1", 10000000000001, addr)
                 raise Exception("Should not create high value tx")
             except ValueError:
                 pass
