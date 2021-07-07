@@ -1552,7 +1552,7 @@ class FullNode:
             return None
         try:
             RespondBlock_FullNode = full_node_protocol.RespondBlock(block)
-            self.log.warning(RespondBlock_FullNode)
+            # self.log.warning(RespondBlock_FullNode)
             await self.respond_block(RespondBlock_FullNode)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
