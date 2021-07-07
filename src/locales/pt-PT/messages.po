@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:47\n"
+"PO-Revision-Date: 2021-07-07 23:37\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -901,7 +901,7 @@ msgstr "HD ou chaves determinísticas hierárquicas são um tipo de esquema de c
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Plots do Harvester"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1087,7 +1087,7 @@ msgstr "Carregando..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
-#~ msgstr "Plots de Harvester locais"
+#~ msgstr "Local Harvester Plots"
 
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
@@ -1221,7 +1221,7 @@ msgstr "ID do Nó"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "ID do Nó"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -2053,7 +2053,7 @@ msgstr "A URL da pool \"{normalizedUrl}\" não está funcionando. É uma pool? E
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "A URL da pool especificada não é válida. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
@@ -2061,7 +2061,7 @@ msgstr "A URL da pool precisa usar o protocolo https. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-#~ msgstr "A URL da pool especificada não é válida. {normalizedUrl}"
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
@@ -2332,7 +2332,7 @@ msgstr "Ver oferta"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #~ msgid "View Payout Instructions"
-#~ msgstr "Instruções de pagamento da pool"
+#~ msgstr "View Payout Instructions"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
@@ -2610,3 +2610,4 @@ msgstr "{currencyCode} Taxas de transação do utilizador"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
