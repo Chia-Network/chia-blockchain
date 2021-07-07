@@ -64,4 +64,4 @@ class TransactionRecord(Streamable):
                     return uint32(block_index)
                 if postfarm_parent == self.additions[0].parent_coin_info:
                     return uint32(block_index)
-        return None
+        return uint32(block_index)
