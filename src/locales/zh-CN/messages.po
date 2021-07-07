@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:46\n"
+"PO-Revision-Date: 2021-07-07 23:36\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1087,7 +1087,7 @@ msgstr "正在载入……"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
-#~ msgstr "本地农田"
+#~ msgstr "Local Harvester Plots"
 
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
@@ -1221,7 +1221,7 @@ msgstr "节点ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "节点ID"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -2053,7 +2053,7 @@ msgstr "农业合作社地址 {normalizedUrl} 无效。请确认这是正确的�
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "此农业合作社地址无效。 {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
@@ -2061,7 +2061,7 @@ msgstr "农业合作社地址需要使用 https 协议。{normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-#~ msgstr "指定的农业合作社地址无效。 {normalizedUrl}"
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
@@ -2332,7 +2332,7 @@ msgstr "查看出价"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #~ msgid "View Payout Instructions"
-#~ msgstr "查看支付说明"
+#~ msgstr "View Payout Instructions"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
@@ -2610,3 +2610,4 @@ msgstr "{currencyCode} 用户交易费用"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
