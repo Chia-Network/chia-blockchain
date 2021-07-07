@@ -978,7 +978,7 @@ class TestFullNodeProtocol:
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 2))
         # Invalid transaction does not propagate
         spend_bundle = wallet_a.generate_signed_transaction(
-            10000000000,
+            100000000000000,
             receiver_puzzlehash,
             list(blocks_new[-1].get_included_reward_coins())[0],
         )

@@ -1,7 +1,12 @@
 from chives.util.ints import uint32, uint64
 
+<<<<<<< HEAD
 # 1 Chives coin = 100,000,000.
 _mojo_per_chives = 100000000
+=======
+# 1 Chives coin = 1,000,000,000,000 = 1 trillion mojo.
+_mojo_per_chives = 1000000000000
+>>>>>>> parent of 8fbd856f (CHANGE UNIT)
 _blocks_per_year = 1681920  # 32 * 6 * 24 * 365
 
 

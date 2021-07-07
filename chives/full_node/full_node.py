@@ -486,15 +486,13 @@ class FullNode:
         if (
             curr is None
             or curr.timestamp is None
-            #or curr.timestamp < uint64(int(now - 60 * 7))
-            or (curr.height+12) < peakBlock.height
+            or curr.timestamp < uint64(int(now - 60 * 7))
             or self.sync_store.get_sync_mode()
         ):
             self.log.warning(f"curr is None:{curr is None}. ")
             self.log.warning(f"curr.timestamp is None:{curr.timestamp is None}. ")
             self.log.warning(f"curr.timestamp < uint64(int(now - 60 * 7)):{curr.timestamp < uint64(int(now - 60 * 7))}. ")
             self.log.warning(f"self.sync_store.get_sync_mode():{self.sync_store.get_sync_mode()}. ")
-            self.log.warning(f"(curr.height+12) < peakBlock.height:{(curr.height+12) < peakBlock.height}. ")
             return False
         else:
             self.log.warning(f"Full Node Status: Return Synced. ")
@@ -1239,7 +1237,7 @@ class FullNode:
                     self.full_node_store.previous_generator = None
                     # self.log.warning("self.full_node_store.previous_generator = None")
             validation_time = time.time() - validation_start
-            self.log.warning("if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:")
+            # self.log.warning("if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:")
             if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
                 self.log.warning("added == ReceiveBlockResult.ALREADY_HAVE_BLOCK: 1238")
                 return None
