@@ -60,7 +60,8 @@ class TestMempoolPerformance:
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
 
-        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(40000000000000, ph, 2213)
+        new_coins = [{"puzzlehash": ph, "amount": 40000000000000}]
+        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(new_coins, 0)
 
         peer = await connect_and_get_peer(server_1, server_2)
         await full_node_api_1.respond_transaction(

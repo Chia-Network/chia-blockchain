@@ -101,8 +101,8 @@ class TestTransactions:
 
         await time_out_assert(10, peak_height, num_blocks, full_node_api_1)
         await time_out_assert(10, peak_height, num_blocks, full_node_api_2)
-
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, 0)
+        new_coins = [{"puzzlehash": ph1, "amount": 10}]
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(new_coins)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
@@ -173,8 +173,8 @@ class TestTransactions:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
-
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
+        new_coins = [{"puzzlehash": 32 * b"\0", "amount": 10}]
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(new_coins)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(

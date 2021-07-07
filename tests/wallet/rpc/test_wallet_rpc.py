@@ -167,12 +167,12 @@ class TestWalletRpc:
                 coins=[coin_to_spend],
                 fee=0,
             )
-            assert tx_res.fee_amount == 100
+
             assert tx_res.amount == 444 + 999
             assert len(tx_res.additions) == 3  # The outputs and the change
             assert any([addition.amount == 444 for addition in tx_res.additions])
             assert any([addition.amount == 999 for addition in tx_res.additions])
-            assert sum([rem.amount for rem in tx_res.removals]) - sum([ad.amount for ad in tx_res.additions]) == 100
+            assert sum([rem.amount for rem in tx_res.removals]) - sum([ad.amount for ad in tx_res.additions]) == 0
 
             push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
@@ -180,21 +180,21 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
+            new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999
             await time_out_assert(5, eventual_balance, new_balance)
 
             send_tx_res: TransactionRecord = await client.send_transaction_multi(
-                "1", [{"amount": 555, "puzzle_hash": ph_4}, {"amount": 666, "puzzle_hash": ph_5}], fee=200
+                "1", [{"amount": 555, "puzzle_hash": ph_4}, {"amount": 666, "puzzle_hash": ph_5}], fee=0
             )
             assert send_tx_res is not None
-            assert send_tx_res.fee_amount == 200
+            assert send_tx_res.fee_amount == 0
             assert send_tx_res.amount == 555 + 666
             assert len(send_tx_res.additions) == 3  # The outputs and the change
             assert any([addition.amount == 555 for addition in send_tx_res.additions])
             assert any([addition.amount == 666 for addition in send_tx_res.additions])
             assert (
                 sum([rem.amount for rem in send_tx_res.removals]) - sum([ad.amount for ad in send_tx_res.additions])
-                == 200
+                == 0
             )
 
             await asyncio.sleep(3)
@@ -202,7 +202,7 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            new_balance = new_balance - 555 - 666 - 200
+            new_balance = new_balance - 555 - 666
             await time_out_assert(5, eventual_balance, new_balance)
 
             address = await client.get_next_address("1", True)

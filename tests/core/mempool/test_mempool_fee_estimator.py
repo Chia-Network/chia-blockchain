@@ -13,9 +13,9 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_item import MempoolItem
 from chia.util.db_wrapper import DBWrapper
-from chia.util.wallet_tools import WalletTool
 from tests.core.consensus.test_pot_iterations import test_constants
 from tests.setup_nodes import bt
+from tests.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")

@@ -300,7 +300,10 @@ class Wallet:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         result: NPCResult = get_name_puzzle_conditions(
-            program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+            program,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            safe_mode=True,
         )
         cost_result: uint64 = calculate_cost_of_program(
             program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -359,8 +362,12 @@ class Wallet:
                 for primary in create_coins:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                solution: Program = self.make_solution(create_coins=create_coins, fee=fee, coin_announcements={message},
-                coin_announcements_to_assert=announcements_to_consume)
+                solution: Program = self.make_solution(
+                    create_coins=create_coins,
+                    fee=fee,
+                    coin_announcements={message},
+                    coin_announcements_to_assert=announcements_to_consume,
+                )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
                 solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash})
@@ -385,7 +392,7 @@ class Wallet:
     async def generate_signed_transaction(
         self,
         create_coins: List[Dict[str, Any]],
-        fee_rate: float,
+        fee_rate: float = 0.0,
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         announcements_to_consume: Set[Announcement] = None,
@@ -407,7 +414,9 @@ class Wallet:
         else:
             coins, fee = await self.select_coins(non_change_amount, fee_rate, uint64(condition_cost))
 
-        coin_solutions = await self._generate_unsigned_transaction(create_coins, uint64(int(fee)), origin_id, coins, announcements_to_consume)
+        coin_solutions = await self._generate_unsigned_transaction(
+            create_coins, uint64(int(fee)), origin_id, coins, announcements_to_consume
+        )
 
         assert len(coin_solutions) > 0
         await self.hack_populate_secret_keys_for_coin_solutions(coin_solutions)

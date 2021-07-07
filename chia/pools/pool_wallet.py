@@ -576,13 +576,14 @@ class PoolWallet:
         genesis_challenge: bytes32,
         delay_time: uint64,
         delay_ph: bytes32,
+        fee_rate: float = 0.0,
     ) -> Tuple[SpendBundle, bytes32, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         with the "pooling" inner state, which can be either self pooling or using a pool
         """
 
-        coins: Set[Coin] = await standard_wallet.select_coins(amount)
+        coins, fee = await standard_wallet.select_coins(amount)
         if coins is None:
             raise ValueError("Not enough coins to create pool wallet")
 
@@ -627,15 +628,12 @@ class PoolWallet:
         announcement_message = Program.to([puzzle_hash, amount, extra_data_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
+        new_coin = [{"puzzlehash": genesis_launcher_puz.get_tree_hash(), "amount": amount}]
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
-            uint64(0),
-            None,
-            coins,
-            None,
-            False,
-            announcement_set,
+            new_coin,
+            fee_rate,
+            coins=coins,
+            announcements_to_consume=announcement_set,
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 

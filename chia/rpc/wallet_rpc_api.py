@@ -1228,6 +1228,8 @@ class WalletRpcApi:
                     coins=coins,
                 )
         else:
+            new_coins = [{"puzzlehash": puzzle_hash_0, "amount": amount_0}]
+            new_coins.extend(additional_outputs)
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                 new_coins,
                 fee,

@@ -55,7 +55,8 @@ class TestTransactions:
         print(await wallet.get_confirmed_balance(), funds)
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         assert int(time.time()) < full_node_api.full_node.constants.INITIAL_FREEZE_END_TIMESTAMP
-        tx: TransactionRecord = await wallet.generate_signed_transaction(100, ph, 0)
+        new_coins = [{"puzzlehash": ph, "amount": 100}]
+        tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins)
         spend = wallet_protocol.SendTransaction(tx.spend_bundle)
         response = await full_node_api.send_transaction(spend)
         assert wallet_protocol.TransactionAck.from_bytes(response.data).status == MempoolInclusionStatus.FAILED
@@ -106,7 +107,8 @@ class TestTransactions:
 
         await time_out_assert(10, new_spend_requested, True, incoming_queue, new_spend)
 
-        tx: TransactionRecord = await wallet.generate_signed_transaction(100, ph, 0)
+        new_coins = [{"puzzlehash": ph, "amount": 100}]
+        tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins)
         spend = wallet_protocol.SendTransaction(tx.spend_bundle)
         response = await full_node_api.send_transaction(spend)
         assert response is not None
@@ -136,8 +138,8 @@ class TestTransactions:
         await asyncio.sleep(2)
         print(await wallet.get_confirmed_balance(), funds)
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
-
-        tx: TransactionRecord = await wallet.generate_signed_transaction(100, ph, 0)
+        new_coins = [{"puzzlehash": ph, "amount": 100}]
+        tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins)
         current_blocks = await full_node_api.get_all_full_blocks()
         new_blocks = bt.get_consecutive_blocks(
             1, block_list_input=current_blocks, transaction_data=tx.spend_bundle, guarantee_transaction_block=True

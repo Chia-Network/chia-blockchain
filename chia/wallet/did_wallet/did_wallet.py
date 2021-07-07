@@ -896,7 +896,7 @@ class DIDWallet:
 
         new_coin = [{"puzzlehash": genesis_launcher_puz.get_tree_hash(), "amount": amount}]
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            new_coin, 0.0, origin_id=origin.name(), coins=coins, False, announcement_set
+            new_coin, 0.0, origin_id=origin.name(), coins=coins, announcements_to_consume=announcement_set
         )
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
