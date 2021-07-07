@@ -1912,7 +1912,6 @@ class FullNode:
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
     ):
-        min_height: Optional[int] = 0
         try:
             while not self._shut_down:
                 while self.sync_store.get_sync_mode():
@@ -1921,14 +1920,12 @@ class FullNode:
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
-                new_min_height = None
                 max_height = self.blockchain.get_peak_height()
                 if max_height is None:
                     await asyncio.sleep(30)
                     continue
-                # Calculate 'min_height' correctly the first time this task is launched, using the db
-                assert min_height is not None
-                min_height = await self.block_store.get_first_not_compactified(min_height)
+                self.log.info("Getting minimum bluebox work height")
+                min_height = await self.block_store.get_first_not_compactified()
                 if min_height is None or min_height > max(0, max_height - 1000):
                     min_height = max(0, max_height - 1000)
                 batches_finished = 0
@@ -1941,13 +1938,11 @@ class FullNode:
                     if len(broadcast_list) > target_uncompact_proofs * 10:
                         break
                     stop_height = min(h + 99, max_height)
-                    assert min_height is not None
-                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height, tx_filter=False)
+                    headers = await self.blockchain.get_header_blocks_in_range(h, stop_height, tx_filter=False)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
-                        records = await self.blockchain.get_block_records_in_range(min_height, stop_height)
+                        records = await self.blockchain.get_block_records_in_range(h, stop_height)
                     for header in headers.values():
-                        prev_broadcast_list_len = len(broadcast_list)
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
@@ -1984,14 +1979,6 @@ class FullNode:
                         # unless this is a challenge block.
                         if sanitize_weight_proof_only:
                             if not record.is_challenge_block(self.constants):
-                                # Calculates 'new_min_height' as described below.
-                                if (
-                                    prev_broadcast_list_len == 0
-                                    and len(broadcast_list) > 0
-                                    and h <= max(0, max_height - 1000)
-                                ):
-                                    new_min_height = header.height
-                                # Skip calculations for CC_SP_VDF and CC_IP_VDF.
                                 continue
                         if header.challenge_chain_sp_proof is not None and (
                             header.challenge_chain_sp_proof.witness_type > 0
@@ -2019,21 +2006,13 @@ class FullNode:
                                     uint8(CompressibleVDFField.CC_IP_VDF),
                                 )
                             )
-                        # This is the first header with uncompact proofs. Store its height so next time we iterate
-                        # only from here. Fix header block iteration window to at least 1000, so reorgs will be
-                        # handled correctly.
-                        if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(0, max_height - 1000):
-                            new_min_height = header.height
 
                     # Small sleep between batches.
                     batches_finished += 1
                     if batches_finished % 10 == 0:
                         await asyncio.sleep(1)
 
-                # We have no uncompact blocks, but mentain the block iteration window to at least 1000 blocks.
-                if new_min_height is None:
-                    new_min_height = max(0, max_height - 1000)
-                min_height = new_min_height
+                # sample work randomly from the uncompact blocks we found
                 if len(broadcast_list) > target_uncompact_proofs:
                     random.shuffle(broadcast_list)
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
