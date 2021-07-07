@@ -4,6 +4,7 @@ import tempfile
 from chia.util.file_keyring import FileKeyring
 from chia.util.keychain import Keychain
 from chia.util.keyring_wrapper import KeyringWrapper
+from functools import wraps
 from keyring.util import platform_
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from pathlib import Path
@@ -46,44 +47,19 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
     mock_configure_backend.return_value = FileKeyring(keys_root_path=Path(temp_file_keyring_dir))
 
 
-def using_temp_keyring_dir(func):
-    """
-    Decorator that will create a temporary keyring directory that is automatically
-    cleaned-up after invoking the decorated function
-    """
-
-    def inner(*args, **kwargs):
-        with tempfile.TemporaryDirectory(prefix="test_keyring_wrapper") as temp_file_keyring_dir:
-            func(*args, **dict(kwargs, temp_file_keyring_dir=temp_file_keyring_dir))
-
-    return inner
-
-
 def using_temp_file_keyring(populate=False):
-    def outer(func):
-        @patch("chia.util.keychain.supports_keyring_passphrase")
-        @patch.object(KeyringWrapper, "_configure_backend")
-        @patch.object(platform_, "data_root")
-        @using_temp_keyring_dir
-        def inner(
-            self,
-            mock_data_root,
-            mock_configure_backend,
-            mock_supports_keyring_passphrase,
-            temp_file_keyring_dir,
-            *args,
-            **kwargs,
-        ):
-            # Patch supports_keyring_passphrase() to return True
-            mock_supports_keyring_passphrase.return_value = True
+    """
+    Decorator that will create a temporary directory with a temporary keyring that is
+    automatically cleaned-up after invoking the decorated function. If `populate` is
+    true, the newly created keyring will be populated with a payload containing 0 keys
+    using the default passphrase.
+    """
 
-            setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=populate)
-
-            # Mock CryptFileKeyring's file_path indirectly by changing keyring.util.platform_.data_root
-            # We don't want CryptFileKeyring finding the real legacy keyring
-            mock_data_root.return_value = temp_file_keyring_dir
-
-            func(self, *args, **kwargs)
+    def outer(method):
+        @wraps(method)
+        def inner(self, *args, **kwargs):
+            with TempKeyring(populate=populate):
+                return method(self, *args, **kwargs)
 
         return inner
 
@@ -91,32 +67,19 @@ def using_temp_file_keyring(populate=False):
 
 
 def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
-    def outer(func):
-        @patch("chia.util.keychain.supports_keyring_passphrase")
-        @patch.object(KeyringWrapper, "_configure_backend")
-        @patch.object(platform_, "data_root")
-        @using_temp_keyring_dir
-        def inner(
-            self,
-            mock_data_root,
-            mock_configure_backend,
-            mock_supports_keyring_passphrase,
-            temp_file_keyring_dir,
-            *args,
-            **kwargs,
-        ):
-            # Patch supports_keyring_passphrase() to return True
-            mock_supports_keyring_passphrase.return_value = True
+    """
+    Like the `using_temp_file_keyring` decorator, this decorator will create a temp
+    dir and temp keyring. Additionally, an empty legacy Cryptfile keyring will be
+    created in the temp directory.
+    """
 
-            setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir)
-
-            # Mock CryptFileKeyring's file_path indirectly by changing keyring.util.platform_.data_root
-            mock_data_root.return_value = temp_file_keyring_dir
-
-            # Create an empty legacy keyring
-            create_empty_cryptfilekeyring()
-
-            func(self, *args, **kwargs)
+    def outer(method):
+        @wraps(method)
+        def inner(self, *args, **kwargs):
+            with TempKeyring(populate=populate):
+                # Create an empty legacy keyring
+                create_empty_cryptfilekeyring()
+                return method(self, *args, **kwargs)
 
         return inner
 
@@ -128,14 +91,17 @@ class TempKeyring:
         self,
         user: str = "testing-1.8.0",
         testing: bool = True,
+        populate: bool = False,
         existing_keyring_path: str = None,
         delete_on_cleanup: bool = True,
     ):
-        self.keychain = self._patch_and_create_keychain(user, testing, existing_keyring_path)
+        self.keychain = self._patch_and_create_keychain(user, testing, populate, existing_keyring_path)
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
-    def _patch_and_create_keychain(self, user: str, testing: bool, existing_keyring_path: Optional[str]):
+    def _patch_and_create_keychain(
+        self, user: str, testing: bool, populate: bool, existing_keyring_path: Optional[str]
+    ):
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
@@ -147,7 +113,7 @@ class TempKeyring:
 
         mock_configure_backend_patch = patch.object(KeyringWrapper, "_configure_backend")
         mock_configure_backend = mock_configure_backend_patch.start()
-        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=False)
+        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()

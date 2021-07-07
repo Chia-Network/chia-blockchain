@@ -88,7 +88,7 @@ class DaemonProxy:
         return False
 
     async def is_keyring_locked(self) -> bool:
-        data = {}
+        data: Dict[str, Any] = {}
         request = self.format_request("is_keyring_locked", data)
         response = await self._get(request)
         if "is_keyring_locked" in response["data"]:

@@ -38,7 +38,7 @@ class TestKeyringWrapper(unittest.TestCase):
         assert KeyringWrapper.get_shared_instance(create_if_necessary=False) is None
 
     # When: creating a new file keyring with a legacy keyring in place
-    @using_temp_file_keyring_and_cryptfilekeyring
+    @using_temp_file_keyring_and_cryptfilekeyring()
     def test_using_legacy_keyring(self):
         """
         In the case that an existing CryptFileKeyring (legacy) keyring exists and we're
@@ -56,7 +56,7 @@ class TestKeyringWrapper(unittest.TestCase):
         assert KeyringWrapper.get_shared_instance().get_keyring() == KeyringWrapper.get_shared_instance().legacy_keyring
 
     # When: a file keyring has content and the legacy keyring exists
-    @using_temp_file_keyring_and_cryptfilekeyring
+    @using_temp_file_keyring_and_cryptfilekeyring(populate=True)
     def test_using_file_keyring_with_legacy_keyring(self):
         """
         In the case that an existing CryptFileKeyring (legacy) keyring exists and we're
