@@ -35,6 +35,10 @@ class KeyringCurrentPassphaseIsInvalid(Exception):
     pass
 
 
+class KeyringMaxUnlockAttempts(Exception):
+    pass
+
+
 def supports_keyring_passphrase() -> bool:
     from sys import platform
 
@@ -84,7 +88,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
         sleep(FAILED_ATTEMPT_DELAY)
         print("Incorrect passphrase\n")
-    raise ValueError("maximum passphrase attempts reached")
+    raise KeyringMaxUnlockAttempts("maximum passphrase attempts reached")
 
 
 def unlocks_keyring(use_passphrase_cache=False):

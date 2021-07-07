@@ -78,12 +78,22 @@ def version_cmd() -> None:
 
 
 @cli.command("run_daemon", short_help="Runs chia daemon")
+@click.option(
+    "--wait-for-unlock",
+    help="If the keyring is passphrase-protected, the daemon will wait for an unlock command before accessing keys",
+    default=False,
+    is_flag=True,
+    hidden=True,  # --wait-for-unlock is only set when launched by chia start <service>
+)
 @click.pass_context
-def run_daemon_cmd(ctx: click.Context) -> None:
-    from chia.daemon.server import async_run_daemon
+def run_daemon_cmd(ctx: click.Context, wait_for_unlock: bool) -> None:
     import asyncio
+    from chia.daemon.server import async_run_daemon
+    from chia.util.keychain import Keychain
 
-    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"], have_gui=False))
+    wait_for_unlock = wait_for_unlock and Keychain.is_keyring_locked()
+
+    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"], wait_for_unlock=wait_for_unlock))
 
 
 cli.add_command(keys_cmd)
