@@ -41,7 +41,7 @@ export default function usePoolInfo(poolUrl?: string): {
       }
 
       throw new Error(
-        t`The pool URL speciefied is not valid. ${normalizedUrl}`,
+        t`The pool URL is not valid. ${normalizedUrl}`,
       );
     }
 
