@@ -20,6 +20,7 @@ export function getTransaction(transactionId: string) {
       dispatch,
       getTransactionMessage(transactionId),
       false,
+      true,
     );
 
     return data?.transaction;
