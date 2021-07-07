@@ -87,6 +87,7 @@ export const getPoolState = () => {
         command: 'get_pool_state',
       }),
       false,
+      true,
     );
 
     return data?.pool_state;
