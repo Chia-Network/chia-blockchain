@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:47\n"
+"PO-Revision-Date: 2021-07-07 11:47\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -107,7 +107,7 @@ msgstr "Ajouter un dossier de parcelles"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "Ajouter {currencyCode} depuis le Faucet"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
@@ -146,7 +146,7 @@ msgstr "Êtes-vous sûr de vouloir supprimer la parcelle ? Cette parcelle ne pou
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "Êtes-vous sûr de vouloir supprimer ces transactions non confirmées ?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
@@ -384,7 +384,7 @@ msgstr "Confirmer la déconnexion"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Confirmation"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -997,7 +997,7 @@ msgstr "État invalide"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:92
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Il s'agit d'un lien de connexion unique qui peut être utilisé pour se connecter à un site web d'un pool. Il contient une signature utilisant la clé du fermier du pool NFT. Certains pools ne prennent pas en charge cette fonctionnalité."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:392
 #: src/components/pool/PoolOverview.tsx:113
@@ -1055,7 +1055,7 @@ msgstr "Identifiant du lanceur"
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
-msgstr ""
+msgstr "En savoir plus"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
