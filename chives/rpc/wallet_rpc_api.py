@@ -959,6 +959,8 @@ class WalletRpcApi:
                 farmer_reward_amount += calculate_base_farmer_reward(height)
                 community_reward_amount += calculate_base_community_reward(height)
             amount += record.amount
+            log.info("for record in tx_records:")
+            log.info(record)
 
         assert amount == pool_reward_amount + farmer_reward_amount + community_reward_amount + fee_amount
         return {
