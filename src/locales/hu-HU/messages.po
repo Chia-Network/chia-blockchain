@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:47\n"
+"PO-Revision-Date: 2021-07-07 11:47\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -107,7 +107,7 @@ msgstr "Parcella könyvtár hozzáadása"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "{currencyCode} hozzáadása a csapból"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
@@ -146,7 +146,7 @@ msgstr "Biztos vagy benne, hogy törlöd ezt a parcellát? A törölt parcella n
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "Biztosan törölni szeretné a meg nem erősített tranzakciókat?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
@@ -384,7 +384,7 @@ msgstr "Megerősítés Lecsatlakozás"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Megerősítés"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -1055,7 +1055,7 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:102
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "Learn More"
-msgstr ""
+msgstr "Tudjon meg többet"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1517,12 +1517,12 @@ msgstr "Parcella kulcs"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Pool bejelentkező link"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:64
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:78
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Pool kifizetési utasítások"
 
 #: src/components/block/Block.jsx:265
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1874,7 +1874,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Hiba történt"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2040,11 +2040,11 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "A pool URL-nek a https protokollt kell használnia. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "A megadott pool URL nem érvényes. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
@@ -2142,7 +2142,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Ez a plot NFT nem kapcsolódik pool-hoz"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2316,12 +2316,12 @@ msgstr "Ajánlat megtekintése"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 msgid "View Payout Instructions"
-msgstr ""
+msgstr "Kifizetési utasítások megnézése"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:241
 #: src/components/plotNFT/PlotNFTCard.tsx:283
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Pool bejelentkezési linkjének megnézése"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2489,7 +2489,7 @@ msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
-msgstr ""
+msgstr "{currencyCode}-ra van szüksége, hogy a pool-ba be tudjon jelentkezni."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
