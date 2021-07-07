@@ -16,12 +16,17 @@ OG plots made before this release can continue to be farmed side by side with th
 - `chia configure` now supports command line updates to peer count and target peer count.
 - Thank you @gldecurtins for adding logging support for remote syslog.
 - Thanks to @maran and @Animazing for adding farmer and pool public key display to the RPC.
-- We added a new RPC to check keys prior to deleting them.
 - We have added translations for Hungarian, Belarusian, Catalan, and Albanian.  For Hungarian thanks to @SirGeoff, @azazio @onokaxxx, @rolandfarkasCOM, @HUNDavid , @horvathpalzsolt, @stishun74, @tusdavgaming, @idotitusz, @rasocsabi, @mail.kope, @gsprblnt, @mbudahazi, @csiberius, @tomatos83, @zok42, @ocel0t, @rwtoptomi, @djxpitke, @ftamas85, @zotya0330, @fnni, @kapabeates, @zamery, @viktor.gonczi, @pal.suta, @miv, and @Joeman_. For Belarusian thanks to @shurix83, @haxycgm, and @metalomaniax. For Catalan thank you to @Poliwhirl, @Pep-33, @marqmarti, @meuca, @Guiwdin, @carlescampi, @jairobtx, @Neoares, @darknsis, @augustfarrerasgimeno, and @fornons. Finally for Albanian thanks to @ATSHOOTER and @lakedeejay. We apologize if we missed anyone and welcome corrections.
 - Our release process is now fully automated from tagging a release to publishing installers to all of the appropriate locations and now makes the release artifacts available via torrents as well.
 - All Chia repositories now automatically build M1 wheels and create a new MacOS M1 native installer.
+- Many changes to the GUI to support pooling and to improve the wallet experience.
+- New CLI command `chia plotnft` to manage pools.
 - We have added a new RPC `get_harvesters` to the farmer. This returns information about remote harvesters and plots.
-- We have added a new RPC `delete_unconfirmed_transactions` which deletes these transactions for a given wallet ID.
+- We have added a new RPC `check_delete_key` to the wallet, to check keys prior to deleting them.
+- We have added a new RPC `delete_unconfirmed_transactions` to the wallet which deletes these transactions for a given wallet ID.
+- We have added a new RPC `get_puzzle_and_solution` to the full node, which takes in a coin ID.
+- We have added a new RPC `get_recent_signage_point_or_eos` to the full node, to support pooling.
+- We have added a new RPC `send_transaction_multi` to the wallet, which sends a payment with multiple payees.
 
 ### Changed
 
@@ -57,6 +62,7 @@ OG plots made before this release can continue to be farmed side by side with th
 - @asdf2014 removed some useless code in the wallet node API.
 - Thanks to @willi123yao for a fix to under development pool wallets.
 - `chia farm summary` better handles wallet errors.
+- `chia farm summary` now shows remote harvester plots.
 - @Hoinor fixed formatting issues around the Chinese translation in the GUI.
 - Sometimes the GUI would stop refreshing certain fields.
 - We have better error handling for misbehaving peers from naive forks/clones.
