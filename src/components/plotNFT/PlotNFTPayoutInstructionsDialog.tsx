@@ -65,9 +65,7 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
       <DialogContent dividers>
         <Flex gap={2} flexDirection="column">
           {loading ? (
-            <Flex justifyContent="center">
-              <Loading />
-            </Flex>
+            <Loading center />
           ) : (
             <Flex flexDirection="column" gap={2}>
               {error && <Alert severity="error">{error.message}</Alert>}

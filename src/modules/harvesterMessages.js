@@ -14,7 +14,9 @@ export const pingHarvester = () => {
   return action;
 };
 
+// deprecated
 export const getPlots = () => {
+  console.log('WARNING: get_plots is deprecated use get_harvesters');
   const action = harvesterMessage();
   action.message.command = 'get_plots';
   action.message.data = {};

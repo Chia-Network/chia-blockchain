@@ -14,6 +14,7 @@ const StyledCircularProgress = styled(CircularProgress)`
 
 type Props = CircularProgressProps & {
   children?: ReactNode;
+  center?: boolean;
 };
 
 export default function Loading(props: Props) {
@@ -30,5 +31,20 @@ export default function Loading(props: Props) {
     );
   }
 
-  return <StyledCircularProgress {...rest} />;
+  if (center) {
+    return (
+      <Flex flexDirection="column" gap={1} alignItems={center ? 'center' : 'flex-start'}>
+        <StyledCircularProgress {...rest} />
+      </Flex>
+    );
+  }
+
+  return (
+    <StyledCircularProgress {...rest} />
+  );
 }
+
+Loading.defaultProps = {
+  children: undefined,
+  center: false,
+};

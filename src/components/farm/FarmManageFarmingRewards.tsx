@@ -121,9 +121,7 @@ export default function FarmManageFarmingRewards(props: Props) {
         <DialogContent dividers>
           <Flex gap={2} flexDirection="column">
             {loading ? (
-              <Flex justifyContent="center">
-                <Loading />
-              </Flex>
+              <Loading center />
             ) : (
               <>
                 {error && <Alert severity="error">{error.message}</Alert>}

@@ -10,7 +10,7 @@ export default function FullNodeEstimatedNetworkSpace() {
     (state: RootState) => state.full_node_state.blockchain_state,
   );
 
-  const loading = !state;
+  const loading = state?.space === undefined;
   const value = state?.space;
 
   return (

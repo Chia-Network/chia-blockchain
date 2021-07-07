@@ -127,9 +127,7 @@ export default function Block() {
   if (loading) {
     return (
       <LayoutMain title={<Trans>Block</Trans>}>
-        <Flex justifyContent="center">
-          <Loading />
-        </Flex>
+        <Loading center />
       </LayoutMain>
     );
   }

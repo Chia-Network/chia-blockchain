@@ -43,7 +43,7 @@ import { mojo_to_chia } from '../../util/chia';
 import { deleteUnconfirmedTransactions } from '../../modules/incoming';
 import PlotNFTGraph from './PlotNFTGraph';
 import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
-import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
+// import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
 import getPercentPointsSuccessfull from '../../util/getPercentPointsSuccessfull';
 
 const StyledCard = styled(Card)`
@@ -132,9 +132,11 @@ export default function PlotNFTCard(props: Props) {
     openDialog(<PlotNFTGetPoolLoginLinkDialog nft={nft} />);
   }
 
+  /*
   function handlePayoutInstructions() {
     openDialog(<PlotNFTPayoutInstructionsDialog nft={nft} />);
   }
+  */
 
   const rows = [
     {
@@ -284,7 +286,7 @@ export default function PlotNFTCard(props: Props) {
                         </Typography>
                       </MenuItem>
                     )}
-                    {!isSelfPooling && (
+                    {/* !isSelfPooling && (
                       <MenuItem
                         onClick={() => {
                           onClose();
@@ -298,7 +300,7 @@ export default function PlotNFTCard(props: Props) {
                           <Trans>View Payout Instructions</Trans>
                         </Typography>
                       </MenuItem>
-                    )}
+                    ) */}
                     <MenuItem
                       onClick={() => {
                         onClose();

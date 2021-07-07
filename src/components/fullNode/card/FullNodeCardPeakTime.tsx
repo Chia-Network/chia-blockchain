@@ -14,7 +14,7 @@ export default function FullNodeCardPeakTime() {
     ? unix_to_short_date(latestPeakTimestamp)
     : '';
 
-  const loading = value === undefined;
+  const loading = latestPeakTimestamp === undefined;
 
   return (
     <FarmCard

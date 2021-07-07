@@ -114,12 +114,12 @@ export const setPoolPayoutInstructions = (
   };
 };
 
-export function getPlots() {
+export function getHarvesters() {
   return async (dispatch) => {
     const { data } = await async_api(
       dispatch,
       farmerMessage({
-        command: 'get_plots',
+        command: 'get_harvesters',
       }),
       false,
     );

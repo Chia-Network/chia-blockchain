@@ -9,9 +9,11 @@ import {
   addPlotDirectory,
   getPlotDirectories,
   removePlotDirectory,
-  getPlots,
   refreshPlots,
 } from './harvesterMessages';
+import {
+  getHarvesters,
+} from './farmerMessages';
 import {
   setBackupInfo,
   changeBackupView,
@@ -666,7 +668,7 @@ export const add_plot_directory_and_refresh = (dir) => (dispatch) =>
     if (response.data.success) {
       dispatch(getPlotDirectories());
       return async_api(dispatch, refreshPlots(), true).then((response) => {
-        dispatch(getPlots());
+        dispatch(getHarvesters());
       });
     }
     const { error } = response.data;
@@ -678,7 +680,7 @@ export const remove_plot_directory_and_refresh = (dir) => (dispatch) =>
     if (response.data.success) {
       dispatch(getPlotDirectories());
       return async_api(dispatch, refreshPlots(), true).then((response) => {
-        dispatch(getPlots());
+        dispatch(getHarvesters());
       });
     }
     const { error } = response.data;

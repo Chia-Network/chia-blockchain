@@ -150,9 +150,7 @@ export default function PlotAdd() {
 
   if (!currencyCode) {
     return (
-      <Flex alignItems="center">
-        <Loading />
-      </Flex>
+      <Loading center />
     );
   }
 

@@ -159,9 +159,7 @@ export default function PlotNFTSelectBase(props: Props) {
           )}
 
           {poolInfo.loading && (
-            <Flex alignItems="center">
-              <Loading />
-            </Flex>
+            <Loading center />
           )}
 
           {poolInfo.poolInfo && <PoolInfo poolInfo={poolInfo.poolInfo} />}

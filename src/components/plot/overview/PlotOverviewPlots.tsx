@@ -82,6 +82,12 @@ const cols = [
   },
   {
     minWidth: '100px',
+    field: 'harvester.node_id',
+    tooltip: 'harvester.node_id',
+    title: <Trans>Node Id</Trans>,
+  },
+  {
+    minWidth: '100px',
     field: ({ pool_contract_puzzle_hash }: Plot) => (
       <Address value={pool_contract_puzzle_hash} tooltip copyToClipboard>
         {(address) => (
@@ -123,7 +129,7 @@ export default function PlotOverviewPlots() {
     <>
       <PlotHeader>
         <Typography variant="h5">
-          <Trans>Local Harvester Plots</Trans>
+          <Trans>Harvester Plots</Trans>
         </Typography>
       </PlotHeader>
       <Card>
@@ -154,6 +160,7 @@ export default function PlotOverviewPlots() {
                       <PlotQueueSize queueItem={item} />
                     </TableCell>
                     <TableCell>{item.queue}</TableCell>
+                    <TableCell />
                     <TableCell />
                     <TableCell />
                     <TableCell />

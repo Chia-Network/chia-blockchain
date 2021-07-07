@@ -28,7 +28,7 @@ import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
 import useOpenDialog from '../../hooks/useOpenDialog';
 import PlotNFTGraph from './PlotNFTGraph';
 import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
-import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
+// import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
 import getPercentPointsSuccessfull from '../../util/getPercentPointsSuccessfull';
 
 const StyledCard = styled(Card)`
@@ -100,9 +100,11 @@ export default function PlotExternalNFTCard(props: Props) {
     openDialog(<PlotNFTGetPoolLoginLinkDialog nft={nft} />);
   }
 
+  /*
   function handlePayoutInstructions() {
     openDialog(<PlotNFTPayoutInstructionsDialog nft={nft} />);
   }
+  */
 
   const rows = [
     {
@@ -242,7 +244,7 @@ export default function PlotExternalNFTCard(props: Props) {
                         </Typography>
                       </MenuItem>
                     )}
-                    {!isSelfPooling && (
+                    {/* !isSelfPooling && (
                       <MenuItem
                         onClick={() => {
                           onClose();
@@ -256,7 +258,7 @@ export default function PlotExternalNFTCard(props: Props) {
                           <Trans>View Payout Instructions</Trans>
                         </Typography>
                       </MenuItem>
-                    )}
+                    ) */}
                   </Box>
                 )}
               </More>

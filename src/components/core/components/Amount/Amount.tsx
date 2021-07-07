@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { Trans, Plural } from '@lingui/macro';
+import NumberFormat from 'react-number-format';
 import {
   Box,
   InputAdornment,
@@ -13,15 +14,42 @@ import useCurrencyCode from '../../../../hooks/useCurrencyCode';
 import FormatLargeNumber from '../FormatLargeNumber';
 import Flex from '../Flex';
 
+interface NumberFormatCustomProps {
+  inputRef: (instance: NumberFormat | null) => void;
+  onChange: (event: { target: { name: string; value: string } }) => void;
+  name: string;
+}
+
+function NumberFormatCustom(props: NumberFormatCustomProps) {
+  const { inputRef, onChange, ...other } = props;
+
+  function handleChange(values: Object) {
+    onChange(values.value);
+  }
+
+  return (
+    <NumberFormat
+      {...other}
+      getInputRef={inputRef}
+      onValueChange={handleChange}
+      thousandSeparator
+      allowNegative={false}
+      isNumericString
+    />
+  );
+}
+
 export type AmountProps = TextFieldProps & {
   children?: (props: { mojo: number; value: string | undefined }) => ReactNode;
   name?: string;
+  step?: string;
 };
 
 export default function Amount(props: AmountProps) {
-  const { children, name, variant, fullWidth, ...rest } = props;
+  const { children, name, variant, fullWidth, step, ...rest } = props;
   const { control } = useFormContext();
   const currencyCode = useCurrencyCode();
+  const [value2, setValue] = useState('123');
 
   const value = useWatch<string>({
     control,
@@ -35,8 +63,10 @@ export default function Amount(props: AmountProps) {
       <TextField
         name={name}
         variant={variant}
-        type="text"
+        autoComplete="off"
         InputProps={{
+          spellCheck: false,
+          inputComponent: NumberFormatCustom as any,
           endAdornment: (
             <InputAdornment position="end">{currencyCode}</InputAdornment>
           ),
@@ -68,4 +98,5 @@ Amount.defaultProps = {
   label: <Trans>Amount</Trans>,
   name: 'amount',
   children: undefined,
+  step: '0.01',
 };
