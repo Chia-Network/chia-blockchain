@@ -29,7 +29,7 @@ import {
 import {
   Delete as DeleteIcon,
   Link as LinkIcon,
-  Payment as PaymentIcon,
+  // Payment as PaymentIcon,
 } from '@material-ui/icons';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';

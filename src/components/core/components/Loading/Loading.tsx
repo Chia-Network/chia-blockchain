@@ -36,7 +36,7 @@ export default function Loading(props: Props) {
       <Flex
         flexDirection="column"
         gap={1}
-        alignItems={center ? 'center' : 'flex-start'}
+        alignItems="center"
       >
         <StyledCircularProgress {...rest} />
       </Flex>

@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { Trans, Plural } from '@lingui/macro';
 import NumberFormat from 'react-number-format';
 import {
@@ -42,14 +42,12 @@ function NumberFormatCustom(props: NumberFormatCustomProps) {
 export type AmountProps = TextFieldProps & {
   children?: (props: { mojo: number; value: string | undefined }) => ReactNode;
   name?: string;
-  step?: string;
 };
 
 export default function Amount(props: AmountProps) {
-  const { children, name, variant, fullWidth, step, ...rest } = props;
+  const { children, name, variant, fullWidth, ...rest } = props;
   const { control } = useFormContext();
   const currencyCode = useCurrencyCode();
-  const [value2, setValue] = useState('123');
 
   const value = useWatch<string>({
     control,
@@ -98,5 +96,4 @@ Amount.defaultProps = {
   label: <Trans>Amount</Trans>,
   name: 'amount',
   children: undefined,
-  step: '0.01',
 };
