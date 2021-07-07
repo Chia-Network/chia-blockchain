@@ -1,4 +1,5 @@
 import asyncio
+from chia.util.config import load_config, save_config
 import logging
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
@@ -241,6 +244,36 @@ class TestWalletRpc:
             await client.log_in_and_skip(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
+
+            # Add in reward addresses into farmer and pool for testing delete key checks
+            # set farmer to first private key
+            sk = wallet_node.get_key_for_fingerprint(pks[0])
+            test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+            test_config = load_config(wallet_node.root_path, "config.yaml")
+            test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+            # set pool to second private key
+            sk = wallet_node.get_key_for_fingerprint(pks[1])
+            test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+            test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+            save_config(wallet_node.root_path, "config.yaml", test_config)
+
+            # Check first key
+            sk_dict = await client.check_delete_key(pks[0])
+            assert sk_dict["fingerprint"] == pks[0]
+            assert sk_dict["used_for_farmer_rewards"] is True
+            assert sk_dict["used_for_pool_rewards"] is False
+
+            # Check second key
+            sk_dict = await client.check_delete_key(pks[1])
+            assert sk_dict["fingerprint"] == pks[1]
+            assert sk_dict["used_for_farmer_rewards"] is False
+            assert sk_dict["used_for_pool_rewards"] is True
+
+            # Check unknown key
+            sk_dict = await client.check_delete_key(123456)
+            assert sk_dict["fingerprint"] == 123456
+            assert sk_dict["used_for_farmer_rewards"] is False
+            assert sk_dict["used_for_pool_rewards"] is False
 
             await client.delete_key(pks[0])
             await client.log_in_and_skip(pks[1])

@@ -55,7 +55,12 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
         relative_lock_height = uint32(0)
         target_puzzle_hash = None  # wallet will fill this in
     elif state == "FARMING_TO_POOL":
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        enforce_https = config["full_node"]["selected_network"] == "mainnet"
         pool_url = str(args["pool_url"])
+        if enforce_https and not pool_url.startswith("https://"):
+            print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+            return
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
         target_puzzle_hash = hexstr_to_bytes(json_dict["target_puzzle_hash"])
@@ -260,7 +265,12 @@ async def submit_tx_with_confirmation(
 
 
 async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    pool_url = args["pool_url"]
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    enforce_https = config["full_node"]["selected_network"] == "mainnet"
+    pool_url: str = args["pool_url"]
+    if enforce_https and not pool_url.startswith("https://"):
+        print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+        return
     wallet_id = args.get("id", None)
     prompt = not args.get("yes", False)
     try:

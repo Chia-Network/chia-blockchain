@@ -1,0 +1,188 @@
+name: MacOS M1 installer on Python 3.9
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: MacOS M1 installer on Python 3.9
+    runs-on: [m1]
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - name: Cancel previous runs on the same branch
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Cache npm
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: cache-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: ~/.npm
+          key: m1-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            m1-build-${{ env.cache-name }}-
+            m1-build-
+            m1-
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(arch -arm64 pip cache dir)"
+
+      - name: Cache pip
+        uses: actions/cache@v2.1.6
+        with:
+          # Note that new runners may break this https://github.com/actions/cache/issues/292
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: m1-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            m1-pip-
+
+      - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_APPLE_SECRET
+          unset HAS_AWS_SECRET
+
+          if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
+          echo ::set-output name=HAS_APPLE_SECRET::${HAS_APPLE_SECRET}
+
+          if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+          echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+        env:
+          APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+          AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+
+      - name: Create installer version number
+        id: version_number
+        run: |
+          arch -arm64 python3 -m venv ../venv
+          . ../venv/bin/activate
+          arch -arm64 pip install setuptools_scm
+          echo "::set-output name=CHIA_INSTALLER_VERSION::$(arch -arm64 python3 ./build_scripts/installer-version.py)"
+          deactivate
+
+      # This will be recreated in the next step
+      # Done now and at the end of the workflow in case the last workflow fails, and this is still around
+      - name: Delete keychain if it already exists
+        run:
+          security delete-keychain signing_temp.keychain || true
+
+      - name: Import Apple app signing certificate
+        if: steps.check_secrets.outputs.HAS_APPLE_SECRET
+        uses: Apple-Actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
+          p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
+
+      - name: Run install script
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+          BUILD_VDF_CLIENT: "N"
+        run: |
+          arch -arm64 sh install.sh
+
+      - name: Install node 12.x
+        run: |
+          arch -arm64 brew install node@12
+
+      - name: Build MacOS DMG in Catalina
+        env:
+          NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
+          APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
+          APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
+        run: |
+          export PATH=$(brew --prefix node@12)/bin:$PATH
+          . ./activate
+          cd ./chia-blockchain-gui
+          arch -arm64 git status
+          cd ../build_scripts
+          arch -arm64 sh build_macos_m1.sh
+
+      - name: Upload MacOS artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Chia-Installer-MacOS-arm64-dmg
+          path: ${{ github.workspace }}/build_scripts/final_installer/
+
+      - name: Install AWS CLI
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
+        run: |
+          arch -arm64 brew install awscli
+
+      - name: Create Checksums
+        run: |
+          ls
+          arch -arm64 shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.sha256
+
+      - name: Upload to s3
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+          AWS_REGION: us-west-2
+        run: |
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg s3://download-chia-net/builds/
+
+      - name: Install py3createtorrent
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          arch -arm64 pip install py3createtorrent
+
+      - name: Create torrent
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          arch -arm64 py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg
+          ls ${{ github.workspace }}/build_scripts/final_installer/
+
+      - name: Upload Release Files
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+          AWS_REGION: us-west-2
+        run: |
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg s3://download-chia-net/install/
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.sha256 s3://download-chia-net/install/
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.torrent s3://download-chia-net/install/
+
+      - name: Get tag name
+        if: startsWith(github.ref, 'refs/tags/')
+        id: tag-name
+        run: |
+          echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
+          echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+
+      - name: Mark installer complete
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-mac-m1
+
+      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
+      - name: Delete signing keychain
+        if: always()
+        run:
+          security delete-keychain signing_temp.keychain || true

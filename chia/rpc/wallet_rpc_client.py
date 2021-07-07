@@ -68,6 +68,9 @@ class WalletRpcClient(RpcClient):
     async def delete_key(self, fingerprint: int) -> None:
         return await self.fetch("delete_key", {"fingerprint": fingerprint})
 
+    async def check_delete_key(self, fingerprint: int) -> None:
+        return await self.fetch("check_delete_key", {"fingerprint": fingerprint})
+
     async def delete_all_keys(self) -> None:
         return await self.fetch("delete_all_keys", {})
 
