@@ -169,6 +169,17 @@ def get_current_passphrase() -> Optional[str]:
     return current_passphrase
 
 
+def default_passphrase() -> str:
+    return DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+
+
+def using_default_passphrase() -> bool:
+    if not Keychain.has_master_passphrase():
+        return False
+
+    return Keychain.master_passphrase_is_valid(DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
+
+
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
     new_passphrase = Keychain.get_cached_master_passphrase()
     assert new_passphrase is not None

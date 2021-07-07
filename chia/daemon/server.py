@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
 from chia.cmds.init_funcs import check_keys, chia_init
+from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
@@ -359,7 +360,10 @@ class WebSocketServer:
         current_passphrase = None
         new_passphrase = None
 
-        if error is None and Keychain.has_master_passphrase():
+        if using_default_passphrase():
+            current_passphrase = default_passphrase()
+
+        if error is None and Keychain.has_master_passphrase() and not current_passphrase:
             current_passphrase = request.get("current_passphrase", None)
             if type(current_passphrase) is not str:
                 error = "missing current_passphrase"
