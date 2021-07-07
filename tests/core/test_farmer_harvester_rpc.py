@@ -254,7 +254,7 @@ class TestRpc:
                 == "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8"
             )
             await client.set_payout_instructions(hexstr_to_bytes(pool_state[0]["pool_config"]["launcher_id"]), "1234vy")
-
+            await farmer_api.farmer.update_pool_state()
             pool_state = (await client.get_pool_state())["pool_state"]
             assert pool_state[0]["pool_config"]["payout_instructions"] == "1234vy"
 
