@@ -952,12 +952,18 @@ class WalletRpcApi:
             height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
             if height > last_height_farmed:
                 last_height_farmed = height
-            if record.type == TransactionType.COINBASE_REWARD:
-                pool_reward_amount += record.amount
-            if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += calculate_base_farmer_reward(height)
-            amount += record.amount
+            # Chives Network Code
+            # Do not need to calculate the Community Rewards Amount To Wallet Card
+            if( uint64(calculate_base_community_reward(height)) != uint64(record.amount) ):
+                if record.type == TransactionType.COINBASE_REWARD:
+                    pool_reward_amount += record.amount
+                if record.type == TransactionType.FEE_REWARD:
+                    fee_amount += record.amount - calculate_base_farmer_reward(height)
+                    farmer_reward_amount += calculate_base_farmer_reward(height)
+                amount += record.amount
+            log.warning("############for record in tx_records:")
+            log.warning(record.amount)
+            log.warning(calculate_base_farmer_reward(height))
 
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {

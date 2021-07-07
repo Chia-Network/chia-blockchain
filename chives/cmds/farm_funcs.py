@@ -214,6 +214,8 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"User transaction fees: {amounts['fee_amount'] / units['chives']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['community_reward_amount'] + amounts['pool_reward_amount']) / units['chives']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
+        print(f"Farmer Reward: {amounts['farmer_reward_amount'] / units['chives']}")
+        print(f"Pool Reward: {amounts['pool_reward_amount'] / units['chives']}")
 
     total_plot_size = 0
     if plots is not None:
