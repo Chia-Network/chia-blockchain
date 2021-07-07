@@ -167,16 +167,16 @@ async def validate_block_body(
                 )
                 curr_b = blocks.block_record(curr_b.prev_hash)
     
-    log.warning("-----------block.transactions_info.reward_claims_incorporated");
-    log.warning(block.transactions_info.reward_claims_incorporated);
-    log.warning(expected_reward_coins);
-    log.warning("-------------------------------------------------------------");
+    #log.warning("-----------block.transactions_info.reward_claims_incorporated");
+    #log.warning(block.transactions_info.reward_claims_incorporated);
+    #log.warning(expected_reward_coins);
+    #log.warning("-------------------------------------------------------------");
     #log.warning(pool_coin);
     #log.warning(farmer_coin);
     #log.warning(community_coin);
-    log.warning("-------------------------------------------------------------");
-    log.warning(f"len(block.transactions_info.reward_claims_incorporated):{len(block.transactions_info.reward_claims_incorporated)}");
-    log.warning(f"len(expected_reward_coins):{len(expected_reward_coins)}");
+    #log.warning("-------------------------------------------------------------");
+    #log.warning(f"len(block.transactions_info.reward_claims_incorporated):{len(block.transactions_info.reward_claims_incorporated)}");
+    #log.warning(f"len(expected_reward_coins):{len(expected_reward_coins)}");
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS, None
 
