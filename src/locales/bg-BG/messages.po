@@ -8,7 +8,7 @@ msgstr ""
 "Language: bg_BG\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-06 23:47\n"
+"PO-Revision-Date: 2021-07-07 23:36\n"
 "Last-Translator: \n"
 "Language-Team: Bulgarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1087,7 +1087,7 @@ msgstr "Зареждане..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
-#~ msgstr "Локални плотове"
+#~ msgstr "Local Harvester Plots"
 
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
@@ -1352,8 +1352,7 @@ msgstr "Моля, въведете валидна първоначална су�
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "Please enter a valid numeric amount"
-msgstr ""
-"35 / 5000\n"
+msgstr "35 / 5000\n"
 "Моля, въведете валидна числова сума"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
@@ -2063,7 +2062,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-#~ msgstr ""
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:23
 #~ msgid "The pool URL speciefied is not valid. {poolUrl}"
@@ -2334,7 +2333,7 @@ msgstr "Виж предложения"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #~ msgid "View Payout Instructions"
-#~ msgstr ""
+#~ msgstr "View Payout Instructions"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
@@ -2612,3 +2611,4 @@ msgstr "{currencyCode} Такси на потребителя за транза�
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
