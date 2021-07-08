@@ -1,0 +1,184 @@
+name: Windows Installer on Windows 10 and Python 3.9
+#HDDcoin Windows Applioation Build Script
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+        - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: Windows Installer on Windows 10 and Python 3.9
+    runs-on: [windows-latest]
+    timeout-minutes: 40
+
+    steps:
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: styfle/cancel-workflow-action@0.9.0
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+        #token: ${{ secrets.PAT }}
+
+    - name: Get npm cache directory
+      id: npm-cache
+      run: |
+        echo "::set-output name=dir::$(npm config get cache)"
+
+    - name: Cache npm
+      uses: actions/cache@v2.1.6
+      with:
+        path: ${{ steps.npm-cache.outputs.dir }}
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.6
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+#  We can't upgrade to Python 3.8 until we have a miniupnpc binary
+    - uses: actions/setup-python@v2
+      name: Install Python 3.9
+      with:
+        python-version: "3.9"
+
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_SECRET
+        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+        echo "::set-output name=HAS_SECRET::${HAS_SECRET}"
+      env:
+        SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
+
+    - name: Decode code signing cert into an encrypted file
+      if: steps.check_secrets.outputs.HAS_SECRET
+      uses: kitek/decode-base64-into-file-action@1.0
+      with:
+        encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
+        destination-file: .\hddcoin-blockchain-gui\win_code_sign_cert.p12
+
+    # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
+    - name: Get version number
+      id: version_number
+      run: |
+        python -m venv ..\venv
+        . ..\venv\Scripts\Activate.ps1
+        pip3 install setuptools_scm
+        $env:HDDCOIN_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+        echo "$env:HDDCOIN_INSTALLER_VERSION"
+        echo "::set-output name=HDDCOIN_INSTALLER_VERSION::$env:HDDCOIN_INSTALLER_VERSION"
+        deactivate
+
+    - name: Build Windows installer with build_scripts\build_windows.ps1
+      env:
+        WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
+        HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SECRET }}
+      run: |
+        $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
+        $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
+        .\build_scripts\build_windows.ps1
+
+    - name: Upload Windows exe's to artifacts
+      uses: actions/upload-artifact@v2.2.2
+      with:
+        name: Windows-Exe
+        path: ${{ github.workspace }}\hddcoin-blockchain-gui\HDDcoin-win32-x64\
+
+    - name: Upload Installer to artifacts
+      uses: actions/upload-artifact@v2.2.2
+      with:
+        name: Windows-Installers
+        path: ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\
+
+
+    - name: Install AWS CLI
+      if: steps.check_secrets.outputs.HAS_SECRET
+      run: |
+          msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+
+    - name: Configure AWS Credentials
+      if: steps.check_secrets.outputs.HAS_SECRET
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_SECRET
+      env:
+        HDDCOIN_INSTALLER_VERSION: ${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}
+      run: |
+        ls ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe s3://download-hddcoin-net/builds/
+
+    - name: Create Checksums
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        HDDCOIN_INSTALLER_VERSION: ${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}
+      run: |
+         certutil.exe -hashfile ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.checksum
+         ls ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\
+
+    - name: Install py3createtorrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create torrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.torrent --webseed https://download-hddcoin-net.s3.us-west-2.amazonaws.com/install/HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe
+        ls
+
+    - name: Upload Release Files
+      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+      run: |
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe s3://download-hddcoin-net/install/
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.checksum s3://download-hddcoin-net/install/
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.torrent s3://download-hddcoin-net/torrents/
+
+    - name: Get tag name
+      if: startsWith(github.ref, 'refs/tags/')
+      id: tag-name
+      run: |
+        echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
+        echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+
+    - name: Mark installer complete
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        $headers = @{
+            Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
+        }
+        $data = @{
+            hddcoin_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
+        }
+        $json = $data | ConvertTo-Json
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
