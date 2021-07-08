@@ -532,6 +532,7 @@ class Farmer:
 
     async def update_cached_harvesters(self):
         # First remove outdated cache entries
+        self.log.debug(f"update_cached_harvesters cache entries: {len(self.harvester_cache)}")
         remove_hosts = []
         for host, host_cache in self.harvester_cache.items():
             remove_peers = []
@@ -543,6 +544,7 @@ class Farmer:
             for key in remove_peers:
                 del host_cache[key]
             if len(host_cache) == 0:
+                self.log.debug(f"update_cached_harvesters remove host: {host}")
                 remove_hosts.append(host)
         for key in remove_hosts:
             del self.harvester_cache[key]
@@ -552,6 +554,7 @@ class Farmer:
                 continue
             cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry is None or time.time() - cache_entry[1] > UPDATE_HARVESTER_CACHE_INTERVAL:
+                self.log.debug(f"update_cached_harvesters update harvester: {connection.peer_node_id}")
                 response = await connection.request_plots(
                     harvester_protocol.RequestPlots(), timeout=UPDATE_HARVESTER_CACHE_INTERVAL
                 )
@@ -564,6 +567,7 @@ class Farmer:
                             response.to_json_dict(),
                             time.time(),
                         )
+                        self.log.debug(f"update_cached_harvesters cache updated: {connection.peer_node_id}")
                     else:
                         self.log.error(
                             f"Invalid response from harvester:"
@@ -585,7 +589,7 @@ class Farmer:
         for connection in self.server.get_connections():
             if connection.connection_type != NodeType.HARVESTER:
                 continue
-
+            self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
             cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry is not None:
                 harvester_object: dict = dict(cache_entry[0])
@@ -595,6 +599,8 @@ class Farmer:
                     "port": connection.peer_port,
                 }
                 harvesters.append(harvester_object)
+            else:
+                self.log.debug(f"get_harvesters no cache: {connection.peer_host}, node_id: {connection.peer_node_id}")
 
         return {"harvesters": harvesters}
 
