@@ -105,7 +105,7 @@ jobs:
     - name: Test core-full_node code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_conditions.py tests/core/full_node/test_full_node.py tests/core/full_node/test_full_node_store.py tests/core/full_node/test_initial_freeze.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_performance.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_conditions.py tests/core/full_node/test_full_node.py tests/core/full_node/test_full_node_store.py tests/core/full_node/test_initial_freeze.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_performance.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py -s -v  --durations 0
 
 
     - name: Check resource usage

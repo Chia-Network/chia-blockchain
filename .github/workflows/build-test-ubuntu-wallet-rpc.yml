@@ -105,7 +105,7 @@ jobs:
     - name: Test wallet-rpc code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/rpc/test_wallet_rpc.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/rpc/test_wallet_rpc.py -s -v  --durations 0
 
 
 #

@@ -105,7 +105,7 @@ jobs:
     - name: Test pools code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/pools/test_pool_config.py tests/pools/test_pool_puzzles_lifecycle.py tests/pools/test_pool_rpc.py tests/pools/test_pool_wallet.py tests/pools/test_wallet_pool_store.py -s -v --durations 0 
+        ./venv/bin/py.test tests/pools/test_pool_config.py tests/pools/test_pool_puzzles_lifecycle.py tests/pools/test_pool_rpc.py tests/pools/test_pool_wallet.py tests/pools/test_wallet_pool_store.py -s -v  --durations 0
 
 
 #

@@ -105,7 +105,7 @@ jobs:
     - name: Test core-server code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/server/test_dos.py tests/core/server/test_rate_limits.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/server/test_dos.py tests/core/server/test_rate_limits.py -s -v  --durations 0
 
 
 #

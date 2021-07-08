@@ -105,7 +105,7 @@ jobs:
     - name: Test simulation code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/simulation/test_simulation.py -s -v --durations 0 
+        ./venv/bin/py.test tests/simulation/test_simulation.py -s -v  --durations 0
 
 
 #

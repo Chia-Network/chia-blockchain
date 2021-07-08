@@ -105,7 +105,7 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/blockchain/test_blockchain.py tests/blockchain/test_blockchain_transactions.py -s -v --durations 0 
+        ./venv/bin/py.test tests/blockchain/test_blockchain.py tests/blockchain/test_blockchain_transactions.py -s -v  --durations 0
 
 
 #

@@ -105,7 +105,7 @@ jobs:
     - name: Test core-consensus code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/consensus/test_pot_iterations.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/consensus/test_pot_iterations.py -s -v  --durations 0
 
 
 #
