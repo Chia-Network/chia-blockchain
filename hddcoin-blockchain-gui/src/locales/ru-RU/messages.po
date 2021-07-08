@@ -1,0 +1,2768 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2021-02-08 18:51+0100\n"
+"Mime-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ru_RU\n"
+"Project-Id-Version: hddcoin-blockchain\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2021-07-06 23:47\n"
+"Last-Translator: \n"
+"Language-Team: Russian\n"
+"Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
+"X-Crowdin-Project: hddcoin-blockchain\n"
+"X-Crowdin-Project-ID: 440660\n"
+"X-Crowdin-Language: ru\n"
+"X-Crowdin-File: /[HDDcoin-Network.hddcoin-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
+
+#: src/components/plot/add/PlotAddNFT.tsx:62
+msgid "(Optional)"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:64
+msgid "*Want to explore HDDcoin’s blocks further? Check out <0>HDDcoin Explorer</0> built by an open source developer."
+msgstr "*Хотите посмотреть больше информации о блоках Чиа? Загляните в обозреватель блоков <0>HDDcoin Explorer</0>, созданный на основе открытого исходного кода."
+
+#: src/components/plot/add/PlotAddNFT.tsx:125
+msgid "+ Add New Plot NFT"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+#~ msgid "0 automatically chooses bucket count"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
+msgid "128 buckets is recommended"
+msgstr "128 корзин рекомендуется"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:98
+msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+msgstr "Комбайн - это служба, работающая на машине, на которой фактически хранятся участки. Фермер и комбайн общаются с полным узлом, чтобы увидеть состояние цепи. Просмотрите вашу сеть подключенных комбайнов ниже. <0>Подробнее</0>"
+
+#: src/electron/main.tsx:422
+#: src/electron/main.tsx:509
+msgid "About HDDcoin Blockchain"
+msgstr "О программе HDDcoin Blockchain"
+
+#: src/components/trading/ViewOffer.jsx:74
+msgid "Accept"
+msgstr "Принять"
+
+#: src/components/trading/TradingOverview.jsx:228
+msgid "Accepted at time:"
+msgstr "Принято в:"
+
+#: src/components/plot/PlotsFailed.tsx:19
+#: src/components/plot/PlotsNotFound.tsx:19
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+msgid "Action"
+msgstr "Действие"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:67
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/fullNode/FullNodeConnections.tsx:83
+#: src/components/pool/PoolOverview.tsx:69
+msgid "Actions"
+msgstr "Действия"
+
+#: src/components/trading/CreateOffer.jsx:201
+msgid "Add"
+msgstr "Добавить"
+
+#: src/components/plot/PlotHeader.tsx:91
+msgid "Add Plot Directory"
+msgstr "Добавить директорию с участками"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:70
+msgid "Add Plot to Queue"
+msgstr "Добавить участок в очередь"
+
+#: src/components/wallet/Wallets.tsx:88
+#~ msgid "Add Wallet"
+#~ msgstr "Add Wallet"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:46
+#: src/components/plot/PlotHeader.tsx:63
+#: src/components/plot/add/PlotAdd.tsx:162
+#: src/components/plot/overview/PlotOverviewHero.tsx:49
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
+#: src/components/plotNFT/PlotNFTCard.tsx:271
+msgid "Add a Plot"
+msgstr "Добавить участок"
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:51
+msgid "Add a Plot NFT"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:68
+msgid "Add a plot"
+msgstr "Добавить участок"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:107
+msgid "Add plot directory"
+msgstr "Добавить директорию с участками"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
+msgid "Add {currencyCode} from the Faucet"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:561
+#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/standard/WalletStandard.tsx:596
+msgid "Address"
+msgstr "Адрес"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
+#: src/components/wallet/standard/WalletStandard.tsx:503
+msgid "Address / Puzzle hash"
+msgstr "Адрес / Хэш-головоломка"
+
+#: src/components/core/components/Amount/Amount.tsx:98
+#: src/components/trading/CreateOffer.jsx:196
+#: src/components/trading/TradesTable.tsx:20
+#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/create/createNewColouredCoin.jsx:119
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
+#: src/components/wallet/standard/WalletStandard.tsx:513
+msgid "Amount"
+msgstr "Количество"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:581
+msgid "Amount ({cc_unit})"
+msgstr "Количество ({cc_unit})"
+
+#: src/components/wallet/create/createRLAdmin.jsx:239
+msgid "Amount For Initial Coin"
+msgstr "Начальное количество монет"
+
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:46
+msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
+msgstr "Вы уверены, что хотите удалить участок? Участок не подлежит восстановлению."
+
+#: src/components/plotNFT/PlotNFTCard.tsx:122
+#: src/components/wallet/standard/WalletStandard.tsx:632
+msgid "Are you sure you want to delete unconfirmed transactions?"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:25
+msgid "Are you sure you want to disconnect?"
+msgstr "Вы уверены, что хотите отключиться?"
+
+#: src/electron/main.tsx:197
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr "Вы уверены, что хотите выйти? Засеивание и фарминг будут остановлены."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr "Are you sure you want to use k={plotSize}"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:38
+msgid "Are you sure you want to use k={plotSize}?"
+msgstr "Вы уверены, что хотите использовать k={plotSize}?"
+
+#: src/components/plotNFT/PlotNFTName.tsx:39
+msgid "Autogenerated name from pool contract address"
+msgstr ""
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:46
+#: src/components/selectKey/SelectKey.tsx:60
+#: src/components/selectKey/SelectKey.tsx:81
+msgid "Back"
+msgstr "Назад"
+
+#: src/components/backup/BackupCreate.tsx:66
+msgid "Backup file is used to restore smart wallets."
+msgstr "Файл резервной копии используется для восстановления умных кошельков."
+
+#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
+msgid "Balance"
+msgstr "Баланс"
+
+#: src/components/block/Block.jsx:317
+msgid "Base Farmer Reward Amount"
+msgstr "Базовая сумма вознаграждения фермера"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:39
+#: src/components/farm/FarmLatestBlockChallenges.tsx:49
+msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr "Ниже приведены значения испытаний для блоков. У вас может быть или не быть доказательств наличия места (proof of space) для этих испытаний. Эти блоки еще не содержат подтверждений времени (proof of time)."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:17
+msgid "Best estimate over last 24 hours"
+msgstr "Лучшая калькуляция за последние 24 часа"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:157
+#: src/components/block/Block.jsx:332
+msgid "Block"
+msgstr "Блок"
+
+#: src/components/block/Block.jsx:137
+msgid "Block Test"
+msgstr "Проверка блока"
+
+#: src/components/block/Block.jsx:235
+msgid "Block VDF Iterations"
+msgstr "VDF итераций блока"
+
+#: src/components/block/Block.jsx:336
+msgid "Block at height {0} in the HDDcoin blockchain"
+msgstr "Блок на высоте {0} в блокчейне HDDcoin"
+
+#: src/components/fullNode/FullNode.jsx:331
+#~ msgid "Block hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:141
+msgid "Block with hash {headerHash}"
+msgstr "Блок с хэшем {headerHash}"
+
+#: src/components/block/Block.jsx:162
+msgid "Block with hash {headerHash} does not exist."
+msgstr "Блок с хешем {headerHash} не существует."
+
+#: src/components/fullNode/FullNode.jsx:311
+msgid "Blocks"
+msgstr "Блоки"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:79
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:110
+msgid "Browse"
+msgstr "Обзор"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:73
+msgid "But you are currently farming <0/>"
+msgstr "Но в настоящий момент выполняется фарминг на <0/>"
+
+#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Buy"
+msgstr "Покупка"
+
+#: src/components/wallet/Wallets.tsx:49
+#~ msgid "CC Wallet"
+#~ msgstr "CC Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:182
+#~ msgid "CCListItems.title"
+#~ msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:141
+msgid "Can be backed up to mnemonic seed"
+msgstr "может быть сохранен в качестве резервной копии при помощи мнемонического зерна"
+
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
+#: src/components/farm/FarmManageFarmingRewards.tsx:196
+#: src/components/fullNode/FullNodeAddConnection.tsx:89
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:30
+#: src/components/trading/CreateOffer.jsx:139
+#: src/components/trading/TradingOverview.jsx:400
+#: src/components/trading/ViewOffer.jsx:71
+msgid "Cancel"
+msgstr "Отмена"
+
+#: src/components/trading/TradingOverview.jsx:389
+msgid "Cancel and Spend"
+msgstr "Отменить и отправить"
+
+#: src/components/plot/PlotsNotFound.tsx:39
+msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+msgstr "Внимание! Удаление этих участков приведет к безвозвратному удалению файлов навсегда. Убедитесь, что устройства хранения правильно подключены."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:16
+msgid "Challenge"
+msgstr "Испытание"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:14
+msgid "Challenge Hash"
+msgstr "Хэш испытания"
+
+#: src/components/plotNFT/PlotNFTChangePool.tsx:111
+msgid "Change"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:396
+#: src/components/plotNFT/PlotNFTChangePool.tsx:110
+#: src/components/pool/PoolOverview.tsx:115
+msgid "Change Pool"
+msgstr ""
+
+#: src/electron/main.tsx:401
+msgid "Chat on KeyBase"
+msgstr "Чат в KeyBase"
+
+#: src/electron/main.tsx:419
+msgid "HDDcoin"
+msgstr "Чиа"
+
+#: src/electron/main.tsx:358
+msgid "HDDcoin Blockchain Wiki"
+msgstr ""
+"Блокчейн HDDcoin на Wiki                           HDDcoin coin\n"
+"\n"
+"Мы считаем, что криптовалютой должно быть проще пользоваться, чем наличными, ее сложнее потерять и почти невозможно украсть. Любой, кто хочет подтверждать транзакции, должен иметь возможность заниматься майнингом без одноразового оборудования или больших счетов за электроэнергию.\n"
+"9 февраля мы выпустили наш бизнес-документ и запустили основную сеть для получения вознаграждений в пятницу, 19 марта 2021 года. Транзакции будут активированы 3 мая 2021 года около 10:00 по тихоокеанскому времени. Вас также может заинтересовать наш новый согласованный рабочий документ, который впервые был реализован в бета-версии 19 12 января 2021 года.\n"
+"\n"
+"HDDcoin Network разрабатывает блокчейн и платформу интеллектуальных транзакций, созданную изобретателем BitTorrent Брэмом Коэном. Он реализует первый новый алгоритм консенсуса Накамото со времен Биткойна в 2008 году. Доказательства пространства и времени заменяют энергоемкие «доказательства работы».\n"
+"\n"
+"HDDcoinlisp - это новый язык программирования HDDcoin, который является мощным, легким для аудита и безопасным. Это упростит использование криптовалюты, чем наличные деньги или кредит. В настоящее время доступны следующие эталонные смарт-транзакции: атомарные свопы, авторизованные получатели, восстанавливаемые кошельки, кошельки с несколькими подписями, кошельки с ограничением скорости и цветные монеты. Брэм представляет HDDcoinlisp в нашем блоге.\n"
+"Вам следует ознакомиться с примечаниями к выпуску, а затем установить блокчейн HDDcoin.\n"
+"\n"
+"Руководство для начинающих\n"
+"\n"
+"\n"
+"Основная информация о Чиа для начала\n"
+"HDDcoin - это новый тип криптовалюты, основанный на емкости предварительно сохраненных случайных данных, которые пользователь создает и хранит в файлах, называемых графиками, что делает консенсус блокчейна чрезвычайно быстрым и экологически чистым. Это улучшение по сравнению с блокчейнами доказательства работы, которые полагаются на быстрые графические карты и специальные машины, выполняющие миллионы вычислений в секунду и тратящие много электроэнергии. HDDcoin также внесла множество улучшений в сценарии, среду сценариев, криптографию, удобство использования и масштабируемость и стремится быть простым, безопасным и мощным блокчейном.\n"
+"\n"
+"Как это работает\n"
+"\n"
+"Вы можете загрузить программное обеспечение HDDcoin на Windows, Mac или Linux. Версия для Windows автоматически запускается при установке, и Mac просто нужно открыть из каталога приложений - он загружается и начинает синхронизацию с остальной сетью и блокчейном. Полная синхронизация может занять 4–6 часов, хотя со временем эта цифра увеличивается. По сути, вы синхронизируетсь со всеми в сети, загружая всю цепочку блоков, которая включает все транзакции, когда-либо обработанные в сети. Копия базы данных блокчейна hddcoin будет храниться на вашем компьютере. У всех остальных есть копия.\n"
+"\n"
+"После того, как hddcoin заработала, ее концепция: пользователи создают графики (каждый размером 101 гигабайт), пользователь сохраняет эти графики на компьютерном оборудовании, а затем обрабатывает созданные участки для потенциального заработка монет.\n"
+"\n"
+"Внутри каждого графика находится большое количество предварительно сформулированных вычислений, хранящихся в блоках листа Excel, называемых (хеш-ячейками). Пользователь выигрывает потенциальные монеты, предоставляя заранее сформулированный (хеш-код) выигрышный код, позволяющий совершить транзакцию. Выигрышная транзакция выполняется очень быстро в течение 2-3 секунд, и пользователю выплачивается компенсация монетами для облегчения транзакции. Сюжеты содержат много (хеш-ячеек) внутри, поэтому, если используется 1, остается еще много ячеек. Земельный участок рассчитан на срок более 5 лет.\n"
+"\n"
+"Вкладка Full Node\n"
+"\n"
+"Это показывает движение блокчейна. Это показывает, что вы синхронизированы с блокчейном. Копия блокчейна хранится на вашем компьютере. У вас есть живая копия, синхронизированная со всеми остальными.\n"
+"\n"
+"Блоки: это работает блокчейн.\n"
+"Подключения: это подключения к вам и другим пользователям и их ПК (узлам).\n"
+"\n"
+"Вкладка \"Кошелек\"\n"
+"\n"
+"Вы увидите свои монеты Чиа по мере их выигрыша\n"
+"\n"
+"Руководство для начинающих\n"
+"lon12 отредактировал эту страницу 10 дней назад • 57 редакций\n"
+"Основная информация о Чиа для начала\n"
+"HDDcoin - это новый тип криптовалюты, основанный на емкости предварительно сохраненных случайных данных, которые пользователь создает и хранит в файлах, называемых графиками, что делает консенсус блокчейна чрезвычайно быстрым и экологически чистым. Это улучшение по сравнению с блокчейнами доказательства работы, которые полагаются на быстрые графические карты и специальные машины, выполняющие миллионы вычислений в секунду и тратящие много электроэнергии. HDDcoin также внесла множество улучшений в сценарии, среду сценариев, криптографию, удобство использования и масштабируемость и стремится быть простым, безопасным и мощным блокчейном.\n"
+"\n"
+"Как это работает\n"
+"Вы можете загрузить программное обеспечение HDDcoin на Windows, Mac или Linux. Версия для Windows автоматически запускается при установке, и Mac просто нужно открыть из каталога приложений - он загружается и начинает синхронизацию с остальной сетью и блокчейном. Полная синхронизация может занять 4–6 часов, хотя со временем эта цифра увеличивается. По сути, вы синхронизируете со всеми в сети, загружая всю цепочку блоков, которая включает все транзакции, когда-либо обработанные в сети. Копия базы данных блокчейна hddcoin будет храниться на вашем компьютере. У всех остальных есть копия.\n"
+"\n"
+"После того, как hddcoin заработала, ее концепция: пользователи создают графики (каждый размером 101 гигабайт), пользователь сохраняет эти графики на компьютерном оборудовании, а затем обрабатывает созданные участки для потенциального заработка монет.\n"
+"\n"
+"Внутри каждого графика находится большое количество предварительно сформулированных вычислений, хранящихся в блоках листа Excel, называемых (хеш-ячейками). Пользователь выигрывает потенциальные монеты, предоставляя заранее сформулированный (хеш-код) выигрышный код, позволяющий совершить транзакцию. Выигрышная транзакция выполняется очень быстро в течение 2-3 секунд, и пользователю выплачивается компенсация монетами для облегчения транзакции. Сюжеты содержат много (хеш-ячеек) внутри, поэтому, если используется 1, остается еще много ячеек. Земельный участок рассчитан на срок более 5 лет.\n"
+"\n"
+"Вкладка Full Node\n"
+"Это показывает движение блокчейна. Это показывает, что вы синхронизированы с блокчейном. Копия блокчейна хранится на вашем компьютере. У вас есть живая копия, синхронизированная со всеми остальными.\n"
+"\n"
+"Блоки: это работает блокчейн.\n"
+"Подключения: это подключения к вам и другим пользователям и их ПК (узлам).\n"
+"Вкладка \"Кошелек\"\n"
+"Вы увидите свои монеты Чиа по мере их выигрыша\n"
+"\n"
+"История: вы можете увидеть время / дату, когда вы заработали монеты или частичные монеты\n"
+"\n"
+"Вкладка \"Графики\"\n"
+"\n"
+"Здесь вы создаете поля. \n"
+"Допустимый размер участка начинается с 101 ГиБ каждый. Вызывается участок k32 - 101 ГиБ / 109 ГБ.\n"
+"\n"
+"ГиБ: это гибибайты и старые школьные компьютеры измеряли пространство. Новинка - особенно от производителей жестких дисков - измеряется гигабайтами. Поскольку гигабайты основаны на 1000, а гибибайты основаны на 1024, ГБ всегда в 1,074 раза больше, чем ГБ.\n"
+"\n"
+"Когда вы строите: ваш компьютер создает эти большие файлы размером 101 ГиБ (примерно 101 гигабайт). Внутри находятся большие таблицы (например, листы Excel), где каждая ячейка имеет случайный указатель на другую ячейку в таблице. Это то, что делает компьютер, и почему на создание сюжета уходит так много времени. Он производит вычисления и помещает «ответы» в эти миллионы ячеек. Ожидаемый срок службы участка k32 для включения в основную сеть на данный момент составляет от 7 до 15 лет. Вы можете думать о каждом поле, как о коллекции карт бинго, которые имеют шанс выиграть блоки.\n"
+"\n"
+"Вот почему транзакции такие зеленые /\n"
+"\n"
+"Вкладка \"Ферма\"\n"
+"Это покажет вам, сколько PLOTS-полей вы создали. Вверху будет показано, сколько HDDcoins было выращено. Также он показывает, сколько гигов участков у вас в сети. Если у вас есть 2 участка по 101 ГиБ. Затем в левом верхнем углу отображается «Общий размер участков» .\n"
+"2 TIB означает, что вы предлагаете такой объем хранилища для формул сети hddcoin. Рассчитано, как если бы у вас 101 ГиБ x 2 = 202 ГиБ.\n"
+"\n"
+"Последние испытания блоков: здесь показаны последние испытания и указатели, которые можно рассматривать как мини-лотереи. Каждые 9 секунд появляется новая вывеска, а это означает, что у вас есть новая возможность проверить свои участки и узнать, выиграли ли вы. Любая другая точка вывески будет выигрышной для кого-то в сети, поэтому каждые 18 секунд создается новый блок.\n"
+"\n"
+"Последняя попытка доказательства: это важно. Это двухэтапный процесс:\n"
+" Шаг 1- график проходит проверку фильтра.\n"
+"Шаг 2 - Выбранный участок проверяется на выигрышный хэш. Итак, в качестве примера - ваша система работает - есть 5 строк, если у вас 157 графиков - каждая из 5 строк читает 0/157. Если выбран график или второй график, это хорошая новость, и число изменится на 1/157 или 2/157, может быть, 3/157. После прохождения фильтра каждый выбранный участок будет проходить «качественный поиск», который выполняет примерно 7 считываний на вашем графике и сообщает вам, выиграли ли участки. Если вы выиграли, это не показывает никаких признаков, так как транзакция выполняется быстро. Ваш кошелек увеличивается.\n"
+"\n"
+"Как только это совпадение появится в первой строке, оно переместится вниз к строкам 2-5, затем, если другой график пройдет шаг 1, он также начнется сверху, amd переместится, выполнив процесс фильтрации.\n"
+"Выигрыши случаются очень редко: в среднем один человек во всем мире выигрывает каждые 18 секунд. На каждой точке указателя (9 секунд) все ваши участки проверяются, чтобы увидеть, какие из них проходят [фильтр поля]. (https://github.com/HDDcoin-Network/hddcoin-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it). Примерно 1/512 всех участков пройдут через фильтр в каждом испытании, поэтому здесь вы можете увидеть, сколько ваших участков прошло. Однако есть 4 608 шансов выиграть 2 чиа каждый день.\n"
+"\n"
+"Если по какой-то причине эти строки перестают двигаться, это еще один признак того, что вы не синхронизированы с базой данных и вам необходимо выполнить повторную синхронизацию - см. Ниже.\n"
+"\n"
+"Создать участок\n"
+"\n"
+"Нажмите зеленую кнопку в правом верхнем углу «Добавить участок».\n"
+"\n"
+"Начальный размер графика - 32 k (101 ГиБ). Для создания графика вам потребуется временное хранилище размером не менее 332 ГиБ (357 ГБ).\n"
+"\n"
+"Выберите количество участков - вы можете выбрать количество для создания на SSD или HDD\n"
+"\n"
+"График в очередь: означает, что если выбрано (5), он будет отображать # 1, затем, когда закончите, начнется # 2\n"
+"Параллельный график: \n"
+"означает одновременное выполнение нескольких графиков. Убедитесь, что у вас достаточно временного хранилища для общей суммы.\n"
+"Расширенные параметры: \n"
+"значения по умолчанию отображаются для выбранного размера участка, поскольку новичок пытается оставить значения по умолчанию.\n"
+"ИспользованиеRAM:\n"
+" больше памяти немного увеличит скорость работы. \n"
+"Если вы назначите слишком мало (менее 4000 для k 32) или слишком много (больше, чем у вас будет доступно), график может потерпеть неудачу во время процесса.\n"
+"\n"
+"Количество потоков:\n"
+" по умолчанию 2.\n"
+"Сегменты:\n"
+" по умолчанию 128. Большее количество сегментов уменьшает объем необходимой оперативной памяти и обычно увеличивает скорость создания поля.\n"
+"Имя очереди:\n"
+" это полезно для сочетания параллельной и последовательной работы. \n"
+"IE: \n"
+"Если вы хотите сделать 2 поля за раз, всего 10, вы можете сделать 5 полей для имени очереди: «Моя первая очередь» и после этого добавить еще 5 к имени очереди: «Моя вторая очередь».\n"
+"Выберите временный каталог:\n"
+" здесь создаются поля - участки. Будет создано около 128 временных файлов (в зависимости от сегментов), которые затем будут сжаты в один файл \"plot\". В прцессе создания объем данных вырастает до 332 ГиБ (357 Гбайт), и по завершению они будут сжаты до\n"
+" k 32 (101 ГиБ).\n"
+"\n"
+"Для этой работы рекомендуется использовать SSD-накопитель или накопитель NVME, но убедитесь, что вы знаете о SSD Endurance.\n"
+"Выберите место на –HDD, где готовое \"поле\" будет храниться. \n"
+"После создания оно перейдет в это место, где его будут обрабатывать и зарабатывать монеты чиа.\n"
+" Хранилище может быть внутренним или подключенным через USB. Сетевые диски могут работать, но могут перегружать вашу локальную сеть или медленно отвечать за вознаграждение (должно быть менее 30 секунд). Планируйте заранее - хранилище быстро заполняется.\n"
+"\n"
+"Нажмите «Создать plot», чтобы начать процесс.\n"
+"\n"
+"Как создаются поля:\n"
+"\n"
+"Создание графика занимает много времени: в среднем 9-20 часов на обычном компьютере и 4-8 часов на высокопроизводительном компьютере. Есть 4 этапа, которые выполняют операции в 7 таблицах.\n"
+"\n"
+"Фазы:\n"
+"\n"
+"Вычисление таблиц с 1 по 7: он создает сегменты (по умолчанию: 128) в виде файлов в вашем временном каталоге, при вычислении 7 таблиц прогресс графика составляет около 42%.\n"
+"Таблицы обратного распространения с 7 по 1: при обратном распространении 7 таблиц прогресс графика составляет около 61%.\n"
+"Сжатие таблиц с 1 по 7 попарно: при сжатии 7 таблиц прогресс графика составляет около 98%.\n"
+"Перезапишите таблицы: перенесите свой участок на постоянный диск. Программа удалит все файлы в вашем временном хранилище, и это завершит прогресс до 100%.\n"
+"Phase\tStep\t% Progress\n"
+"1\tComputing table 1\t1%\n"
+"1\tComputing table 2\t6%\n"
+"1\tComputing table 3\t12%\n"
+"1\tComputing table 4\t20%\n"
+"1\tComputing table 5\t28%\n"
+"1\tComputing table 6\t36%\n"
+"1\tComputing table 7\t42%\n"
+"2\tBackpropagating on table 7\t43%\n"
+"2\tBackpropagating on table 6\t48%\n"
+"2\tBackpropagating on table 5\t51%\n"
+"2\tBackpropagating on table 4\t55%\n"
+"2\tBackpropagating on table 3\t58%\n"
+"2\tBackpropagating on table 2\t61%\n"
+"3\tCompressing tables 1 and 2\t66%\n"
+"3\tCompressing tables 2 and 3\t73%\n"
+"3\tCompressing tables 3 and 4\t79%\n"
+"3\tCompressing tables 4 and 5\t85%\n"
+"3\tCompressing tables 5 and 6\t92%\n"
+"3\tCompressing tables 6 and 7\t98%\n"
+"4\tWrite checkpoint tables\t100%\n"
+"Примечания. \n"
+"Предлагается использовать дополнительное хранилище SSD или NVME для создания полей, а не основной жесткий диск (особенно для несменного NVME, например, на некоторых Mac или ноутбуках с Windows). Если по какой-то причине процесс записи поля не может быть завершен, его следует удален, удалив все временные файлы. Будьте осторожны, чтобы не удалить временные файлы другого строящегося поля.\n"
+"\n"
+"В Windows вы можете использовать hddcoin CLI из Windows PowerShell, что обеспечивает большую гибкость и контроль. PowerShell - это программа, в которой вы вводите команды, нажимаете клавишу ВВОД и выполняете такие действия, как изменение папок, перемещение файлов или запуск программ, таких как hddcoin.\n"
+"\n"
+"1. Параллельное построение с использованием PowerShell\n"
+"    cd C:\\Users\\yourUserName\\AppData\\Local\\HDDcoin-Blockchain\\app-1.0.5\\resources\\app.asar.unpacked\\daemon\\\n"
+"    start-process .\\hddcoin.exe -argumentlist \"plots create yourParametersGoHere\"\n"
+"    start-process ....\n"
+"\n"
+"   Если start-process не работает, попробуйте. .\\hddcoin.exe plots create yourParametersGoHere\n"
+"\n"
+"Или добавьте путь\n"
+" \"%USERPROFILE%\\AppData\\Local\\hddcoin-blockchain\\app-1.0.5\\resources\\app.asar.unpacked\\daemon\"\n"
+"\n"
+"Чтобы добавить задержку между вашими параллельными процессами, вы можете поместить sleep <seconds> между каждой командой создания полей hddcoin hddcoin plots create , например чтобы отложить следующий процесс на час sleep 3600\n"
+"\n"
+"Конкретный пример:\n"
+"    cd C:\\Users\\yourUserName\\AppData\\Local\\HDDcoin-Blockchain\\app-1.0.5\\resources\\app.asar.unpacked\\daemon\\\n"
+"    start-process ./hddcoin.exe -argumentlist \"plots create -k 32 -b 4000 -u 128 -r 4 -t d:\\tempdrive1 -2 e:\\tempdrive2 -d F:\\plots -n 1\"\n"
+"\n"
+"Приведенная выше команда создает одио поле (указывается -n 1), для параллельного построения вам нужно повторить команду (не закрывая первую). Увеличьте значение -n для последовательного построения, то есть после завершения первого участка запускается следующий."
+
+#: src/components/wallet/standard/WalletStandard.tsx:647
+msgid "HDDcoin Wallet"
+msgstr "Кошелек HDDcoin"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:36
+msgid "Choose Number of Plots"
+msgstr "Выберите количество участков"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:61
+msgid "Choose Plot Size"
+msgstr "Выберите размер участка"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:372
+#: src/components/pool/PoolOverview.tsx:92
+msgid "Claim Rewards"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:114
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:89
+msgid "Close"
+msgstr "Закрыть"
+
+#: src/components/app/AppRouter.tsx:27
+msgid "Closing down node and server"
+msgstr "Закрытие узла и сервера"
+
+#: src/components/trading/TradingOverview.jsx:366
+msgid "Coins:"
+msgstr "Монет:"
+
+#: src/components/trading/CreateOffer.jsx:172
+#: src/components/trading/TradesTable.tsx:24
+msgid "Colour"
+msgstr "Цвет"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:223
+msgid "Colour Info"
+msgstr "Информация о цвете"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:110
+msgid "Colour String"
+msgstr "Шеснадцатеричная строка цвета"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:228
+msgid "Colour:"
+msgstr "Цвет:"
+
+#: src/components/wallet/create/WalletCreate.jsx:118
+msgid "Coloured Coin"
+msgstr "Цветная Монета"
+
+#: src/components/wallet/create/WalletCreate.jsx:160
+msgid "Coloured Coin Options"
+msgstr "Настройки Цветной Монеты"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:168
+#: src/electron/main.tsx:195
+#: src/hooks/useAbsorbRewards.tsx:46
+msgid "Confirm"
+msgstr "Подтвердить"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:21
+msgid "Confirm Disconnect"
+msgstr "Подтвердить отключение"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:118
+#: src/components/wallet/standard/WalletStandard.tsx:628
+msgid "Confirmation"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:201
+msgid "Confirmed at block:"
+msgstr "Подтверждено на блоке:"
+
+#: src/components/wallet/WalletHistory.tsx:51
+msgid "Confirmed at height {0}"
+msgstr "Подтверждено на высоте {0}"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:92
+msgid "Connect"
+msgstr "Подключиться"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:68
+#: src/components/fullNode/FullNodeConnections.tsx:113
+msgid "Connect to other peers"
+msgstr "Подключиться к другим узлам"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
+msgid "Connect to pool"
+msgstr ""
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Connected"
+msgstr "Подключен"
+
+#: src/components/app/AppRouter.tsx:34
+msgid "Connecting to wallet"
+msgstr "Подключение к кошельку"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
+msgid "Connection Status"
+msgstr "Состояние соединения"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:111
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:109
+msgid "Connection Status:"
+msgstr "Состояние соединения:"
+
+#: src/components/fullNode/FullNodeConnections.tsx:76
+msgid "Connection type"
+msgstr "Тип подключения"
+
+#: src/components/fullNode/FullNodeConnections.tsx:110
+msgid "Connections"
+msgstr "Подключения"
+
+#: src/electron/main.tsx:382
+msgid "Contribute on GitHub"
+msgstr "Сотрудничать на GitHub"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
+msgid "Copied"
+msgstr "Скопировано"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
+msgid "Copy"
+msgstr "Копировать"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
+msgid "Copy to Clipboard"
+msgstr "Скопировать в буфер обмена"
+
+#: src/components/backup/BackupCreate.tsx:78
+#: src/components/plot/add/PlotAdd.tsx:179
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:175
+#: src/components/wallet/create/createExistingColouredCoin.jsx:133
+#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/create/createRLAdmin.jsx:307
+#: src/components/wallet/create/createRLUser.jsx:99
+msgid "Create"
+msgstr "Создать"
+
+#: src/components/wallet/create/WalletCreate.jsx:276
+msgid "Create DID wallet"
+msgstr "Создать DID кошелек"
+
+#: src/components/trading/TradeManager.tsx:45
+msgid "Create Offer"
+msgstr "Создать Предложение"
+
+#: src/components/plot/add/PlotAdd.tsx:92
+#~ msgid "Create Plot"
+#~ msgstr "Create Plot"
+
+#: src/components/wallet/create/createRLAdmin.jsx:188
+msgid "Create Rate Limited Admin Wallet"
+msgstr "Создать кошелек администратора с ограниченнием скорости"
+
+#: src/components/wallet/create/createRLUser.jsx:78
+msgid "Create Rate Limited User Wallet"
+msgstr "Создать кошелек пользователя с ограниченнием скорости вывода"
+
+#: src/components/trading/TradeManager.tsx:22
+#~ msgid "Create Trade"
+#~ msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:135
+msgid "Create Trade Offer"
+msgstr "Создать торговое предложение"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
+#: src/components/wallet/standard/WalletStandard.tsx:483
+msgid "Create Transaction"
+msgstr "Создать транзакцию"
+
+#: src/components/backup/BackupCreate.tsx:63
+msgid "Create a Backup"
+msgstr "Создать Резервную Копию"
+
+#: src/components/plot/add/PlotAddNFT.tsx:42
+msgid "Create a Plot NFT"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:182
+msgid "Create a new private key"
+msgstr "Создать новый приватный ключ"
+
+#: src/components/wallet/create/WalletCreate.jsx:224
+msgid "Create admin wallet"
+msgstr "Создать администрационный кошелек"
+
+#: src/components/wallet/create/WalletCreate.jsx:170
+msgid "Create new coloured coin"
+msgstr "Создать новую цветную монету"
+
+#: src/components/wallet/create/WalletCreate.jsx:230
+msgid "Create user wallet"
+msgstr "Создать кошелек пользователя"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:93
+msgid "Create wallet for colour"
+msgstr "Создать кошелек для цвета"
+
+#: src/components/wallet/create/WalletCreate.jsx:177
+msgid "Create wallet for existing colour"
+msgstr "Создать кошелек для существующей цветной монеты"
+
+#: src/components/wallet/Wallets.tsx:81
+#~ msgid "CreateWallet.addWallet"
+#~ msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:186
+msgid "Created At:"
+msgstr "Создано в:"
+
+#: src/components/trading/TradingOverview.jsx:211
+msgid "Created by us:"
+msgstr "Создано нами?"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
+msgid "Creating Plot NFT and Joining the Pool"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
+msgid "Creating Plot NFT for Self Pooling"
+msgstr ""
+
+#: src/components/plot/add/PlotAdd.tsx:86
+msgid "Currency code is not defined"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
+#: src/components/plotNFT/PlotNFTCard.tsx:180
+msgid "Current Difficulty"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
+#: src/components/plotNFT/PlotNFTCard.tsx:197
+msgid "Current Points Balance"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:182
+msgid "Current trade status"
+msgstr "Текущий торговый статус"
+
+#: src/components/selectKey/SelectKey.tsx:156
+msgid "DANGER: permanently delete private key"
+msgstr "ОПАСНО: удалить закрытый ключ навсегда"
+
+#: src/components/wallet/Wallets.tsx:53
+#~ msgid "DID Wallet"
+#~ msgstr "DID Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:310
+#~ msgid "DIDListItems.title"
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
+#: src/components/trading/TradingOverview.jsx:137
+#: src/components/wallet/WalletHistory.tsx:46
+msgid "Date"
+msgstr "Дата"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
+msgid "Delay"
+msgstr "Задержка"
+
+#: src/components/plot/PlotAction.tsx:27
+#: src/components/plot/PlotAction.tsx:57
+#: src/components/plot/queue/PlotQueueActions.tsx:43
+#: src/components/plot/queue/PlotQueueActions.tsx:97
+#: src/components/plotNFT/PlotNFTCard.tsx:119
+#: src/components/selectKey/SelectKey.tsx:59
+#: src/components/selectKey/SelectKey.tsx:80
+#: src/components/wallet/standard/WalletStandard.tsx:629
+msgid "Delete"
+msgstr "Удалить"
+
+#: src/components/plot/PlotAction.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:42
+msgid "Delete Plot"
+msgstr "Удалить участок"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:314
+#: src/components/wallet/standard/WalletStandard.tsx:663
+msgid "Delete Unconfirmed Transactions"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:79
+#: src/components/selectKey/SelectKey.tsx:200
+msgid "Delete all keys"
+msgstr "Удалить все ключи"
+
+#: src/components/selectKey/SelectKey.tsx:58
+msgid "Delete key"
+msgstr "Удалить ключ"
+
+#: src/components/selectKey/SelectKey.tsx:84
+msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Удаление всех ключей приведет к безвозвратному удалению ключей с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
+
+#: src/components/selectKey/SelectKey.tsx:63
+msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Удаление ключа приведет к безвозвратному удалению ключа с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
+
+#: src/electron/main.tsx:304
+msgid "Developer"
+msgstr "Разработчик"
+
+#: src/electron/main.tsx:307
+msgid "Developer Tools"
+msgstr "Инструменты разработчика"
+
+#: src/components/block/Block.jsx:221
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
+msgid "Difficulty"
+msgstr "Сложность"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
+msgid "Disable bitfield plotting"
+msgstr "Отключить битовое поле"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+msgid "Discard"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr "Отключить"
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "Distributed Identity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:266
+msgid "Distributed Identity Options"
+msgstr "Настройки Децентрализованного Идентификатора"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:52
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
+msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
+msgstr "Есть ли у вас на этой машине участки? <0>Добавить каталог с участками</0>"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:55
+msgid "Does your machine support parallel plotting?"
+msgstr "Поддерживает ли ваша машина параллельное засеивание?"
+
+#: src/components/trading/ViewOffer.jsx:39
+#: src/components/wallet/create/recoverDIDWallet.js:294
+msgid "Drag and drop offer file"
+msgstr "Перетащите сюда файл с предложением сделки"
+
+#: src/components/backup/BackupRestore.tsx:173
+msgid "Drag and drop your backup file"
+msgstr "Перетащите файл резервной копии"
+
+#: src/electron/main.tsx:263
+msgid "Edit"
+msgstr "Правка"
+
+#: src/components/wallet/WalletImport.tsx:147
+msgid "Enter the 24 word mnemonic that you have saved in order to restore your HDDcoin wallet."
+msgstr "Введите мнемонику из 24 слов, которую вы сохранили, чтобы восстановить свой кошелек HDDcoin."
+
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
+#: src/components/farm/card/FarmCardStatus.tsx:35
+#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/plot/PlotStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
+msgid "Error"
+msgstr "Ошибка"
+
+#: src/components/wallet/standard/WalletStandard.tsx:456
+msgid "Error: Cannot send hddcoin to coloured address. Please enter a hddcoin address."
+msgstr "Ошибка: не удается отправить чиа на цветной адрес. Пожалуйста, введите адрес hddcoin."
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
+msgid "Estimated Network Space"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
+msgid "Estimated Time to Win"
+msgstr "Ожидаемое время до выигрыша"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Estimated network space"
+#~ msgstr "Estimated network space"
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
+msgid "Estimated sum of all the plotted disk space of all farmers in the network"
+msgstr "Оценка размера всего дискового пространства, занимаемого участками суммарно всех фермеров в сети"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:193
+msgid "Exclude final directory"
+msgstr "Исключить окончательную директорию"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:38
+msgid "Failed to open (invalid plots)"
+msgstr "Неудается открыть (некоррекные участки)"
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/standard/WalletStandard.tsx:532
+msgid "Farm"
+msgstr "Ферма"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
+msgid "Farmer Public Key"
+msgstr "Открытый ключ фермера"
+
+#: src/components/block/Block.jsx:267
+msgid "Farmer Puzzle Hash"
+msgstr "Хеш-головоломка фермера"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:163
+msgid "Farmer Reward Address"
+msgstr "Адрес выплаты фермеру"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:137
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/plot/PlotStatus.tsx:28
+msgid "Farmer is not connected"
+msgstr "Фермер не подключен"
+
+#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/plot/PlotStatus.tsx:29
+msgid "Farmer is not running"
+msgstr "Фермер не запущен"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:33
+msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
+msgstr "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
+
+#: src/components/farm/Farm.tsx:23
+#: src/components/farm/FarmerStatus.tsx:18
+#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/plot/PlotStatus.tsx:17
+msgid "Farming"
+msgstr "Фарминг"
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:26
+#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/card/FarmCardStatus.tsx:46
+#: src/components/farm/card/FarmCardStatus.tsx:59
+msgid "Farming Status"
+msgstr "Статус фарминга"
+
+#: src/components/core/components/Fee/Fee.tsx:48
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:154
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
+#: src/components/pool/PoolInfo.tsx:17
+#: src/components/wallet/WalletHistory.tsx:66
+#: src/components/wallet/create/createExistingColouredCoin.jsx:123
+#: src/components/wallet/create/createNewColouredCoin.jsx:132
+#: src/components/wallet/create/createRLAdmin.jsx:244
+#: src/components/wallet/create/createRLAdmin.jsx:272
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
+#: src/components/wallet/standard/WalletStandard.tsx:524
+msgid "Fee"
+msgstr "Комиссия"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee (TXCH)"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr "Fee ({0})"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:595
+msgid "Fee ({currencyCode})"
+msgstr "Комиссия ({currencyCode})"
+
+#: src/components/block/Block.jsx:321
+msgid "Fees Amount"
+msgstr "Объем коммисий"
+
+#: src/components/block/Block.jsx:313
+#~ msgid "Fees Puzzle Hash"
+#~ msgstr ""
+
+#: src/electron/main.tsx:255
+#: src/electron/main.tsx:456
+msgid "File"
+msgstr "Файл"
+
+#: src/components/plot/PlotsFailed.tsx:14
+#: src/components/plot/PlotsNotFound.tsx:14
+#: src/components/plot/overview/PlotOverviewPlots.tsx:106
+msgid "Filename"
+msgstr "Имя файла"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
+msgid "Final folder location"
+msgstr "Путь к папке для окончательного хранения"
+
+#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Finished"
+msgstr "Завершен"
+
+#: src/electron/main.tsx:407
+msgid "Follow on Twitter"
+msgstr "Следить в Twitter"
+
+#: src/electron/main.tsx:366
+msgid "Frequently Asked Questions"
+msgstr "Часто задаваемые вопросы"
+
+#: src/components/dashboard/DashboardSideBar.tsx:39
+#: src/components/fullNode/FullNode.jsx:323
+msgid "Full Node"
+msgstr "Полный узел"
+
+#: src/components/fullNode/FullNode.jsx:326
+msgid "Full Node Overview"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:267
+#~ msgid "Full Node Status"
+#~ msgstr "Full Node Status"
+
+#: src/electron/main.tsx:332
+msgid "Full Screen"
+msgstr "Полный экран"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:102
+msgid "Generate New Colour"
+msgstr "Сгенерировать новый цвет"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "Grid view"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.tsx:583
+msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
+msgstr "HD или иерархические детерминированные ключи (Hierarchical Deterministic keys) - это схема открытого/закрытого ключей, в которой один закрытый ключ может иметь почти бесконечное количество различных открытых ключей (и, следовательно, адресов для получения кошелька), которые в конечном итоге будут возвращаться и использоваться одним закрытым ключом."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Harvester ID"
+#~ msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:132
+msgid "Harvester Plots"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:61
+msgid "Header Hash"
+msgstr "Хэш заголовка"
+
+#: src/components/block/Block.jsx:185
+msgid "Header hash"
+msgstr "Хэш заголовка"
+
+#: src/components/block/Block.jsx:201
+#: src/components/fullNode/FullNode.jsx:81
+#: src/components/fullNode/FullNodeConnections.tsx:80
+msgid "Height"
+msgstr "Высота"
+
+#: src/electron/main.tsx:354
+msgid "Help"
+msgstr "Помощь"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
+msgid "Help translate"
+msgstr "Помогите с переводом"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
+msgid "Hide Advanced Options"
+msgstr "Скрыть дополнительные опции"
+
+#: src/components/wallet/WalletHistory.tsx:91
+msgid "History"
+msgstr "История"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:36
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+msgid "Host Name"
+msgstr "Имя хоста"
+
+#: src/components/fullNode/FullNodeConnections.tsx:41
+msgid "IP address"
+msgstr "IP адрес"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:75
+msgid "IP address / host"
+msgstr "IP адрес / хост"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:115
+msgid "If none selected, then it will default to the temporary directory."
+msgstr "Если ничего не выбрано, по умолчанию используется временный каталог."
+
+#: src/components/wallet/WalletImport.tsx:144
+msgid "Import Wallet from Mnemonics"
+msgstr "Импортировать кошелек из мнемоники"
+
+#: src/components/selectKey/SelectKey.tsx:191
+msgid "Import from Mnemonics (24 words)"
+msgstr "Импорт мнемоники (24 слова)"
+
+#: src/components/fullNode/FullNode.jsx:45
+msgid "In Progress"
+msgstr "В процессе"
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Incoming"
+msgstr "Входящие"
+
+#: src/components/core/components/Fee/Fee.tsx:36
+msgid "Incorrect value"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:18
+msgid "Index"
+msgstr "Индекс"
+
+#: src/components/trading/TradingOverview.jsx:214
+msgid "Indicated if this offer was created by us"
+msgstr "Показывает, было ли это предложение создано нами или нет"
+
+#: src/components/trading/TradingOverview.jsx:231
+msgid "Indicated what time this offer was accepted"
+msgstr "Показывает, в какое время было принято это предложение"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:333
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:472
+msgid "Info Packet"
+msgstr "Информационный пакет"
+
+#: src/components/wallet/create/createRLAdmin.jsx:260
+msgid "Initial Amount"
+msgstr "Начальное количество монет"
+
+#: src/components/wallet/create/createRLUser.jsx:87
+msgid "Initialize a Rate Limited User Wallet:"
+msgstr "Инициализируйте кошелек пользователя с ограничением скорости вывода монет:"
+
+#: src/components/wallet/create/createRLAdmin.jsx:218
+msgid "Interval"
+msgstr "Интервал"
+
+#: src/components/plotNFT/PlotNFTState.tsx:26
+msgid "Invalid state"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
+msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:394
+#: src/components/pool/PoolOverview.tsx:113
+msgid "Join Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:59
+#: src/components/plot/add/PlotAddNFT.tsx:143
+#: src/components/pool/PoolHero.tsx:31
+msgid "Join a Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:44
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:59
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:135
+msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:63
+msgid "K-Size"
+msgstr "K-размер"
+
+#: src/components/dashboard/DashboardSideBar.tsx:66
+msgid "Keys"
+msgstr "Ключи"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:64
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+msgid "KiB Up/Down"
+msgstr "КиБ исх.\\вх."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:47
+msgid "Last Attempted Proof"
+msgstr "Последняя попытка доказательства"
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:19
+msgid "Last Height Farmed"
+msgstr "Высота последнего выращенного блока"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
+msgid "Latest Block Challenges"
+msgstr "Последние испытания блоков"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
+#: src/components/plotNFT/PlotNFTCard.tsx:349
+msgid "Launcher Id"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
+msgid "Learn More"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTState.tsx:58
+msgid "Leaving Pool"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "List view"
+msgstr ""
+
+#: src/components/pool/Pool.tsx:21
+msgid "Loading Plot NFTs"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:172
+msgid "Loading list of wallets"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+msgid "Loading..."
+msgstr "Загрузка..."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:126
+#~ msgid "Local Harvester Plots"
+#~ msgstr "Участки для локальных комбайнов"
+
+#: src/components/app/AppRouter.tsx:41
+msgid "Logging in"
+msgstr "Вход в систему"
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+#~ msgid "MainWalletList.colouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:258
+#~ msgid "MainWalletList.createAdminWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:322
+#~ msgid "MainWalletList.createDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:194
+#~ msgid "MainWalletList.createNewColouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:270
+#~ msgid "MainWalletList.createUserWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:206
+#~ msgid "MainWalletList.createWalletForExistingColour"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "MainWalletList.distributedIdentity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:134
+#~ msgid "MainWalletList.rateLimited"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:334
+#~ msgid "MainWalletList.recoverDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:112
+#~ msgid "MainWalletList.title"
+#~ msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:53
+msgid "Manage Farming Rewards"
+msgstr "Управление вознаграждением за фарминг"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:119
+msgid "Manage Your Farming Rewards Target Addresses"
+msgstr "Управление целевыми адресами для получения вознаграждений за фарминг"
+
+#: src/components/fullNode/FullNodeConnections.tsx:69
+msgid "MiB Up/Down"
+msgstr "МиБ Исх./Вх."
+
+#: src/components/pool/PoolInfo.tsx:27
+msgid "Minimum Difficulty"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
+msgid "Minutes"
+msgstr "Минут"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:116
+msgid "More memory slightly increases speed"
+msgstr "Больше количество памяти немного увеличивает скорость"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+msgid "My Pubkey"
+msgstr "Мой публичный ключ"
+
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
+msgid "Network Name"
+msgstr "Имя сети"
+
+#: src/components/fullNode/FullNode.jsx:106
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr "Network not launched yet, waiting for genesis challenge!"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/standard/WalletStandard.tsx:579
+msgid "New Address"
+msgstr "Новый адрес"
+
+#: src/components/wallet/WalletAdd.tsx:63
+msgid "New Wallet"
+msgstr "Новый кошелек"
+
+#: src/components/block/Block.jsx:350
+#: src/components/wallet/WalletAdd.tsx:95
+#: src/components/wallet/WalletImport.tsx:163
+msgid "Next"
+msgstr "Далее"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:249
+msgid "Nickname"
+msgstr "Псевдоним"
+
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:192
+msgid "No"
+msgstr "Нет"
+
+#: src/middleware/middleware_api.jsx:301
+msgid "No 24 word seed, since this key is imported."
+msgstr "Нет 24 слов семя, так как этот ключ импортируется."
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:21
+msgid "No blocks farmed yet"
+msgstr "Выращенных блоков пока нет"
+
+#: src/components/wallet/WalletHistory.tsx:102
+msgid "No previous transactions"
+msgstr "Нет предыдущих транзакций"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:156
+msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+msgstr "Не найдено закрытых ключей для одного или обоих адресов. Безопасно только в том случае, если вы отправляете вознаграждение на другой кошелек."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/fullNode/FullNodeConnections.tsx:37
+msgid "Node ID"
+msgstr "Идентификатор узла"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:87
+msgid "Node Id"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:88
+msgid "None"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:68
+msgid "None of your plots have passed the plot filter yet."
+msgstr "Ни один из ваших участков пока не прошел через фильтр."
+
+#: src/components/farm/FarmerStatus.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/plot/PlotStatus.tsx:19
+msgid "Not Available"
+msgstr "Не определено"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#: src/components/wallet/WalletStatus.tsx:28
+msgid "Not Synced"
+msgstr "Не синхронизирован"
+
+#: src/components/trading/TradingOverview.jsx:222
+msgid "Not accepted yet"
+msgstr "Еще не принято"
+
+#: src/components/trading/TradingOverview.jsx:195
+msgid "Not confirmed yet"
+msgstr "Еще не подтверждено"
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Not connected"
+msgstr "Нет подключения"
+
+#: src/components/plot/PlotsNotFound.tsx:37
+msgid "Not found Plots"
+msgstr "Участки не найдены"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:184
+msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
+#: src/components/plotNFT/PlotNFTCard.tsx:159
+msgid "Number of Plots"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
+msgid "Number of buckets"
+msgstr "Количество сегментов"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:133
+msgid "Number of threads"
+msgstr "Количество потоков"
+
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:111
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:112
+msgid "OK"
+msgstr "OK"
+
+#: src/components/trading/ViewOffer.jsx:67
+msgid "Offer"
+msgstr "Предложение"
+
+#: src/components/trading/TradingOverview.jsx:413
+msgid "Offers Created"
+msgstr "Предложение создано"
+
+#: src/components/wallet/standard/WalletStandard.tsx:485
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr "В среднем между каждым блоком транзакций проходит одна минута. Если нет перегрузки, вы можете ожидать что ваша транзакция будет включена менее чем за минуту."
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Outgoing"
+msgstr "Исходящие"
+
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
+msgid "Peak Height"
+msgstr "Пиковая высота"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Peak Sub-block Height"
+#~ msgstr "Peak Sub-block Height"
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
+msgid "Peak Time"
+msgstr "Пиковое время"
+
+#: src/components/plotNFT/PlotNFTState.tsx:43
+#: src/components/wallet/WalletHistory.tsx:53
+msgid "Pending"
+msgstr "Ожидающие"
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:573
+msgid "Pending Balance"
+msgstr "Баланс в ожидани"
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:578
+msgid "Pending Change"
+msgstr "Сдача в ожидании"
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:27
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
+msgid "Pending Total Balance"
+msgstr "Ожидаемый итоговый баланс"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
+#: src/hooks/useAbsorbRewards.tsx:45
+msgid "Please Confirm"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:100
+msgid "Please add a trade pair"
+msgstr "Пожалуйста, добавьте торговую пару"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:668
+msgid "Please enter 0 fee. Positive fees not supported yet for RL."
+msgstr "Пожалуйста, введите комиссию 0. Положительные комиссии для кошельков с ограничением скорости пока не поддерживаются."
+
+#: src/components/wallet/create/createRLAdmin.jsx:140
+msgid "Please enter a valid initial coin amount"
+msgstr "Пожалуйста, укажите корректное численное начальное значение баланса кошелька"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
+#: src/components/wallet/standard/WalletStandard.tsx:432
+msgid "Please enter a valid numeric amount"
+msgstr "Пожалуйста, укажите корректное численное значение"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:70
+#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/create/createRLAdmin.jsx:150
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
+#: src/components/wallet/standard/WalletStandard.tsx:444
+msgid "Please enter a valid numeric fee"
+msgstr "Пожалуйста, укажите корректное численное значение комиссии"
+
+#: src/components/wallet/create/createRLAdmin.jsx:100
+msgid "Please enter a valid numeric interval length"
+msgstr "Пожалуйста, укажите корректное целочисленное значение интервала в блоках"
+
+#: src/components/wallet/create/createRLAdmin.jsx:115
+msgid "Please enter a valid numeric spendable amount"
+msgstr "Пожалуйста, укажите корректное числовое значение количества монет, которое можно будет потратить за указанный интервал"
+
+#: src/components/wallet/create/createRLAdmin.jsx:125
+msgid "Please enter a valid pubkey"
+msgstr "Пожалуйста, введите действующий публичный ключ"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
+#: src/components/wallet/standard/WalletStandard.tsx:420
+msgid "Please finish syncing before making a transaction"
+msgstr "Пожалуйста, завершите синхронизацию перед совершением транзакции"
+
+#: src/components/trading/CreateOffer.jsx:66
+msgid "Please select amount"
+msgstr "Пожалуйста, укажите количество"
+
+#: src/components/trading/CreateOffer.jsx:76
+msgid "Please select buy or sell"
+msgstr "Пожалуйста, выберите купить или продать"
+
+#: src/components/trading/CreateOffer.jsx:56
+msgid "Please select coin colour"
+msgstr "Пожалуйста, выберите тип монеты"
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:45
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:49
+msgid "Please specify final directory"
+msgstr "Пожалуйста, укажите окончательный каталог хранения"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:60
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:64
+msgid "Please specify temporary directory"
+msgstr "Пожалуйста, укажите временную директорию"
+
+#: src/hooks/useAbsorbRewards.tsx:21
+msgid "Please wait for synchronization"
+msgstr ""
+
+#: src/hooks/useJoinPool.tsx:27
+msgid "Please wait for wallet synchronization"
+msgstr ""
+
+#: src/components/plot/Plot.tsx:18
+msgid "Plot"
+msgstr "Участок"
+
+#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:41
+msgid "Plot Count"
+msgstr "Количество участков"
+
+#: src/components/block/Block.jsx:299
+msgid "Plot Id"
+msgstr "ID участка"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+msgid "Plot Key"
+msgstr "Публ. ключ"
+
+#: src/components/pool/PoolOverview.tsx:40
+msgid "Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
+#: src/components/plotNFT/PlotNFTChangePool.tsx:81
+msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#~ msgid "Plot Name"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:259
+msgid "Plot Public Key"
+msgstr "Публичный ключ участка"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Plot Seed"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:80
+msgid "Plot Size"
+msgstr "Размер участка"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
+msgid "Plot in Parallel"
+msgstr "Засеивать паралельно"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+msgid "Plot is duplicate of {0}"
+msgstr "Плот дубликат {0}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+#~ msgid "PlotNFT is transitioning to (target state)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:50
+msgid "Plots"
+msgstr "Участки"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:22
+msgid "Plots Passed Filter"
+msgstr "Участки, прошедшие фильтр"
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
+msgid "Plots are allocated space on your hard drive used to farm and earn HDDcoin. <0>Learn more</0>"
+msgstr "Участки - это выделенное пространство на вашем жестком диске. Участки используются для фарминга и приносят доход в чиа. <0>Подробности</0>"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:34
+msgid "Plotting"
+msgstr "Засеивание"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
+msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+msgstr "Параллельное засеивание позволяет сэкономить время. Также вы можете создать очередь засеивания участков."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:174
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr "Разметка участков при включенной функции построения битовых полей почти всегда выполняется быстрее так как  имеет  меньше операций записи примерно на 30% . С другой стороны вы можете увидеть снижение требований к памяти при отключении функции построения битовых полей. Если ваш процессор разработан до 2010 года, возможно, вам придется отключить функцию построения битовых полей."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
+#: src/components/plotNFT/PlotNFTCard.tsx:215
+msgid "Points Found Since Start"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
+#: src/components/plotNFT/PlotNFTCard.tsx:226
+msgid "Points Found in Last 24 Hours"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
+#: src/components/plotNFT/PlotNFTCard.tsx:235
+msgid "Points Successful in Last 24 Hours"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/pool/Pool.tsx:25
+msgid "Pool"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:100
+msgid "Pool Contract Address"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:81
+msgid "Pool Key"
+msgstr "Ключ пула"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
+msgid "Pool Login Link"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
+msgid "Pool Payout Instructions"
+msgstr ""
+
+#: src/components/block/Block.jsx:263
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
+msgid "Pool Public Key"
+msgstr "Публичный ключ пула"
+
+#: src/components/block/Block.jsx:283
+msgid "Pool Puzzle Hash"
+msgstr "Хеш-головоломка пула"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:173
+msgid "Pool Reward Address"
+msgstr "Адрес выплаты пулу"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:149
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:144
+msgid "Pool Reward Address must not be empty."
+msgstr ""
+
+#: src/components/block/Block.jsx:313
+msgid "Pool Reward Amount"
+msgstr "Сумма вознаграждения пула"
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+msgid "Pool does not provide relative_lock_height."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+msgid "Pool does not provide target_puzzle_hash."
+msgstr ""
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
+#: src/components/plotNFT/PlotNFTCard.tsx:326
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
+msgid "Pool:"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:24
+#: src/components/plotNFT/PlotNFTState.tsx:59
+msgid "Pooling"
+msgstr ""
+
+#: src/components/farm/FarmFullNodeConnections.tsx:42
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
+#: src/components/fullNode/FullNodeAddConnection.tsx:80
+#: src/components/fullNode/FullNodeConnections.tsx:47
+msgid "Port"
+msgstr "Порт"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
+#: src/components/plotNFT/PlotNFTChangePool.tsx:74
+msgid "Preparing Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
+msgid "Preparing standard wallet"
+msgstr ""
+
+#: src/components/block/Block.jsx:347
+msgid "Previous"
+msgstr "Предыдущий"
+
+#: src/components/block/Block.jsx:203
+#~ msgid "Previous Block Hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:215
+msgid "Previous Header Hash"
+msgstr "Хэш предыдущего блока"
+
+#: src/components/block/Block.jsx:217
+#~ msgid "Previous Sub Block Hash"
+#~ msgstr "Previous Sub Block Hash"
+
+#: src/components/selectKey/SelectKey.tsx:136
+msgid "Private key with public fingerprint {fingerprint}"
+msgstr "Приватный ключ с публичным отпечатком {fingerprint}"
+
+#: src/middleware/middleware_api.jsx:249
+msgid "Private key {0}"
+msgstr "Закрытый ключ {0}"
+
+#: src/middleware/middleware_api.jsx:259
+msgid "Private key:"
+msgstr "Закрытый ключ:"
+
+#: src/components/block/Block.jsx:251
+msgid "Proof of Space Size"
+msgstr "Размер доказательства пространства (Proof of Space)"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:26
+msgid "Proofs Found"
+msgstr "Доказательств найдено"
+
+#: src/components/pool/PoolInfo.tsx:22
+msgid "Protocol Version"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:297
+msgid "Pubkey"
+msgstr "Публичный ключ"
+
+#: src/middleware/middleware_api.jsx:267
+msgid "Public key:"
+msgstr "Открытый ключ:"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
+msgid "Queue Name"
+msgstr "Имя очереди"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+msgid "Queue name"
+msgstr "Имя очереди"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:35
+msgid "Queued"
+msgstr "В очереди"
+
+#: src/electron-starter.js:80
+#~ msgid "Quit"
+#~ msgstr "Quit"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:115
+msgid "RAM max usage"
+msgstr "Максимальное использование ОЗУ"
+
+#: src/components/wallet/Wallets.tsx:51
+#~ msgid "RL Wallet"
+#~ msgstr "RL Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:246
+#~ msgid "RLListItems.title"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+msgid "Rate Limited"
+msgstr "Ограниченной Скорости"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:391
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:438
+msgid "Rate Limited Info"
+msgstr "Информация об ограничении скорости"
+
+#: src/components/wallet/create/WalletCreate.jsx:214
+msgid "Rate Limited Options"
+msgstr "Настройки Ограниченной Скорости"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
+msgid "Rate Limited User Wallet Setup"
+msgstr "Настройка кошелька пользователя с ограничением скорости"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/standard/WalletStandard.tsx:576
+msgid "Receive Address"
+msgstr "Адрес для получения платежа"
+
+#: src/components/wallet/create/WalletCreate.jsx:282
+msgid "Recover DID wallet"
+msgstr "Восстанавление Кошелека Децентрализованного Идентификатора"
+
+#: src/components/plot/PlotHeader.tsx:78
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
+msgid "Refresh Plots"
+msgstr "Обновить участки"
+
+#: src/components/pool/PoolInfo.tsx:32
+msgid "Relative Lock Height"
+msgstr ""
+
+#: src/electron/main.tsx:374
+msgid "Release Notes"
+msgstr "Примечания к релизу"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:36
+msgid "Removing"
+msgstr "Удаление"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:265
+msgid "Rename"
+msgstr "Переименовать"
+
+#: src/electron/main.tsx:393
+msgid "Report an Issue..."
+msgstr "Сообщить о проблеме..."
+
+#: src/components/backup/BackupRestore.tsx:160
+msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
+msgstr "Восстановление метаданных цветных монет и других смарт-кошельков из резервной копии"
+
+#: src/components/backup/BackupRestore.tsx:107
+#~ msgid "Restore Smart Wallets From Backup"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNodeConnections.jsx:107
+#~ msgid "SB Height"
+#~ msgstr "SB Height"
+
+#: src/components/backup/BackupRestore.tsx:186
+msgid "Safe To Skip"
+msgstr "Можно пропустить"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:199
+#: src/components/trading/CreateOffer.jsx:142
+msgid "Save"
+msgstr "Сохранить"
+
+#: src/components/fullNode/FullNode.jsx:338
+#~ msgid "Search"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNodeBlockSearch.tsx:41
+msgid "Search block by header hash"
+msgstr "Поиск блока по хешу заголовка"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:93
+msgid "Second temporary folder location"
+msgstr "Расположение второй временной папки"
+
+#: src/components/selectKey/SelectKey.tsx:145
+msgid "See private key"
+msgstr "Посмотреть закрытый ключ"
+
+#: src/middleware/middleware_api.jsx:293
+msgid "Seed:"
+msgstr "Семя:"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:87
+msgid "Select 2nd Temporary Directory"
+msgstr "Выберите 2-й временный каталог"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:23
+msgid "Select Final Directory"
+msgstr "Выберите окончательный каталог"
+
+#: src/components/selectKey/SelectKey.tsx:104
+msgid "Select Key"
+msgstr "Выбор ключа"
+
+#: src/components/trading/ViewOffer.jsx:37
+msgid "Select Offer"
+msgstr "Выберите предложение"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
+msgid "Select Temporary Directory"
+msgstr "Выберите временный каталог"
+
+#: src/components/wallet/create/WalletCreate.jsx:108
+msgid "Select Wallet Type"
+msgstr "Выберите Тип Кошелька"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:25
+msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
+msgstr "Выберите путь для конечной папки, в которой вы хотите хранить участок. Мы рекомендуем вам использовать большой медленный жесткий диск (например, внешний жесткий диск HDD)."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "Выберите временное место назначения для папки, в которой вы хотите сохранить участок. Мы рекомендуем использовать быстрый диск."
+
+#: src/components/plot/add/PlotAddNFT.tsx:83
+msgid "Select your Plot NFT"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:74
+msgid "Select your Plot NFT from the dropdown or create a new one."
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:108
+msgid "Selected"
+msgstr "Выбран"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:23
+#: src/components/plotNFT/PlotNFTState.tsx:57
+msgid "Self Pooling"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
+msgid "Self pool. When you win a block you will earn XCH rewards."
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:164
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Sell"
+msgstr "Продажа"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
+#: src/components/wallet/standard/WalletStandard.tsx:542
+msgid "Send"
+msgstr "Отправить"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:460
+msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+msgstr "Отправьте этот информационный пакет пользователям вашего кошелька с ограниченной скоростью вывода. Эта информация потребуется пользователям для завершения настройки своего кошелька:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:279
+msgid "Send your pubkey to your Rate Limited Wallet admin:"
+msgstr "Отправьте этот публичный ключ администратору вашего кошелька с ограниченной скоростью вывода средств:"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
+msgid "Show Advanced Options"
+msgstr "Показать дополнительные опции"
+
+#: src/electron-starter.js:79
+#~ msgid "Show app"
+#~ msgstr "Show app"
+
+#: src/components/trading/CreateOffer.jsx:153
+#: src/components/trading/TradesTable.tsx:16
+msgid "Side"
+msgstr "Направление"
+
+#: src/components/selectKey/SelectKey.tsx:109
+msgid "Sign In"
+msgstr "Войти в систему"
+
+#: src/components/backup/BackupRestore.tsx:122
+#~ msgid "Skip"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:195
+msgid "Skips adding a final directory to harvester for farming"
+msgstr "Пропускает добавление окончательной директории в комбайн для фермерства"
+
+#: src/components/pool/PoolHero.tsx:26
+msgid "Smooth out your XCH farming rewards by joining a pool."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
+msgid "Something went wrong"
+msgstr ""
+
+#: src/electron/main.tsx:470
+msgid "Speech"
+msgstr "Речь"
+
+#: src/components/wallet/create/createRLAdmin.jsx:230
+msgid "Spendable Amount"
+msgstr "Расходуемое количество"
+
+#: src/components/wallet/create/createRLAdmin.jsx:202
+msgid "Spendable Amount Per Interval"
+msgstr "Расходуемое количество монет за интервал"
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
+#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
+msgid "Spendable Balance"
+msgstr "Расходуемый баланс"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:396
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:443
+msgid "Spending Interval (number of blocks): {interval}"
+msgstr "Интервал расходования (количество блоков): {interval}"
+
+#: src/components/wallet/create/createRLAdmin.jsx:197
+msgid "Spending Interval Length (number of blocks)"
+msgstr "Длина интервала расходования (количество блоков)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:448
+msgid "Spending Limit (hddcoin per interval): {0}"
+msgstr "Лимит расходования (hddcoin за интервал): {0}"
+
+#: src/components/fullNode/FullNode.jsx:100
+msgid "State"
+msgstr "Состояние"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:59
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:110
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
+#: src/components/plotNFT/PlotNFTCard.tsx:144
+#: src/components/pool/PoolOverview.tsx:44
+#: src/components/trading/TradingOverview.jsx:128
+#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/wallet/WalletStatusCard.tsx:22
+#: src/components/wallet/Wallets.tsx:118
+msgid "Status"
+msgstr "Статус"
+
+#: src/components/trading/TradingOverview.jsx:179
+msgid "Status:"
+msgstr "Статус:"
+
+#: src/components/wallet/Wallets.tsx:119
+#~ msgid "StatusCard.connections"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:113
+#~ msgid "StatusCard.height"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+#~ msgid "StatusCard.status"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:93
+#~ msgid "StatusCard.title"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
+#~ msgid "Stripe Size"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:199
+#~ msgid "Sub Block Height"
+#~ msgstr "Sub Block Height"
+
+#: src/components/block/Block.jsx:338
+#~ msgid "Sub Block at height {0} in the HDDcoin blockchain"
+#~ msgstr "Sub Block at height {0} in the HDDcoin blockchain"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:347
+msgid "Submit"
+msgstr "Подтвердить"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
+#: src/components/wallet/WalletStatus.tsx:33
+msgid "Synced"
+msgstr "Синхронизован"
+
+#: src/components/farm/FarmerStatus.tsx:19
+#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:18
+#: src/components/wallet/WalletStatus.tsx:38
+msgid "Syncing"
+msgstr "Синхронизация"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
+msgid "Syncing <0/>/<1/>"
+msgstr "Синхронизация <0/>/<1/>"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#~ msgid "TXCH Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardFeesReward.tsx:12
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/pool/PoolInfo.tsx:37
+msgid "Target Puzzle Hash"
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
+msgid "Temporary folder location"
+msgstr "Расположение временной папки"
+
+#: src/components/app/AppTimeBomb.tsx:30
+msgid "The application will stop working at block height 193536."
+msgstr "Приложение перестанет работать при высоте блока 193536."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:97
+msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
+msgstr "Полный узел, к которому подключен ваш фермер, указан ниже. <0>Подробнее</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:34
+#: src/components/plot/add/PlotAddChooseSize.tsx:91
+msgid "The minimum required size for mainnet is k=32"
+msgstr "Минимальный требуемый размер участка для основной сети равен k=32"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
+msgid "The node is not synced"
+msgstr "Узел не синхронизирован с сетью"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
+msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+msgstr "Узел синхронизируется, что означает, что он загружает блоки с других узлов, чтобы достичь последнего блока в цепи"
+
+#: src/hooks/usePoolInfo.ts:59
+msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:44
+msgid "The pool URL is not valid. {normalizedUrl}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:39
+msgid "The pool URL needs to use protocol https. {normalizedUrl}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:44
+#~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
+#~ msgstr ""
+
+#: src/hooks/usePoolInfo.ts:23
+#~ msgid "The pool URL speciefied is not valid. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:29
+msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
+msgstr ""
+
+#: src/components/block/Block.jsx:302
+msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
+msgstr "Зерно, которое использовалось для создания участка. Зерно зависит от публичного ключа пула и публичного ключа участка."
+
+#: src/components/block/Block.jsx:228
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+msgstr "Общее количество итерации VDF (от англ. Verifiable Delay Function - проверяемая функция задержки) или доказательств временных итераций по всей цепочке до этого подблока."
+
+#: src/components/block/Block.jsx:244
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+msgstr "Общее количество итераций VDF (от англ. Verifiable Delay Function - проверяемая функция задержки), другими словами общее количество доказательств временных итераций (proof of time) в этом блоке."
+
+#: src/components/block/Block.jsx:324
+msgid "The total transactions fees in this block. Rewarded to the farmer."
+msgstr "Общая комиссия за транзакции в этом блоке, полученная в награду фермерами."
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
+msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
+msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:40
+msgid "These plots are invalid, you might want to delete them."
+msgstr "Эти участки невалидны, вы можете удалить их."
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:72
+msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
+msgstr "Это позволяет вам добавить каталог, в котором уже есть участки. Если вы еще не создали никаких участков, перейдите к экрану создания участков."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
+#: src/components/plotNFT/PlotNFTCard.tsx:171
+msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:123
+#: src/hooks/useSelectDirectory.tsx:31
+#: src/hooks/useSelectFile.tsx:21
+msgid "This feature is available only from the GUI."
+msgstr "Эта функция доступна только из графического интерфейса."
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:26
+msgid "This is the amount of HDDcoin that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and HDDcoin that you have just spent but is not yet in the blockchain."
+msgstr "Это количество монет Чиа, которое в настоящее время вы можете использовать для совершения транзакций. Баланс не включает ожидающие вознаграждения за фармиг, ожидающие входящие транзакции и монеты, которые вы только что потратили, но они еще не попали в блокчейн."
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:26
+msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+msgstr "Здесь рассчитан размер ожидаемой сдачи, которая осталась в качестве размена после отправки монет. Размен вы отправили себе, но транзакция еще не была подтверждена."
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:26
+msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+msgstr "Здесь рассчитана сумма входящих и исходящих ожидающих транзакций (еще не включенных в цепь блоков). Награды за фарминг не включены в сумму."
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
+msgid "This is the time of the latest peak sub block."
+msgstr "Это время последнего пикового суб блока."
+
+#: src/components/block/Block.jsx:194
+msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+msgstr "Это момент времени, когда блок был создан фермером, то есть до того, как он был завершен с применением алгоритма подтверждения времени (proof of time)."
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:34
+msgid "This is the total amount of hddcoin in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "Это общее количество монет Чиа в блокчейне в текущем пиковом суб блоке, которые контролируются вашими приватными ключами. Баланс включает в себя замороженные награды за фарм, но не включает ожидающие входящие и исходящие транзакции."
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:29
+msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
+msgstr "Это общий баланс + отложенный баланс: это то, каким будет ваш баланс после подтверждения всех ожидающих транзакций."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
+#: src/components/plotNFT/PlotNFTCard.tsx:190
+msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
+#: src/components/plotNFT/PlotNFTCard.tsx:207
+msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
+msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
+msgid "This node is fully caught up and validating the network"
+msgstr "Этот узел полностью догнал соседние узлы и выполняет валидацию в сети"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
+msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
+msgid "This plot NFT is not connected to pool"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:49
+msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
+msgstr "Эта таблица показывает вам, когда ваша ферма в последний раз пыталась выиграть испытание при фарминге блока. <0>Подробнее</0>"
+
+#: src/components/trading/TradingOverview.jsx:189
+msgid "This trade was created at this time"
+msgstr "Сделка была создана в это время"
+
+#: src/components/trading/TradingOverview.jsx:205
+msgid "This trade was included on blockchain at this block height"
+msgstr "Сделка была включена в блокчейн на указанной высоте блока"
+
+#: src/components/app/AppTimeBombAlert.tsx:19
+msgid "This version of HDDcoin is no longer compatible with the blockchain and can not safely farm."
+msgstr "Эта версия HDDcoin больше не совместима с блокчейном и не может безопасно фармить."
+
+#: src/components/fullNode/FullNode.jsx:92
+msgid "Time Created"
+msgstr "Время создания"
+
+#: src/components/trading/TradingOverview.jsx:192
+#~ msgid "Time this trade was created at this time"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:189
+msgid "Timestamp"
+msgstr "Временная метка"
+
+#: src/components/wallet/WalletHistory.tsx:42
+msgid "To"
+msgstr "Кому"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:32
+#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
+msgid "Total Balance"
+msgstr "Итоговый баланс"
+
+#: src/components/farm/card/FarmCardTotalHDDcoinFarmed.tsx:15
+#~ msgid "Total HDDcoin Farmed"
+#~ msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:20
+msgid "Total Iterations"
+msgstr "Всего итераций"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+msgid "Total Network Space"
+msgstr "Суммарное пространство сети"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:146
+msgid "Total Plot Size:"
+msgstr "Общий объем участков:"
+
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+msgid "Total Size of Plots"
+msgstr "Общий объем участков"
+
+#: src/components/block/Block.jsx:225
+msgid "Total VDF Iterations"
+msgstr "Общее количество итерации VDF"
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:22
+msgid "Total iterations since the start of the blockchain"
+msgstr "Общее количество итераций с момента запуска блокчейна"
+
+#: src/components/dashboard/DashboardSideBar.tsx:27
+#~ msgid "Trade"
+#~ msgstr "Trade"
+
+#: src/components/trading/TradingOverview.jsx:350
+msgid "Trade Details"
+msgstr "Детали сделки"
+
+#: src/components/trading/TradingOverview.jsx:125
+msgid "Trade ID"
+msgstr "Идентификатор сделки"
+
+#: src/components/trading/TradingOverview.jsx:172
+msgid "Trade ID:"
+msgstr "Идентификатор сделки:"
+
+#: src/components/trading/TradeManager.tsx:34
+msgid "Trade Overview"
+msgstr "Обзор торгов"
+
+#: src/components/trading/TradingOverview.jsx:153
+msgid "Trades will show up here"
+msgstr "Здесь будут отображаться сделки"
+
+#: src/components/trading/TradeManager.tsx:23
+msgid "Trading"
+msgstr "Торговля"
+
+#: src/components/trading/TradingOverview.jsx:422
+msgid "Trading History"
+msgstr "История торгов"
+
+#: src/components/block/Block.jsx:309
+msgid "Transactions Filter Hash"
+msgstr "Хэш фильтра транзакций"
+
+#: src/components/wallet/WalletHistory.tsx:25
+msgid "Type"
+msgstr "Тип"
+
+#: src/components/plot/add/PlotAdd.tsx:101
+msgid "Unable to create plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:149
+#: src/components/pool/PoolOverview.tsx:66
+msgid "Unclaimed Rewards"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Unfinished"
+msgstr "Незаконченный"
+
+#: src/components/trading/TradingOverview.jsx:175
+msgid "Unique identifier"
+msgstr "Уникальный идентификатор"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
+msgid "Unknown"
+msgstr "Неизвестный"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+msgid "Unsaved Changes"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:281
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
+msgid "User Pubkey"
+msgstr "Пользовательский публичный ключ"
+
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
+msgid "VDF Sub Slot Iterations"
+msgstr "Итерации VDF суб слота"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+#~ msgid "Value is too high"
+#~ msgstr "Value is too high"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+msgid "Value seems high"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
+msgid "Verify Pool Details"
+msgstr ""
+
+#: src/electron/main.tsx:295
+msgid "View"
+msgstr "Вид"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:79
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:63
+msgid "View Log"
+msgstr "Посмотреть журнал"
+
+#: src/components/trading/TradeManager.tsx:54
+msgid "View Offer"
+msgstr "Просмотр заявок"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
+#: src/components/plotNFT/PlotNFTCard.tsx:298
+#~ msgid "View Payout Instructions"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:285
+msgid "View Pool Login Link"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+msgid "View pending balances"
+msgstr "Просмотр ожидаемого баланса"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:393
+msgid "View pending balances..."
+msgstr "Просмотр ожидаемого баланса..."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/plot/PlotStatus.tsx:26
+#: src/components/plot/PlotStatus.tsx:27
+msgid "Wait for synchronization"
+msgstr "Дождитесь синхронизации"
+
+#: src/components/wallet/Wallets.tsx:104
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
+msgid "Waiting for the transaction to be confirmed"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:185
+#: src/components/wallet/standard/WalletStandard.tsx:674
+msgid "Wallet Status:"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:34
+#~ msgid "WalletItem.ccWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:30
+#~ msgid "WalletItem.hddcoinWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:48
+#~ msgid "WalletItem.didWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:41
+#~ msgid "WalletItem.rlWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:107
+#~ msgid "WalletStatusCard.not_synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:105
+#~ msgid "WalletStatusCard.synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:103
+#~ msgid "WalletStatusCard.syncing"
+#~ msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:45
+#: src/components/wallet/Wallets.tsx:173
+msgid "Wallets"
+msgstr "Кошельки"
+
+#: src/components/wallet/Wallets.tsx:131
+#~ msgid "Wallets.title"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:57
+msgid "Want to Join a Pool? Create a Plot NFT"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:139
+msgid "Want to earn more HDDcoin? Add more plots to your farm."
+msgstr "Хотите получать больше дохода в Чиа? Добавьте больше участков к своей ферме."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:86
+msgid "Want to have a delay before the next plot starts?"
+msgstr "Хотите установить задержку между стартом параллельного засевания файлов?"
+
+#: src/components/block/Block.jsx:205
+msgid "Weight"
+msgstr "Вес"
+
+#: src/components/block/Block.jsx:208
+msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
+msgstr "Вес - это общая добавленная сложность всех подблоков, включая этот"
+
+#: src/components/selectKey/SelectKey.tsx:112
+msgid "Welcome to HDDcoin. Please log in with an existing key, or create a new key."
+msgstr "Добро пожаловать в Чиа. Пожалуйста, войдите в систему с существующим ключом или создайте новый ключ."
+
+#: src/components/wallet/WalletAdd.tsx:66
+msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+msgstr "Добро пожаловать! Перечисленные слова используются для резервного копирования вашего кошелька. Без них вы потеряете доступ к своему кошельку, берегите их! Запишите каждое слово вместе с порядковым номером рядом с ним. (Порядок важен)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:316
+msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
+
+#: src/electron/main.tsx:340
+msgid "Window"
+msgstr "Окно"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:36
+msgid "Without fees"
+msgstr "Без комиссии"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:35
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:193
+msgid "Yes"
+msgstr "Да"
+
+#: src/hooks/useAbsorbRewards.tsx:29
+#: src/hooks/useJoinPool.tsx:35
+msgid "You are in pending state. Please wait for confirmation"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:37
+msgid "You are not self pooling"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:412
+msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
+#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:63
+msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+msgstr "Вам не нужно синхронизировать узел или быть подключенным к участку. Во время процесса засеивания участков создаются временные файлы, размер которых превышает размер итоговых файлов участков. Убедитесь, что у вас достаточно места. <0>Подробнее</0>"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+msgid "You have made changes. Do you want to discard them?"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:56
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgstr "У вас есть {0}% пространства в сети, поэтому ожидание обработки блока займет {expectedTimeToWin}. Фактические результаты могут быть в 3-4 раза дольше чем ожидаемое время."
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+
+#: src/components/pool/PoolJoin.tsx:37
+msgid "You need to claim your rewards first"
+msgstr ""
+
+#: src/components/app/AppTimeBomb.tsx:28
+#~ msgid "You need to upgrade the HDDcoin application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the HDDcoin application as this version will stop working soon!"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
+msgid "You need {currencyCode} to join a pool."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
+msgid "You will recieve <0/> to {0}"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:49
+msgid "You will recieve <0/> to {address}"
+msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:37
+msgid "Your Farm Overview"
+msgstr "Обзор вашей фермы"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:95
+msgid "Your Full Node Connection"
+msgstr "Ваше подключение к полному узлу"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+msgid "Your Harvester Network"
+msgstr "Ваша сеть комбайнов"
+
+#: src/components/pool/PoolOverview.tsx:160
+msgid "Your Pool Overview"
+msgstr ""
+
+#: src/util/getDescriptiveError.ts:5
+msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Ошибка 13] Доступ запрещен. Вы пытаетесь получить доступ к файлу/каталогу без необходимых разрешений. Скорее всего, одна из папок участков в вашем config.yaml имеет проблему."
+
+#: src/util/getDescriptiveError.ts:8
+msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Ошибка 22] Файл не найден. Скорее всего, один из каталогов с участками в вашем config.yaml имеет проблему."
+
+#: src/components/wallet/WalletStatusCard.tsx:41
+#: src/components/wallet/Wallets.tsx:143
+msgid "connections:"
+msgstr "подключения:"
+
+#: src/components/wallet/WalletStatusCard.tsx:33
+#: src/components/wallet/Wallets.tsx:135
+msgid "height:"
+msgstr "высота:"
+
+#: src/components/wallet/Wallets.tsx:129
+msgid "not synced"
+msgstr "не синхр."
+
+#: src/components/plot/add/PlotAdd.tsx:105
+msgid "p2_singleton_puzzle_hash is not defined"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:27
+#: src/components/wallet/Wallets.tsx:123
+msgid "status:"
+msgstr "статус:"
+
+#: src/components/wallet/WalletStatusCard.tsx:29
+#: src/components/wallet/Wallets.tsx:128
+msgid "synced"
+msgstr "синхр."
+
+#: src/components/wallet/WalletStatusCard.tsx:29
+#: src/components/wallet/Wallets.tsx:127
+msgid "syncing"
+msgstr "синх-ция"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr "{0} Block Rewards"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr "{0} User Transaction Fees"
+
+#: src/components/plotNFT/PlotNFTGraph.tsx:111
+msgid "{0} points {1} - {2} hours ago"
+msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:35
+msgid "{currencyCode} Block Rewards"
+msgstr "{currencyCode} Награда за блок"
+
+#: src/components/farm/card/FarmCardTotalHDDcoinFarmed.tsx:29
+msgid "{currencyCode} Total HDDcoin Farmed"
+msgstr "{currencyCode} Всего Чиа выращено"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:28
+msgid "{currencyCode} User Transaction Fees"
+msgstr "{currencyCode} Комиссия за транзакции пользователей"
+
+#: src/components/core/components/Amount/Amount.tsx:82
+msgid "{mojo, plural, one {mojo} other {mojos}}"
+msgstr ""

@@ -56,17 +56,17 @@ jobs:
     - name: Checkout test blocks and plots
       uses: actions/checkout@v2
       with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
+        repository: 'HDDcoin-Network/test-cache'
+        path: '.hddcoin'
         ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        ln -s $GITHUB_WORKSPACE/.hddcoin
+        echo "$HOME/.hddcoin"
+        ls -al $HOME/.hddcoin
 
     - name: Run install script
       env:

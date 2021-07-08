@@ -4,24 +4,24 @@ import signal
 from secrets import token_bytes
 from typing import Dict, List, Optional
 
-from chia.consensus.constants import ConsensusConstants
-from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.start_farmer import service_kwargs_for_farmer
-from chia.server.start_full_node import service_kwargs_for_full_node
-from chia.server.start_harvester import service_kwargs_for_harvester
-from chia.server.start_introducer import service_kwargs_for_introducer
-from chia.server.start_service import Service
-from chia.server.start_timelord import service_kwargs_for_timelord
-from chia.server.start_wallet import service_kwargs_for_wallet
-from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
-from chia.timelord.timelord_launcher import kill_processes, spawn_process
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from hddcoin.consensus.constants import ConsensusConstants
+from hddcoin.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
+from hddcoin.full_node.full_node_api import FullNodeAPI
+from hddcoin.server.start_farmer import service_kwargs_for_farmer
+from hddcoin.server.start_full_node import service_kwargs_for_full_node
+from hddcoin.server.start_harvester import service_kwargs_for_harvester
+from hddcoin.server.start_introducer import service_kwargs_for_introducer
+from hddcoin.server.start_service import Service
+from hddcoin.server.start_timelord import service_kwargs_for_timelord
+from hddcoin.server.start_wallet import service_kwargs_for_wallet
+from hddcoin.simulator.start_simulator import service_kwargs_for_full_node_simulator
+from hddcoin.timelord.timelord_launcher import kill_processes, spawn_process
+from hddcoin.types.peer_info import PeerInfo
+from hddcoin.util.bech32m import encode_puzzle_hash
 from tests.block_tools import BlockTools, test_constants
-from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic
+from hddcoin.util.hash import std_hash
+from hddcoin.util.ints import uint16, uint32
+from hddcoin.util.keychain import Keychain, bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
 
 bt = BlockTools(constants=test_constants)

@@ -1,0 +1,62 @@
+name: Check npm audit and locales
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+  pull_request:
+    branches-ignore:
+      - 'main'
+
+jobs:
+  build:
+    name: Check npm audit and locales
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [3.8]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/dev' }}
+      uses: styfle/cancel-workflow-action@0.9.0
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Cache npm
+      uses: actions/cache@v2.1.5
+      env:
+        cache-name: cache-node-modules
+      with:
+        # npm cache files are stored in `~/.npm` on Linux/macOS
+        path: ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Setup Node 12.x
+      uses: actions/setup-node@v2.1.5
+      with:
+        node-version: '12.x'
+
+    - name: Check npm audit and locale on ${{ matrix.os }}
+      shell: bash
+      run: |
+        npm install
+        if ! output=$(npm audit --audit-level=high); then echo "$output" && exit 1; fi
+        echo "$output"
+        npm run locale:extract
+        if [ "$(git diff-index --quiet HEAD)" ]; then echo "locales need to be extracted!" && exit 1; fi
+        git status
+        echo "No issues found."

@@ -1,0 +1,2596 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2021-02-08 18:51+0100\n"
+"Mime-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: uk_UA\n"
+"Project-Id-Version: hddcoin-blockchain\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2021-07-06 23:46\n"
+"Last-Translator: \n"
+"Language-Team: Ukrainian\n"
+"Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
+"X-Crowdin-Project: hddcoin-blockchain\n"
+"X-Crowdin-Project-ID: 440660\n"
+"X-Crowdin-Language: uk\n"
+"X-Crowdin-File: /[HDDcoin-Network.hddcoin-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
+
+#: src/components/plot/add/PlotAddNFT.tsx:62
+msgid "(Optional)"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:64
+msgid "*Want to explore HDDcoin’s blocks further? Check out <0>HDDcoin Explorer</0> built by an open source developer."
+msgstr "Бажаєте подивитися більше інформації про блоки HDDcoin? Загляньте в оглядач блоків <0>HDDcoin Explorer</0>, створений на основі відкритого вихідного коду."
+
+#: src/components/plot/add/PlotAddNFT.tsx:125
+msgid "+ Add New Plot NFT"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+#~ msgid "0 automatically chooses bucket count"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
+msgid "128 buckets is recommended"
+msgstr "128 кошиків рекомендовано"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:98
+msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+msgstr "Комбайн - це служба, що працює на пристрої, де фактично зберігаються ділянки. Фермер та комбайн розмовляють із повним вузлом, щоб побачити стан ланцюга. Перегляньте свою мережу підключених комбайнів нижче. Докладніше"
+
+#: src/electron/main.tsx:422
+#: src/electron/main.tsx:509
+msgid "About HDDcoin Blockchain"
+msgstr "Про програму HDDcoin Blockchain"
+
+#: src/components/trading/ViewOffer.jsx:74
+msgid "Accept"
+msgstr "Прийняти"
+
+#: src/components/trading/TradingOverview.jsx:228
+msgid "Accepted at time:"
+msgstr "Прийнято о:"
+
+#: src/components/plot/PlotsFailed.tsx:19
+#: src/components/plot/PlotsNotFound.tsx:19
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+msgid "Action"
+msgstr "Дія"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:67
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/fullNode/FullNodeConnections.tsx:83
+#: src/components/pool/PoolOverview.tsx:69
+msgid "Actions"
+msgstr "Дії"
+
+#: src/components/trading/CreateOffer.jsx:201
+msgid "Add"
+msgstr "Додати"
+
+#: src/components/plot/PlotHeader.tsx:91
+msgid "Add Plot Directory"
+msgstr "Додати теку з ділянками"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:70
+msgid "Add Plot to Queue"
+msgstr "Додати ділянку до черги"
+
+#: src/components/wallet/Wallets.tsx:88
+#~ msgid "Add Wallet"
+#~ msgstr "Add Wallet"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:46
+#: src/components/plot/PlotHeader.tsx:63
+#: src/components/plot/add/PlotAdd.tsx:162
+#: src/components/plot/overview/PlotOverviewHero.tsx:49
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
+#: src/components/plotNFT/PlotNFTCard.tsx:271
+msgid "Add a Plot"
+msgstr "Додати ділянку"
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:51
+msgid "Add a Plot NFT"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:68
+msgid "Add a plot"
+msgstr "Додати ділянку"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:107
+msgid "Add plot directory"
+msgstr "Додати теку з ділянками"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
+msgid "Add {currencyCode} from the Faucet"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:561
+#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/standard/WalletStandard.tsx:596
+msgid "Address"
+msgstr "Адреса"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
+#: src/components/wallet/standard/WalletStandard.tsx:503
+msgid "Address / Puzzle hash"
+msgstr "Адреса / Хеш-головоломка"
+
+#: src/components/core/components/Amount/Amount.tsx:98
+#: src/components/trading/CreateOffer.jsx:196
+#: src/components/trading/TradesTable.tsx:20
+#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/create/createNewColouredCoin.jsx:119
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
+#: src/components/wallet/standard/WalletStandard.tsx:513
+msgid "Amount"
+msgstr "Кількість"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:581
+msgid "Amount ({cc_unit})"
+msgstr "Кількість ({cc_unit})"
+
+#: src/components/wallet/create/createRLAdmin.jsx:239
+msgid "Amount For Initial Coin"
+msgstr "Початкова кількість монет"
+
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:46
+msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
+msgstr "Ви впевнені, що хочете видалити ділянку? Ділянка не підлягає відновленню."
+
+#: src/components/plotNFT/PlotNFTCard.tsx:122
+#: src/components/wallet/standard/WalletStandard.tsx:632
+msgid "Are you sure you want to delete unconfirmed transactions?"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:25
+msgid "Are you sure you want to disconnect?"
+msgstr "Ви впевнені, що бажаєте відключитися?"
+
+#: src/electron/main.tsx:197
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr "Ви впевнені, що хочете вийти? Засівання та фермерство зупиняться."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr "Are you sure you want to use k={plotSize}"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:38
+msgid "Are you sure you want to use k={plotSize}?"
+msgstr "Ви впевнені, що бажаєте використовувати k={plotSize}?"
+
+#: src/components/plotNFT/PlotNFTName.tsx:39
+msgid "Autogenerated name from pool contract address"
+msgstr ""
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:46
+#: src/components/selectKey/SelectKey.tsx:60
+#: src/components/selectKey/SelectKey.tsx:81
+msgid "Back"
+msgstr "Назад"
+
+#: src/components/backup/BackupCreate.tsx:66
+msgid "Backup file is used to restore smart wallets."
+msgstr "Файл резервної копії використовується для відновлення розумних гаманців."
+
+#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
+msgid "Balance"
+msgstr "Баланс"
+
+#: src/components/block/Block.jsx:317
+msgid "Base Farmer Reward Amount"
+msgstr "Базова сума винагороди фермера"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:39
+#: src/components/farm/FarmLatestBlockChallenges.tsx:49
+msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr "Нижче наведені значення випробувань для блоків. У вас може бути чи не бути доказів наявності місця для цих випробувань. Ці блоки ще не містять підтверджень часу."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:17
+msgid "Best estimate over last 24 hours"
+msgstr "Найкраща оцінка за останні 24 години"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:157
+#: src/components/block/Block.jsx:332
+msgid "Block"
+msgstr "Блок"
+
+#: src/components/block/Block.jsx:137
+msgid "Block Test"
+msgstr "Перевірка блоку"
+
+#: src/components/block/Block.jsx:235
+msgid "Block VDF Iterations"
+msgstr "VDF ітерацій блоку"
+
+#: src/components/block/Block.jsx:336
+msgid "Block at height {0} in the HDDcoin blockchain"
+msgstr "Блок на висоті {0} в блокчейні HDDcoin"
+
+#: src/components/fullNode/FullNode.jsx:331
+#~ msgid "Block hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:141
+msgid "Block with hash {headerHash}"
+msgstr "Блок з хешем {headerHash}"
+
+#: src/components/block/Block.jsx:162
+msgid "Block with hash {headerHash} does not exist."
+msgstr "Блок з хешем {headerHash} не існує."
+
+#: src/components/fullNode/FullNode.jsx:311
+msgid "Blocks"
+msgstr "Блоки"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:79
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:110
+msgid "Browse"
+msgstr "Огляд"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:73
+msgid "But you are currently farming <0/>"
+msgstr "Але ви зараз займаєтеся фермерством <0/>"
+
+#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Buy"
+msgstr "Покупка"
+
+#: src/components/wallet/Wallets.tsx:49
+#~ msgid "CC Wallet"
+#~ msgstr "CC Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:182
+#~ msgid "CCListItems.title"
+#~ msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:141
+msgid "Can be backed up to mnemonic seed"
+msgstr "Може бути збережений в якості резервної копії за допомогою мнемонічного зерна"
+
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
+#: src/components/farm/FarmManageFarmingRewards.tsx:196
+#: src/components/fullNode/FullNodeAddConnection.tsx:89
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:30
+#: src/components/trading/CreateOffer.jsx:139
+#: src/components/trading/TradingOverview.jsx:400
+#: src/components/trading/ViewOffer.jsx:71
+msgid "Cancel"
+msgstr "Відміна"
+
+#: src/components/trading/TradingOverview.jsx:389
+msgid "Cancel and Spend"
+msgstr "Відмінити і відправити"
+
+#: src/components/plot/PlotsNotFound.tsx:39
+msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+msgstr "Увага! Видалення цих ділянок призведе до безповоротного видалення файлів назавжди. Переконайтеся, що пристрої зберігання правильно підключені."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:16
+msgid "Challenge"
+msgstr "Випробування"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:14
+msgid "Challenge Hash"
+msgstr "Хеш випробування"
+
+#: src/components/plotNFT/PlotNFTChangePool.tsx:111
+msgid "Change"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:396
+#: src/components/plotNFT/PlotNFTChangePool.tsx:110
+#: src/components/pool/PoolOverview.tsx:115
+msgid "Change Pool"
+msgstr ""
+
+#: src/electron/main.tsx:401
+msgid "Chat on KeyBase"
+msgstr "Чат у KeyBase"
+
+#: src/electron/main.tsx:419
+msgid "HDDcoin"
+msgstr "HDDcoin"
+
+#: src/electron/main.tsx:358
+msgid "HDDcoin Blockchain Wiki"
+msgstr "HDDcoin Blockchain Wiki"
+
+#: src/components/wallet/standard/WalletStandard.tsx:647
+msgid "HDDcoin Wallet"
+msgstr "Гаманець HDDcoin"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:36
+msgid "Choose Number of Plots"
+msgstr "Виберіть кількість ділянок"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:61
+msgid "Choose Plot Size"
+msgstr "Виберіть розмір ділянки"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:372
+#: src/components/pool/PoolOverview.tsx:92
+msgid "Claim Rewards"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:114
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:89
+msgid "Close"
+msgstr "Закрити"
+
+#: src/components/app/AppRouter.tsx:27
+msgid "Closing down node and server"
+msgstr "Закриття вузла і сервера"
+
+#: src/components/trading/TradingOverview.jsx:366
+msgid "Coins:"
+msgstr "Монет:"
+
+#: src/components/trading/CreateOffer.jsx:172
+#: src/components/trading/TradesTable.tsx:24
+msgid "Colour"
+msgstr "Колір"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:223
+msgid "Colour Info"
+msgstr "Інформація про колір"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:110
+msgid "Colour String"
+msgstr "Шістнадцятковий рядок кольору"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:228
+msgid "Colour:"
+msgstr "Колір:"
+
+#: src/components/wallet/create/WalletCreate.jsx:118
+msgid "Coloured Coin"
+msgstr "Кольорова Монета"
+
+#: src/components/wallet/create/WalletCreate.jsx:160
+msgid "Coloured Coin Options"
+msgstr "Налаштування Кольорової Монети"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:168
+#: src/electron/main.tsx:195
+#: src/hooks/useAbsorbRewards.tsx:46
+msgid "Confirm"
+msgstr "Підтвердити"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:21
+msgid "Confirm Disconnect"
+msgstr "Підтвердити відключення"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:118
+#: src/components/wallet/standard/WalletStandard.tsx:628
+msgid "Confirmation"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:201
+msgid "Confirmed at block:"
+msgstr "Підтверджено в блоці:"
+
+#: src/components/wallet/WalletHistory.tsx:51
+msgid "Confirmed at height {0}"
+msgstr "Підтверджено на висоті {0}"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:92
+msgid "Connect"
+msgstr "Підключитися"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:68
+#: src/components/fullNode/FullNodeConnections.tsx:113
+msgid "Connect to other peers"
+msgstr "Підключитися до інших вузлів"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
+msgid "Connect to pool"
+msgstr ""
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Connected"
+msgstr "Підключено"
+
+#: src/components/app/AppRouter.tsx:34
+msgid "Connecting to wallet"
+msgstr "Підключення до гаманця"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
+msgid "Connection Status"
+msgstr "Стан підключення"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:111
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:109
+msgid "Connection Status:"
+msgstr "Стан підключення:"
+
+#: src/components/fullNode/FullNodeConnections.tsx:76
+msgid "Connection type"
+msgstr "Тип підключення"
+
+#: src/components/fullNode/FullNodeConnections.tsx:110
+msgid "Connections"
+msgstr "Підключення"
+
+#: src/electron/main.tsx:382
+msgid "Contribute on GitHub"
+msgstr "Внести свій внесок на GitHub"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
+msgid "Copied"
+msgstr "Скопійовано"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
+msgid "Copy"
+msgstr "Копіювати"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
+msgid "Copy to Clipboard"
+msgstr "Скопіювати до буферу обміну"
+
+#: src/components/backup/BackupCreate.tsx:78
+#: src/components/plot/add/PlotAdd.tsx:179
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:175
+#: src/components/wallet/create/createExistingColouredCoin.jsx:133
+#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/create/createRLAdmin.jsx:307
+#: src/components/wallet/create/createRLUser.jsx:99
+msgid "Create"
+msgstr "Створити"
+
+#: src/components/wallet/create/WalletCreate.jsx:276
+msgid "Create DID wallet"
+msgstr "Створити DID гаманець"
+
+#: src/components/trading/TradeManager.tsx:45
+msgid "Create Offer"
+msgstr "Створити пропозицію"
+
+#: src/components/plot/add/PlotAdd.tsx:92
+#~ msgid "Create Plot"
+#~ msgstr "Create Plot"
+
+#: src/components/wallet/create/createRLAdmin.jsx:188
+msgid "Create Rate Limited Admin Wallet"
+msgstr "Створити гаманець адміністратора з обмеженням частоти"
+
+#: src/components/wallet/create/createRLUser.jsx:78
+msgid "Create Rate Limited User Wallet"
+msgstr "Створити гаманець користувача з обмеженням частоти"
+
+#: src/components/trading/TradeManager.tsx:22
+#~ msgid "Create Trade"
+#~ msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:135
+msgid "Create Trade Offer"
+msgstr "Створити торгову пропозицію"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
+#: src/components/wallet/standard/WalletStandard.tsx:483
+msgid "Create Transaction"
+msgstr "Створити транзакцію"
+
+#: src/components/backup/BackupCreate.tsx:63
+msgid "Create a Backup"
+msgstr "Створити резервну копію"
+
+#: src/components/plot/add/PlotAddNFT.tsx:42
+msgid "Create a Plot NFT"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:182
+msgid "Create a new private key"
+msgstr "Створити новий приватний ключ"
+
+#: src/components/wallet/create/WalletCreate.jsx:224
+msgid "Create admin wallet"
+msgstr "Створити адміністративний гаманець"
+
+#: src/components/wallet/create/WalletCreate.jsx:170
+msgid "Create new coloured coin"
+msgstr "Створити нову кольорову монету"
+
+#: src/components/wallet/create/WalletCreate.jsx:230
+msgid "Create user wallet"
+msgstr "Створити гаманець користувача"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:93
+msgid "Create wallet for colour"
+msgstr "Створити гаманець для кольору"
+
+#: src/components/wallet/create/WalletCreate.jsx:177
+msgid "Create wallet for existing colour"
+msgstr "Створити гаманець для наявного кольору"
+
+#: src/components/wallet/Wallets.tsx:81
+#~ msgid "CreateWallet.addWallet"
+#~ msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:186
+msgid "Created At:"
+msgstr "Створено в:"
+
+#: src/components/trading/TradingOverview.jsx:211
+msgid "Created by us:"
+msgstr "Створено нами:"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
+msgid "Creating Plot NFT and Joining the Pool"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
+msgid "Creating Plot NFT for Self Pooling"
+msgstr ""
+
+#: src/components/plot/add/PlotAdd.tsx:86
+msgid "Currency code is not defined"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
+#: src/components/plotNFT/PlotNFTCard.tsx:180
+msgid "Current Difficulty"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
+#: src/components/plotNFT/PlotNFTCard.tsx:197
+msgid "Current Points Balance"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:182
+msgid "Current trade status"
+msgstr "Поточний торговий статус"
+
+#: src/components/selectKey/SelectKey.tsx:156
+msgid "DANGER: permanently delete private key"
+msgstr "НЕБЕЗПЕКА: видалити приватний ключ назавжди"
+
+#: src/components/wallet/Wallets.tsx:53
+#~ msgid "DID Wallet"
+#~ msgstr "DID Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:310
+#~ msgid "DIDListItems.title"
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
+#: src/components/trading/TradingOverview.jsx:137
+#: src/components/wallet/WalletHistory.tsx:46
+msgid "Date"
+msgstr "Дата"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
+msgid "Delay"
+msgstr "Затримка"
+
+#: src/components/plot/PlotAction.tsx:27
+#: src/components/plot/PlotAction.tsx:57
+#: src/components/plot/queue/PlotQueueActions.tsx:43
+#: src/components/plot/queue/PlotQueueActions.tsx:97
+#: src/components/plotNFT/PlotNFTCard.tsx:119
+#: src/components/selectKey/SelectKey.tsx:59
+#: src/components/selectKey/SelectKey.tsx:80
+#: src/components/wallet/standard/WalletStandard.tsx:629
+msgid "Delete"
+msgstr "Видалити"
+
+#: src/components/plot/PlotAction.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:42
+msgid "Delete Plot"
+msgstr "Видалити ділянку"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:314
+#: src/components/wallet/standard/WalletStandard.tsx:663
+msgid "Delete Unconfirmed Transactions"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:79
+#: src/components/selectKey/SelectKey.tsx:200
+msgid "Delete all keys"
+msgstr "Видалити всі ключі"
+
+#: src/components/selectKey/SelectKey.tsx:58
+msgid "Delete key"
+msgstr "Видалити ключ"
+
+#: src/components/selectKey/SelectKey.tsx:84
+msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Видалення усіх ключів призведе до безповоротного видалення ключів з Вашого комп'ютеру. Переконайтесь, що маєте резервні копії. Ви впевнені, що хочете продовжити?"
+
+#: src/components/selectKey/SelectKey.tsx:63
+msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Видалення ключа призведе до безповоротного його видалення з Вашого комп'ютеру. Переконайтесь, що маєте резервні копії. Ви впевнені, що хочете продовжити?"
+
+#: src/electron/main.tsx:304
+msgid "Developer"
+msgstr "Розробник"
+
+#: src/electron/main.tsx:307
+msgid "Developer Tools"
+msgstr "Інструменти розробника"
+
+#: src/components/block/Block.jsx:221
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
+msgid "Difficulty"
+msgstr "Складність"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
+msgid "Disable bitfield plotting"
+msgstr "Вимкнути використання бітового поля"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+msgid "Discard"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr "Від'єднати"
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "Distributed Identity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:266
+msgid "Distributed Identity Options"
+msgstr "Опції поширеної Особистості"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:52
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
+msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
+msgstr "У Вас є існуючі ділянки на цьому пристрої? <0>Додати директорію з ділянками</0>"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:55
+msgid "Does your machine support parallel plotting?"
+msgstr "Ваша машина підтримує паралельну генерацію ділянок?"
+
+#: src/components/trading/ViewOffer.jsx:39
+#: src/components/wallet/create/recoverDIDWallet.js:294
+msgid "Drag and drop offer file"
+msgstr "Перетягніть файл пропозиції"
+
+#: src/components/backup/BackupRestore.tsx:173
+msgid "Drag and drop your backup file"
+msgstr "Перетягніть файл резервної копії"
+
+#: src/electron/main.tsx:263
+msgid "Edit"
+msgstr "Редагувати"
+
+#: src/components/wallet/WalletImport.tsx:147
+msgid "Enter the 24 word mnemonic that you have saved in order to restore your HDDcoin wallet."
+msgstr "Введіть мнемоніку з 24 слів, яку ви зберегли, для відновлення гаманця HDDcoin."
+
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
+#: src/components/farm/card/FarmCardStatus.tsx:35
+#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/plot/PlotStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
+msgid "Error"
+msgstr "Помилка"
+
+#: src/components/wallet/standard/WalletStandard.tsx:456
+msgid "Error: Cannot send hddcoin to coloured address. Please enter a hddcoin address."
+msgstr "Помилка: Не вдалося надіслати hddcoin на кольорову адресу. Будь ласка, введіть hddcoin-адресу."
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
+msgid "Estimated Network Space"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
+msgid "Estimated Time to Win"
+msgstr "Очікуваний час до виграшу"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Estimated network space"
+#~ msgstr "Estimated network space"
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
+msgid "Estimated sum of all the plotted disk space of all farmers in the network"
+msgstr "Орієнтовна сума обсягу всіх ділянок на дисковому просторі всіх фермерів у мережі"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:193
+msgid "Exclude final directory"
+msgstr "Виключити кінцеву теку"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:38
+msgid "Failed to open (invalid plots)"
+msgstr "Не вдалося відкрити (недійсні ділянки)"
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/standard/WalletStandard.tsx:532
+msgid "Farm"
+msgstr "Ферма"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
+msgid "Farmer Public Key"
+msgstr "Відкритий ключ фермера"
+
+#: src/components/block/Block.jsx:267
+msgid "Farmer Puzzle Hash"
+msgstr "Хеш головоломки фермера"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:163
+msgid "Farmer Reward Address"
+msgstr "Адреса винагороди фермера"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:137
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/plot/PlotStatus.tsx:28
+msgid "Farmer is not connected"
+msgstr "Фермер не підключений"
+
+#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/plot/PlotStatus.tsx:29
+msgid "Farmer is not running"
+msgstr "Фермер не запущений"
+
+#: src/middleware/middleware_api.jsx:275
+msgid "Farmer public key:"
+msgstr ""
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:33
+msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
+msgstr "Фермери заробляють нагороди за блоки і комісії за транзакції додаючи свій вільний дисковий простір у мережу, щоб допомогти забезпечити транзакції. Тут буде Ваша ферма, коли буде додано ділянки. <0>Дізнатися більше</0>"
+
+#: src/components/farm/Farm.tsx:23
+#: src/components/farm/FarmerStatus.tsx:18
+#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/plot/PlotStatus.tsx:17
+msgid "Farming"
+msgstr "Фермерство"
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:26
+#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/card/FarmCardStatus.tsx:46
+#: src/components/farm/card/FarmCardStatus.tsx:59
+msgid "Farming Status"
+msgstr "Стан фермерства"
+
+#: src/components/core/components/Fee/Fee.tsx:48
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:154
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
+#: src/components/pool/PoolInfo.tsx:17
+#: src/components/wallet/WalletHistory.tsx:66
+#: src/components/wallet/create/createExistingColouredCoin.jsx:123
+#: src/components/wallet/create/createNewColouredCoin.jsx:132
+#: src/components/wallet/create/createRLAdmin.jsx:244
+#: src/components/wallet/create/createRLAdmin.jsx:272
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
+#: src/components/wallet/standard/WalletStandard.tsx:524
+msgid "Fee"
+msgstr "Комісія"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee (TXCH)"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr "Fee ({0})"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:595
+msgid "Fee ({currencyCode})"
+msgstr "Комісія ({currencyCode})"
+
+#: src/components/block/Block.jsx:321
+msgid "Fees Amount"
+msgstr "Сума збору"
+
+#: src/components/block/Block.jsx:313
+#~ msgid "Fees Puzzle Hash"
+#~ msgstr ""
+
+#: src/electron/main.tsx:255
+#: src/electron/main.tsx:456
+msgid "File"
+msgstr "Файл"
+
+#: src/components/plot/PlotsFailed.tsx:14
+#: src/components/plot/PlotsNotFound.tsx:14
+#: src/components/plot/overview/PlotOverviewPlots.tsx:106
+msgid "Filename"
+msgstr "Ім'я файлу"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
+msgid "Final folder location"
+msgstr "Розташування кінцевої теки"
+
+#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Finished"
+msgstr "Завершено"
+
+#: src/electron/main.tsx:407
+msgid "Follow on Twitter"
+msgstr "Слідкувати у Twitter"
+
+#: src/electron/main.tsx:366
+msgid "Frequently Asked Questions"
+msgstr "Найчастіші питання"
+
+#: src/components/dashboard/DashboardSideBar.tsx:39
+#: src/components/fullNode/FullNode.jsx:323
+msgid "Full Node"
+msgstr "Повний вузол"
+
+#: src/components/fullNode/FullNode.jsx:326
+msgid "Full Node Overview"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:267
+#~ msgid "Full Node Status"
+#~ msgstr "Full Node Status"
+
+#: src/electron/main.tsx:332
+msgid "Full Screen"
+msgstr "Повний екран"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:102
+msgid "Generate New Colour"
+msgstr "Створити новий колір"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "Grid view"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.tsx:583
+msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
+msgstr "Ієрархічні детерміновані ключі або HD - це тип публічного/приватного ключів, в якій один приватний ключ може мати майже нескінченну кількість різних публічних ключів (і відповідно адрес отримання гаманця), які в кінцевому рахунку будуть вертатися і використовуватися одним приватним ключем."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Harvester ID"
+#~ msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:132
+msgid "Harvester Plots"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:61
+msgid "Header Hash"
+msgstr "Хеш заголовка"
+
+#: src/components/block/Block.jsx:185
+msgid "Header hash"
+msgstr "Хеш заголовка"
+
+#: src/components/block/Block.jsx:201
+#: src/components/fullNode/FullNode.jsx:81
+#: src/components/fullNode/FullNodeConnections.tsx:80
+msgid "Height"
+msgstr "Висота"
+
+#: src/electron/main.tsx:354
+msgid "Help"
+msgstr "Допомога"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
+msgid "Help translate"
+msgstr "Допомогти з перекладом"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
+msgid "Hide Advanced Options"
+msgstr "Приховати додаткові параметри"
+
+#: src/components/wallet/WalletHistory.tsx:91
+msgid "History"
+msgstr "Історія"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:36
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+msgid "Host Name"
+msgstr "Ім'я хосту"
+
+#: src/components/fullNode/FullNodeConnections.tsx:41
+msgid "IP address"
+msgstr "ІР-адреса"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:75
+msgid "IP address / host"
+msgstr "IP-адреса / хост"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:115
+msgid "If none selected, then it will default to the temporary directory."
+msgstr "Якщо нічого не вибрано, за замовчуванням буде використовуватися тимчасова тека."
+
+#: src/components/wallet/WalletImport.tsx:144
+msgid "Import Wallet from Mnemonics"
+msgstr "Імпортувати гаманець за допомогою мнемоніки"
+
+#: src/components/selectKey/SelectKey.tsx:191
+msgid "Import from Mnemonics (24 words)"
+msgstr "Імпортувати за допомогою мнемоніки (24 слова)"
+
+#: src/components/fullNode/FullNode.jsx:45
+msgid "In Progress"
+msgstr "Виконується"
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Incoming"
+msgstr "Вхідні"
+
+#: src/components/core/components/Fee/Fee.tsx:36
+msgid "Incorrect value"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:18
+msgid "Index"
+msgstr "Індекс"
+
+#: src/components/trading/TradingOverview.jsx:214
+msgid "Indicated if this offer was created by us"
+msgstr "Показує чи була ця пропозиція створена нами"
+
+#: src/components/trading/TradingOverview.jsx:231
+msgid "Indicated what time this offer was accepted"
+msgstr "Показує в який час була прийнята ця пропозиція"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:333
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:472
+msgid "Info Packet"
+msgstr "Інформаційний Пакунок"
+
+#: src/components/wallet/create/createRLAdmin.jsx:260
+msgid "Initial Amount"
+msgstr "Початкова Кількість монет"
+
+#: src/components/wallet/create/createRLUser.jsx:87
+msgid "Initialize a Rate Limited User Wallet:"
+msgstr "Ініціалізувати кишеню користувача з обмеженням швидкості виведення монет:"
+
+#: src/components/wallet/create/createRLAdmin.jsx:218
+msgid "Interval"
+msgstr "Інтервал"
+
+#: src/components/plotNFT/PlotNFTState.tsx:26
+msgid "Invalid state"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
+msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:394
+#: src/components/pool/PoolOverview.tsx:113
+msgid "Join Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:59
+#: src/components/plot/add/PlotAddNFT.tsx:143
+#: src/components/pool/PoolHero.tsx:31
+msgid "Join a Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:44
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:59
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:135
+msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:63
+msgid "K-Size"
+msgstr "K-розмір"
+
+#: src/components/dashboard/DashboardSideBar.tsx:66
+msgid "Keys"
+msgstr "Ключі"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:64
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+msgid "KiB Up/Down"
+msgstr "KiB Вивантаження/Завантаження"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:47
+msgid "Last Attempted Proof"
+msgstr "Остання спроба доказу"
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:19
+msgid "Last Height Farmed"
+msgstr "Висота останнього створеного блоку"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
+msgid "Latest Block Challenges"
+msgstr "Останні випробування блоків"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
+#: src/components/plotNFT/PlotNFTCard.tsx:349
+msgid "Launcher Id"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
+msgid "Learn More"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTState.tsx:58
+msgid "Leaving Pool"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "List view"
+msgstr ""
+
+#: src/components/pool/Pool.tsx:21
+msgid "Loading Plot NFTs"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:172
+msgid "Loading list of wallets"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+msgid "Loading..."
+msgstr "Завантаження..."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:126
+#~ msgid "Local Harvester Plots"
+#~ msgstr "Локальні ділянки комбайну"
+
+#: src/components/app/AppRouter.tsx:41
+msgid "Logging in"
+msgstr "Здійснюється вхід"
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+#~ msgid "MainWalletList.colouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:258
+#~ msgid "MainWalletList.createAdminWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:322
+#~ msgid "MainWalletList.createDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:194
+#~ msgid "MainWalletList.createNewColouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:270
+#~ msgid "MainWalletList.createUserWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:206
+#~ msgid "MainWalletList.createWalletForExistingColour"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "MainWalletList.distributedIdentity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:134
+#~ msgid "MainWalletList.rateLimited"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:334
+#~ msgid "MainWalletList.recoverDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:112
+#~ msgid "MainWalletList.title"
+#~ msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:53
+msgid "Manage Farming Rewards"
+msgstr "Управління винагородами за фермерство"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:119
+msgid "Manage Your Farming Rewards Target Addresses"
+msgstr "Управління вашими адресами для отримання винагороди за фермерство"
+
+#: src/components/fullNode/FullNodeConnections.tsx:69
+msgid "MiB Up/Down"
+msgstr "MiB Вивантаження/Завантаження"
+
+#: src/components/pool/PoolInfo.tsx:27
+msgid "Minimum Difficulty"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
+msgid "Minutes"
+msgstr "Хвилин"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:116
+msgid "More memory slightly increases speed"
+msgstr "Більший обсяг пам'яті трохи збільшує швидкість"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+msgid "My Pubkey"
+msgstr "Мій публічний ключ"
+
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
+msgid "Network Name"
+msgstr "Назва мережі"
+
+#: src/components/fullNode/FullNode.jsx:106
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr "Network not launched yet, waiting for genesis challenge!"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/standard/WalletStandard.tsx:579
+msgid "New Address"
+msgstr "Нова адреса"
+
+#: src/components/wallet/WalletAdd.tsx:63
+msgid "New Wallet"
+msgstr "Новий гаманець"
+
+#: src/components/block/Block.jsx:350
+#: src/components/wallet/WalletAdd.tsx:95
+#: src/components/wallet/WalletImport.tsx:163
+msgid "Next"
+msgstr "Далі"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:249
+msgid "Nickname"
+msgstr "Прізвисько"
+
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:192
+msgid "No"
+msgstr "Ні"
+
+#: src/middleware/middleware_api.jsx:301
+msgid "No 24 word seed, since this key is imported."
+msgstr "Відсутні 24 ключових слова, оскільки ключ імпортовано."
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:21
+msgid "No blocks farmed yet"
+msgstr "У вас ще немає оброблених блоків"
+
+#: src/components/wallet/WalletHistory.tsx:102
+msgid "No previous transactions"
+msgstr "Немає попередніх транзакцій"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:156
+msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+msgstr "Немає приватних ключів для одного або обох адрес. Безпечно, тільки якщо ви надсилаєте нагороди іншому гаманця."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/fullNode/FullNodeConnections.tsx:37
+msgid "Node ID"
+msgstr "ID вузла"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:87
+msgid "Node Id"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:88
+msgid "None"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:68
+msgid "None of your plots have passed the plot filter yet."
+msgstr "Жодна з ваших ділянок ще не пройшла фільтр."
+
+#: src/components/farm/FarmerStatus.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/plot/PlotStatus.tsx:19
+msgid "Not Available"
+msgstr "Не доступно"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#: src/components/wallet/WalletStatus.tsx:28
+msgid "Not Synced"
+msgstr "Не синхронізовано"
+
+#: src/components/trading/TradingOverview.jsx:222
+msgid "Not accepted yet"
+msgstr "Ще не прийнято"
+
+#: src/components/trading/TradingOverview.jsx:195
+msgid "Not confirmed yet"
+msgstr "Ще не підтверджено"
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Not connected"
+msgstr "Немає з'єднання"
+
+#: src/components/plot/PlotsNotFound.tsx:37
+msgid "Not found Plots"
+msgstr "Незнайдені ділянки"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:184
+msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
+#: src/components/plotNFT/PlotNFTCard.tsx:159
+msgid "Number of Plots"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
+msgid "Number of buckets"
+msgstr "Кількість корзин"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:133
+msgid "Number of threads"
+msgstr "Число потоків"
+
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:111
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:112
+msgid "OK"
+msgstr "ОК"
+
+#: src/components/trading/ViewOffer.jsx:67
+msgid "Offer"
+msgstr "Пропозиція"
+
+#: src/components/trading/TradingOverview.jsx:413
+msgid "Offers Created"
+msgstr "Заявки створено"
+
+#: src/components/wallet/standard/WalletStandard.tsx:485
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr "У середньому між кожним блоком транзакції триває одна хвилина. За відсутністю заторів ви можете очікувати, що ваша транзакція буде включена менш ніж за хвилину."
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Outgoing"
+msgstr "Вихідні"
+
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
+msgid "Peak Height"
+msgstr "Найбільша висота"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Peak Sub-block Height"
+#~ msgstr "Peak Sub-block Height"
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
+msgid "Peak Time"
+msgstr "Найбільший час"
+
+#: src/components/plotNFT/PlotNFTState.tsx:43
+#: src/components/wallet/WalletHistory.tsx:53
+msgid "Pending"
+msgstr "В очікуванні"
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:573
+msgid "Pending Balance"
+msgstr "Баланс в очікуванні"
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:578
+msgid "Pending Change"
+msgstr "Зміни очікуються"
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:27
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
+msgid "Pending Total Balance"
+msgstr "Загальний баланс очікується"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
+#: src/hooks/useAbsorbRewards.tsx:45
+msgid "Please Confirm"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:100
+msgid "Please add a trade pair"
+msgstr "Будь-ласка додайте торгову пару"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:668
+msgid "Please enter 0 fee. Positive fees not supported yet for RL."
+msgstr "Будь-ласка введіть нульову комісію. Додатні комісії не підтримуються для RL."
+
+#: src/components/wallet/create/createRLAdmin.jsx:140
+msgid "Please enter a valid initial coin amount"
+msgstr "Будь ласка, введіть припустиму початкову кількість монет"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
+#: src/components/wallet/standard/WalletStandard.tsx:432
+msgid "Please enter a valid numeric amount"
+msgstr "Будь ласка, введіть припустиму числову кількість"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:70
+#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/create/createRLAdmin.jsx:150
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
+#: src/components/wallet/standard/WalletStandard.tsx:444
+msgid "Please enter a valid numeric fee"
+msgstr "Будь ласка, введіть припустиму числову комісію"
+
+#: src/components/wallet/create/createRLAdmin.jsx:100
+msgid "Please enter a valid numeric interval length"
+msgstr "Будь ласка, введіть припустиму числову довжину інтервалу"
+
+#: src/components/wallet/create/createRLAdmin.jsx:115
+msgid "Please enter a valid numeric spendable amount"
+msgstr "Будь ласка, введіть припустиму числову кількість витрат"
+
+#: src/components/wallet/create/createRLAdmin.jsx:125
+msgid "Please enter a valid pubkey"
+msgstr "Будь ласка, введіть коректний публічний ключ"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
+#: src/components/wallet/standard/WalletStandard.tsx:420
+msgid "Please finish syncing before making a transaction"
+msgstr "Будь ласка, завершіть синхронізацію перед створенням транзакції"
+
+#: src/components/trading/CreateOffer.jsx:66
+msgid "Please select amount"
+msgstr "Будь-ласка, вкажіть кількість"
+
+#: src/components/trading/CreateOffer.jsx:76
+msgid "Please select buy or sell"
+msgstr "Будь ласка, виберіть купівлю або продаж"
+
+#: src/components/trading/CreateOffer.jsx:56
+msgid "Please select coin colour"
+msgstr "Будь ласка, оберіть колір монети"
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:45
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:49
+msgid "Please specify final directory"
+msgstr "Будь ласка, вкажіть фінальну теку"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:60
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:64
+msgid "Please specify temporary directory"
+msgstr "Будь ласка, вкажіть тимчасову теку"
+
+#: src/hooks/useAbsorbRewards.tsx:21
+msgid "Please wait for synchronization"
+msgstr ""
+
+#: src/hooks/useJoinPool.tsx:27
+msgid "Please wait for wallet synchronization"
+msgstr ""
+
+#: src/components/plot/Plot.tsx:18
+msgid "Plot"
+msgstr "Ділянка"
+
+#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:41
+msgid "Plot Count"
+msgstr "Кількість ділянок"
+
+#: src/components/block/Block.jsx:299
+msgid "Plot Id"
+msgstr "ID ділянки"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+msgid "Plot Key"
+msgstr "Ключ ділянки"
+
+#: src/components/pool/PoolOverview.tsx:40
+msgid "Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
+#: src/components/plotNFT/PlotNFTChangePool.tsx:81
+msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#~ msgid "Plot Name"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:259
+msgid "Plot Public Key"
+msgstr "Публічний ключ ділянки"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Plot Seed"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:80
+msgid "Plot Size"
+msgstr "Розмір ділянки"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
+msgid "Plot in Parallel"
+msgstr "Засіювати ділянки паралельно"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+msgid "Plot is duplicate of {0}"
+msgstr "Ділянка є дублікатом {0}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+#~ msgid "PlotNFT is transitioning to (target state)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:50
+msgid "Plots"
+msgstr "Ділянки"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:22
+msgid "Plots Passed Filter"
+msgstr "Ділянки, що пройшли фільтр"
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
+msgid "Plots are allocated space on your hard drive used to farm and earn HDDcoin. <0>Learn more</0>"
+msgstr "Ділянки - виділений обсяг на вашому диску, який використовується для фермерства, щоб заробити Сhia. <0>Дізнатися більше</0>"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:34
+msgid "Plotting"
+msgstr "Створення ділянок"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
+msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+msgstr "Паралельне (одночасне) засіювання декількох ділянок заощаджує час. В іншому випадку, засіювання додається в чергу."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:174
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr "Засіювання із увімкненим бітовим полем зменшує кількість загальних операцій запису приблизно на 30% і майже завжди працює швидше. Вимкнення бітового поля може зменшити вимоги до об'єму пам'яті. Якщо Ваш процесор випущений раніше 2010 року, можливо Вам слід вимкнути бітове поле."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
+#: src/components/plotNFT/PlotNFTCard.tsx:215
+msgid "Points Found Since Start"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
+#: src/components/plotNFT/PlotNFTCard.tsx:226
+msgid "Points Found in Last 24 Hours"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
+#: src/components/plotNFT/PlotNFTCard.tsx:235
+msgid "Points Successful in Last 24 Hours"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/pool/Pool.tsx:25
+msgid "Pool"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:100
+msgid "Pool Contract Address"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:81
+msgid "Pool Key"
+msgstr "Ключ пулу"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
+msgid "Pool Login Link"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
+msgid "Pool Payout Instructions"
+msgstr ""
+
+#: src/components/block/Block.jsx:263
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
+msgid "Pool Public Key"
+msgstr "Публічний ключ пулу"
+
+#: src/components/block/Block.jsx:283
+msgid "Pool Puzzle Hash"
+msgstr "Хеш головоломки пула"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:173
+msgid "Pool Reward Address"
+msgstr "Адреса винагороди пула"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:149
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:144
+msgid "Pool Reward Address must not be empty."
+msgstr ""
+
+#: src/components/block/Block.jsx:313
+msgid "Pool Reward Amount"
+msgstr "Кількість винагороди пула"
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+msgid "Pool does not provide relative_lock_height."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+msgid "Pool does not provide target_puzzle_hash."
+msgstr ""
+
+#: src/middleware/middleware_api.jsx:283
+msgid "Pool public key:"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
+#: src/components/plotNFT/PlotNFTCard.tsx:326
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
+msgid "Pool:"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:24
+#: src/components/plotNFT/PlotNFTState.tsx:59
+msgid "Pooling"
+msgstr ""
+
+#: src/components/farm/FarmFullNodeConnections.tsx:42
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
+#: src/components/fullNode/FullNodeAddConnection.tsx:80
+#: src/components/fullNode/FullNodeConnections.tsx:47
+msgid "Port"
+msgstr "Порт"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
+#: src/components/plotNFT/PlotNFTChangePool.tsx:74
+msgid "Preparing Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
+msgid "Preparing standard wallet"
+msgstr ""
+
+#: src/components/block/Block.jsx:347
+msgid "Previous"
+msgstr "Попередній"
+
+#: src/components/block/Block.jsx:203
+#~ msgid "Previous Block Hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:215
+msgid "Previous Header Hash"
+msgstr "Хеш попереднього заголовка"
+
+#: src/components/block/Block.jsx:217
+#~ msgid "Previous Sub Block Hash"
+#~ msgstr "Previous Sub Block Hash"
+
+#: src/components/selectKey/SelectKey.tsx:136
+msgid "Private key with public fingerprint {fingerprint}"
+msgstr "Закритий ключ з публічним відбитком пальця {fingerprint}"
+
+#: src/middleware/middleware_api.jsx:249
+msgid "Private key {0}"
+msgstr "Закритий ключ {0}"
+
+#: src/middleware/middleware_api.jsx:259
+msgid "Private key:"
+msgstr "Закритий ключ:"
+
+#: src/components/block/Block.jsx:251
+msgid "Proof of Space Size"
+msgstr "Розмір Доказу простору"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:26
+msgid "Proofs Found"
+msgstr "Доказів знайдено"
+
+#: src/components/pool/PoolInfo.tsx:22
+msgid "Protocol Version"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:297
+msgid "Pubkey"
+msgstr "Публічний ключ"
+
+#: src/middleware/middleware_api.jsx:267
+msgid "Public key:"
+msgstr "Публічний ключ:"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
+msgid "Queue Name"
+msgstr "Назва черги"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+msgid "Queue name"
+msgstr "Назва черги"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:35
+msgid "Queued"
+msgstr "У черзі"
+
+#: src/electron-starter.js:80
+#~ msgid "Quit"
+#~ msgstr "Quit"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:115
+msgid "RAM max usage"
+msgstr "Максимальне використання RAM"
+
+#: src/components/wallet/Wallets.tsx:51
+#~ msgid "RL Wallet"
+#~ msgstr "RL Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:246
+#~ msgid "RLListItems.title"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+msgid "Rate Limited"
+msgstr "Обмеження частоти"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:391
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:438
+msgid "Rate Limited Info"
+msgstr "Інформація обмеження частоти"
+
+#: src/components/wallet/create/WalletCreate.jsx:214
+msgid "Rate Limited Options"
+msgstr "Опції обмеження частоти"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
+msgid "Rate Limited User Wallet Setup"
+msgstr "Налаштування гаманця з обмеженням частоти"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/standard/WalletStandard.tsx:576
+msgid "Receive Address"
+msgstr "Адреса отримання"
+
+#: src/components/wallet/create/WalletCreate.jsx:282
+msgid "Recover DID wallet"
+msgstr "Відновлення гаманця DID"
+
+#: src/components/plot/PlotHeader.tsx:78
+#: src/components/plot/overview/PlotOverviewHero.tsx:52
+msgid "Refresh Plots"
+msgstr "Оновити ділянки"
+
+#: src/components/pool/PoolInfo.tsx:32
+msgid "Relative Lock Height"
+msgstr ""
+
+#: src/electron/main.tsx:374
+msgid "Release Notes"
+msgstr "Докладно про реліз"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:36
+msgid "Removing"
+msgstr "Видалення"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:265
+msgid "Rename"
+msgstr "Перейменувати"
+
+#: src/electron/main.tsx:393
+msgid "Report an Issue..."
+msgstr "Повідомити про проблему..."
+
+#: src/components/backup/BackupRestore.tsx:160
+msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
+msgstr "Відновити метадані для кольорових монет та інших Smart Wallets з резервної копії"
+
+#: src/components/backup/BackupRestore.tsx:107
+#~ msgid "Restore Smart Wallets From Backup"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNodeConnections.jsx:107
+#~ msgid "SB Height"
+#~ msgstr "SB Height"
+
+#: src/components/backup/BackupRestore.tsx:186
+msgid "Safe To Skip"
+msgstr "Можна пропустити"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:199
+#: src/components/trading/CreateOffer.jsx:142
+msgid "Save"
+msgstr "Зберегти"
+
+#: src/components/fullNode/FullNode.jsx:338
+#~ msgid "Search"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNodeBlockSearch.tsx:41
+msgid "Search block by header hash"
+msgstr "Пошук блоку за хешем заголовку"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:93
+msgid "Second temporary folder location"
+msgstr "Розташування другої тимчасової теки"
+
+#: src/components/selectKey/SelectKey.tsx:145
+msgid "See private key"
+msgstr "Переглянути приватний ключ"
+
+#: src/middleware/middleware_api.jsx:293
+msgid "Seed:"
+msgstr "Фраза:"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:87
+msgid "Select 2nd Temporary Directory"
+msgstr "Виберіть 2-й тимчасовий каталог"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:23
+msgid "Select Final Directory"
+msgstr "Оберіть кінцеву теку"
+
+#: src/components/selectKey/SelectKey.tsx:104
+msgid "Select Key"
+msgstr "Вибрати ключ"
+
+#: src/components/trading/ViewOffer.jsx:37
+msgid "Select Offer"
+msgstr "Вибрати пропозицію"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
+msgid "Select Temporary Directory"
+msgstr "Виберіть тимчасовий каталог"
+
+#: src/components/wallet/create/WalletCreate.jsx:108
+msgid "Select Wallet Type"
+msgstr "Оберіть тип гаманця"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:25
+msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
+msgstr "Виберіть кінцеве розташування теки, де ви бажаєте зберегти ділянку. Ми рекомендуємо використовувати великий повільний жорсткий диск (наприклад, зовнішній HDD)."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "Виберіть розташування тимчасової теки, де ви хочете зберегти ділянку. Ми рекомендуємо використовувати швидкий диск."
+
+#: src/components/plot/add/PlotAddNFT.tsx:83
+msgid "Select your Plot NFT"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:74
+msgid "Select your Plot NFT from the dropdown or create a new one."
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:108
+msgid "Selected"
+msgstr "Вибрано"
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:23
+#: src/components/plotNFT/PlotNFTState.tsx:57
+msgid "Self Pooling"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
+msgid "Self pool. When you win a block you will earn XCH rewards."
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:164
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Sell"
+msgstr "Продаж"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
+#: src/components/wallet/standard/WalletStandard.tsx:542
+msgid "Send"
+msgstr "Надіслати"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:460
+msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+msgstr "Надішліть цей пакет інформації до вашого обмеженого користувача Wallet, який повинен використовувати його, щоб завершити налаштування його гаманця:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:279
+msgid "Send your pubkey to your Rate Limited Wallet admin:"
+msgstr "Надішліть свій публічний ключ адміністратору вашого гаманця з обмеженням частоти:"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
+msgid "Show Advanced Options"
+msgstr "Показати розширені параметри"
+
+#: src/electron-starter.js:79
+#~ msgid "Show app"
+#~ msgstr "Show app"
+
+#: src/components/trading/CreateOffer.jsx:153
+#: src/components/trading/TradesTable.tsx:16
+msgid "Side"
+msgstr "Сторона"
+
+#: src/components/selectKey/SelectKey.tsx:109
+msgid "Sign In"
+msgstr "Увійти"
+
+#: src/components/backup/BackupRestore.tsx:122
+#~ msgid "Skip"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:195
+msgid "Skips adding a final directory to harvester for farming"
+msgstr "Пропустити додавання фінальної директорії у комбайн для землеробства"
+
+#: src/components/pool/PoolHero.tsx:26
+msgid "Smooth out your XCH farming rewards by joining a pool."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
+msgid "Something went wrong"
+msgstr ""
+
+#: src/electron/main.tsx:470
+msgid "Speech"
+msgstr "Мовлення"
+
+#: src/components/wallet/create/createRLAdmin.jsx:230
+msgid "Spendable Amount"
+msgstr "Витратна сума"
+
+#: src/components/wallet/create/createRLAdmin.jsx:202
+msgid "Spendable Amount Per Interval"
+msgstr "Витратна сума за інтервал"
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
+#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
+msgid "Spendable Balance"
+msgstr "Витратний баланс"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:396
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:443
+msgid "Spending Interval (number of blocks): {interval}"
+msgstr "Інтервал витрат (кількість блоків): {interval}"
+
+#: src/components/wallet/create/createRLAdmin.jsx:197
+msgid "Spending Interval Length (number of blocks)"
+msgstr "Інтервал витрат (кількість блоків)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:448
+msgid "Spending Limit (hddcoin per interval): {0}"
+msgstr "Ліміт витрат (hddcoin на інтервал): {0}"
+
+#: src/components/fullNode/FullNode.jsx:100
+msgid "State"
+msgstr "Стан"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:59
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:110
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
+#: src/components/plotNFT/PlotNFTCard.tsx:144
+#: src/components/pool/PoolOverview.tsx:44
+#: src/components/trading/TradingOverview.jsx:128
+#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/wallet/WalletStatusCard.tsx:22
+#: src/components/wallet/Wallets.tsx:118
+msgid "Status"
+msgstr "Стан"
+
+#: src/components/trading/TradingOverview.jsx:179
+msgid "Status:"
+msgstr "Стан:"
+
+#: src/components/wallet/Wallets.tsx:119
+#~ msgid "StatusCard.connections"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:113
+#~ msgid "StatusCard.height"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+#~ msgid "StatusCard.status"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:93
+#~ msgid "StatusCard.title"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
+#~ msgid "Stripe Size"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:199
+#~ msgid "Sub Block Height"
+#~ msgstr "Sub Block Height"
+
+#: src/components/block/Block.jsx:338
+#~ msgid "Sub Block at height {0} in the HDDcoin blockchain"
+#~ msgstr "Sub Block at height {0} in the HDDcoin blockchain"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:347
+msgid "Submit"
+msgstr "Надіслати"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
+#: src/components/wallet/WalletStatus.tsx:33
+msgid "Synced"
+msgstr "Синхронізовано"
+
+#: src/components/farm/FarmerStatus.tsx:19
+#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:18
+#: src/components/wallet/WalletStatus.tsx:38
+msgid "Syncing"
+msgstr "Синхронізація"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
+msgid "Syncing <0/>/<1/>"
+msgstr "Синхронізація <0/>/<1/>"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#~ msgid "TXCH Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardFeesReward.tsx:12
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/pool/PoolInfo.tsx:37
+msgid "Target Puzzle Hash"
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
+msgid "Temporary folder location"
+msgstr "Тимчасова тека"
+
+#: src/components/app/AppTimeBomb.tsx:30
+msgid "The application will stop working at block height 193536."
+msgstr "Програма перестане працювати при висоті блоку 193536."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:97
+msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
+msgstr "Повний вузол, до якого підключено вашого фермера, вказано нижче. <0>Дізнатися більше</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:34
+#: src/components/plot/add/PlotAddChooseSize.tsx:91
+msgid "The minimum required size for mainnet is k=32"
+msgstr "Мінімальний необхідний розмір для головної мережі (mainnet) – k=32"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
+msgid "The node is not synced"
+msgstr "Вузол не синхронізовано"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
+msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+msgstr "Вузол синхронізований, це означає, що він завантажує блоки з інших вузлів, щоб досягти останнього блоку в ланцюжку"
+
+#: src/hooks/usePoolInfo.ts:59
+msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:44
+msgid "The pool URL is not valid. {normalizedUrl}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:39
+msgid "The pool URL needs to use protocol https. {normalizedUrl}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:44
+#~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
+#~ msgstr ""
+
+#: src/hooks/usePoolInfo.ts:23
+#~ msgid "The pool URL speciefied is not valid. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:29
+msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
+msgstr ""
+
+#: src/components/block/Block.jsx:302
+msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
+msgstr "Зерно, яке використовувалося для створення ділянки. Зерно залежить від публічного ключа пулу і публічного ключа ділянки."
+
+#: src/components/block/Block.jsx:228
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+msgstr "Загальна кількість ітерації VDF (від англ. Verifiable Delay Function - перевіряєма функція затримки) або доказів тимчасових ітерацій по всьому ланцюжку до цього підблока."
+
+#: src/components/block/Block.jsx:244
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+msgstr "Загальна кількість VDF (від англ. Verifiable Delay Function - перевіряємо функція затримки), іншими словами загальна кількість доказів часових ітерацій в цьому блоці."
+
+#: src/components/block/Block.jsx:324
+msgid "The total transactions fees in this block. Rewarded to the farmer."
+msgstr "Загальна комісія за транзакції в цьому блоці, що була отримана фермерами."
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
+msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
+msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:40
+msgid "These plots are invalid, you might want to delete them."
+msgstr "Ці ділянки не є дійсними, ви можете видалити їх."
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:72
+msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
+msgstr "Це дозволяє вам додати каталог, в якому вже є ділянки. Якщо ви ще не створили ніяких ділянок, перейдіть до екрану створення ділянок."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
+#: src/components/plotNFT/PlotNFTCard.tsx:171
+msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:123
+#: src/hooks/useSelectDirectory.tsx:31
+#: src/hooks/useSelectFile.tsx:21
+msgid "This feature is available only from the GUI."
+msgstr "Ця функція доступна лише з графічного інтерфейсу."
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:26
+msgid "This is the amount of HDDcoin that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and HDDcoin that you have just spent but is not yet in the blockchain."
+msgstr "Це кількість HDDcoin, яку можна використовувати для здійснення транзакцій. Не включає в себе очікувані винагороди за фермерство, очікувані вхідні транзакції і HDDcoin, що ви щойно витратили, але які ще не потрапили в blockchain."
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:26
+msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+msgstr "Це зміна, яка очікує очікування. Змінює монети, які ви відправили собі, але ще не підтверджені."
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:26
+msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+msgstr "Це сума вхідних та вихідних відкладених транзакцій (не включена в блокчейну). Це не включає винагороди фермерства."
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
+msgid "This is the time of the latest peak sub block."
+msgstr "Це час останнього пікового блоку."
+
+#: src/components/block/Block.jsx:194
+msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+msgstr "Це час, коли блок був створений фермером, який до того, як він буде опрацьований доказом часу"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:34
+msgid "This is the total amount of hddcoin in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "Це загальна кількість hddcoin в блокчейку на поточному піковому блоці, який контролюється вашими закритими ключами. Він включає в себе заморожені фермерські винагороди, але не очікувані вхідні та вихідні транзакції."
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:29
+msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
+msgstr "Це сукупний баланс + очікуваний баланс: це ваш майбутній баланс після підтвердження усіх очікуючих транзакцій."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
+#: src/components/plotNFT/PlotNFTCard.tsx:190
+msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
+#: src/components/plotNFT/PlotNFTCard.tsx:207
+msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
+msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
+msgid "This node is fully caught up and validating the network"
+msgstr "Цей вузел повністю підіймається і перевіряє мережу"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
+msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
+msgid "This plot NFT is not connected to pool"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:49
+msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
+msgstr "Ця таблиця показує вам останній раз, коли ваша ферма спробувала виграти блок <0>Докладніше </0>"
+
+#: src/components/trading/TradingOverview.jsx:189
+msgid "This trade was created at this time"
+msgstr "Ця угода була створена у вказаний час"
+
+#: src/components/trading/TradingOverview.jsx:205
+msgid "This trade was included on blockchain at this block height"
+msgstr "Ця угода включена в blockchain на вказаній висоті блоку"
+
+#: src/components/app/AppTimeBombAlert.tsx:19
+msgid "This version of HDDcoin is no longer compatible with the blockchain and can not safely farm."
+msgstr "Ця версія HDDcoin більше не сумісна з blockchain і не може безпечно фармити."
+
+#: src/components/fullNode/FullNode.jsx:92
+msgid "Time Created"
+msgstr "Час створення"
+
+#: src/components/trading/TradingOverview.jsx:192
+#~ msgid "Time this trade was created at this time"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:189
+msgid "Timestamp"
+msgstr "Часова мітка"
+
+#: src/components/wallet/WalletHistory.tsx:42
+msgid "To"
+msgstr "До"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:32
+#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
+msgid "Total Balance"
+msgstr "Загальний баланс"
+
+#: src/components/farm/card/FarmCardTotalHDDcoinFarmed.tsx:15
+#~ msgid "Total HDDcoin Farmed"
+#~ msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:20
+msgid "Total Iterations"
+msgstr "Всього ітерацій"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+msgid "Total Network Space"
+msgstr "Загальний обсяг мережі"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:146
+msgid "Total Plot Size:"
+msgstr "Загальний обсяг ділянок:"
+
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+msgid "Total Size of Plots"
+msgstr "Загальний розмір ділянок"
+
+#: src/components/block/Block.jsx:225
+msgid "Total VDF Iterations"
+msgstr "Загальна кількість VDF ітерацій"
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:22
+msgid "Total iterations since the start of the blockchain"
+msgstr "Загальна ітерація з початку блокчейн"
+
+#: src/components/dashboard/DashboardSideBar.tsx:27
+#~ msgid "Trade"
+#~ msgstr "Trade"
+
+#: src/components/trading/TradingOverview.jsx:350
+msgid "Trade Details"
+msgstr "Докладніше про угоду"
+
+#: src/components/trading/TradingOverview.jsx:125
+msgid "Trade ID"
+msgstr "Ідентифікатор угоди"
+
+#: src/components/trading/TradingOverview.jsx:172
+msgid "Trade ID:"
+msgstr "Ідентифікатор угоди:"
+
+#: src/components/trading/TradeManager.tsx:34
+msgid "Trade Overview"
+msgstr "Огляд торгів"
+
+#: src/components/trading/TradingOverview.jsx:153
+msgid "Trades will show up here"
+msgstr "Тут будуть відображені угоди"
+
+#: src/components/trading/TradeManager.tsx:23
+msgid "Trading"
+msgstr "Торгівля"
+
+#: src/components/trading/TradingOverview.jsx:422
+msgid "Trading History"
+msgstr "Історія торгів"
+
+#: src/components/block/Block.jsx:309
+msgid "Transactions Filter Hash"
+msgstr "Хеш фільтру транзакцій"
+
+#: src/components/wallet/WalletHistory.tsx:25
+msgid "Type"
+msgstr "Тип"
+
+#: src/components/plot/add/PlotAdd.tsx:101
+msgid "Unable to create plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:149
+#: src/components/pool/PoolOverview.tsx:66
+msgid "Unclaimed Rewards"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Unfinished"
+msgstr "Незавершений"
+
+#: src/components/trading/TradingOverview.jsx:175
+msgid "Unique identifier"
+msgstr "Унікальний ідентифікатор"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
+msgid "Unknown"
+msgstr "Невідомо"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+msgid "Unsaved Changes"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:281
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
+msgid "User Pubkey"
+msgstr "Публічний ключ користувача"
+
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
+msgid "VDF Sub Slot Iterations"
+msgstr "Ітерації підслотів VDF"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+#~ msgid "Value is too high"
+#~ msgstr "Value is too high"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+msgid "Value seems high"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
+msgid "Verify Pool Details"
+msgstr ""
+
+#: src/electron/main.tsx:295
+msgid "View"
+msgstr "Вигляд"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:79
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:63
+msgid "View Log"
+msgstr "Переглянути журнал"
+
+#: src/components/trading/TradeManager.tsx:54
+msgid "View Offer"
+msgstr "Переглянути пропозиції"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
+#: src/components/plotNFT/PlotNFTCard.tsx:298
+#~ msgid "View Payout Instructions"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:285
+msgid "View Pool Login Link"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+msgid "View pending balances"
+msgstr "Переглянути очікувані баланси"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:393
+msgid "View pending balances..."
+msgstr "Переглянути очікувані баланси..."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/plot/PlotStatus.tsx:26
+#: src/components/plot/PlotStatus.tsx:27
+msgid "Wait for synchronization"
+msgstr "Зачекайте на синхронізацію"
+
+#: src/components/wallet/Wallets.tsx:104
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
+msgid "Waiting for the transaction to be confirmed"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:185
+#: src/components/wallet/standard/WalletStandard.tsx:674
+msgid "Wallet Status:"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:34
+#~ msgid "WalletItem.ccWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:30
+#~ msgid "WalletItem.hddcoinWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:48
+#~ msgid "WalletItem.didWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:41
+#~ msgid "WalletItem.rlWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:107
+#~ msgid "WalletStatusCard.not_synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:105
+#~ msgid "WalletStatusCard.synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:103
+#~ msgid "WalletStatusCard.syncing"
+#~ msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:45
+#: src/components/wallet/Wallets.tsx:173
+msgid "Wallets"
+msgstr "Гаманці"
+
+#: src/components/wallet/Wallets.tsx:131
+#~ msgid "Wallets.title"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:57
+msgid "Want to Join a Pool? Create a Plot NFT"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:139
+msgid "Want to earn more HDDcoin? Add more plots to your farm."
+msgstr "Хочете заробити більше HDDcoin? Додайте більше ділянок у свою ферму."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:86
+msgid "Want to have a delay before the next plot starts?"
+msgstr "Хочете встановити затримку перед початком побудови наступної ділянки?"
+
+#: src/components/block/Block.jsx:205
+msgid "Weight"
+msgstr "Вага"
+
+#: src/components/block/Block.jsx:208
+msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
+msgstr "Вага - це загальна додана складність усіх підблоків до цього, та включно з цим"
+
+#: src/components/selectKey/SelectKey.tsx:112
+msgid "Welcome to HDDcoin. Please log in with an existing key, or create a new key."
+msgstr "Ласкаво просимо в HDDcoin. Будь ласка, увійдіть за допомогою існуючого ключа або створіть новий ключ."
+
+#: src/components/wallet/WalletAdd.tsx:66
+msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+msgstr "Ласкаво просимо! Ці слова використовуються для резервної копії вашого гаманця. Без них Ви втратите доступ до свого гаманця, тримайте їх у безпеці! Запишіть кожне слово разом з порядковим номером поруч з ними. (Порядок важливий)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:316
+msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr "Коли ви отримаєте пакет інформації про налаштування від вашого адміністратора, введіть його нижче, щоб завершити налаштування кишені з обмеженням швидкості виведення:"
+
+#: src/electron/main.tsx:340
+msgid "Window"
+msgstr "Вікно"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:36
+msgid "Without fees"
+msgstr "Без комісії"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:35
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:193
+msgid "Yes"
+msgstr "Так"
+
+#: src/hooks/useAbsorbRewards.tsx:29
+#: src/hooks/useJoinPool.tsx:35
+msgid "You are in pending state. Please wait for confirmation"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:37
+msgid "You are not self pooling"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:412
+msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
+#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:63
+msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+msgstr "Для генерації ділянок не потрібно бути сінхронізованим або підключеним до мережі. Під час процесу створення ділянок використовуються тимчасові файли, розмір яких перевищує розмір кінцевих файлів ділянок. Переконайтеся, що у вас достатньо вільного місця. <0>Дізнатися більше</0>"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+msgid "You have made changes. Do you want to discard them?"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:56
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgstr "У вас {0}% від обсягу мережі, тому фермерство одного блоку займе приблизно {expectedTimeToWin}. Фактичні результати можуть бути в 3-4 рази довше, ніж ця оцінка."
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+
+#: src/components/pool/PoolJoin.tsx:37
+msgid "You need to claim your rewards first"
+msgstr ""
+
+#: src/components/app/AppTimeBomb.tsx:28
+#~ msgid "You need to upgrade the HDDcoin application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the HDDcoin application as this version will stop working soon!"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
+msgid "You need {currencyCode} to join a pool."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
+msgid "You will recieve <0/> to {0}"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:49
+msgid "You will recieve <0/> to {address}"
+msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:37
+msgid "Your Farm Overview"
+msgstr "Огляд вашої ферми"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:95
+msgid "Your Full Node Connection"
+msgstr "Ваше підключення до повного вузла"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+msgid "Your Harvester Network"
+msgstr "Ваша мережа комбайнів"
+
+#: src/components/pool/PoolOverview.tsx:160
+msgid "Your Pool Overview"
+msgstr ""
+
+#: src/util/getDescriptiveError.ts:5
+msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Error 13] У доступі відмовлено. Ви намагаєтесь отримати доступ до файлу/каталогу не маючи необхідних дозволів. Швидше за все, одна з тек для ділянок у вашому config.yaml має проблему."
+
+#: src/util/getDescriptiveError.ts:8
+msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Помилка 22] Файл не знайдено. Швидше за все, одна з тек для ділянок, що вказана у вашому config.yaml має проблему."
+
+#: src/components/wallet/WalletStatusCard.tsx:41
+#: src/components/wallet/Wallets.tsx:143
+msgid "connections:"
+msgstr "з'єднання:"
+
+#: src/components/wallet/WalletStatusCard.tsx:33
+#: src/components/wallet/Wallets.tsx:135
+msgid "height:"
+msgstr "висота:"
+
+#: src/components/wallet/Wallets.tsx:129
+msgid "not synced"
+msgstr "не синхронізовано"
+
+#: src/components/plot/add/PlotAdd.tsx:105
+msgid "p2_singleton_puzzle_hash is not defined"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:27
+#: src/components/wallet/Wallets.tsx:123
+msgid "status:"
+msgstr "стан:"
+
+#: src/components/wallet/WalletStatusCard.tsx:29
+#: src/components/wallet/Wallets.tsx:128
+msgid "synced"
+msgstr "синхронізовано"
+
+#: src/components/wallet/WalletStatusCard.tsx:29
+#: src/components/wallet/Wallets.tsx:127
+msgid "syncing"
+msgstr "синхронізація"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr "{0} Block Rewards"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr "{0} User Transaction Fees"
+
+#: src/components/plotNFT/PlotNFTGraph.tsx:111
+msgid "{0} points {1} - {2} hours ago"
+msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:35
+msgid "{currencyCode} Block Rewards"
+msgstr "{currencyCode} Винагороди за блоки"
+
+#: src/components/farm/card/FarmCardTotalHDDcoinFarmed.tsx:29
+msgid "{currencyCode} Total HDDcoin Farmed"
+msgstr "{currencyCode} Всього HDDcoin створено"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:28
+msgid "{currencyCode} User Transaction Fees"
+msgstr "{currencyCode} Комісії за транзакціями користувачів"
+
+#: src/components/core/components/Amount/Amount.tsx:82
+msgid "{mojo, plural, one {mojo} other {mojos}}"
+msgstr ""

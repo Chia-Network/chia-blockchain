@@ -65,9 +65,9 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        ln -s $GITHUB_WORKSPACE/.hddcoin
+        echo "$HOME/.hddcoin"
+        ls -al $HOME/.hddcoin
 
     - name: Install ubuntu dependencies
       run: |

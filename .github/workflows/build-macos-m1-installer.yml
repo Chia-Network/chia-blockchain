@@ -82,7 +82,7 @@ jobs:
           arch -arm64 python3 -m venv ../venv
           . ../venv/bin/activate
           arch -arm64 pip install setuptools_scm
-          echo "::set-output name=CHIA_INSTALLER_VERSION::$(arch -arm64 python3 ./build_scripts/installer-version.py)"
+          echo "::set-output name=HDDCOIN_INSTALLER_VERSION::$(arch -arm64 python3 ./build_scripts/installer-version.py)"
           deactivate
 
       # This will be recreated in the next step
@@ -117,7 +117,7 @@ jobs:
         run: |
           export PATH=$(brew --prefix node@12)/bin:$PATH
           . ./activate
-          cd ./chia-blockchain-gui
+          cd ./hddcoin-blockchain-gui
           arch -arm64 git status
           cd ../build_scripts
           arch -arm64 sh build_macos_m1.sh
@@ -125,7 +125,7 @@ jobs:
       - name: Upload MacOS artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: Chia-Installer-MacOS-arm64-dmg
+          name: HDDcoin-Installer-MacOS-arm64-dmg
           path: ${{ github.workspace }}/build_scripts/final_installer/
 
       - name: Install AWS CLI
@@ -136,7 +136,7 @@ jobs:
       - name: Create Checksums
         run: |
           ls
-          arch -arm64 shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.sha256
+          arch -arm64 shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg > ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg.sha256
 
       - name: Upload to s3
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -145,7 +145,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
           AWS_REGION: us-west-2
         run: |
-          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg s3://download-chia-net/builds/
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg s3://download-hddcoin-net/builds/
 
       - name: Install py3createtorrent
         if: startsWith(github.ref, 'refs/tags/')
@@ -155,7 +155,7 @@ jobs:
       - name: Create torrent
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          arch -arm64 py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg
+          arch -arm64 py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg -o ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg.torrent --webseed https://download-hddcoin-net.s3.us-west-2.amazonaws.com/install/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
 
       - name: Upload Release Files
@@ -165,9 +165,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
           AWS_REGION: us-west-2
         run: |
-          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg s3://download-chia-net/install/
-          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.sha256 s3://download-chia-net/install/
-          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.torrent s3://download-chia-net/torrents/
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg s3://download-hddcoin-net/install/
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg.sha256 s3://download-hddcoin-net/install/
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}-arm64.dmg.torrent s3://download-hddcoin-net/torrents/
 
       - name: Get tag name
         if: startsWith(github.ref, 'refs/tags/')
@@ -179,7 +179,7 @@ jobs:
       - name: Mark installer complete
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-mac-m1
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"hddcoin_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-mac-m1
 
       # We want to delete this no matter what happened in the previous steps (failures, success, etc)
       - name: Delete signing keychain

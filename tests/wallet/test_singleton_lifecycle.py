@@ -5,16 +5,16 @@ from typing import List, Tuple
 from blspy import G2Element
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
+from hddcoin.types.blockchain_format.program import Program, INFINITE_COST
+from hddcoin.types.announcement import Announcement
+from hddcoin.types.blockchain_format.coin import Coin
+from hddcoin.types.blockchain_format.sized_bytes import bytes32
+from hddcoin.types.coin_solution import CoinSolution
+from hddcoin.types.spend_bundle import SpendBundle
+from hddcoin.util.condition_tools import ConditionOpcode
 
-from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
+from hddcoin.util.ints import uint64
+from hddcoin.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.full_node.test_conditions import bt, check_spend_bundle_validity, initial_blocks
 

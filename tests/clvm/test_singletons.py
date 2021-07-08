@@ -5,16 +5,16 @@ from unittest import TestCase
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.ints import uint64
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles import (
+from hddcoin.types.blockchain_format.program import Program
+from hddcoin.types.blockchain_format.sized_bytes import bytes32
+from hddcoin.types.blockchain_format.coin import Coin
+from hddcoin.types.coin_solution import CoinSolution
+from hddcoin.types.spend_bundle import SpendBundle
+from hddcoin.util.condition_tools import ConditionOpcode
+from hddcoin.util.ints import uint64
+from hddcoin.consensus.default_constants import DEFAULT_CONSTANTS
+from hddcoin.wallet.lineage_proof import LineageProof
+from hddcoin.wallet.puzzles import (
     p2_conditions,
     p2_delegated_puzzle_or_hidden_puzzle,
     singleton_top_layer,
@@ -29,10 +29,10 @@ from .coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 
 """
 This test suite aims to test:
-    - chia.wallet.puzzles.singleton_top_layer.py
-    - chia.wallet.puzzles.singleton_top_layer.clvm
-    - chia.wallet.puzzles.p2_singleton.clvm
-    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
+    - hddcoin.wallet.puzzles.singleton_top_layer.py
+    - hddcoin.wallet.puzzles.singleton_top_layer.clvm
+    - hddcoin.wallet.puzzles.p2_singleton.clvm
+    - hddcoin.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
 """
 
 T1 = CoinTimestamp(1, 10000000)

@@ -6,23 +6,23 @@ if [ ! "$1" ]; then
 elif [ "$1" = "amd64" ]; then
 	#PLATFORM="$1"
 	REDHAT_PLATFORM="x86_64"
-	DIR_NAME="chia-blockchain-linux-x64"
+	DIR_NAME="hddcoin-blockchain-linux-x64"
 else
 	#PLATFORM="$1"
-	DIR_NAME="chia-blockchain-linux-arm64"
+	DIR_NAME="hddcoin-blockchain-linux-arm64"
 fi
 
 pip install setuptools_scm
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined
+# The environment variable HDDCOIN_INSTALLER_VERSION needs to be defined
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG
-CHIA_INSTALLER_VERSION=$(python installer-version.py)
+HDDCOIN_INSTALLER_VERSION=$(python installer-version.py)
 
-if [ ! "$CHIA_INSTALLER_VERSION" ]; then
-	echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
-	CHIA_INSTALLER_VERSION="0.0.0"
+if [ ! "$HDDCOIN_INSTALLER_VERSION" ]; then
+	echo "WARNING: No environment variable HDDCOIN_INSTALLER_VERSION set. Using 0.0.0."
+	HDDCOIN_INSTALLER_VERSION="0.0.0"
 fi
-echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+echo "HDDcoin Installer Version is: $HDDCOIN_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-packager -g
@@ -34,7 +34,7 @@ mkdir dist
 
 echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
-SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
+SPEC_FILE=$(python -c 'import hddcoin; print(hddcoin.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
@@ -42,9 +42,9 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-cp -r dist/daemon ../chia-blockchain-gui
+cp -r dist/daemon ../hddcoin-blockchain-gui
 cd .. || exit
-cd chia-blockchain-gui || exit
+cd hddcoin-blockchain-gui || exit
 
 echo "npm build"
 npm install
@@ -56,9 +56,9 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION
+electron-packager . hddcoin-blockchain --asar.unpack="**/daemon/**" --platform=linux \
+--icon=src/assets/img/HDDcoin.icns --overwrite --app-bundle-id=net.hddcoin.blockchain \
+--appVersion=$HDDCOIN_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-packager failed!"
@@ -69,9 +69,9 @@ mv $DIR_NAME ../build_scripts/dist/
 cd ../build_scripts || exit
 
 if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
-	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
+	echo "Create hddcoin-blockchain-$HDDCOIN_INSTALLER_VERSION.rpm"
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
-  --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
+  --arch "$REDHAT_PLATFORM" --options.version $HDDCOIN_INSTALLER_VERSION \
   --license ../LICENSE
   LAST_EXIT_CODE=$?
   if [ "$LAST_EXIT_CODE" -ne 0 ]; then

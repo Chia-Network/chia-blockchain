@@ -60,14 +60,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-# Omitted checking out blocks and plots repo Chia-Network/test-cache
+# Omitted checking out blocks and plots repo HDDcoin-Network/test-cache
 
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        ln -s $GITHUB_WORKSPACE/.hddcoin
+        echo "$HOME/.hddcoin"
+        ls -al $HOME/.hddcoin
 
     - name: Install ubuntu dependencies
       run: |
@@ -92,4 +92,4 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_chialisp_deserialization.py tests/clvm/test_clvm_compilation.py tests/clvm/test_puzzles.py tests/clvm/test_serialized_program.py tests/clvm/test_singletons.py -s -v --durations 0 -n auto
+        ./venv/bin/py.test tests/clvm/test_hddcoinlisp_deserialization.py tests/clvm/test_clvm_compilation.py tests/clvm/test_puzzles.py tests/clvm/test_serialized_program.py tests/clvm/test_singletons.py -s -v --durations 0 -n auto

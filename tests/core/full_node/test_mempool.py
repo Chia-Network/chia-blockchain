@@ -7,33 +7,33 @@ import pytest
 from clvm import SExp
 from clvm.EvalError import EvalError
 
-import chia.server.ws_connection as ws
+import hddcoin.server.ws_connection as ws
 
-from chia.full_node.mempool import Mempool
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
-from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import conditions_for_solution
-from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint64
-from chia.util.hash import std_hash
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request, peer_required, bytes_required
-from chia.full_node.mempool_check_conditions import parse_condition_args
+from hddcoin.full_node.mempool import Mempool
+from hddcoin.full_node.full_node_api import FullNodeAPI
+from hddcoin.protocols import full_node_protocol
+from hddcoin.simulator.simulator_protocol import FarmNewBlockProtocol
+from hddcoin.types.announcement import Announcement
+from hddcoin.types.blockchain_format.coin import Coin
+from hddcoin.types.coin_solution import CoinSolution
+from hddcoin.types.condition_opcodes import ConditionOpcode
+from hddcoin.types.condition_with_args import ConditionWithArgs
+from hddcoin.types.spend_bundle import SpendBundle
+from hddcoin.util.clvm import int_to_bytes
+from hddcoin.util.condition_tools import conditions_for_solution
+from hddcoin.util.errors import Err, ValidationError
+from hddcoin.util.ints import uint64
+from hddcoin.util.hash import std_hash
+from hddcoin.types.mempool_inclusion_status import MempoolInclusionStatus
+from hddcoin.util.api_decorators import api_request, peer_required, bytes_required
+from hddcoin.full_node.mempool_check_conditions import parse_condition_args
 
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.consensus.condition_costs import ConditionCost
+from hddcoin.types.blockchain_format.program import Program, INFINITE_COST
+from hddcoin.consensus.condition_costs import ConditionCost
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
@@ -111,7 +111,7 @@ class TestMempool:
 async def respond_transaction(
     node: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
-    peer: ws.WSChiaConnection,
+    peer: ws.WSHDDcoinConnection,
     tx_bytes: bytes = b"",
     test: bool = False,
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:

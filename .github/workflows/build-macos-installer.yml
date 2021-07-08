@@ -103,7 +103,7 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
-        cd ./chia-blockchain-gui
+        cd ./hddcoin-blockchain-gui
         git status
         cd ../build_scripts
         sh build_macos.sh
@@ -112,12 +112,12 @@ jobs:
       id: version_number
       run: |
         . ./activate
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
+        echo "::set-output name=HDDCOIN_INSTALLER_VERSION::$(hddcoin version)"
 
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Chia-Installer-on-MacOS-10.15-dmg
+        name: HDDcoin-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Install AWS CLI
@@ -136,17 +136,17 @@ jobs:
     - name: Rename Artifact
       run: |
         ls
-        mv ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg  ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg
+        mv ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg  ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg
 
     - name: Create Checksums
       run: |
         ls
-        shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.sha256
+        shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg.sha256
 
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_SECRET
       run: |
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg s3://download-chia-net/builds/
+        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg s3://download-hddcoin-net/builds/
 
     - name: Install py3createtorrent
       if: startsWith(github.ref, 'refs/tags/')
@@ -156,12 +156,12 @@ jobs:
 #    - name: Create torrent
 #      if: startsWith(github.ref, 'refs/tags/')
 #      run: |
-#        py3createtorrent -t torrent.chia.net ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.torrent
+#        py3createtorrent -t torrent.hddcoin.org ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg.torrent
 
 #Temporarily disable release uploads
 #    - name: Upload Release Files
 #      if: startsWith(github.ref, 'refs/tags/')
 #      run: |
-#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg s3://download-chia-net/install/
-#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.sha256 s3://download-chia-net/install/
-#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-Catalina-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.dmg.torrent s3://download-chia-net/install/
+#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg s3://download-hddcoin-net/install/
+#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg.sha256 s3://download-hddcoin-net/install/
+#          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/HDDcoin-Catalina-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.dmg.torrent s3://download-hddcoin-net/install/

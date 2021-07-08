@@ -82,7 +82,7 @@ jobs:
       uses: kitek/decode-base64-into-file-action@1.0
       with:
         encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-        destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
+        destination-file: .\hddcoin-blockchain-gui\win_code_sign_cert.p12
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -91,9 +91,9 @@ jobs:
         python -m venv ..\venv
         . ..\venv\Scripts\Activate.ps1
         pip3 install setuptools_scm
-        $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
-        echo "$env:CHIA_INSTALLER_VERSION"
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$env:CHIA_INSTALLER_VERSION"
+        $env:HDDCOIN_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+        echo "$env:HDDCOIN_INSTALLER_VERSION"
+        echo "::set-output name=HDDCOIN_INSTALLER_VERSION::$env:HDDCOIN_INSTALLER_VERSION"
         deactivate
 
     - name: Build Windows installer with build_scripts\build_windows.ps1
@@ -109,13 +109,13 @@ jobs:
       uses: actions/upload-artifact@v2.2.2
       with:
         name: Windows-Exe
-        path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
+        path: ${{ github.workspace }}\hddcoin-blockchain-gui\HDDcoin-win32-x64\
 
     - name: Upload Installer to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
         name: Windows-Installers
-        path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+        path: ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\
 
 
     - name: Install AWS CLI
@@ -134,18 +134,18 @@ jobs:
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        HDDCOIN_INSTALLER_VERSION: ${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}
       run: |
-        ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/builds/
+        ls ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe s3://download-hddcoin-net/builds/
 
     - name: Create Checksums
       if: startsWith(github.ref, 'refs/tags/')
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        HDDCOIN_INSTALLER_VERSION: ${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}
       run: |
-         certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.checksum
-         ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
+         certutil.exe -hashfile ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.checksum
+         ls ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\
 
     - name: Install py3createtorrent
       if: startsWith(github.ref, 'refs/tags/')
@@ -155,7 +155,7 @@ jobs:
     - name: Create torrent
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.torrent --webseed https://download-hddcoin-net.s3.us-west-2.amazonaws.com/install/HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe
         ls
 
     - name: Upload Release Files
@@ -164,9 +164,9 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
       run: |
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/install/
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.checksum s3://download-chia-net/install/
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download-chia-net/torrents/
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe s3://download-hddcoin-net/install/
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.checksum s3://download-hddcoin-net/install/
+        aws s3 cp ${{ github.workspace }}\hddcoin-blockchain-gui\release-builds\windows-installer\HDDcoinSetup-${{ steps.version_number.outputs.HDDCOIN_INSTALLER_VERSION }}.exe.torrent s3://download-hddcoin-net/torrents/
 
     - name: Get tag name
       if: startsWith(github.ref, 'refs/tags/')
@@ -182,7 +182,7 @@ jobs:
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            chia_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
+            hddcoin_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
         }
         $json = $data | ConvertTo-Json
         $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers

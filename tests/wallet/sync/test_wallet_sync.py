@@ -4,12 +4,12 @@ import asyncio
 import pytest
 from colorlog import logging
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.protocols import full_node_protocol
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
-from chia.wallet.wallet_state_manager import WalletStateManager
+from hddcoin.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from hddcoin.protocols import full_node_protocol
+from hddcoin.simulator.simulator_protocol import FarmNewBlockProtocol
+from hddcoin.types.peer_info import PeerInfo
+from hddcoin.util.ints import uint16, uint32
+from hddcoin.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.core.fixtures import default_400_blocks, default_1000_blocks
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants

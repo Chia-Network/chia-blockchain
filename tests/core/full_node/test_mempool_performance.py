@@ -6,10 +6,10 @@ import time
 import pytest
 import logging
 
-from chia.protocols import full_node_protocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
-from chia.wallet.transaction_record import TransactionRecord
+from hddcoin.protocols import full_node_protocol
+from hddcoin.types.peer_info import PeerInfo
+from hddcoin.util.ints import uint16
+from hddcoin.wallet.transaction_record import TransactionRecord
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert

@@ -1,8 +1,8 @@
-[submodule "chia-blockchain-gui"]
-	path = chia-blockchain-gui
-	url = https://github.com/Chia-Network/chia-blockchain-gui.git
+[submodule "hddcoin-blockchain-gui"]
+	path = hddcoin-blockchain-gui
+	url = https://github.com/HDDcoin-Network/hddcoin-blockchain-gui.git
 	branch = pools
 [submodule "mozilla-ca"]
 	path = mozilla-ca
-	url = https://github.com/Chia-Network/mozilla-ca.git
+	url = https://github.com/HDDcoin-Network/mozilla-ca.git
         branch = main
