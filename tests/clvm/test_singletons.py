@@ -299,11 +299,7 @@ class TestSingleton:
         # Save the height so we can rewind after this
         save_height: uint64 = node.get_height()  # The last coin solution before this point is singleton_claim_coinsol
         await self.make_and_spend_bundle(
-            node,
-            node_client,
-            singleton_child,
-            delegated_puzzle,
-            [delay_claim_coinsol, claim_coinsol]
+            node, node_client, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol]
         )
 
         # TRY TO SPEND AWAY TOO SOON (Negative Test)

@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.util.errors import Err
@@ -12,10 +13,21 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.coin_solution import CoinSolution
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.coinbase import create_pool_coin, create_farmer_coin
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.consensus.cost_calculator import NPCResult
+
+"""
+The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
+
+The Node object uses actual MempoolManager and Mempool objects, while substituting the CoinStore, FullBlock, and
+BlockRecord objects for trimmed down versions.
+
+There is also a provided NodeClient object which implements many of the methods from chia.rpc.full_node_rpc_client
+and is designed so that you could test with it and then swap in a real rpc client that uses the same code you tested.
+"""
 
 
 class CoinStore:
@@ -69,10 +81,12 @@ class CoinStore:
             if int(coin_record.confirmed_block_index) > block_height:
                 self.delete_coin_record(coin_name)
 
+
 class FullBlock:
     def __init__(self, generator: BlockGenerator, height: uint32):
         self.height = height
         self.transactions_generator = generator
+
 
 class BlockRecord:
     def __init__(self, rci: List[Coin], height: uint32, timestamp: uint64):
@@ -165,9 +179,7 @@ class Node:
                 self.timestamp,
             )
         )
-        self.blocks.append(
-            FullBlock(generator, next_block_height)
-        )
+        self.blocks.append(FullBlock(generator, next_block_height))
 
         # block_height is incremented
         self.block_height = next_block_height
@@ -197,16 +209,15 @@ class Node:
         else:
             self.timestamp = uint64(DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1)
 
-class NodeClient():
+
+class NodeClient:
     def __init__(self, service):
         self.service = service
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle)
         cost, status, error = await self.service.mempool_manager.add_spendbundle(
-            spend_bundle,
-            cost_result,
-            spend_bundle.name()
+            spend_bundle, cost_result, spend_bundle.name()
         )
         return status, error
 
@@ -223,11 +234,10 @@ class NodeClient():
         return [
             item[1]
             for item in filter(
-                lambda coin_record_item:
-                    (coin_record_item[1].coin.puzzle_hash == puzzle_hash)
-                    and not (coin_record_item[1].spent and not include_spent_coins)
-                    and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
-                    and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
+                lambda coin_record_item: (coin_record_item[1].coin.puzzle_hash == puzzle_hash)
+                and not (coin_record_item[1].spent and not include_spent_coins)
+                and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
+                and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
                 self.service.mempool_manager.coin_store.coin_records.items(),
             )
         ]
@@ -242,11 +252,10 @@ class NodeClient():
         return [
             item[1]
             for item in filter(
-                lambda coin_record_item:
-                    (coin_record_item[1].coin.puzzle_hash in puzzle_hashes)
-                    and not (coin_record_item[1].spent and not include_spent_coins)
-                    and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
-                    and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
+                lambda coin_record_item: (coin_record_item[1].coin.puzzle_hash in puzzle_hashes)
+                and not (coin_record_item[1].spent and not include_spent_coins)
+                and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
+                and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
                 self.service.mempool_manager.coin_store.coin_records.items(),
             )
         ]
@@ -261,7 +270,9 @@ class NodeClient():
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.block_records))
 
     async def get_block(self, header_hash: bytes32) -> FullBlock:
-        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.service.block_records))[0]
+        selected_block: BlockRecord = list(
+            filter(lambda br: br.header_hash == header_hash, self.service.block_records)
+        )[0]
         block_height: uint32 = selected_block.height
         block: FullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
         delattr(block, "height")
@@ -274,7 +285,9 @@ class NodeClient():
         return blocks
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[Coin], List[Coin]]:
-        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.service.block_records))[0]
+        selected_block: BlockRecord = list(
+            filter(lambda br: br.header_hash == header_hash, self.service.block_records)
+        )[0]
         block_height: uint32 = selected_block.height
         additions: List[Coin] = [
             item[1]
