@@ -69,7 +69,7 @@ def test_files_in_dir(dir):
 default_replacements = {
     "INSTALL_TIMELORD": read_file("runner-templates/install-timelord.include.yml").rstrip(),
     "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file("runner-templates/checkout-test-plots.include.yml").rstrip(),
-    "TEST_DIR": "",
+    "TEST_PATHS": "",
     "TEST_NAME": "",
     "PYTEST_PARALLEL_ARGS": "",
 }
@@ -95,7 +95,7 @@ def generate_replacements(defaults, conf, dir, test_files):
     test_paths = ["tests/" + str(f) for f in test_files]
     # We have to list the test files individually until pytest has the
     # option to only collect tests in the named dir, and not those below
-    replacements["TEST_DIR"] = " ".join(sorted(test_paths))
+    replacements["TEST_PATHS"] = " ".join(sorted(test_paths))
     replacements["TEST_NAME"] = test_name(str(dir))
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
