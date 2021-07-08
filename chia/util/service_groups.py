@@ -1,19 +1,19 @@
 from typing import KeysView, Generator
 
 SERVICES_FOR_GROUP = {
-    "all": "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet".split(),
-    "node": "chia_full_node".split(),
-    "harvester": "chia_harvester".split(),
-    "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),
-    "farmer-no-wallet": "chia_harvester chia_farmer chia_full_node".split(),
-    "farmer-only": "chia_farmer".split(),
-    "timelord": "chia_timelord_launcher chia_timelord chia_full_node".split(),
-    "timelord-only": "chia_timelord".split(),
-    "timelord-launcher-only": "chia_timelord_launcher".split(),
-    "wallet": "chia_wallet chia_full_node".split(),
-    "wallet-only": "chia_wallet".split(),
-    "introducer": "chia_introducer".split(),
-    "simulator": "chia_full_node_simulator".split(),
+    "all": "silicoin_harvester silicoin_timelord_launcher silicoin_timelord silicoin_farmer silicoin_full_node silicoin_wallet".split(),
+    "node": "silicoin_full_node".split(),
+    "harvester": "silicoin_harvester".split(),
+    "farmer": "silicoin_harvester silicoin_farmer silicoin_full_node silicoin_wallet".split(),
+    "farmer-no-wallet": "silicoin_harvester silicoin_farmer silicoin_full_node".split(),
+    "farmer-only": "silicoin_farmer".split(),
+    "timelord": "silicoin_timelord_launcher silicoin_timelord silicoin_full_node".split(),
+    "timelord-only": "silicoin_timelord".split(),
+    "timelord-launcher-only": "silicoin_timelord_launcher".split(),
+    "wallet": "silicoin_wallet silicoin_full_node".split(),
+    "wallet-only": "silicoin_wallet".split(),
+    "introducer": "silicoin_introducer".split(),
+    "simulator": "silicoin_full_node_simulator".split(),
 }
 
 

@@ -87,7 +87,7 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
 
 def main():
     root_path = DEFAULT_ROOT_PATH
-    setproctitle("chia_timelord_launcher")
+    setproctitle("silicoin_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
     config = net_config["timelord_launcher"]
     initialize_logging("TLauncher", config["logging"], root_path)
