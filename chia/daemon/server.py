@@ -25,7 +25,12 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, KeyringCurrentPassphaseIsInvalid, KeyringRequiresMigration
+from chia.util.keychain import (
+    Keychain,
+    KeyringCurrentPassphaseIsInvalid,
+    KeyringRequiresMigration,
+    supports_keyring_passphrase,
+)
 from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -283,7 +288,8 @@ class WebSocketServer:
         ]
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
-        elif command in keychain_commands:  # Keychain commands should be handled by KeychainServer
+        # Keychain commands should be handled by KeychainServer
+        elif command in keychain_commands and supports_keyring_passphrase():
             response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()
