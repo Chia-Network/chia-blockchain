@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: Ubuntu blockchain Test
 
 on:
@@ -97,9 +100,14 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
     - name: Test blockchain code with pytest
       run: |
         . ./activate
         ./venv/bin/py.test tests/blockchain/test_blockchain.py tests/blockchain/test_blockchain_transactions.py -s -v --durations 0 
+
+
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
