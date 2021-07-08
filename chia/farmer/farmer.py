@@ -552,7 +552,9 @@ class Farmer:
                 continue
             cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry is None or time.time() - cache_entry[1] > UPDATE_HARVESTER_CACHE_INTERVAL:
-                response = await connection.request_plots(harvester_protocol.RequestPlots(), timeout=5)
+                response = await connection.request_plots(
+                    harvester_protocol.RequestPlots(), timeout=UPDATE_HARVESTER_CACHE_INTERVAL
+                )
                 if response is not None:
                     if isinstance(response, harvester_protocol.RespondPlots):
                         if connection.peer_host not in self.harvester_cache:
