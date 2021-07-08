@@ -93,7 +93,7 @@ jobs:
     - name: Test core-full_node-block_compression code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/block_compression/test_block_compression.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/full_node/block_compression/test_block_compression.py -s -v  --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

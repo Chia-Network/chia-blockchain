@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: MacOS core-util Tests
 
 on:
@@ -91,3 +94,6 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests/core/util/test_keychain.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py tests/core/util/test_type_checking.py -s -v  --durations 0
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

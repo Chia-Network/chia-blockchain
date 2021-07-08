@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu core-util Test
+name: Ubuntu blockchain-reorgs Test
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu core-util Test
+    name: Ubuntu blockchain-reorgs Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -102,10 +102,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
-    - name: Test core-util code with pytest
+    - name: Test blockchain-reorgs code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/util/test_keychain.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py tests/core/util/test_type_checking.py -s -v  --durations 0
+        ./venv/bin/py.test tests/blockchain/reorgs/test_reorgs.py -s -v  --durations 0
 
 
 #

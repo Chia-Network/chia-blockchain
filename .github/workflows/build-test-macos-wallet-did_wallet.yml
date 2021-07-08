@@ -93,7 +93,7 @@ jobs:
     - name: Test wallet-did_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/did_wallet/test_did.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/did_wallet/test_did.py -s -v  --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
