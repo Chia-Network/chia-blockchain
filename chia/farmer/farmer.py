@@ -528,14 +528,9 @@ class Farmer:
                     new_list.append(list_element)
 
                 config["pool"]["pool_list"] = new_list
-<<<<<<< HEAD
                 save_config(self.root_path, "config.yaml", config)
                 # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
                 pool_state_dict["next_farmer_update"] = 0
-=======
-                save_config(self.root_path, "config.yaml", config)
-                await self.update_pool_state()
->>>>>>> Fixed linter issues.
                 return
 
         self.log.warning(f"Launcher id: {launcher_id} not found")
