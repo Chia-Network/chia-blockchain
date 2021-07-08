@@ -1,4 +1,4 @@
-min_mainnet_k_size: 32
+min_mainnet_k_size: 29
 
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
