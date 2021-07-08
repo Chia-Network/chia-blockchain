@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: MacOS TEST_NAME Tests
 
 on:
@@ -81,3 +84,6 @@ INSTALL_TIMELORD
       run: |
         . ./activate
         ./venv/bin/py.test TEST_DIR -s -v --durations 0 PYTEST_PARALLEL_ARGS
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: MacOS wallet-rl_wallet Tests
 
 on:
@@ -91,3 +94,6 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py -s -v --durations 0 
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

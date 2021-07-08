@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: MacOS wallet-cc_wallet Tests
 
 on:
@@ -91,3 +94,6 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests/wallet/cc_wallet/test_cc_wallet.py tests/wallet/cc_wallet/test_trades.py -s -v --durations 0 
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
