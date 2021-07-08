@@ -282,7 +282,7 @@ class KeyringWrapper:
 
         # Write the keys directly to the new keyring (self.keyring)
         for (user, passphrase) in user_passphrase_pairs:
-            self.keyring.set_passphrase(service, user, passphrase)
+            self.keyring.set_password(service, user, passphrase)
 
         # Stop using the legacy keyring. This will direct subsequent reads to the new keyring.
         old_keyring = self.legacy_keyring
@@ -316,7 +316,7 @@ class KeyringWrapper:
 
         if response:
             for user in users:
-                legacy_keyring.delete_passphrase(service, user)
+                legacy_keyring.delete_password(service, user)
             print("Removed keys from old keyring")
         else:
             print("Keys in old keyring left intact")
@@ -330,20 +330,20 @@ class KeyringWrapper:
         # Continue reading from the legacy keyring until we want to write something,
         # at which point we'll migrate the legacy contents to the new keyring
         if self.using_legacy_keyring():
-            return self.legacy_keyring.get_passphrase(service, user)  # type: ignore
+            return self.legacy_keyring.get_password(service, user)  # type: ignore
 
-        return self.get_keyring().get_passphrase(service, user)
+        return self.get_keyring().get_password(service, user)
 
     def set_passphrase(self, service: str, user: str, passphrase_bytes: bytes):
         # On the first write while using the legacy keyring, we'll start migration
         if self.using_legacy_keyring() and self.has_cached_master_passphrase():
             self.migrate_legacy_keyring()
 
-        self.get_keyring().set_passphrase(service, user, passphrase_bytes)
+        self.get_keyring().set_password(service, user, passphrase_bytes)
 
     def delete_passphrase(self, service: str, user: str):
         # On the first write while using the legacy keyring, we'll start migration
         if self.using_legacy_keyring() and self.has_cached_master_passphrase():
             self.migrate_legacy_keyring()
 
-        self.get_keyring().delete_passphrase(service, user)
+        self.get_keyring().delete_password(service, user)
