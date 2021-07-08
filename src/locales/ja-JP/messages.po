@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-08 05:40\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -901,7 +901,7 @@ msgstr "階層的決定性鍵、または HD 鍵とは、一つの秘密鍵に�
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "収穫機上の耕地"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1221,7 +1221,7 @@ msgstr "ノード ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "ノード Id"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -2053,7 +2053,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "プールの URL が無効です。 {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
