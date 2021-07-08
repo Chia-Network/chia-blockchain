@@ -1,0 +1,45 @@
+name:  Update Mozilla cert.pem Nightly
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Update Mozilla cert.pem Nightly
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/master' }}
+      uses: styfle/cancel-workflow-action@0.7.0
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: setup git config
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<>"
+
+    - name: Update Mozilla cert.pem Nightly
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        curl --remote-name --time-cond cacert.pem https://curl.se/ca/cacert.pem
+        git status
+        DATE="$(date)"
+        export DATE
+        if [ "$(git diff-index --quiet HEAD)" ]; then
+          echo "cacert.pem needs to be updated" &&
+          git add -a &&
+          git commit -m "cacert.pem updated $DATE" &&
+          git push origin main
+        fi
+        git status
