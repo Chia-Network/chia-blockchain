@@ -1114,7 +1114,9 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
 
 
 async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
-    chia_init(root_path, skip_check_keys=wait_for_unlock)
+    # When wait_for_unlock is true, we want to skip the check_keys() call in chia_init
+    # since it might be necessary to wait for the GUI to unlock the keyring first.
+    chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)

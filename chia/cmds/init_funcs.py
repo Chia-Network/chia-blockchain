@@ -313,12 +313,12 @@ def chia_full_version_str() -> str:
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(root_path: Path, *, skip_check_keys: bool = False):
+def chia_init(root_path: Path, *, should_check_keys: bool = True):
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
 
-    skip_check_keys can be set to False to avoid blocking when accessing a passphrase
+    should_check_keys can be set to False to avoid blocking when accessing a passphrase
     protected Keychain. When launching the daemon from the GUI, we want the GUI to
     handle unlocking the keychain.
     """
@@ -333,14 +333,14 @@ def chia_init(root_path: Path, *, skip_check_keys: bool = False):
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
         # This is reached if CHIA_ROOT is set, or if user has run chia init twice
         # before a new update.
-        if not skip_check_keys:
+        if should_check_keys:
             check_keys(root_path)
         print(f"{root_path} already exists, no migration action taken")
         return -1
 
     create_default_chia_config(root_path)
     create_all_ssl(root_path)
-    if not skip_check_keys:
+    if should_check_keys:
         check_keys(root_path)
     print("")
     print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
