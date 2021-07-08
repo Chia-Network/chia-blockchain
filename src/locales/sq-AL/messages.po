@@ -8,7 +8,7 @@ msgstr ""
 "Language: sq_AL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-08 23:52\n"
 "Last-Translator: \n"
 "Language-Team: Albanian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -107,7 +107,7 @@ msgstr "Shto një direktori për Plotet"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "Shtoni {currencyCode} nga Rubineti"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
@@ -146,7 +146,7 @@ msgstr "Je i sigurt që do ta fshish këtë Plot? Pasi nuk mund ta riktheni."
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "Je i sigurt që dëshiron të fshish transaksione të pakonfirmuara?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
@@ -384,7 +384,7 @@ msgstr "Konfirmo shkëputjen"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Konfirmimi"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -901,7 +901,7 @@ msgstr "Çelësat HD ose celsat Hierarchical Deterministic janë një lloj skeme
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Parcela korrëse"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1005,7 +1005,7 @@ msgstr "Gjendje e pavlefshme"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Shtë një lidhje identifikimi një herë që mund të përdoret për t'u identifikuar në faqen e internetit të një poll. Ai përmban një nënshkrim duke përdorur çelësin e fermerit nga parcela NFT. Jo të gjitha pollet e mbështesin këtë veçori."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
@@ -1063,7 +1063,7 @@ msgstr "Id e lëshuesit"
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
 msgid "Learn More"
-msgstr ""
+msgstr "Mëso më shumë"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1221,7 +1221,7 @@ msgstr "ID e nyjes"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Id e nyjes"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -1469,7 +1469,7 @@ msgstr "Ploti është dublikatë e {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
-msgstr ""
+msgstr "Ploti Nft po kalon në (gjendjen e synuar). Kjo mund të zgjasë pak. Ju lutemi mos e mbyllni aplikacionin derisa të finalizohet kjo."
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -1512,7 +1512,7 @@ msgstr "Pikët që gjenden në 24 orët e fundit"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Pikët e Suksesshme në 24 Orët e Fundit"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
@@ -1529,12 +1529,12 @@ msgstr "Çelësi i pollit"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Lidhja e hyrjes në poll"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Udhëzimet e Pagimit të Pollit"
 
 #: src/components/block/Block.jsx:263
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1883,11 +1883,11 @@ msgstr "Kalon duke shtuar një direktori përfundimtare"
 
 #: src/components/pool/PoolHero.tsx:26
 msgid "Smooth out your XCH farming rewards by joining a pool."
-msgstr "Zbutoni shpërblimet tuaja minimit XCH duke u bashkuar me një poll."
+msgstr "Z'busni shpërblimet tuaja XCH duke u bashkuar me një poll."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Dicka shkoi keq"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2053,11 +2053,11 @@ msgstr "URL-ja e pollit \"{normalizedUrl}\" nuk po punon. Është poll? Gabim: {
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "URL-ja e pollit nuk është e vlefshme. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "URL-ja e pollit duhet të përdorë protokollin https. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2089,7 +2089,7 @@ msgstr "Tarifat totale të transaksioneve në këtë bllok. Shpërblyer për fer
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "Këto janë udhëzimet se si fermeri dëshiron të paguhet. Si parazgjedhje kjo do të jetë një adresë XCH, por mund të vendoset në çdo varg me madhësi më të vogël se 1024 karaktere, kështu që mund të përfaqësojë një tjetër identifikues të bllokut ose sistemit të pagesave."
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2158,7 +2158,7 @@ msgstr "Kjo plot NFT i është caktuar një çelësi tjetër. Ju ende mund të k
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Ky plot NFT nuk është i lidhur me pollin"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2220,7 +2220,7 @@ msgstr "Madhësia totale e Ploteve:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
 msgid "Total Size of Plots"
-msgstr "Madhësia totale e ploteves"
+msgstr "Madhësia totale e ploteve"
 
 #: src/components/block/Block.jsx:225
 msgid "Total VDF Iterations"
@@ -2336,7 +2336,7 @@ msgstr "Shiko Ofertën"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Shikoni lidhjen e hyrjes në poll"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2516,7 +2516,7 @@ msgstr "Së pari duhet të kërkoni shpërblimet tuaja"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
-msgstr ""
+msgstr "Ju duhet {currencyCode} për t'u bashkuar me një poll."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
