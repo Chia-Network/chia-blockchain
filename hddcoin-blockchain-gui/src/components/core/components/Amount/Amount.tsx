@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { Trans, Plural } from '@lingui/macro';
-import NumberFormat from 'react-number-format';
 import {
   Box,
   InputAdornment,
@@ -13,31 +12,6 @@ import { hddcoin_to_mojo } from '../../../../util/hddcoin';
 import useCurrencyCode from '../../../../hooks/useCurrencyCode';
 import FormatLargeNumber from '../FormatLargeNumber';
 import Flex from '../Flex';
-
-interface NumberFormatCustomProps {
-  inputRef: (instance: NumberFormat | null) => void;
-  onChange: (event: { target: { name: string; value: string } }) => void;
-  name: string;
-}
-
-function NumberFormatCustom(props: NumberFormatCustomProps) {
-  const { inputRef, onChange, ...other } = props;
-
-  function handleChange(values: Object) {
-    onChange(values.value);
-  }
-
-  return (
-    <NumberFormat
-      {...other}
-      getInputRef={inputRef}
-      onValueChange={handleChange}
-      thousandSeparator
-      allowNegative={false}
-      isNumericString
-    />
-  );
-}
 
 export type AmountProps = TextFieldProps & {
   children?: (props: { mojo: number; value: string | undefined }) => ReactNode;
@@ -61,10 +35,8 @@ export default function Amount(props: AmountProps) {
       <TextField
         name={name}
         variant={variant}
-        autoComplete="off"
+        type="text"
         InputProps={{
-          spellCheck: false,
-          inputComponent: NumberFormatCustom as any,
           endAdornment: (
             <InputAdornment position="end">{currencyCode}</InputAdornment>
           ),

@@ -274,7 +274,9 @@ const FullNodeStatus = (props) => {
           ))}
         </Grid>
       ) : (
-        <Loading center />
+        <Flex justifyContent="center">
+          <Loading />
+        </Flex>
       )}
     </Card>
   );
@@ -312,7 +314,9 @@ const BlocksCard = () => {
       {rows.length ? (
         <Table cols={cols} rows={rows} onRowClick={handleRowClick} />
       ) : (
-        <Loading center />
+        <Flex justifyContent="center">
+          <Loading />
+        </Flex>
       )}
     </Card>
   );

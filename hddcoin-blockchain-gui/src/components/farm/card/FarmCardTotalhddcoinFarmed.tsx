@@ -31,4 +31,4 @@ export default function FarmCardTotalHDDcoinFarmed() {
       loading={loading}
     />
   );
-}
+} 

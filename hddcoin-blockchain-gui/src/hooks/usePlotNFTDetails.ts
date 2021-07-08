@@ -41,6 +41,7 @@ export default function usePlotNFTDetails(nft: PlotNFT): {
     const isLeavingPool = state === PlotNFTState.LEAVING_POOL;
     const isSelfPooling = state === PlotNFTState.SELF_POOLING;
 
+
     return {
       isPending,
       state,

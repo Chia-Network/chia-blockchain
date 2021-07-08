@@ -4,40 +4,6 @@ import type FarmingInfo from '../types/FarmingInfo';
 import type SignagePoint from '../types/SignagePoint';
 import type ProofsOfSpace from '../types/ProofsOfSpace';
 
-function combineHarvesters(harvesters): {
-  plots: Plot[];
-  failed_to_open_filenames: string[];
-  not_found_filenames: string[];
-} {
-  const plots: Plot[] = [];
-  const failedToOpenFilenames: string[] = [];
-  const notFoundFilenames: string[] = [];
-
-  harvesters.forEach((harvester) => {
-    const {
-      plots: harvesterPlots,
-      failed_to_open_filenames,
-      no_key_filenames,
-    } = harvester;
-
-    harvesterPlots.forEach((plot) => {
-      plots.push({
-        ...plot,
-        harvester: harvester.connection,
-      });
-    });
-
-    failedToOpenFilenames.push(...failed_to_open_filenames);
-    notFoundFilenames.push(...no_key_filenames);
-  });
-
-  return {
-    plots: plots.sort((a, b) => b.size - a.size),
-    failed_to_open_filenames: failedToOpenFilenames,
-    not_found_filenames: notFoundFilenames,
-  };
-}
-
 type SignagePointAndProofsOfSpace = {
   sp: SignagePoint[];
   proofs: ProofsOfSpace;
@@ -168,19 +134,21 @@ export default function farmingReducer(
       }
 
       // Harvester API
-      if (command === 'get_harvesters') {
+      if (command === 'get_plots') {
         if (data.success !== true) {
           return state;
         }
 
-        const { harvesters } = data;
-        const combined = combineHarvesters(harvesters);
+        const { plots } = data;
+        const sortedPlots = plots && [...plots].sort((a, b) => b.size - a.size);
 
         return {
           ...state,
           harvester: {
             ...state.harvester,
-            ...combined,
+            plots: sortedPlots,
+            failed_to_open_filenames: data.failed_to_open_filenames,
+            not_found_filenames: data.not_found_filenames,
           },
         };
       }

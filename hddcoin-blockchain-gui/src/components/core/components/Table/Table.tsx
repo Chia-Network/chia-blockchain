@@ -186,7 +186,7 @@ export default function Table(props: Props) {
                       typeof tooltip === 'function'
                         ? tooltip(row)
                         : // @ts-ignore
-                          get(row, tooltip);
+                          row[tooltip];
                   }
                 }
 

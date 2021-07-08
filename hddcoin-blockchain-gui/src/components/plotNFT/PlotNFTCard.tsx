@@ -14,7 +14,6 @@ import {
   Loading,
   FormatLargeNumber,
   Link,
-  ConfirmDialog,
 } from '@hddcoin/core';
 import {
   Box,
@@ -26,25 +25,17 @@ import {
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
-import {
-  Delete as DeleteIcon,
-  Link as LinkIcon,
-  // Payment as PaymentIcon,
-} from '@material-ui/icons';
+import { Delete as DeleteIcon } from '@material-ui/icons';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTStatus from './PlotNFTState';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTDetails from '../../hooks/usePlotNFTDetails';
-import useOpenDialog from '../../hooks/useOpenDialog';
 import PoolJoin from '../pool/PoolJoin';
 import PoolAbsorbRewards from '../pool/PoolAbsorbRewards';
 import { mojo_to_hddcoin } from '../../util/hddcoin';
 import { deleteUnconfirmedTransactions } from '../../modules/incoming';
 import PlotNFTGraph from './PlotNFTGraph';
-import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
-// import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
-import getPercentPointsSuccessfull from '../../util/getPercentPointsSuccessfull';
 
 const StyledCard = styled(Card)`
   display: flex;
@@ -83,19 +74,12 @@ export default function PlotNFTCard(props: Props) {
         p2_singleton_puzzle_hash,
         pool_config: { launcher_id, pool_url },
         points_found_24h,
-        points_acknowledged_24h,
       },
       pool_wallet_status: { wallet_id },
     },
   } = props;
 
-  const percentPointsSuccessful24 = getPercentPointsSuccessfull(
-    points_acknowledged_24h,
-    points_found_24h,
-  );
-
   const history = useHistory();
-  const openDialog = useOpenDialog();
   const dispatch = useDispatch();
   const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
   const totalPointsFound24 = points_found_24h.reduce(
@@ -112,31 +96,9 @@ export default function PlotNFTCard(props: Props) {
     });
   }
 
-  async function handleDeleteUnconfirmedTransactions() {
-    const deleteConfirmed = await openDialog(
-      <ConfirmDialog
-        title={<Trans>Confirmation</Trans>}
-        confirmTitle={<Trans>Delete</Trans>}
-        confirmColor="danger"
-      >
-        <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
-      </ConfirmDialog>,
-    );
-
-    if (deleteConfirmed) {
-      dispatch(deleteUnconfirmedTransactions(wallet_id));
-    }
+  function handleDeleteUnconfirmedTransactions() {
+    dispatch(deleteUnconfirmedTransactions(wallet_id));
   }
-
-  function handleGetPoolLoginLink() {
-    openDialog(<PlotNFTGetPoolLoginLinkDialog nft={nft} />);
-  }
-
-  /*
-  function handlePayoutInstructions() {
-    openDialog(<PlotNFTPayoutInstructionsDialog nft={nft} />);
-  }
-  */
 
   const rows = [
     {
@@ -228,22 +190,6 @@ export default function PlotNFTCard(props: Props) {
       ),
       value: <FormatLargeNumber value={totalPointsFound24} />,
     },
-    !isSelfPooling && {
-      key: 'points_found_24',
-      label: (
-        <Typography>
-          <Trans>Points Successful in Last 24 Hours</Trans>
-        </Typography>
-      ),
-      value: (
-        <>
-          <FormatLargeNumber
-            value={Number(percentPointsSuccessful24 * 100).toFixed(2)}
-          />
-          {' %'}
-        </>
-      ),
-    },
   ].filter((row) => !!row);
 
   return (
@@ -271,36 +217,6 @@ export default function PlotNFTCard(props: Props) {
                         <Trans>Add a Plot</Trans>
                       </Typography>
                     </MenuItem>
-                    {!isSelfPooling && (
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handleGetPoolLoginLink();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <LinkIcon />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>View Pool Login Link</Trans>
-                        </Typography>
-                      </MenuItem>
-                    )}
-                    {/* !isSelfPooling && (
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handlePayoutInstructions();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <PaymentIcon />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>View Payout Instructions</Trans>
-                        </Typography>
-                      </MenuItem>
-                    ) */}
                     <MenuItem
                       onClick={() => {
                         onClose();

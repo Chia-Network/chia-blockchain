@@ -23,6 +23,7 @@ import {
   login_action,
   delete_key,
   get_private_key,
+  selectFingerprint,
   delete_all_keys,
 } from '../../modules/message';
 import { resetMnemonic } from '../../modules/mnemonic';
@@ -43,9 +44,10 @@ export default function SelectKey() {
   const hasFingerprints =
     publicKeyFingerprints && !!publicKeyFingerprints.length;
 
-  async function handleClick(fingerprint: Fingerprint) {
-    await dispatch(resetMnemonic());
-    await dispatch(login_action(fingerprint));
+  function handleClick(fingerprint: Fingerprint) {
+    dispatch(resetMnemonic());
+    dispatch(selectFingerprint(fingerprint));
+    dispatch(login_action(fingerprint));
   }
 
   function handleShowKey(fingerprint: Fingerprint) {

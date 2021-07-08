@@ -19,12 +19,12 @@ export default function PoolHero() {
 
   return (
     <Grid container>
-      <Grid xs={12} md={6} lg={5} item>
+      <Grid xs={12} md={6} lg={4} item>
         <CardHero>
           <StyledPoolIcon color="primary" />
           <Typography variant="body1">
             <Trans>
-              Smooth out your XCH farming rewards by joining a pool.
+              Smooth out your HDD farming rewards by joining a pool.
             </Trans>
           </Typography>
           <Button onClick={handleJoinPool} variant="contained" color="primary">

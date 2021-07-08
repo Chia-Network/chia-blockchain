@@ -98,7 +98,7 @@ class TestWalletRpc:
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
-            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
+            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "hdd")
             tx_amount = 15600000
             try:
                 await client.send_transaction("1", 100000000000000001, addr)
@@ -150,7 +150,7 @@ class TestWalletRpc:
             ] == initial_funds_eventually - tx_amount
 
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "hdd"))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
@@ -177,7 +177,7 @@ class TestWalletRpc:
             push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "hdd"))
                 await asyncio.sleep(0.5)
 
             new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
@@ -199,7 +199,7 @@ class TestWalletRpc:
 
             await asyncio.sleep(3)
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "hdd"))
                 await asyncio.sleep(0.5)
 
             new_balance = new_balance - 555 - 666 - 200
@@ -250,11 +250,11 @@ class TestWalletRpc:
             sk = wallet_node.get_key_for_fingerprint(pks[0])
             test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
             test_config = load_config(wallet_node.root_path, "config.yaml")
-            test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+            test_config["farmer"]["hdd_target_address"] = encode_puzzle_hash(test_ph, "thdd")
             # set pool to second private key
             sk = wallet_node.get_key_for_fingerprint(pks[1])
             test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
-            test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+            test_config["pool"]["hdd_target_address"] = encode_puzzle_hash(test_ph, "thdd")
             save_config(wallet_node.root_path, "config.yaml", test_config)
 
             # Check first key

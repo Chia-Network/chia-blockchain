@@ -9,9 +9,9 @@ import {
   addPlotDirectory,
   getPlotDirectories,
   removePlotDirectory,
+  getPlots,
   refreshPlots,
 } from './harvesterMessages';
-import { getHarvesters } from './farmerMessages';
 import {
   setBackupInfo,
   changeBackupView,
@@ -365,30 +365,28 @@ export const login_and_skip_action = (fingerprint) => (dispatch) => {
 
 export const login_action = (fingerprint) => (dispatch) => {
   dispatch(selectFingerprint(fingerprint));
-  return async_api(dispatch, log_in(fingerprint), true).then(
-    async (response) => {
-      if (response.data.success) {
-        // Go to wallet
-        await dispatch(refreshAllState());
-        dispatch(push('/dashboard'));
-      } else {
-        const { error } = response.data;
-        if (error === 'not_initialized') {
-          const { backup_info } = response.data;
-          const { backup_path } = response.data;
-          dispatch(push('/wallet/restore'));
-          if (backup_info && backup_path) {
-            dispatch(setBackupInfo(backup_info));
-            dispatch(selectFilePath(backup_path));
-            dispatch(changeBackupView(presentBackupInfo));
-          }
-          // Go to restore from backup screen
-        } else {
-          dispatch(openErrorDialog(error));
+  return async_api(dispatch, log_in(fingerprint), true).then((response) => {
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(refreshAllState());
+      dispatch(push('/dashboard'));
+    } else {
+      const { error } = response.data;
+      if (error === 'not_initialized') {
+        const { backup_info } = response.data;
+        const { backup_path } = response.data;
+        dispatch(push('/wallet/restore'));
+        if (backup_info && backup_path) {
+          dispatch(setBackupInfo(backup_info));
+          dispatch(selectFilePath(backup_path));
+          dispatch(changeBackupView(presentBackupInfo));
         }
+        // Go to restore from backup screen
+      } else {
+        dispatch(openErrorDialog(error));
       }
-    },
-  );
+    }
+  });
 };
 
 export const get_backup_info = (file_path, fingerprint, words) => {
@@ -666,7 +664,7 @@ export const add_plot_directory_and_refresh = (dir) => (dispatch) =>
     if (response.data.success) {
       dispatch(getPlotDirectories());
       return async_api(dispatch, refreshPlots(), true).then((response) => {
-        dispatch(getHarvesters());
+        dispatch(getPlots());
       });
     }
     const { error } = response.data;
@@ -678,7 +676,7 @@ export const remove_plot_directory_and_refresh = (dir) => (dispatch) =>
     if (response.data.success) {
       dispatch(getPlotDirectories());
       return async_api(dispatch, refreshPlots(), true).then((response) => {
-        dispatch(getHarvesters());
+        dispatch(getPlots());
       });
     }
     const { error } = response.data;

@@ -49,8 +49,8 @@ class FarmerRpcClient(RpcClient):
         request = {"launcher_id": launcher_id.hex(), "payout_instructions": payout_instructions}
         return await self.fetch("set_payout_instructions", request)
 
-    async def get_harvesters(self) -> Dict[str, Any]:
-        return await self.fetch("get_harvesters", {})
+    async def get_plots(self) -> Dict[str, Any]:
+        return await self.fetch("get_plots", {})
 
     async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:
         try:

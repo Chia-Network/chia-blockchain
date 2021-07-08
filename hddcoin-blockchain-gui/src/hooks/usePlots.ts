@@ -35,7 +35,7 @@ export default function usePlots(): {
       return plots;
     }
 
-    return uniqBy(plots, (plot) => plot['plot_id']);
+    return uniqBy(plots, (plot) => plot['plot-seed']);
   }, [plots]);
 
   const updatedPlots = useMemo(() => {
@@ -45,7 +45,7 @@ export default function usePlots(): {
 
     return plots.map((plot) => {
       const duplicates = plots.filter(
-        (item) => plot['plot_id'] === item['plot_id'] && item !== plot,
+        (item) => plot['plot-seed'] === item['plot-seed'] && item !== plot,
       );
 
       return {

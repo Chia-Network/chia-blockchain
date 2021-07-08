@@ -161,15 +161,16 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spend_coin, additional_outputs=[(receiver_puzzlehash, 1000)]
-        )
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle_double = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+
+        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
 
         new_blocks = bt.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            transaction_data=spend_bundle,
+            transaction_data=block_spendbundle,
             guarantee_transaction_block=True,
         )
 

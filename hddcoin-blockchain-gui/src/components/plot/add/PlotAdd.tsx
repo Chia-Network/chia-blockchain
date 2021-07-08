@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
-import { AlertDialog } from '@hddcoin/core';
+import { Alert } from '@material-ui/lab';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { ButtonLoading, Flex, Form, FormBackButton, Loading } from '@hddcoin/core';
@@ -142,14 +142,18 @@ export default function PlotAdd() {
 
       history.push('/dashboard/plot');
     } catch (error) {
-      await openDialog(<AlertDialog>{error.message}</AlertDialog>);
+      await openDialog(<Alert severity="warning">{error.message}</Alert>);
     } finally {
       setLoading(false);
     }
   };
 
   if (!currencyCode) {
-    return <Loading center />;
+    return (
+      <Flex alignItems="center">
+        <Loading />
+      </Flex>
+    );
   }
 
   return (

@@ -12,7 +12,6 @@ from hddcoin.consensus.block_rewards import calculate_base_farmer_reward, calcul
 from hddcoin.plotting.create_plots import create_plots
 from hddcoin.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from hddcoin.protocols import full_node_protocol
-from hddcoin.protocols.full_node_protocol import RespondBlock
 from hddcoin.rpc.rpc_server import start_rpc_server
 from hddcoin.rpc.wallet_rpc_api import WalletRpcApi
 from hddcoin.rpc.wallet_rpc_client import WalletRpcClient
@@ -147,7 +146,7 @@ class TestPoolWalletRpc:
         args.buffer = 100
         args.farmer_public_key = bytes(bt.farmer_pk).hex()
         args.pool_public_key = None
-        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "txch")
+        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "thdd")
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -469,7 +468,7 @@ class TestPoolWalletRpc:
         for summary in summaries_response:
             if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                 assert False
-        # Balance stars at 6 XCH
+        # Balance stars at 6 HDD
         assert (await wallet_0.get_confirmed_balance()) == 6000000000000
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "http://123.45.67.89", 10, "localhost:5000", "new", "FARMING_TO_POOL"
@@ -543,7 +542,7 @@ class TestPoolWalletRpc:
         assert (
             wallet_node_0.wallet_state_manager.get_peak().height == full_node_api.full_node.blockchain.get_peak().height
         )
-        # Balance stars at 6 XCH and 5 more blocks are farmed, total 22 XCH
+        # Balance stars at 6 HDD and 5 more blocks are farmed, total 22 HDD
         assert (await wallet_0.get_confirmed_balance()) == 21999999999999
 
     @pytest.mark.asyncio
@@ -845,118 +844,6 @@ class TestPoolWalletRpc:
             assert pw_info.current.pool_url == "https://pool-b.org"
             assert pw_info.current.relative_lock_height == 10
             assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
-
-        finally:
-            client.close()
-            await client.await_closed()
-            await rpc_cleanup()
-
-    @pytest.mark.asyncio
-    async def test_change_pools_reorg(self, setup):
-        """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
-        full_nodes, wallets, receive_address, client, rpc_cleanup = setup
-        our_ph = receive_address[0]
-        pool_a_ph = receive_address[1]
-        pool_b_ph = await wallets[1].get_new_puzzlehash()
-
-        full_node_api = full_nodes[0]
-        WAIT_SECS = 30
-
-        try:
-            summaries_response = await client.get_wallets()
-            for summary in summaries_response:
-                if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
-                    assert False
-
-            async def have_hddcoin():
-                await self.farm_blocks(full_node_api, our_ph, 1)
-                return (await wallets[0].get_confirmed_balance()) > 0
-
-            await time_out_assert(timeout=WAIT_SECS, function=have_hddcoin)
-
-            creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-                pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL"
-            )
-
-            await time_out_assert(
-                10,
-                full_node_api.full_node.mempool_manager.get_spendbundle,
-                creation_tx.spend_bundle,
-                creation_tx.name,
-            )
-
-            await self.farm_blocks(full_node_api, our_ph, 6)
-            assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
-
-            summaries_response = await client.get_wallets()
-            wallet_id: Optional[int] = None
-            for summary in summaries_response:
-                if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
-                    wallet_id = summary["id"]
-            assert wallet_id is not None
-            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-
-            assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
-            assert status.target is None
-
-            async def status_is_farming_to_pool():
-                await self.farm_blocks(full_node_api, our_ph, 1)
-                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-                return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
-
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
-
-            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-            assert pw_info.current.pool_url == "https://pool-a.org"
-            assert pw_info.current.relative_lock_height == 5
-
-            original_height = full_node_api.full_node.blockchain.get_peak().height
-            join_pool_tx: TransactionRecord = await client.pw_join_pool(
-                wallet_id,
-                pool_b_ph,
-                "https://pool-b.org",
-                10,
-            )
-            assert join_pool_tx is not None
-            await time_out_assert(
-                10,
-                full_node_api.full_node.mempool_manager.get_spendbundle,
-                join_pool_tx.spend_bundle,
-                join_pool_tx.name,
-            )
-            await self.farm_blocks(full_node_api, our_ph, 1)
-
-            async def status_is_leaving_no_blocks():
-                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-                return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
-
-            async def status_is_farming_to_pool_no_blocks():
-                pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-                return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
-
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving_no_blocks)
-
-            log.warning(f"Doing reorg: {original_height - 1} {original_height + 2}")
-            current_blocks = await full_node_api.get_all_full_blocks()
-            more_blocks = full_node_api.bt.get_consecutive_blocks(
-                3,
-                farmer_reward_puzzle_hash=pool_a_ph,
-                pool_reward_puzzle_hash=pool_b_ph,
-                block_list_input=current_blocks[:-1],
-                force_overflow=True,
-                guarantee_transaction_block=True,
-                seed=32 * b"4",
-                transaction_data=join_pool_tx.spend_bundle,
-            )
-
-            for block in more_blocks[-3:]:
-                await full_node_api.full_node.respond_block(RespondBlock(block))
-
-            await asyncio.sleep(5)
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving_no_blocks)
-
-            # Eventually, leaves pool
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
 
         finally:
             client.close()

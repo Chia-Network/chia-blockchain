@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
@@ -97,7 +97,6 @@ class WalletTool:
         condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
         fee: int = 0,
         secret_key: Optional[PrivateKey] = None,
-        additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
     ) -> List[CoinSolution]:
         spends = []
 
@@ -110,11 +109,6 @@ class WalletTool:
 
         output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [new_puzzle_hash, int_to_bytes(amount)])
         condition_dic[output.opcode].append(output)
-        if additional_outputs is not None:
-            for o in additional_outputs:
-                out = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [o[0], int_to_bytes(o[1])])
-                condition_dic[out.opcode].append(out)
-
         amount_total = sum(int_from_bytes(cvp.vars[1]) for cvp in condition_dic[ConditionOpcode.CREATE_COIN])
         change = spend_value - amount_total - fee
         if change > 0:
@@ -178,13 +172,10 @@ class WalletTool:
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
         fee: int = 0,
-        additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
-        transaction = self.generate_unsigned_transaction(
-            amount, new_puzzle_hash, [coin], condition_dic, fee, additional_outputs=additional_outputs
-        )
+        transaction = self.generate_unsigned_transaction(amount, new_puzzle_hash, [coin], condition_dic, fee)
         assert transaction is not None
         return self.sign_transaction(transaction)
 
@@ -195,12 +186,9 @@ class WalletTool:
         coins: List[Coin],
         condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
         fee: int = 0,
-        additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
-        transaction = self.generate_unsigned_transaction(
-            amount, new_puzzle_hash, coins, condition_dic, fee, additional_outputs=additional_outputs
-        )
+        transaction = self.generate_unsigned_transaction(amount, new_puzzle_hash, coins, condition_dic, fee)
         assert transaction is not None
         return self.sign_transaction(transaction)

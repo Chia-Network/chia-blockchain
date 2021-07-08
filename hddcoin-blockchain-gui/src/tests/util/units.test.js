@@ -112,14 +112,14 @@ describe('units', () => {
     });
     it('updates an existing display', () => {
       units.setDisplay('hddcoin', {
-        format: '{amount} TXCH',
+        format: '{amount} THDD',
         fractionDigits: 0,
       });
 
       const result = units.getDisplay('hddcoin');
 
       expect(result).toEqual({
-        format: '{amount} TXCH',
+        format: '{amount} THDD',
         fractionDigits: 0,
       });
     });

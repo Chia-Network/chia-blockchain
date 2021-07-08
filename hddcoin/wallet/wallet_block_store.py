@@ -126,8 +126,7 @@ class WalletBlockStore:
         if len(additional_coin_spends) > 0:
             blob: bytes = bytes(AdditionalCoinSpends(additional_coin_spends))
             cursor_3 = await self.db.execute(
-                "INSERT OR REPLACE INTO additional_coin_spends VALUES(?, ?)",
-                (header_block_record.header_hash.hex(), blob),
+                "INSERT OR REPLACE INTO additional_coin_spends VALUES(?, ?)", (header_block_record.header_hash, blob)
             )
             await cursor_3.close()
 

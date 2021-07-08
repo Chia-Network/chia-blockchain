@@ -121,7 +121,9 @@ export default function FarmManageFarmingRewards(props: Props) {
         <DialogContent dividers>
           <Flex gap={2} flexDirection="column">
             {loading ? (
-              <Loading center />
+              <Flex justifyContent="center">
+                <Loading />
+              </Flex>
             ) : (
               <>
                 {error && <Alert severity="error">{error.message}</Alert>}
@@ -184,7 +186,7 @@ export default function FarmManageFarmingRewards(props: Props) {
                   <Trans>
                     Note that this does not change your pooling payout
                     addresses. This only affects old format plots, and the
-                    0.25XCH reward for pooling plots.
+                    0.25HDD reward for pooling plots.
                   </Trans>
                 </Typography>
               </>

@@ -15,16 +15,14 @@ type Props = BaseLinkProps &
     | {
         to?: string | Object;
         fullWidth?: boolean;
-        noWrap?: boolean;
       }
     | RouterLinkProps
   );
 
-const StyledBaseLink = styled(({ fullWidth, noWrap, ...rest }) => (
+const StyledBadeLink = styled(({ fullWidth, ...rest }) => (
   <BaseLink {...rest} />
 ))`
   width: ${({ fullWidth }) => (fullWidth ? '100%' : 'inherit')};
-  ${({ noWrap }) => `white-space: nowrap;`}
 `;
 
 export default function Link(props: Props) {
@@ -46,5 +44,5 @@ export default function Link(props: Props) {
     newProps.onClick = handleOpenExternal;
   }
 
-  return <StyledBaseLink component={RouterLink} {...newProps} />;
+  return <StyledBadeLink component={RouterLink} {...newProps} />;
 }

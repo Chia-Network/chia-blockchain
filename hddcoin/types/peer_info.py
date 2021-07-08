@@ -1,3 +1,7 @@
+# Start: Added as workarond to issue with connections from Chia-Blockchain Peers
+import logging 
+# End: Added as workarond to issue with connections from Chia-Blockchain Peers
+
 import ipaddress
 from dataclasses import dataclass
 from typing import Optional, Union
@@ -5,6 +9,7 @@ from typing import Optional, Union
 from hddcoin.util.ints import uint16, uint64
 from hddcoin.util.streamable import Streamable, streamable
 
+log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 @streamable
@@ -13,6 +18,13 @@ class PeerInfo(Streamable):
     port: uint16
 
     def is_valid(self, allow_private_subnets=False) -> bool:
+    
+        # Start: Added as workarond to issue with connections from Chia-Blockchain Peers
+        if self.port in [8444, 8744]:
+            log.warning('Rejecting Chia-Blockchain Peers ' + str(self.host) + ' on port ' + str(self.port))
+            return False
+        # End: Added as workarond to issue with connections from Chia-Blockchain Peers
+        
         ip: Optional[Union[ipaddress.IPv6Address, ipaddress.IPv4Address]] = None
         try:
             ip = ipaddress.IPv6Address(self.host)

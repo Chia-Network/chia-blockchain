@@ -87,7 +87,6 @@ export const getPoolState = () => {
         command: 'get_pool_state',
       }),
       false,
-      true,
     );
 
     return data?.pool_state;
@@ -115,33 +114,16 @@ export const setPoolPayoutInstructions = (
   };
 };
 
-export function getHarvesters() {
+export const getPlots = () => {
   return async (dispatch) => {
     const { data } = await async_api(
       dispatch,
       farmerMessage({
-        command: 'get_harvesters',
+        command: 'get_plots',
       }),
       false,
     );
 
     return data;
   };
-}
-
-export function getPoolLoginLink(launcherId) {
-  return async (dispatch) => {
-    const { data } = await async_api(
-      dispatch,
-      farmerMessage({
-        command: 'get_pool_login_link',
-        data: {
-          launcher_id: launcherId,
-        },
-      }),
-      false,
-    );
-
-    return data;
-  };
-}
+};

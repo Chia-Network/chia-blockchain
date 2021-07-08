@@ -10,7 +10,6 @@ import {
   CopyToClipboard,
   Flex,
   Card,
-  ConfirmDialog,
 } from '@hddcoin/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
@@ -53,7 +52,6 @@ import { deleteUnconfirmedTransactions } from '../../../modules/incoming';
 // import WalletGraph from '../WalletGraph';
 import WalletCards from './WalletCards';
 import WalletStatus from '../WalletStatus';
-import useOpenDialog from '../../../hooks/useOpenDialog';
 
 const drawerWidth = 240;
 
@@ -396,7 +394,6 @@ function SendCard(props: SendCardProps) {
   const { sending_transaction, send_transaction_result } = wallet;
 
   const result = get_transaction_result(send_transaction_result);
-
   const result_message = result.message;
   const result_class = result.success
     ? classes.resultSuccess
@@ -620,23 +617,9 @@ type StandardWalletProps = {
 export default function StandardWallet(props: StandardWalletProps) {
   const { wallet_id } = props;
   const dispatch = useDispatch();
-  const openDialog = useOpenDialog();
 
-  async function handleDeleteUnconfirmedTransactions() {
-    const deleteConfirmed = await openDialog(
-      <ConfirmDialog
-        title={<Trans>Confirmation</Trans>}
-        confirmTitle={<Trans>Delete</Trans>}
-        confirmColor="danger"
-      >
-        <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
-      </ConfirmDialog>,
-    );
-
-    // @ts-ignore
-    if (deleteConfirmed) {
-      dispatch(deleteUnconfirmedTransactions(wallet_id));
-    }
+  function handleDeleteUnconfirmedTransactions() {
+    dispatch(deleteUnconfirmedTransactions(wallet_id));
   }
 
   return (

@@ -127,9 +127,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
             step="1"
             title={
               <Flex gap={1} alignItems="center">
-                <Flex flexGrow={1}>
-                  <Trans>Please Confirm</Trans>
-                </Flex>
+                <Flex flexGrow={1}>Please Confirm</Flex>
               </Flex>
             }
           >

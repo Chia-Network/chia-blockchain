@@ -7,7 +7,8 @@ import type { RootState } from '../../../modules/rootReducer';
 
 export default function FullNodeCardTotalIterations() {
   const state = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state,
+    (state: RootState) =>
+      state.full_node_state.blockchain_state,
   );
 
   const loading = !state?.peak;

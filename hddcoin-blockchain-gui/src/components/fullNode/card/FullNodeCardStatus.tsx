@@ -56,7 +56,12 @@ export default function FullNodeCardStatus() {
 
   const loading = !state || !state.sync;
   if (loading) {
-    return <FarmCard loading title={<Trans>Status</Trans>} />;
+    return (
+      <FarmCard
+        loading
+        title={<Trans>Status</Trans>}
+      />
+    );
   }
 
   const { value, tooltip, color } = getData(state?.sync);

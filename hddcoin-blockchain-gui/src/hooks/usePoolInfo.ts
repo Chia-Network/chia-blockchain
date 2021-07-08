@@ -3,44 +3,24 @@ import isURL from 'validator/es/lib/isURL';
 import { t } from '@lingui/macro';
 import normalizeUrl from '../util/normalizeUrl';
 import type PoolInfo from '../types/PoolInfo';
-import useIsMainnet from './useIsMainnet';
 
 export default function usePoolInfo(poolUrl?: string): {
   error?: Error;
   loading: boolean;
   poolInfo?: PoolInfo;
 } {
-  const isMainnet = useIsMainnet();
-
   const poolInfo = useAsync(async () => {
-    if (isMainnet === undefined) {
-      return undefined;
-    }
-
     if (!poolUrl) {
       return undefined;
     }
 
-    const isUrlOptions = {
-      allow_underscores: true,
-      require_valid_protocol: true,
-    };
-
-    if (isMainnet) {
-      isUrlOptions.protocols = ['https'];
-    }
-
     const normalizedUrl = normalizeUrl(poolUrl);
-    const isValidUrl = isURL(normalizedUrl, isUrlOptions);
+    const isValidUrl = isURL(normalizedUrl, {
+      allow_underscores: true,
+    });
 
     if (!isValidUrl) {
-      if (isMainnet && !normalizedUrl.startsWith('https:')) {
-        throw new Error(
-          t`The pool URL needs to use protocol https. ${normalizedUrl}`,
-        );
-      }
-
-      throw new Error(t`The pool URL is not valid. ${normalizedUrl}`);
+      throw new Error(t`The pool URL speciefied is not valid. ${poolUrl}`);
     }
 
     try {
@@ -57,7 +37,7 @@ export default function usePoolInfo(poolUrl?: string): {
         t`The pool URL "${normalizedUrl}" is not working. Is it pool? Error: ${e.message}`,
       );
     }
-  }, [poolUrl, isMainnet]);
+  }, [poolUrl]);
 
   return {
     error: poolInfo.error,

@@ -197,7 +197,7 @@ function prepareGraphPoints(
   const points = [
     {
       x: peak.height,
-      y: Math.max(0, mojo_to_hddcoin(start)),
+      y: mojo_to_hddcoin(start),
       tooltip: mojo_to_hddcoin(balance),
     },
   ];
@@ -209,7 +209,7 @@ function prepareGraphPoints(
 
     points.push({
       x: timestamp,
-      y: Math.max(0, mojo_to_hddcoin(start)),
+      y: mojo_to_hddcoin(start),
       tooltip: mojo_to_hddcoin(start),
     });
   });

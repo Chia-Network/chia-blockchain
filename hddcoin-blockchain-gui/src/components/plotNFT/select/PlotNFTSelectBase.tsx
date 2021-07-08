@@ -103,7 +103,7 @@ export default function PlotNFTSelectBase(props: Props) {
                     control={<Radio />}
                     label={
                       <Trans>
-                        Self pool. When you win a block you will earn XCH
+                        Self pool. When you win a block you will earn HDD
                         rewards.
                       </Trans>
                     }
@@ -126,7 +126,7 @@ export default function PlotNFTSelectBase(props: Props) {
                           name="poolUrl"
                           label="Pool URL"
                           variant="filled"
-                          autoComplete="on"
+                          autoComplete="pool-url"
                           onClick={handleDisableSelfPooling}
                           onChange={handleDisableSelfPooling}
                           fullWidth
@@ -158,7 +158,11 @@ export default function PlotNFTSelectBase(props: Props) {
             <Alert severity="warning">{poolInfo.error.message}</Alert>
           )}
 
-          {poolInfo.loading && <Loading center />}
+          {poolInfo.loading && (
+            <Flex alignItems="center">
+              <Loading />
+            </Flex>
+          )}
 
           {poolInfo.poolInfo && <PoolInfo poolInfo={poolInfo.poolInfo} />}
         </CardStep>
