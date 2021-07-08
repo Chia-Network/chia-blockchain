@@ -42,7 +42,7 @@ class KeyringMaxUnlockAttempts(Exception):
 def supports_keyring_passphrase() -> bool:
     from sys import platform
 
-    return platform == "linux" or platform == "darwin"
+    return platform == "linux"
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:
