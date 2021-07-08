@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-08 05:40\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -901,7 +901,7 @@ msgstr "HD eller Hierarkisk Deterministiske nøgler er en type a offentlig nøgl
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Harvester Plots"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1221,7 +1221,7 @@ msgstr "Node ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Node ID"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -2053,7 +2053,7 @@ msgstr "Pulje URL \"{normalizedUrl}\" virker ikke. Er det en pulje? Fejl: {0}"
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "Puljens URL er ikke gyldig. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
