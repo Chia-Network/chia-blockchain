@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-08 11:39\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -546,7 +546,7 @@ msgstr "Vytváření vykreslování NFT a připojení ke sdružení"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
-msgstr "Vytváření vykreslování NFT pro samosdružování"
+msgstr "Vytváří se NFT pole pro vlastní poolování"
 
 #: src/components/plot/add/PlotAdd.tsx:86
 msgid "Currency code is not defined"
@@ -745,7 +745,7 @@ msgstr "Farma"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
 msgid "Farmer Public Key"
-msgstr ""
+msgstr "Veřejný klíč farmáře"
 
 #: src/components/block/Block.jsx:267
 msgid "Farmer Puzzle Hash"
@@ -757,7 +757,7 @@ msgstr "Adresa pro odměny farmáře"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:137
 msgid "Farmer Reward Address is not properly formatted."
-msgstr ""
+msgstr "Adresa odměny farmáře není správně formátována."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -765,7 +765,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address must not be empty."
-msgstr ""
+msgstr "Adresa pro odměnu farmáře nesmí být prázdná."
 
 #: src/components/farm/card/FarmCardStatus.tsx:38
 #: src/components/plot/PlotStatus.tsx:28
@@ -779,7 +779,7 @@ msgstr "Farmář není spuštěn"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Veřejný klíč farmáře:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:33
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -901,7 +901,7 @@ msgstr "HD nebo Hierarchické Deterministické klíče jsou typy veřejného/sou
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Sklízecí pole"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1005,7 +1005,7 @@ msgstr "Neplatný stav"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr "Je to jednorázový přihlašovací odkaz, který může být použit k přihlášení na webovou stránku poolu. Obsahuje podpis používající klíč farmera z NFT pole. Ne všechny pooly podporují tuto funkci."
+msgstr "Je to jednorázový přihlašovací odkaz, který může být použit k přihlášení na webovou stránku poolu. Obsahuje podpis používající klíč farmáře z NFT pole. Ne všechny pooly podporují tuto funkci."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
@@ -1028,7 +1028,7 @@ msgstr "Připojte se ke sdružení a získejte konzistentní odměnu XCH. Prům�
 
 #: src/components/plot/add/PlotAddNFT.tsx:133
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr ""
+msgstr "Připojte se k poolu a získejte konzistentní farmářskou odměnu XCH. Vytvořte NFT pole a přiřaďte svá nová pole do skupiny."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
@@ -1221,7 +1221,7 @@ msgstr "ID uzlu"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Id uzlu"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -1262,7 +1262,7 @@ msgstr "Pole nenalezena"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:184
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr ""
+msgstr "Všimněte si, že toto nezmění vaše pool adresy. To se týká pouze starého formátu polí a odměny 0,25XCH pool polí."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
@@ -1551,7 +1551,7 @@ msgstr "Adresa pro odměny poolu"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:149
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "Adresa odměny pole není správně formátována."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1559,7 +1559,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:144
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "Adresa odměny pole nesmí být prázdná."
 
 #: src/components/block/Block.jsx:313
 msgid "Pool Reward Amount"
@@ -1575,7 +1575,7 @@ msgstr "Pool neposkytuje target_puzzle_hash."
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Veřejný klíč poolu:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
@@ -1586,7 +1586,7 @@ msgstr "Pool:"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
-msgstr "Pooling"
+msgstr "Poolování"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
@@ -1602,7 +1602,7 @@ msgstr "Připravuji NFT pole"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
 msgid "Preparing standard wallet"
-msgstr ""
+msgstr "Připravuji standardní peněženku"
 
 #: src/components/block/Block.jsx:347
 msgid "Previous"
@@ -1642,7 +1642,7 @@ msgstr "Nalezeno důkazů"
 
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
-msgstr ""
+msgstr "Verze protokolu"
 
 #: src/components/wallet/create/createRLAdmin.jsx:297
 msgid "Pubkey"
@@ -1811,11 +1811,11 @@ msgstr "Vyberte dočasnou složku, do které chcete pole uložit. Doporučujeme 
 
 #: src/components/plot/add/PlotAddNFT.tsx:81
 msgid "Select your Plot NFT"
-msgstr ""
+msgstr "Vyberte své NFT pole"
 
 #: src/components/plot/add/PlotAddNFT.tsx:72
 msgid "Select your Plot NFT from the dropdown or create a new one."
-msgstr ""
+msgstr "Vyberte své NFT pole z rozbalovacího seznamu nebo vytvořte nové."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
@@ -1826,11 +1826,11 @@ msgstr "Vybráno"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
 msgid "Self Pooling"
-msgstr ""
+msgstr "Vlastní poolování"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
-msgstr ""
+msgstr "Vlastní pool. Když vyhraješ blok, získáš XCH odměnu ty."
 
 #: src/components/trading/CreateOffer.jsx:164
 #: src/components/trading/TradesTable.tsx:47
@@ -1883,7 +1883,7 @@ msgstr "Přeskočí využití cílové složky pro farmaření"
 
 #: src/components/pool/PoolHero.tsx:26
 msgid "Smooth out your XCH farming rewards by joining a pool."
-msgstr ""
+msgstr "Stabilizujte odměny za vaše farmení XCH přidáním do poolu."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
@@ -2049,11 +2049,11 @@ msgstr "Uzel se synchronizuje, což znamená, že stahuje bloky z jiných uzlů,
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr ""
+msgstr "URL adresa poolu \"{normalizedUrl}\" nefunguje. Je to pool? Chyba: {0}"
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "URL adresa poolu je neplatná. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
@@ -2069,7 +2069,7 @@ msgstr "URL adresa poolu musí používat protokol https. {normalizedUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
-msgstr ""
+msgstr "Operace změny poolu byla zrušena, zkuste to prosím znovu změnou poolu nebo vlastním poolem"
 
 #: src/components/block/Block.jsx:302
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2089,7 +2089,7 @@ msgstr "Souhrnná výše transakčních poplatků v tomto bloku. Vyplaceno farm�
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr "Toto jsou instrukce, jak chce farmer dostávat platbu. Ve výchozím nastavení se jedná o adresu XCH, ale může být nastaven libovolný řetězec o velikosti menší než 1024 znaků, aby mohl zastupovat jiný blockchain nebo identifikátor platebního systému."
+msgstr "Toto jsou instrukce, jak chce farmář dostávat platbu. Ve výchozím nastavení se jedná o adresu XCH, ale může být nastaven libovolný řetězec o velikosti menší než 1024 znaků, aby mohl zastupovat jiný blockchain nebo identifikátor platebního systému."
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2141,12 +2141,12 @@ msgstr "Celkový zůstatek plus čekající transakce. Jinými slovy: celkový z
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "Jedná se o celkový počet bodů, které má toto NFT pole s tímto poolem, od poslední výplaty. Po provedení výplaty se body poolu resetují."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
-msgstr ""
+msgstr "Toto je celkový počet bodů, které váš farmář nalezl pro toto NFT pole. Každé k32 pole dostane asi 10 bodů denně, takže pokud máte 10TiB, měl by očekávat okolo 1000 bodů denně, nebo 41 bodů za hodinu."
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
@@ -2154,7 +2154,7 @@ msgstr "Jste plně synchronizováni se sítí"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:310
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
-msgstr ""
+msgstr "Toto NFT pole je přiřazeno k jinému klíči. Stále můžete vytvářet pole pro toto NFT pole, ale nemůžete provádět změny."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
@@ -2272,12 +2272,12 @@ msgstr "Typ"
 
 #: src/components/plot/add/PlotAdd.tsx:101
 msgid "Unable to create plot NFT"
-msgstr ""
+msgstr "Nelze vytvořit NFT pole"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:149
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
-msgstr ""
+msgstr "Nevyzvednuté odměny"
 
 #: src/components/fullNode/FullNode.jsx:98
 msgid "Unfinished"
@@ -2293,7 +2293,7 @@ msgstr "Neznámé"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 msgid "Unsaved Changes"
-msgstr ""
+msgstr "Neuložené změny"
 
 #: src/components/wallet/create/createRLAdmin.jsx:281
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
@@ -2310,11 +2310,11 @@ msgstr "VDF dílčí iterace slotu"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
-msgstr ""
+msgstr "Hodnota se zdá vysoká"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
-msgstr ""
+msgstr "Ověřit detaily poolu"
 
 #: src/electron/main.tsx:295
 msgid "View"
@@ -2363,12 +2363,12 @@ msgstr "Čekání na synchronizaci"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
 msgid "Waiting for the transaction to be confirmed"
-msgstr ""
+msgstr "Čekání na potvrzení transakce"
 
 #: src/components/pool/PoolOverview.tsx:185
 #: src/components/wallet/standard/WalletStandard.tsx:674
 msgid "Wallet Status:"
-msgstr ""
+msgstr "Stav peněženky:"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2409,7 +2409,7 @@ msgstr "Peněženky"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:57
 msgid "Want to Join a Pool? Create a Plot NFT"
-msgstr ""
+msgstr "Chceš se připojit k poolu? Vytvoř NFT pole"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
 msgid "Want to earn more Chia? Add more plots to your farm."
@@ -2468,15 +2468,15 @@ msgstr "Ano"
 #: src/hooks/useAbsorbRewards.tsx:29
 #: src/hooks/useJoinPool.tsx:35
 msgid "You are in pending state. Please wait for confirmation"
-msgstr ""
+msgstr "Jste ve stavu čekající na potvrzení. Počkejte prosím na potvrzení"
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr ""
+msgstr "Neprobíhá vlastní poolování"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:412
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
-msgstr ""
+msgstr "Stále můžete vytvářet pole pro toto NFT pole, ale nemůžete provádět změny, dokud nebude synchronizace dokončena."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -2488,7 +2488,7 @@ msgstr "Pro vytváření polí nemusíte být připojeni a nemusí být dokonče
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
 msgid "You have made changes. Do you want to discard them?"
-msgstr ""
+msgstr "Provedli jste změny. Chcete je zahodit?"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2508,7 +2508,7 @@ msgstr "Vaše farma zabírá {0}% sítě, takže farmaření jednoho bloku zaber
 
 #: src/components/pool/PoolJoin.tsx:37
 msgid "You need to claim your rewards first"
-msgstr ""
+msgstr "Nejprve musíte zažádat o své odměny"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
@@ -2520,11 +2520,11 @@ msgstr "Je potřeba {currencyCode}, aby se šlo připojit k poolu."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
-msgstr ""
+msgstr "Dostanete <0/> do {0}"
 
 #: src/hooks/useAbsorbRewards.tsx:49
 msgid "You will recieve <0/> to {address}"
-msgstr ""
+msgstr "Obdržíte <0/> na {address}"
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
@@ -2540,7 +2540,7 @@ msgstr "Vaše sklízecí síť"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr ""
+msgstr "Přehled vašeho poolu"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2566,7 +2566,7 @@ msgstr "nesynchronizováno"
 
 #: src/components/plot/add/PlotAdd.tsx:105
 msgid "p2_singleton_puzzle_hash is not defined"
-msgstr ""
+msgstr "p2_singleton_puzzle_hash není definován"
 
 #: src/components/wallet/WalletStatusCard.tsx:27
 #: src/components/wallet/Wallets.tsx:123
@@ -2593,7 +2593,7 @@ msgstr "synchronizace"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
-msgstr ""
+msgstr "{0} bodů {1} - před {2} hodinami"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 msgid "{currencyCode} Block Rewards"
