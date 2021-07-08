@@ -25,7 +25,7 @@ from tests.clvm.test_puzzles import (
     secret_exponent_for_index,
 )
 
-from .node import Node
+from chia.clvm.node import Node, NodeClient
 
 """
 This test suite aims to test:
@@ -58,6 +58,7 @@ class TestSingleton:
     async def make_and_spend_bundle(
         self,
         node: Node,
+        node_client: NodeClient,
         coin: Coin,
         delegated_puzzle: Program,
         coinsols: List[CoinSpend],
@@ -71,7 +72,7 @@ class TestSingleton:
         )
 
         try:
-            result, error = await node.push_tx(spend_bundle)
+            result, error = await node_client.push_tx(spend_bundle)
             if error is None:
                 await node.farm_block()
             elif ex_error is not None:
@@ -94,8 +95,10 @@ class TestSingleton:
         # Get our starting standard coin created
         START_AMOUNT: uint64 = 1023
         node = Node()
+        node_client = NodeClient(node)
         await node.farm_block(starting_puzzle.get_tree_hash())
-        starting_coin: Coin = await node.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())[0].coin
+        starting_coin: Coin = await node_client.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())
+        starting_coin = starting_coin[0].coin
         comment: List[Tuple[str, str]] = [("hello", "world")]
 
         # LAUNCHING
@@ -123,6 +126,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             starting_coin,
             delegated_puzzle,
             [starting_coinsol, launcher_coinsol],
@@ -169,6 +173,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             singleton_eve,
             delegated_puzzle,
             [singleton_eve_coinsol],
@@ -193,6 +198,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             singleton,
             delegated_puzzle,
             [singleton_coinsol],
@@ -204,7 +210,8 @@ class TestSingleton:
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         ARBITRARY_AMOUNT: uint64 = 1379
         await node.farm_block(p2_singleton_ph)
-        p2_singleton_coin: Coin = await node.get_coin_records_by_puzzle_hash(p2_singleton_ph)[0].coin
+        p2_singleton_coin: Coin = await node_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
+        p2_singleton_coin = p2_singleton_coin[0].coin
         assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
             p2_singleton_coin,
             adapted_puzzle_hash,
@@ -238,7 +245,7 @@ class TestSingleton:
         )
 
         await self.make_and_spend_bundle(
-            node, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol]
+            node, node_client, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol]
         )
 
         # CLAIM A P2_SINGLETON_OR_DELAYED
@@ -253,7 +260,8 @@ class TestSingleton:
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         ARBITRARY_AMOUNT: uint64 = 1379
         await node.farm_block(p2_singleton_ph)
-        p2_singleton_coin: Coin = await node.get_coin_records_by_puzzle_hash(p2_singleton_ph)[0].coin
+        p2_singleton_coin: Coin = await node_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
+        p2_singleton_coin = p2_singleton_coin[0].coin
         assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
             p2_singleton_coin,
             adapted_puzzle_hash,
@@ -290,7 +298,13 @@ class TestSingleton:
 
         # Save the height so we can rewind after this
         save_height: uint64 = node.get_height()  # The last coin solution before this point is singleton_claim_coinsol
-        await self.make_and_spend_bundle(node, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol])
+        await self.make_and_spend_bundle(
+            node,
+            node_client,
+            singleton_child,
+            delegated_puzzle,
+            [delay_claim_coinsol, claim_coinsol]
+        )
 
         # TRY TO SPEND AWAY TOO SOON (Negative Test)
         node.rewind(save_height)
@@ -301,14 +315,14 @@ class TestSingleton:
             DELAY_TIME,
             DELAY_PH,
         )
-        result, error = await node.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
+        result, error = await node_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
         assert error == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
         # SPEND TO DELAYED PUZZLE HASH
         node.rewind(save_height)
         node.pass_time(10000005)
         node.pass_blocks(100)
-        await node.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
+        await node_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
 
         # CREATE MULTIPLE ODD CHILDREN (Negative Test)
         singleton_child: Coin = node.all_non_reward_coins()[0]
@@ -339,6 +353,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             singleton_child,
             delegated_puzzle,
             [multi_odd_coinsol],
@@ -374,6 +389,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             singleton_child,
             delegated_puzzle,
             [no_odd_coinsol],
@@ -415,6 +431,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             singleton_child,
             delegated_puzzle,
             [singleton_even_coinsol],
@@ -454,6 +471,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             evil_coin,
             delegated_puzzle,
             [evil_coinsol],
@@ -491,6 +509,7 @@ class TestSingleton:
 
         await self.make_and_spend_bundle(
             node,
+            node_client,
             singleton_child,
             delegated_puzzle,
             [melt_coinsol],

@@ -197,13 +197,21 @@ class Node:
         else:
             self.timestamp = uint64(DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1)
 
+class NodeClient():
+    def __init__(self, service):
+        self.service = service
+
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
-        cost_result: NPCResult = await self.mempool_manager.pre_validate_spendbundle(spend_bundle)
-        cost, status, error = await self.mempool_manager.add_spendbundle(spend_bundle, cost_result, spend_bundle.name())
+        cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle)
+        cost, status, error = await self.service.mempool_manager.add_spendbundle(
+            spend_bundle,
+            cost_result,
+            spend_bundle.name()
+        )
         return status, error
 
     async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
-        return await self.mempool_manager.coin_store.get_coin_record(name)
+        return await self.service.mempool_manager.coin_store.get_coin_record(name)
 
     async def get_coin_records_by_puzzle_hash(
         self,
@@ -220,7 +228,7 @@ class Node:
                     and not (coin_record_item[1].spent and not include_spent_coins)
                     and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
                     and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
-                self.mempool_manager.coin_store.coin_records.items(),
+                self.service.mempool_manager.coin_store.coin_records.items(),
             )
         ]
 
@@ -239,49 +247,54 @@ class Node:
                     and not (coin_record_item[1].spent and not include_spent_coins)
                     and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
                     and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
-                self.mempool_manager.coin_store.coin_records.items(),
+                self.service.mempool_manager.coin_store.coin_records.items(),
             )
         ]
 
     async def get_block_record_by_height(self, height: uint32) -> BlockRecord:
-        return list(filter(lambda block: block.height == height, self.block_records))[0]
+        return list(filter(lambda block: block.height == height, self.service.block_records))[0]
 
     async def get_block_record(self, header_hash: bytes32) -> BlockRecord:
-        return list(filter(lambda block: block.header_hash == header_hash, self.block_records))[0]
+        return list(filter(lambda block: block.header_hash == header_hash, self.service.block_records))[0]
 
     async def get_block_records(self, start: uint32, end: uint32) -> List[BlockRecord]:
-        return list(filter(lambda block: (block.height >= start) and (block.height < end), self.block_records))
+        return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.block_records))
 
     async def get_block(self, header_hash: bytes32) -> FullBlock:
-        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.block_records))[0]
+        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.service.block_records))[0]
         block_height: uint32 = selected_block.height
-        return list(filter(lambda block: block.height == block_height, self.blocks))[0]
+        block: FullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
+        delattr(block, "height")
+        return block
 
     async def get_all_block(self, start: uint32, end: uint32) -> List[FullBlock]:
-        return list(filter(lambda block: (block.height >= start) and (block.height < end), self.blocks))
+        blocks = list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
+        for block in blocks:
+            delattr(block, "height")
+        return blocks
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[Coin], List[Coin]]:
-        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.block_records))[0]
+        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.service.block_records))[0]
         block_height: uint32 = selected_block.height
         additions: List[Coin] = [
             item[1]
             for item in filter(
                 lambda coin_record_item: coin_record_item[1].confirmed_block_index == block_height,
-                self.mempool_manager.coin_store.coin_records.items(),
+                self.service.mempool_manager.coin_store.coin_records.items(),
             )
         ]
         removals: List[Coin] = [
             item[1]
             for item in filter(
                 lambda coin_record_item: coin_record_item[1].spent_block_index == block_height,
-                self.mempool_manager.coin_store.coin_records.items(),
+                self.service.mempool_manager.coin_store.coin_records.items(),
             )
         ]
         return additions, removals
 
     async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSolution]:
-        generator = list(filter(lambda block: block.height == height, self.blocks))[0].transactions_generator
-        coin_record = await self.mempool_manager.coin_store.get_coin_record(coin_id)
+        generator = list(filter(lambda block: block.height == height, self.service.blocks))[0].transactions_generator
+        coin_record = await self.service.mempool_manager.coin_store.get_coin_record(coin_id)
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             generator,
             coin_id,
@@ -295,16 +308,16 @@ class Node:
             return CoinSolution(coin_record.coin, puzzle_ser, solution_ser)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
-        return list(self.mempool_manager.mempool.spends.keys())
+        return list(self.service.mempool_manager.mempool.spends.keys())
 
     async def get_all_mempool_items(self) -> Dict[bytes32, Dict]:
         spends = {}
-        for tx_id, item in self.mempool_manager.mempool.spends.items():
+        for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id] = item
         return spends
 
     async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
-        item = self.mempool_manager.get_mempool_item(tx_id)
+        item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
             return None
         else:
