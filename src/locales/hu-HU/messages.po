@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-08 11:39\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -901,7 +901,7 @@ msgstr "A HD vagy a hierarchikus determinisztikus kulcsok egyfajta nyilvános ku
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Farmolható plot-ok"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1221,7 +1221,7 @@ msgstr "Node azonosító"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Node azonosító"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -2053,7 +2053,7 @@ msgstr ""
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "A megadott pool URL nem érvényes. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
