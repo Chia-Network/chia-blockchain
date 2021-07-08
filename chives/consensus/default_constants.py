@@ -18,7 +18,7 @@ testnet_kwargs = {
     "EPOCH_BLOCKS": 4608,  # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
     "SIGNIFICANT_BITS": 8,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
-    "NUMBER_ZERO_BITS_PLOT_FILTER": 5,  # H(plot signature of the challenge) must start with these many zeroes
+    "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
     "MIN_PLOT_SIZE": 29,  # 32 for mainnet
     "MAX_PLOT_SIZE": 31,
     "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
@@ -30,15 +30,15 @@ testnet_kwargs = {
     # Default used for tests is std_hash(b'')
     "GENESIS_CHALLENGE": bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     # Forks of chives should change this value to provide replay attack protection. This is set to mainnet genesis chall
-    "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("1171692f4b57dcaf0c86a2ec665d53c14d4335e37984bf843fc803607683ac6a"),
+    "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("e407c84deb8081a44c445bcc475f9d0c155ac7d94c0a47cb461cb71b6a891e79"),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "97690c9438fbaf1dcddc7c6d4d16079f4fd872c53f7fd53c10c58f2d9368ebf9"
+        "1a86fab63fc8f4fcfe1708b85c56e0ef9d70ca17278e6c15f9713b148ecf920a"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "2e6cdc8d18231bcbfb403f056f8c0e74da49445896fde24ed1a88f274fb0798f"
+        "5b848b19bd465b2edf93428e553bfeafcee17699cce5fbc3587fc281c2ac17d4"
     ),
     "GENESIS_PRE_FARM_COMMUNITY_PUZZLE_HASH": bytes.fromhex(
-        "062ff69060ad5b4c1c1eb79377767625279d7c64dccb46ad8a04f18d74eb23ab"
+        "4e7d87c3752c0b4a1f25ec7ac5c10f347c39406e6753220043f28e5a450e0388"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Size of mempool = 50x the size of block
