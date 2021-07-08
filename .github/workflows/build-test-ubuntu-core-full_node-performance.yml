@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu core-full_node Test
+name: Ubuntu core-full_node-performance Test
 
 on:
   push:
@@ -15,9 +15,9 @@ on:
 
 jobs:
   build:
-    name: Ubuntu core-full_node Test
+    name: Ubuntu core-full_node-performance Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -102,16 +102,11 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
-    - name: Test core-full_node code with pytest
+    - name: Test core-full_node-performance code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_conditions.py tests/core/full_node/test_full_node.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py -s -v  --durations 0
+        ./venv/bin/py.test tests/core/full_node/performance/test_performance.py -s -v  --durations 0
 
-
-    - name: Check resource usage
-      run: |
-        sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
-        ./tests/check_pytest_monitor_output.py <metrics.out
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
