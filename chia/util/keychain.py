@@ -40,9 +40,11 @@ class KeyringMaxUnlockAttempts(Exception):
 
 
 def supports_keyring_passphrase() -> bool:
-    from sys import platform
+    # TODO: Enable for Linux once GUI work is finalized (including migration)
+    return False
+    # from sys import platform
 
-    return platform == "linux"
+    # return platform == "linux"
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:
