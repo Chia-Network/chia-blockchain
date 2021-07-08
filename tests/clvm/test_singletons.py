@@ -95,7 +95,7 @@ class TestSingleton:
         START_AMOUNT: uint64 = 1023
         node = Node()
         await node.farm_block(starting_puzzle.get_tree_hash())
-        starting_coin: Coin = node.api_get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())[0].coin
+        starting_coin: Coin = await node.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())[0].coin
         comment: List[Tuple[str, str]] = [("hello", "world")]
 
         # LAUNCHING
@@ -204,7 +204,7 @@ class TestSingleton:
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         ARBITRARY_AMOUNT: uint64 = 1379
         await node.farm_block(p2_singleton_ph)
-        p2_singleton_coin: Coin = node.api_get_coin_records_by_puzzle_hash(p2_singleton_ph)[0].coin
+        p2_singleton_coin: Coin = await node.get_coin_records_by_puzzle_hash(p2_singleton_ph)[0].coin
         assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
             p2_singleton_coin,
             adapted_puzzle_hash,
@@ -253,7 +253,7 @@ class TestSingleton:
         p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
         ARBITRARY_AMOUNT: uint64 = 1379
         await node.farm_block(p2_singleton_ph)
-        p2_singleton_coin: Coin = node.api_get_coin_records_by_puzzle_hash(p2_singleton_ph)[0].coin
+        p2_singleton_coin: Coin = await node.get_coin_records_by_puzzle_hash(p2_singleton_ph)[0].coin
         assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
             p2_singleton_coin,
             adapted_puzzle_hash,

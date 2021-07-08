@@ -9,6 +9,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.coin_solution import CoinSolution
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_manager import MempoolManager
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -68,13 +69,16 @@ class CoinStore:
             if int(coin_record.confirmed_block_index) > block_height:
                 self.delete_coin_record(coin_name)
 
-
-class Block:
-    def __init__(self, rci: List[Coin], generator: BlockGenerator, height: uint32, timestamp: uint64):
-        self.reward_claims_incorporated = rci
-        self.transactions_generator = generator
+class FullBlock:
+    def __init__(self, generator: BlockGenerator, height: uint32):
         self.height = height
-        self.previous_transaction_block_height = uint32(height - 1)
+        self.transactions_generator = generator
+
+class BlockRecord:
+    def __init__(self, rci: List[Coin], height: uint32, timestamp: uint64):
+        self.reward_claims_incorporated = rci
+        self.height = height
+        self.prev_transaction_block_height = uint32(height - 1) if height > 0 else 0
         self.timestamp = timestamp
         self.is_transaction_block = True
         self.header_hash = std_hash(bytes(height))
@@ -83,17 +87,13 @@ class Block:
 class Node:
     def __init__(self):
         self.mempool_manager = MempoolManager(CoinStore(), DEFAULT_CONSTANTS)
-        self.blocks: List[Block] = []
+        self.block_records: List[BlockRecord] = []
+        self.blocks: List[FullBlock] = []
         self.timestamp: uint64 = DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1
         self.block_height: uint32 = 0
 
-    async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
-        cost_result: NPCResult = await self.mempool_manager.pre_validate_spendbundle(spend_bundle)
-        cost, status, error = await self.mempool_manager.add_spendbundle(spend_bundle, cost_result, spend_bundle.name())
-        return status, error
-
     async def new_peak(self):
-        await self.mempool_manager.new_peak(self.blocks[-1])
+        await self.mempool_manager.new_peak(self.block_records[-1])
 
     def new_coin_record(self, coin: Coin, coinbase=False) -> CoinRecord:
         return CoinRecord(
@@ -127,7 +127,7 @@ class Node:
                 fees += item.spend_bundle.fees()
 
         # Rewards get created
-        next_block_height: uint32 = uint32(self.block_height + 1)
+        next_block_height: uint32 = uint32(self.block_height + 1) if len(self.block_records) > 0 else self.block_height
         pool_coin: Coin = create_pool_coin(
             next_block_height,
             puzzle_hash,
@@ -144,7 +144,7 @@ class Node:
         self.mempool_manager.coin_store.add_coin_record(self.new_coin_record(farmer_coin, True))
 
         # Coin store gets updated
-        if (len(self.blocks) > 0) and (self.mempool_manager.mempool.spends):
+        if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
             bundle, additions, removals = await self.mempool_manager.create_bundle_from_mempool(
                 self.mempool_manager.peak.header_hash
             )
@@ -156,20 +156,21 @@ class Node:
         else:
             bundle = None
 
-        # Block is created
+        # BlockRecord is created
         generator: BlockGenerator = await self.generate_transaction_generator(bundle)
-        self.blocks.append(
-            Block(
+        self.block_records.append(
+            BlockRecord(
                 [pool_coin, farmer_coin],
-                generator,
-                self.block_height,
+                next_block_height,
                 self.timestamp,
             )
         )
+        self.blocks.append(
+            FullBlock(generator, next_block_height)
+        )
 
         # block_height is incremented
-        if len(self.blocks) != 1:
-            self.block_height = next_block_height
+        self.block_height = next_block_height
 
         # mempool is reset
         await self.new_peak()
@@ -184,24 +185,127 @@ class Node:
         self.block_height = uint32(self.block_height + blocks)
 
     def rewind(self, block_height: uint32):
+        new_br_list = list(filter(lambda br: br.height <= block_height, self.block_records))
         new_block_list = list(filter(lambda block: block.height <= block_height, self.blocks))
+        self.block_records = new_br_list
         self.blocks = new_block_list
         self.mempool_manager.coin_store.rewind(block_height)
         self.mempool_manager.mempool.spends = {}
         self.block_height = block_height
-        if new_block_list:
-            self.timestamp = new_block_list[-1].timestamp
+        if new_br_list:
+            self.timestamp = new_br_list[-1].timestamp
         else:
             self.timestamp = uint64(DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1)
 
-    def api_get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
-        return self.mempool_manager.coin_store.get_coin_record(name)
+    async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+        cost_result: NPCResult = await self.mempool_manager.pre_validate_spendbundle(spend_bundle)
+        cost, status, error = await self.mempool_manager.add_spendbundle(spend_bundle, cost_result, spend_bundle.name())
+        return status, error
 
-    def api_get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[CoinRecord]:
+    async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
+        return await self.mempool_manager.coin_store.get_coin_record(name)
+
+    async def get_coin_records_by_puzzle_hash(
+        self,
+        puzzle_hash: bytes32,
+        include_spent_coins: bool = True,
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+    ) -> List[CoinRecord]:
         return [
             item[1]
             for item in filter(
-                lambda coin_record_item: coin_record_item[1].coin.puzzle_hash == puzzle_hash,
+                lambda coin_record_item:
+                    (coin_record_item[1].coin.puzzle_hash == puzzle_hash)
+                    and not (coin_record_item[1].spent and not include_spent_coins)
+                    and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
+                    and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
                 self.mempool_manager.coin_store.coin_records.items(),
             )
         ]
+
+    async def get_coin_records_by_puzzle_hashes(
+        self,
+        puzzle_hashes: List[bytes32],
+        include_spent_coins: bool = True,
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+    ) -> List[CoinRecord]:
+        return [
+            item[1]
+            for item in filter(
+                lambda coin_record_item:
+                    (coin_record_item[1].coin.puzzle_hash in puzzle_hashes)
+                    and not (coin_record_item[1].spent and not include_spent_coins)
+                    and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
+                    and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
+                self.mempool_manager.coin_store.coin_records.items(),
+            )
+        ]
+
+    async def get_block_record_by_height(self, height: uint32) -> BlockRecord:
+        return list(filter(lambda block: block.height == height, self.block_records))[0]
+
+    async def get_block_record(self, header_hash: bytes32) -> BlockRecord:
+        return list(filter(lambda block: block.header_hash == header_hash, self.block_records))[0]
+
+    async def get_block_records(self, start: uint32, end: uint32) -> List[BlockRecord]:
+        return list(filter(lambda block: (block.height >= start) and (block.height < end), self.block_records))
+
+    async def get_block(self, header_hash: bytes32) -> FullBlock:
+        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.block_records))[0]
+        block_height: uint32 = selected_block.height
+        return list(filter(lambda block: block.height == block_height, self.blocks))[0]
+
+    async def get_all_block(self, start: uint32, end: uint32) -> List[FullBlock]:
+        return list(filter(lambda block: (block.height >= start) and (block.height < end), self.blocks))
+
+    async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[Coin], List[Coin]]:
+        selected_block: BlockRecord = list(filter(lambda br: br.header_hash == header_hash, self.block_records))[0]
+        block_height: uint32 = selected_block.height
+        additions: List[Coin] = [
+            item[1]
+            for item in filter(
+                lambda coin_record_item: coin_record_item[1].confirmed_block_index == block_height,
+                self.mempool_manager.coin_store.coin_records.items(),
+            )
+        ]
+        removals: List[Coin] = [
+            item[1]
+            for item in filter(
+                lambda coin_record_item: coin_record_item[1].spent_block_index == block_height,
+                self.mempool_manager.coin_store.coin_records.items(),
+            )
+        ]
+        return additions, removals
+
+    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSolution]:
+        generator = list(filter(lambda block: block.height == height, self.blocks))[0].transactions_generator
+        coin_record = await self.mempool_manager.coin_store.get_coin_record(coin_id)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(
+            generator,
+            coin_id,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        )
+        if error:
+            return None
+        else:
+            puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
+            solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
+            return CoinSolution(coin_record.coin, puzzle_ser, solution_ser)
+
+    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+        return list(self.mempool_manager.mempool.spends.keys())
+
+    async def get_all_mempool_items(self) -> Dict[bytes32, Dict]:
+        spends = {}
+        for tx_id, item in self.mempool_manager.mempool.spends.items():
+            spends[tx_id] = item
+        return spends
+
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
+        item = self.mempool_manager.get_mempool_item(tx_id)
+        if item is None:
+            return None
+        else:
+            return dict(item)
