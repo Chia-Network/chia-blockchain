@@ -1,4 +1,4 @@
-SECTOR NETWORK IS CURRENTLY OFFLINE. OUR TIMELORD IS HAVING HARDARE PROBLEMS. YOU CAN CLOSE DOWN YOUR SOFTWARE FOR NOW.
+SSL has been updated for anyone still running the network
 
 # sector-blockchain
 
