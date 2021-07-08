@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-08 23:52\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -542,11 +542,11 @@ msgstr "Creado por nosotros:"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr ""
+msgstr "Creando Parcela NFT y Uniéndose al Fondo"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
-msgstr ""
+msgstr "Creando parcela NFT para auto-Fondo"
 
 #: src/components/plot/add/PlotAdd.tsx:86
 msgid "Currency code is not defined"
@@ -1005,30 +1005,30 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Es un enlace de inicio de sesión único que puede ser utilizado para iniciar sesión en el sitio web de un fondo. Contiene una firma usando la clave del agricultor de la parcela NFT. No todos los fondos soportan esta función."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr ""
+msgstr "Unirse a un fondo"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:141
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr ""
+msgstr "Unirse a un fondo"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
-msgstr ""
+msgstr "Únete a un fondo y obtén recompensas de agricultura XCH. El rendimiento promedio es el mismo, pero es mucho menos volátil."
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:59
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr ""
+msgstr "Únete a una piscina y obtén recompensas de agricultura XCH. El rendimiento promedio es el mismo, pero es mucho menos volátil. Asigna parcelas a una parcela NFT. Puedes cambiar fácilmente los fondos sin tener que volver a parcelar."
 
 #: src/components/plot/add/PlotAddNFT.tsx:133
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr ""
+msgstr "Únete a un fondo y consigue recompensas de cultivo XCH más consistentes. Crea una parcela NFT y asigna tus nuevas parcelas a un grupo."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
@@ -1067,7 +1067,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
-msgstr ""
+msgstr "Abandonar Fondo"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "List view"
@@ -1262,7 +1262,7 @@ msgstr "Parcelas No Encontradas"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:184
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr ""
+msgstr "Tenga en cuenta que esto no cambia sus direcciones de pago de fondo. Esto sólo afecta a las antiguas parcelas de formato, y la recompensa de 0.25XCH por agrupar parcelas."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
@@ -1517,41 +1517,41 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr ""
+msgstr "Fondo"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
-msgstr ""
+msgstr "Dirección del Contrato de Fondo"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:81
 msgid "Pool Key"
-msgstr "Llave de Conjunto"
+msgstr "Llave de Fondo"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Enlace de Inicio de Sesión de Fondo"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Instrucciones de pago en Fondo"
 
 #: src/components/block/Block.jsx:263
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
 msgid "Pool Public Key"
-msgstr "Llave Pública de Conjunto"
+msgstr "Llave Pública de Fondo"
 
 #: src/components/block/Block.jsx:283
 msgid "Pool Puzzle Hash"
-msgstr "Enigma Hash de Conjunto"
+msgstr "Enigma Hash de Fondo"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:173
 msgid "Pool Reward Address"
-msgstr "Dirección de Recompensa de Conjunto"
+msgstr "Dirección de Recompensa de Fondo"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:149
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "La dirección de Recompensa de Fondo no está correctamente formateada."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1559,34 +1559,34 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:144
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "La dirección de recompensa de Fondo no debe estar vacía."
 
 #: src/components/block/Block.jsx:313
 msgid "Pool Reward Amount"
-msgstr "Monto de Recompensa de Conjunto"
+msgstr "Monto de Recompensa de Fondo"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
 msgid "Pool does not provide relative_lock_height."
-msgstr ""
+msgstr "Fondo no proporciona relative_lock_height."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
 msgid "Pool does not provide target_puzzle_hash."
-msgstr ""
+msgstr "Fondo no proporciona target_puzzle_hash."
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Llave Pública de Fondo:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
-msgstr ""
+msgstr "Fondo:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
-msgstr ""
+msgstr "Uniéndose a Fondo"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
@@ -1826,11 +1826,11 @@ msgstr "Seleccionado"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
 msgid "Self Pooling"
-msgstr ""
+msgstr "Auto-Fondo"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
-msgstr ""
+msgstr "Auto - Fondo. Cuando ganes un bloqueo, ganarás recompensas XCH."
 
 #: src/components/trading/CreateOffer.jsx:164
 #: src/components/trading/TradesTable.tsx:47
@@ -1883,7 +1883,7 @@ msgstr "Se salta el paso de añadir el directorio final al cosechador para culti
 
 #: src/components/pool/PoolHero.tsx:26
 msgid "Smooth out your XCH farming rewards by joining a pool."
-msgstr ""
+msgstr "Suaviza tus recompensas de cultivo XCH uniéndote a un Fondo."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
@@ -2049,15 +2049,15 @@ msgstr "El nodo se está sincronizando, lo que significa que está descargando b
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr ""
+msgstr "La URL del fondo \"{normalizedUrl}\" no está funcionando. ¿Es el fondo? Error: {0}"
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "La URL del fondo no es válida. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "La URL del fondo necesita usar el protocolo https. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2069,11 +2069,11 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
-msgstr ""
+msgstr "La operación de cambio de fondo fue cancelada, por favor inténtalo de nuevo cambiando el fondo o auto-fondo"
 
 #: src/components/block/Block.jsx:302
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr "La semilla utilizada para crear la parcela. Esto depende del conjunto pk y parcela pk."
+msgstr "La semilla utilizada para crear la parcela. Esto depende del fondo pk y la parcela pk."
 
 #: src/components/block/Block.jsx:228
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
@@ -2102,7 +2102,7 @@ msgstr "Esto le permite agregar un directorio que tiene parcelas. Si no ha cread
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:132
 #: src/components/plotNFT/PlotNFTCard.tsx:171
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr ""
+msgstr "Esta dificultad es artificialmente inferior a la de la red real y se utiliza en la agricultura, para encontrar más pruebas y enviarlas al fondo. Cuantas más parcelas tenga, mayor dificultad tendrá, pero la dificultad no afecta a las recompensas."
 
 #: src/components/trading/CreateOffer.jsx:123
 #: src/hooks/useSelectDirectory.tsx:31
@@ -2141,7 +2141,7 @@ msgstr "Este es el saldo total + saldo pendiente: es lo que será su saldo despu
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "Este es el número total de puntos que esta plotNFT tiene con este fondo, desde el último pago. El fondo reiniciará los puntos después de hacer un pago."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
@@ -2158,7 +2158,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Este NFT de parcela no está conectado al fondo"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2314,7 +2314,7 @@ msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
-msgstr ""
+msgstr "Verificar Detalles de Fondo"
 
 #: src/electron/main.tsx:295
 msgid "View"
@@ -2336,7 +2336,7 @@ msgstr "Ver Oferta"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Ver Enlace de Inicio de Sesión de Fondo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2409,7 +2409,7 @@ msgstr "Carteras"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:57
 msgid "Want to Join a Pool? Create a Plot NFT"
-msgstr ""
+msgstr "¿Quieres unirte a un Fondo? Crea una parcela NFT"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
 msgid "Want to earn more Chia? Add more plots to your farm."
@@ -2472,7 +2472,7 @@ msgstr ""
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr ""
+msgstr "No estás en auto-fondo"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:412
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
@@ -2540,7 +2540,7 @@ msgstr "Su Red de Cosechadores"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr ""
+msgstr "Visión General de su Fondo"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
