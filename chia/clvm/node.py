@@ -1,4 +1,6 @@
-from typing import Optional, List, Dict, Tuple
+import aiosqlite
+
+from typing import Optional, List, Dict, Tuple, Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
@@ -6,6 +8,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.util.errors import Err
+from chia.util.db_wrapper import DBWrapper
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.types.generator_types import BlockGenerator
@@ -13,6 +16,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.coin_solution import CoinSolution
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.coinbase import create_pool_coin, create_farmer_coin
@@ -22,7 +26,7 @@ from chia.consensus.cost_calculator import NPCResult
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
 
-The Node object uses actual MempoolManager and Mempool objects, while substituting the CoinStore, FullBlock, and
+The Node object uses actual MempoolManager, Mempool and CoinStore objects, while substituting FullBlock and
 BlockRecord objects for trimmed down versions.
 
 There is also a provided NodeClient object which implements many of the methods from chia.rpc.full_node_rpc_client
@@ -30,65 +34,13 @@ and is designed so that you could test with it and then swap in a real rpc clien
 """
 
 
-class CoinStore:
-    def __init__(self):
-        self.coin_records: Dict[bytes32, CoinRecord] = {}
-
-    def add_coin_record(self, record: CoinRecord, allow_replace: bool = False):
-        if (not allow_replace) and (record.coin.name() in self.coin_records.keys()):
-            raise Exception("The coin is already in the coin store")
-        else:
-            self.coin_records[record.coin.name()] = record
-
-    def delete_coin_record(self, name: bytes32):
-        if name in self.coin_records.keys():
-            del self.coin_records[name]
-
-    async def get_coin_record(self, name: bytes32) -> Optional[CoinRecord]:
-        if name not in self.coin_records:
-            return None
-        return self.coin_records[name]
-
-    async def set_spent(self, name: bytes32, block_height: uint32):
-        existing: Optional[CoinRecord] = await self.get_coin_record(name)
-        if existing is None:
-            raise Exception("There is no CoinRecord with the specified name")
-        else:
-            self.add_coin_record(
-                CoinRecord(
-                    existing.coin,
-                    existing.confirmed_block_index,
-                    block_height,
-                    True,
-                    existing.coinbase,
-                    existing.timestamp,
-                ),
-                True,
-            )
-
-    def rewind(self, block_height: uint32):
-        for coin_name, coin_record in list(self.coin_records.items()):
-            if int(coin_record.spent_block_index) > block_height:
-                new_record = CoinRecord(
-                    coin_record.coin,
-                    coin_record.confirmed_block_index,
-                    uint32(0),
-                    False,
-                    coin_record.coinbase,
-                    coin_record.timestamp,
-                )
-                self.add_coin_record(new_record, True)
-            if int(coin_record.confirmed_block_index) > block_height:
-                self.delete_coin_record(coin_name)
-
-
-class FullBlock:
-    def __init__(self, generator: BlockGenerator, height: uint32):
+class TestFullBlock:
+    def __init__(self, generator: Optional[BlockGenerator], height: uint32):
         self.height = height  # Note that height is not on a regular FullBlock
         self.transactions_generator = generator
 
 
-class BlockRecord:
+class TestBlockRecord:
     def __init__(self, rci: List[Coin], height: uint32, timestamp: uint64):
         self.reward_claims_incorporated = rci
         self.height = height
@@ -99,12 +51,28 @@ class BlockRecord:
 
 
 class Node:
-    def __init__(self):
-        self.mempool_manager = MempoolManager(CoinStore(), DEFAULT_CONSTANTS)
-        self.block_records: List[BlockRecord] = []
-        self.blocks: List[FullBlock] = []
-        self.timestamp: uint64 = DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1
-        self.block_height: uint32 = 0
+
+    connection: aiosqlite.Connection
+    mempool_manager: MempoolManager
+    block_records: List[TestBlockRecord]
+    blocks: List[TestFullBlock]
+    timestamp: uint64
+    block_height: uint32
+
+    @classmethod
+    async def create(cls):
+        self = cls()
+        self.connection = await aiosqlite.connect(":memory:")
+        coin_store = await CoinStore.create(DBWrapper(self.connection))
+        self.mempool_manager = MempoolManager(coin_store, DEFAULT_CONSTANTS)
+        self.block_records = []
+        self.blocks = []
+        self.timestamp = DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1
+        self.block_height = 0
+        return self
+
+    async def close(self):
+        await self.connection.close()
 
     async def new_peak(self):
         await self.mempool_manager.new_peak(self.block_records[-1])
@@ -119,16 +87,20 @@ class Node:
             self.timestamp,
         )
 
-    def all_non_reward_coins(self) -> List[Coin]:
-        return [
-            item[1].coin
-            for item in filter(
-                lambda coin_record_item: (not coin_record_item[1].coinbase) and (not coin_record_item[1].spent),
-                self.mempool_manager.coin_store.coin_records.items(),
-            )
-        ]
+    async def all_non_reward_coins(self) -> List[Coin]:
+        coins = set()
+        cursor = await self.mempool_manager.coin_store.coin_record_db.execute(
+            "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
+        )
+        rows = await cursor.fetchall()
 
-    async def generate_transaction_generator(self, bundle: SpendBundle) -> BlockGenerator:
+        await cursor.close()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.add(coin)
+        return list(coins)
+
+    async def generate_transaction_generator(self, bundle: Optional[SpendBundle]) -> Optional[BlockGenerator]:
         if bundle is None:
             return None
         return simple_solution_generator(bundle)
@@ -138,7 +110,7 @@ class Node:
         fees = uint64(0)
         if self.mempool_manager.mempool.spends:
             for _, item in self.mempool_manager.mempool.spends.items():
-                fees += item.spend_bundle.fees()
+                fees = uint64(fees + item.spend_bundle.fees())
 
         # Rewards get created
         next_block_height: uint32 = uint32(self.block_height + 1) if len(self.block_records) > 0 else self.block_height
@@ -154,32 +126,35 @@ class Node:
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
             DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
         )
-        self.mempool_manager.coin_store.add_coin_record(self.new_coin_record(pool_coin, True))
-        self.mempool_manager.coin_store.add_coin_record(self.new_coin_record(farmer_coin, True))
+        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(pool_coin, True), False)
+        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(farmer_coin, True), False)
 
         # Coin store gets updated
+        generator_bundle: Optional[SpendBundle] = None
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
-            bundle, additions, removals = await self.mempool_manager.create_bundle_from_mempool(
-                self.mempool_manager.peak.header_hash
-            )
+            peak = self.mempool_manager.peak
+            if peak is not None:
+                result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash)
 
-            for addition in additions:
-                self.mempool_manager.coin_store.add_coin_record(self.new_coin_record(addition))
-            for removal in removals:
-                await self.mempool_manager.coin_store.set_spent(removal.name(), self.block_height + 1)
-        else:
-            bundle = None
+                if result is not None:
+                    bundle, additions, removals = result
+                    generator_bundle = bundle
 
-        # BlockRecord is created
-        generator: BlockGenerator = await self.generate_transaction_generator(bundle)
+                for addition in additions:
+                    await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(addition), False)
+                for removal in removals:
+                    await self.mempool_manager.coin_store._set_spent(removal.name(), uint32(self.block_height + 1))
+
+        # TestBlockRecord is created
+        generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
         self.block_records.append(
-            BlockRecord(
+            TestBlockRecord(
                 [pool_coin, farmer_coin],
                 next_block_height,
                 self.timestamp,
             )
         )
-        self.blocks.append(FullBlock(generator, next_block_height))
+        self.blocks.append(TestFullBlock(generator, next_block_height))
 
         # block_height is incremented
         self.block_height = next_block_height
@@ -196,12 +171,12 @@ class Node:
     def pass_blocks(self, blocks: uint32):
         self.block_height = uint32(self.block_height + blocks)
 
-    def rewind(self, block_height: uint32):
+    async def rewind(self, block_height: uint32):
         new_br_list = list(filter(lambda br: br.height <= block_height, self.block_records))
         new_block_list = list(filter(lambda block: block.height <= block_height, self.blocks))
         self.block_records = new_br_list
         self.blocks = new_block_list
-        self.mempool_manager.coin_store.rewind(block_height)
+        await self.mempool_manager.coin_store.rollback_to_block(block_height)
         self.mempool_manager.mempool.spends = {}
         self.block_height = block_height
         if new_br_list:
@@ -231,16 +206,12 @@ class NodeClient:
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
     ) -> List[CoinRecord]:
-        return [
-            item[1]
-            for item in filter(
-                lambda coin_record_item: (coin_record_item[1].coin.puzzle_hash == puzzle_hash)
-                and not (coin_record_item[1].spent and not include_spent_coins)
-                and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
-                and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
-                self.service.mempool_manager.coin_store.coin_records.items(),
-            )
-        ]
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hash": puzzle_hash}
+        if start_height is not None:
+            kwargs["start_height"] = start_height
+        if end_height is not None:
+            kwargs["end_height"] = end_height
+        return await self.service.mempool_manager.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
     async def get_coin_records_by_puzzle_hashes(
         self,
@@ -249,56 +220,44 @@ class NodeClient:
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
     ) -> List[CoinRecord]:
-        return [
-            item[1]
-            for item in filter(
-                lambda coin_record_item: (coin_record_item[1].coin.puzzle_hash in puzzle_hashes)
-                and not (coin_record_item[1].spent and not include_spent_coins)
-                and (coin_record_item[1].confirmed_block_index >= start_height if start_height else True)
-                and (coin_record_item[1].confirmed_block_index < end_height if end_height else True),
-                self.service.mempool_manager.coin_store.coin_records.items(),
-            )
-        ]
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hashes": puzzle_hashes}
+        if start_height is not None:
+            kwargs["start_height"] = start_height
+        if end_height is not None:
+            kwargs["end_height"] = end_height
+        return await self.service.mempool_manager.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
-    async def get_block_record_by_height(self, height: uint32) -> BlockRecord:
+    async def get_block_record_by_height(self, height: uint32) -> TestBlockRecord:
         return list(filter(lambda block: block.height == height, self.service.block_records))[0]
 
-    async def get_block_record(self, header_hash: bytes32) -> BlockRecord:
+    async def get_block_record(self, header_hash: bytes32) -> TestBlockRecord:
         return list(filter(lambda block: block.header_hash == header_hash, self.service.block_records))[0]
 
-    async def get_block_records(self, start: uint32, end: uint32) -> List[BlockRecord]:
+    async def get_block_records(self, start: uint32, end: uint32) -> List[TestBlockRecord]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.block_records))
 
-    async def get_block(self, header_hash: bytes32) -> FullBlock:
-        selected_block: BlockRecord = list(
+    async def get_block(self, header_hash: bytes32) -> TestFullBlock:
+        selected_block: TestBlockRecord = list(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
         )[0]
         block_height: uint32 = selected_block.height
-        block: FullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
+        block: TestFullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
         return block
 
-    async def get_all_block(self, start: uint32, end: uint32) -> List[FullBlock]:
+    async def get_all_block(self, start: uint32, end: uint32) -> List[TestFullBlock]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
 
-    async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[Coin], List[Coin]]:
-        selected_block: BlockRecord = list(
+    async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+        selected_block: TestBlockRecord = list(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
         )[0]
         block_height: uint32 = selected_block.height
-        additions: List[Coin] = [
-            item[1]
-            for item in filter(
-                lambda coin_record_item: coin_record_item[1].confirmed_block_index == block_height,
-                self.service.mempool_manager.coin_store.coin_records.items(),
-            )
-        ]
-        removals: List[Coin] = [
-            item[1]
-            for item in filter(
-                lambda coin_record_item: coin_record_item[1].spent_block_index == block_height,
-                self.service.mempool_manager.coin_store.coin_records.items(),
-            )
-        ]
+        additions: List[CoinRecord] = await self.service.mempool_manager.coin_store.get_coins_added_at_height(
+            block_height
+        )  # noqa
+        removals: List[CoinRecord] = await self.service.mempool_manager.coin_store.get_coins_removed_at_height(
+            block_height
+        )  # noqa
         return additions, removals
 
     async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSolution]:
