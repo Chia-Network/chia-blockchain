@@ -84,7 +84,7 @@ class CoinStore:
 
 class FullBlock:
     def __init__(self, generator: BlockGenerator, height: uint32):
-        self.height = height
+        self.height = height # Note that height is not on a regular FullBlock
         self.transactions_generator = generator
 
 
@@ -275,14 +275,10 @@ class NodeClient:
         )[0]
         block_height: uint32 = selected_block.height
         block: FullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
-        delattr(block, "height")
         return block
 
     async def get_all_block(self, start: uint32, end: uint32) -> List[FullBlock]:
-        blocks = list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
-        for block in blocks:
-            delattr(block, "height")
-        return blocks
+        return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[Coin], List[Coin]]:
         selected_block: BlockRecord = list(
@@ -334,4 +330,4 @@ class NodeClient:
         if item is None:
             return None
         else:
-            return dict(item)
+            return item.__dict__
