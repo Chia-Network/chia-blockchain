@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-09 12:12\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -904,7 +904,7 @@ msgstr "کلید های سلسله مراتب قطعی(HD)، نوعی طرح ک�
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "دروکننده محیط کشت محلی"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1224,7 +1224,7 @@ msgstr "شناسه گره"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "شناسه گره"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -2056,7 +2056,7 @@ msgstr "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "ادرس استخر استخراج معین شده معتبر نیست. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
