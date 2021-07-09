@@ -84,7 +84,7 @@ class CoinStore:
 
 class FullBlock:
     def __init__(self, generator: BlockGenerator, height: uint32):
-        self.height = height # Note that height is not on a regular FullBlock
+        self.height = height  # Note that height is not on a regular FullBlock
         self.transactions_generator = generator
 
 
