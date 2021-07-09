@@ -108,7 +108,6 @@ class WalletNode:
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
-        self.new_peak_lock = asyncio.Lock()
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
@@ -154,7 +153,7 @@ class WalletNode:
         )
         path = path_from_root(self.root_path, db_path_replaced)
         mkdir(path.parent)
-
+        self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
         self.wallet_state_manager = await WalletStateManager.create(
             private_key, self.config, path, self.constants, self.server, self.root_path
