@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-08 11:39\n"
+"PO-Revision-Date: 2021-07-09 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1517,7 +1517,7 @@ msgstr "過去24小時有效的積分"
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr "農會"
+msgstr "礦池"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
@@ -1581,7 +1581,7 @@ msgstr "農會公鑰:"
 #: src/components/plotNFT/PlotNFTCard.tsx:326
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
-msgstr "農會："
+msgstr "礦池："
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
@@ -1883,7 +1883,7 @@ msgstr "跳過新增最終資料夾到收割機進行耕種"
 
 #: src/components/pool/PoolHero.tsx:26
 msgid "Smooth out your XCH farming rewards by joining a pool."
-msgstr "加入農會來獲得穩定的 XCH 獎勵。"
+msgstr "加入礦池來獲得穩定的 XCH 獎勵。"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
@@ -2057,7 +2057,7 @@ msgstr "農會網址無效. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr "農會網址需要使用https協議. {normalizedUrl}"
+msgstr "礦池網址需要使用https協議. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2069,7 +2069,7 @@ msgstr "農會網址需要使用https協議. {normalizedUrl}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
-msgstr "切換農會操作已被取消，請重試切換農會或自己的農會。"
+msgstr "切換礦池操作已被取消，請重試切換礦池或自聚礦池。"
 
 #: src/components/block/Block.jsx:302
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2516,7 +2516,7 @@ msgstr "您需要先領取你的獎勵"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
-msgstr "你需要 {currencyCode} 來加入農會。"
+msgstr "你需要 {currencyCode} 來加入礦池。"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
@@ -2540,7 +2540,7 @@ msgstr "你的收割機網路"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr "你的耕地NFT概觀"
+msgstr "您的礦池概觀"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2593,7 +2593,7 @@ msgstr "同步中"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
-msgstr "{0} 積分 {1} - {2} 小時前"
+msgstr "{0} 點 {1} - {2} 小時前"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 msgid "{currencyCode} Block Rewards"
