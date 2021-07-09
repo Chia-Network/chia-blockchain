@@ -96,7 +96,7 @@ rate_limits_other = {
     ProtocolMessageTypes.respond_peers_introducer: RLSettings(100, 1024 * 1024),
     ProtocolMessageTypes.farm_new_block: RLSettings(200, 200),
     ProtocolMessageTypes.request_plots: RLSettings(10, 10 * 1024 * 1024),
-    ProtocolMessageTypes.respond_plots: RLSettings(10, 10 * 1024 * 1024),
+    ProtocolMessageTypes.respond_plots: RLSettings(10, 100 * 1024 * 1024),
 }
 
 
