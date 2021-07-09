@@ -43,6 +43,8 @@ class FullNodeRpcApi:
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
+            "/get_coin_records_by_parent_id": self.get_coin_records_by_parent_id,
+            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             # Mempool
@@ -462,6 +464,47 @@ class FullNodeRpcApi:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
         return {"coin_record": coin_record}
+
+    async def get_coin_records_by_parent_id(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves the coins for a given parent coin ID, by default returns unspent coins.
+        """
+        if "parent_id" not in request:
+            raise ValueError("Parent ID not in request")
+        kwargs: Dict[str, Any] = {"include_spent_coins": False, "parent_id": hexstr_to_bytes(request["parent_id"])}
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
+
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_id(**kwargs)
+
+        return {"coin_records": coin_records}
+
+    async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves the coins for given parent coin IDs, by default returns unspent coins.
+        """
+        if "parent_ids" not in request:
+            raise ValueError("Parent IDs not in request")
+        kwargs: Dict[str, Any] = {
+            "include_spent_coins": False,
+            "parent_ids": [hexstr_to_bytes(ph) for ph in request["parent_ids"]],
+        }
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
+
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
+
+        return {"coin_records": coin_records}
 
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:

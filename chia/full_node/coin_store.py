@@ -192,6 +192,56 @@ class CoinStore:
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
         return list(coins)
 
+    # Checks DB and DiffStores for CoinRecords with parent_id and returns them
+    async def get_coin_records_by_parent_id(
+        self,
+        include_spent_coins: bool,
+        parent_id: bytes32,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2 ** 32) - 1),
+    ) -> List[CoinRecord]:
+
+        coins = set()
+        cursor = await self.coin_record_db.execute(
+            f"SELECT * from coin_record WHERE coin_parent=? AND confirmed_index>=? AND confirmed_index<? "
+            f"{'' if include_spent_coins else 'AND spent=0'}",
+            (parent_id.hex(), start_height, end_height),
+        )
+        rows = await cursor.fetchall()
+
+        await cursor.close()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+        return list(coins)
+
+    async def get_coin_records_by_parent_ids(
+        self,
+        include_spent_coins: bool,
+        parent_ids: List[bytes32],
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2 ** 32) - 1),
+    ) -> List[CoinRecord]:
+        if len(parent_ids) == 0:
+            return []
+
+        coins = set()
+        parent_ids_db = tuple([pid.hex() for pid in parent_ids])
+        cursor = await self.coin_record_db.execute(
+            f'SELECT * from coin_record WHERE coin_parent in ({"?," * (len(parent_ids_db) - 1)}?) '
+            f"AND confirmed_index>=? AND confirmed_index<? "
+            f"{'' if include_spent_coins else 'AND spent=0'}",
+            parent_ids_db + (start_height, end_height),
+        )
+
+        rows = await cursor.fetchall()
+
+        await cursor.close()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+        return list(coins)
+
     async def rollback_to_block(self, block_index: int):
         """
         Note that block_index can be negative, in which case everything is rolled back
