@@ -8,7 +8,7 @@ msgstr ""
 "Language: sq_AL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-08 23:52\n"
+"PO-Revision-Date: 2021-07-09 06:08\n"
 "Last-Translator: \n"
 "Language-Team: Albanian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -542,7 +542,7 @@ msgstr "Krijuar nga ne:"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr "Krijimi i Plotit NFT dhe Bashkimi me Polling"
+msgstr "Krijimi i Plotit NFT dhe Lidhja me Pollet"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
@@ -1586,7 +1586,7 @@ msgstr "Polli:"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
-msgstr "Bashkim"
+msgstr "Lidhur"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:42
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
