@@ -175,6 +175,26 @@ class WalletRpcClient(RpcClient):
             response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
         return TransactionRecord.from_json_dict(response["signed_tx"])
 
+    async def get_fee_rate_transactions(
+        self, wallet_id, additions: List[Dict], coins: List[Coin] = None
+    ) -> TransactionRecord:
+        # Converts bytes to hex for puzzle hashes
+        additions_hex = [{"amount": ad["amount"], "puzzlehash": ad["puzzlehash"].hex()} for ad in additions]
+        request = {"additions": additions_hex}
+        request["wallet_id"] = wallet_id
+        if coins is not None and len(coins) > 0:
+            coins_json = [c.to_json_dict() for c in coins]
+            request["coins"] = coins_json
+
+        response = await self.fetch("create_fee_rate_transactions", request)
+        return response
+
+    async def send_previously_created_transction(self, tx_id: str) -> TransactionRecord:
+        # Converts bytes to hex for puzzle hashes
+        request = {"tx_id": tx_id}
+        response = await self.fetch("send_fee_rate_transaction", request)
+        return response
+
     async def create_new_pool_wallet(
         self,
         target_puzzlehash: Optional[bytes32],

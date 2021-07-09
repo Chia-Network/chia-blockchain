@@ -38,3 +38,4 @@ class FeeStore:
             (type, bytes(fee_backup)),
         )
         await cursor.close()
+        await self.db.commit()

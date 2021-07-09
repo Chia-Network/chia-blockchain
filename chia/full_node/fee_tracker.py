@@ -63,7 +63,7 @@ class FeeStat:
     max_confirms: int
     fee_store: FeeStore
 
-    def __init__(self, buckets, sorted_buckets, max_periods, decay, scale, log, fee_store):
+    def __init__(self, buckets, sorted_buckets, max_periods, decay, scale, log, fee_store, my_type):
         self.buckets = buckets
         self.sorted_buckets = sorted_buckets
         self.confirmed_average = [[] for _ in range(0, max_periods)]
@@ -73,7 +73,7 @@ class FeeStat:
         self.max_confirms = self.scale * len(self.confirmed_average)
         self.log = log
         self.fee_store = fee_store
-        self.type = type
+        self.type = my_type
         self.max_periods = max_periods
 
         for i in range(0, max_periods):
@@ -169,21 +169,21 @@ class FeeStat:
         for i in range(0, self.max_periods):
             str_i_list_conf = []
             for j in range(0, len(self.confirmed_average[i])):
-                str_i_list_conf.append(float.hex(self.confirmed_average[i][j]))
+                str_i_list_conf.append(float.hex(float(self.confirmed_average[i][j])))
 
             str_confirmed_average.append(str_i_list_conf)
 
             str_i_list_fail = []
             for j in range(0, len(self.failed_average[i])):
-                str_i_list_fail.append(float.hex(self.failed_average[i][j]))
+                str_i_list_fail.append(float.hex(float(self.failed_average[i][j])))
 
             str_failed_average.append(str_i_list_fail)
 
         for i in range(0, len(self.tx_ct_avg)):
-            str_tx_ct_abg.append(float.hex(self.tx_ct_avg[i]))
+            str_tx_ct_abg.append(float.hex(float(self.tx_ct_avg[i])))
 
         for i in range(0, len(self.m_feerate_avg)):
-            str_m_feerate_avg.append(float.hex(self.m_feerate_avg[i]))
+            str_m_feerate_avg.append(float.hex(float(self.m_feerate_avg[i])))
 
         return FeeStatBackup(self.type, str_tx_ct_abg, str_confirmed_average, str_failed_average, str_m_feerate_avg)
 
@@ -357,13 +357,34 @@ class FeeTracker:
         assert len(self.sorted_buckets.keys()) == len(self.buckets)
 
         self.short_horizon = FeeStat(
-            self.buckets, self.sorted_buckets, SHORT_BLOCK_PERIODS, SHORT_DECAY, SHORT_SCALE, self.log, self.fee_store
+            self.buckets,
+            self.sorted_buckets,
+            SHORT_BLOCK_PERIODS,
+            SHORT_DECAY,
+            SHORT_SCALE,
+            self.log,
+            self.fee_store,
+            "short",
         )
         self.med_horizon = FeeStat(
-            self.buckets, self.sorted_buckets, MED_BLOCK_PERIODS, MED_DECAY, MED_SCALE, self.log, self.fee_store
+            self.buckets,
+            self.sorted_buckets,
+            MED_BLOCK_PERIODS,
+            MED_DECAY,
+            MED_SCALE,
+            self.log,
+            self.fee_store,
+            "medium",
         )
         self.long_horizon = FeeStat(
-            self.buckets, self.sorted_buckets, LONG_BLOCK_PERIODS, LONG_DECAY, LONG_SCALE, self.log, self.fee_store
+            self.buckets,
+            self.sorted_buckets,
+            LONG_BLOCK_PERIODS,
+            LONG_DECAY,
+            LONG_SCALE,
+            self.log,
+            self.fee_store,
+            "long",
         )
         fee_backup: Optional[FeeTrackerBackup] = await self.fee_store.get_stored_fee_data()
 

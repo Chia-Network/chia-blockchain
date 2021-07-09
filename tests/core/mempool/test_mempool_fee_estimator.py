@@ -2,8 +2,12 @@ import asyncio
 import logging
 from pathlib import Path
 from random import Random
+from typing import Optional
+
 import aiosqlite
 import pytest
+from aiosqlite import Connection
+
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate_store import FeeStore
@@ -191,6 +195,7 @@ class TestFeeEstimator:
         log = logging.getLogger(__name__)
         path = Path("./fee_test_db")
         db_connection = await aiosqlite.connect(path)
+        new_db_connection: Optional[Connection] = None
         try:
             db_wrapper = DBWrapper(db_connection)
             fee_store = await FeeStore.create(db_wrapper)
@@ -241,8 +246,25 @@ class TestFeeEstimator:
             estimates = estimator.get_estimates(ignore_mempool=True)
             assert float(estimates.short) > float(estimates.medium)
             assert float(estimates.medium) > float(estimates.long)
+
+            # Validate that disk backup works
+            await fee_tracker.shutdown()
+            await db_connection.close()
+
+            new_db_connection = await aiosqlite.connect(path)
+            new_db_wrapper = DBWrapper(new_db_connection)
+            new_fee_store = await FeeStore.create(new_db_wrapper)
+            new_fee_tracker = await FeeTracker.create(log, new_fee_store)
+            new_mpool = MempoolManager(coin_store, test_constants, bt.config, new_fee_tracker)
+
+            new_estimator = SmartFeeEstimator(new_mpool, log)
+            new_estimates = new_estimator.get_estimates(ignore_mempool=True)
+            assert estimates == new_estimates
         except BaseException:
             raise
         finally:
-            await db_connection.close()
+            if db_connection.is_alive():
+                await db_connection.close()
+            if new_db_connection is not None:
+                await new_db_connection.close()
             path.unlink()

@@ -2,7 +2,6 @@ import asyncio
 import pytest
 import time
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.condition_costs import ConditionCost
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol

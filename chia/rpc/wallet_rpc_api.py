@@ -10,6 +10,9 @@ from blspy import PrivateKey, G1Element
 
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -18,9 +21,9 @@ from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.generator_types import BlockGenerator
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
@@ -115,7 +118,8 @@ class WalletRpcApi:
             "/pw_self_pool": self.pw_self_pool,
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
-            "/construct_transaction": self.construct_transaction,
+            "/create_fee_rate_transactions": self.create_fee_rate_transactions,
+            "/send_fee_rate_transaction": self.send_fee_rate_transaction,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -693,7 +697,27 @@ class WalletRpcApi:
             "address": address,
         }
 
-    async def construct_transaction(self, request):
+    def get_clvm_cost(self, spend_bundle):
+        program: BlockGenerator = simple_solution_generator(spend_bundle)
+        # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+        result: NPCResult = get_name_puzzle_conditions(
+            program,
+            self.service.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=self.service.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            safe_mode=True,
+        )
+        cost_result: uint64 = calculate_cost_of_program(
+            program.program, result, self.service.wallet_state_manager.constants.COST_PER_BYTE
+        )
+        return cost_result
+
+    async def send_fee_rate_transaction(self, request):
+        tx_id = request["tx_id"]
+        tx = self.service.wallet_state_manager.constructed_transactions[hexstr_to_bytes(tx_id)]
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return
+
+    async def create_fee_rate_transactions(self, request):
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
@@ -702,28 +726,30 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if not isinstance(request["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
+        if "additions" not in request or len(request["additions"]) < 1:
+            raise ValueError("Specify additions list")
 
-        amount: uint64 = uint64(request["amount"])
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        new_coins = request["additions"]
+        for coin in new_coins:
+            coin["puzzlehash"] = hexstr_to_bytes(coin["puzzlehash"])
+
         config = load_config(self.service.root_path, "config.yaml")
         self_hostname = config["self_hostname"]
         rpc_port = config["full_node"]["rpc_port"]
         full_node_rpc = await FullNodeRpcClient.create(self_hostname, rpc_port, self.service.root_path, config)
         fee_estimates = await full_node_rpc.get_fee_estimates()
         if fee_estimates is None:
-            return {"error": "unable to get fee estimates"}
-        short_fee_rate = fee_estimates["short"]
-        medium_fee_rate = fee_estimates["medium"]
-        long_fee_rate = fee_estimates["long"]
-        breakpoint()
-        new_coins = [{"puzzlehash": puzzle_hash, "amount": amount}]
-        short_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins, short_fee_rate)
+            raise ValueError("Wallet was not able to get fee estimates from the Full Node")
+
+        short_fee_rate = float(fee_estimates["short"])
+        medium_fee_rate = float(fee_estimates["medium"])
+        long_fee_rate = float(fee_estimates["long"])
+
+        short_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins.copy(), short_fee_rate)
         short_tx_id = token_bytes()
-        medium_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins, medium_fee_rate)
+        medium_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins.copy(), medium_fee_rate)
         medium_tx_id = token_bytes()
-        long_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins, long_fee_rate)
+        long_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins.copy(), long_fee_rate)
         long_tx_id = token_bytes()
 
         self.service.wallet_state_manager.clear_constructed_transactions()
@@ -731,10 +757,18 @@ class WalletRpcApi:
         self.service.wallet_state_manager.add_constructed_transaction(medium_tx_id, medium_tx)
         self.service.wallet_state_manager.add_constructed_transaction(long_tx_id, long_tx)
 
-        short_json = {
-            "tx_id": short_tx_id.hex(),
-        }
-        return {short_json}
+        short_cost = self.get_clvm_cost(short_tx.spend_bundle)
+        medium_cost = self.get_clvm_cost(medium_tx.spend_bundle)
+        long_cost = self.get_clvm_cost(long_tx.spend_bundle)
+        short_fee_rate = short_tx.fee_amount / short_cost
+        medium_fee_rate = medium_tx.fee_amount / medium_cost
+        long_fee_rate = long_tx.fee_amount / long_cost
+
+        short_json = {"tx_id": short_tx_id.hex(), "fee": short_tx.fee_amount, "fee_rate": short_fee_rate}
+        medium_json = {"tx_id": medium_tx_id.hex(), "fee": medium_tx.fee_amount, "fee_rate": medium_fee_rate}
+        long_json = {"tx_id": long_tx_id.hex(), "fee": long_tx.fee_amount, "fee_rate": long_fee_rate}
+
+        return {"additions": new_coins, "short": short_json, "medium": medium_json, "long": long_json}
 
     async def send_transaction(self, request):
         assert self.service.wallet_state_manager is not None
@@ -1210,9 +1244,9 @@ class WalletRpcApi:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount})
 
-        fee = 0.0
-        if "fee" in request:
-            fee = float(request["fee"])
+        fee_rate = 0.0
+        if "fee_rate" in request:
+            fee_rate = float(request["fee_rate"])
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
@@ -1224,7 +1258,7 @@ class WalletRpcApi:
                 new_coins.extend(additional_outputs)
                 signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                     new_coins,
-                    fee,
+                    fee_rate,
                     coins=coins,
                 )
         else:
@@ -1232,7 +1266,7 @@ class WalletRpcApi:
             new_coins.extend(additional_outputs)
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
                 new_coins,
-                fee,
+                fee_rate,
                 coins=coins,
             )
         return {"signed_tx": signed_tx}

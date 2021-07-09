@@ -1,4 +1,6 @@
 import asyncio
+
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config
 import logging
 from pathlib import Path
@@ -299,6 +301,121 @@ class TestWalletRpc:
 
             await client.delete_all_keys()
 
+            assert len(await client.get_public_keys()) == 0
+        finally:
+            # Checks that the RPC manages to stop the node
+            client.close()
+            client_node.close()
+            await client.await_closed()
+            await client_node.await_closed()
+            await rpc_cleanup()
+            await rpc_cleanup_node()
+
+    @pytest.mark.asyncio
+    async def test_generate_transaction_with_fee(self, two_wallet_nodes):
+        test_rpc_port = uint16(21529)
+        test_rpc_port_node = uint16(21530)
+        num_blocks = 21
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        initial_funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        wallet_rpc_api = WalletRpcApi(wallet_node)
+
+        config = bt.config
+        hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+
+        def stop_node_cb():
+            pass
+
+        full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
+
+        rpc_cleanup_node = await start_rpc_server(
+            full_node_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port_node,
+            stop_node_cb,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
+        rpc_cleanup = await start_rpc_server(
+            wallet_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            stop_node_cb,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
+
+        client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
+        config = load_config(wallet_node.root_path, "config.yaml")
+        config["full_node"]["rpc_port"] = f"{test_rpc_port_node}"
+        save_config(wallet_node.root_path, "config.yaml", config)
+
+        # Set daemon ssl cert to be the same, so that wallet can connect to the full_node
+        full_node_crt_path = bt.root_path / config["daemon_ssl"]["private_crt"]
+        full_node_key_path = bt.root_path / config["daemon_ssl"]["private_key"]
+        full_node_ca = bt.root_path / config["private_ssl_ca"]["crt"]
+        full_node_ca_key = bt.root_path / config["private_ssl_ca"]["key"]
+
+        wallet_crt_path = wallet_node.root_path / config["daemon_ssl"]["private_crt"]
+        wallet_key_path = wallet_node.root_path / config["daemon_ssl"]["private_key"]
+        wallet_private_ca = wallet_node.root_path / config["private_ssl_ca"]["crt"]
+        wallet_private_ca_key = wallet_node.root_path / config["private_ssl_ca"]["key"]
+
+        wallet_crt_path.write_text(full_node_crt_path.read_text())
+        wallet_key_path.write_text(full_node_key_path.read_text())
+        wallet_private_ca.write_text(full_node_ca.read_text())
+        wallet_private_ca_key.write_text(full_node_ca_key.read_text())
+
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+
+        try:
+            send_amount = 1000
+            ph = await wallet_2.get_new_puzzlehash()
+            fee_rates = await client.get_fee_rate_transactions(1, [{"puzzlehash": ph, "amount": send_amount}])
+            assert len(fee_rates["additions"]) == 1
+            assert fee_rates["additions"][0]["amount"] == send_amount
+            assert hexstr_to_bytes(fee_rates["additions"][0]["puzzlehash"]) == ph
+            assert fee_rates["short"]["fee"] == 0
+            assert fee_rates["medium"]["fee"] == 0
+            assert fee_rates["long"]["fee"] == 0
+            tx_id = fee_rates["short"]["tx_id"]
+
+            response = await client.send_previously_created_transction(tx_id)
+            success = response["success"]
+            assert success
+
+            await asyncio.sleep(3)
+            for i in range(0, 3):
+                await full_node_api.farm_new_transaction_block(32 * b"\0")
+
+            await time_out_assert(5, wallet_2.get_confirmed_balance, send_amount)
+
+            await client.delete_all_keys()
             assert len(await client.get_public_keys()) == 0
         finally:
             # Checks that the RPC manages to stop the node

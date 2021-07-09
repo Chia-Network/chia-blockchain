@@ -30,9 +30,7 @@ class SmartFeeEstimator:
         return -1
 
     def get_estimates(self, ignore_mempool=False) -> FeeEstimate:
-        if ignore_mempool is False and (
-            self.mempool_manager.peak is None or self.mempool_manager.fee_tracker.latest_seen_height == 0
-        ):
+        if ignore_mempool is False and (self.mempool_manager.fee_tracker.latest_seen_height == 0):
             return FeeEstimate("no enough data", "-1", "-1", "-1")
 
         tracking_length = (
