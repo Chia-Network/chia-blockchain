@@ -21,7 +21,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 class FullNodeRpcApi:
     def __init__(self, service: FullNode):
         self.service = service
-        self.service_name = "chia_full_node"
+        self.service_name = "silicoin_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 
     def get_routes(self) -> Dict[str, Callable]:

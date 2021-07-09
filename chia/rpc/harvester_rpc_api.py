@@ -7,7 +7,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 class HarvesterRpcApi:
     def __init__(self, harvester: Harvester):
         self.service = harvester
-        self.service_name = "chia_harvester"
+        self.service_name = "silicoin_harvester"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
