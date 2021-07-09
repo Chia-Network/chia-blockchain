@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-09 06:08\n"
+"PO-Revision-Date: 2021-07-09 12:12\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1024,7 +1024,7 @@ msgstr "加入礦池並獲得公平的 XCH 耕耘獎勵。平均回報相同但�
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:59
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr "加入礦池並獲得持續的 XCH 耕種獎勵。雖然平均報酬一樣但波動較小相對穩定。分配耕地到耕地 NFT。你可以更輕鬆的轉換礦池而不用重新進行耕地。"
+msgstr "加入礦池以獲得持續性的 XCH 耕耘獎勵。。分配耕地到耕地 NFT。您可以簡單的免重新耕地切換礦池。"
 
 #: src/components/plot/add/PlotAddNFT.tsx:133
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
@@ -1262,7 +1262,7 @@ msgstr "沒找到的耕地"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:184
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr "請注意，這不會變更您的農會支付位址。這只會影響舊的耕地格式和 0.25XCH 的農會耕地獎勵。"
+msgstr "注意，這不會變更您的礦池支付位址。這只會影響舊的格式耕地和 0.25XCH 的池耕地獎勵。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
@@ -1575,7 +1575,7 @@ msgstr "礦池未提供 target_puzzle_hash。"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr "農會公鑰:"
+msgstr "礦池公鑰:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:274
 #: src/components/plotNFT/PlotNFTCard.tsx:326
@@ -1826,7 +1826,7 @@ msgstr "已選擇"
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
 msgid "Self Pooling"
-msgstr "正在耕種自己的礦池"
+msgstr "正在自己的礦池中耕種"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
@@ -2049,11 +2049,11 @@ msgstr "節點同步中，這代表正從其他節點中下載區塊，直到到
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr "農會網址：「 {normalizedUrl} 」錯誤。這是農會嗎？錯誤碼： {0}"
+msgstr "礦池網址：「 {normalizedUrl} 」錯誤。這是礦池嗎？錯誤碼： {0}"
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr "農會網址無效. {normalizedUrl}"
+msgstr "礦池網址無效. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
@@ -2472,7 +2472,7 @@ msgstr "您處於待確認的狀態。請等待確認"
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr "你目前不在自己的農會。"
+msgstr "你目前不在自己的礦池"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:412
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
