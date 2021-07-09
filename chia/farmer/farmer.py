@@ -57,6 +57,22 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
 
 
+class HarvesterCacheEntry:
+    def __init__(self):
+        self.data: Optional[dict] = None
+        self.last_update: float = 0
+
+    def set_data(self, data):
+        self.data = data
+        self.last_update = time.time()
+
+    def needs_update(self):
+        return time.time() - self.last_update > UPDATE_HARVESTER_CACHE_INTERVAL
+
+    def expired(self):
+        return time.time() - self.last_update > UPDATE_HARVESTER_CACHE_INTERVAL * 10
+
+
 class Farmer:
     def __init__(
         self,
@@ -132,7 +148,7 @@ class Farmer:
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
 
-        self.harvester_cache: Dict[str, Dict[str, Tuple[Optional[Dict], float]]] = {}
+        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
     async def _start(self):
         self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
@@ -537,9 +553,8 @@ class Farmer:
         for host, host_cache in self.harvester_cache.items():
             remove_peers = []
             for peer_id, peer_cache in host_cache.items():
-                _, last_update = peer_cache
-                # If the peer cache hasn't been updated for 10x interval, drop it since the harvester doesn't respond
-                if time.time() - last_update > UPDATE_HARVESTER_CACHE_INTERVAL * 10:
+                # If the peer cache is expired it means the harvester didn't respond for too long
+                if peer_cache.expired():
                     remove_peers.append(peer_id)
             for key in remove_peers:
                 del host_cache[key]
@@ -553,17 +568,14 @@ class Farmer:
             if connection.connection_type != NodeType.HARVESTER:
                 continue
             cache_entry = await self.get_cached_harvesters(connection)
-            if time.time() - cache_entry[1] > UPDATE_HARVESTER_CACHE_INTERVAL:
+            if cache_entry.needs_update():
                 self.log.debug(f"update_cached_harvesters update harvester: {connection.peer_node_id}")
                 response = await connection.request_plots(
                     harvester_protocol.RequestPlots(), timeout=UPDATE_HARVESTER_CACHE_INTERVAL
                 )
                 if response is not None:
                     if isinstance(response, harvester_protocol.RespondPlots):
-                        self.harvester_cache[connection.peer_host][connection.peer_node_id.hex()] = (
-                            response.to_json_dict(),
-                            time.time(),
-                        )
+                        cache_entry.set_data(response.to_json_dict())
                         self.log.debug(f"update_cached_harvesters cache updated: {connection.peer_node_id}")
                     else:
                         self.log.error(
@@ -575,18 +587,15 @@ class Farmer:
                         "Harvester did not respond. You might need to update harvester to the latest version"
                     )
 
-    async def get_cached_harvesters(self, connection: WSChiaConnection) -> Tuple[Optional[Dict], float]:
+    async def get_cached_harvesters(self, connection: WSChiaConnection) -> HarvesterCacheEntry:
         host_cache = self.harvester_cache.get(connection.peer_host)
         if host_cache is None:
             host_cache = {}
             self.harvester_cache[connection.peer_host] = host_cache
         node_cache = host_cache.get(connection.peer_node_id.hex())
         if node_cache is None:
-            node_cache = (
-                None,
-                0,
-            )
-            self.harvester_cache[connection.peer_host][connection.peer_node_id.hex()] = node_cache
+            node_cache = HarvesterCacheEntry()
+            host_cache[connection.peer_node_id.hex()] = node_cache
         return node_cache
 
     async def get_harvesters(self) -> Dict:
@@ -596,8 +605,8 @@ class Farmer:
                 continue
             self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
             cache_entry = await self.get_cached_harvesters(connection)
-            if cache_entry[0] is not None:
-                harvester_object: dict = dict(cache_entry[0])
+            if cache_entry.data is not None:
+                harvester_object: dict = dict(cache_entry.data)
                 harvester_object["connection"] = {
                     "node_id": connection.peer_node_id.hex(),
                     "host": connection.peer_host,
