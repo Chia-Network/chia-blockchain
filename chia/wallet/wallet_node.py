@@ -59,29 +59,6 @@ from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_blockchain import ReceiveBlockResult
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.util.profiler import profile_task
-from functools import wraps
-
-
-def uses_keychain_proxy():
-    """
-    Decorator which establishes a KeychainProxy connection if necessary
-    """
-
-    def wrapper(method):
-        @wraps(method)
-        async def inner(self, *args, **kwargs):
-            if not self.keychain_proxy:
-                if self.local_keychain:
-                    self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
-                else:
-                    self.keychain_proxy = await connect_to_keychain_and_validate(
-                        self.root_path, self.log, self.local_keychain
-                    )
-            return await method(self, *args, **kwargs)
-
-        return inner
-
-    return wrapper
 
 
 class WalletNode:
@@ -146,12 +123,21 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
-    @uses_keychain_proxy()
+    async def ensure_keychain_proxy(self):
+        if not self.keychain_proxy:
+            if self.local_keychain:
+                self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
+            else:
+                self.keychain_proxy = await connect_to_keychain_and_validate(
+                    self.root_path, self.log, self.local_keychain
+                )
+        return self.keychain_proxy
+
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         key: PrivateKey = None
         try:
-            assert self.keychain_proxy is not None  # An offering to the mypy gods
-            key = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
+            keychain_proxy = await self.ensure_keychain_proxy()
+            key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
         except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
