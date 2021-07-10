@@ -6,7 +6,7 @@ import argparse
 import testconfig
 import logging
 import subprocess
-from typing import Optional
+from typing import Optional, Any
 from pathlib import Path
 from typing import List, Dict
 
@@ -38,17 +38,17 @@ def read_file(filename) -> Optional[str]:
     return None
 
 
-# input file
-def workflow_yaml_template_text(os) -> str:
+# Input file
+def workflow_yaml_template_text(os: str) -> str:
     return Path(f"runner-templates/build-test-{os}").read_text()
 
 
-# output files
-def workflow_yaml_file(dir: Path, os: str, test_name: str) -> Path:
+# Output files
+def workflow_yaml_file(dir, os: str, test_name: str) -> Path:
     return Path(dir / f"build-test-{os}-{test_name}.yml")
 
 
-# Function from test dir to test name
+# String function from test dir to test name
 def test_name(dir: str) -> str:
     return str(dir).replace("/", "-")
 
@@ -82,8 +82,8 @@ default_replacements = {
 # -----
 
 
-# replace with update_config
-def generate_replacements(defaults: Dict, conf: Dict, dir: Path, test_files: List[Path]) -> Dict:
+# Replace with update_config
+def generate_replacements(defaults: Dict[str, Any], conf: Dict[str, Any], dir: Path, test_files: List[Path]) -> Dict[str, Any]:
     assert len(test_files) > 0
     replacements = dict(defaults)
 
@@ -107,8 +107,8 @@ def generate_replacements(defaults: Dict, conf: Dict, dir: Path, test_files: Lis
     return replacements
 
 
-# overwrite with directory specific values
-def update_config(parent, child) -> Dict:
+# Overwrite with directory specific values
+def update_config(parent, child) -> Dict[str, Any]:
     if child is None:
         return parent
     conf = child

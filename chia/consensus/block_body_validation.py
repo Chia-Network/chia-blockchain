@@ -247,6 +247,9 @@ async def validate_block_body(
         # We will not even reach here because Coins do type checking (uint64)
         for coin in additions + coinbase_additions:
             additions_dic[coin.name()] = coin
+            if coin.amount < 0:
+                return Err.COIN_AMOUNT_NEGATIVE, None
+
             if coin.amount > constants.MAX_COIN_AMOUNT:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None
 
@@ -327,7 +330,10 @@ async def validate_block_body(
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
                     assert curr_block_generator is not None and curr.transactions_info is not None
                     curr_npc_result = get_name_puzzle_conditions(
-                        curr_block_generator, min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost), False
+                        curr_block_generator,
+                        min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
+                        cost_per_byte=constants.COST_PER_BYTE,
+                        safe_mode=False,
                     )
                     removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
                 else:
@@ -382,6 +388,7 @@ async def validate_block_body(
                     # This coin is not in the current heaviest chain, so it must be in the fork
                     if rem not in additions_since_fork:
                         # Check for spending a coin that does not exist in this fork
+                        log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
                         return Err.UNKNOWN_UNSPENT, None
                     new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(

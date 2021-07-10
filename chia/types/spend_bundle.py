@@ -6,6 +6,7 @@ from blspy import AugSchemeMPL, G2Element
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_solution import CoinSolution
 
@@ -40,36 +41,21 @@ class SpendBundle(Streamable):
         return items
 
     def removals(self) -> List[Coin]:
-        """ This should be used only by wallet"""
+        """This should be used only by wallet"""
         return [_.coin for _ in self.coin_solutions]
 
     def fees(self) -> int:
-        """ Unsafe to use for fees validation!!! """
+        """Unsafe to use for fees validation!!!"""
         amount_in = sum(_.amount for _ in self.removals())
         amount_out = sum(_.amount for _ in self.additions())
 
         return amount_in - amount_out
 
-    def removal_names(self) -> List[bytes32]:
-        return [_.coin.name() for _ in self.coin_solutions]
-
-    def addition_names(self) -> List[bytes32]:
-        return [_.name() for _ in self.additions()]
-
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def not_ephemeral_spends(self) -> List[Coin]:
-        all_removals = self.removals()
-        all_additions = self.additions()
-        result: List[Coin] = []
-
-        for rem in all_removals:
-            if rem in all_additions:
-                continue
-            result.append(rem)
-
-        return result
+    def debug(self, agg_sig_additional_data=bytes([3] * 32)) -> None:
+        debug_spend_bundle(self, agg_sig_additional_data)
 
     def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()

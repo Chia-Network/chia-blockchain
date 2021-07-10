@@ -1,0 +1,172 @@
+name: Linux .rpm installer on Python 3.8
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+        - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: Linux .rpm installer on Python 3.8
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [3.8]
+        os: [ubuntu-18.04]
+
+    steps:
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: styfle/cancel-workflow-action@0.9.0
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Setup Python environment
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache npm
+      uses: actions/cache@v2.1.6
+      env:
+        cache-name: cache-node-modules
+      with:
+        # npm cache files are stored in `~/.npm` on Linux/macOS
+        path: ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2.1.6
+      with:
+        # Note that new runners may break this https://github.com/actions/cache/issues/292
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
+    - name: Get version number
+      id: version_number
+      run: |
+        python3 -m venv ../venv
+        . ../venv/bin/activate
+        pip3 install setuptools_scm
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$(python3 ./build_scripts/installer-version.py)"
+        deactivate
+
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_SECRET
+        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+      env:
+        SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
+
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        BUILD_VDF_CLIENT: "N"
+      run: |
+        sh install.sh
+
+    - name: Setup Node 12.x
+      uses: actions/setup-node@v2.1.5
+      with:
+        node-version: '12.x'
+
+    - name: Build .rpm package
+      run: |
+        . ./activate
+        sudo apt-get -y install rpm
+        ldd --version
+        cd ./chia-blockchain-gui
+        git status
+        cd ../build_scripts
+        sh build_linux_rpm.sh amd64
+
+    - name: Upload Linux artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Linux-Installers
+        path: ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Configure AWS Credentials
+      if: steps.check_secrets.outputs.HAS_SECRET
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_SECRET
+      env:
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+          ls ${{ github.workspace }}/build_scripts/final_installer/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/builds/
+
+    - name: Create Checksums
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+         ls ${{ github.workspace }}/build_scripts/final_installer/
+         sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm > ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.sha256
+         ls ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Install py3createtorrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create .rpm torrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm -o ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm
+          ls
+
+    - name: Upload Release Files
+      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
+      run: |
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm s3://download-chia-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.sha256 s3://download-chia-net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.torrent s3://download-chia-net/torrents/
+
+    - name: Get tag name
+      if: startsWith(github.ref, 'refs/tags/')
+      id: tag-name
+      run: |
+          echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
+          echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+
+    - name: Mark installer complete
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-linux-rpm

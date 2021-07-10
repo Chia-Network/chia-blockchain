@@ -7,6 +7,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import Message
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -59,11 +60,24 @@ class TestTransactions:
         response = await full_node_api.send_transaction(spend)
         assert wallet_protocol.TransactionAck.from_bytes(response.data).status == MempoolInclusionStatus.FAILED
 
-        new_spend = full_node_protocol.NewTransaction(tx.spend_bundle.name(), 1, 0)
-        response = await full_node_api.new_transaction(new_spend)
-        assert response is None
-
         peer = full_node_server.all_connections[node_id]
+        new_spend = full_node_protocol.NewTransaction(tx.spend_bundle.name(), 1, 0)
+        await full_node_api.new_transaction(new_spend, peer=peer)
+
+        async def new_transaction_not_requested(incoming):
+            await asyncio.sleep(3)
+            while not incoming.empty():
+                response, peer = await incoming.get()
+                if (
+                    response is not None
+                    and isinstance(response, Message)
+                    and response.type == ProtocolMessageTypes.request_transaction.value
+                ):
+                    return False
+            return True
+
+        await time_out_assert(10, new_transaction_not_requested, True, incoming_queue)
+
         new_spend = full_node_protocol.RespondTransaction(tx.spend_bundle)
         response = await full_node_api.respond_transaction(new_spend, peer=peer)
         assert response is None
@@ -75,9 +89,22 @@ class TestTransactions:
                 break
 
         new_spend = full_node_protocol.NewTransaction(tx.spend_bundle.name(), 1, 0)
-        response = await full_node_api.new_transaction(new_spend)
-        assert response is not None
-        assert ProtocolMessageTypes(response.type) == ProtocolMessageTypes.request_transaction
+        await full_node_api.new_transaction(new_spend, peer)
+
+        async def new_spend_requested(incoming, new_spend):
+            while not incoming.empty():
+                response, peer = await incoming.get()
+                if (
+                    response is not None
+                    and isinstance(response, Message)
+                    and response.type == ProtocolMessageTypes.request_transaction.value
+                ):
+                    request = full_node_protocol.RequestTransaction.from_bytes(response.data)
+                    if request.transaction_id == new_spend.transaction_id:
+                        return True
+            return False
+
+        await time_out_assert(10, new_spend_requested, True, incoming_queue, new_spend)
 
         tx: TransactionRecord = await wallet.generate_signed_transaction(100, ph, 0)
         spend = wallet_protocol.SendTransaction(tx.spend_bundle)

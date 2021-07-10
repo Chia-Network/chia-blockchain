@@ -4,7 +4,7 @@ from blspy import G1Element
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -96,13 +96,9 @@ def created_outputs_for_conditions_dict(
 ) -> List[Coin]:
     output_coins = []
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
-        # TODO: check condition very carefully
-        # (ensure there are the correct number and type of parameters)
-        # maybe write a type-checking framework for conditions
-        # and don't just fail with asserts
         puzzle_hash, amount_bin = cvp.vars[0], cvp.vars[1]
         amount = int_from_bytes(amount_bin)
-        coin = Coin(input_coin_name, puzzle_hash, amount)
+        coin = Coin(input_coin_name, puzzle_hash, uint64(amount))
         output_coins.append(coin)
     return output_coins
 
@@ -176,8 +172,8 @@ def puzzle_announcement_names_for_conditions_dict(
 
 
 def conditions_dict_for_solution(
-    puzzle_reveal: Program,
-    solution: Program,
+    puzzle_reveal: SerializedProgram,
+    solution: SerializedProgram,
     max_cost: int,
 ) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionWithArgs]]], uint64]:
     error, result, cost = conditions_for_solution(puzzle_reveal, solution, max_cost)
@@ -187,8 +183,8 @@ def conditions_dict_for_solution(
 
 
 def conditions_for_solution(
-    puzzle_reveal: Program,
-    solution: Program,
+    puzzle_reveal: SerializedProgram,
+    solution: SerializedProgram,
     max_cost: int,
 ) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution

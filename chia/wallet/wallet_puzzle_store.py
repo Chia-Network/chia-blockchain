@@ -17,6 +17,8 @@ log = logging.getLogger(__name__)
 class WalletPuzzleStore:
     """
     WalletPuzzleStore keeps track of all generated puzzle_hashes and their derivation path / wallet.
+    This is only used for HD wallets where each address is derived from a public key. Otherwise, use the
+    WalletInterestedStore to keep track of puzzle hashes which we are interested in.
     """
 
     db_connection: aiosqlite.Connection
@@ -77,11 +79,14 @@ class WalletPuzzleStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
+    async def add_derivation_paths(self, records: List[DerivationRecord], in_transaction=False) -> None:
         """
         Insert many derivation paths into the database.
         """
-        async with self.db_wrapper.lock:
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
             sql_records = []
             for record in records:
                 self.all_puzzle_hashes.add(record.puzzle_hash)
@@ -102,7 +107,10 @@ class WalletPuzzleStore:
             )
 
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def get_derivation_record(self, index: uint32, wallet_id: uint32) -> Optional[DerivationRecord]:
         """
@@ -120,11 +128,11 @@ class WalletPuzzleStore:
 
         if row is not None and row[0] is not None:
             return DerivationRecord(
-                row[0],
-                bytes.fromhex(row[2]),
+                uint32(row[0]),
+                bytes32.fromhex(row[2]),
                 G1Element.from_bytes(bytes.fromhex(row[1])),
-                row[3],
-                row[4],
+                WalletType(row[3]),
+                uint32(row[4]),
             )
 
         return None
@@ -142,11 +150,11 @@ class WalletPuzzleStore:
 
         if row is not None and row[0] is not None:
             return DerivationRecord(
-                row[0],
-                bytes.fromhex(row[2]),
+                uint32(row[0]),
+                bytes32.fromhex(row[2]),
                 G1Element.from_bytes(bytes.fromhex(row[1])),
-                row[3],
-                row[4],
+                WalletType(row[3]),
+                uint32(row[4]),
             )
 
         return None

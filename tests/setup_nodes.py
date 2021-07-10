@@ -1,5 +1,6 @@
 import asyncio
 import signal
+
 from secrets import token_bytes
 from typing import Dict, List, Optional, AsyncGenerator, Tuple, Any
 
@@ -17,7 +18,7 @@ from chia.simulator.start_simulator import service_kwargs_for_full_node_simulato
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.block_tools import BlockTools, test_constants
+from tests.block_tools import BlockTools, test_constants
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic
@@ -84,6 +85,7 @@ async def setup_full_node(
         config["introducer_peer"]["port"] = introducer_port
     else:
         config["introducer_peer"] = None
+    config["dns_servers"] = []
     config["port"] = port
     config["rpc_port"] = port + 1000
     overrides = config["network_overrides"]["constants"][config["selected_network"]]

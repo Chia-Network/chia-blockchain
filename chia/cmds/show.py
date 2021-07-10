@@ -28,6 +28,7 @@ async def show_async(
     from chia.util.config import load_config
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
+    from chia.util.misc import format_bytes
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -40,7 +41,7 @@ async def show_async(
             blockchain_state = await client.get_blockchain_state()
             if blockchain_state is None:
                 print("There is no blockchain found yet. Try again shortly")
-                return
+                return None
             peak: Optional[BlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]
@@ -49,18 +50,14 @@ async def show_async(
             total_iters = peak.total_iters if peak is not None else 0
             num_blocks: int = 10
 
-            if sync_mode:
-                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
-                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
-                print(
-                    "Current Blockchain Status: Full Node syncing to block",
-                    sync_max_block,
-                    "\nCurrently synced to block:",
-                    sync_current_block,
-                )
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
                 print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
+            elif peak is not None and sync_mode:
+                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
+                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
+                print(f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block}.")
+                print("Peak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
@@ -85,12 +82,7 @@ async def show_async(
                 )
 
                 print("Estimated network space: ", end="")
-                network_space_human_readable = blockchain_state["space"] / 1024 ** 4
-                if network_space_human_readable >= 1024:
-                    network_space_human_readable = network_space_human_readable / 1024
-                    print(f"{network_space_human_readable:.3f} PiB")
-                else:
-                    print(f"{network_space_human_readable:.3f} TiB")
+                print(format_bytes(blockchain_state["space"]))
                 print(f"Current difficulty: {difficulty}")
                 print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
                 print("Total iterations since the start of the blockchain:", total_iters)
@@ -261,7 +253,7 @@ async def show_async(
                 print("Block with header hash", block_header_hash_by_height, "not found")
 
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if full node rpc is running at {rpc_port}")
             print("This is normal if full node is still starting up")
         else:

@@ -39,7 +39,7 @@ async def async_start(root_path: Path, group: List[str], restart: bool) -> None:
     daemon = await create_start_daemon_connection(root_path)
     if daemon is None:
         print("Failed to create the chia daemon")
-        return
+        return None
 
     for service in services_for_groups(group):
         if await daemon.is_running(service_name=service):
@@ -56,11 +56,13 @@ async def async_start(root_path: Path, group: List[str], restart: bool) -> None:
                 continue
         print(f"{service}: ", end="", flush=True)
         msg = await daemon.start_service(service_name=service)
-        success = msg["data"]["success"]
+        success = msg and msg["data"]["success"]
 
         if success is True:
             print("started")
         else:
-            error = msg["data"]["error"]
+            error = "no response"
+            if msg:
+                error = msg["data"]["error"]
             print(f"{service} failed to start. Error: {error}")
     await daemon.close()

@@ -27,5 +27,5 @@ def services_for_groups(groups: List[str]) -> Generator[str, None, None]:
             yield service
 
 
-def validate_service(service) -> bool:
+def validate_service(service: str) -> bool:
     return any(service in _ for _ in SERVICES_FOR_GROUP.values())

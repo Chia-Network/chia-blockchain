@@ -1,4 +1,4 @@
-name: Linux installer on Python 3.8
+name: MacOS core-daemon Tests
 
 on:
   push:
@@ -12,15 +12,15 @@ on:
 
 jobs:
   build:
-    name: Linux installer on Python 3.8
+    name: MacOS core-daemon Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.8]
-        os: [ubuntu-18.04]
+        python-version: [3.8, 3.9]
+        os: [macOS-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -33,25 +33,11 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
-        submodules: recursive
 
     - name: Setup Python environment
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache npm
-      uses: actions/cache@v2.1.5
-      env:
-        cache-name: cache-node-modules
-      with:
-        # npm cache files are stored in `~/.npm` on Linux/macOS
-        path: ~/.npm
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
 
     - name: Get pip cache dir
       id: pip-cache
@@ -59,7 +45,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -67,30 +53,41 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+        ref: '0.27.0'
+        fetch-depth: 1
+
+    - name: Link home directory
+      run: |
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: |
+        brew install boost
         sh install.sh
 
-    - name: Setup Node 12.x
-      uses: actions/setup-node@v2.1.5
-      with:
-        node-version: '12.x'
-
-    - name: Build .deb and .rpm packages
+    - name: Install timelord
       run: |
         . ./activate
-        sudo apt-get -y install rpm
-        ldd --version
-        cd ./chia-blockchain-gui
-        git status
-        cd ../build_scripts
-        sh build_linux.sh amd64
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
 
-    - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: Linux-Installers
-        path: ${{ github.workspace }}/build_scripts/final_installer/
+    - name: Install developer requirements
+      run: |
+        . ./activate
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
+
+    - name: Test core-daemon code with pytest
+      run: |
+        . ./activate
+        ./venv/bin/py.test tests/core/daemon/test_daemon.py -s -v --durations 0 

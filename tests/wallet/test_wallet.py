@@ -1,14 +1,15 @@
 import asyncio
-
 import pytest
-
+import time
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -156,7 +157,7 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
-        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(3), uint32(num_blocks + 6), 32 * b"0"))
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(2), uint32(num_blocks + 6), 32 * b"0"))
 
         funds = sum(
             [
@@ -465,3 +466,158 @@ class TestWalletSimulator:
             pass
 
         assert above_limit_tx is None
+
+    @pytest.mark.asyncio
+    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes):
+        num_blocks = 5
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+
+        assert await wallet.get_confirmed_balance() == funds
+        assert await wallet.get_unconfirmed_balance() == funds
+        tx_amount = 3200000000000
+        tx_fee = 300000000000
+        tx = await wallet.generate_signed_transaction(
+            tx_amount,
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_fee,
+        )
+
+        # extract coin_solution from generated spend_bundle
+        for cs in tx.spend_bundle.coin_solutions:
+            if cs.additions() == []:
+                stolen_cs = cs
+        # get a legit signature
+        stolen_sb = await wallet.sign_transaction([stolen_cs])
+        now = uint64(int(time.time()))
+        add_list = list(stolen_sb.additions())
+        rem_list = list(stolen_sb.removals())
+        name = stolen_sb.name()
+        stolen_tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=32 * b"0",
+            amount=0,
+            fee_amount=stolen_cs.coin.amount,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=stolen_sb,
+            additions=add_list,
+            removals=rem_list,
+            wallet_id=wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=name,
+        )
+        await wallet.push_transaction(stolen_tx)
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        # Funds have not decreased because stolen_tx was rejected
+        outstanding_coinbase_rewards = 2000000000000
+        await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
+        await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
+
+    @pytest.mark.asyncio
+    async def test_wallet_tx_reorg(self, two_wallet_nodes):
+        num_blocks = 5
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        fn_server = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node: WalletNode = wallet_node
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+        ph = await wallet.get_new_puzzlehash()
+        ph2 = await wallet_2.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+        # Waits a few seconds to receive rewards
+        all_blocks = await full_node_api.get_all_full_blocks()
+
+        # Ensure that we use a coin that we will not reorg out
+        coin = list(all_blocks[-3].get_included_reward_coins())[0]
+        await asyncio.sleep(5)
+
+        tx = await wallet.generate_signed_transaction(1000, ph2, coins={coin})
+        await wallet.push_transaction(tx)
+        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        for i in range(0, 2):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+        await time_out_assert(5, wallet_2.get_confirmed_balance, 1000)
+
+        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        peak_height = full_node_api.full_node.blockchain.get_peak().height
+        print(peak_height)
+
+        # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
+        await full_node_api.reorg_from_index_to_new_index(
+            ReorgProtocol(uint32(peak_height - 3), uint32(peak_height + 3), 32 * b"0")
+        )
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, peak_height - 2)
+            ]
+        )
+
+        await time_out_assert(7, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
+
+        # Farm a few blocks so we can confirm the resubmitted transaction
+        for i in range(0, num_blocks):
+            await asyncio.sleep(1)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        # By this point, the transaction should be confirmed
+        print(await wallet.get_confirmed_balance())
+        await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
+        unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
+        assert len(unconfirmed) == 0
+        tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx.name)
+        removed = tx_record.removals[0]
+        added = tx_record.additions[0]
+        added_1 = tx_record.additions[1]
+        wallet_coin_record_rem = await wallet_node.wallet_state_manager.coin_store.get_coin_record(removed.name())
+        assert wallet_coin_record_rem.spent
+
+        coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(removed.name())
+        assert coin_record_full_node.spent
+        add_1_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added.name())
+        assert add_1_coin_record_full_node is not None
+        assert add_1_coin_record_full_node.confirmed_block_index > 0
+        add_2_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added_1.name())
+        assert add_2_coin_record_full_node is not None
+        assert add_2_coin_record_full_node.confirmed_block_index > 0

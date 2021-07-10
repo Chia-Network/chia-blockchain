@@ -1,5 +1,5 @@
 import io
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
 from clvm import run_program as default_run_program
@@ -7,8 +7,8 @@ from clvm.CLVMObject import CLVMObject
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
-from clvm.serialize import sexp_buffer_from_stream, sexp_from_stream, sexp_to_stream
-from clvm_rs import STRICT_MODE, deserialize_and_run_program
+from clvm.serialize import sexp_from_stream, sexp_to_stream
+from clvm_rs import STRICT_MODE, deserialize_and_run_program2, serialized_length
 from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -55,6 +55,9 @@ class Program(SExp):
         assert f.read() == b""
         return result
 
+    def to_serialized_program(self) -> "SerializedProgram":
+        return SerializedProgram.from_bytes(bytes(self))
+
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # type: ignore # noqa
@@ -83,8 +86,11 @@ class Program(SExp):
         cost, r = curry(self, list(args))
         return Program.to(r)
 
-    def uncurry(self) -> Optional[Tuple["Program", "Program"]]:
-        return uncurry(self)
+    def uncurry(self) -> Tuple["Program", "Program"]:
+        r = uncurry(self)
+        if r is None:
+            return self, self.to(0)
+        return r
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
@@ -149,8 +155,8 @@ class SerializedProgram:
 
     @classmethod
     def parse(cls, f) -> "SerializedProgram":
-        tmp = sexp_buffer_from_stream(f)
-        return SerializedProgram.from_bytes(tmp)
+        length = serialized_length(f.getvalue()[f.tell() :])
+        return SerializedProgram.from_bytes(f.read(length))
 
     def stream(self, f):
         f.write(self._buf)
@@ -160,6 +166,18 @@ class SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(blob)
         return ret
+
+    @classmethod
+    def from_program(cls, p: Program) -> "SerializedProgram":
+        ret = SerializedProgram()
+        ret._buf = bytes(p)
+        return ret
+
+    def to_program(self) -> Program:
+        return Program.from_bytes(self._buf)
+
+    def uncurry(self) -> Tuple["Program", "Program"]:
+        return self.to_program().uncurry()
 
     def __bytes__(self) -> bytes:
         return self._buf
@@ -213,7 +231,7 @@ class SerializedProgram:
         native_opcode_names_by_opcode = dict(
             ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."
         )
-        cost, ret = deserialize_and_run_program(
+        cost, ret = deserialize_and_run_program2(
             self._buf,
             serialized_args,
             KEYWORD_TO_ATOM["q"][0],
@@ -222,8 +240,7 @@ class SerializedProgram:
             max_cost,
             flags,
         )
-        # TODO this could be parsed lazily
-        return cost, Program.to(sexp_from_stream(io.BytesIO(ret), SExp.to))
+        return cost, Program.to(ret)
 
 
 NIL = Program.from_bytes(b"\x80")

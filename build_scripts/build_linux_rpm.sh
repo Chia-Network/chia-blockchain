@@ -4,11 +4,11 @@ if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
 	exit 1
 elif [ "$1" = "amd64" ]; then
-	PLATFORM="$1"
+	#PLATFORM="$1"
 	REDHAT_PLATFORM="x86_64"
 	DIR_NAME="chia-blockchain-linux-x64"
 else
-	PLATFORM="$1"
+	#PLATFORM="$1"
 	DIR_NAME="chia-blockchain-linux-arm64"
 fi
 
@@ -26,7 +26,6 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-packager -g
-npm install electron-installer-debian -g
 npm install electron-installer-redhat -g
 
 echo "Create dist/"
@@ -68,17 +67,6 @@ fi
 
 mv $DIR_NAME ../build_scripts/dist/
 cd ../build_scripts || exit
-
-echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
-rm -rf final_installer
-mkdir final_installer
-electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-debian failed!"
-	exit $LAST_EXIT_CODE
-fi
 
 if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"

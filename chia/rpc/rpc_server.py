@@ -44,12 +44,12 @@ class RpcServer:
             await self.websocket.close()
 
     async def _state_changed(self, *args):
-        change = args[0]
         if self.websocket is None:
-            return
+            return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
-        if change == "add_connection" or change == "close_connection":
+        change = args[0]
+        if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
             if data is not None:
 
@@ -71,7 +71,7 @@ class RpcServer:
 
     def state_changed(self, *args):
         if self.websocket is None:
-            return
+            return None
         asyncio.create_task(self._state_changed(*args))
 
     def _wrap_http_handler(self, f) -> Callable:
@@ -222,13 +222,10 @@ class RpcServer:
         except Exception as e:
             tb = traceback.format_exc()
             self.log.warning(f"Error while handling message: {tb}")
-            if len(e.args) > 0:
-                error = {"success": False, "error": f"{e.args[0]}"}
-            else:
-                error = {"success": False, "error": f"{e}"}
-            if message is None:
-                return
-            await websocket.send_str(format_response(message, error))
+            if message is not None:
+                error = e.args[0] if e.args else e
+                res = {"success": False, "error": f"{error}"}
+                await websocket.send_str(format_response(message, res))
 
     async def connection(self, ws: aiohttp.ClientWebSocketResponse) -> None:
         data = {"service": self.service_name}
@@ -263,32 +260,26 @@ class RpcServer:
 
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
         while True:
-            session = None
             try:
                 if self.shut_down:
                     break
-                session = aiohttp.ClientSession()
-
-                async with session.ws_connect(
-                    f"wss://{self_hostname}:{daemon_port}",
-                    autoclose=True,
-                    autoping=True,
-                    heartbeat=60,
-                    ssl_context=self.ssl_context,
-                    max_msg_size=100 * 1024 * 1024,
-                ) as ws:
-                    self.websocket = ws
-                    await self.connection(ws)
-                self.websocket = None
-                await session.close()
-            except aiohttp.client_exceptions.ClientConnectorError:
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(
+                        f"wss://{self_hostname}:{daemon_port}",
+                        autoclose=True,
+                        autoping=True,
+                        heartbeat=60,
+                        ssl_context=self.ssl_context,
+                        max_msg_size=100 * 1024 * 1024,
+                    ) as ws:
+                        self.websocket = ws
+                        await self.connection(ws)
+                    self.websocket = None
+            except aiohttp.ClientConnectorError:
                 self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
-            finally:
-                if session is not None:
-                    await session.close()
             await asyncio.sleep(2)
 
 

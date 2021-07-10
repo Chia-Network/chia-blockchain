@@ -6,13 +6,15 @@ from typing import List
 
 import pytest
 
+from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from tests.core.fixtures import default_400_blocks, default_1000_blocks, default_10000_blocks, empty_blockchain
-from tests.core.node_height import node_height_exactly
+from tests.core.node_height import node_height_exactly, node_height_between
 from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 
@@ -168,7 +170,7 @@ class TestFullSync:
             full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
         )
         assert res is not None
-        validated, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(
+        validated, _, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(
             full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
         )
         assert validated
@@ -299,3 +301,74 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_1, 89)
         await time_out_assert(60, node_height_exactly, True, full_node_2, 89)
         await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
+
+    @pytest.mark.asyncio
+    async def test_sync_bad_peak_while_synced(self, three_nodes, default_1000_blocks, default_10000_blocks):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        num_blocks_initial = len(default_1000_blocks) - 250
+        blocks_750 = default_1000_blocks[:num_blocks_initial]
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        full_node_3.full_node.weight_proof_handler = None
+        for block in blocks_750:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        # Node 3 syncs from a different blockchain
+
+        for block in default_10000_blocks[:1100]:
+            await full_node_3.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1
+        await time_out_assert(180, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
+        # set new heavy peak, fn3 cannot serve wp's
+        # node 2 should keep being synced and receive blocks
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_3.full_node.on_connect)
+        # trigger long sync in full node 2
+        peak_block = default_10000_blocks[1050]
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_2.full_node.on_connect)
+        con = server_2.all_connections[full_node_3.full_node.server.node_id]
+        peak = full_node_protocol.NewPeak(
+            peak_block.header_hash,
+            peak_block.height,
+            peak_block.weight,
+            peak_block.height,
+            peak_block.reward_chain_block.get_unfinished().get_hash(),
+        )
+        await full_node_2.full_node.new_peak(peak, con)
+        await asyncio.sleep(2)
+        assert not full_node_2.full_node.sync_store.get_sync_mode()
+        for block in default_1000_blocks[1000 - num_blocks_initial :]:
+            await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        assert node_height_exactly(full_node_2, 999)
+
+    @pytest.mark.asyncio
+    async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = default_1000_blocks
+
+        for block in blocks[:501]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        peak1 = full_node_1.full_node.blockchain.get_peak()
+        full_node_2.full_node.sync_store.set_long_sync(True)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
+        summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
+        summaries2 = summaries1
+        s = summaries1[1]
+        # change summary so check would fail on 2 sub epoch
+        summaries2[1] = SubEpochSummary(
+            s.prev_subepoch_summary_hash,
+            s.reward_chain_hash,
+            s.num_blocks_overflow,
+            s.new_difficulty * 2,
+            s.new_sub_slot_iters * 2,
+        )
+        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
+        log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
+        assert node_height_between(full_node_2, 320, 400)

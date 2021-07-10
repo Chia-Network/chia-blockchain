@@ -125,7 +125,7 @@ def create_cmd(
             self.exclude_final_dir = exclude_final_dir
 
     if size < 32 and not override_k:
-        print("k=32 is the minimun size for farming.")
+        print("k=32 is the minimum size for farming.")
         print("If you are testing and you want to use smaller size please add the --override-k flag.")
         sys.exit(1)
     elif size < 25 and override_k:
