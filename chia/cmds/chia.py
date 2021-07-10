@@ -71,6 +71,7 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
 
 if not supports_keyring_passphrase():
     from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
+
     # TODO: Remove once keyring passphrase management is rolled out to all platforms
     remove_passphrase_options_from_cmd(cli)
 

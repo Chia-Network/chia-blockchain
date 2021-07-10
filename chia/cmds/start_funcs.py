@@ -8,7 +8,7 @@ from typing import Optional
 
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from chia.util.keychain import Keychain, KeyringMaxUnlockAttempts
+from chia.util.keychain import KeyringMaxUnlockAttempts
 from chia.util.service_groups import services_for_groups
 
 

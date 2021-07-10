@@ -46,7 +46,6 @@ from chia.wallet.derive_keys import (
     find_owner_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
-from functools import wraps
 
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 
@@ -59,28 +58,6 @@ UPDATE_HARVESTER_CACHE_INTERVAL: int = 60
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
-
-
-def uses_keychain_proxy():
-    """
-    Decorator which establishes a KeychainProxy connection if necessary
-    """
-
-    def wrapper(method):
-        @wraps(method)
-        async def inner(self, *args, **kwargs):
-            if not self.keychain_proxy:
-                if self.local_keychain:
-                    self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
-                else:
-                    self.keychain_proxy = await connect_to_keychain_and_validate(
-                        self.root_path, self.log, self.local_keychain
-                    )
-            return await method(self, *args, **kwargs)
-
-        return inner
-
-    return wrapper
 
 
 class HarvesterCacheEntry:
@@ -137,10 +114,22 @@ class Farmer:
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
 
-    @uses_keychain_proxy()
-    async def setup_keys(self):
-        self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+    async def ensure_keychain_proxy(self):
+        if not self.keychain_proxy:
+            if self.local_keychain:
+                self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
+            else:
+                self.keychain_proxy = await connect_to_keychain_and_validate(
+                    self.root_path, self.log, self.local_keychain
+                )
+        return self.keychain_proxy
 
+    async def get_all_private_keys(self):
+        keychain_proxy = await self.ensure_keychain_proxy()
+        return await keychain_proxy.get_all_private_keys()
+
+    async def setup_keys(self):
+        self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.get_all_private_keys()]
         self._private_keys = [master_sk_to_farmer_sk(sk) for sk in self.all_root_sks] + [
             master_sk_to_pool_sk(sk) for sk in self.all_root_sks
         ]
@@ -509,11 +498,9 @@ class Farmer:
     def get_private_keys(self):
         return self._private_keys
 
-    @uses_keychain_proxy()
-    def get_reward_targets(self, search_for_private_key: bool) -> Dict:
+    async def get_reward_targets(self, search_for_private_key: bool) -> Dict:
         if search_for_private_key:
-            assert self.keychain_proxy is not None  # An offering to the mypy gods
-            all_sks = asyncio.get_event_loop().run_until_complete(self.keychain_proxy.get_all_private_keys())
+            all_sks = await self.get_all_private_keys()
             stop_searching_for_farmer, stop_searching_for_pool = False, False
             for i in range(500):
                 if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
@@ -673,7 +660,7 @@ class Farmer:
             stat_info = config_path.stat()
             if stat_info.st_mtime > self.last_config_access_time:
                 # If we detect the config file changed, refresh private keys first just in case
-                self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+                self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.get_all_private_keys()]
                 self.last_config_access_time = stat_info.st_mtime
                 await self.update_pool_state()
                 time_slept = uint64(0)

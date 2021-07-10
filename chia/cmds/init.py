@@ -38,7 +38,7 @@ def init_cmd(ctx: click.Context, create_certs: str, **kwargs):
 
 if not supports_keyring_passphrase():
     from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
-    
+
     # TODO: Remove once keyring passphrase management is rolled out to all platforms
     remove_passphrase_options_from_cmd(init_cmd)
 
