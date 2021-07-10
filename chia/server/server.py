@@ -596,29 +596,16 @@ class ChiaServer:
                 await connection.send_message(message)
 
     def get_outgoing_connections(self) -> List[WSChiaConnection]:
-        result = []
-        for _, connection in self.all_connections.items():
-            if connection.is_outbound:
-                result.append(connection)
-
-        return result
+        return [c for c in self.all_connections.values() if c.is_outbound]
 
     def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
-        result = []
-        connections = self.get_full_node_connections()
-        for connection in connections:
-            if connection.is_outbound:
-                result.append(connection)
-        return result
+        return [c for c in self.get_full_node_connections() if c.is_outbound]
 
     def get_full_node_connections(self) -> List[WSChiaConnection]:
         return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
     def get_connections(self) -> List[WSChiaConnection]:
-        result = []
-        for _, connection in self.all_connections.items():
-            result.append(connection)
-        return result
+        return list(self.all_connections.values())
 
     async def close_all_connections(self) -> None:
         keys = [a for a, b in self.all_connections.items()]
