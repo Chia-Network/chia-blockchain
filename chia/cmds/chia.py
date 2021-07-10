@@ -7,7 +7,6 @@ from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
 from chia.cmds.passphrase import passphrase_cmd
-from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
@@ -68,6 +67,7 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
 
 
 if not supports_keyring_passphrase():
+    from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
     # TODO: Remove once keyring passphrase management is rolled out to all platforms
     remove_passphrase_options_from_cmd(cli)
 

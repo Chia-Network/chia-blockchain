@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional
 
 import websockets
 
-from chia.server.server import ssl_context_for_client
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
@@ -129,6 +128,8 @@ async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
     """
+    from chia.server.server import ssl_context_for_client
+
     try:
         net_config = load_config(root_path, "config.yaml")
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]

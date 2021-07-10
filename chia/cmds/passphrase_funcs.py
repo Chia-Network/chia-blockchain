@@ -1,6 +1,5 @@
 import sys
 
-from chia.daemon.client import connect_to_daemon_and_validate
 from chia.util.keychain import Keychain, obtain_current_passphrase
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from getpass import getpass
@@ -187,6 +186,8 @@ def using_default_passphrase() -> bool:
 
 
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
+    from chia.daemon.client import connect_to_daemon_and_validate
+
     new_passphrase = Keychain.get_cached_master_passphrase()
     assert new_passphrase is not None
 
