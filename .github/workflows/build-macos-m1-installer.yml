@@ -109,7 +109,7 @@ jobs:
         run: |
           arch -arm64 brew install node@12
 
-      - name: Build MacOS DMG in Catalina
+      - name: Build MacOS DMG
         env:
           NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
           APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
