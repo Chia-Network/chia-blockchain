@@ -61,6 +61,7 @@ class Solver:
     """
     This class registers puzzle templates by hash and solves them.
     """
+
     solvers_by_puzzle_hash: Dict[bytes32, Solver_F]
 
     def __init__(self) -> None:

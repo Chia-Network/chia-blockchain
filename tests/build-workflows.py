@@ -83,7 +83,9 @@ default_replacements = {
 
 
 # Replace with update_config
-def generate_replacements(defaults: Dict[str, Any], conf: Dict[str, Any], dir: Path, test_files: List[Path]) -> Dict[str, Any]:
+def generate_replacements(
+    defaults: Dict[str, Any], conf: Dict[str, Any], dir: Path, test_files: List[Path]
+) -> Dict[str, Any]:
     assert len(test_files) > 0
     replacements = dict(defaults)
 
