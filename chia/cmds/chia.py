@@ -52,6 +52,9 @@ def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
 
+    # keys_root_path and passphrase_file are grabbed from kwargs because they may not be
+    # present. If supports_keyring_passphrase() returns False, we remove those options
+    # from the CLI.
     keys_root_path = kwargs.get("keys_root_path")
     if keys_root_path:
         set_keys_root_path(Path(keys_root_path))

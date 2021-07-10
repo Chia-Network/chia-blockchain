@@ -23,9 +23,6 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
 async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProxy]:
     connection = await connect_to_daemon_and_validate(root_path)
     if connection is None:
-        passphrase = None
-        if Keychain.is_keyring_locked():
-            passphrase = get_current_passphrase()
         print("Starting daemon")
         # launch a daemon
         process = launch_start_daemon(root_path)
@@ -35,10 +32,15 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
         await asyncio.sleep(1)
         # it prints "daemon: listening"
         connection = await connect_to_daemon_and_validate(root_path)
-        if connection and passphrase:
+    if connection:
+        passphrase = None
+        if await connection.is_keyring_locked():
+            passphrase = get_current_passphrase()
+
+        if passphrase:
             print("Unlocking daemon keyring")
             await connection.unlock_keyring(passphrase)
-    if connection:
+
         return connection
     return None
 
