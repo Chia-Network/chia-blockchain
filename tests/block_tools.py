@@ -178,7 +178,7 @@ class BlockTools:
         self.constants = updated_constants
         save_config(self.root_path, "config.yaml", self._config)
 
-    def load_plots(self):
+    def load_plots(self) -> None:
         _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
 
@@ -1224,7 +1224,7 @@ def get_plot_dir() -> Path:
     return cache_path
 
 
-def get_plot_tmp_dir():
+def get_plot_tmp_dir() -> Path:
     return get_plot_dir() / "tmp"
 
 

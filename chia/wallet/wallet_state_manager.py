@@ -1221,7 +1221,7 @@ class WalletStateManager:
             await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
         return pool_wallet_interested
 
-    async def new_peak(self):
+    async def new_peak(self) -> None:
         peak: Optional[BlockRecord] = self.get_peak()
         if peak is None:
             return

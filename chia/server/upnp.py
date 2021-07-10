@@ -16,7 +16,7 @@ class UPnP:
     thread: Optional[threading.Thread] = None
     queue: Queue = Queue()
 
-    def __init__(self):
+    def __init__(self) -> None:
         def run():
             try:
                 self.upnp = miniupnpc.UPnP()
@@ -54,13 +54,13 @@ class UPnP:
         self.thread = threading.Thread(target=run)
         self.thread.start()
 
-    def remap(self, port):
+    def remap(self, port: int) -> None:
         self.queue.put(("remap", port))
 
-    def release(self, port):
+    def release(self, port: int) -> None:
         self.queue.put(("release", port))
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         if not self.thread:
             return
         self.queue.put(("shutdown",))
@@ -70,5 +70,5 @@ class UPnP:
 
     # this is here just in case the UPnP object is destroyed non-gracefully,
     # e.g. via an exception before the main thread can call shutdown()
-    def __del__(self):
+    def __del__(self) -> None:
         self.shutdown()

@@ -114,7 +114,7 @@ class Blockchain(BlockchainInterface):
         self._seen_compact_proofs = set()
         return self
 
-    def shut_down(self):
+    def shut_down(self) -> None:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 

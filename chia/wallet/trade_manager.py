@@ -364,7 +364,7 @@ class TradeManager:
         cc_coinsol_outamounts: Dict[bytes32, List[Tuple[CoinSolution, int]]] = dict()
         aggsig = offer_spend_bundle.aggregated_signature
         cc_discrepancies: Dict[bytes32, int] = dict()
-        chia_discrepancy = None
+        chia_discrepancy: Optional[int] = None
         wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
 
         for coinsol in offer_spend_bundle.coin_solutions:
@@ -531,7 +531,9 @@ class TradeManager:
         now = uint64(int(time.time()))
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
-            if chia_discrepancy < 0:
+            if chia_discrepancy is None:
+                pass
+            elif chia_discrepancy < 0:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,

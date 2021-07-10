@@ -58,18 +58,18 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class HarvesterCacheEntry:
-    def __init__(self):
+    def __init__(self) -> None:
         self.data: Optional[dict] = None
         self.last_update: float = 0
 
-    def set_data(self, data):
+    def set_data(self, data: Dict) -> None:
         self.data = data
         self.last_update = time.time()
 
-    def needs_update(self):
+    def needs_update(self) -> bool:
         return time.time() - self.last_update > UPDATE_HARVESTER_CACHE_INTERVAL
 
-    def expired(self):
+    def expired(self) -> bool:
         return time.time() - self.last_update > UPDATE_HARVESTER_CACHE_INTERVAL * 10
 
 
@@ -324,7 +324,7 @@ class Farmer:
             )
         return None
 
-    async def update_pool_state(self):
+    async def update_pool_state(self) -> None:
         config = load_config(self._root_path, "config.yaml")
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
@@ -437,7 +437,10 @@ class Farmer:
                                 #         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
                                 #     )
                                 # TODO: Fix Streamable implementation and recover the above.
-                                if put_farmer_response_dict["payout_instructions"]:
+                                if (
+                                    put_farmer_response_dict is not None
+                                    and put_farmer_response_dict["payout_instructions"]
+                                ):
                                     self.log.info(
                                         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
                                     )

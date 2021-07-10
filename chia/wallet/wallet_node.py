@@ -462,7 +462,7 @@ class WalletNode:
                 if peak.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
                     await self.wallet_short_sync_backtrack(header_block, peer)
                 else:
-                    await self.batch_sync_to_peak(curr_peak_height, peak)
+                    await self.batch_sync_to_peak(curr_peak_height, peak.height)
             elif peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # Request weight proof
                 # Sync if PoW validates
@@ -498,11 +498,12 @@ class WalletNode:
                 self.wallet_state_manager.sync_store.add_potential_peak(header_block)
                 self.start_sync()
 
-    async def wallet_short_sync_backtrack(self, header_block, peer):
+    async def wallet_short_sync_backtrack(self, header_block, peer) -> None:
         top = header_block
         blocks = [top]
         # Fetch blocks backwards until we hit the one that we have,
         # then complete them with additions / removals going forward
+        assert self.wallet_state_manager is not None
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
             request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
             response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
@@ -515,12 +516,13 @@ class WalletNode:
         await self.complete_blocks(blocks, peer)
         await self.wallet_state_manager.create_more_puzzle_hashes()
 
-    async def batch_sync_to_peak(self, fork_height, peak):
+    async def batch_sync_to_peak(self, fork_height: uint32, peak_height: uint32) -> None:
         advanced_peak = False
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        for i in range(max(0, fork_height - 1), peak.height, batch_size):
+        for i in range(max(0, fork_height - 1), peak_height, batch_size):
             start_height = i
-            end_height = min(peak.height, start_height + batch_size)
+            end_height = min(peak_height, start_height + batch_size)
+            assert self.server is not None
             peers = self.server.get_full_node_connections()
             added = False
             for peer in peers:
@@ -537,8 +539,8 @@ class WalletNode:
             if not added:
                 raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
 
+            assert self.wallet_state_manager is not None
             curr_peak = self.wallet_state_manager.blockchain.get_peak()
-            assert peak is not None
             self.wallet_state_manager.blockchain.clean_block_record(
                 min(end_height, curr_peak.height) - self.constants.BLOCKS_CACHE_SIZE
             )
@@ -658,7 +660,8 @@ class WalletNode:
             if fork_height is None:
                 fork_height = uint32(0)
             await self.wallet_state_manager.blockchain.warmup(fork_height)
-            await self.batch_sync_to_peak(fork_height, peak)
+            if peak is not None:
+                await self.batch_sync_to_peak(fork_height, peak.height)
 
     async def fetch_blocks_and_validate(
         self,

@@ -118,7 +118,7 @@ class PoolWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.POOLING_WALLET)
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_info.id
 
     @classmethod
@@ -170,7 +170,7 @@ class PoolWallet:
             return "Internal Error"
 
     @classmethod
-    def _verify_initial_target_state(cls, initial_target_state):
+    def _verify_initial_target_state(cls, initial_target_state: PoolState) -> None:
         err = cls._verify_pool_state(initial_target_state)
         if err:
             raise ValueError(f"Invalid internal Pool State: {err}: {initial_target_state}")

@@ -19,16 +19,16 @@ from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint16
 from chia.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
 MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
-NETWORK_ID_DEFAULT_PORTS = {
-    "mainnet": 8444,
-    "testnet7": 58444,
-    "testnet8": 58445,
+NETWORK_ID_DEFAULT_PORTS: Dict[str, uint16] = {
+    "mainnet": uint16(8444),
+    "testnet7": uint16(58444),
+    "testnet8": uint16(58445),
 }
 
 
@@ -45,7 +45,7 @@ class FullNodeDiscovery:
         dns_servers: List[str],
         peer_connect_interval: int,
         selected_network: str,
-        default_port: Optional[int],
+        default_port: Optional[uint16],
         log,
     ):
         self.server: ChiaServer = server
@@ -85,7 +85,7 @@ class FullNodeDiscovery:
             self.log.exception("Error initializing asyncresolver")
         self.pending_outbound_connections: Set[str] = set()
         self.pending_tasks: Set[asyncio.Task] = set()
-        self.default_port: Optional[int] = default_port
+        self.default_port: Optional[uint16] = default_port
         if default_port is None and selected_network in NETWORK_ID_DEFAULT_PORTS:
             self.default_port = NETWORK_ID_DEFAULT_PORTS[selected_network]
 
@@ -198,7 +198,7 @@ class FullNodeDiscovery:
 
         await self.server.start_client(self.introducer_info, on_connect)
 
-    async def _query_dns(self, dns_address):
+    async def _query_dns(self, dns_address: str) -> None:
         try:
             if self.default_port is None:
                 self.log.error(
@@ -215,7 +215,7 @@ class FullNodeDiscovery:
                     TimestampedPeerInfo(
                         ip.to_text(),
                         self.default_port,
-                        0,
+                        uint64(0),
                     )
                 )
             self.log.info(f"Received {len(peers)} peers from DNS seeder.")
