@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -45,7 +46,7 @@ def _get_filenames(directory: Path) -> List[Path]:
                 if child.suffix == ".plot" and not child.name.startswith("._"):
                     all_files.append(child)
             else:
-                log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
+                log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
@@ -155,6 +156,7 @@ def load_plots(
     for paths in plot_filenames.values():
         all_filenames += paths
     plot_ids: Set[bytes32] = set()
+    plot_ids_lock = threading.Lock()
 
     if match_str is not None:
         log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
@@ -176,8 +178,12 @@ def load_plots(
                     log.error(f"Failed to open file {filename}. {e}")
                     return 0, new_provers
                 if stat_info.st_mtime == provers[filename].time_modified:
+                    with plot_ids_lock:
+                        if provers[filename].prover.get_id() in plot_ids:
+                            log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                            return 0, new_provers
+                        plot_ids.add(provers[filename].prover.get_id())
                     new_provers[filename] = provers[filename]
-                    plot_ids.add(provers[filename].prover.get_id())
                     return stat_info.st_size, new_provers
             try:
                 prover = DiskProver(str(filename))
@@ -228,13 +234,16 @@ def load_plots(
 
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
 
-                if prover.get_id() in plot_ids:
-                    log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
-                    return 0, new_provers
+                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+                    local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
+                )
 
-                plot_ids.add(prover.get_id())
+                with plot_ids_lock:
+                    if prover.get_id() in plot_ids:
+                        log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                        return 0, new_provers
+                    plot_ids.add(prover.get_id())
 
                 new_provers[filename] = PlotInfo(
                     prover,

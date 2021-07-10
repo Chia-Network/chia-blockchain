@@ -53,6 +53,7 @@ class Harvester:
         self.log = log
         self.state_changed_callback: Optional[Callable] = None
         self.last_load_time: float = 0
+        self.plot_load_frequency = config.get("plot_loading_frequency_seconds", 120)
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -76,6 +77,7 @@ class Harvester:
         self._state_changed("close_connection")
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
+        self.log.debug(f"get_plots prover items: {len(self.provers)}")
         response_plots: List[Dict] = []
         for path, plot_info in self.provers.items():
             prover = plot_info.prover
@@ -83,7 +85,8 @@ class Harvester:
                 {
                     "filename": str(path),
                     "size": prover.get_size(),
-                    "plot-seed": prover.get_id(),
+                    "plot-seed": prover.get_id(),  # Deprecated
+                    "plot_id": prover.get_id(),
                     "pool_public_key": plot_info.pool_public_key,
                     "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
                     "plot_public_key": plot_info.plot_public_key,
@@ -91,7 +94,11 @@ class Harvester:
                     "time_modified": plot_info.time_modified,
                 }
             )
-
+        self.log.debug(
+            f"get_plots response: plots: {len(response_plots)}, "
+            f"failed_to_open_filenames: {len(self.failed_to_open_filenames)}, "
+            f"no_key_filenames: {len(self.no_key_filenames)}"
+        )
         return (
             response_plots,
             [str(s) for s, _ in self.failed_to_open_filenames.items()],

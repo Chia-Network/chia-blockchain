@@ -1,6 +1,6 @@
 # flake8: noqa: F501
 from dataclasses import dataclass
-from typing import List
+from typing import List, Any
 from unittest import TestCase
 
 from chia.full_node.bundle_tools import (
@@ -9,6 +9,7 @@ from chia.full_node.bundle_tools import (
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
     simple_solution_generator,
+    spend_bundle_to_serialized_coin_solution_entry_list,
 )
 from chia.full_node.generator import run_generator, create_generator_args
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
@@ -16,10 +17,13 @@ from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorA
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
+
+from clvm import SExp
+import io
+from clvm.serialize import sexp_from_stream
 
 from clvm_tools import binutils
 
@@ -48,8 +52,7 @@ FAKE_BLOCK_HEIGHT2 = uint32(200)
 
 
 @dataclass(frozen=True)
-@streamable
-class MultipleCompressorArg(Streamable):
+class MultipleCompressorArg:
     arg: List[CompressorArg]
     split_offset: int
 
@@ -75,6 +78,19 @@ def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: Spe
         GeneratorArg(FAKE_BLOCK_HEIGHT2, args.arg[1].generator),
     ]
     return BlockGenerator(program, generator_args)
+
+
+def spend_bundle_to_coin_solution_entry_list(bundle: SpendBundle) -> List[Any]:
+    r = []
+    for coin_solution in bundle.coin_solutions:
+        entry = [
+            coin_solution.coin.parent_coin_info,
+            sexp_from_stream(io.BytesIO(bytes(coin_solution.puzzle_reveal)), SExp.to),
+            coin_solution.coin.amount,
+            sexp_from_stream(io.BytesIO(bytes(coin_solution.solution)), SExp.to),
+        ]
+        r.append(entry)
+    return r
 
 
 class TestCompression(TestCase):
@@ -120,6 +136,13 @@ class TestCompression(TestCase):
         assert result_s is not None
         assert result_c == result_s
 
+    def test_spend_byndle_coin_solution(self):
+        for i in range(0, 10):
+            sb: SpendBundle = make_spend_bundle(i)
+            cs1 = SExp.to(spend_bundle_to_coin_solution_entry_list(sb)).as_bin()
+            cs2 = spend_bundle_to_serialized_coin_solution_entry_list(sb)
+            assert cs1 == cs2
+
 
 class TestDecompression(TestCase):
     def __init__(self, *args, **kwargs):
@@ -157,7 +180,7 @@ class TestDecompression(TestCase):
     #    print(out)
 
     def test_decompress_cse(self):
-        """ Decompress a single CSE / CoinSolutionEntry """
+        """Decompress a single CSE / CoinSolutionEntry"""
         cse0 = binutils.assemble(
             "((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ())))"
         )  # noqa

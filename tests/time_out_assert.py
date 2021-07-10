@@ -16,9 +16,9 @@ async def time_out_assert_custom_interval(timeout: int, interval, function, valu
         else:
             f_res = function(*args, **kwargs)
         if value == f_res:
-            return
+            return None
         await asyncio.sleep(interval)
-    assert False
+    assert False, "Timed assertion timed out"
 
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
@@ -33,9 +33,9 @@ async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
         else:
             f_res = function(*args, **kwargs)
         if f_res is not None:
-            return
+            return None
         await asyncio.sleep(0.05)
-    assert False
+    assert False, "Timed assertion timed out"
 
 
 def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int = 1) -> Callable:

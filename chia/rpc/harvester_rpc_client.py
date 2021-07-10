@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from chia.rpc.rpc_client import RpcClient
 
@@ -12,7 +12,7 @@ class HarvesterRpcClient(RpcClient):
     to the full node.
     """
 
-    async def get_plots(self) -> List[Dict]:
+    async def get_plots(self) -> Dict[str, Any]:
         return await self.fetch("get_plots", {})
 
     async def refresh_plots(self) -> None:

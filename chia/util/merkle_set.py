@@ -42,7 +42,7 @@ TRUNCATED = bytes([3])
 
 BLANK = bytes([0] * 32)
 
-prehashed: Dict = {}
+prehashed: Dict[bytes, Any] = {}
 
 
 def init_prehashed():

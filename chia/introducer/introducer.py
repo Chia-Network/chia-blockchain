@@ -33,11 +33,11 @@ class Introducer:
     async def _vetting_loop(self):
         while True:
             if self._shut_down:
-                return
+                return None
             try:
                 for i in range(60):
                     if self._shut_down:
-                        return
+                        return None
                     await asyncio.sleep(1)
                 self.log.info("Vetting random peers.")
                 if self.server.introducer_peers is None:
@@ -50,7 +50,7 @@ class Introducer:
                 peer: VettedPeer
                 for peer in raw_peers:
                     if self._shut_down:
-                        return
+                        return None
 
                     now = time.time()
 

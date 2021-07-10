@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Tuple, List, Any
+from typing import Optional, Tuple, List, Union
 
 from clvm import SExp
 from clvm_tools import binutils
@@ -10,19 +10,19 @@ from chia.types.coin_solution import CoinSolution
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 
 
-def spend_bundle_to_coin_solution_entry_list(bundle: SpendBundle) -> List[Any]:
-    r = []
+def spend_bundle_to_serialized_coin_solution_entry_list(bundle: SpendBundle) -> bytes:
+    r = b""
     for coin_solution in bundle.coin_solutions:
-        entry = [
-            coin_solution.coin.parent_coin_info,
-            coin_solution.puzzle_reveal,
-            coin_solution.coin.amount,
-            coin_solution.solution,
-        ]
-        r.append(entry)
+        r += b"\xff"
+        r += b"\xff" + SExp.to(coin_solution.coin.parent_coin_info).as_bin()
+        r += b"\xff" + bytes(coin_solution.puzzle_reveal)
+        r += b"\xff" + SExp.to(coin_solution.coin.amount).as_bin()
+        r += b"\xff" + bytes(coin_solution.solution)
+        r += b"\x80"
+    r += b"\x80"
     return r
 
 
@@ -30,10 +30,14 @@ def simple_solution_generator(bundle: SpendBundle) -> BlockGenerator:
     """
     Simply quotes the solutions we know.
     """
-    cse_list = spend_bundle_to_coin_solution_entry_list(bundle)
-    block_program = SerializedProgram.from_bytes(SExp.to((binutils.assemble("#q"), [cse_list])).as_bin())
-    generator = BlockGenerator(block_program, [])
-    return generator
+    cse_list = spend_bundle_to_serialized_coin_solution_entry_list(bundle)
+    block_program = b"\xff"
+
+    block_program += SExp.to(binutils.assemble("#q")).as_bin()
+
+    block_program += b"\xff" + cse_list + b"\x80"
+
+    return BlockGenerator(SerializedProgram.from_bytes(block_program), [])
 
 
 STANDARD_TRANSACTION_PUZZLE_PREFIX = r"""ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01"""  # noqa
@@ -59,12 +63,12 @@ def match_standard_transaction_at_any_index(generator_body: bytes) -> Optional[T
         return None
 
 
-def match_standard_transaction_exactly_and_return_pubkey(puzzle: Program) -> Optional[bytes]:
+def match_standard_transaction_exactly_and_return_pubkey(puzzle: SerializedProgram) -> Optional[bytes]:
     m = STANDARD_TRANSACTION_PUZZLE_PATTERN.fullmatch(bytes(puzzle).hex())
     return None if m is None else hexstr_to_bytes(m.group(1))
 
 
-def compress_cse_puzzle(puzzle: Program):
+def compress_cse_puzzle(puzzle: SerializedProgram) -> Optional[bytes]:
     return match_standard_transaction_exactly_and_return_pubkey(puzzle)
 
 
@@ -72,11 +76,11 @@ def compress_coin_solution(coin_solution: CoinSolution):
     compressed_puzzle = compress_cse_puzzle(coin_solution.puzzle_reveal)
     return [
         [coin_solution.coin.parent_coin_info, coin_solution.coin.amount],
-        [compressed_puzzle, coin_solution.solution],
+        [compressed_puzzle, Program.from_bytes(bytes(coin_solution.solution))],
     ]
 
 
-def puzzle_suitable_for_compression(puzzle: Program):
+def puzzle_suitable_for_compression(puzzle: SerializedProgram) -> bool:
     return True if match_standard_transaction_exactly_and_return_pubkey(puzzle) else False
 
 
@@ -88,7 +92,7 @@ def bundle_suitable_for_compression(bundle: SpendBundle):
 
 
 def compressed_coin_solution_entry_list(bundle: SpendBundle) -> List:
-    compressed_cse_list = []
+    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]] = []
     for coin_solution in bundle.coin_solutions:
         compressed_cse_list.append(compress_coin_solution(coin_solution))
     return compressed_cse_list

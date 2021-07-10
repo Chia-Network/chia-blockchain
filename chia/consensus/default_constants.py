@@ -38,8 +38,8 @@ testnet_kwargs = {
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Size of mempool = 150x the size of block
-    "MEMPOOL_BLOCK_BUFFER": 150,
+    # Size of mempool = 50x the size of block
+    "MEMPOOL_BLOCK_BUFFER": 50,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Max block cost in clvm cost units
@@ -54,6 +54,7 @@ testnet_kwargs = {
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
     "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
+    "POOL_SUB_SLOT_ITERS": 37600000000,  # iters limit * NUM_SPS
 }
 
 

@@ -76,6 +76,7 @@ class RejectBlock(Streamable):
 
 
 @dataclass(frozen=True)
+@streamable
 class RequestBlocks(Streamable):
     start_height: uint32
     end_height: uint32
