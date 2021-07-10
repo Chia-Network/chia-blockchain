@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-10 21:05\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -146,7 +146,7 @@ msgstr "¿Está seguro de que desea eliminar la parcela? La parcela no se puede 
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "¿Estás seguro de querer eliminar estas transacciones no confirmadas?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
@@ -384,7 +384,7 @@ msgstr "Confirmar Desconexión"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Confirmación"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -901,7 +901,7 @@ msgstr "HD o llaves Jerárquicamente Determinísticas son un tipo de esquema de 
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Parcelas de Cosechador"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1005,7 +1005,7 @@ msgstr "Estado inválido"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Es un enlace de inicio de sesión único que puede ser utilizado para iniciar sesión en el sitio web de un fondo. Contiene una firma usando la clave del agricultor de la parcela NFT. No todos los fondos soportan esta función."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
@@ -1063,7 +1063,7 @@ msgstr "Id de Lanzador"
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
 msgid "Learn More"
-msgstr ""
+msgstr "Aprender más"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1221,7 +1221,7 @@ msgstr "ID del nodo"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "ID de Nodo"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -1469,7 +1469,7 @@ msgstr "La parcela es un duplicado de {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
-msgstr ""
+msgstr "PlotNFT está transicionando hacia (estado de destino). Esto puede tardar un tiempo. Por favor, no cierre la aplicación hasta que esto esté finalizado."
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -2336,7 +2336,7 @@ msgstr "Ver Oferta"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Ver Enlace de Inicio de Sesión de Fondo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2472,7 +2472,7 @@ msgstr "Estás en estado pendiente. Por favor, espera la confirmación"
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr "No estás en auto-conjunto"
+msgstr "No estás en auto-fondo"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:412
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
