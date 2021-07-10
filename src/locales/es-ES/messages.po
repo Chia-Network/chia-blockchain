@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-10 15:02\n"
+"PO-Revision-Date: 2021-07-10 21:05\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -757,7 +757,7 @@ msgstr "Dirección de Recompensa de Granja"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:137
 msgid "Farmer Reward Address is not properly formatted."
-msgstr ""
+msgstr "La dirección de recompensa del agricultor no está formateada correctamente."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:133
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -765,7 +765,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:131
 msgid "Farmer Reward Address must not be empty."
-msgstr ""
+msgstr "La dirección de recompensa del agricultor no debe estar vacía."
 
 #: src/components/farm/card/FarmCardStatus.tsx:38
 #: src/components/plot/PlotStatus.tsx:28
@@ -779,7 +779,7 @@ msgstr "El Agricultor no está funcionando"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Llave Pública de Granjero:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:33
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -869,7 +869,7 @@ msgstr "Nodo Completo"
 
 #: src/components/fullNode/FullNode.jsx:326
 msgid "Full Node Overview"
-msgstr ""
+msgstr "Resumen del nodo completo"
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
@@ -901,7 +901,7 @@ msgstr "HD o llaves Jerárquicamente Determinísticas son un tipo de esquema de 
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Parcelas de Cosechador"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -968,7 +968,7 @@ msgstr "Entrante"
 
 #: src/components/core/components/Fee/Fee.tsx:36
 msgid "Incorrect value"
-msgstr ""
+msgstr "Valor incorrecto"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:18
 msgid "Index"
@@ -1001,7 +1001,7 @@ msgstr "Intervalo"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
-msgstr ""
+msgstr "Estado no válido"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
@@ -1058,7 +1058,7 @@ msgstr "Últimos Desafíos de Bloque"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTCard.tsx:349
 msgid "Launcher Id"
-msgstr ""
+msgstr "ID de lanzador"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
@@ -1079,7 +1079,7 @@ msgstr "Cargando NFTs de parcela"
 
 #: src/components/wallet/Wallets.tsx:172
 msgid "Loading list of wallets"
-msgstr ""
+msgstr "Cargando lista de carteras"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:41
 msgid "Loading..."
@@ -1221,11 +1221,11 @@ msgstr "ID de Nodo"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "ID de Nodo"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
-msgstr ""
+msgstr "Ninguno"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:68
 msgid "None of your plots have passed the plot filter yet."
@@ -1267,7 +1267,7 @@ msgstr "Tenga en cuenta que esto no cambia sus direcciones de pago de fondo. Est
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
 msgid "Number of Plots"
-msgstr ""
+msgstr "Cantidad de Parcelas"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
 msgid "Number of buckets"
@@ -1334,7 +1334,7 @@ msgstr "Saldo Pendiente Total"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
 #: src/hooks/useAbsorbRewards.tsx:45
 msgid "Please Confirm"
-msgstr ""
+msgstr "Por favor confirma"
 
 #: src/components/trading/CreateOffer.jsx:100
 msgid "Please add a trade pair"
@@ -1407,7 +1407,7 @@ msgstr "Por favor, especifique el directorio temporal"
 
 #: src/hooks/useAbsorbRewards.tsx:21
 msgid "Please wait for synchronization"
-msgstr ""
+msgstr "Por favor espere a sincronización"
 
 #: src/hooks/useJoinPool.tsx:27
 msgid "Please wait for wallet synchronization"
@@ -2272,7 +2272,7 @@ msgstr "Tipo"
 
 #: src/components/plot/add/PlotAdd.tsx:101
 msgid "Unable to create plot NFT"
-msgstr ""
+msgstr "No se puede crear parcela NFT"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:149
 #: src/components/pool/PoolOverview.tsx:66
@@ -2293,7 +2293,7 @@ msgstr "Desconocido"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 msgid "Unsaved Changes"
-msgstr ""
+msgstr "Cambios sin guardar"
 
 #: src/components/wallet/create/createRLAdmin.jsx:281
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
@@ -2310,7 +2310,7 @@ msgstr "Iteraciones VDF Sub Slot"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
-msgstr ""
+msgstr "El valor parece alto"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
@@ -2363,7 +2363,7 @@ msgstr "Esperar sincronización"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
 msgid "Waiting for the transaction to be confirmed"
-msgstr ""
+msgstr "Esperando que la transacción sea confirmada"
 
 #: src/components/pool/PoolOverview.tsx:185
 #: src/components/wallet/standard/WalletStandard.tsx:674
@@ -2476,7 +2476,7 @@ msgstr "No estás en auto-fondo"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:412
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
-msgstr ""
+msgstr "Todavía puede crear parcelas para esta parcela NFT, pero no puede hacer cambios hasta que se complete la sincronización."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
