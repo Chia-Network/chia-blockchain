@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 
 from chia.util.file_keyring import FileKeyring
@@ -150,7 +151,7 @@ class TempKeyring:
         if self.delete_on_cleanup:
             temp_dir = self.keychain._temp_dir
             print(f"Cleaning up temp keychain in dir: {temp_dir}")
-            tempfile.TemporaryDirectory._rmtree(temp_dir)
+            shutil.rmtree(temp_dir)
 
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()
