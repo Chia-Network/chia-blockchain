@@ -14,7 +14,7 @@ network_overrides: &network_overrides
       GENESIS_CHALLENGE: a863ac9871ebeaf1fdc7ed6acd3d5c8c39441d53187a936868c87e1e233a3819
     testnet:
       NETWORK_TYPE: 18
-      GENESIS_CHALLENGE: 3eb32956763acbfb3da75b073e4634cfb1f5895e330fa50316597846e7e9af7f
+      GENESIS_CHALLENGE: 151fd2823d8710e014cb1ba3f0d990966ad998f17450efd1f2e8e22cbf507e3f
   config:
     mainnet:
       address_prefix: "sit"
