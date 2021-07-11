@@ -18,8 +18,10 @@ network_overrides: &network_overrides
   config:
     mainnet:
       address_prefix: "sit"
+      default_full_node_port: 11444
     testnet:
       address_prefix: "tsit"
+      default_full_node_port: 10444
 
 selected_network: &selected_network "testnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
