@@ -68,13 +68,24 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much chia to send, in TXCH/XCH", type=str, required=True)
+@click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
 @click.option(
-    "-m", "--fee", help="Set the fees for the transaction", type=str, default="0", show_default=True, required=True
+    "-m",
+    "--fee",
+    help="Set the fees for the transaction, in XCH",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
 )
-@click.option("-t", "--address", help="Address to send the TXCH/XCH", type=str, required=True)
-def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str) -> None:
-    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address}
+@click.option("-t", "--address", help="Address to send the XCH", type=str, required=True)
+@click.option(
+    "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
+)
+def send_cmd(
+    wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str, override: bool
+) -> None:
+    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
@@ -227,3 +238,22 @@ def create_rate_limited_user_cmd(wallet_rpc_port: int, fingerprint: int) -> None
 
     extra_params = {"wallet_type": "rl_wallet", "data": {"rl_type": "user"}}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
+
+@wallet_cmd.command(
+    "delete_unconfirmed_transactions", short_help="Deletes all unconfirmed transactions for this wallet ID"
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def delete_unconfirmed_transactions_cmd(wallet_rpc_port: int, id, fingerprint: int) -> None:
+    extra_params = {"id": id}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, delete_unconfirmed_transactions
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))

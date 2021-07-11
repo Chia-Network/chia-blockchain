@@ -1,6 +1,7 @@
 import unittest
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
+import io
 
 from clvm_tools import binutils
 from pytest import raises
@@ -12,7 +13,17 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint8, uint32
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import (
+    Streamable,
+    streamable,
+    parse_bool,
+    parse_optional,
+    parse_bytes,
+    parse_list,
+    parse_tuple,
+    parse_size_hints,
+    parse_str,
+)
 from tests.setup_nodes import bt, test_constants
 
 
@@ -27,8 +38,9 @@ class TestStreamable(unittest.TestCase):
             d: List[List[uint32]]
             e: Optional[uint32]
             f: Optional[uint32]
+            g: Tuple[uint32, str, bytes]
 
-        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None)  # type: ignore
+        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
@@ -44,15 +56,13 @@ class TestStreamable(unittest.TestCase):
         a = TestClass2(uint32(1), uint32(2), b"3")
         bytes(a)
 
-        @dataclass(frozen=True)
-        @streamable
-        class TestClass3(Streamable):
-            a: int
-
-        b = TestClass3(1)
         try:
-            bytes(b)
-            assert False
+
+            @dataclass(frozen=True)
+            @streamable
+            class TestClass3(Streamable):
+                a: int
+
         except NotImplementedError:
             pass
 
@@ -124,6 +134,16 @@ class TestStreamable(unittest.TestCase):
         with raises(AssertionError):
             TestClassList.from_bytes(bytes([0, 0, 100, 24]))
 
+    def test_ambiguous_deserialization_tuple(self):
+        @dataclass(frozen=True)
+        @streamable
+        class TestClassTuple(Streamable):
+            a: Tuple[uint8, str]
+
+        # Does not have the required elements
+        with raises(AssertionError):
+            TestClassTuple.from_bytes(bytes([0, 0, 100, 24]))
+
     def test_ambiguous_deserialization_str(self):
         @dataclass(frozen=True)
         @streamable
@@ -183,6 +203,145 @@ class TestStreamable(unittest.TestCase):
             pass
 
         assert A.from_bytes(bytes(A())) == A()
+
+    def test_parse_bool(self):
+        assert not parse_bool(io.BytesIO(b"\x00"))
+        assert parse_bool(io.BytesIO(b"\x01"))
+
+        # EOF
+        with raises(AssertionError):
+            parse_bool(io.BytesIO(b""))
+
+        with raises(ValueError):
+            parse_bool(io.BytesIO(b"\xff"))
+
+        with raises(ValueError):
+            parse_bool(io.BytesIO(b"\x02"))
+
+    def test_parse_optional(self):
+        assert parse_optional(io.BytesIO(b"\x00"), parse_bool) is None
+        assert parse_optional(io.BytesIO(b"\x01\x01"), parse_bool)
+        assert not parse_optional(io.BytesIO(b"\x01\x00"), parse_bool)
+
+        # EOF
+        with raises(AssertionError):
+            parse_optional(io.BytesIO(b"\x01"), parse_bool)
+
+        # optional must be 0 or 1
+        with raises(ValueError):
+            parse_optional(io.BytesIO(b"\x02\x00"), parse_bool)
+
+        with raises(ValueError):
+            parse_optional(io.BytesIO(b"\xff\x00"), parse_bool)
+
+    def test_parse_bytes(self):
+
+        assert parse_bytes(io.BytesIO(b"\x00\x00\x00\x00")) == b""
+        assert parse_bytes(io.BytesIO(b"\x00\x00\x00\x01\xff")) == b"\xff"
+
+        # 512 bytes
+        assert parse_bytes(io.BytesIO(b"\x00\x00\x02\x00" + b"a" * 512)) == b"a" * 512
+
+        # 255 bytes
+        assert parse_bytes(io.BytesIO(b"\x00\x00\x00\xff" + b"b" * 255)) == b"b" * 255
+
+        # EOF
+        with raises(AssertionError):
+            parse_bytes(io.BytesIO(b"\x00\x00\x00\xff\x01\x02\x03"))
+
+        with raises(AssertionError):
+            parse_bytes(io.BytesIO(b"\xff\xff\xff\xff"))
+
+        with raises(AssertionError):
+            parse_bytes(io.BytesIO(b"\xff\xff\xff\xff" + b"a" * 512))
+
+        # EOF off by one
+        with raises(AssertionError):
+            parse_bytes(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
+
+    def test_parse_list(self):
+
+        assert parse_list(io.BytesIO(b"\x00\x00\x00\x00"), parse_bool) == []
+        assert parse_list(io.BytesIO(b"\x00\x00\x00\x01\x01"), parse_bool) == [True]
+        assert parse_list(io.BytesIO(b"\x00\x00\x00\x03\x01\x00\x01"), parse_bool) == [True, False, True]
+
+        # EOF
+        with raises(AssertionError):
+            parse_list(io.BytesIO(b"\x00\x00\x00\x01"), parse_bool)
+
+        with raises(AssertionError):
+            parse_list(io.BytesIO(b"\x00\x00\x00\xff\x00\x00"), parse_bool)
+
+        with raises(AssertionError):
+            parse_list(io.BytesIO(b"\xff\xff\xff\xff\x00\x00"), parse_bool)
+
+        # failure to parser internal type
+        with raises(ValueError):
+            parse_list(io.BytesIO(b"\x00\x00\x00\x01\x02"), parse_bool)
+
+    def test_parse_tuple(self):
+
+        assert parse_tuple(io.BytesIO(b""), []) == ()
+        assert parse_tuple(io.BytesIO(b"\x00\x00"), [parse_bool, parse_bool]) == (False, False)
+        assert parse_tuple(io.BytesIO(b"\x00\x01"), [parse_bool, parse_bool]) == (False, True)
+
+        # error in parsing internal type
+        with raises(ValueError):
+            parse_tuple(io.BytesIO(b"\x00\x02"), [parse_bool, parse_bool])
+
+        # EOF
+        with raises(AssertionError):
+            parse_tuple(io.BytesIO(b"\x00"), [parse_bool, parse_bool])
+
+    def test_parse_size_hints(self):
+        class TestFromBytes:
+            b: bytes
+
+            @classmethod
+            def from_bytes(self, b):
+                ret = TestFromBytes()
+                ret.b = b
+                return ret
+
+        assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4).b == b"1337"
+
+        # EOF
+        with raises(AssertionError):
+            parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4)
+
+        class FailFromBytes:
+            @classmethod
+            def from_bytes(self, b):
+                raise ValueError()
+
+        # error in underlying type
+        with raises(ValueError):
+            parse_size_hints(io.BytesIO(b"1337"), FailFromBytes, 4)
+
+    def test_parse_str(self):
+
+        assert parse_str(io.BytesIO(b"\x00\x00\x00\x00")) == ""
+        assert parse_str(io.BytesIO(b"\x00\x00\x00\x01a")) == "a"
+
+        # 512 bytes
+        assert parse_str(io.BytesIO(b"\x00\x00\x02\x00" + b"a" * 512)) == "a" * 512
+
+        # 255 bytes
+        assert parse_str(io.BytesIO(b"\x00\x00\x00\xff" + b"b" * 255)) == "b" * 255
+
+        # EOF
+        with raises(AssertionError):
+            parse_str(io.BytesIO(b"\x00\x00\x00\xff\x01\x02\x03"))
+
+        with raises(AssertionError):
+            parse_str(io.BytesIO(b"\xff\xff\xff\xff"))
+
+        with raises(AssertionError):
+            parse_str(io.BytesIO(b"\xff\xff\xff\xff" + b"a" * 512))
+
+        # EOF off by one
+        with raises(AssertionError):
+            parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
 
 
 if __name__ == "__main__":

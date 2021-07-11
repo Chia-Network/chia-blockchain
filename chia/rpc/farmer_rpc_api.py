@@ -1,6 +1,7 @@
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from chia.farmer.farmer import Farmer
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -16,6 +17,10 @@ class FarmerRpcApi:
             "/get_signage_points": self.get_signage_points,
             "/get_reward_targets": self.get_reward_targets,
             "/set_reward_targets": self.set_reward_targets,
+            "/get_pool_state": self.get_pool_state,
+            "/set_payout_instructions": self.set_payout_instructions,
+            "/get_harvesters": self.get_harvesters,
+            "/get_pool_login_link": self.get_pool_login_link,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -93,3 +98,26 @@ class FarmerRpcApi:
 
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
+
+    async def get_pool_state(self, _: Dict) -> Dict:
+        pools_list = []
+        for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
+            pool_state = pool_dict.copy()
+            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pools_list.append(pool_state)
+        return {"pool_state": pools_list}
+
+    async def set_payout_instructions(self, request: Dict) -> Dict:
+        launcher_id: bytes32 = hexstr_to_bytes(request["launcher_id"])
+        await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
+        return {}
+
+    async def get_harvesters(self, _: Dict):
+        return await self.service.get_harvesters()
+
+    async def get_pool_login_link(self, request: Dict) -> Dict:
+        launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
+        login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
+        if login_link is None:
+            raise ValueError(f"Failed to generate login link for {launcher_id.hex()}")
+        return {"login_link": login_link}

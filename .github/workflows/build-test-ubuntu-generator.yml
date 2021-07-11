@@ -40,7 +40,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -53,7 +53,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -65,7 +65,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.26.0'
+        ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -102,4 +102,4 @@ jobs:
     - name: Test generator code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/generator/test_compression.py tests/generator/test_generator_types.py tests/generator/test_scan.py -s -v --durations 0 
+        ./venv/bin/py.test tests/generator/test_compression.py tests/generator/test_generator_types.py tests/generator/test_rom.py tests/generator/test_scan.py -s -v --durations 0 

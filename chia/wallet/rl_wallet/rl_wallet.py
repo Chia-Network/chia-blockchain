@@ -67,9 +67,9 @@ class RLWallet:
         assert unused is not None
 
         private_key = master_sk_to_wallet_sk(wallet_state_manager.private_key, unused)
-        pubkey_bytes: bytes = bytes(private_key.get_g1())
+        pubkey: G1Element = private_key.get_g1()
 
-        rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None, False)
+        rl_info = RLInfo("admin", bytes(pubkey), None, None, None, None, None, None, False)
         info_as_string = json.dumps(rl_info.to_json_dict())
         wallet_info: Optional[WalletInfo] = await wallet_state_manager.user_store.create_wallet(
             "RL Admin", WalletType.RATE_LIMITED, info_as_string
@@ -81,8 +81,8 @@ class RLWallet:
             [
                 DerivationRecord(
                     unused,
-                    token_bytes(),
-                    pubkey_bytes,
+                    bytes32(token_bytes(32)),
+                    pubkey,
                     WalletType.RATE_LIMITED,
                     wallet_info.id,
                 )
@@ -107,9 +107,9 @@ class RLWallet:
 
             private_key = wallet_state_manager.private_key
 
-            pubkey_bytes: bytes = bytes(master_sk_to_wallet_sk(private_key, unused).get_g1())
+            pubkey: G1Element = master_sk_to_wallet_sk(private_key, unused).get_g1()
 
-            rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None, False)
+            rl_info = RLInfo("user", None, bytes(pubkey), None, None, None, None, None, False)
             info_as_string = json.dumps(rl_info.to_json_dict())
             await wallet_state_manager.user_store.create_wallet("RL User", WalletType.RATE_LIMITED, info_as_string)
             wallet_info = await wallet_state_manager.user_store.get_last_wallet()
@@ -122,8 +122,8 @@ class RLWallet:
                 [
                     DerivationRecord(
                         unused,
-                        token_bytes(),
-                        pubkey_bytes,
+                        bytes32(token_bytes(32)),
+                        pubkey,
                         WalletType.RATE_LIMITED,
                         wallet_info.id,
                     )
@@ -190,7 +190,7 @@ class RLWallet:
         record = DerivationRecord(
             index,
             rl_puzzle_hash,
-            self.rl_info.admin_pubkey,
+            G1Element.from_bytes(self.rl_info.admin_pubkey),
             WalletType.RATE_LIMITED,
             self.id(),
         )
@@ -265,14 +265,13 @@ class RLWallet:
             raise ValueError(
                 "Cannot create multiple Rate Limited wallets under the same keys. This will change in a future release."
             )
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
-            G1Element.from_bytes(self.rl_info.user_pubkey)
-        )
+        user_pubkey: G1Element = G1Element.from_bytes(self.rl_info.user_pubkey)
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(user_pubkey)
         assert index is not None
         record = DerivationRecord(
             index,
             rl_puzzle_hash,
-            self.rl_info.user_pubkey,
+            user_pubkey,
             WalletType.RATE_LIMITED,
             self.id(),
         )
@@ -281,7 +280,7 @@ class RLWallet:
         record2 = DerivationRecord(
             index + 1,
             aggregation_puzzlehash,
-            self.rl_info.user_pubkey,
+            user_pubkey,
             WalletType.RATE_LIMITED,
             self.id(),
         )
@@ -470,7 +469,7 @@ class RLWallet:
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
         if rl_parent_id == self.rl_info.rl_origin_id:
             return self.rl_info.rl_origin
-        rl_parent = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(rl_parent_id)
+        rl_parent = await self.wallet_state_manager.coin_store.get_coin_record(rl_parent_id)
         if rl_parent is None:
             return None
 
@@ -549,7 +548,7 @@ class RLWallet:
         sigs = []
         for coin_solution in spends:
             pubkey, secretkey = await self.get_keys(coin_solution.coin.puzzle_hash)
-            signature = AugSchemeMPL.sign(secretkey, Program.to(coin_solution.solution).get_tree_hash())
+            signature = AugSchemeMPL.sign(secretkey, coin_solution.solution.get_tree_hash())
             sigs.append(signature)
 
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -635,7 +634,7 @@ class RLWallet:
         if self.rl_coin_record is None:
             raise ValueError("Rl coin record is None")
 
-        list_of_coinsolutions = []
+        list_of_coin_solutions = []
         self.rl_coin_record = await self._get_rl_coin_record()
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
@@ -660,7 +659,7 @@ class RLWallet:
         signature = AugSchemeMPL.sign(secretkey, solution.get_tree_hash())
         rl_spend = CoinSolution(self.rl_coin_record.coin, puzzle, solution)
 
-        list_of_coinsolutions.append(rl_spend)
+        list_of_coin_solutions.append(rl_spend)
 
         # Spend consolidating coin
         puzzle = rl_make_aggregation_puzzle(self.rl_coin_record.coin.puzzle_hash)
@@ -671,10 +670,10 @@ class RLWallet:
         )
         agg_spend = CoinSolution(consolidating_coin, puzzle, solution)
 
-        list_of_coinsolutions.append(agg_spend)
+        list_of_coin_solutions.append(agg_spend)
         aggsig = AugSchemeMPL.aggregate([signature])
 
-        return SpendBundle(list_of_coinsolutions, aggsig)
+        return SpendBundle(list_of_coin_solutions, aggsig)
 
     def rl_get_aggregation_puzzlehash(self, wallet_puzzle):
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()
@@ -689,5 +688,5 @@ class RLWallet:
         await self.main_wallet.push_transaction(spend_bundle)
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
-        """ Use this API to send transactions. """
+        """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)
