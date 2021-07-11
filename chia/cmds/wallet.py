@@ -137,13 +137,18 @@ def wallet_create_cmd():
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-c", "--colour-id", help="Id of the colour for the new wallet", type=str)
 @click.option("-a", "--amount", help="How much chia to destroy to create this coloured coin, in TXCH/XCH", type=str)
 @click.option(
-    "-m", "--fee", help="Set the fees for the transaction", type=str, default="0", show_default=True, required=True
+    "-m",
+    "--fee",
+    help="Set the fees for the transaction, in XCH",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, fee: str, fingerprint: int) -> None:
@@ -188,14 +193,19 @@ def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, 
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-i", "--interval", help="Spending interval length (Number of blocks).", type=int, required=True)
 @click.option("-l", "--limit", help="Spendable amount per interval, in TXCH/XCH.", type=str, required=True)
 @click.option("-a", "--amount", help="Amount for initial coin. in TXCH/XCH.", type=str, required=True)
 @click.option(
-    "-m", "--fee", help="Set the fees for the transaction", type=str, default="0", show_default=True, required=True
+    "-m",
+    "--fee",
+    help="Set the fees for the transaction, in XCH",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
 )
 @click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
@@ -228,8 +238,7 @@ def create_rate_limited_admin_cmd(
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def create_rate_limited_user_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
