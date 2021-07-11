@@ -248,6 +248,7 @@ def create_rate_limited_user_cmd(wallet_rpc_port: int, fingerprint: int) -> None
     extra_params = {"wallet_type": "rl_wallet", "data": {"rl_type": "user"}}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
 
+
 @wallet_cmd.command(
     "delete_unconfirmed_transactions", short_help="Deletes all unconfirmed transactions for this wallet ID"
 )
