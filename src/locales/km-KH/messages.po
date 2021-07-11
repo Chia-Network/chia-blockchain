@@ -8,7 +8,7 @@ msgstr ""
 "Language: km_KH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-10 00:15\n"
+"PO-Revision-Date: 2021-07-11 03:01\n"
 "Last-Translator: \n"
 "Language-Team: Khmer\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -49,7 +49,7 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:74
 msgid "Accept"
-msgstr ""
+msgstr "ទទួលយក"
 
 #: src/components/trading/TradingOverview.jsx:228
 msgid "Accepted at time:"
@@ -59,18 +59,18 @@ msgstr ""
 #: src/components/plot/PlotsNotFound.tsx:19
 #: src/components/plot/overview/PlotOverviewPlots.tsx:114
 msgid "Action"
-msgstr ""
+msgstr "ជម្រើស"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:67
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:67
 #: src/components/fullNode/FullNodeConnections.tsx:83
 #: src/components/pool/PoolOverview.tsx:69
 msgid "Actions"
-msgstr ""
+msgstr "ជម្រើស"
 
 #: src/components/trading/CreateOffer.jsx:201
 msgid "Add"
-msgstr ""
+msgstr "បន្ថែម"
 
 #: src/components/plot/PlotHeader.tsx:91
 msgid "Add Plot Directory"
@@ -172,7 +172,7 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:60
 #: src/components/selectKey/SelectKey.tsx:81
 msgid "Back"
-msgstr ""
+msgstr "ត្រឡប់ក្រោយ"
 
 #: src/components/backup/BackupCreate.tsx:66
 msgid "Backup file is used to restore smart wallets."
@@ -181,7 +181,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:377
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
 msgid "Balance"
-msgstr ""
+msgstr "សមតុល្យ"
 
 #: src/components/block/Block.jsx:317
 msgid "Base Farmer Reward Amount"
@@ -205,7 +205,7 @@ msgstr ""
 #: src/components/block/Block.jsx:157
 #: src/components/block/Block.jsx:332
 msgid "Block"
-msgstr ""
+msgstr "ប្លុក"
 
 #: src/components/block/Block.jsx:137
 msgid "Block Test"
@@ -233,7 +233,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
-msgstr ""
+msgstr "ប្លុក"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -243,7 +243,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:79
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:110
 msgid "Browse"
-msgstr ""
+msgstr "រុករកមើល"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:73
 msgid "But you are currently farming <0/>"
@@ -276,7 +276,7 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:400
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Cancel"
-msgstr ""
+msgstr "បោះបង់"
 
 #: src/components/trading/TradingOverview.jsx:389
 msgid "Cancel and Spend"
@@ -288,7 +288,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
-msgstr ""
+msgstr "ការប្រកួត"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:14
 msgid "Challenge Hash"
