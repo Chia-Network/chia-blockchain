@@ -8,7 +8,7 @@ msgstr ""
 "Language: km_KH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-11 03:01\n"
+"PO-Revision-Date: 2021-07-11 09:08\n"
 "Last-Translator: \n"
 "Language-Team: Khmer\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -91,7 +91,7 @@ msgstr ""
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:232
 #: src/components/plotNFT/PlotNFTCard.tsx:271
 msgid "Add a Plot"
-msgstr ""
+msgstr "បន្ថែម Plot"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
@@ -99,11 +99,11 @@ msgstr ""
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
-msgstr ""
+msgstr "បន្ថែម Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:107
 msgid "Add plot directory"
-msgstr ""
+msgstr "បន្ថែមថតឯកសាររបស់ Plot"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
@@ -113,12 +113,12 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:657
 #: src/components/wallet/standard/WalletStandard.tsx:596
 msgid "Address"
-msgstr ""
+msgstr "អាស័យដ្ឋាន"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
 #: src/components/wallet/standard/WalletStandard.tsx:503
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "អាស័យដ្ឋាន / Puzzle hash"
 
 #: src/components/core/components/Amount/Amount.tsx:98
 #: src/components/trading/CreateOffer.jsx:196
@@ -128,15 +128,15 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 #: src/components/wallet/standard/WalletStandard.tsx:513
 msgid "Amount"
-msgstr ""
+msgstr "ចំនួន"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:581
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "ចំនួន ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:239
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "ចំនួនកាក់ដំបូង"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -150,7 +150,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
-msgstr ""
+msgstr "តើអ្នកពិតជាចង់ផ្តាច់? "
 
 #: src/electron/main.tsx:197
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
@@ -336,7 +336,7 @@ msgstr ""
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
 msgid "Close"
-msgstr ""
+msgstr "បិទ"
 
 #: src/components/app/AppRouter.tsx:27
 msgid "Closing down node and server"
@@ -349,7 +349,7 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:172
 #: src/components/trading/TradesTable.tsx:24
 msgid "Colour"
-msgstr ""
+msgstr "ពណ៌"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:223
 msgid "Colour Info"
@@ -361,7 +361,7 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:228
 msgid "Colour:"
-msgstr ""
+msgstr "ពណ៌"
 
 #: src/components/wallet/create/WalletCreate.jsx:118
 msgid "Coloured Coin"
@@ -375,7 +375,7 @@ msgstr ""
 #: src/electron/main.tsx:195
 #: src/hooks/useAbsorbRewards.tsx:46
 msgid "Confirm"
-msgstr ""
+msgstr "យល់ព្រម"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:21
 msgid "Confirm Disconnect"
