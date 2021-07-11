@@ -87,7 +87,7 @@ class Farmer:
     ):
         self.keychain_proxy = None
         self.local_keychain = local_keychain
-        self.root_path = root_path
+        self._root_path = root_path
         self.config = farmer_config
         self.pool_config = pool_config
         # Keep track of all sps, keyed on challenge chain signage point hash
@@ -120,7 +120,7 @@ class Farmer:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
                 self.keychain_proxy = await connect_to_keychain_and_validate(
-                    self.root_path, self.log, self.local_keychain
+                    self._root_path, self.log, self.local_keychain
                 )
         return self.keychain_proxy
 
@@ -359,8 +359,8 @@ class Farmer:
         return None
 
     async def update_pool_state(self):
-        config = load_config(self.root_path, "config.yaml")
-        pool_config_list: List[PoolWalletConfig] = load_pool_config(self.root_path)
+        config = load_config(self._root_path, "config.yaml")
+        pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
@@ -524,7 +524,7 @@ class Farmer:
         }
 
     def set_reward_targets(self, farmer_target_encoded: Optional[str], pool_target_encoded: Optional[str]):
-        config = load_config(self.root_path, "config.yaml")
+        config = load_config(self._root_path, "config.yaml")
         if farmer_target_encoded is not None:
             self.farmer_target_encoded = farmer_target_encoded
             self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
@@ -533,12 +533,12 @@ class Farmer:
             self.pool_target_encoded = pool_target_encoded
             self.pool_target = decode_puzzle_hash(pool_target_encoded)
             config["pool"]["xch_target_address"] = pool_target_encoded
-        save_config(self.root_path, "config.yaml", config)
+        save_config(self._root_path, "config.yaml", config)
 
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
-                config = load_config(self.root_path, "config.yaml")
+                config = load_config(self._root_path, "config.yaml")
                 new_list = []
                 for list_element in config["pool"]["pool_list"]:
                     if bytes.fromhex(list_element["launcher_id"]) == bytes(launcher_id):
@@ -546,7 +546,7 @@ class Farmer:
                     new_list.append(list_element)
 
                 config["pool"]["pool_list"] = new_list
-                save_config(self.root_path, "config.yaml", config)
+                save_config(self._root_path, "config.yaml", config)
                 # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
                 pool_state_dict["next_farmer_update"] = 0
                 return
@@ -654,7 +654,7 @@ class Farmer:
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
-        config_path: Path = config_path_for_filename(self.root_path, "config.yaml")
+        config_path: Path = config_path_for_filename(self._root_path, "config.yaml")
         while not self._shut_down:
             # Every time the config file changes, read it to check the pool state
             stat_info = config_path.stat()
