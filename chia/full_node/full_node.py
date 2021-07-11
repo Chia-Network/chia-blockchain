@@ -1924,14 +1924,15 @@ class FullNode:
                 if max_height is None:
                     await asyncio.sleep(30)
                     continue
+                assert max_height is not None
                 self.log.info("Getting minimum bluebox work height")
                 min_height = await self.block_store.get_first_not_compactified()
                 if min_height is None or min_height > max(0, max_height - 1000):
                     min_height = max(0, max_height - 1000)
-                batches_finished = 0
-                self.log.info("Scanning the blockchain for uncompact blocks.")
-                assert max_height is not None
                 assert min_height is not None
+                max_height = uint32(min(max_height, min_height + 2000))
+                batches_finished = 0
+                self.log.info(f"Scanning the blockchain for uncompact blocks. Range: {min_height}..{max_height}")
                 for h in range(min_height, max_height, 100):
                     # Got 10 times the target header count, sampling the target headers should contain
                     # enough randomness to split the work between blueboxes.
