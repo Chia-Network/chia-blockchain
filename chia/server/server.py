@@ -614,10 +614,11 @@ class ChiaServer:
     def get_full_node_connections(self) -> List[WSChiaConnection]:
         return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
-    def get_connections(self) -> List[WSChiaConnection]:
+    def get_connections(self, node_type: Optional[NodeType] = None) -> List[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
-            result.append(connection)
+            if node_type is None or connection.connection_type == node_type:
+                result.append(connection)
         return result
 
     async def close_all_connections(self) -> None:
