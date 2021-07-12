@@ -34,7 +34,6 @@ def set_cmd(
 
     success = False
     current_passphrase = None
-    new_passphrase = None
     if current_passphrase_file:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
@@ -84,14 +83,11 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
         remove_passphrase,
     )
 
-    success = False
     current_passphrase = None
     if current_passphrase_file:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
-    success = remove_passphrase(current_passphrase)
-
-    if success:
+    if remove_passphrase(current_passphrase):
         # Attempt to update the daemon's passphrase cache
         sys.exit(
             asyncio.get_event_loop().run_until_complete(
