@@ -2,10 +2,13 @@
 
 #$ErrorActionPreference = "Stop"
 
-rm .\build_scripts\build\ -Recurse -Force
-rm .\build_scripts\dist\ -Recurse -Force
-rm .\build_scripts\win_build\ -Recurse -Force
-rm .\chia-blockchain-gui\daemon\ -Recurse -Force
+Write-Output "   ---"
+Write-Output "clen source"
+Write-Output "   ---"
+git clean -fdx
+Set-Location -Path ".\chia-blockchain-gui" -PassThru
+git clean -fdx
+Set-Location -Path "../" -PassThru
 
 
 mkdir build_scripts\win_build
