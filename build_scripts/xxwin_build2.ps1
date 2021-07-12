@@ -52,3 +52,4 @@ git status
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
+Set-Location -Path "..\" -PassThru
