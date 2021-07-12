@@ -36,6 +36,10 @@ class MalformedKeychainResponse(Exception):
     pass
 
 
+class KeychainProxyConnectionFailure(Exception):
+    pass
+
+
 class KeychainProxy(DaemonProxy):
     """
     KeychainProxy can act on behalf of a local or remote keychain. In the case of
@@ -309,12 +313,14 @@ async def connect_to_keychain(
     client = KeychainProxy(
         uri=f"wss://{self_hostname}:{daemon_port}", ssl_context=ssl_context, log=log, user=user, testing=testing
     )
-    await client.start()
+    # Connect to the service if the proxy isn't using a local keychain
+    if not client.use_local_keychain():
+        await client.start()
     return client
 
 
 async def connect_to_keychain_and_validate(
-    root_path: Path, log: logging.Logger, user: str = None, testing: bool = False
+    root_path: Path, log: logging.Logger, *, user: str = None, testing: bool = False
 ) -> Optional[KeychainProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really

@@ -13,6 +13,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.daemon.keychain_proxy import (
     KeychainProxy,
+    KeychainProxyConnectionFailure,
     KeyringIsEmpty,
     KeyringIsLocked,
     connect_to_keychain_and_validate,
@@ -123,14 +124,14 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
-    async def ensure_keychain_proxy(self):
+    async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
             if self.local_keychain:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
-                self.keychain_proxy = await connect_to_keychain_and_validate(
-                    self.root_path, self.log, self.local_keychain
-                )
+                self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+                if not self.keychain_proxy:
+                    raise KeychainProxyConnectionFailure("Failed to connect to keychain service")
         return self.keychain_proxy
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
@@ -144,6 +145,10 @@ class WalletNode:
         except KeyringIsLocked:
             self.log.warning("Keyring is locked")
             return None
+        except KeychainProxyConnectionFailure as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Missing keychain_proxy: {e} {tb}")
+            raise e  # Re-raise so that the caller can decide whether to continue or abort
         return key
 
     async def _start(
@@ -153,7 +158,12 @@ class WalletNode:
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
     ) -> bool:
-        private_key = await self.get_key_for_fingerprint(fingerprint)
+        try:
+            private_key = await self.get_key_for_fingerprint(fingerprint)
+        except KeychainProxyConnectionFailure:
+            self.log.error("Failed to connect to keychain service")
+            return False
+
         if private_key is None:
             self.logged_in = False
             return False

@@ -12,7 +12,12 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
+from chia.daemon.keychain_proxy import (
+    KeychainProxy,
+    KeychainProxyConnectionFailure,
+    connect_to_keychain_and_validate,
+    wrap_local_keychain,
+)
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
@@ -85,7 +90,7 @@ class Farmer:
         consensus_constants: ConsensusConstants,
         local_keychain: Optional[Keychain] = None,
     ):
-        self.keychain_proxy = None
+        self.keychain_proxy: Optional[KeychainProxy] = None
         self.local_keychain = local_keychain
         self._root_path = root_path
         self.config = farmer_config
@@ -114,14 +119,14 @@ class Farmer:
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
 
-    async def ensure_keychain_proxy(self):
+    async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
             if self.local_keychain:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
-                self.keychain_proxy = await connect_to_keychain_and_validate(
-                    self._root_path, self.log, self.local_keychain
-                )
+                self.keychain_proxy = await connect_to_keychain_and_validate(self._root_path, self.log)
+                if not self.keychain_proxy:
+                    raise KeychainProxyConnectionFailure("Failed to connect to keychain service")
         return self.keychain_proxy
 
     async def get_all_private_keys(self):
