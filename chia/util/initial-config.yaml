@@ -17,7 +17,7 @@ network_overrides: &network_overrides
       GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       SUB_SLOT_ITERS_STARTING: 33554432
       EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 7255
+      DIFFICULTY_STARTING: 7
   config:
     mainnet:
       address_prefix: "sit"
