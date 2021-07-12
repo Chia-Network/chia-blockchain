@@ -538,7 +538,7 @@ class WebSocketServer:
             }
             return response
 
-        ids : List[str] = [] 
+        ids : List[str] = []
         for k in range(count):
             id = str(uuid.uuid4())
             ids.append(id)
