@@ -7,10 +7,12 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.cc_wallet.cc_utils import cc_puzzle_hash_for_inner_puzzle_hash
+from chia.wallet.cc_wallet.cc_utils import cc_puzzle_hash_for_inner_puzzle_hash, get_colour_for_url
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.transaction_record import TransactionRecord
@@ -253,6 +255,15 @@ class TestCCWallet:
             await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(cc_wallet_2.id())
         )
         assert unspent.pop().coin.amount == 0
+
+    @pytest.mark.asyncio
+    async def test_generate_zero_val_from_url(self, two_wallet_nodes):
+        full_nodes, wallets = two_wallet_nodes
+        wallet_node_2, server_3 = wallets[1]
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        colour = get_colour_for_url("test.yostra.io")
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
+        assert cc_wallet_2.cc_info.my_genesis_checker == Program.from_bytes(hexstr_to_bytes(colour))
 
     @pytest.mark.asyncio
     async def test_cc_spend_uncoloured(self, two_wallet_nodes):

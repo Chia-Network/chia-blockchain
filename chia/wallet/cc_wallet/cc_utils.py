@@ -1,6 +1,7 @@
 import dataclasses
 from typing import List, Optional, Tuple
 
+import dns.resolver
 from blspy import AugSchemeMPL, G2Element
 
 from chia.types.blockchain_format.coin import Coin
@@ -17,6 +18,7 @@ from chia.wallet.puzzles.genesis_by_coin_id_with_0 import (
     lineage_proof_for_genesis,
     lineage_proof_for_zero,
 )
+from chia.wallet.util.backup_utils import post
 
 NULL_SIGNATURE = G2Element()
 
@@ -250,3 +252,16 @@ def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_pu
         spendable_cc_list.append(cc_spend_info)
 
     return spendable_cc_list
+
+
+def get_colour_for_url(url: str) -> Optional[str]:
+    try:
+        dns_record = dns.resolver.resolve(f"xch_colour.{url}", "TXT")
+        colour = dns_record.response.answer[0][0].to_text()
+        if colour.startswith("\""):
+            colour = colour[1:]
+        if colour.endswith("\""):
+            colour = colour[:-1]
+        return colour
+    except dns.resolver.NoAnswer:
+        return None
