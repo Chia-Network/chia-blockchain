@@ -89,7 +89,7 @@ class Timelord:
         self.total_infused: int = 0
         self.state_changed_callback: Optional[Callable] = None
         self.sanitizer_mode = self.config["sanitizer_mode"]
-        self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
+        self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
 
     async def _start(self):
@@ -1005,7 +1005,7 @@ class Timelord:
                         # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
                         target_field_vdf = random.randint(1, 4)
                         info = next(
-                            (info for info in self.pending_bluebox_info if info.field_vdf == target_field_vdf),
+                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
                             None,
                         )
                         if info is None:
@@ -1016,15 +1016,15 @@ class Timelord:
                             asyncio.create_task(
                                 self._do_process_communication(
                                     Chain.BLUEBOX,
-                                    info.new_proof_of_time.challenge,
+                                    info[1].new_proof_of_time.challenge,
                                     ClassgroupElement.get_default_element(),
                                     ip,
                                     reader,
                                     writer,
-                                    info.new_proof_of_time.number_of_iterations,
-                                    info.header_hash,
-                                    info.height,
-                                    info.field_vdf,
+                                    info[1].new_proof_of_time.number_of_iterations,
+                                    info[1].header_hash,
+                                    info[1].height,
+                                    info[1].field_vdf,
                                 )
                             )
                         )
