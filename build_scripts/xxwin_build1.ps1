@@ -3,7 +3,7 @@
 #$ErrorActionPreference = "Stop"
 
 Write-Output "   ---"
-Write-Output "clen source"
+Write-Output "clean source"
 Write-Output "   ---"
 git clean -fdx
 Set-Location -Path ".\chia-blockchain-gui" -PassThru
