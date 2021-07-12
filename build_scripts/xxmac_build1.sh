@@ -6,6 +6,8 @@
 
 echo "clean source ========================="
 # git clean -fdx
+rm -rf ./build_scripts/build
+rm -rf ./build_scripts/dist
 cd chia-blockchain-gui
 git clean -fdx
 cd ../

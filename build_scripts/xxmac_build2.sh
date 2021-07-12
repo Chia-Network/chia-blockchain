@@ -1,15 +1,20 @@
 #!/bin/bash
 
+if [[ x$1 == x ]]; then
+	echo "need a version!!!!!"
+	return
+fi
+
 cd chia-blockchain-gui
 
-CHIA_INSTALLER_VERSION="0.0.7"
+CHIA_INSTALLER_VERSION=$1
 
 
 # echo "Installing npm and electron packagers ========================================================================"
-npm install electron-installer-dmg -g
-npm install electron-packager -g
-npm install electron/electron-osx-sign -g
-npm install notarize-cli -g
+# npm install electron-installer-dmg -g
+# npm install electron-packager -g
+# npm install electron/electron-osx-sign -g
+# npm install notarize-cli -g
 
 echo "Build ========================================================================"
 npm install
@@ -33,16 +38,16 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 
-echo "Sign ========================================================================"
-electron-osx-sign Silicoin-darwin-x64/Silicoin.app --platform=darwin \
-  --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
-  --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
-  --no-gatekeeper-assess
- LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-osx-sign failed!"
-	exit $LAST_EXIT_CODE
-fi
+# echo "Sign ========================================================================"
+# electron-osx-sign Silicoin-darwin-x64/Silicoin.app --platform=darwin \
+#   --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
+#   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
+#   --no-gatekeeper-assess
+#  LAST_EXIT_CODE=$?
+# if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+# 	echo >&2 "electron-osx-sign failed!"
+# 	exit $LAST_EXIT_CODE
+# fi
 
 
 echo "Create DMG ========================================================================"
