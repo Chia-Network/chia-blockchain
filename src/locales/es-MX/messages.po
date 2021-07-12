@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-10 21:05\n"
+"PO-Revision-Date: 2021-07-12 18:08\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -107,7 +107,7 @@ msgstr "Añadir directorio de parcelas"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "Añade {currencyCode} del Faucet"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
@@ -1512,7 +1512,7 @@ msgstr "Puntos Encontrados en las Últimas 24 Horas"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Puntos Encontrados en las Últimas 24 Horas"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
@@ -1529,12 +1529,12 @@ msgstr "Llave de Conjunto"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Enlace de inicio de sesion en el Pool"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Instrucciones de pago en el Pool"
 
 #: src/components/block/Block.jsx:263
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1887,7 +1887,7 @@ msgstr "Suaviza tus recompensas de cría XCH uniéndote a un conjunto."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Algo salió mal"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2053,11 +2053,11 @@ msgstr "La URL del conjunto \"{normalizedUrl}\" no está funcionando. ¿Es un co
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "La URL del Pool no es válida. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "La URL del Pool necesita usar el protocolo https. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2089,7 +2089,7 @@ msgstr "Las tarifas totales de transacciones en este bloque. Recompensado al agr
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "Estas son las instrucciones sobre cómo el agricultor quiere que se le pague. Por defecto, esta será una dirección XCH, pero puede establecerse en cualquier cadena con un tamaño de menos de 1024 caracteres, para que pueda representar otro identificador del sistema de pago o de cadena de bloques."
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2158,7 +2158,7 @@ msgstr "Esta parcela NFT está asignada a una llave diferente. Todavía puede cr
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Este NFT de parcela no está conectado al Pool"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2516,7 +2516,7 @@ msgstr "Necesitas reclamar tus recompensas primero"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
-msgstr ""
+msgstr "Necesitas {currencyCode} para unirte a una Pool."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
