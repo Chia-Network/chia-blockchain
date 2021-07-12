@@ -5,7 +5,7 @@ _mojo_per_chia = 1000000000000
 _blocks_per_year = 1681920  # 32 * 6 * 24 * 365
 
 # preserve + testnet supply
-PREFARM = 4200000 + 187870
+PREFARM = 4200000 + 199998
 
 
 def calculate_pool_reward(height: uint32) -> uint64:
