@@ -538,8 +538,10 @@ class WebSocketServer:
             }
             return response
 
+        ids : List[str] = [] 
         for k in range(count):
             id = str(uuid.uuid4())
+            ids.append(id)
             config = {
                 "id": id,
                 "size": size,
@@ -572,6 +574,7 @@ class WebSocketServer:
 
         response = {
             "success": True,
+            "ids": ids,
             "service_name": service_name,
         }
 
