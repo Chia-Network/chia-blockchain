@@ -277,6 +277,25 @@ export const delete_key = (fingerprint) => {
   return action;
 };
 
+export const check_delete_key = (fingerprint) => {
+  const action = walletMessage();
+  action.message.command = 'check_delete_key';
+  action.message.data = { fingerprint };
+  return action;
+};
+
+export const check_delete_key_action = (fingerprint) => {
+  return async (dispatch) => {
+    const { data } = await async_api(
+      dispatch,
+      check_delete_key(fingerprint),
+      false,
+    );
+
+    return data;
+  };
+};
+
 export const delete_all_keys = () => {
   const action = walletMessage();
   action.message.command = 'delete_all_keys';

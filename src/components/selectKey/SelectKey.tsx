@@ -3,6 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { Button, ConfirmDialog, Flex, Logo } from '@chia/core';
+import { Alert } from '@material-ui/lab';
 import {
   Card,
   Typography,
@@ -24,11 +25,13 @@ import {
   delete_key,
   get_private_key,
   delete_all_keys,
+  check_delete_key_action
 } from '../../modules/message';
 import { resetMnemonic } from '../../modules/mnemonic';
 import type { RootState } from '../../modules/rootReducer';
 import type Fingerprint from '../../types/Fingerprint';
 import useOpenDialog from '../../hooks/useOpenDialog';
+import { openProgress, closeProgress } from '../../modules/progress';
 
 const StyledFingerprintListItem = styled(ListItem)`
   padding-right: ${({ theme }) => `${theme.spacing(11)}px`};
@@ -53,13 +56,39 @@ export default function SelectKey() {
   }
 
   async function handleDeletePrivateKey(fingerprint: Fingerprint) {
+
+    dispatch(openProgress());
+    const response: any = await dispatch(check_delete_key_action(fingerprint));
+    dispatch(closeProgress());
+
     const deletePrivateKey = await openDialog(
       <ConfirmDialog
-        title={<Trans>Delete key</Trans>}
+        title={<Trans>Delete key {fingerprint}</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         cancelTitle={<Trans>Back</Trans>}
-        confirmColor="default"
+        confirmColor="danger"
       >
+        {response.used_for_farmer_rewards && (<Alert severity="warning">
+          <Trans>
+            Warning: This key is used for your farming rewards address. 
+            By deleting this key you may lose access to any future farming rewards
+            </Trans>
+        </Alert>)}
+
+        {response.used_for_pool_rewards && (<Alert severity="warning">
+          <Trans>
+            Warning: This key is used for your pool rewards address. 
+            By deleting this key you may lose access to any future pool rewards
+          </Trans>
+        </Alert>)}
+
+        {response.wallet_balance && (<Alert severity="warning">
+          <Trans>
+            Warning: This key is used for a wallet that may have a non-zero balance. 
+            By deleting this key you may lose access to this wallet
+          </Trans>
+        </Alert>)}
+
         <Trans>
           Deleting the key will permanently remove the key from your computer,
           make sure you have backups. Are you sure you want to continue?
