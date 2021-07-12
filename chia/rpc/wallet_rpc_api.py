@@ -753,6 +753,16 @@ class WalletRpcApi:
         long_tx_id = token_bytes()
 
         self.service.wallet_state_manager.clear_constructed_transactions()
+
+        custom_tx: Optional[TransactionRecord] = None
+        custom_tx_id = None
+        frate = None
+        if "fee_rate" in request:
+            frate = float(request["fee_rate"])
+            custom_tx: TransactionRecord = await wallet.generate_signed_transaction(new_coins.copy(), frate)
+            custom_tx_id = token_bytes()
+            self.service.wallet_state_manager.add_constructed_transaction(custom_tx_id, custom_tx)
+
         self.service.wallet_state_manager.add_constructed_transaction(short_tx_id, short_tx)
         self.service.wallet_state_manager.add_constructed_transaction(medium_tx_id, medium_tx)
         self.service.wallet_state_manager.add_constructed_transaction(long_tx_id, long_tx)
@@ -768,7 +778,13 @@ class WalletRpcApi:
         medium_json = {"tx_id": medium_tx_id.hex(), "fee": medium_tx.fee_amount, "fee_rate": medium_fee_rate}
         long_json = {"tx_id": long_tx_id.hex(), "fee": long_tx.fee_amount, "fee_rate": long_fee_rate}
 
-        return {"additions": new_coins, "short": short_json, "medium": medium_json, "long": long_json}
+        response = {"additions": new_coins, "short": short_json, "medium": medium_json, "long": long_json}
+
+        if custom_tx is not None and custom_tx_id is not None:
+            custom_json = {"tx_id": custom_tx_id.hex(), "fee": custom_tx.fee_amount, "fee_rate": frate}
+            response["custom"] = custom_json
+
+        return response
 
     async def send_transaction(self, request):
         assert self.service.wallet_state_manager is not None
