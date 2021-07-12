@@ -9,14 +9,14 @@ from secrets import token_bytes
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
 from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.spend_bundle import SpendBundle
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.util.transaction_type import TransactionType
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64, uint32, uint8
+from chia.wallet.util.transaction_type import TransactionType
 
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
@@ -454,7 +454,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
             Program.to([new_puzhash, coin.amount, []]).get_tree_hash()
@@ -521,7 +521,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         # new_inner_puzhash amount message
         message = (
@@ -588,7 +588,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
             Program.to([amount, puzhash]).get_tree_hash()
@@ -659,7 +659,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
@@ -793,7 +793,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
@@ -801,7 +801,7 @@ class DIDWallet:
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         message = bytes(puzhash)
         sigs = [AugSchemeMPL.sign(private, message)]
-        for _ in spend_bundle.coin_solutions:
+        for _ in spend_bundle.coin_spends:
             sigs.append(AugSchemeMPL.sign(private, message))
         aggsig = AugSchemeMPL.aggregate(sigs)
         # assert AugSchemeMPL.verify(pubkey, message, aggsig)
@@ -900,7 +900,7 @@ class DIDWallet:
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
 
-        launcher_cs = CoinSolution(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
         future_parent = LineageProof(
@@ -947,7 +947,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
             Program.to([innerpuz.get_tree_hash(), coin.amount, []]).get_tree_hash()

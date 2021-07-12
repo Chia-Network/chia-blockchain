@@ -63,7 +63,7 @@ def get_discrepancies_for_spend_bundle(
 ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
     try:
         cc_discrepancies: Dict[str, int] = dict()
-        for coinsol in trade_offer.coin_solutions:
+        for coinsol in trade_offer.coin_spends:
             puzzle: Program = Program.from_bytes(bytes(coinsol.puzzle_reveal))
             solution: Program = Program.from_bytes(bytes(coinsol.solution))
             # work out the deficits between coin amount and expected output for each

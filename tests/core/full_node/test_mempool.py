@@ -15,7 +15,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
@@ -1246,22 +1246,22 @@ class TestMempoolManager:
 
         coin = list(blocks[-1].get_included_reward_coins())[0]
         spend_bundle_0 = generate_test_spend_bundle(coin)
-        unsigned: List[CoinSolution] = spend_bundle_0.coin_solutions
+        unsigned: List[CoinSpend] = spend_bundle_0.coin_spends
 
         assert len(unsigned) == 1
-        coin_solution: CoinSolution = unsigned[0]
+        coin_spend: CoinSpend = unsigned[0]
 
-        err, con, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution, INFINITE_COST)
+        err, con, cost = conditions_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         assert con is not None
 
         # TODO(straya): fix this test
-        # puzzle, solution = list(coin_solution.solution.as_iter())
+        # puzzle, solution = list(coin_spend.solution.as_iter())
         # conditions_dict = conditions_by_opcode(con)
 
-        # pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, coin_solution.coin.name())
+        # pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin.name())
         # assert len(pkm_pairs) == 1
         #
-        # assert pkm_pairs[0][1] == solution.rest().first().get_tree_hash() + coin_solution.coin.name()
+        # assert pkm_pairs[0][1] == solution.rest().first().get_tree_hash() + coin_spend.coin.name()
         #
         # spend_bundle = WALLET_A.sign_transaction(unsigned)
         # assert spend_bundle is not None

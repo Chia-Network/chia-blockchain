@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint64
@@ -57,7 +57,7 @@ def make_and_spend_bundle(
     db: CoinStore,
     coin: Coin,
     delegated_puzzle: Program,
-    coinsols: List[CoinSolution],
+    coinsols: List[CoinSpend],
     exception: Optional[Exception] = None,
     ex_msg: str = "",
     fail_msg: str = "",
@@ -119,7 +119,7 @@ class TestSingleton(TestCase):
         delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)  # noqa
         full_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)  # noqa
 
-        starting_coinsol = CoinSolution(
+        starting_coinsol = CoinSpend(
             starting_coin,
             starting_puzzle,
             full_solution,
@@ -165,7 +165,7 @@ class TestSingleton(TestCase):
             inner_solution,
         )
 
-        singleton_eve_coinsol = CoinSolution(
+        singleton_eve_coinsol = CoinSpend(
             singleton_eve,
             puzzle_reveal,
             full_solution,
@@ -189,7 +189,7 @@ class TestSingleton(TestCase):
             inner_solution,
         )
 
-        singleton_coinsol = CoinSolution(
+        singleton_coinsol = CoinSpend(
             singleton,
             puzzle_reveal,
             full_solution,
@@ -240,7 +240,7 @@ class TestSingleton(TestCase):
             singleton_eve.amount,
             inner_solution,
         )
-        singleton_claim_coinsol = CoinSolution(
+        singleton_claim_coinsol = CoinSpend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -292,7 +292,7 @@ class TestSingleton(TestCase):
             singleton_eve.amount,
             inner_solution,
         )
-        delay_claim_coinsol = CoinSolution(
+        delay_claim_coinsol = CoinSpend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -348,7 +348,7 @@ class TestSingleton(TestCase):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        multi_odd_coinsol = CoinSolution(
+        multi_odd_coinsol = CoinSpend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -384,7 +384,7 @@ class TestSingleton(TestCase):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        no_odd_coinsol = CoinSolution(
+        no_odd_coinsol = CoinSpend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -426,7 +426,7 @@ class TestSingleton(TestCase):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        singleton_even_coinsol = CoinSolution(
+        singleton_even_coinsol = CoinSpend(
             singleton_child,
             puzzle_reveal,
             full_solution,
@@ -465,7 +465,7 @@ class TestSingleton(TestCase):
             inner_solution,
         )
 
-        evil_coinsol = CoinSolution(
+        evil_coinsol = CoinSpend(
             evil_coin,
             puzzle_reveal,
             full_solution,
@@ -502,7 +502,7 @@ class TestSingleton(TestCase):
             lineage_proof, singleton_child.amount, inner_solution
         )
 
-        melt_coinsol = CoinSolution(
+        melt_coinsol = CoinSpend(
             singleton_child,
             puzzle_reveal,
             full_solution,

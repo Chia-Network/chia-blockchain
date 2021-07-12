@@ -8,7 +8,7 @@ from blspy import PrivateKey
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import PoolState, FARMING_TO_POOL
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
@@ -55,11 +55,11 @@ class TestPoolWallet2:
         initial_state = PoolState(1, FARMING_TO_POOL, ph, owner_sk.get_g1(), "pool.com", uint32(10))
         tx_record, _, _ = await PoolWallet.create_new_pool_wallet_transaction(wsm, wallet_0, initial_state)
 
-        launcher_spend: CoinSolution = tx_record.spend_bundle.coin_solutions[1]
+        launcher_spend: CoinSpend = tx_record.spend_bundle.coin_spends[1]
 
         async with wsm.db_wrapper.lock:
             pw = await PoolWallet.create(
-                wsm, wallet_0, launcher_spend.coin.name(), tx_record.spend_bundle.coin_solutions, h, True
+                wsm, wallet_0, launcher_spend.coin.name(), tx_record.spend_bundle.coin_spends, h, True
             )
 
         log.warning(await pw.get_current_state())
