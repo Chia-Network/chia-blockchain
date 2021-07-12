@@ -9,7 +9,7 @@ fi
 
 pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10
-pip install git+https://github.com/silicoin-network/silicoin-blockchain.git@v0.0.7
+pip install git+https://github.com/silicoin-network/silicoin-blockchain.git@v0.0.8
 
 
 echo -e "\n===================================================="
