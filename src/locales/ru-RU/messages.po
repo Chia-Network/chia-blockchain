@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:37\n"
+"PO-Revision-Date: 2021-07-13 00:15\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -736,7 +736,7 @@ msgstr "Удалить все ключи"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
-#~ msgstr "Удалить ключ"
+#~ msgstr "Delete key"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
