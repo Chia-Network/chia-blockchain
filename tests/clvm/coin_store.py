@@ -67,10 +67,10 @@ class CoinStore:
         puzzle_announcements: Set[bytes32] = set()
 
         conditions_dicts = []
-        for coin_solution in spend_bundle.coin_solutions:
-            assert isinstance(coin_solution.coin, Coin)
+        for coin_spend in spend_bundle.coin_spends:
+            assert isinstance(coin_spend.coin, Coin)
             err, conditions_dict, cost = conditions_dict_for_solution(
-                coin_solution.puzzle_reveal, coin_solution.solution, max_cost
+                coin_spend.puzzle_reveal, coin_spend.solution, max_cost
             )
             if conditions_dict is None:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
@@ -78,13 +78,13 @@ class CoinStore:
             coin_announcements.update(
                 coin_announcement_names_for_conditions_dict(
                     conditions_dict,
-                    coin_solution.coin,
+                    coin_spend.coin,
                 )
             )
             puzzle_announcements.update(
                 puzzle_announcement_names_for_conditions_dict(
                     conditions_dict,
-                    coin_solution.coin,
+                    coin_spend.coin,
                 )
             )
 
@@ -100,12 +100,12 @@ class CoinStore:
                 uint64(now.seconds),
             )
 
-        for coin_solution, conditions_dict in zip(spend_bundle.coin_solutions, conditions_dicts):  # noqa
+        for coin_spend, conditions_dict in zip(spend_bundle.coin_spends, conditions_dicts):  # noqa
             prev_transaction_block_height = now.height
             timestamp = now.seconds
-            coin_record = ephemeral_db.get(coin_solution.coin.name())
+            coin_record = ephemeral_db.get(coin_spend.coin.name())
             if coin_record is None:
-                raise BadSpendBundleError(f"coin not found for id 0x{coin_solution.coin.name().hex()}")  # noqa
+                raise BadSpendBundleError(f"coin not found for id 0x{coin_spend.coin.name().hex()}")  # noqa
             err = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements,
@@ -136,7 +136,7 @@ class CoinStore:
             coin_name = spent_coin.name()
             coin_record = self._db[coin_name]
             self._db[coin_name] = replace(coin_record, spent_block_index=now.height, spent=True)
-        return additions, spend_bundle.coin_solutions
+        return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
         for coin_name in self._ph_index[puzzle_hash]:

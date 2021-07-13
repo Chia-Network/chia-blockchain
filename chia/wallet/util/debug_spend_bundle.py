@@ -55,15 +55,15 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=bytes([3] * 32)) ->
     asserted_puzzle_announcements = []
 
     print("=" * 80)
-    for coin_solution in spend_bundle.coin_solutions:
-        coin = coin_solution.coin
-        puzzle_reveal = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
-        solution = Program.from_bytes(bytes(coin_solution.solution))
+    for coin_spend in spend_bundle.coin_spends:
+        coin = coin_spend.coin
+        puzzle_reveal = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        solution = Program.from_bytes(bytes(coin_spend.solution))
         coin_name = coin.name()
 
-        if puzzle_reveal.get_tree_hash() != coin_solution.coin.puzzle_hash:
+        if puzzle_reveal.get_tree_hash() != coin_spend.coin.puzzle_hash:
             print("*** BAD PUZZLE REVEAL")
-            print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_solution.coin.puzzle_hash.hex()}")
+            print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_spend.coin.puzzle_hash.hex()}")
             print("*" * 80)
             breakpoint()
             continue
