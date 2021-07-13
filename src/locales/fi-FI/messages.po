@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 00:15\n"
+"PO-Revision-Date: 2021-07-13 06:31\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -107,7 +107,7 @@ msgstr "Lisää plottihakemisto"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "Lisää {currencyCode} hanasta"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
@@ -146,7 +146,7 @@ msgstr "Haluatko tuhota plotin? Plottia ei voi palauttaa."
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "Haluatko varmasti poistaa nämä vahvistamattomat tapahtumat?"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:25
 msgid "Are you sure you want to disconnect?"
@@ -384,7 +384,7 @@ msgstr "Varmista Yhteyden Katkaisu"
 #: src/components/plotNFT/PlotNFTCard.tsx:118
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Vahvista"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -620,7 +620,7 @@ msgstr "Poista kaikki avaimet"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Poista avain {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -901,7 +901,7 @@ msgstr "HD- eli hierarkis-deterministiset avaimet ovat julkisen ja salaisen avai
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Harvesterin Plotit"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1005,7 +1005,7 @@ msgstr "Virheellinen tila"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Kertaluonteinen kirjautumislinkki, jota voidaan käyttää kirjautumiseen poolin verkkosivuilla. Sisältää allekirjoituksen käyttäen viljelijän avainta Plot-NFT:stä Kaikki poolit eivät tue tätä ominaisuutta."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
@@ -1063,7 +1063,7 @@ msgstr "Käynnistimen Tunnus"
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
 msgid "Learn More"
-msgstr ""
+msgstr "Lisätietoja"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1221,7 +1221,7 @@ msgstr "Noodin tunnus"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Noodin Tunnus"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -1469,7 +1469,7 @@ msgstr "Plotti on {0}:n duplikaatti"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
-msgstr ""
+msgstr "Plot-NFT on siirtymässä (kohdetilaan). Tämä voi kestää jonkin aikaa. Älä sulje sovellusta ennen kuin tämä on valmis."
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -1512,7 +1512,7 @@ msgstr "Pisteitä löytynyt viimeisen 24 tunnin aikana"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:196
 #: src/components/plotNFT/PlotNFTCard.tsx:235
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Pisteitä viimeisen 24 tunnin aikana"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
@@ -1529,12 +1529,12 @@ msgstr "Poolin Avain"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Poolin Kirjautumislinkki"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Poolin Maksuohjeet"
 
 #: src/components/block/Block.jsx:263
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1887,7 +1887,7 @@ msgstr "Tasaa XCH-farmauspalkkioita liittymällä pooliin."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Jotain meni pieleen"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2053,11 +2053,11 @@ msgstr "Poolin URL \"{normalizedUrl}\" ei toimi. Onko se poolin osoite? Virhe: {
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "Poolin URL ei ole kelvollinen. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "Poolin URL-osoite tarvitsee HTTPS-protokollan. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2089,7 +2089,7 @@ msgstr "Kokonaistransaktioveloitukset tässä lohkossa. Suoritetaan farmarille."
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "Nämä ovat ohjeet siitä, miten farmari haluaa saada maksun. Oletuksena tämä on XCH-osoite, mutta se voidaan asettaa mihin tahansa merkkijonoon, jonka koko on alle 1024 merkkiä, joten se voi edustaa toista lohkoketjua tai maksujärjestelmätunnusta."
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2158,7 +2158,7 @@ msgstr "Tämä Plot-NFT on määritetty eri avaimelle. Voit silti luoda plotteja
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Tämä Plot-NFT ei ole kytketty pooliin"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2336,7 +2336,7 @@ msgstr "Näytä Tarjous"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:285
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Näytä Poolin Kirjautumislinkki"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2421,15 +2421,15 @@ msgstr "Haluatko asettaa tauon ennen seuraavaa plottausta?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Varoitus: Tätä avainta käytetään lompakossa, jolla voi olla saldoa. Poistamalla tämän avaimen voit menettää pääsyn tähän lompakkoon"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Varoitus: tätä avainta käytetään farmarin palkinto-osoitteeseen. Poistamalla tämän avaimen voit menettää pääsyn tuleviin farmaripalkkioihin"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Varoitus: tätä avainta käytetään poolin palkinto-osoitteeseen. Poistamalla tämän avaimen voit menettää pääsyn tuleviin poolipalkkioihin"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
@@ -2516,7 +2516,7 @@ msgstr "Sinun täytyy lunastaa ensin palkkiosi"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
 msgid "You need {currencyCode} to join a pool."
-msgstr ""
+msgstr "Tarvitset {currencyCode} liittyäksesi pooliin."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
 msgid "You will recieve <0/> to {0}"
