@@ -292,7 +292,7 @@ class DIDWallet:
         await self.save_info(new_info, True)
 
         future_parent = LineageProof(
-            coin.parent_coin_info,
+            coin.parent_coin_id,
             inner_puzzle.get_tree_hash(),
             coin.amount,
         )
@@ -304,7 +304,7 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         try:
             f = open(filename, "w")
-            output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
+            output_str = f"{self.did_info.origin_coin.parent_coin_id}:"
             output_str += f"{self.did_info.origin_coin.puzzle_hash}:"
             output_str += f"{self.did_info.origin_coin.amount}:"
             for did in self.did_info.backup_ids:
@@ -375,14 +375,14 @@ class DIDWallet:
             for puzzle_list_coin in additions.coins:
                 puzzle_hash, coins = puzzle_list_coin
                 for coin in coins:
-                    all_parents.add(coin.parent_coin_info)
+                    all_parents.add(coin.parent_coin_id)
             for puzzle_list_coin in additions.coins:
                 puzzle_hash, coins = puzzle_list_coin
                 if puzzle_hash == full_puzzle_hash:
                     # our coin
                     for coin in coins:
                         future_parent = LineageProof(
-                            coin.parent_coin_info,
+                            coin.parent_coin_id,
                             innerpuz.get_tree_hash(),
                             coin.amount,
                         )
@@ -695,7 +695,7 @@ class DIDWallet:
             f.write(":")
             f.write(bytes(message_spend_bundle).hex())
             f.write(":")
-            parent = coin.parent_coin_info.hex()
+            parent = coin.parent_coin_id.hex()
             innerpuzhash = self.did_info.current_inner.get_tree_hash().hex()
             amount = coin.amount
             f.write(parent)
@@ -710,7 +710,7 @@ class DIDWallet:
     async def get_info_for_recovery(self):
         coins = await self.select_coins(1)
         coin = coins.pop()
-        parent = coin.parent_coin_info
+        parent = coin.parent_coin_id
         innerpuzhash = self.did_info.current_inner.get_tree_hash()
         amount = coin.amount
         return [parent, innerpuzhash, amount]
@@ -867,7 +867,7 @@ class DIDWallet:
     async def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
         parent_info = None
         for name, ccparent in self.did_info.parent_info:
-            if name == coin.parent_coin_info:
+            if name == coin.parent_coin_id:
                 parent_info = ccparent
 
         return parent_info
@@ -904,16 +904,16 @@ class DIDWallet:
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
         future_parent = LineageProof(
-            eve_coin.parent_coin_info,
+            eve_coin.parent_coin_id,
             did_inner_hash,
             eve_coin.amount,
         )
         eve_parent = LineageProof(
-            launcher_coin.parent_coin_info,
+            launcher_coin.parent_coin_id,
             launcher_coin.puzzle_hash,
             launcher_coin.amount,
         )
-        await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
+        await self.add_parent(eve_coin.parent_coin_id, eve_parent, False)
         await self.add_parent(eve_coin.name(), future_parent, False)
 
         if tx_record is None or tx_record.spend_bundle is None:
@@ -942,7 +942,7 @@ class DIDWallet:
         # full solution is (parent_info my_amount innersolution)
         fullsol = Program.to(
             [
-                [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
+                [self.did_info.origin_coin.parent_coin_id, self.did_info.origin_coin.amount],
                 coin.amount,
                 innersol,
             ]

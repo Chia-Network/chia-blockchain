@@ -290,11 +290,11 @@ class CCWallet:
         search_for_parent: bool = True
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
-        lineage_proof = Program.to((1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount]))
+        lineage_proof = Program.to((1, [coin.parent_coin_id, inner_puzzle.get_tree_hash(), coin.amount]))
         await self.add_lineage(coin.name(), lineage_proof, True)
 
         for name, lineage_proofs in self.cc_info.lineage_proofs:
-            if coin.parent_coin_info == name:
+            if coin.parent_coin_id == name:
                 search_for_parent = False
                 break
 
@@ -304,7 +304,7 @@ class CCWallet:
                     "action_data": {
                         "api_name": "request_puzzle_solution",
                         "height": height,
-                        "coin_name": coin.parent_coin_info,
+                        "coin_name": coin.parent_coin_id,
                         "received_coin": coin.name(),
                     }
                 }
@@ -403,11 +403,11 @@ class CCWallet:
             Program.to(
                 (
                     1,
-                    [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],
+                    [eve_coin.parent_coin_id, cc_inner, eve_coin.amount],
                 )
             ),
         )
-        await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
+        await self.add_lineage(eve_coin.parent_coin_id, Program.to((0, [origin.as_list(), 1])))
 
         if send:
             regular_record = TransactionRecord(
@@ -466,7 +466,7 @@ class CCWallet:
             our_spend = False
             for coin in record.removals:
                 # Don't count eve spend as change
-                if coin.parent_coin_info.hex() == self.get_colour():
+                if coin.parent_coin_id.hex() == self.get_colour():
                     continue
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
                     our_spend = True
@@ -566,7 +566,7 @@ class CCWallet:
 
     async def get_lineage_proof_for_coin(self, coin) -> Optional[Program]:
         for name, proof in self.cc_info.lineage_proofs:
-            if name == coin.parent_coin_info:
+            if name == coin.parent_coin_id:
                 return proof
         return None
 

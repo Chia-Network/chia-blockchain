@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+
+## Unreleased
+
+### Changed
+
+- parent_coin_info has been renamed parent_coin_id, affecting RPC calls that return the [Coin](chia/wallet/puzzles/singleton_top_layer.py) data type
+
 ## 1.2.1 Chia blockchain 2021-07-12
 
 ### Added

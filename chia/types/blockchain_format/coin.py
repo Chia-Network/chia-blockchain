@@ -15,7 +15,7 @@ class Coin(Streamable):
     This structure is used in the body for the reward and fees genesis coins.
     """
 
-    parent_coin_info: bytes32  # down with this sort of thing.
+    parent_coin_id: bytes32  # down with this sort of thing.
     puzzle_hash: bytes32
     amount: uint64
 
@@ -27,13 +27,13 @@ class Coin(Streamable):
         # significant bit is set, to encode it as a positive number. This
         # despite "amount" being unsigned. This way, a CLVM program can generate
         # these hashes easily.
-        return std_hash(self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount))
+        return std_hash(self.parent_coin_id + self.puzzle_hash + int_to_bytes(self.amount))
 
     def name(self) -> bytes32:
         return self.get_hash()
 
     def as_list(self) -> List[Any]:
-        return [self.parent_coin_info, self.puzzle_hash, self.amount]
+        return [self.parent_coin_id, self.puzzle_hash, self.amount]
 
     @property
     def name_str(self) -> str:

@@ -90,7 +90,7 @@ class TestRLWallet:
                 "interval": 2,
                 "limit": 10,
                 "origin": {
-                    "parent_coin_info": origin.parent_coin_info.hex(),
+                    "parent_coin_id": origin.parent_coin_id.hex(),
                     "puzzle_hash": origin.puzzle_hash.hex(),
                     "amount": origin.amount,
                 },

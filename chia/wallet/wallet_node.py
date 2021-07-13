@@ -881,7 +881,7 @@ class WalletNode:
 
                 for coin in all_added_coins:
                     # This searches specifically for a launcher being created, and adds the solution of the launcher
-                    if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.parent_coin_info in removed_coin_ids:
+                    if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.parent_coin_id in removed_coin_ids:
                         cs: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, coin)
                         additional_coin_spends.append(cs)
                         # Apply this coin solution, which might add things to interested list

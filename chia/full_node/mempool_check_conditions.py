@@ -117,7 +117,7 @@ def mempool_assert_my_parent_id(condition: ConditionWithArgs, unspent: CoinRecor
     """
     Checks if coin's parent ID matches the ID from the condition
     """
-    if unspent.coin.parent_coin_info != condition.vars[0]:
+    if unspent.coin.parent_coin_id != condition.vars[0]:
         return Err.ASSERT_MY_PARENT_ID_FAILED
     return None
 

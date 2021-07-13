@@ -54,8 +54,8 @@ class TransactionRecord(Streamable):
                     return None
                 pool_parent = pool_parent_id(uint32(block_index), genesis_challenge)
                 farmer_parent = farmer_parent_id(uint32(block_index), genesis_challenge)
-                if pool_parent == self.additions[0].parent_coin_info:
+                if pool_parent == self.additions[0].parent_coin_id:
                     return uint32(block_index)
-                if farmer_parent == self.additions[0].parent_coin_info:
+                if farmer_parent == self.additions[0].parent_coin_id:
                     return uint32(block_index)
         return None

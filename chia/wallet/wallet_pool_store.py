@@ -59,7 +59,7 @@ class WalletPoolStore:
         if len(all_state_transitions) > 0:
             if height < all_state_transitions[-1][0]:
                 raise ValueError("Height cannot go down")
-            if spend.coin.parent_coin_info != all_state_transitions[-1][1].coin.name():
+            if spend.coin.parent_coin_id != all_state_transitions[-1][1].coin.name():
                 raise ValueError("New spend does not extend")
 
         all_state_transitions.append((height, spend))

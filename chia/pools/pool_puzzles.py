@@ -190,15 +190,15 @@ def create_travel_spend(
     current_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
     assert current_singleton is not None
 
-    if current_singleton.parent_coin_info == launcher_coin.name():
-        parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
+    if current_singleton.parent_coin_id == launcher_coin.name():
+        parent_info_list = Program.to([launcher_coin.parent_coin_id, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_spend.puzzle_reveal))
         last_coin_spend_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
         assert last_coin_spend_inner_puzzle is not None
         parent_info_list = Program.to(
             [
-                last_coin_spend.coin.parent_coin_info,
+                last_coin_spend.coin.parent_coin_id,
                 last_coin_spend_inner_puzzle.get_tree_hash(),
                 last_coin_spend.coin.amount,
             ]
@@ -241,15 +241,15 @@ def create_absorb_spend(
     coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
     assert coin is not None
 
-    if coin.parent_coin_info == launcher_coin.name():
-        parent_info: Program = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
+    if coin.parent_coin_id == launcher_coin.name():
+        parent_info: Program = Program.to([launcher_coin.parent_coin_id, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_spend.puzzle_reveal))
         last_coin_spend_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
         assert last_coin_spend_inner_puzzle is not None
         parent_info = Program.to(
             [
-                last_coin_spend.coin.parent_coin_info,
+                last_coin_spend.coin.parent_coin_id,
                 last_coin_spend_inner_puzzle.get_tree_hash(),
                 last_coin_spend.coin.amount,
             ]

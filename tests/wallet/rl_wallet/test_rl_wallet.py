@@ -54,7 +54,7 @@ class TestCCWallet:
         await rl_user.set_user_info(
             interval,
             limit,
-            origin.parent_coin_info.hex(),
+            origin.parent_coin_id.hex(),
             origin.puzzle_hash.hex(),
             origin.amount,
             admin_pubkey.hex(),

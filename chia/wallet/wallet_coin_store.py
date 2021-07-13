@@ -109,7 +109,7 @@ class WalletCoinStore:
                 int(record.spent),
                 int(record.coinbase),
                 str(record.coin.puzzle_hash.hex()),
-                str(record.coin.parent_coin_info.hex()),
+                str(record.coin.parent_coin_id.hex()),
                 bytes(record.coin.amount),
                 record.wallet_type,
                 record.wallet_id,

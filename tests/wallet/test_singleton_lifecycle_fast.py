@@ -236,7 +236,7 @@ class SingletonWallet:
                         assert parent_inner_puzzle is not None
                         parent_inner_puzzle_hash = parent_inner_puzzle.get_tree_hash()
                         lineage_proof = Program.to(
-                            [self.current_state.parent_coin_info, parent_inner_puzzle_hash, coin.amount]
+                            [self.current_state.parent_coin_id, parent_inner_puzzle_hash, coin.amount]
                         )
                         self.lineage_proof = lineage_proof
                         self.current_state = coin
@@ -368,7 +368,7 @@ def claim_p2_singleton(
 def lineage_proof_for_coin_spend(coin_spend: CoinSpend) -> Program:
     """Take a coin solution, return a lineage proof for their child to use in spends"""
     coin = coin_spend.coin
-    parent_name = coin.parent_coin_info
+    parent_name = coin.parent_coin_id
     amount = coin.amount
 
     inner_puzzle_hash = None

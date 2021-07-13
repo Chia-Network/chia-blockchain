@@ -487,7 +487,7 @@ class XTestDIDWallet:
         parent_info = await did_wallet.get_parent_for_coin(coin)
         fullsol = Program.to(
             [
-                [did_wallet.did_info.origin_coin.parent_coin_info, did_wallet.did_info.origin_coin.amount],
+                [did_wallet.did_info.origin_coin.parent_coin_id, did_wallet.did_info.origin_coin.amount],
                 [
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,
@@ -578,7 +578,7 @@ class XTestDIDWallet:
         )
         fullsol = Program.to(
             [
-                [did_wallet.did_info.origin_coin.parent_coin_info, did_wallet.did_info.origin_coin.amount],
+                [did_wallet.did_info.origin_coin.parent_coin_id, did_wallet.did_info.origin_coin.amount],
                 [
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,

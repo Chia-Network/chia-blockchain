@@ -84,7 +84,7 @@ def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
     r = []
     for coin_spend in bundle.coin_spends:
         entry = [
-            coin_spend.coin.parent_coin_info,
+            coin_spend.coin.parent_coin_id,
             sexp_from_stream(io.BytesIO(bytes(coin_spend.puzzle_reveal)), SExp.to),
             coin_spend.coin.amount,
             sexp_from_stream(io.BytesIO(bytes(coin_spend.solution)), SExp.to),

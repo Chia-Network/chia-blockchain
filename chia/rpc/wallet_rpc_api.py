@@ -1077,7 +1077,7 @@ class WalletRpcApi:
             await rl_user.set_user_info(
                 uint64(request["interval"]),
                 uint64(request["limit"]),
-                origin["parent_coin_info"],
+                origin["parent_coin_id"],
                 origin["puzzle_hash"],
                 origin["amount"],
                 request["admin_pubkey"],

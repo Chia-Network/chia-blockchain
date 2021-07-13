@@ -514,7 +514,7 @@ class PoolWallet:
         tip_coin = tip.coin
         singleton = tip.additions()[0]
         singleton_id = singleton.name()
-        assert outgoing_coin_spend.coin.parent_coin_info == tip_coin.name()
+        assert outgoing_coin_spend.coin.parent_coin_id == tip_coin.name()
         assert outgoing_coin_spend.coin.name() == singleton_id
         assert new_inner_puzzle != inner_puzzle
         if is_pool_member_inner_puzzle(inner_puzzle):

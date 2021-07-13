@@ -33,7 +33,7 @@ def coin_as_program(coin: Coin) -> Program:
     """
     Convenience function for when putting `coin_info` into a solution.
     """
-    return Program.to([coin.parent_coin_info, coin.puzzle_hash, coin.amount])
+    return Program.to([coin.parent_coin_id, coin.puzzle_hash, coin.amount])
 
 
 def dump_coin(coin: Coin) -> str:

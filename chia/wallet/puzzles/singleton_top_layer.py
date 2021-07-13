@@ -81,7 +81,7 @@ def launch_conditions_and_coinsol(
 
 # Take a coin solution, return a lineage proof for their child to use in spends
 def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
-    parent_name: bytes32 = coin_spend.coin.parent_coin_info
+    parent_name: bytes32 = coin_spend.coin.parent_coin_id
 
     inner_puzzle_hash: Optional[bytes32] = None
     if coin_spend.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:

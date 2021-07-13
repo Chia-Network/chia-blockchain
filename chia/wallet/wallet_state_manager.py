@@ -678,9 +678,9 @@ class WalletStateManager:
 
             is_coinbase = False
             is_fee_reward = False
-            if coin.parent_coin_info in pool_rewards:
+            if coin.parent_coin_id in pool_rewards:
                 is_coinbase = True
-            if coin.parent_coin_info in farmer_rewards:
+            if coin.parent_coin_id in farmer_rewards:
                 is_fee_reward = True
 
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)

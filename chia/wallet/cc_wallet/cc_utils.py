@@ -57,7 +57,7 @@ def lineage_proof_for_cc_parent(parent_coin: Coin, parent_inner_puzzle_hash: byt
     return Program.to(
         (
             1,
-            [parent_coin.parent_coin_info, parent_inner_puzzle_hash, parent_coin.amount],
+            [parent_coin.parent_coin_id, parent_inner_puzzle_hash, parent_coin.amount],
         )
     )
 
