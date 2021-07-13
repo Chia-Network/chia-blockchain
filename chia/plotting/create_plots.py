@@ -33,7 +33,7 @@ class PlotKeys:
 
     @property
     def pool_contract_puzzle_hash(self) -> Optional[bytes32]:
-        if self.pool_contract_address:
+        if self.pool_contract_address is not None:
             return decode_puzzle_hash(self.pool_contract_address)
         return None
 
@@ -59,10 +59,10 @@ class PlotKeysResolver:
         self.resolved_keys: Optional[PlotKeys] = None
 
     async def resolve(self) -> PlotKeys:
-        if self.resolved_keys:
+        if self.resolved_keys is not None:
             return self.resolved_keys
 
-        keychain_proxy = None
+        keychain_proxy: Optional[KeychainProxy] = None
         if self.connect_to_daemon:
             keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:

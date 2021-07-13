@@ -1,3 +1,4 @@
+from io import TextIOWrapper
 import click
 
 from chia import __version__
@@ -15,6 +16,7 @@ from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import set_keys_root_path, supports_keyring_passphrase
+from typing import Optional
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -46,21 +48,23 @@ def monkey_patch_click() -> None:
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the keyring passphase from")
 @click.pass_context
-def cli(ctx: click.Context, root_path: str, **kwargs) -> None:
+def cli(
+    ctx: click.Context,
+    root_path: str,
+    keys_root_path: Optional[str] = None,
+    passphrase_file: Optional[TextIOWrapper] = None,
+) -> None:
     from pathlib import Path
 
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
 
-    # keys_root_path and passphrase_file are grabbed from kwargs because they may not be
-    # present. If supports_keyring_passphrase() returns False, we remove those options
-    # from the CLI.
-    keys_root_path = kwargs.get("keys_root_path")
-    if keys_root_path:
+    # keys_root_path and passphrase_file will be None if the passphrase options have been
+    # scrubbed from the CLI options
+    if keys_root_path is not None:
         set_keys_root_path(Path(keys_root_path))
 
-    passphrase_file = kwargs.get("passphrase_file")
-    if passphrase_file:
+    if passphrase_file is not None:
         from .passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
         try:

@@ -327,16 +327,16 @@ class WebSocketServer:
         return full_response, [websocket]
 
     async def is_keyring_locked(self) -> Dict[str, Any]:
-        locked = Keychain.is_keyring_locked()
-        response = {"success": True, "is_keyring_locked": locked}
+        locked: bool = Keychain.is_keyring_locked()
+        response: Dict[str, Any] = {"success": True, "is_keyring_locked": locked}
         return response
 
     async def keyring_status(self) -> Dict[str, Any]:
-        passphrase_support_enabled = supports_keyring_passphrase()
-        user_passphrase_is_set = using_default_passphrase()
-        locked = Keychain.is_keyring_locked()
-        needs_migration = Keychain.needs_migration()
-        response = {
+        passphrase_support_enabled: bool = supports_keyring_passphrase()
+        user_passphrase_is_set: bool = using_default_passphrase()
+        locked: bool = Keychain.is_keyring_locked()
+        needs_migration: bool = Keychain.needs_migration()
+        response: Dict[str, Any] = {
             "success": True,
             "is_keyring_locked": locked,
             "passphrase_support_enabled": passphrase_support_enabled,
@@ -372,70 +372,66 @@ class WebSocketServer:
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
 
-        response = {"success": success, "error": error}
+        response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
     async def set_keyring_passphrase(self, request: Dict[str, Any]):
-        success = False
-        error = None
-        current_passphrase = None
-        new_passphrase = None
+        success: bool = False
+        error: Optional[str] = None
+        current_passphrase: Optional[str] = None
+        new_passphrase: Optional[str] = None
 
         if using_default_passphrase():
             current_passphrase = default_passphrase()
 
-        if error is None and Keychain.has_master_passphrase() and not current_passphrase:
+        if Keychain.has_master_passphrase() and not current_passphrase:
             current_passphrase = request.get("current_passphrase", None)
             if type(current_passphrase) is not str:
-                error = "missing current_passphrase"
+                return {"success": False, "error": "missing current_passphrase"}
 
-        if error is None:
-            new_passphrase = request.get("new_passphrase", None)
-            if type(new_passphrase) is not str:
-                error = "missing new_passphrase"
+        new_passphrase = request.get("new_passphrase", None)
+        if type(new_passphrase) is not str:
+            return {"success": False, "error": "missing new_passphrase"}
 
-        if error is None:
-            try:
-                assert new_passphrase is not None  # mypy, I love you
-                Keychain.set_master_passphrase(current_passphrase, new_passphrase, allow_migration=False)
-            except KeyringRequiresMigration:
-                error = "keyring requires migration"
-            except KeyringCurrentPassphaseIsInvalid:
-                error = "current passphrase is invalid"
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Failed to set keyring passphrase: {e} {tb}")
-            else:
-                success = True
+        try:
+            assert new_passphrase is not None  # mypy, I love you
+            Keychain.set_master_passphrase(current_passphrase, new_passphrase, allow_migration=False)
+        except KeyringRequiresMigration:
+            error = "keyring requires migration"
+        except KeyringCurrentPassphaseIsInvalid:
+            error = "current passphrase is invalid"
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Failed to set keyring passphrase: {e} {tb}")
+        else:
+            success = True
 
-        response = {"success": success, "error": error}
+        response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
     async def remove_keyring_passphrase(self, request: Dict[str, Any]):
-        success = False
-        error = None
-        current_passphrase = None
+        success: bool = False
+        error: Optional[str] = None
+        current_passphrase: Optional[str] = None
 
-        if error is None and not Keychain.has_master_passphrase():
-            error = "passphrase not set"
+        if not Keychain.has_master_passphrase():
+            return {"success": False, "error": "passphrase not set"}
 
-        if error is None:
-            current_passphrase = request.get("current_passphrase", None)
-            if type(current_passphrase) is not str:
-                error = "missing current_passphrase"
+        current_passphrase = request.get("current_passphrase", None)
+        if type(current_passphrase) is not str:
+            return {"success": False, "error": "missing current_passphrase"}
 
-        if error is None:
-            try:
-                Keychain.remove_master_passphrase(current_passphrase)
-            except KeyringCurrentPassphaseIsInvalid:
-                error = "current passphrase is invalid"
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Failed to remove keyring passphrase: {e} {tb}")
-            else:
-                success = True
+        try:
+            Keychain.remove_master_passphrase(current_passphrase)
+        except KeyringCurrentPassphaseIsInvalid:
+            error = "current passphrase is invalid"
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Failed to remove keyring passphrase: {e} {tb}")
+        else:
+            success = True
 
-        response = {"success": success, "error": error}
+        response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
     def get_status(self) -> Dict[str, Any]:
