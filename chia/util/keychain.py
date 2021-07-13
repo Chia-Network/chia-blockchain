@@ -449,6 +449,14 @@ class Keychain:
         return True
 
     @staticmethod
+    def needs_migration() -> bool:
+        """
+        Returns a bool indicating whether the underlying keyring needs to be migrated to the new
+        format for passphrase support.
+        """
+        return KeyringWrapper.get_shared_instance().using_legacy_keyring()
+
+    @staticmethod
     def has_master_passphrase() -> bool:
         """
         Returns a bool indicating whether the underlying keyring data

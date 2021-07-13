@@ -305,6 +305,8 @@ class WebSocketServer:
             response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "is_keyring_locked":
             response = await self.is_keyring_locked()
+        elif command == "keyring_status":
+            response = await self.keyring_status()
         elif command == "unlock_keyring":
             response = await self.unlock_keyring(cast(Dict[str, Any], data))
         elif command == "set_keyring_passphrase":
@@ -327,6 +329,20 @@ class WebSocketServer:
     async def is_keyring_locked(self) -> Dict[str, Any]:
         locked = Keychain.is_keyring_locked()
         response = {"success": True, "is_keyring_locked": locked}
+        return response
+
+    async def keyring_status(self) -> Dict[str, Any]:
+        passphrase_support_enabled = supports_keyring_passphrase()
+        user_passphrase_is_set = using_default_passphrase()
+        locked = Keychain.is_keyring_locked()
+        needs_migration = Keychain.needs_migration()
+        response = {
+            "success": True,
+            "is_keyring_locked": locked,
+            "passphrase_support_enabled": passphrase_support_enabled,
+            "user_passphrase_is_set": user_passphrase_is_set,
+            "needs_migration": needs_migration,
+        }
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]):
