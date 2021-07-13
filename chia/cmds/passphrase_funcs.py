@@ -14,7 +14,7 @@ PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_f
 
 def remove_passphrase_options_from_cmd(cmd) -> None:
     """
-    Filters-out passphrase optiosn from a given Click command object
+    Filters-out passphrase options from a given Click command object
     """
     # TODO: Click doesn't seem to have a great way of adding/removing params using an
     # existing command, and using the decorator-supported construction of options doesn't

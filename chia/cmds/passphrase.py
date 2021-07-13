@@ -32,15 +32,15 @@ def set_cmd(
         verify_passphrase_meets_requirements,
     )
 
-    success = False
-    current_passphrase = None
-    if current_passphrase_file:
+    success: bool = False
+    current_passphrase: Optional[str] = None
+    if current_passphrase_file is not None:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
-    if passphrase_file:
+    if passphrase_file is not None:
         try:
             # Read the passphrase from a file and verify it
-            new_passphrase = read_passphrase_from_file(passphrase_file)
+            new_passphrase: str = read_passphrase_from_file(passphrase_file)
             valid_passphrase, error_msg = verify_passphrase_meets_requirements(
                 new_passphrase, new_passphrase
             )  # new_passphrase provided for both args since we don't have a separate confirmation passphrase
@@ -83,8 +83,8 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
         remove_passphrase,
     )
 
-    current_passphrase = None
-    if current_passphrase_file:
+    current_passphrase: Optional[str] = None
+    if current_passphrase_file is not None:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
     if remove_passphrase(current_passphrase):

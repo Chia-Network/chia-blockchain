@@ -346,23 +346,22 @@ class WebSocketServer:
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]):
-        success = False
-        error = None
-        key = request.get("key", None)
+        success: bool = False
+        error: Optional[str] = None
+        key: Optional[str] = request.get("key", None)
         if type(key) is not str:
-            error = "missing key"
+            return {"success": False, "error": "missing key"}
 
-        if error is None:
-            try:
-                if Keychain.master_passphrase_is_valid(key, force_reload=True):
-                    Keychain.set_cached_master_passphrase(key)
-                    success = True
-                else:
-                    error = "bad passphrase"
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
-                error = "validation exception"
+        try:
+            if Keychain.master_passphrase_is_valid(key, force_reload=True):
+                Keychain.set_cached_master_passphrase(key)
+                success = True
+            else:
+                error = "bad passphrase"
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
+            error = "validation exception"
 
         if success and self.run_check_keys_on_unlock:
             try:

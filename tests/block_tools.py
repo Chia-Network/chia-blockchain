@@ -226,7 +226,6 @@ class BlockTools:
             plot_keys_1 = PlotKeys(self.farmer_pk, self.pool_pk, None)
 
             # No datetime in the filename, to get deterministic filenames and not re-plot
-            print(f"starting creation of plot 1")
             await create_plots(
                 args,
                 plot_keys_1,
@@ -234,11 +233,9 @@ class BlockTools:
                 use_datetime=False,
                 test_private_keys=test_private_keys[:num_pool_public_key_plots],
             )
-            print(f"finished creating plot 1")
             # Create more plots, but to a pool address instead of public key
             plot_keys_2 = PlotKeys(self.farmer_pk, None, encode_puzzle_hash(self.pool_ph, "xch"))
             args.num = num_pool_address_plots
-            print(f"starting creation of plot 2")
             await create_plots(
                 args,
                 plot_keys_2,
@@ -246,7 +243,6 @@ class BlockTools:
                 use_datetime=False,
                 test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
-            print(f"finished creating plot 2")
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
