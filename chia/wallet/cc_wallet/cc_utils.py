@@ -258,9 +258,9 @@ def get_colour_for_url(url: str) -> Optional[str]:
     try:
         dns_record = dns.resolver.resolve(f"xch_colour.{url}", "TXT")
         colour = dns_record.response.answer[0][0].to_text()
-        if colour.startswith("\""):
+        if colour.startswith('"'):
             colour = colour[1:]
-        if colour.endswith("\""):
+        if colour.endswith('"'):
             colour = colour[:-1]
         return colour
     except dns.resolver.NoAnswer:

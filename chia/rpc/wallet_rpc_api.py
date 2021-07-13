@@ -22,6 +22,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.wallet.cc_wallet.cc_utils import get_colour_for_url
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
@@ -437,9 +438,11 @@ class WalletRpcApi:
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
-                    cc_wallet = await CCWallet.create_wallet_for_cc(
-                        wallet_state_manager, main_wallet, request["colour"]
-                    )
+                    if "colour" in request:
+                        colour = request["colour"]
+                    elif "cc_url" in request:
+                        colour = get_colour_for_url(request["cc_url"])
+                    cc_wallet = await CCWallet.create_wallet_for_cc(wallet_state_manager, main_wallet, colour)
                     asyncio.create_task(self._create_backup_and_upload(host))
                 return {"type": cc_wallet.type()}
 
