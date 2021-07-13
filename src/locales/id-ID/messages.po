@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-08 17:48\n"
+"PO-Revision-Date: 2021-07-13 00:14\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -616,7 +616,7 @@ msgstr "Hapus semua key"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
-#~ msgstr "Hapus key"
+#~ msgstr "Delete key"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
