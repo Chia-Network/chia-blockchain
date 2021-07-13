@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 00:15\n"
+"PO-Revision-Date: 2021-07-13 06:31\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -620,7 +620,7 @@ msgstr "Slet alle nøgler"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Slet nøgle {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -2421,15 +2421,15 @@ msgstr "Vil du have en forsinkelse før det næste plot starter?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Advarsel: Denne nøgle bruges til en tegnebog, der kan have en saldo der ikke er nul. Ved at slette denne nøgle kan du miste adgangen til denne tegnebog"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Advarsel: Denne nøgle bruges som farmer belønningsadresse. Ved at slette denne nøgle kan du miste adgang til fremtidige farmer belønninger"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Advarsel: Denne nøgle bruges som pulje belønningsadresse. Ved at slette denne nøgle kan du miste adgang til fremtidige pulje belønninger"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
