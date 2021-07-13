@@ -117,23 +117,6 @@ class FullNodeRpcClient(RpcClient):
             for coin in (await self.fetch("get_coin_records_by_puzzle_hashes", d))["coin_records"]
         ]
 
-    async def get_coin_records_by_parent_id(
-        self,
-        parent_id: bytes32,
-        include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
-    ) -> List:
-        d = {"parent_id": parent_id.hex(), "include_spent_coins": include_spent_coins}
-        if start_height is not None:
-            d["start_height"] = start_height
-        if end_height is not None:
-            d["end_height"] = end_height
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in (await self.fetch("get_coin_records_by_parent_id", d))["coin_records"]
-        ]
-
     async def get_coin_records_by_parent_ids(
         self,
         parent_ids: List[bytes32],

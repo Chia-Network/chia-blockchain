@@ -115,9 +115,6 @@ class TestRpc:
 
             pid = list(blocks[-1].get_included_reward_coins())[0].parent_coin_info
             pid_2 = list(blocks[-1].get_included_reward_coins())[1].parent_coin_info
-            coins = await client.get_coin_records_by_parent_id(pid)
-            print(coins)
-            assert len(coins) == 1
             coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
             print(coins)
             assert len(coins) == 2
