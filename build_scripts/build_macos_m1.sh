@@ -31,6 +31,7 @@ echo "Install pyinstaller and build bootloaders for M1"
 # Alternatively, if the m1 bootloaders are distributed with pip in the future, can just use those
 git clone https://github.com/pyinstaller/pyinstaller.git
 cd pyinstaller/bootloader
+git checkout ab81fe39b11bc12216f86e85fb899ff13379c069
 python ./waf all
 pip install ..
 cd ../..
