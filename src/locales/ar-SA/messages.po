@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-13 00:15\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -616,7 +616,7 @@ msgstr "حذف جميع المفاتيح"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
-#~ msgstr "حذف المفتاح"
+#~ msgstr "Delete key"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
