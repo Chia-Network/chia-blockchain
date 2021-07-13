@@ -25,7 +25,7 @@ from chia.full_node.bundle_tools import (
 from chia.util.errors import Err
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots
+from chia.plotting.create_plots import create_plots, PlotKeys
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -207,10 +207,6 @@ class BlockTools:
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = num_pool_public_key_plots  # Some plots created to a pool public key, and some to a pool puzzle hash
         args.buffer = 100
-        args.farmer_public_key = bytes(self.farmer_pk).hex()
-        args.pool_public_key = bytes(self.pool_pk).hex()
-        args.alt_fingerprint = None
-        args.pool_contract_address = None
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -222,29 +218,35 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
-        args.connect_to_daemon = False
         test_private_keys = [
             AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big")))
             for i in range(num_pool_public_key_plots + num_pool_address_plots)
         ]
         try:
+            plot_keys_1 = PlotKeys(self.farmer_pk, self.pool_pk, None)
+
             # No datetime in the filename, to get deterministic filenames and not re-plot
+            print(f"starting creation of plot 1")
             await create_plots(
                 args,
+                plot_keys_1,
                 self.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[:num_pool_public_key_plots],
             )
+            print(f"finished creating plot 1")
             # Create more plots, but to a pool address instead of public key
-            args.pool_public_key = None
-            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
+            plot_keys_2 = PlotKeys(self.farmer_pk, None, encode_puzzle_hash(self.pool_ph, "xch"))
             args.num = num_pool_address_plots
+            print(f"starting creation of plot 2")
             await create_plots(
                 args,
+                plot_keys_2,
                 self.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
+            print(f"finished creating plot 2")
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)

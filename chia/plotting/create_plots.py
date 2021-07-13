@@ -20,6 +20,24 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_s
 log = logging.getLogger(__name__)
 
 
+class PlotKeys:
+    def __init__(
+        self,
+        farmer_public_key: G1Element,
+        pool_public_key: Optional[G1Element],
+        pool_contract_address: Optional[str],
+    ):
+        self.farmer_public_key = farmer_public_key
+        self.pool_public_key = pool_public_key
+        self.pool_contract_address = pool_contract_address
+
+    @property
+    def pool_contract_puzzle_hash(self) -> Optional[bytes32]:
+        if self.pool_contract_address:
+            return decode_puzzle_hash(self.pool_contract_address)
+        return None
+
+
 class PlotKeysResolver:
     def __init__(
         self,
@@ -38,15 +56,11 @@ class PlotKeysResolver:
         self.root_path = root_path
         self.log = log
         self.connect_to_daemon = connect_to_daemon
-        self.resolved = False
+        self.resolved_keys: Optional[PlotKeys] = None
 
-        self._farmer_public_key_g1element = None
-        self._pool_public_key_g1element = None
-        self._pool_contract_puzzle_hash = None
-
-    async def resolve(self):
-        if self.resolved:
-            return
+    async def resolve(self) -> PlotKeys:
+        if self.resolved_keys:
+            return self.resolved_keys
 
         keychain_proxy = None
         if self.connect_to_daemon:
@@ -61,7 +75,6 @@ class PlotKeysResolver:
             farmer_public_key = await self.get_farmer_public_key(keychain_proxy)
 
         pool_public_key: Optional[G1Element] = None
-        pool_contract_puzzle_hash: Optional[bytes32] = None
         if self.pool_public_key is not None:
             if self.pool_contract_address is not None:
                 raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
@@ -70,32 +83,9 @@ class PlotKeysResolver:
             if self.pool_contract_address is None:
                 # If nothing is set, farms to the provided key (or the first key)
                 pool_public_key = await self.get_pool_public_key(keychain_proxy)
-            else:
-                # If the pool contract puzzle hash is set, use that
-                pool_contract_puzzle_hash = decode_puzzle_hash(self.pool_contract_address)
 
-        self._farmer_public_key_g1element = farmer_public_key
-        self._pool_public_key_g1element = pool_public_key
-        self._pool_contract_puzzle_hash = pool_contract_puzzle_hash
-        self.resolved = True
-
-    @property
-    def farmer_public_key_g1element(self):
-        if not self.resolved:
-            raise Exception("resolve() hasn't been called yet")
-        return self._farmer_public_key_g1element
-
-    @property
-    def pool_public_key_g1element(self):
-        if not self.resolved:
-            raise Exception("resolve() hasn't been called yet")
-        return self._pool_public_key_g1element
-
-    @property
-    def pool_contract_puzzle_hash(self):
-        if not self.resolved:
-            raise Exception("resolve() hasn't been called yet")
-        return self._pool_contract_puzzle_hash
+        self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
+        return self.resolved_keys
 
     async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:
         sk: Optional[PrivateKey] = None
@@ -136,7 +126,21 @@ class PlotKeysResolver:
         return master_sk_to_pool_sk(sk).get_g1()
 
 
-async def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
+async def resolve_plot_keys(
+    farmer_public_key: str,
+    alt_fingerprint: int,
+    pool_public_key: str,
+    pool_contract_address: str,
+    root_path: Path,
+    log: logging.Logger,
+    connect_to_daemon=False,
+) -> PlotKeys:
+    return await PlotKeysResolver(
+        farmer_public_key, alt_fingerprint, pool_public_key, pool_contract_address, root_path, log, connect_to_daemon
+    ).resolve()
+
+
+async def create_plots(args, keys: PlotKeys, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
 
     config_filename = config_path_for_filename(root_path, "config.yaml")
     config = load_config(root_path, config_filename)
@@ -144,23 +148,7 @@ async def create_plots(args, root_path, use_datetime=True, test_private_keys: Op
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
 
-    keys_resolver = PlotKeysResolver(
-        args.farmer_public_key,
-        args.alt_fingerprint,
-        args.pool_public_key,
-        args.pool_contract_address,
-        root_path,
-        log,
-        args.connect_to_daemon,
-    )
-
-    await keys_resolver.resolve()
-
-    farmer_public_key: G1Element = keys_resolver.farmer_public_key_g1element
-    pool_public_key: G1Element = keys_resolver.pool_public_key_g1element
-    pool_contract_puzzle_hash: Optional[bytes32] = keys_resolver.pool_contract_puzzle_hash
-
-    assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
+    assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
     num = args.num
 
     if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
@@ -169,16 +157,16 @@ async def create_plots(args, root_path, use_datetime=True, test_private_keys: Op
         log.warning("k under 22 is not supported. Increasing k to 22")
         args.size = 22
 
-    if pool_public_key is not None:
+    if keys.pool_public_key is not None:
         log.info(
             f"Creating {num} plots of size {args.size}, pool public key:  "
-            f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
+            f"{bytes(keys.pool_public_key).hex()} farmer public key: {bytes(keys.farmer_public_key).hex()}"
         )
     else:
-        assert pool_contract_puzzle_hash is not None
+        assert keys.pool_contract_puzzle_hash is not None
         log.info(
             f"Creating {num} plots of size {args.size}, pool contract address:  "
-            f"{args.pool_contract_address} farmer public key: {bytes(farmer_public_key).hex()}"
+            f"{keys.pool_contract_address} farmer public key: {bytes(keys.farmer_public_key).hex()}"
         )
 
     tmp_dir_created = False
@@ -204,19 +192,19 @@ async def create_plots(args, root_path, use_datetime=True, test_private_keys: Op
 
         # The plot public key is the combination of the harvester and farmer keys
         # New plots will also include a taproot of the keys, for extensibility
-        include_taproot: bool = pool_contract_puzzle_hash is not None
+        include_taproot: bool = keys.pool_contract_puzzle_hash is not None
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            master_sk_to_local_sk(sk).get_g1(), farmer_public_key, include_taproot
+            master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, include_taproot
         )
 
         # The plot id is based on the harvester, farmer, and pool keys
-        if pool_public_key is not None:
-            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(pool_public_key, plot_public_key)
-            plot_memo: bytes32 = stream_plot_info_pk(pool_public_key, farmer_public_key, sk)
+        if keys.pool_public_key is not None:
+            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
+            plot_memo: bytes32 = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
         else:
-            assert pool_contract_puzzle_hash is not None
-            plot_id = ProofOfSpace.calculate_plot_id_ph(pool_contract_puzzle_hash, plot_public_key)
-            plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, sk)
+            assert keys.pool_contract_puzzle_hash is not None
+            plot_id = ProofOfSpace.calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
+            plot_memo = stream_plot_info_ph(keys.pool_contract_puzzle_hash, keys.farmer_public_key, sk)
 
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")

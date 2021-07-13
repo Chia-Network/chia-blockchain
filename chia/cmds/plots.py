@@ -112,7 +112,7 @@ def create_cmd(
     exclude_final_dir: bool,
     connect_to_daemon: bool,
 ):
-    from chia.plotting.create_plots import create_plots
+    from chia.plotting.create_plots import create_plots, resolve_plot_keys
 
     class Params(object):
         def __init__(self):
@@ -122,10 +122,6 @@ def create_cmd(
             self.num_threads = num_threads
             self.buckets = buckets
             self.stripe_size = DEFAULT_STRIPE_SIZE
-            self.alt_fingerprint = alt_fingerprint
-            self.pool_contract_address = pool_contract_address
-            self.farmer_public_key = farmer_public_key
-            self.pool_public_key = pool_public_key
             self.tmp_dir = Path(tmp_dir)
             self.tmp2_dir = Path(tmp2_dir) if tmp2_dir else None
             self.final_dir = Path(final_dir)
@@ -133,7 +129,6 @@ def create_cmd(
             self.memo = memo
             self.nobitfield = nobitfield
             self.exclude_final_dir = exclude_final_dir
-            self.connect_to_daemon = connect_to_daemon
 
     if size < 32 and not override_k:
         print("k=32 is the minimum size for farming.")
@@ -143,7 +138,19 @@ def create_cmd(
         print("Error: The minimum k size allowed from the cli is k=25.")
         sys.exit(1)
 
-    asyncio.get_event_loop().run_until_complete(create_plots(Params(), ctx.obj["root_path"]))
+    plot_keys = asyncio.get_event_loop().run_until_complete(
+        resolve_plot_keys(
+            farmer_public_key,
+            alt_fingerprint,
+            pool_public_key,
+            pool_contract_address,
+            ctx.obj["root_path"],
+            log,
+            connect_to_daemon,
+        )
+    )
+
+    asyncio.get_event_loop().run_until_complete(create_plots(Params(), plot_keys, ctx.obj["root_path"]))
 
 
 @plots_cmd.command("check", short_help="Checks plots")
