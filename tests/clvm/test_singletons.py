@@ -25,7 +25,7 @@ from tests.clvm.test_puzzles import (
     secret_exponent_for_index,
 )
 
-from chia.clvm.node import Node, NodeClient
+from chia.clvm.spend_sim import SpendSim, SimClient
 
 """
 This test suite aims to test:
@@ -57,8 +57,8 @@ class TestSingleton:
     # Helper function
     async def make_and_spend_bundle(
         self,
-        node: Node,
-        node_client: NodeClient,
+        sim: SpendSim,
+        sim_client: SimClient,
         coin: Coin,
         delegated_puzzle: Program,
         coinsols: List[CoinSpend],
@@ -72,9 +72,9 @@ class TestSingleton:
         )
 
         try:
-            result, error = await node_client.push_tx(spend_bundle)
+            result, error = await sim_client.push_tx(spend_bundle)
             if error is None:
-                await node.farm_block()
+                await sim.farm_block()
             elif ex_error is not None:
                 assert error == ex_error
             else:
@@ -95,10 +95,10 @@ class TestSingleton:
 
             # Get our starting standard coin created
             START_AMOUNT: uint64 = 1023
-            node = await Node.create()
-            node_client = NodeClient(node)
-            await node.farm_block(starting_puzzle.get_tree_hash())
-            starting_coin: Coin = await node_client.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())
+            sim = await SpendSim.create()
+            sim_client = SimClient(sim)
+            await sim.farm_block(starting_puzzle.get_tree_hash())
+            starting_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())
             starting_coin = starting_coin[0].coin
             comment: List[Tuple[str, str]] = [("hello", "world")]
 
@@ -126,15 +126,15 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 starting_coin,
                 delegated_puzzle,
                 [starting_coinsol, launcher_coinsol],
             )
 
             # EVE
-            singleton_eve: Coin = (await node.all_non_reward_coins())[0]
+            singleton_eve: Coin = (await sim.all_non_reward_coins())[0]
             launcher_coin: Coin = singleton_top_layer.generate_launcher_coin(
                 starting_coin,
                 START_AMOUNT,
@@ -173,15 +173,15 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 singleton_eve,
                 delegated_puzzle,
                 [singleton_eve_coinsol],
             )
 
             # POST-EVE
-            singleton: Coin = (await node.all_non_reward_coins())[0]
+            singleton: Coin = (await sim.all_non_reward_coins())[0]
             # Same delegated_puzzle / inner_solution. We're just recreating ourself
             lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_eve_coinsol)  # noqa
             # Same puzzle_reveal too
@@ -198,20 +198,20 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 singleton,
                 delegated_puzzle,
                 [singleton_coinsol],
             )
 
             # CLAIM A P2_SINGLETON
-            singleton_child: Coin = (await node.all_non_reward_coins())[0]
+            singleton_child: Coin = (await sim.all_non_reward_coins())[0]
             p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_puzzle(launcher_id)
             p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
             ARBITRARY_AMOUNT: uint64 = 1379
-            await node.farm_block(p2_singleton_ph)
-            p2_singleton_coin: Coin = await node_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
+            await sim.farm_block(p2_singleton_ph)
+            p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
             p2_singleton_coin = p2_singleton_coin[0].coin
             assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
                 p2_singleton_coin,
@@ -246,11 +246,11 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node, node_client, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol]
+                sim, sim_client, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol]
             )
 
             # CLAIM A P2_SINGLETON_OR_DELAYED
-            singleton_child: Coin = (await node.all_non_reward_coins())[0]
+            singleton_child: Coin = (await sim.all_non_reward_coins())[0]
             DELAY_TIME: uint64 = 1
             DELAY_PH: bytes32 = adapted_puzzle_hash
             p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_or_delay_puzzle(
@@ -260,8 +260,8 @@ class TestSingleton:
             )
             p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
             ARBITRARY_AMOUNT: uint64 = 1379
-            await node.farm_block(p2_singleton_ph)
-            p2_singleton_coin: Coin = await node_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
+            await sim.farm_block(p2_singleton_ph)
+            p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
             p2_singleton_coin = p2_singleton_coin[0].coin
             assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
                 p2_singleton_coin,
@@ -299,14 +299,14 @@ class TestSingleton:
 
             # Save the height so we can rewind after this
             save_height: uint64 = (
-                node.get_height()
+                sim.get_height()
             )  # The last coin solution before this point is singleton_claim_coinsol
             await self.make_and_spend_bundle(
-                node, node_client, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol]
+                sim, sim_client, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol]
             )
 
             # TRY TO SPEND AWAY TOO SOON (Negative Test)
-            await node.rewind(save_height)
+            await sim.rewind(save_height)
             to_delay_ph_coinsol: CoinSpend = singleton_top_layer.spend_to_delayed_puzzle(
                 p2_singleton_coin,
                 ARBITRARY_AMOUNT,
@@ -314,17 +314,17 @@ class TestSingleton:
                 DELAY_TIME,
                 DELAY_PH,
             )
-            result, error = await node_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
+            result, error = await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
             assert error == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
             # SPEND TO DELAYED PUZZLE HASH
-            await node.rewind(save_height)
-            node.pass_time(10000005)
-            node.pass_blocks(100)
-            await node_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
+            await sim.rewind(save_height)
+            sim.pass_time(10000005)
+            sim.pass_blocks(100)
+            await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
 
             # CREATE MULTIPLE ODD CHILDREN (Negative Test)
-            singleton_child: Coin = (await node.all_non_reward_coins())[0]
+            singleton_child: Coin = (await sim.all_non_reward_coins())[0]
             delegated_puzzle: Program = Program.to(
                 (
                     1,
@@ -351,8 +351,8 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 singleton_child,
                 delegated_puzzle,
                 [multi_odd_coinsol],
@@ -387,8 +387,8 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 singleton_child,
                 delegated_puzzle,
                 [no_odd_coinsol],
@@ -397,7 +397,7 @@ class TestSingleton:
             )
 
             # ATTEMPT TO CREATE AN EVEN SINGLETON (Negative test)
-            await node.rewind(save_height)
+            await sim.rewind(save_height)
 
             delegated_puzzle: Program = Program.to(
                 (
@@ -429,15 +429,15 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 singleton_child,
                 delegated_puzzle,
                 [singleton_even_coinsol],
             )
 
             # Now try a perfectly innocent spend
-            evil_coin: Coin = (await node.all_non_reward_coins())[0]
+            evil_coin: Coin = (await sim.all_non_reward_coins())[0]
             delegated_puzzle: Program = Program.to(
                 (
                     1,
@@ -469,8 +469,8 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 evil_coin,
                 delegated_puzzle,
                 [evil_coinsol],
@@ -480,7 +480,7 @@ class TestSingleton:
 
             # MELTING
             # Remember, we're still spending singleton_child
-            await node.rewind(save_height)
+            await sim.rewind(save_height)
             conditions = [
                 singleton_top_layer.MELT_CONDITION,
                 [
@@ -507,14 +507,14 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                node,
-                node_client,
+                sim,
+                sim_client,
                 singleton_child,
                 delegated_puzzle,
                 [melt_coinsol],
             )
 
-            melted_coin: Coin = (await node.all_non_reward_coins())[0]
+            melted_coin: Coin = (await sim.all_non_reward_coins())[0]
             assert melted_coin.puzzle_hash == adapted_puzzle_hash
         finally:
-            await node.close()
+            await sim.close()

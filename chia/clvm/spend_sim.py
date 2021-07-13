@@ -50,7 +50,7 @@ class TestBlockRecord:
         self.header_hash = std_hash(bytes(height))
 
 
-class Node:
+class SpendSim:
 
     connection: aiosqlite.Connection
     mempool_manager: MempoolManager
@@ -131,6 +131,8 @@ class Node:
 
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
+        return_additions: List[Coin] = []
+        return_removals: List[Coin] = []
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
             peak = self.mempool_manager.peak
             if peak is not None:
@@ -139,6 +141,8 @@ class Node:
                 if result is not None:
                     bundle, additions, removals = result
                     generator_bundle = bundle
+                    return_additions = additions
+                    return_removals = removals
 
                 for addition in additions:
                     await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(addition), False)
@@ -161,6 +165,9 @@ class Node:
 
         # mempool is reset
         await self.new_peak()
+
+        # return some debugging data
+        return return_additions, return_removals
 
     def get_height(self) -> uint32:
         return self.block_height
@@ -185,7 +192,7 @@ class Node:
             self.timestamp = uint64(DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1)
 
 
-class NodeClient:
+class SimClient:
     def __init__(self, service):
         self.service = service
 
