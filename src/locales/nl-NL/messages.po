@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl_NL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-13 00:15\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -616,7 +616,7 @@ msgstr "Verwijder alle sleutels"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
-#~ msgstr "Verwijder sleutel"
+#~ msgstr "Delete key"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
