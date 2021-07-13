@@ -143,7 +143,7 @@ class FullNodeRpcClient(RpcClient):
     async def push_tx(self, spend_bundle: SpendBundle):
         return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
 
-    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinRecord]:
+    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSpend]:
         try:
             response = await self.fetch("get_puzzle_and_solution", {"coin_id": coin_id.hex(), "height": height})
             return CoinSpend.from_json_dict(response["coin_solution"])
