@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:36\n"
+"PO-Revision-Date: 2021-07-13 00:14\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -616,7 +616,7 @@ msgstr "Burn all treasure maps"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
-#~ msgstr "Burn treasure map"
+#~ msgstr "Delete key"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
