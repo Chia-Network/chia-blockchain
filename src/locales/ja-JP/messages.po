@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 06:31\n"
+"PO-Revision-Date: 2021-07-13 18:46\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -564,7 +564,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:182
 msgid "Current trade status"
-msgstr "現在の交換状態"
+msgstr "現在の取引状態"
 
 #: src/components/selectKey/SelectKey.tsx:185
 msgid "DANGER: permanently delete private key"
@@ -741,7 +741,7 @@ msgstr "開けませんでした (耕地に問題あり)"
 #: src/components/wallet/coloured/WalletColoured.tsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:532
 msgid "Farm"
-msgstr "畑"
+msgstr "農家"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
 msgid "Farmer Public Key"
@@ -1771,7 +1771,7 @@ msgstr "秘密鍵を表示"
 
 #: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
-msgstr "乱数種:"
+msgstr "シード値:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:87
 msgid "Select 2nd Temporary Directory"
@@ -2028,7 +2028,7 @@ msgstr "一時フォルダの場所"
 
 #: src/components/app/AppTimeBomb.tsx:30
 msgid "The application will stop working at block height 193536."
-msgstr "当アプリはブロック高 193536 で正常に機能しなくなります。"
+msgstr "アプリケーションはブロック高さ 193536 で正常に機能しなくなります。"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:97
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -2116,7 +2116,7 @@ msgstr "取引に使用できるチアの額です。承認待ちの耕作報酬
 
 #: src/components/wallet/card/WalletCardPendingChange.tsx:26
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "保留中のお釣り、つまり自己送信したが、まだ承認されていないお釣りのコインの額です。"
+msgstr "保留中のお釣り、つまり自分自身に送金したが、まだ承認されていないお釣りのコインの額です。"
 
 #: src/components/wallet/card/WalletCardPendingBalance.tsx:26
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
@@ -2158,7 +2158,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "このプロットNFTはプールに接続されていません"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2445,7 +2445,7 @@ msgstr "チアにようこそ。お持ちの鍵でログインするか、新し
 
 #: src/components/wallet/WalletAdd.tsx:66
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "ご利用ありがとうございます！以下の合言葉はあなたのウォレットのバックアップに使用します。紛失するとウォレットへのアクセスを失いますので、必ず安全な場所に保管してください！各語を番号と共に書き記してください。 (復元の際は順番通りに入力する必要があります。)"
+msgstr "ご利用ありがとうございます！以下の合言葉はあなたのウォレットのバックアップに使用します。紛失するとウォレットへのアクセスを失いますので、必ず安全な場所に保管してください！各単語を番号と共に書き記してください。 (復元の際は順番通りに入力する必要があります。)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:316
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
