@@ -734,7 +734,7 @@ class PoolWallet:
         )
 
         if len(unspent_coin_records) == 0:
-            raise ValueError("Nothing to claim")
+            raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
         coin_to_height_farmed: Dict[Coin, uint32] = {}
         for tx_record in farming_rewards:
@@ -752,6 +752,8 @@ class PoolWallet:
         all_spends: List[CoinSpend] = []
         total_amount = 0
         for coin_record in unspent_coin_records:
+            if coin_record.coin not in coin_to_height_farmed:
+                continue
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block
                 break
@@ -770,6 +772,8 @@ class PoolWallet:
             self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
+        if len(all_spends) == 0:
+            raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
         # No signatures are required to absorb
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
