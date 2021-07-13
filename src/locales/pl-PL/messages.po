@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-07 23:37\n"
+"PO-Revision-Date: 2021-07-13 00:15\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -265,7 +265,7 @@ msgstr "Kup"
 
 #: src/components/selectKey/SelectKey.tsx:170
 msgid "Can be backed up to mnemonic seed"
-msgstr "Można przywróćic do nasiona mnemonicznego"
+msgstr "Można utworzyć kopię zapasową do ziarna mnemonicznego"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
 #: src/components/farm/FarmManageFarmingRewards.tsx:196
@@ -616,7 +616,7 @@ msgstr "Usuń wszystkie klucze"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
-#~ msgstr "Usuń klucz"
+#~ msgstr "Delete key"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
@@ -1186,7 +1186,7 @@ msgstr "Nowy portfel"
 #: src/components/wallet/WalletAdd.tsx:95
 #: src/components/wallet/WalletImport.tsx:163
 msgid "Next"
-msgstr "Nestępny"
+msgstr "Dalej"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:249
 msgid "Nickname"
