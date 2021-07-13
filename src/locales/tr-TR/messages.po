@@ -8,7 +8,7 @@ msgstr ""
 "Language: tr_TR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 00:15\n"
+"PO-Revision-Date: 2021-07-13 18:46\n"
 "Last-Translator: \n"
 "Language-Team: Turkish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:62
 msgid "(Optional)"
-msgstr ""
+msgstr "(Seçimlik)"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:64
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -28,7 +28,7 @@ msgstr "Chia'nın bloklarını daha da keşfetmek ister misiniz? Açık kaynakl�
 
 #: src/components/plot/add/PlotAddNFT.tsx:123
 msgid "+ Add New Plot NFT"
-msgstr ""
+msgstr "Yeni NFT Plot Ekleyin"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -95,7 +95,7 @@ msgstr "Plot Ekle"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
-msgstr ""
+msgstr "Plot NFT Ekleyin"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
@@ -1010,13 +1010,13 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTCard.tsx:394
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr ""
+msgstr "Havuza Katıl"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:141
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr ""
+msgstr "Bir Havuza Katıl"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
@@ -1063,7 +1063,7 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
 msgid "Learn More"
-msgstr ""
+msgstr "Daha Fazla Öğren"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
@@ -1071,7 +1071,7 @@ msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "List view"
-msgstr ""
+msgstr "Liste Görünümü"
 
 #: src/components/pool/Pool.tsx:21
 msgid "Loading Plot NFTs"
@@ -1147,7 +1147,7 @@ msgstr "MiB Yukarı/Aşağı"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
-msgstr ""
+msgstr "Zorluk Seviyesi"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
 msgid "Minutes"
