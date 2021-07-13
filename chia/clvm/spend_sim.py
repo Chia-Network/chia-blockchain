@@ -13,7 +13,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.coin_store import CoinStore
@@ -267,7 +267,7 @@ class SimClient:
         )  # noqa
         return additions, removals
 
-    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSolution]:
+    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSpend]:
         generator = list(filter(lambda block: block.height == height, self.service.blocks))[0].transactions_generator
         coin_record = await self.service.mempool_manager.coin_store.get_coin_record(coin_id)
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
@@ -280,7 +280,7 @@ class SimClient:
         else:
             puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
             solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-            return CoinSolution(coin_record.coin, puzzle_ser, solution_ser)
+            return CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         return list(self.service.mempool_manager.mempool.spends.keys())

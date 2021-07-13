@@ -6,7 +6,7 @@ from chia.clvm.spend_sim import SpendSim, SimClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
 from chia.types.spend_bundle import SpendBundle
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 
 
 class TestSpendSim:
@@ -105,7 +105,7 @@ class TestSimClient:
             spendable_coin = spendable_coin[0].coin
             bundle = SpendBundle(
                 [
-                    CoinSolution(
+                    CoinSpend(
                         spendable_coin,
                         Program.to(1),
                         Program.to([[51, puzzle_hash, 1]]),
