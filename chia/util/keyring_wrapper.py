@@ -60,12 +60,17 @@ class KeyringWrapper:
 
             keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
         elif platform == "darwin":
-            if supports_keyring_passphrase():
-                keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
-            else:
-                import keyring.backends.macOS
+            import keyring.backends.macOS
 
-                keyring.set_keyring(keyring.backends.macOS.Keyring())
+            keyring.set_keyring(keyring.backends.macOS.Keyring())
+            # TODO: New keyring + passphrase support can be enabled for macOS by updating
+            # supports_keyring_passphrase() and uncommenting the lines below. Leaving the
+            # lines below in place for testing.
+            #
+            # if supports_keyring_passphrase():
+            #     keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
+            # else:
+            #     keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
             if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
