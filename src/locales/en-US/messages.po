@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 00:14\n"
+"PO-Revision-Date: 2021-07-13 06:31\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2421,15 +2421,15 @@ msgstr "Want to have a delay before the next plot starts?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Warning: This key is used for a wallet that may have a non-zero balance. You will lose access to this wallet if you delete this key"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Warning: This key is used for your farming rewards address. You will lose access to any future farming rewards if you delete this key"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Warning: This key is used for your pool rewards address. You will lose access to future pool rewards if you delete this key"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
