@@ -77,7 +77,6 @@ class SpendSim:
     async def new_peak(self) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1])
 
-
     def new_coin_record(self, coin: Coin, coinbase=False) -> CoinRecord:
         return CoinRecord(
             coin,

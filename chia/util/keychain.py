@@ -17,11 +17,11 @@ MAX_KEYS = 100
 if platform == "win32" or platform == "cygwin":
     import keyring.backends.Windows
 
-    keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
+    keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())  # type: ignore
 elif platform == "darwin":
     import keyring.backends.macOS
 
-    keyring.set_keyring(keyring.backends.macOS.Keyring())
+    keyring.set_keyring(keyring.backends.macOS.Keyring())  # type: ignore
 elif platform == "linux":
     keyring = CryptFileKeyring()
     keyring.keyring_key = "your keyring password"  # type: ignore

@@ -79,7 +79,7 @@ class FullNodeDiscovery:
         self.cleanup_task: Optional[asyncio.Task] = None
         self.initial_wait: int = 0
         try:
-            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
+            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()  # type: ignore
         except Exception:
             self.resolver = None
             self.log.exception("Error initializing asyncresolver")
@@ -209,7 +209,7 @@ class FullNodeDiscovery:
                 self.log.warn("Skipping DNS query: asyncresolver not initialized.")
                 return
             peers: List[TimestampedPeerInfo] = []
-            result = await self.resolver.resolve(qname=dns_address, lifetime=30)
+            result = await self.resolver.resolve(qname=dns_address, lifetime=30)  # type: ignore
             for ip in result:
                 peers.append(
                     TimestampedPeerInfo(
