@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 import aiohttp
+import socket
 
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
@@ -219,6 +220,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     if all_harvesters is not None:
         harvesters_local: dict = {}
         harvesters_remote: dict = {}
+        harvesters_hostnames: dict = {}
         for harvester in all_harvesters["harvesters"]:
             ip = harvester["connection"]["host"]
             if is_localhost(ip):
@@ -227,6 +229,8 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
                 if ip not in harvesters_remote:
                     harvesters_remote[ip] = {}
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
+                if socket.gethostbyaddr(ip):
+                    harvesters_hostnames[ip] = socket.gethostbyaddr(ip)[0]
 
         def process_harvesters(harvester_peers_in: dict):
             for harvester_peer_id, plots in harvester_peers_in.items():
@@ -239,7 +243,10 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
             process_harvesters(harvesters_local)
         for harvester_ip, harvester_peers in harvesters_remote.items():
-            print(f"Remote Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
+            if harvesters_hostnames[harvester_ip]:
+                print(f"Remote Harvester{'s' if len(harvester_peers) > 1 else ''} for host: {harvesters_hostnames[harvester_ip]} ({harvester_ip})")
+            else:
+                print(f"Remote Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
             process_harvesters(harvester_peers)
 
         print(f"Plot count for all harvesters: {PlotStats.total_plots}")
