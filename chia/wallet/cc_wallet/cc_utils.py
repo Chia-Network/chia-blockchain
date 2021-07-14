@@ -7,7 +7,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import CoinSolution, SpendBundle
+from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint64
 from chia.wallet.puzzles.cc_loader import CC_MOD, LOCK_INNER_PUZZLE
@@ -81,15 +81,15 @@ def subtotals_for_deltas(deltas) -> List[int]:
     return subtotals
 
 
-def coin_solution_for_lock_coin(
+def coin_spend_for_lock_coin(
     prev_coin: Coin,
     subtotal: int,
     coin: Coin,
-) -> CoinSolution:
+) -> CoinSpend:
     puzzle_reveal = LOCK_INNER_PUZZLE.curry(prev_coin.as_list(), subtotal)
     coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
-    coin_solution = CoinSolution(coin, puzzle_reveal, Program.to(0))
-    return coin_solution
+    coin_spend = CoinSpend(coin, puzzle_reveal, Program.to(0))
+    return coin_spend
 
 
 def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
@@ -129,7 +129,7 @@ def spend_bundle_for_spendable_ccs(
                 total += Program.to(_.vars[1]).as_int()
         output_amounts.append(total)
 
-    coin_solutions = []
+    coin_spends = []
 
     deltas = [input_coins[_].amount - output_amounts[_] for _ in range(N)]
     subtotals = subtotals_for_deltas(deltas)
@@ -157,13 +157,13 @@ def spend_bundle_for_spendable_ccs(
             next_bundle,
             subtotals[index],
         ]
-        coin_solution = CoinSolution(input_coins[index], puzzle_reveal, Program.to(solution))
-        coin_solutions.append(coin_solution)
+        coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
+        coin_spends.append(coin_spend)
 
     if sigs is None or sigs == []:
-        return SpendBundle(coin_solutions, NULL_SIGNATURE)
+        return SpendBundle(coin_spends, NULL_SIGNATURE)
     else:
-        return SpendBundle(coin_solutions, AugSchemeMPL.aggregate(sigs))
+        return SpendBundle(coin_spends, AugSchemeMPL.aggregate(sigs))
 
 
 def is_cc_mod(inner_f: Program):
@@ -210,10 +210,10 @@ def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
     return lineage_proof
 
 
-def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_puzzle_f) -> List[SpendableCC]:
+def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -> List[SpendableCC]:
 
     """
-    Given a `CoinSolution`, extract out a list of `SpendableCC` objects.
+    Given a `CoinSpend`, extract out a list of `SpendableCC` objects.
 
     Since `SpendableCC` needs to track the inner puzzles and a `Coin` only includes
     puzzle hash, we also need a `hash_to_puzzle_f` function that turns puzzle hashes into
@@ -223,8 +223,8 @@ def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_pu
 
     spendable_cc_list = []
 
-    coin = coin_solution.coin
-    puzzle = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
+    coin = coin_spend.coin
+    puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
     r = uncurry_cc(puzzle)
     if r:
         mod_hash, genesis_coin_checker, inner_puzzle = r
@@ -232,7 +232,7 @@ def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_pu
     else:
         lineage_proof = lineage_proof_for_coin(coin)
 
-    for new_coin in coin_solution.additions():
+    for new_coin in coin_spend.additions():
         puzzle = hash_to_puzzle_f(new_coin.puzzle_hash)
         if puzzle is None:
             # we don't recognize this puzzle hash, skip it

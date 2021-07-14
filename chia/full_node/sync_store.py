@@ -59,6 +59,9 @@ class SyncStore:
     def get_long_sync(self) -> bool:
         return self.long_sync
 
+    def seen_header_hash(self, header_hash: bytes32) -> bool:
+        return header_hash in self.peak_to_peer
+
     def peer_has_block(self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool):
         """
         Adds a record that a certain peer has a block.

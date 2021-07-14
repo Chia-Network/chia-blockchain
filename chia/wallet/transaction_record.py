@@ -45,7 +45,7 @@ class TransactionRecord(Streamable):
         # Note, transactions pending inclusion (pending) return false
         return False
 
-    def height_farmed(self, genesis_challenge) -> Optional[uint32]:
+    def height_farmed(self, genesis_challenge: bytes32) -> Optional[uint32]:
         if not self.confirmed:
             return None
         if self.type == TransactionType.FEE_REWARD or self.type == TransactionType.COINBASE_REWARD:

@@ -80,6 +80,7 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
+    _ui_tasks: Set[asyncio.Task]
 
     def __init__(
         self,
@@ -100,11 +101,11 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
+        self.uncompact_task = None
 
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
+
+        self._ui_tasks = set()
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -148,7 +149,6 @@ class FullNode:
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
-        self.uncompact_task = None
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
@@ -177,6 +177,12 @@ class FullNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         dns_servers = []
+        try:
+            network_name = self.config["selected_network"]
+            default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        except Exception:
+            self.log.info("Default port field not found in config.")
+            default_port = None
         if "dns_servers" in self.config:
             dns_servers = self.config["dns_servers"]
         elif self.config["port"] == 8444:
@@ -192,6 +198,8 @@ class FullNode:
                 self.config["introducer_peer"],
                 dns_servers,
                 self.config["peer_connect_interval"],
+                self.config["selected_network"],
+                default_port,
                 self.log,
             )
         except Exception as e:
@@ -325,6 +333,11 @@ class FullNode:
         self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
 
+    async def _refresh_ui_connections(self, sleep_before: float = 0):
+        if sleep_before > 0:
+            await asyncio.sleep(sleep_before)
+        self._state_changed("peer_changed_peak")
+
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         """
         We have received a notification of a new peak from a peer. This happens either when we have just connected,
@@ -335,6 +348,17 @@ class FullNode:
             peer: peer that sent the message
 
         """
+
+        try:
+            seen_header_hash = self.sync_store.seen_header_hash(request.header_hash)
+            # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
+            # Limit to 3 refreshes.
+            if not seen_header_hash and len(self._ui_tasks) < 3:
+                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
+            # Prune completed connect tasks
+            self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
+        except Exception as e:
+            self.log.warning(f"Exception UI refresh task: {e}")
 
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
@@ -705,7 +729,7 @@ class FullNode:
         if len(ses_heigths) > 2 and our_peak_height is not None:
             ses_heigths.sort()
             max_fork_ses_height = ses_heigths[-3]
-            # This is fork point in SES in case where fork was not detected
+            # This is the fork point in SES in the case where no fork was detected
             if self.blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
                 for peer in peers_with_peak:
                     # Grab a block at peak + 1 and check if fork point is actually our current height
@@ -803,7 +827,7 @@ class FullNode:
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
@@ -817,7 +841,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point, wp_summaries
+                block, pre_validation_results[i], None if advanced_peak else fork_point
             )
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
@@ -855,7 +879,7 @@ class FullNode:
 
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
             if peak is not None:
-                await self.peak_post_processing(peak_fb, peak, peak.height - 1, None)
+                await self.peak_post_processing(peak_fb, peak, max(peak.height - 1, 0), None)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
@@ -1737,12 +1761,16 @@ class FullNode:
         vdf_proof: VDFProof,
         height: uint32,
         field_vdf: CompressibleVDFField,
-    ):
+    ) -> bool:
         full_blocks = await self.block_store.get_full_blocks_at([height])
         assert len(full_blocks) > 0
+        replaced = False
+        expected_header_hash = self.blockchain.height_to_hash(height)
         for block in full_blocks:
             new_block = None
-            block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
+            if block.header_hash != expected_header_hash:
+                continue
+            block_record = await self.blockchain.get_block_record_from_db(expected_header_hash)
             assert block_record is not None
 
             if field_vdf == CompressibleVDFField.CC_EOS_VDF:
@@ -1774,11 +1802,12 @@ class FullNode:
                 if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
                     new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             if new_block is None:
-                self.log.debug("did not replace any proof, vdf does not match")
-                return
+                continue
             async with self.db_wrapper.lock:
                 await self.block_store.add_full_block(new_block.header_hash, new_block, block_record)
                 await self.block_store.db_wrapper.commit_transaction()
+                replaced = True
+        return replaced
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
@@ -1787,7 +1816,10 @@ class FullNode:
         ):
             return None
         async with self.blockchain.compact_proof_lock:
-            await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+        if not replaced:
+            self.log.error(f"Could not replace compact proof: {request.height}")
+            return None
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
@@ -1866,7 +1898,10 @@ class FullNode:
         async with self.blockchain.compact_proof_lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
                 return None
-            await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+            replaced = await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
+        if not replaced:
+            self.log.error(f"Could not replace compact proof: {request.height}")
+            return None
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
@@ -1877,7 +1912,6 @@ class FullNode:
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
     ):
-        min_height: Optional[int] = 0
         try:
             while not self._shut_down:
                 while self.sync_store.get_sync_mode():
@@ -1886,33 +1920,30 @@ class FullNode:
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
-                new_min_height = None
                 max_height = self.blockchain.get_peak_height()
                 if max_height is None:
                     await asyncio.sleep(30)
                     continue
-                # Calculate 'min_height' correctly the first time this task is launched, using the db
-                assert min_height is not None
-                min_height = await self.block_store.get_first_not_compactified(min_height)
+                assert max_height is not None
+                self.log.info("Getting minimum bluebox work height")
+                min_height = await self.block_store.get_first_not_compactified()
                 if min_height is None or min_height > max(0, max_height - 1000):
                     min_height = max(0, max_height - 1000)
-                batches_finished = 0
-                self.log.info("Scanning the blockchain for uncompact blocks.")
-                assert max_height is not None
                 assert min_height is not None
+                max_height = uint32(min(max_height, min_height + 2000))
+                batches_finished = 0
+                self.log.info(f"Scanning the blockchain for uncompact blocks. Range: {min_height}..{max_height}")
                 for h in range(min_height, max_height, 100):
                     # Got 10 times the target header count, sampling the target headers should contain
                     # enough randomness to split the work between blueboxes.
                     if len(broadcast_list) > target_uncompact_proofs * 10:
                         break
                     stop_height = min(h + 99, max_height)
-                    assert min_height is not None
-                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height, tx_filter=False)
+                    headers = await self.blockchain.get_header_blocks_in_range(h, stop_height, tx_filter=False)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
-                        records = await self.blockchain.get_block_records_in_range(min_height, stop_height)
+                        records = await self.blockchain.get_block_records_in_range(h, stop_height)
                     for header in headers.values():
-                        prev_broadcast_list_len = len(broadcast_list)
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
@@ -1949,14 +1980,6 @@ class FullNode:
                         # unless this is a challenge block.
                         if sanitize_weight_proof_only:
                             if not record.is_challenge_block(self.constants):
-                                # Calculates 'new_min_height' as described below.
-                                if (
-                                    prev_broadcast_list_len == 0
-                                    and len(broadcast_list) > 0
-                                    and h <= max(0, max_height - 1000)
-                                ):
-                                    new_min_height = header.height
-                                # Skip calculations for CC_SP_VDF and CC_IP_VDF.
                                 continue
                         if header.challenge_chain_sp_proof is not None and (
                             header.challenge_chain_sp_proof.witness_type > 0
@@ -1984,21 +2007,13 @@ class FullNode:
                                     uint8(CompressibleVDFField.CC_IP_VDF),
                                 )
                             )
-                        # This is the first header with uncompact proofs. Store its height so next time we iterate
-                        # only from here. Fix header block iteration window to at least 1000, so reorgs will be
-                        # handled correctly.
-                        if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(0, max_height - 1000):
-                            new_min_height = header.height
 
                     # Small sleep between batches.
                     batches_finished += 1
                     if batches_finished % 10 == 0:
                         await asyncio.sleep(1)
 
-                # We have no uncompact blocks, but mentain the block iteration window to at least 1000 blocks.
-                if new_min_height is None:
-                    new_min_height = max(0, max_height - 1000)
-                min_height = new_min_height
+                # sample work randomly from the uncompact blocks we found
                 if len(broadcast_list) > target_uncompact_proofs:
                     random.shuffle(broadcast_list)
                     broadcast_list = broadcast_list[:target_uncompact_proofs]

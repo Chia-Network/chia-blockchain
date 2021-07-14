@@ -1,4 +1,4 @@
-name: Windows Installer on Windows 10 and Python 3.7
+name: Windows Installer on Windows 10 and Python 3.9
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Windows Installer on Windows 10 and Python 3.7
+    name: Windows Installer on Windows 10 and Python 3.9
     runs-on: [windows-latest]
     timeout-minutes: 40
 
@@ -35,7 +35,7 @@ jobs:
         echo "::set-output name=dir::$(npm config get cache)"
 
     - name: Cache npm
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: ${{ steps.npm-cache.outputs.dir }}
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -48,7 +48,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -57,31 +57,49 @@ jobs:
 
 #  We can't upgrade to Python 3.8 until we have a miniupnpc binary
     - uses: actions/setup-python@v2
-      name: Install Python 3.7
+      name: Install Python 3.9
       with:
-        python-version: "3.7"
+        python-version: "3.9"
 
     - name: Test for secrets access
       id: check_secrets
       shell: bash
       run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        unset HAS_SIGNING_SECRET
+        unset HAS_AWS_SECRET
+
+        if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
+        echo "::set-output name=HAS_SIGNING_SECRET::${HAS_SIGNING_SECRET}"
+
+        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+        echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
       env:
-        SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
+        SIGNING_SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
+        AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
 
     - name: Decode code signing cert into an encrypted file
-      if: steps.check_secrets.outputs.HAS_SECRET
+      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
       uses: kitek/decode-base64-into-file-action@1.0
       with:
         encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
         destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
 
+    # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
+    - name: Get version number
+      id: version_number
+      run: |
+        python -m venv ..\venv
+        . ..\venv\Scripts\Activate.ps1
+        pip3 install setuptools_scm
+        $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+        echo "$env:CHIA_INSTALLER_VERSION"
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$env:CHIA_INSTALLER_VERSION"
+        deactivate
+
     - name: Build Windows installer with build_scripts\build_windows.ps1
       env:
         WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
-        HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SECRET }}
+        HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
@@ -98,3 +116,73 @@ jobs:
       with:
         name: Windows-Installers
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+
+
+    - name: Install AWS CLI
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      run: |
+          msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+
+    - name: Configure AWS Credentials
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/builds/
+
+    - name: Create Checksums
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+         certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.checksum
+         ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
+
+    - name: Install py3createtorrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create torrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
+        ls
+
+    - name: Upload Release Files
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+      run: |
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/install/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.checksum s3://download-chia-net/install/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download-chia-net/torrents/
+
+    - name: Get tag name
+      if: startsWith(github.ref, 'refs/tags/')
+      id: tag-name
+      run: |
+        echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
+        echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+
+    - name: Mark installer complete
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        $headers = @{
+            Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
+        }
+        $data = @{
+            chia_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
+        }
+        $json = $data | ConvertTo-Json
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
