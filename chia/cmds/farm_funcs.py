@@ -228,9 +228,9 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
             else:
                 if ip not in harvesters_remote:
                     harvesters_remote[ip] = {}
-                harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
                 if socket.gethostbyaddr(ip):
                     harvesters_hostnames[ip] = socket.gethostbyaddr(ip)[0]
+                harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
         def process_harvesters(harvester_peers_in: dict):
             for harvester_peer_id, plots in harvester_peers_in.items():
