@@ -46,8 +46,9 @@ def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict
             updated[k] = v
 
 
-def check_keys(new_root: Path) -> None:
-    keychain: Keychain = Keychain()
+def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
+    if keychain is None:
+        keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")

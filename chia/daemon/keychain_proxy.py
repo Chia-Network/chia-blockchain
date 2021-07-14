@@ -142,7 +142,7 @@ class KeychainProxy(DaemonProxy):
         Forwards to init_funcs.check_keys()
         """
         if self.use_local_keychain():
-            check_keys(root_path)
+            check_keys(root_path, self.keychain)
         else:
             response, success = await self.get_response_for_request("check_keys", {"root_path": str(root_path)})
             if not success:
