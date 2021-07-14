@@ -2657,21 +2657,32 @@ class TestReorgs:
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0],
             condition_dic=conditions.copy()
         )
-        print("tx1=", tx1)
         coin1: Coin = tx1.additions()[0]
         tx2: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), coin1,
             condition_dic=conditions.copy()
         )
-        print("tx2=", tx2)
+        assert coin1 in tx2.removals()
         coin2: Coin = tx2.additions()[0]
         tx3: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), coin2
         )
-        print("tx3=", tx3)
+        assert coin2 in tx3.removals()
+        coin3: Coin = tx3.additions()[0]
 
         bundles = SpendBundle.aggregate([tx1, tx2, tx3])
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundles
         )
         assert (await b.receive_block(blocks[-1]))[0] == expected
+
+        if expected == ReceiveBlockResult.NEW_PEAK:
+            # ensure coin1 was in fact spent
+            c = await b.coin_store.get_coin_record(coin1.name())
+            assert c is not None and c.spent
+            # ensure coin2 was in fact spent
+            c = await b.coin_store.get_coin_record(coin2.name())
+            assert c is not None and c.spent
+            # ensure coin3 was NOT spent
+            c = await b.coin_store.get_coin_record(coin3.name())
+            assert c is not None and not c.spent
