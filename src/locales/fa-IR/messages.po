@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-14 08:47\n"
+"PO-Revision-Date: 2021-07-14 14:45\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,7 +28,7 @@ msgstr "آیا می خواهید که بلوک های چیـا را فراتر �
 
 #: src/components/plot/add/PlotAddNFT.tsx:123
 msgid "+ Add New Plot NFT"
-msgstr "+ افزودن پلات جدید"
+msgstr "+ افزودن پلات NFT جدید"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -96,7 +96,7 @@ msgstr "افزودن پلات"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
-msgstr "افزودن پلات جدید"
+msgstr "افزودن پلات NFT"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
@@ -133,11 +133,11 @@ msgstr "مقدار"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:581
 msgid "Amount ({cc_unit})"
-msgstr "Amount ({cc_unit})"
+msgstr "مقدار ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:239
 msgid "Amount For Initial Coin"
-msgstr "Amount For Initial Coin"
+msgstr "مقدار سکه اولیه"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -290,7 +290,7 @@ msgstr "اخطار، حذف این پلات ها، آنها را برای همی
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
-msgstr "Challenge"
+msgstr "چالش"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:14
 msgid "Challenge Hash"
@@ -351,7 +351,7 @@ msgstr "سکه ها:"
 #: src/components/trading/CreateOffer.jsx:172
 #: src/components/trading/TradesTable.tsx:24
 msgid "Colour"
-msgstr "Colour"
+msgstr "رنگ"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:223
 msgid "Colour Info"
@@ -398,12 +398,12 @@ msgstr "Confirmed at height {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:92
 msgid "Connect"
-msgstr "Connect"
+msgstr "اتصال"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:68
 #: src/components/fullNode/FullNodeConnections.tsx:112
 msgid "Connect to other peers"
-msgstr "Connect to other peers"
+msgstr "اتصال به سایر همسان‌ ها"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
@@ -412,28 +412,28 @@ msgstr "Connect to pool"
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
 msgid "Connected"
-msgstr "Connected"
+msgstr "متصل شد"
 
 #: src/components/app/AppRouter.tsx:34
 msgid "Connecting to wallet"
-msgstr "Connecting to wallet"
+msgstr "اتصال به کیف پول"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
 msgid "Connection Status"
-msgstr "Connection Status"
+msgstr "وضعیت اتصال"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:111
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:109
 msgid "Connection Status:"
-msgstr "Connection Status:"
+msgstr "وضعیت اتصال:"
 
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connection type"
-msgstr "Connection type"
+msgstr "نوع اتصال"
 
 #: src/components/fullNode/FullNodeConnections.tsx:109
 msgid "Connections"
-msgstr "Connections"
+msgstr "اتصال ها"
 
 #: src/electron/main.tsx:382
 msgid "Contribute on GitHub"
@@ -462,15 +462,15 @@ msgstr "رونوشت در کلیپ بورد"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/create/createRLUser.jsx:99
 msgid "Create"
-msgstr "Create"
+msgstr "ایجاد"
 
 #: src/components/wallet/create/WalletCreate.jsx:276
 msgid "Create DID wallet"
-msgstr "Create DID wallet"
+msgstr "ساخت کیف پول DID"
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr "ایجاد پیشنهاد"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
@@ -584,11 +584,11 @@ msgstr "DANGER: permanently delete private key"
 #: src/components/trading/TradingOverview.jsx:137
 #: src/components/wallet/WalletHistory.tsx:46
 msgid "Date"
-msgstr "Date"
+msgstr "تاریخ"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Delay"
-msgstr "Delay"
+msgstr "تاخیر"
 
 #: src/components/plot/PlotAction.tsx:27
 #: src/components/plot/PlotAction.tsx:57
@@ -599,12 +599,12 @@ msgstr "Delay"
 #: src/components/selectKey/SelectKey.tsx:109
 #: src/components/wallet/standard/WalletStandard.tsx:629
 msgid "Delete"
-msgstr "Delete"
+msgstr "حذف"
 
 #: src/components/plot/PlotAction.tsx:26
 #: src/components/plot/queue/PlotQueueActions.tsx:42
 msgid "Delete Plot"
-msgstr "Delete Plot"
+msgstr "حذف پلات"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:314
 #: src/components/wallet/standard/WalletStandard.tsx:663
@@ -622,7 +622,7 @@ msgstr "Delete all keys"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "حذف کلید {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -656,7 +656,7 @@ msgstr "Disable bitfield plotting"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:26
 msgid "Discard"
-msgstr "Discard"
+msgstr "لغو"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -744,7 +744,7 @@ msgstr "ناتوانی در بازگشایی (پلات های نامعتبر)"
 #: src/components/wallet/coloured/WalletColoured.tsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:532
 msgid "Farm"
-msgstr "Farm"
+msgstr "مزرعه"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
 msgid "Farmer Public Key"
@@ -1228,7 +1228,7 @@ msgstr "شناسه گره"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
-msgstr "None"
+msgstr "خالی"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:68
 msgid "None of your plots have passed the plot filter yet."
@@ -1520,11 +1520,11 @@ msgstr "Points Successful in Last 24 Hours"
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr "Pool"
+msgstr "استخر"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
-msgstr "Pool Contract Address"
+msgstr "آدرس قرارداد استخر"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:81
 msgid "Pool Key"
@@ -2425,15 +2425,15 @@ msgstr "آیا می خواهید قبل از شروع ساخت پلات بعدی
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "این کلید استفده شده برای کیف پول که ممکنه پول داخلش باشه که اگر حذف کنی دیگر به آن دسترسی نخواهی داشت"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "این کلید در farming استفاده شده اگر این کلید را حذف کنید دیگر دسترسی به ویژگی های farming ندارید"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "این کلید در استخر استفاده شده. اگر این کلید را حذف کنید دیگر دسترسی به ویژگی های استخرتان ندارید."
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
@@ -2546,7 +2546,7 @@ msgstr "شبکه برداشت کننده های شما"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr "Your Pool Overview"
+msgstr "نمای کلی استخر شما"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
