@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 12:37\n"
+"PO-Revision-Date: 2021-07-14 21:30\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1221,7 +1221,7 @@ msgstr "Node-ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr "Nodens id"
+msgstr "Nod-ID"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -1262,7 +1262,7 @@ msgstr "Ej hittade plottar"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:184
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr ""
+msgstr "Observera att detta inte ändrar dina poolutbetalningsadresser. Detta påverkar endast plottar med det gamla formatet och belöningen 0,25XCH för poolplotter."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
 #: src/components/plotNFT/PlotNFTCard.tsx:159
@@ -1713,7 +1713,7 @@ msgstr "Uppdatera plottar"
 
 #: src/components/pool/PoolInfo.tsx:32
 msgid "Relative Lock Height"
-msgstr ""
+msgstr "Relativ låshöjd"
 
 #: src/electron/main.tsx:374
 msgid "Release Notes"
@@ -2141,7 +2141,7 @@ msgstr "Detta är totalt saldo + väntande saldo: det är vad ditt saldo kommer 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
 #: src/components/plotNFT/PlotNFTCard.tsx:190
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "Detta är det sammanlagda antalet poäng denna plot-NFT har med denna pool, sedan den senaste utbetalningen. Poolen kommer att återställa poängen efter att ha gjort en utbetalning."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:168
 #: src/components/plotNFT/PlotNFTCard.tsx:207
