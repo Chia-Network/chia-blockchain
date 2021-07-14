@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 00:14\n"
+"PO-Revision-Date: 2021-07-14 00:55\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -620,7 +620,7 @@ msgstr "Eliminar todas las llaves"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Eliminar clave"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -2421,15 +2421,15 @@ msgstr "¿Quieres tener un retraso antes de que comience la siguiente parcela?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Advertencia: esta clave se utilizó para una billetera que puede tener un saldo distinto de cero. Al eliminar esta clave, es posible que pierda el acceso a esta billetera"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Advertencia: esta clave se utiliza para su dirección de recompensas de recolección. Al eliminar esta clave, es posible que pierda el acceso a futuras recompensas de recolección"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Advertencia: esta clave se utiliza para la dirección de recompensas de la piscina. Al eliminar esta clave, puede perder el acceso a futuras recompensas de la piscina"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
