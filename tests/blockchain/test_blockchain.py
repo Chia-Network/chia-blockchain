@@ -2639,10 +2639,10 @@ class TestReorgs:
         "opcode", [ConditionOpcode.ASSERT_SECONDS_RELATIVE, ConditionOpcode.ASSERT_HEIGHT_RELATIVE]
     )
     @pytest.mark.parametrize(
-        "lock_time,expected",
+        "lock_value,expected",
         [(-1, ReceiveBlockResult.NEW_PEAK), (0, ReceiveBlockResult.NEW_PEAK), (1, ReceiveBlockResult.INVALID_BLOCK)],
     )
-    async def test_ephmeral_timelock(self, empty_blockchain, opcode, lock_time, expected):
+    async def test_ephmeral_timelock(self, empty_blockchain, opcode, lock_value, expected):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -2656,7 +2656,7 @@ class TestReorgs:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_time)])]}
+        conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
 
         tx1: SpendBundle = wt.generate_signed_transaction(
             10,
