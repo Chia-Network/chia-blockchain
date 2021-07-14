@@ -333,7 +333,7 @@ class WebSocketServer:
 
     async def keyring_status(self) -> Dict[str, Any]:
         passphrase_support_enabled: bool = supports_keyring_passphrase()
-        user_passphrase_is_set: bool = using_default_passphrase()
+        user_passphrase_is_set: bool = not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
         needs_migration: bool = Keychain.needs_migration()
         response: Dict[str, Any] = {
