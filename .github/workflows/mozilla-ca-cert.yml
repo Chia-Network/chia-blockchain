@@ -29,4 +29,4 @@ jobs:
           delete-branch: true
           reviewers: "justinengland,hoffmang9,cmmarslender,nirajpathak13"
           title: "CA Cert updates"
-          token: "${{ secrets.GITHUB_TOKEN }  }"
+          token: "${{ secrets.GITHUB_TOKEN }}"
