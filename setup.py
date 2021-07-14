@@ -35,6 +35,7 @@ dev_dependencies = [
     "pytest-asyncio",
     "flake8",
     "mypy",
+    "types-cryptography",
     "black",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging

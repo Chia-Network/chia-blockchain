@@ -13,7 +13,7 @@ def additions_for_solution(
     coin_name: bytes32, puzzle_reveal: SerializedProgram, solution: SerializedProgram, max_cost: int
 ) -> List[Coin]:
     """
-    Checks the conditions created by CoinSolution and returns the list of all coins created
+    Checks the conditions created by CoinSpend and returns the list of all coins created
     """
     err, dic, cost = conditions_dict_for_solution(puzzle_reveal, solution, max_cost)
     if err or dic is None:

@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64, uint32
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -27,7 +27,7 @@ from chia.pools.pool_puzzles import (
     create_p2_singleton_puzzle,
     create_absorb_spend,
     create_travel_spend,
-    get_most_recent_singleton_coin_from_coin_solution,
+    get_most_recent_singleton_coin_from_coin_spend,
     get_delayed_puz_info_from_launcher_spend,
     SINGLETON_MOD_HASH,
     launcher_id_to_p2_puzzle_hash,
@@ -147,7 +147,7 @@ class TestPoolPuzzles(TestCase):
         # Creating solution for standard transaction
         delegated_puzzle: Program = puzzle_for_conditions(conditions)
         full_solution: Program = solution_for_conditions(conditions)
-        starting_coinsol = CoinSolution(
+        starting_coinsol = CoinSpend(
             starting_coin,
             starting_puzzle,
             full_solution,
@@ -206,7 +206,7 @@ class TestPoolPuzzles(TestCase):
         assert launcher_id_to_p2_puzzle_hash(launcher_id, DELAY_TIME, DELAY_PH) == p2_singleton_ph
         assert get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(p2_singleton_puz) == (DELAY_TIME, DELAY_PH)
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
-        coin_sols: List[CoinSolution] = create_absorb_spend(
+        coin_sols: List[CoinSpend] = create_absorb_spend(
             launcher_coinsol,
             pool_state,
             launcher_coin,
@@ -223,13 +223,13 @@ class TestPoolPuzzles(TestCase):
         )
 
         # ABSORB A NON EXISTENT REWARD (Negative test)
-        last_coinsol: CoinSolution = list(
+        last_coinsol: CoinSpend = list(
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
             )
         )[0]
-        coin_sols: List[CoinSolution] = create_absorb_spend(
+        coin_sols: List[CoinSpend] = create_absorb_spend(
             last_coinsol,
             pool_state,
             launcher_coin,
@@ -239,7 +239,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,  # height
         )
         # filter for only the singleton solution
-        singleton_coinsol: CoinSolution = list(
+        singleton_coinsol: CoinSpend = list(
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
@@ -264,7 +264,7 @@ class TestPoolPuzzles(TestCase):
         )
         coin_db._add_coin_entry(non_reward_p2_singleton, time)
         # construct coin solution for the p2_singleton coin
-        bad_coinsol = CoinSolution(
+        bad_coinsol = CoinSpend(
             non_reward_p2_singleton,
             p2_singleton_puz,
             Program.to(
@@ -286,7 +286,7 @@ class TestPoolPuzzles(TestCase):
 
         # ENTER WAITING ROOM
         # find the singleton
-        singleton = get_most_recent_singleton_coin_from_coin_solution(last_coinsol)
+        singleton = get_most_recent_singleton_coin_from_coin_spend(last_coinsol)
         # get the relevant coin solution
         travel_coinsol, _ = create_travel_spend(
             last_coinsol,
@@ -314,7 +314,7 @@ class TestPoolPuzzles(TestCase):
 
         # ESCAPE TOO FAST (Negative test)
         # find the singleton
-        singleton = get_most_recent_singleton_coin_from_coin_solution(travel_coinsol)
+        singleton = get_most_recent_singleton_coin_from_coin_spend(travel_coinsol)
         # get the relevant coin solution
         return_coinsol, _ = create_travel_spend(
             travel_coinsol,
@@ -345,7 +345,7 @@ class TestPoolPuzzles(TestCase):
         # create the farming reward
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         # generate relevant coin solutions
-        coin_sols: List[CoinSolution] = create_absorb_spend(
+        coin_sols: List[CoinSpend] = create_absorb_spend(
             travel_coinsol,
             target_pool_state,
             launcher_coin,
@@ -364,13 +364,13 @@ class TestPoolPuzzles(TestCase):
         # LEAVE THE WAITING ROOM
         time = CoinTimestamp(20000000, 10000)
         # find the singleton
-        singleton_coinsol: CoinSolution = list(
+        singleton_coinsol: CoinSpend = list(
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
             )
         )[0]
-        singleton: Coin = get_most_recent_singleton_coin_from_coin_solution(singleton_coinsol)
+        singleton: Coin = get_most_recent_singleton_coin_from_coin_spend(singleton_coinsol)
         # get the relevant coin solution
         return_coinsol, _ = create_travel_spend(
             singleton_coinsol,
@@ -400,7 +400,7 @@ class TestPoolPuzzles(TestCase):
         time = CoinTimestamp(20000000, 10005)
         # create the farming  reward
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
-        coin_sols: List[CoinSolution] = create_absorb_spend(
+        coin_sols: List[CoinSpend] = create_absorb_spend(
             return_coinsol,
             pool_state,
             launcher_coin,

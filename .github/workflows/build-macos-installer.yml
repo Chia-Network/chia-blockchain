@@ -92,7 +92,7 @@ jobs:
         sh install.sh
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v2.1.5
+      uses: actions/setup-node@v2.2.0
       with:
         node-version: '12.x'
 

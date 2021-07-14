@@ -1557,6 +1557,10 @@ def create_test_foliage(
             for coin in additions:
                 addition_amount += coin.amount
             spend_bundle_fees = removal_amount - addition_amount
+            # in order to allow creating blocks that mint coins, clamp the fee
+            # to 0, if it ends up being negative
+            if spend_bundle_fees < 0:
+                spend_bundle_fees = 0
         else:
             spend_bundle_fees = 0
 

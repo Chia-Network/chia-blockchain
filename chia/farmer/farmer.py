@@ -27,7 +27,9 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
+from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
+from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
@@ -195,7 +197,9 @@ class Farmer:
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(f"{pool_config.pool_url}/pool_info") as resp:
+                async with session.get(
+                    f"{pool_config.pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())
+                ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
@@ -231,7 +235,11 @@ class Farmer:
         }
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(f"{pool_config.pool_url}/farmer", params=get_farmer_params) as resp:
+                async with session.get(
+                    f"{pool_config.pool_url}/farmer",
+                    params=get_farmer_params,
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+                ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"GET /farmer response: {response}")
@@ -270,7 +278,10 @@ class Farmer:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{pool_config.pool_url}/farmer", data=post_farmer_body, headers=headers
+                    f"{pool_config.pool_url}/farmer",
+                    data=post_farmer_body,
+                    headers=headers,
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt()),
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
@@ -306,7 +317,11 @@ class Farmer:
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.put(f"{pool_config.pool_url}/farmer", data=put_farmer_body) as resp:
+                async with session.put(
+                    f"{pool_config.pool_url}/farmer",
+                    data=put_farmer_body,
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+                ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
                         self.log.info(f"PUT /farmer response: {response}")

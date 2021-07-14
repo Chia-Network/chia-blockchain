@@ -16,7 +16,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
@@ -156,7 +156,7 @@ class WalletBlockchain(BlockchainInterface):
         pre_validation_result: Optional[PreValidationResult] = None,
         trusted: bool = False,
         fork_point_with_peak: Optional[uint32] = None,
-        additional_coin_spends: List[CoinSolution] = None,
+        additional_coin_spends: List[CoinSpend] = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -268,7 +268,7 @@ class WalletBlockchain(BlockchainInterface):
         block_record: BlockRecord,
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
-        additional_coin_spends_from_wallet: Optional[List[CoinSolution]],
+        additional_coin_spends_from_wallet: Optional[List[CoinSpend]],
         heights_changed: Set[Tuple[uint32, Optional[bytes32]]],
     ) -> Tuple[Optional[uint32], List[BlockRecord]]:
         """
@@ -318,7 +318,7 @@ class WalletBlockchain(BlockchainInterface):
                 del self.__sub_epoch_summaries[height]
 
             # Collect all blocks from fork point to new peak
-            blocks_to_add: List[Tuple[HeaderBlockRecord, BlockRecord, List[CoinSolution]]] = []
+            blocks_to_add: List[Tuple[HeaderBlockRecord, BlockRecord, List[CoinSpend]]] = []
             curr = block_record.header_hash
             while fork_h < 0 or curr != self.height_to_hash(uint32(fork_h)):
                 fetched_header_block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(curr)
