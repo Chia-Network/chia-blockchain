@@ -2661,8 +2661,7 @@ class TestReorgs:
         tx1: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
-            list(blocks[-1].get_included_reward_coins())[0],
-            condition_dic=conditions.copy(),
+            list(blocks[-1].get_included_reward_coins())[0]
         )
         coin1: Coin = tx1.additions()[0]
         tx2: SpendBundle = wt.generate_signed_transaction(
