@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 12:37\n"
+"PO-Revision-Date: 2021-07-14 00:55\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2425,11 +2425,11 @@ msgstr "Aviso: Esta chave é usada para uma carteira que pode ter um saldo difer
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Aviso: Esta chave é usada para o endereço das recompensas da sua farm. Ao excluir esta chave, você pode perder acesso a quaisquer futuras recompensas da farm"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Aviso: Esta chave é usada para o endereço das recompensas da sua pool. Ao excluir esta chave, você pode perder acesso a quaisquer futuras recompensas da pool"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
