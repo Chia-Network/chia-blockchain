@@ -719,8 +719,8 @@ Batch process weight proof epochs in groups of 900 to fit below May 2020 sqlite 
 
 - This is the first release in our release candidate series. There are still a few things that will change at the edges but the blockchain, clvm, and chialisp are in release form. We have one major change to chialisp/clvm that we have chosen to schedule for the next release as in this release we're breaking the way q/quote works. We also have one more revision to the VDF that will decrease the sizes of the proofs of time. We expect a few more releases in the release candidate series.
 - Installers will now be of the pattern ChiaSetup-0.2.1.exe. `0.2` is release candidate and the final `.1` is the first release candidate.
-- Use 'chia wallet get_transactions' in the command line to see your transactions.
-- 'chia wallet show' now shows your wallet's height.
+- Use 'silicoin wallet get_transactions' in the command line to see your transactions.
+- 'silicoin wallet show' now shows your wallet's height.
 - Last Attempted Proof is now above Latest Block Challenge on the Farm page of the GUI.
 - The GUI now detects duplicate plots and also only counts unique plots and unique plot size.
 - We have integrated with crowdin to make it easier to translate the GUI. Check out [Chia Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
@@ -735,7 +735,7 @@ validation was changed to allow blocks like these to be made. This will enable c
 - Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This effects the RPC, now
 all fields that referred to sub blocks are changed to blocks.
 - Base difficulty and weight have increased, so difficulty of "5" in the rc1 testnet will be equivalent to "21990232555520" in the previous testnet.
-- 'chia wallet send' now takes in TXCH or XCH as units instead of mojos.
+- 'silicoin wallet send' now takes in TXCH or XCH as units instead of mojos.
 - Transactions have been further sped up.
 - The blockchain database has more careful validation.
 - The GUI is now using bech32m.
@@ -1377,7 +1377,7 @@ relic. We will make a patch available for these systems shortly.
 - Windows and MacOS now have one click installers that then send users to a GUI on both platforms to farm or use their wallets. Windows is built on GitHub Actions and MacOS is also built on Azure Pipelines so as to build on Mojave.
 - You can see and control your farmer, harvester, and plotter from the GUI on Windows, MacOS, and Linux.
 - Create plots and see the plotting log from a GUI on Windows, MacOS, and Linux.
-- You can now create or import private keys with a 24 word mnemonic, both in the UI and 'chia keys' command line.
+- You can now create or import private keys with a 24 word mnemonic, both in the UI and 'silicoin keys' command line.
 - You can delete and change active keys from the GUI and cli.
 - We added a new keychain system that replaces keys.yaml, and migrates existing users from keys.yaml. It utilizes each OS's keychain for slightly more secure key storage.
 - We added a `chia keys` command line program, to see, add, and remove private keys.

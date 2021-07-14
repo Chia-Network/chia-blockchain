@@ -184,5 +184,5 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.warning(
             f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "
             f"is not on this machine. The farmer private key must be in the keychain in order to "
-            f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
+            f"farm them, use 'silicoin keys' to transfer keys. The pool public keys must be in the config.yaml"
         )

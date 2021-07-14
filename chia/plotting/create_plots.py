@@ -8,8 +8,7 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.util import add_plot_directory
-from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
+from chia.plotting.util import add_plot_directory, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
@@ -114,7 +113,7 @@ class PlotKeysResolver:
         sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
         if sk is None:
             raise RuntimeError(
-                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f"
+                "No keys, please run 'silicoin keys add', 'silicoin keys generate' or provide a public key with -f"
             )
         return master_sk_to_farmer_sk(sk).get_g1()
 
@@ -122,7 +121,7 @@ class PlotKeysResolver:
         sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
         if sk is None:
             raise RuntimeError(
-                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p"
+                "No keys, please run 'silicoin keys add', 'silicoin keys generate' or provide a public key with -p"
             )
         return master_sk_to_pool_sk(sk).get_g1()
 
@@ -140,6 +139,19 @@ async def resolve_plot_keys(
         farmer_public_key, alt_fingerprint, pool_public_key, pool_contract_address, root_path, log, connect_to_daemon
     ).resolve()
 
+<<<<<<< HEAD
+=======
+def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
+    sk_ent: Optional[Tuple[PrivateKey, bytes]]
+    keychain: Keychain = Keychain()
+    if alt_fingerprint is not None:
+        sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
+    else:
+        sk_ent = keychain.get_first_private_key()
+    if sk_ent is None:
+        raise RuntimeError("No keys, please run 'silicoin keys add', 'silicoin keys generate' or provide a public key with -p")
+    return master_sk_to_pool_sk(sk_ent[0]).get_g1()
+>>>>>>> 155a2aedd (cmdhelpmessage)
 
 async def create_plots(args, keys: PlotKeys, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
 

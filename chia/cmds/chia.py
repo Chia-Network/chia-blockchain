@@ -40,7 +40,7 @@ def monkey_patch_click() -> None:
 
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
-    epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
+    epilog="Try 'silicoin start node', 'silicoin netspace -d 192', or 'silicoin show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
