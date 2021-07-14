@@ -1,3 +1,5 @@
+from typing import Optional
+
 import click
 
 
@@ -16,7 +18,7 @@ def plotnft_cmd() -> None:
 )
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def show_cmd(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import show
@@ -47,7 +49,7 @@ def get_login_link_cmd(launcher_id: str) -> None:
     type=int,
     default=None,
 )
-def create_cmd(wallet_rpc_port: int, fingerprint: int, pool_url: str, state: str, yes: bool) -> None:
+def create_cmd(wallet_rpc_port: Optional[int], fingerprint: int, pool_url: str, state: str, yes: bool) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import create
@@ -75,7 +77,7 @@ def create_cmd(wallet_rpc_port: int, fingerprint: int, pool_url: str, state: str
     type=int,
     default=None,
 )
-def join_cmd(wallet_rpc_port: int, fingerprint: int, id: int, pool_url: str, yes: bool) -> None:
+def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, pool_url: str, yes: bool) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import join_pool
@@ -95,7 +97,7 @@ def join_cmd(wallet_rpc_port: int, fingerprint: int, id: int, pool_url: str, yes
     type=int,
     default=None,
 )
-def self_pool_cmd(wallet_rpc_port: int, fingerprint: int, id: int, yes: bool) -> None:
+def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, yes: bool) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import self_pool
@@ -114,7 +116,7 @@ def self_pool_cmd(wallet_rpc_port: int, fingerprint: int, id: int, yes: bool) ->
     type=int,
     default=None,
 )
-def inspect(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
+def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import inspect_cmd
@@ -133,7 +135,7 @@ def inspect(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
     type=int,
     default=None,
 )
-def claim(wallet_rpc_port: int, fingerprint: int, id: int) -> None:
+def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet
     from .plotnft_funcs import claim_cmd
