@@ -2635,8 +2635,13 @@ class TestReorgs:
         assert blocks[-1].height == 199
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("opcode", [ConditionOpcode.ASSERT_SECONDS_RELATIVE, ConditionOpcode.ASSERT_HEIGHT_RELATIVE])
-    @pytest.mark.parametrize("lock_time,expected", [(-1, ReceiveBlockResult.NEW_PEAK), (0, ReceiveBlockResult.NEW_PEAK), (1, ReceiveBlockResult.INVALID_BLOCK)])
+    @pytest.mark.parametrize(
+        "opcode", [ConditionOpcode.ASSERT_SECONDS_RELATIVE, ConditionOpcode.ASSERT_HEIGHT_RELATIVE]
+    )
+    @pytest.mark.parametrize(
+        "lock_time,expected",
+        [(-1, ReceiveBlockResult.NEW_PEAK), (0, ReceiveBlockResult.NEW_PEAK), (1, ReceiveBlockResult.INVALID_BLOCK)],
+    )
     async def test_ephmeral_timelock(self, empty_blockchain, opcode, lock_time, expected):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2654,19 +2659,18 @@ class TestReorgs:
         conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_time)])]}
 
         tx1: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0],
-            condition_dic=conditions.copy()
+            10,
+            wt.get_new_puzzlehash(),
+            list(blocks[-1].get_included_reward_coins())[0],
+            condition_dic=conditions.copy(),
         )
         coin1: Coin = tx1.additions()[0]
         tx2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), coin1,
-            condition_dic=conditions.copy()
+            10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions.copy()
         )
         assert coin1 in tx2.removals()
         coin2: Coin = tx2.additions()[0]
-        tx3: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), coin2
-        )
+        tx3: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin2)
         assert coin2 in tx3.removals()
         coin3: Coin = tx3.additions()[0]
 
