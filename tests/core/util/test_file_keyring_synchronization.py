@@ -27,7 +27,7 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path):
             # otherwise file events won't be detected in the child process
             KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
 
-        KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase_bytes=passphrase)
+        KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
         # Wait a short while between writing and reading. Without proper locking, this helps ensure
         # the concurrent processes get into a bad state
