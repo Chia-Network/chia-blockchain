@@ -228,8 +228,10 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
             else:
                 if ip not in harvesters_remote:
                     harvesters_remote[ip] = {}
-                    if socket.gethostbyaddr(ip):
+                    try:
                         harvesters_hostnames[ip] = socket.gethostbyaddr(ip)[0]
+                    except Exception:
+                        pass
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
         def process_harvesters(harvester_peers_in: dict):
