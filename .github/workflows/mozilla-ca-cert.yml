@@ -1,7 +1,9 @@
 name: Update Mozilla CA sub module
+
 on:
   workflow_dispatch:
     branches: [ $default-branch ]
+    
 jobs:
   update_ca_module:
     runs-on: ubuntu-latest
