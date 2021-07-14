@@ -47,8 +47,6 @@ class KeyringWrapper:
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
         self.legacy_keyring = self._configure_legacy_backend()
 
-        KeyringWrapper.__shared_instance = self
-
     def _configure_backend(self) -> Union[Any, FileKeyring]:
         from chia.util.keychain import supports_keyring_passphrase
 
@@ -104,7 +102,7 @@ class KeyringWrapper:
     @staticmethod
     def get_shared_instance(create_if_necessary=True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
-            KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
+            KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 

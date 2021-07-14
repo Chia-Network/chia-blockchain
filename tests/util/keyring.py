@@ -123,7 +123,8 @@ class TempKeyring:
         # We don't want CryptFileKeyring finding the real legacy keyring
         mock_data_root.return_value = temp_dir
 
-        keychain = Keychain(user=user, testing=testing)
+        keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
+        keychain = Keychain(user=user, testing=testing, test_keyring_wrapper=keyring_wrapper)
 
         # Stash the temp_dir in the keychain instance
         keychain._temp_dir = temp_dir  # type: ignore

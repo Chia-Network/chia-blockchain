@@ -204,11 +204,15 @@ class Keychain:
     """
 
     testing: bool
+    test_keyring_wrapper: Optional[KeyringWrapper]
     user: str
 
-    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
-        self.testing = testing
+    def __init__(
+        self, user: str = "user-chia-1.8", testing: bool = False, test_keyring_wrapper: Optional[KeyringWrapper] = None
+    ):
         self.user = user
+        self.testing = testing
+        self.test_keyring_wrapper = test_keyring_wrapper
 
     def _get_service(self) -> str:
         """
@@ -219,6 +223,12 @@ class Keychain:
         else:
             return f"chia-{self.user}"
 
+    @property
+    def keyring_wrapper(self) -> KeyringWrapper:
+        if self.test_keyring_wrapper is not None:
+            return self.test_keyring_wrapper
+        return KeyringWrapper.get_shared_instance()
+
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
@@ -226,7 +236,7 @@ class Keychain:
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = KeyringWrapper.get_shared_instance().get_passphrase(self._get_service(), user)
+        read_str = self.keyring_wrapper.get_passphrase(self._get_service(), user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
@@ -273,7 +283,7 @@ class Keychain:
             # Prevents duplicate add
             return key
 
-        KeyringWrapper.get_shared_instance().set_passphrase(
+        self.keyring_wrapper.set_passphrase(
             self._get_service(),
             self._get_private_key_user(index),
             bytes(key.get_g1()).hex() + entropy.hex(),
@@ -383,9 +393,7 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    KeyringWrapper.get_shared_instance().delete_passphrase(
-                        self._get_service(), self._get_private_key_user(index)
-                    )
+                    self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -400,9 +408,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                KeyringWrapper.get_shared_instance().delete_passphrase(
-                    self._get_service(), self._get_private_key_user(index)
-                )
+                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -420,9 +426,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                KeyringWrapper.get_shared_instance().delete_passphrase(
-                    self._get_service(), self._get_private_key_user(index)
-                )
+                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
