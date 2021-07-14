@@ -94,7 +94,13 @@ export default function PlotNFTCard(props: Props) {
     (state: RootState) => state.wallet_state.network_info?.network_prefix,
   );
 
-  const payoutAddress = encodePuzzleHash(payout_instructions, networkPrefix);
+  var payoutAddress: string;
+
+  try {
+    payoutAddress = encodePuzzleHash(payout_instructions, networkPrefix)
+  } catch {
+    payoutAddress = payout_instructions;
+  }
 
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
     points_acknowledged_24h,
