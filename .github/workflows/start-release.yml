@@ -9,7 +9,7 @@ on:
 jobs:
   start_release:
     name: Starts release process in Glue API
-    runs-on: [ARM64]
+    runs-on: [glue-notify]
     steps:
       - name: Get tag name
         if: startsWith(github.ref, 'refs/tags/')
