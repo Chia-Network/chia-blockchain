@@ -18,6 +18,7 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.coinbase import create_pool_coin, create_farmer_coin
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -34,13 +35,13 @@ and is designed so that you could test with it and then swap in a real rpc clien
 """
 
 
-class TestFullBlock:
+class SimFullBlock:
     def __init__(self, generator: Optional[BlockGenerator], height: uint32):
         self.height = height  # Note that height is not on a regular FullBlock
         self.transactions_generator = generator
 
 
-class TestBlockRecord:
+class SimBlockRecord:
     def __init__(self, rci: List[Coin], height: uint32, timestamp: uint64):
         self.reward_claims_incorporated = rci
         self.height = height
@@ -54,21 +55,23 @@ class SpendSim:
 
     connection: aiosqlite.Connection
     mempool_manager: MempoolManager
-    block_records: List[TestBlockRecord]
-    blocks: List[TestFullBlock]
+    block_records: List[SimBlockRecord]
+    blocks: List[SimFullBlock]
     timestamp: uint64
     block_height: uint32
+    defaults: ConsensusConstants
 
     @classmethod
-    async def create(cls):
+    async def create(cls, defaults=DEFAULT_CONSTANTS):
         self = cls()
         self.connection = await aiosqlite.connect(":memory:")
         coin_store = await CoinStore.create(DBWrapper(self.connection))
-        self.mempool_manager = MempoolManager(coin_store, DEFAULT_CONSTANTS)
+        self.mempool_manager = MempoolManager(coin_store, defaults)
         self.block_records = []
         self.blocks = []
-        self.timestamp = DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1
+        self.timestamp = defaults.INITIAL_FREEZE_END_TIMESTAMP + 1
         self.block_height = 0
+        self.defaults = defaults
         return self
 
     async def close(self):
@@ -118,13 +121,13 @@ class SpendSim:
             next_block_height,
             puzzle_hash,
             calculate_pool_reward(next_block_height),
-            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.defaults.GENESIS_CHALLENGE,
         )
         farmer_coin: Coin = create_farmer_coin(
             next_block_height,
             puzzle_hash,
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
-            DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+            self.defaults.GENESIS_CHALLENGE,
         )
         await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(pool_coin, True), False)
         await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(farmer_coin, True), False)
@@ -149,16 +152,16 @@ class SpendSim:
                 for removal in removals:
                     await self.mempool_manager.coin_store._set_spent(removal.name(), uint32(self.block_height + 1))
 
-        # TestBlockRecord is created
+        # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
         self.block_records.append(
-            TestBlockRecord(
+            SimBlockRecord(
                 [pool_coin, farmer_coin],
                 next_block_height,
                 self.timestamp,
             )
         )
-        self.blocks.append(TestFullBlock(generator, next_block_height))
+        self.blocks.append(SimFullBlock(generator, next_block_height))
 
         # block_height is incremented
         self.block_height = next_block_height
@@ -189,7 +192,7 @@ class SpendSim:
         if new_br_list:
             self.timestamp = new_br_list[-1].timestamp
         else:
-            self.timestamp = uint64(DEFAULT_CONSTANTS.INITIAL_FREEZE_END_TIMESTAMP + 1)
+            self.timestamp = uint64(self.defaults.INITIAL_FREEZE_END_TIMESTAMP + 1)
 
 
 class SimClient:
@@ -234,28 +237,28 @@ class SimClient:
             kwargs["end_height"] = end_height
         return await self.service.mempool_manager.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
-    async def get_block_record_by_height(self, height: uint32) -> TestBlockRecord:
+    async def get_block_record_by_height(self, height: uint32) -> SimBlockRecord:
         return list(filter(lambda block: block.height == height, self.service.block_records))[0]
 
-    async def get_block_record(self, header_hash: bytes32) -> TestBlockRecord:
+    async def get_block_record(self, header_hash: bytes32) -> SimBlockRecord:
         return list(filter(lambda block: block.header_hash == header_hash, self.service.block_records))[0]
 
-    async def get_block_records(self, start: uint32, end: uint32) -> List[TestBlockRecord]:
+    async def get_block_records(self, start: uint32, end: uint32) -> List[SimBlockRecord]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.block_records))
 
-    async def get_block(self, header_hash: bytes32) -> TestFullBlock:
-        selected_block: TestBlockRecord = list(
+    async def get_block(self, header_hash: bytes32) -> SimFullBlock:
+        selected_block: SimBlockRecord = list(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
         )[0]
         block_height: uint32 = selected_block.height
-        block: TestFullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
+        block: SimFullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
         return block
 
-    async def get_all_block(self, start: uint32, end: uint32) -> List[TestFullBlock]:
+    async def get_all_block(self, start: uint32, end: uint32) -> List[SimFullBlock]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
-        selected_block: TestBlockRecord = list(
+        selected_block: SimBlockRecord = list(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
         )[0]
         block_height: uint32 = selected_block.height
@@ -273,7 +276,7 @@ class SimClient:
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             generator,
             coin_id,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            self.service.defaults.MAX_BLOCK_COST_CLVM,
         )
         if error:
             return None
