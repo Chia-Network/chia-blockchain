@@ -2633,3 +2633,45 @@ class TestReorgs:
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("opcode", [ConditionOpcode.ASSERT_SECONDS_RELATIVE, ConditionOpcode.ASSERT_HEIGHT_RELATIVE])
+    @pytest.mark.parametrize("lock_time,expected", [(-1, ReceiveBlockResult.NEW_PEAK), (0, ReceiveBlockResult.NEW_PEAK), (1, ReceiveBlockResult.INVALID_BLOCK)])
+    async def test_ephmeral_timelock(self, empty_blockchain, opcode, lock_time, expected):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_time)])]}
+
+        tx1: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0],
+            condition_dic=conditions.copy()
+        )
+        print("tx1=", tx1)
+        coin1: Coin = tx1.additions()[0]
+        tx2: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), coin1,
+            condition_dic=conditions.copy()
+        )
+        print("tx2=", tx2)
+        coin2: Coin = tx2.additions()[0]
+        tx3: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), coin2
+        )
+        print("tx3=", tx3)
+
+        bundles = SpendBundle.aggregate([tx1, tx2, tx3])
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundles
+        )
+        assert (await b.receive_block(blocks[-1]))[0] == expected
