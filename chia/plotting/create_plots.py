@@ -68,7 +68,14 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             pool_public_key = get_pool_public_key(args.alt_fingerprint)
         else:
             # If the pool contract puzzle hash is set, use that
-            pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
+            try:
+                pool_contract_puzzle_hash = bytes.fromhex(args.pool_contract_address)
+            except ValueError:
+                log.warning(
+                    "Creating plots with pool_contract_address formatted as bech32m is deprecated."
+                    "pool_contract_address should be given as 64 hex digits."
+                )
+                pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
 
     assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
     num = args.num

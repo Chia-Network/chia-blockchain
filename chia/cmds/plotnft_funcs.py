@@ -120,8 +120,8 @@ async def pprint_pool_wallet_state(
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
 
     print(
-        f"P2 singleton address (pool contract address for plotting): "
-        f"{encode_puzzle_hash(pool_wallet_info.p2_singleton_puzzle_hash, address_prefix)}"
+        f"Pool contract address (used ONLY for plotting - do not send money to this address): "
+        f"{pool_wallet_info.p2_singleton_puzzle_hash.hex()}"
     )
     if pool_wallet_info.target is not None:
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
