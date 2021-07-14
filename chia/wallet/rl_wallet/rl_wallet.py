@@ -561,7 +561,7 @@ class RLWallet:
 
     def generate_unsigned_clawback_transaction(
         self, clawback_coin: Coin, clawback_puzzle_hash: bytes32, fee: uint64
-    ) -> List[Tuple[Program, CoinSolution]]:
+    ) -> List[Tuple[Program, CoinSpend]]:
         if (
             self.rl_info.limit is None
             or self.rl_info.interval is None
