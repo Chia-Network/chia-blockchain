@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.2.1 Chia blockchain 2021-07-12
+
+### Added
+
+- Thanks @feldsam for adding support for Fedora in install-gui script
+
+### Fixed
+
+- Fix harvester cache updates. Prior to this commit the farmer called the `request_plots` every second for each harvester as long as they failed to respond properly. Since the rate limit was 10/minute this lead to hitting the rate limit if the harvester didn't responds for 10 tries in a row for whatever reason. This commit changes the behavior to always keep track of request attempts even if they end up in a timeout to really only re-try every 60s no matter what.
+- Fix M1 installed torrent and installer version number
+- Thanks to @x-Rune for helping find and test a lot of 1.2.0 bugs with the harvester.
+- Fixed issue for Debian users where the wallet crashes on start for them since last release
+
 ## 1.2.0 Chia blockchain 2021-07-07
 
 ### Added

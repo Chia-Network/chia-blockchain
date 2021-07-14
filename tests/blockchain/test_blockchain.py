@@ -2348,7 +2348,35 @@ class TestBodyValidation:
 
     @pytest.mark.asyncio
     async def test_minting_coin(self, empty_blockchain):
-        # 16 TODO
+        # 16 Minting coin check
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        spend = list(blocks[-1].get_included_reward_coins())[0]
+        print("spend=", spend)
+        # this create coin will spend all of the coin, so the 10 mojos below
+        # will be "minted".
+        output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(spend.amount)])
+        condition_dict = {ConditionOpcode.CREATE_COIN: [output]}
+
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), spend, condition_dic=condition_dict
+        )
+
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+        assert (await b.receive_block(blocks[-1]))[1] == Err.MINTING_COIN
         # 17 is tested in mempool tests
         pass
 

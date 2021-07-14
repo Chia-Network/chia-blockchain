@@ -345,9 +345,12 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_first_not_compactified(self, min_height: int) -> Optional[int]:
+    async def get_first_not_compactified(self) -> Optional[int]:
+        # Since orphan blocks do not get compactified, we need to check whether all blocks with a
+        # certain height are not compact. And if we do have compact orphan blocks, then all that
+        # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            "SELECT MIN(height) from full_blocks WHERE is_fully_compactified=0 AND height>=?", (min_height,)
+            "SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 ORDER BY height LIMIT 1"
         )
         row = await cursor.fetchone()
         await cursor.close()

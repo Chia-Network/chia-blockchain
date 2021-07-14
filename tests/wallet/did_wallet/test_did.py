@@ -11,7 +11,7 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from clvm_tools import binutils
 from chia.types.blockchain_format.program import Program
 from chia.wallet.derivation_record import DerivationRecord
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from blspy import AugSchemeMPL
 from chia.types.spend_bundle import SpendBundle
 from chia.wallet.transaction_record import TransactionRecord
@@ -589,7 +589,7 @@ class XTestDIDWallet:
             ]
         )
 
-        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
+        list_of_solutions = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = coin.puzzle_hash + coin.name() + did_wallet.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
