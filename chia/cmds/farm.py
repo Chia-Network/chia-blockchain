@@ -50,7 +50,10 @@ def farm_cmd() -> None:
     show_default=True,
 )
 def summary_cmd(
-    rpc_port: int, wallet_rpc_port: Optional[int], harvester_rpc_port: Optional[int], farmer_rpc_port: Optional[int]
+    rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int],
+    harvester_rpc_port: Optional[int],
+    farmer_rpc_port: Optional[int],
 ) -> None:
     from .farm_funcs import summary
     import asyncio

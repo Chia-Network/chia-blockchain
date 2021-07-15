@@ -179,7 +179,10 @@ async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
 
 
 async def summary(
-    rpc_port: int, wallet_rpc_port: Optional[int], harvester_rpc_port: Optional[int], farmer_rpc_port: Optional[int]
+    rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int],
+    harvester_rpc_port: Optional[int],
+    farmer_rpc_port: Optional[int],
 ) -> None:
     all_harvesters = await get_harvesters(farmer_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
