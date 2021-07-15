@@ -8,7 +8,7 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 00:15\n"
+"PO-Revision-Date: 2021-07-15 14:18\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -107,7 +107,7 @@ msgstr "Plot-Verzeichnis hinzufügen"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "{currencyCode} aus Faucet hinzufügen"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:561
 #: src/components/wallet/coloured/WalletColoured.tsx:657
