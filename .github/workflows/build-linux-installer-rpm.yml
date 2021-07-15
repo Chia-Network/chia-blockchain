@@ -21,7 +21,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.8]
-        os: [ubuntu-18.04]
+        os: [centos7]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -106,7 +106,6 @@ jobs:
     - name: Build .rpm package
       run: |
         . ./activate
-        sudo apt-get -y install rpm
         ldd --version
         cd ./chia-blockchain-gui
         git status
