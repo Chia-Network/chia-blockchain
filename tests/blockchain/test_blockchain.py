@@ -1600,12 +1600,21 @@ class TestBodyValidation:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "opcode", [ConditionOpcode.ASSERT_SECONDS_RELATIVE, ConditionOpcode.ASSERT_HEIGHT_RELATIVE]
-    )
-    @pytest.mark.parametrize(
-        "lock_value,expected",
-        [(-1, ReceiveBlockResult.NEW_PEAK), (0, ReceiveBlockResult.NEW_PEAK), (1, ReceiveBlockResult.INVALID_BLOCK)],
-    )
+        "opcode,lock_value,expected", [
+        (ConditionOpcode.ASSERT_SECONDS_RELATIVE,-2, ReceiveBlockResult.NEW_PEAK),
+        (ConditionOpcode.ASSERT_SECONDS_RELATIVE,-1, ReceiveBlockResult.NEW_PEAK),
+        (ConditionOpcode.ASSERT_SECONDS_RELATIVE,0, ReceiveBlockResult.NEW_PEAK),
+        (ConditionOpcode.ASSERT_SECONDS_RELATIVE,1, ReceiveBlockResult.INVALID_BLOCK),
+
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK),
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
+
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK),
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK),
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK),
+    ])
     async def test_ephmeral_timelock(self, empty_blockchain, opcode, lock_value, expected):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
