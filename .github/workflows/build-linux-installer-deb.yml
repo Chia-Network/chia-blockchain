@@ -36,6 +36,9 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - name: Cleanup any leftovers that exist from previous runs
+      run: bash build_scripts/clean-runner.sh || true
+
     - name: Setup Python environment
       uses: actions/setup-python@v2
       with:

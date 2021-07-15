@@ -27,23 +27,14 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - name: Cleanup any leftovers that exist from previous runs
-        run: |
-          rm -rf ../venv || true
-          rm -rf venv || true
-          rm -rf chia_blockchain.egg-info || true
-          rm -rf build_scripts/final_installer || true
-          rm -rf build_scripts/dist || true
-          rm -rf build_scripts/pyinstaller || true
-          rm -rf chia-blockchain-gui/build || true
-          rm -rf chia-blockchain-gui/daemon || true
-          rm -rf chia-blockchain-gui/node_modules || true
-
       - name: Checkout Code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
           submodules: recursive
+
+      - name: Cleanup any leftovers that exist from previous runs
+        run: bash build_scripts/clean-runner.sh || true
 
       - name: Test for secrets access
         id: check_secrets
