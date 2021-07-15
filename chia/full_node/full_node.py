@@ -768,11 +768,9 @@ class FullNode:
                     continue
                 elif isinstance(response, RespondBlocks):
                     while start_height - batch_size in queued_blocks:
-                        self.log.info(
-                            f"batch {start_height} waiting for {start_height - batch_size} - sleeping..."
-                        )
+                        self.log.info(f"batch {start_height} waiting for {start_height - batch_size} - sleeping...")
                         await asyncio.sleep(multi_request_sleep_time)
-                    # TODO: advanced_peak across parallel calls...                    
+                    # TODO: advanced_peak across parallel calls...
                     success, advanced_peak, _ = await self.receive_block_batch(
                         response.blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                     )
@@ -806,15 +804,13 @@ class FullNode:
                 self.sync_store.peers_changed.clear()
 
             if batch_added is False:
-                self.log.info(
-                    f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}"
-                )
+                self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
                 failed_to_fetch_blocks = True
                 return
             else:
                 self.log.info(
-                    f"Added blocks {start_height} to {end_height}. "+
-                    f"queued_blocks={len(queued_blocks)} peers={len(peers_with_peak)}"
+                    f"Added blocks {start_height} to {end_height}. "
+                    + f"queued_blocks={len(queued_blocks)} peers={len(peers_with_peak)}"
                 )
                 self.blockchain.clean_block_record(
                     min(
@@ -828,9 +824,7 @@ class FullNode:
         for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
             while len(queued_blocks) > max_queue_size:
                 if failed_to_fetch_blocks:
-                    self.log.info(
-                        f"Failed to fetch blocks, stranding queue={len(queued_blocks)} - terminating..."
-                    )
+                    self.log.info(f"Failed to fetch blocks, stranding queue={len(queued_blocks)} - terminating...")
                     break
                 self.log.info(
                     f"batch launcher height {start_height}: queue full with {max_queue_size} entries - sleeping..."
