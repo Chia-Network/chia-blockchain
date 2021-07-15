@@ -1614,7 +1614,7 @@ class TestBodyValidation:
             (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK),
         ],
     )
-    async def test_ephmeral_timelock(self, empty_blockchain, opcode, lock_value, expected):
+    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -1635,15 +1635,12 @@ class TestBodyValidation:
         )
         coin1: Coin = tx1.additions()[0]
         tx2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions.copy()
+            10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions
         )
         assert coin1 in tx2.removals()
         coin2: Coin = tx2.additions()[0]
-        tx3: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin2)
-        assert coin2 in tx3.removals()
-        coin3: Coin = tx3.additions()[0]
 
-        bundles = SpendBundle.aggregate([tx1, tx2, tx3])
+        bundles = SpendBundle.aggregate([tx1, tx2])
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundles
         )
@@ -1653,11 +1650,8 @@ class TestBodyValidation:
             # ensure coin1 was in fact spent
             c = await b.coin_store.get_coin_record(coin1.name())
             assert c is not None and c.spent
-            # ensure coin2 was in fact spent
+            # ensure coin2 was NOT spent
             c = await b.coin_store.get_coin_record(coin2.name())
-            assert c is not None and c.spent
-            # ensure coin3 was NOT spent
-            c = await b.coin_store.get_coin_record(coin3.name())
             assert c is not None and not c.spent
 
     @pytest.mark.asyncio
