@@ -1605,16 +1605,13 @@ class TestBodyValidation:
             (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
             (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK),
             (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-
             (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
             (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
             (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK),
             (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-
             (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK),
             (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK),
             (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK),
-
             # genesis timestamp is 10000 and each block is 10 seconds
             (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK),
             (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK),
@@ -1644,15 +1641,16 @@ class TestBodyValidation:
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
         )
         coin1: Coin = tx1.additions()[0]
-        tx2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions
-        )
+        tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
         assert coin1 in tx2.removals()
         coin2: Coin = tx2.additions()[0]
 
         bundles = SpendBundle.aggregate([tx1, tx2])
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundles,
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=bundles,
             time_per_block=10,
         )
         assert (await b.receive_block(blocks[-1]))[0] == expected
