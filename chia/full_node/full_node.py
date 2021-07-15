@@ -745,8 +745,9 @@ class FullNode:
         queued_blocks = {}
         multi_request_sleep_time = 2
         failed_to_fetch_blocks = False
+
         async def request_range(start_height):
-            nonlocal queued_blocks, multi_request_sleep_time
+            nonlocal queued_blocks, multi_request_sleep_time, failed_to_fetch_blocks
             nonlocal peer_ids, peers_with_peak, advanced_peak, batch_size, target_peak_sb_height
             end_height = min(target_peak_sb_height, start_height + batch_size)
             request = RequestBlocks(uint32(start_height), uint32(end_height), True)
@@ -802,11 +803,13 @@ class FullNode:
                 self.sync_store.peers_changed.clear()
 
             if batch_added is False:
-                self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
+                self.log.info(f"Failed to fetch blocks {start_height} to {end_height} "+
+                              f"from peers: {peers_with_peak}")
                 failed_to_fetch_blocks = True
                 return
             else:
-                self.log.info(f"Added blocks {start_height} to {end_height}. queued_blocks={len(queued_blocks)} peers={len(peers_with_peak)}")
+                self.log.info(f"Added blocks {start_height} to {end_height}. "+
+                              f"queued_blocks={len(queued_blocks)} peers={len(peers_with_peak)}")
                 self.blockchain.clean_block_record(
                     min(
                         end_height - self.constants.BLOCKS_CACHE_SIZE,
