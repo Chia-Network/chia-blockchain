@@ -1,4 +1,4 @@
-name: Linux .rpm installer on Python 3.8
+name: Linux .rpm installer on Python 3.9
 
 on:
   workflow_dispatch:
@@ -13,15 +13,15 @@ on:
 
 jobs:
   build:
-    name: Linux .rpm installer on Python 3.8
+    name: Linux .rpm installer on Python 3.9
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.8]
-        os: [ubuntu-18.04]
+        python-version: [3.9]
+        os: [fedora]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -38,11 +38,6 @@ jobs:
 
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
-
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
       uses: actions/cache@v2.1.6
@@ -106,7 +101,6 @@ jobs:
     - name: Build .rpm package
       run: |
         . ./activate
-        sudo apt-get -y install rpm
         ldd --version
         cd ./chia-blockchain-gui
         git status
