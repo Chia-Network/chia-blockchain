@@ -579,9 +579,7 @@ class Farmer:
         for key in remove_hosts:
             del self.harvester_cache[key]
         # Now query each harvester and update caches
-        for connection in self.server.get_connections():
-            if connection.connection_type != NodeType.HARVESTER:
-                continue
+        for connection in self.server.get_connections(NodeType.HARVESTER):
             cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry.needs_update():
                 self.log.debug(f"update_cached_harvesters update harvester: {connection.peer_node_id}")
@@ -615,9 +613,7 @@ class Farmer:
 
     async def get_harvesters(self) -> Dict:
         harvesters: List = []
-        for connection in self.server.get_connections():
-            if connection.connection_type != NodeType.HARVESTER:
-                continue
+        for connection in self.server.get_connections(NodeType.HARVESTER):
             self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
             cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry.data is not None:
