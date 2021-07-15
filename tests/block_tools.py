@@ -108,7 +108,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "INITIAL_FREEZE_END_TIMESTAMP": int(time.time()) - 1,
+        "INITIAL_FREEZE_END_TIMESTAMP": 1000,
         "NETWORK_TYPE": 1,
     }
 )
