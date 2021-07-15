@@ -708,6 +708,135 @@ class FullNode:
                 return None
             await self._finish_sync()
 
+    async def sync_from_fork_point_multi(
+        self,
+        fork_point_height: int,
+        target_peak_sb_height: uint32,
+        peak_hash: bytes32,
+        summaries: List[SubEpochSummary],
+    ):
+        self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
+        peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
+        peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
+
+        if len(peers_with_peak) == 0:
+            raise RuntimeError(f"Not syncing, no peers with header_hash {peak_hash} ")
+        advanced_peak = False
+        batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+
+        our_peak_height = self.blockchain.get_peak_height()
+        ses_heigths = self.blockchain.get_ses_heights()
+        if len(ses_heigths) > 2 and our_peak_height is not None:
+            ses_heigths.sort()
+            max_fork_ses_height = ses_heigths[-3]
+            # This is the fork point in SES in the case where no fork was detected
+            if self.blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
+                for peer in peers_with_peak:
+                    # Grab a block at peak + 1 and check if fork point is actually our current height
+                    block_response: Optional[Any] = await peer.request_block(
+                        full_node_protocol.RequestBlock(uint32(our_peak_height + 1), True)
+                    )
+                    if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
+                        peak = self.blockchain.get_peak()
+                        if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
+                            fork_point_height = our_peak_height
+                        break
+
+        event_sync_done = asyncio.Event()
+        g_advanced_peak = False
+
+        async def send_peak_wallets():
+            peak = self.blockchain.get_peak()
+            assert peak is not None
+            msg = make_msg(
+                ProtocolMessageTypes.new_peak_wallet,
+                wallet_protocol.NewPeakWallet(
+                    peak.header_hash,
+                    peak.height,
+                    peak.weight,
+                    uint32(max(peak.height - 1, uint32(0))),
+                ),
+            )
+            await self.server.send_to_all([msg], NodeType.WALLET)
+
+        async def receive_response_event(peer, response, response_time, request_height, target_peak_height, batch_size):
+            # Trigger new request
+
+            if response is None:
+                peers_with_peak.remove(peer)
+                asyncio.create_task(peer.close())
+                asyncio.create_task(request_block_event(request_height, target_peak_height, batch_size, None))
+                return
+            if isinstance(response, RejectBlocks):
+                peers_with_peak.remove(peer)
+                asyncio.create_task(request_block_event(request_height, target_peak_height, batch_size, None))
+                return
+            elif isinstance(response, RespondBlocks):
+                wait_event = asyncio.Event()
+                asyncio.create_task(request_block_event(request_height+32, target_peak_height, batch_size, wait_event))
+
+                try:
+                    global g_advanced_peak
+                    success, advanced_peak, _ = await self.receive_block_batch(
+                        response.blocks, peer, None if g_advanced_peak else uint32(fork_point_height), summaries
+                    )
+                    g_advanced_peak = advanced_peak
+                    wait_event.set()
+                    if success is False:
+                        peers_with_peak.remove(peer)
+                        asyncio.create_task(peer.close(600))
+                        asyncio.create_task(request_block_event(request_height, target_peak_height, batch_size, wait_event))
+                        return
+                    else:
+                        self.blockchain.clean_block_record(
+                            min(
+                                end_height - self.constants.BLOCKS_CACHE_SIZE,
+                                peak.height - self.constants.BLOCKS_CACHE_SIZE,
+                            )
+                        )
+                    asyncio.create_task(send_peak_wallets())
+                except BaseException as e:
+                    self.log.error(f"Error while receiving a batch: {e}")
+                finally:
+                    wait_event.set()
+
+        async def request_block_event(request_height, target_peak_height, batch_size, wait_event):
+            # Select fastest peer
+            # Request blocks
+            if self.sync_store.peers_changed.is_set():
+
+                self.log.info(f"Number of peers we are syncing from: {len(peers_with_peak)}")
+                self.sync_store.peers_changed.clear()
+            peer_ids = self.sync_store.get_peers_that_have_peak([peak_hash])
+            peers_with_peak = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
+            if len(peers_with_peak) == 0:
+                event_sync_done.set()
+            peer = peers_with_peak[0]
+            end_height = min(target_peak_height, request_height + batch_size)
+            request = RequestBlocks(uint32(request_height), uint32(end_height), True)
+            response = None
+            response_time = None
+            try:
+                response_start = time.time()
+                response = await peer.request_blocks(request, timeout=60)
+                response_end = time.time()
+                response_time = response_end - response_start
+                # Wait for previous batch to be processes before adding a new one
+            except BaseException as e:
+                self.log.error(f"Error during request_block_event: {e}")
+                if self._shut_down:
+                    return
+
+            if wait_event is not None:
+                await wait_event.wait()
+
+            asyncio.create_task(receive_response_event(peer, response, response_time, fork_point_height, target_peak_height,
+                                       batch_size))
+
+        asyncio.create_task(request_block_event(fork_point_height, target_peak_sb_height, batch_size, None))
+
+        await event_sync_done.wait()
+
     async def sync_from_fork_point(
         self,
         fork_point_height: int,
