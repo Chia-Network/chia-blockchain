@@ -206,7 +206,7 @@ class WalletBlockchain(BlockchainInterface):
             required_iters, val_error = validate_unfinished_header_block(
                 self.constants, self, unfinished_header_block, False, difficulty, sub_slot_iters, False, True
             )
-            error = ValidationError(Err(val_error)) if val_error is not None else None
+            error = val_error if val_error is not None else None
         else:
             assert pre_validation_result is not None
             required_iters = pre_validation_result.required_iters
