@@ -1,10 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 
 import click
 
 
 async def show_async(
-    rpc_port: int,
+    rpc_port: Optional[int],
     state: bool,
     show_connections: bool,
     exit_node: bool,
@@ -296,8 +296,8 @@ async def show_async(
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
 def show_cmd(
-    rpc_port: int,
-    wallet_rpc_port: int,
+    rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int],
     state: bool,
     connections: bool,
     exit_node: bool,
