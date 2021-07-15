@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from pathlib import Path
 from secrets import token_bytes
 from typing import Optional
@@ -16,8 +15,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 
 from chia.wallet.wallet_pool_store import WalletPoolStore
-
-log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -39,8 +36,6 @@ def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) 
         SerializedProgram.from_program(puzzle_prog),
         SerializedProgram.from_program(solution_prog),
     )
-    log.warning("ABC")
-    log.warning(f"{sol.additions()}")
     return sol
 
 
