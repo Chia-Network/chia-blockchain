@@ -1548,20 +1548,6 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
         assert err == Err.ASSERT_MY_AMOUNT_FAILED
 
-    @pytest.mark.asyncio
-    async def test_unknown_condition(self, two_nodes):
-
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        cvp = ConditionWithArgs(ConditionOpcode.UNKNOWN, [])
-        dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
-
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
-        assert sb1 is None
-        assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
-
 
 class TestConditionParser:
     @pytest.mark.parametrize("safe_mode", [True, False])
