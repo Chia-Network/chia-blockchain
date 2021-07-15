@@ -742,8 +742,12 @@ class FullNode:
                             fork_point_height = our_peak_height
                         break
 
-        for i in range(fork_point_height, target_peak_sb_height, batch_size):
-            start_height = i
+        queued_blocks = {}
+        multi_request_sleep_time = 2
+        failed_to_fetch_blocks = False
+        async def request_range(start_height):
+            nonlocal queued_blocks, multi_request_sleep_time
+            nonlocal peer_ids, peers_with_peak, advanced_peak, batch_size, target_peak_sb_height
             end_height = min(target_peak_sb_height, start_height + batch_size)
             request = RequestBlocks(uint32(start_height), uint32(end_height), True)
             self.log.info(f"Requesting blocks: {start_height} to {end_height}")
@@ -762,6 +766,9 @@ class FullNode:
                     to_remove.append(peer)
                     continue
                 elif isinstance(response, RespondBlocks):
+                    while start_height - batch_size in queued_blocks:
+                        self.log.info(f"batch {start_height} waiting for {start_height - batch_size} - sleeping...")
+                        await asyncio.sleep(multi_request_sleep_time)
                     success, advanced_peak, _ = await self.receive_block_batch(
                         response.blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                     )
@@ -796,15 +803,28 @@ class FullNode:
 
             if batch_added is False:
                 self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
-                break
+                failed_to_fetch_blocks = True
+                return
             else:
-                self.log.info(f"Added blocks {start_height} to {end_height}")
+                self.log.info(f"Added blocks {start_height} to {end_height}. queued_blocks={len(queued_blocks)} peers={len(peers_with_peak)}")
                 self.blockchain.clean_block_record(
                     min(
                         end_height - self.constants.BLOCKS_CACHE_SIZE,
                         peak.height - self.constants.BLOCKS_CACHE_SIZE,
                     )
                 )
+            del queued_blocks[start_height]
+
+        max_queue_size = 10
+        for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
+            while len(queued_blocks) > max_queue_size:
+                if failed_to_fetch_blocks:
+                    self.log.info(f"Failed to fetch blocks, stranding queue={len(queued_blocks)} - terminating...")
+                    break
+                self.log.info(f"batch launcher height {start_height}: queue full with {max_queue_size} entries - sleeping...")
+                await asyncio.sleep(multi_request_sleep_time)
+            queued_blocks[start_height] = True
+            asyncio.create_task(request_range(start_height))
 
     async def receive_block_batch(
         self,
