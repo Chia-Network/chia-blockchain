@@ -99,11 +99,11 @@ def send_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def show_cmd(wallet_rpc_port: Optional[int], farmer_rpc_port: int, fingerprint: int) -> None:
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, print_balances
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"farmer_rpc_port": farmer_rpc_port}, print_balances))
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
 
 
 @wallet_cmd.command("get_address", short_help="Get a wallet receive address")

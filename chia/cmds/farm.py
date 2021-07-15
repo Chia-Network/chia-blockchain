@@ -29,6 +29,17 @@ def farm_cmd() -> None:
     show_default=True,
 )
 @click.option(
+    "-hp",
+    "--harvester-rpc-port",
+    help=(
+        "Set the port where the Harvester is hosting the RPC interface"
+        "See the rpc_port under harvester in config.yaml"
+    ),
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-fp",
     "--farmer-rpc-port",
     help=(
@@ -38,11 +49,13 @@ def farm_cmd() -> None:
     default=None,
     show_default=True,
 )
-def summary_cmd(rpc_port: int, wallet_rpc_port: Optional[int], farmer_rpc_port: Optional[int]) -> None:
+def summary_cmd(
+    rpc_port: int, wallet_rpc_port: Optional[int], harvester_rpc_port: Optional[int], farmer_rpc_port: Optional[int]
+) -> None:
     from .farm_funcs import summary
     import asyncio
 
-    asyncio.run(summary(rpc_port, wallet_rpc_port, farmer_rpc_port))
+    asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
 
 @farm_cmd.command("challenges", short_help="Show the latest challenges")
