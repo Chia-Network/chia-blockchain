@@ -39,11 +39,6 @@ jobs:
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
     - name: Cache npm
       uses: actions/cache@v2.1.6
       env:
