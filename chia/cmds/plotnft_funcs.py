@@ -154,6 +154,7 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
     farmer_rpc_port = config["farmer"]["rpc_port"]
@@ -167,7 +168,9 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         harvesters = await farmer_client.get_harvesters()
         for d in harvesters["harvesters"]:
             for plot in d["plots"]:
-                plot_counts[hexstr_to_bytes(plot["pool_contract_puzzle_hash"])] += 1
+                if plot.get("pool_contract_puzzle_hash", None) is not None:
+                    # Non pooled plots will have a None pool_contract_puzzle_hash
+                    plot_counts[hexstr_to_bytes(plot["pool_contract_puzzle_hash"])] += 1
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
             print(
