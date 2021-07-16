@@ -1980,7 +1980,7 @@ class TestGeneratorConditions:
         for cond in [60, 62]:
             message = "a" * 1024
             # announcements are validated on the Rust side and never returned
-            # back. They ar either satisified or cause an immediate failure
+            # back. They are either satisified or cause an immediate failure
             npc_result = generator_condition_tester(f'({cond} "{message}") ' * 50)
             assert npc_result.error is None
             assert len(npc_result.npc_list) == 1
