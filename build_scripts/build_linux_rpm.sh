@@ -73,7 +73,7 @@ if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 
 	# Disables build links from the generated rpm so that we dont conflict with other packages
 	NODE_ROOT=$(dirname $(dirname $(which node)))
-  sed -i '1s/^/%define _build_id_links none\n/' "$NODE_ROOT/lib/node_modules/electron-installer-redhat/resources/spec.ejs"
+  sed -i '1s/^/%define _build_id_links none\n%global _enable_debug_package 0\n%global debug_package %{nil}\n%global __os_install_post \/usr\/lib\/rpm\/brp-compress %{nil}\n/' "$NODE_ROOT/lib/node_modules/electron-installer-redhat/resources/spec.ejs"
 
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
   --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
