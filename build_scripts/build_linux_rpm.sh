@@ -71,6 +71,7 @@ cd ../build_scripts || exit
 if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
 
+	# shellcheck disable=SC2046
 	NODE_ROOT="$(dirname $(dirname $(which node)))"
 
 	# Disables build links from the generated rpm so that we dont conflict with other packages. See https://github.com/Chia-Network/chia-blockchain/issues/3846
