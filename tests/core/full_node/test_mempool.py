@@ -1992,7 +1992,7 @@ class TestGeneratorConditions:
     def test_multiple_reserve_fee(self):
         # RESERVE_FEE
         cond = 52
-        # even though the generator outputs 50 conditions, we only need to return one copy
+        # even though the generator outputs 3 conditions, we only need to return one copy
         # with all the fees accumulated
         npc_result = generator_condition_tester(f"({cond} 100) " * 3)
         assert npc_result.error is None
