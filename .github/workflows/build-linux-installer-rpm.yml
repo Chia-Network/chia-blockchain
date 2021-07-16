@@ -21,7 +21,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.9]
-        os: [fedora]
+        os: [centos]
 
     steps:
     - name: Cancel previous runs on the same branch
