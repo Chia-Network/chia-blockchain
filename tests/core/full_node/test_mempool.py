@@ -2081,7 +2081,7 @@ class TestGeneratorConditions:
 
     def test_create_coin_different_puzzhash(self):
         # CREATE_COIN
-        # coins with diffeerent puzzle hashes are not considered duplicate
+        # coins with different puzzle hashes are not considered duplicate
         puzzle_hash_1 = "abababababababababababababababab"
         puzzle_hash_2 = "cbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcb"
         npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5) (51 "{puzzle_hash_2}" 5)')
