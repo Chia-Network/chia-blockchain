@@ -1,3 +1,4 @@
+import pytest
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
@@ -93,14 +94,17 @@ class TestROM:
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 
-    def test_get_name_puzzle_conditions(self):
+    @pytest.mark.parametrize("rust_checker", [True, False])
+    def test_get_name_puzzle_conditions(self, rust_checker: bool):
         # this tests that extra block or coin data doesn't confuse `get_name_puzzle_conditions`
 
         gen = block_generator()
         cost, r = run_generator(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, safe_mode=False)
+        npc_result = get_name_puzzle_conditions(
+            gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, safe_mode=False, rust_checker=rust_checker
+        )
         assert npc_result.error is None
         assert npc_result.clvm_cost == EXPECTED_COST
         cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500)])

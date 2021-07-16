@@ -2114,7 +2114,7 @@ class TestGeneratorConditions:
         )
         generator = BlockGenerator(program, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, safe_mode=False
+            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, safe_mode=False, rust_checker=rust_checker
         )
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 2

@@ -383,7 +383,7 @@ def get_name_puzzle_conditions_rust(
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool, rust_checker: bool = True
+    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool, rust_checker: bool
 ) -> NPCResult:
     """
     This executes the generator program and returns the coins and their

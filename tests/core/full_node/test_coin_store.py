@@ -56,7 +56,8 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class TestCoinStore:
     @pytest.mark.asyncio
-    async def test_basic_coin_store(self):
+    @pytest.mark.parametrize("rust_checker", [True, False])
+    async def test_basic_coin_store(self, rust_checker: bool):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -76,7 +77,9 @@ class TestCoinStore:
                         if coin.puzzle_hash == reward_ph:
                             coins_to_spend.append(coin)
 
-            spend_bundle = wallet_a.generate_signed_transaction(1000, wallet_a.get_new_puzzlehash(), coins_to_spend[0])
+            spend_bundle = wallet_a.generate_signed_transaction(
+                uint64(1000), wallet_a.get_new_puzzlehash(), coins_to_spend[0]
+            )
 
             db_path = Path("fndb_test.db")
             if db_path.exists():
@@ -108,6 +111,7 @@ class TestCoinStore:
                             bt.constants.MAX_BLOCK_COST_CLVM,
                             cost_per_byte=bt.constants.COST_PER_BYTE,
                             safe_mode=False,
+                            rust_checker=rust_checker,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                     else:
