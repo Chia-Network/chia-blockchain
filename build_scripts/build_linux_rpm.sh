@@ -70,6 +70,11 @@ cd ../build_scripts || exit
 
 if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
+
+	# Disables build links from the generated rpm so that we dont conflict with other packages
+	NODE_ROOT=$(dirname $(dirname $(which node)))
+  sed -i '1s/^/%define _build_id_links none\n/' "$NODE_ROOT/lib/node_modules/electron-installer-redhat/resources/spec.ejs"
+
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
   --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
   --license ../LICENSE
