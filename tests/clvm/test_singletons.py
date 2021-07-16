@@ -209,7 +209,6 @@ class TestSingleton:
             singleton_child: Coin = (await sim.all_non_reward_coins())[0]
             p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_puzzle(launcher_id)
             p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
-            ARBITRARY_AMOUNT: uint64 = 1379
             await sim.farm_block(p2_singleton_ph)
             p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
             p2_singleton_coin = p2_singleton_coin[0].coin
@@ -259,10 +258,10 @@ class TestSingleton:
                 DELAY_PH,
             )
             p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
-            ARBITRARY_AMOUNT: uint64 = 1379
+            ARBITRARY_AMOUNT: uint64 = 250000000000
             await sim.farm_block(p2_singleton_ph)
             p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
-            p2_singleton_coin = p2_singleton_coin[0].coin
+            p2_singleton_coin = sorted(p2_singleton_coin, key=lambda x: x.coin.amount)[0].coin
             assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
                 p2_singleton_coin,
                 adapted_puzzle_hash,
