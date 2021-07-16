@@ -89,7 +89,7 @@ msgstr "Tilføj Plot til Kø"
 #: src/components/plot/add/PlotAdd.tsx:160
 #: src/components/plot/overview/PlotOverviewHero.tsx:54
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:232
-#: src/components/plotNFT/PlotNFTCard.tsx:271
+#: src/components/plotNFT/PlotNFTCard.tsx:284
 msgid "Add a Plot"
 msgstr "Tilføj et plot"
 
@@ -143,7 +143,7 @@ msgstr "Beløb for Start Coin"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Er du sikker du vil slette plotfilen? Plotfilen kan ikke gendannes."
 
-#: src/components/plotNFT/PlotNFTCard.tsx:122
+#: src/components/plotNFT/PlotNFTCard.tsx:135
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr "Er du sikker på, at du vil slette ubekræftede transaktioner?"
@@ -298,7 +298,7 @@ msgstr "Udfordringshash"
 msgid "Change"
 msgstr "Ændre"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:396
+#: src/components/plotNFT/PlotNFTCard.tsx:420
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
@@ -328,7 +328,7 @@ msgstr "Vælg et antal af plotfiler"
 msgid "Choose Plot Size"
 msgstr "Vælg plotfil størrelse"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:372
+#: src/components/plotNFT/PlotNFTCard.tsx:396
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
 msgstr "Indløs Belønning"
@@ -381,7 +381,7 @@ msgstr "Bekræft"
 msgid "Confirm Disconnect"
 msgstr "Bekræft Afkobling"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:118
+#: src/components/plotNFT/PlotNFTCard.tsx:131
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
 msgstr "Bekræftelse"
@@ -553,12 +553,12 @@ msgid "Currency code is not defined"
 msgstr "Valuta kode er ikke defineret"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:141
-#: src/components/plotNFT/PlotNFTCard.tsx:180
+#: src/components/plotNFT/PlotNFTCard.tsx:193
 msgid "Current Difficulty"
 msgstr "Nuværende Sværhed"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:158
-#: src/components/plotNFT/PlotNFTCard.tsx:197
+#: src/components/plotNFT/PlotNFTCard.tsx:210
 msgid "Current Points Balance"
 msgstr "Nuværende Point Balance"
 
@@ -592,7 +592,7 @@ msgstr "Forsinkelse"
 #: src/components/plot/PlotAction.tsx:57
 #: src/components/plot/queue/PlotQueueActions.tsx:43
 #: src/components/plot/queue/PlotQueueActions.tsx:97
-#: src/components/plotNFT/PlotNFTCard.tsx:119
+#: src/components/plotNFT/PlotNFTCard.tsx:132
 #: src/components/selectKey/SelectKey.tsx:67
 #: src/components/selectKey/SelectKey.tsx:109
 #: src/components/wallet/standard/WalletStandard.tsx:629
@@ -604,7 +604,7 @@ msgstr "Slet"
 msgid "Delete Plot"
 msgstr "Slet Plotfil"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:314
+#: src/components/plotNFT/PlotNFTCard.tsx:327
 #: src/components/wallet/standard/WalletStandard.tsx:663
 msgid "Delete Unconfirmed Transactions"
 msgstr "Slet Ubekræftede Transaktioner"
@@ -1007,7 +1007,7 @@ msgstr "Ugyldig tilstand"
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 msgstr "Det er et engangs-login link, der kan bruges til at logge ind på en puljes hjemmeside. Den indeholder en underskrift ved hjælp af farmerens nøgle fra plot NFT. Ikke alle puljer understøtter denne funktion."
 
-#: src/components/plotNFT/PlotNFTCard.tsx:394
+#: src/components/plotNFT/PlotNFTCard.tsx:418
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
 msgstr "Tilslut Pulje"
@@ -1056,7 +1056,7 @@ msgid "Latest Block Challenges"
 msgstr "Sidste Blok Udfordring"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:297
-#: src/components/plotNFT/PlotNFTCard.tsx:349
+#: src/components/plotNFT/PlotNFTCard.tsx:362
 msgid "Launcher Id"
 msgstr "Starter Id"
 
@@ -1265,7 +1265,7 @@ msgid "Note that this does not change your pooling payout addresses. This only a
 msgstr "Bemærk, at dette ikke ændrer din pulje udbetalingsadresser. Dette påvirker kun gamle plot filer af gammelt format, og 0,25XCH belønning for pulje plots."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
-#: src/components/plotNFT/PlotNFTCard.tsx:159
+#: src/components/plotNFT/PlotNFTCard.tsx:172
 msgid "Number of Plots"
 msgstr "Antal af Plot Filer"
 
@@ -1298,6 +1298,10 @@ msgstr "I gennemsnit er der et minut mellem hver transaktionsblok. Medmindre der
 #: src/components/wallet/WalletHistory.tsx:23
 msgid "Outgoing"
 msgstr "Udgående"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:373
+msgid "Payout Address"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -1500,17 +1504,17 @@ msgstr "Plotning med bitfield aktiveret har omkring 30% mindre skrivning og er n
 #~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:176
-#: src/components/plotNFT/PlotNFTCard.tsx:215
+#: src/components/plotNFT/PlotNFTCard.tsx:228
 msgid "Points Found Since Start"
 msgstr "Point Fundet Siden Start"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:187
-#: src/components/plotNFT/PlotNFTCard.tsx:226
+#: src/components/plotNFT/PlotNFTCard.tsx:239
 msgid "Points Found in Last 24 Hours"
 msgstr "Point Fundet i de sidste 24 Timer"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:196
-#: src/components/plotNFT/PlotNFTCard.tsx:235
+#: src/components/plotNFT/PlotNFTCard.tsx:248
 msgid "Points Successful in Last 24 Hours"
 msgstr "Point Fundet i de sidste 24 Timer"
 
@@ -1578,7 +1582,7 @@ msgid "Pool public key:"
 msgstr "Pool offentlig nøgle:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:274
-#: src/components/plotNFT/PlotNFTCard.tsx:326
+#: src/components/plotNFT/PlotNFTCard.tsx:339
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
 msgstr "Pulje:"
@@ -1929,7 +1933,7 @@ msgstr "Status"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:115
-#: src/components/plotNFT/PlotNFTCard.tsx:144
+#: src/components/plotNFT/PlotNFTCard.tsx:157
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
@@ -2100,7 +2104,7 @@ msgid "This allows you to add a directory that has plots in it. If you have not 
 msgstr "Dette lader dig tilføje en folder med plotfiler i. Hvis du ikke har genereret nogle plotfiler, gå til plot skærmen."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:132
-#: src/components/plotNFT/PlotNFTCard.tsx:171
+#: src/components/plotNFT/PlotNFTCard.tsx:184
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "Denne vanskelighed er kunstigt lavere end på det reelle netværk og bruges når du farmer, for at finde flere beviser og sende dem til puljen. Jo flere plot filer du har, jo højere sværhedsgrad vil du have. Men, vanskeligheden påvirker ikke belønninger."
 
@@ -2139,12 +2143,12 @@ msgid "This is the total balance + pending balance: it is what your balance will
 msgstr "Dette er den totalle + afventende saldo: det er hvad din balance vil være når alle afventende transaktioner er bekræftet."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
-#: src/components/plotNFT/PlotNFTCard.tsx:190
+#: src/components/plotNFT/PlotNFTCard.tsx:203
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "Dette er det samlede antal point denne plotNFT har med denne pulje, siden den sidste udbetaling. Puljen vil nulstille point efter at have foretaget en udbetaling."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:168
-#: src/components/plotNFT/PlotNFTCard.tsx:207
+#: src/components/plotNFT/PlotNFTCard.tsx:220
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "Dette er det samlede antal point din farmer har fundet for denne plot NFT. Hver k32 plot vil få omkring 10 point om dagen, så hvis du har 10TiB, skulle forvente omkring 1000 point om dagen, eller 41 point i timen."
 
@@ -2274,7 +2278,7 @@ msgstr "Type"
 msgid "Unable to create plot NFT"
 msgstr "Kan ikke oprette plot NFT"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:149
+#: src/components/plotNFT/PlotNFTCard.tsx:162
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
 msgstr "Udestående Belønninger"
@@ -2334,7 +2338,7 @@ msgstr "Vis Handel"
 #~ msgid "View Payout Instructions"
 #~ msgstr "View Payout Instructions"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:285
+#: src/components/plotNFT/PlotNFTCard.tsx:298
 msgid "View Pool Login Link"
 msgstr "Se Pulje Login Link"
 
@@ -2474,7 +2478,7 @@ msgstr "Du er i afventende tilstand. Vent venligst på bekræftelse"
 msgid "You are not self pooling"
 msgstr "Du er ikke selv pulje"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:412
+#: src/components/plotNFT/PlotNFTCard.tsx:436
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
 msgstr "Du kan stadig oprette plot filer til denne plot NFT, men du kan ikke foretage ændringer, før synkroniseringen er gennemført."
 
@@ -2610,4 +2614,3 @@ msgstr "{currencyCode} Bruger Transaktionsgebyrer"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
-

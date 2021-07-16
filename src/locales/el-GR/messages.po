@@ -89,7 +89,7 @@ msgstr "Προσθήκη plot σε αναμονή"
 #: src/components/plot/add/PlotAdd.tsx:160
 #: src/components/plot/overview/PlotOverviewHero.tsx:54
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:232
-#: src/components/plotNFT/PlotNFTCard.tsx:271
+#: src/components/plotNFT/PlotNFTCard.tsx:284
 msgid "Add a Plot"
 msgstr "Προσθήκη plot"
 
@@ -143,7 +143,7 @@ msgstr "Ποσό για Αρχικό Νομίσμα"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το plot?? Το plot δεν μπορεί να ανακτηθεί."
 
-#: src/components/plotNFT/PlotNFTCard.tsx:122
+#: src/components/plotNFT/PlotNFTCard.tsx:135
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr ""
@@ -298,7 +298,7 @@ msgstr "Πρόκληση Hash"
 msgid "Change"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTCard.tsx:396
+#: src/components/plotNFT/PlotNFTCard.tsx:420
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
@@ -328,7 +328,7 @@ msgstr "Επιλέξτε τον αριθμό των Plots"
 msgid "Choose Plot Size"
 msgstr "Επιλέξτε Μέγεθος Plot"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:372
+#: src/components/plotNFT/PlotNFTCard.tsx:396
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
 msgstr ""
@@ -381,7 +381,7 @@ msgstr "Επιβεβαίωση"
 msgid "Confirm Disconnect"
 msgstr "Επιβεβαίωση Αποσύνδεσης"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:118
+#: src/components/plotNFT/PlotNFTCard.tsx:131
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
 msgstr ""
@@ -553,12 +553,12 @@ msgid "Currency code is not defined"
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:141
-#: src/components/plotNFT/PlotNFTCard.tsx:180
+#: src/components/plotNFT/PlotNFTCard.tsx:193
 msgid "Current Difficulty"
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:158
-#: src/components/plotNFT/PlotNFTCard.tsx:197
+#: src/components/plotNFT/PlotNFTCard.tsx:210
 msgid "Current Points Balance"
 msgstr ""
 
@@ -592,7 +592,7 @@ msgstr "Καθυστέρηση"
 #: src/components/plot/PlotAction.tsx:57
 #: src/components/plot/queue/PlotQueueActions.tsx:43
 #: src/components/plot/queue/PlotQueueActions.tsx:97
-#: src/components/plotNFT/PlotNFTCard.tsx:119
+#: src/components/plotNFT/PlotNFTCard.tsx:132
 #: src/components/selectKey/SelectKey.tsx:67
 #: src/components/selectKey/SelectKey.tsx:109
 #: src/components/wallet/standard/WalletStandard.tsx:629
@@ -604,7 +604,7 @@ msgstr "Διαγραφή"
 msgid "Delete Plot"
 msgstr "Διαγραφή Plot"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:314
+#: src/components/plotNFT/PlotNFTCard.tsx:327
 #: src/components/wallet/standard/WalletStandard.tsx:663
 msgid "Delete Unconfirmed Transactions"
 msgstr ""
@@ -1007,7 +1007,7 @@ msgstr ""
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTCard.tsx:394
+#: src/components/plotNFT/PlotNFTCard.tsx:418
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
 msgstr ""
@@ -1056,7 +1056,7 @@ msgid "Latest Block Challenges"
 msgstr "Τελευταίες Προκλήσεις Μπλοκ"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:297
-#: src/components/plotNFT/PlotNFTCard.tsx:349
+#: src/components/plotNFT/PlotNFTCard.tsx:362
 msgid "Launcher Id"
 msgstr ""
 
@@ -1265,7 +1265,7 @@ msgid "Note that this does not change your pooling payout addresses. This only a
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:120
-#: src/components/plotNFT/PlotNFTCard.tsx:159
+#: src/components/plotNFT/PlotNFTCard.tsx:172
 msgid "Number of Plots"
 msgstr ""
 
@@ -1298,6 +1298,10 @@ msgstr "Κατά μέσο όρο υπάρχει ένα λεπτό μεταξύ �
 #: src/components/wallet/WalletHistory.tsx:23
 msgid "Outgoing"
 msgstr "Εξερχόμενες"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:373
+msgid "Payout Address"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -1500,17 +1504,17 @@ msgstr "Το plotting με ενεργοποιημένο το bitfield έχει �
 #~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:176
-#: src/components/plotNFT/PlotNFTCard.tsx:215
+#: src/components/plotNFT/PlotNFTCard.tsx:228
 msgid "Points Found Since Start"
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:187
-#: src/components/plotNFT/PlotNFTCard.tsx:226
+#: src/components/plotNFT/PlotNFTCard.tsx:239
 msgid "Points Found in Last 24 Hours"
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:196
-#: src/components/plotNFT/PlotNFTCard.tsx:235
+#: src/components/plotNFT/PlotNFTCard.tsx:248
 msgid "Points Successful in Last 24 Hours"
 msgstr ""
 
@@ -1578,7 +1582,7 @@ msgid "Pool public key:"
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:274
-#: src/components/plotNFT/PlotNFTCard.tsx:326
+#: src/components/plotNFT/PlotNFTCard.tsx:339
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
 msgstr ""
@@ -1929,7 +1933,7 @@ msgstr "Κατάσταση"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:115
-#: src/components/plotNFT/PlotNFTCard.tsx:144
+#: src/components/plotNFT/PlotNFTCard.tsx:157
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
@@ -2100,7 +2104,7 @@ msgid "This allows you to add a directory that has plots in it. If you have not 
 msgstr "Αυτό σας επιτρέπει να προσθέσετε έναν κατάλογο που περιέχει plot Αν δεν έχετε δημιουργήσει plot, μεταβείτε στην οθόνη σχεδίασης."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:132
-#: src/components/plotNFT/PlotNFTCard.tsx:171
+#: src/components/plotNFT/PlotNFTCard.tsx:184
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr ""
 
@@ -2139,12 +2143,12 @@ msgid "This is the total balance + pending balance: it is what your balance will
 msgstr "Αυτό είναι το συνολικό υπόλοιπο + το εκκρεμές υπόλοιπο: αυτό είναι που θα είναι το υπόλοιπό σας μετά από όλες τις εκκρεμείς συναλλαγές που θα επιβεβαιωθούν."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:151
-#: src/components/plotNFT/PlotNFTCard.tsx:190
+#: src/components/plotNFT/PlotNFTCard.tsx:203
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:168
-#: src/components/plotNFT/PlotNFTCard.tsx:207
+#: src/components/plotNFT/PlotNFTCard.tsx:220
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
@@ -2274,7 +2278,7 @@ msgstr "Τύπος"
 msgid "Unable to create plot NFT"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTCard.tsx:149
+#: src/components/plotNFT/PlotNFTCard.tsx:162
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
 msgstr ""
@@ -2334,7 +2338,7 @@ msgstr "Προβολή Προσφοράς"
 #~ msgid "View Payout Instructions"
 #~ msgstr "View Payout Instructions"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:285
+#: src/components/plotNFT/PlotNFTCard.tsx:298
 msgid "View Pool Login Link"
 msgstr ""
 
@@ -2474,7 +2478,7 @@ msgstr ""
 msgid "You are not self pooling"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTCard.tsx:412
+#: src/components/plotNFT/PlotNFTCard.tsx:436
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
 msgstr ""
 
@@ -2610,4 +2614,3 @@ msgstr "{currencyCode} Τέλη Συναλλαγής Χρήστη"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-
