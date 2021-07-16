@@ -2099,7 +2099,7 @@ class TestGeneratorConditions:
 
     def test_create_coin_different_amounts(self):
         # CREATE_COIN
-        # coins with diffeerent amounts are not considered duplicate
+        # coins with different amounts are not considered duplicate
         puzzle_hash = "abababababababababababababababab"
         npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 5) (51 "{puzzle_hash}" 4)')
         assert npc_result.error is None
