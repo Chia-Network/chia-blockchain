@@ -270,17 +270,12 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
         post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
-        post_farmer_body = json.dumps(post_farmer_request.to_json_dict())
 
-        headers = {
-            "content-type": "application/json;",
-        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{pool_config.pool_url}/farmer",
-                    data=post_farmer_body,
-                    headers=headers,
+                    json=post_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt()),
                 ) as resp:
                     if resp.ok:
@@ -313,13 +308,12 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
         put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
-        put_farmer_body = json.dumps(put_farmer_request.to_json_dict())
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.put(
                     f"{pool_config.pool_url}/farmer",
-                    data=put_farmer_body,
+                    json=put_farmer_request.to_json_dict(),
                     ssl=ssl_context_for_root(get_mozilla_ca_crt()),
                 ) as resp:
                     if resp.ok:

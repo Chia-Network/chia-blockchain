@@ -209,21 +209,17 @@ class FarmerAPI:
                 agg_sig: G2Element = AugSchemeMPL.aggregate([plot_signature, authentication_signature])
 
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
-                post_partial_body = json.dumps(post_partial_request.to_json_dict())
                 self.farmer.log.info(
                     f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
-                headers = {
-                    "content-type": "application/json;",
-                }
+
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
                             f"{pool_url}/partial",
-                            data=post_partial_body,
-                            headers=headers,
+                            json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt()),
                         ) as resp:
                             if resp.ok:
