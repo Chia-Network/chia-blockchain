@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-17 00:02\n"
+"PO-Revision-Date: 2021-07-17 13:17\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2425,15 +2425,15 @@ msgstr "次の耕地を耕しはじめる前に遅延時間を挟みますか？
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr "注意: この鍵を使用するウォレットは残高がゼロでない可能性があります。この鍵を削除するとウォレットにアクセスできなくなるかもしれません。"
+msgstr "注意: この鍵を使用するウォレットは残高がゼロでない可能性があります。この鍵を削除するとウォレットを失くすかもしれません。"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "注意: この鍵は耕作報酬アドレスに使われています。この鍵を削除すると、今後の耕作報酬を失くすかもしれません。"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "注意: この鍵はプール報酬アドレスに使われています。この鍵を削除すると、今後のプール報酬を失くすかもしれません。"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
