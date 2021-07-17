@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-14 21:30\n"
+"PO-Revision-Date: 2021-07-17 00:01\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1301,7 +1301,7 @@ msgstr "Utgående"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:373
 msgid "Payout Address"
-msgstr ""
+msgstr "Utbetalningsadress"
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -2488,8 +2488,7 @@ msgstr "Du kan fortfarande skapa plottar för denna plot-NFT, men du kan inte g�
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
-"Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
+msgstr "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
@@ -2616,3 +2615,4 @@ msgstr "{currencyCode} Transaktionsavgifter för användare"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojo}}"
+
