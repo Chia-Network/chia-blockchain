@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-13 06:31\n"
+"PO-Revision-Date: 2021-07-17 00:01\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -620,7 +620,7 @@ msgstr "Apagar todas as chaves"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Excluir chave {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -1301,7 +1301,7 @@ msgstr "Enviado"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:373
 msgid "Payout Address"
-msgstr ""
+msgstr "Endereço do pagamento"
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -2425,15 +2425,15 @@ msgstr "Quer atrasar antes do próximo lote começar?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Aviso: Esta chave é usada para uma carteira que pode ter um saldo diferente de zero. Ao excluir esta chave, você pode perder o acesso a esta carteira"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Aviso: Esta chave é usada para o endereço das recompensas da sua coleta. Ao excluir esta chave, você pode perder acesso a qualquer futuro prêmio da coleta"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Aviso: Esta chave é usada para o endereço das recompensas da sua coleta. Ao excluir esta chave, você pode perder acesso a qualquer futuro prêmio da coleta"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
@@ -2614,3 +2614,4 @@ msgstr "{currencyCode} Taxas de transação do usuário"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
