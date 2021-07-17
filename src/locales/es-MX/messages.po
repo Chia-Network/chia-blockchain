@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_MX\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-17 00:01\n"
+"PO-Revision-Date: 2021-07-17 07:06\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Mexico\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -620,7 +620,7 @@ msgstr "Borrar todas las llaves"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Borrar clave {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -1301,7 +1301,7 @@ msgstr "Enviado"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:373
 msgid "Payout Address"
-msgstr ""
+msgstr "Dirección para pagos"
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -2425,11 +2425,11 @@ msgstr "¿Quiere tener un retraso antes de que comience la próxima parcela?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Advertencia: Esta clave se utiliza en una cartera que pueda tener un saldo distinto a cero. Al eliminar esta clave podría perder el acceso a esta cartera"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Advertencia: Esta clave se utiliza en tu dirección de recompensas. Al eliminar esta clave puedes perder el acceso a futuras recompensas"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
