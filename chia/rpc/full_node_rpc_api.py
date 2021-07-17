@@ -598,6 +598,19 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item}
     
+    def _validate_pool_puzzle_hash(
+        self,
+        launcher_id: bytes32,
+        delay_ph: bytes32,
+        delay_time: uint64,
+        pool_state: PoolState,
+        outer_puzzle_hash: bytes32,
+        genesis_challenge: bytes32,
+    ) -> bool:
+        inner_puzzle: Program = pool_state_to_inner_puzzle(pool_state, launcher_id, genesis_challenge, delay_time, delay_ph)
+        new_full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_id)
+        return new_full_puzzle.get_tree_hash() == outer_puzzle_hash
+
     async def get_pool_launcher(self, request: Dict) -> Optional[Dict]:
         if "launcher_id" not in request:
             raise ValueError("launcher_id not in request")
