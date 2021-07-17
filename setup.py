@@ -1,7 +1,7 @@
 from setuptools import setup
 
 dependencies = [
-    "blspy==1.0.3",  # Signature library
+    "blspy==1.0.4",  # Signature library
     "chiavdf==1.0.2",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.3",  # proof of space
