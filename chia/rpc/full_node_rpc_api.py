@@ -1,9 +1,23 @@
+from blspy import G2Element
 from typing import Any, Callable, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.coinbase import pool_parent_id
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.pools.pool_puzzles import (
+    create_absorb_spend,
+    create_full_puzzle,
+    get_delayed_puz_info_from_launcher_spend,
+    get_most_recent_singleton_coin_from_coin_solution,
+    launcher_id_to_p2_puzzle_hash,
+    pool_state_to_inner_puzzle,
+    solution_to_extra_data,
+)
+from chia.pools.pool_wallet import PoolSingletonState
+from chia.pools.pool_wallet_info import PoolState
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -50,6 +64,11 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            # Pool Protocol
+            "/get_pool_launcher": self.get_pool_launcher,
+            "/get_pool_singleton_states": self.get_pool_singleton_states,
+            "/get_pool_singleton_state": self.get_pool_singleton_state,
+            "/create_pool_absorb_tx": self.create_pool_absorb_tx,
         }
 
     async def _state_changed(self, change: str) -> List[WsRpcMessage]:
@@ -577,3 +596,331 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+    
+    async def get_pool_launcher(self, request: Dict) -> Optional[Dict]:
+        if "launcher_id" not in request:
+            raise ValueError("launcher_id not in request")
+
+        launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
+        launcher_coin: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(launcher_id)
+        if launcher_coin is None:
+            raise ValueError(f"Can not find launcher coin 0x{launcher_id}")
+        if not launcher_coin.spent:
+            raise ValueError(f"Genesis coin 0x{launcher_id} not spent")
+        
+        launcher_solution: Optional[CoinSolution] = (await self.get_puzzle_and_solution({"coin_id": launcher_coin.coin.name().hex(), "height": launcher_coin.spent_block_index}))["coin_solution"]
+        if launcher_solution is None:
+            raise ValueError("Invalid launcher solution")
+        launcher_state = solution_to_extra_data(launcher_solution)
+        if launcher_state is None:
+            raise ValueError("Invalid launcher state")
+
+        delay_time, delay_puzzle_hash = get_delayed_puz_info_from_launcher_spend(launcher_solution)
+        p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_puzzle_hash)
+
+        launcher = {
+            "launcher_solution": launcher_solution,
+            "launcher_state": launcher_state,
+            "delay_time": delay_time,
+            "delay_puzzle_hash": delay_puzzle_hash,
+            "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash,
+            "coin_record": {
+                "confirmed_block_index": launcher_coin.confirmed_block_index,
+                "spent_block_index": launcher_coin.spent_block_index,
+            }
+        }
+        return {"launcher": launcher}
+    
+    async def get_pool_singleton_states(self, request: Dict) -> Optional[Dict]:
+        if "launcher_id" not in request:
+            raise ValueError("launcher_id not in request")
+
+        launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
+        end_height: uint32 = uint32(request["end_height"] if "end_height" in request else 0x7fffffff)
+
+        # solution
+        last_solution: Optional[CoinSolution] = None
+        saved_state: Optional[PoolState] = None
+        delay_time: uint64 = uint64(0)
+        delay_puzzle_hash: Optional[bytes32] = None
+        if "farmer_record" not in request:
+            launcher_coin: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(launcher_id)
+            if launcher_coin is None:
+                raise ValueError(f"Can not find launcher coin 0x{launcher_id}")
+            if not launcher_coin.spent:
+                raise ValueError(f"Genesis coin 0x{launcher_id} not spent")
+
+            last_solution = (await self.get_puzzle_and_solution({"coin_id": launcher_coin.coin.name().hex(), "height": launcher_coin.spent_block_index}))["coin_solution"]
+            if last_solution is None:
+                raise ValueError("Invalid launcher solution")
+            delay_time, delay_puzzle_hash = get_delayed_puz_info_from_launcher_spend(last_solution)
+            saved_state = solution_to_extra_data(last_solution)
+            if saved_state is None:
+                raise ValueError("Invalid launcher coin")
+        else:
+            farmer_record = request["farmer_record"]
+            if "singleton_tip" not in farmer_record:
+                raise ValueError("farmer_record.singleton_tip not in request")
+            if "singleton_tip_state" not in farmer_record:
+                raise ValueError("farmer_record.singleton_tip_state not in request")
+            if "delay_time" not in farmer_record:
+                raise ValueError("farmer_record.delay_time not in request")
+            if "delay_puzzle_hash" not in farmer_record:
+                raise ValueError("farmer_record.delay_puzzle_hash not in request")
+
+            last_solution = CoinSolution.from_json_dict(farmer_record["singleton_tip"])
+            saved_state = PoolState.from_json_dict(farmer_record["singleton_tip_state"])
+            if last_solution is None or saved_state is None:
+                raise ValueError("Invalid singleton_tip or singleton_tip_state")
+
+            delay_time = uint64(farmer_record["delay_time"])
+            delay_puzzle_hash = bytes32(hexstr_to_bytes(farmer_record["delay_puzzle_hash"]))
+
+        assert last_solution is not None and saved_state is not None
+        last_coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(last_solution.coin.name())
+        if last_coin_record is None:
+            raise ValueError(f"Not found last solution coin 0x{last_solution.coin.name()}")
+        last_not_none_state: PoolState = saved_state # Current state of the singleton
+        p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_puzzle_hash)
+
+        singleton_state_steps = [{
+            "singleton_tip": last_solution,
+            "singleton_tip_state": saved_state,
+            "delay_puzzle_hash": delay_puzzle_hash,
+            "delay_time": delay_time,
+            "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash,
+            "coin_record": {
+                "confirmed_block_index": last_coin_record.confirmed_block_index,
+                "spent_block_index": last_coin_record.spent_block_index,
+            }
+        }]
+
+        while True:
+            next_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_solution)
+            if next_coin is None:
+                raise ValueError("The singleton is invalid")
+            next_coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(next_coin.name())
+            if next_coin_record is None:
+                raise ValueError(f"Not found coin 0x{next_coin.name()}")
+            if not next_coin_record.spent:
+                if not self._validate_pool_puzzle_hash(
+                    launcher_id,
+                    delay_puzzle_hash,
+                    delay_time,
+                    last_not_none_state,
+                    next_coin_record.coin.puzzle_hash,
+                    self.service.constants.GENESIS_CHALLENGE,
+                ):
+                    raise ValueError(f"Invalid singleton puzzle_hash for 0x{launcher_id}")
+                break
+            if end_height <= next_coin_record.spent_block_index:
+                break
+
+            last_solution = (await self.get_puzzle_and_solution({"coin_id": next_coin_record.coin.name().hex(), "height": next_coin_record.spent_block_index}))["coin_solution"]
+            if last_solution is None:
+                raise ValueError(f"Invalid puzzle_and_solution 0x{next_coin_record.coin.name()}")
+
+            pool_state: Optional[PoolState] = solution_to_extra_data(last_solution)
+            if pool_state is not None:
+                last_not_none_state = pool_state
+
+            # There is a state transition, and it is sufficiently buried
+            singleton_state_steps += [{
+                "singleton_tip": last_solution,
+                "singleton_tip_state": last_not_none_state,
+                "delay_puzzle_hash": delay_puzzle_hash,
+                "delay_time": delay_time,
+                "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash,
+                "coin_record": {
+                    "confirmed_block_index": next_coin_record.confirmed_block_index,
+                    "spent_block_index": next_coin_record.spent_block_index,
+                }
+            }]
+
+        return {"singleton_state_steps": singleton_state_steps}
+
+    async def get_pool_singleton_state(self, request: Dict) -> Optional[Dict]:
+        if "launcher_id" not in request:
+            raise ValueError("launcher_id not in request")
+
+        launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
+        peak_height = uint32(request["peak_height"] if "peak_height" in request else 0x7fffffff)
+        confirmation_security_threshold = request["confirmation_security_threshold"] if "confirmation_security_threshold" in request else 0
+
+        # solution
+        last_solution: Optional[CoinSolution] = None
+        saved_state: Optional[PoolState] = None
+        delay_time: uint64 = uint64(0)
+        delay_puzzle_hash: Optional[bytes32] = None
+        if "farmer_record" not in request:
+            launcher_coin: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(launcher_id)
+            if launcher_coin is None:
+                raise ValueError(f"Can not find launcher coin 0x{launcher_id}")
+            if not launcher_coin.spent:
+                raise ValueError(f"Genesis coin 0x{launcher_id} not spent")
+
+            last_solution = (await self.get_puzzle_and_solution({"coin_id": launcher_coin.coin.name().hex(), "height": launcher_coin.spent_block_index}))["coin_solution"]
+            if last_solution is None:
+                raise ValueError("Invalid launcher solution")
+            delay_time, delay_puzzle_hash = get_delayed_puz_info_from_launcher_spend(last_solution)
+            saved_state = solution_to_extra_data(last_solution)
+            if saved_state is None:
+                raise ValueError("Invalid launcher coin")
+        else:
+            farmer_record = request["farmer_record"]
+            if "singleton_tip" not in farmer_record:
+                raise ValueError("farmer_record.singleton_tip not in request")
+            if "singleton_tip_state" not in farmer_record:
+                raise ValueError("farmer_record.singleton_tip_state not in request")
+            if "delay_time" not in farmer_record:
+                raise ValueError("farmer_record.delay_time not in request")
+            if "delay_puzzle_hash" not in farmer_record:
+                raise ValueError("farmer_record.delay_puzzle_hash not in request")
+
+            last_solution = CoinSolution.from_json_dict(farmer_record["singleton_tip"])
+            saved_state = PoolState.from_json_dict(farmer_record["singleton_tip_state"])
+            if last_solution is None or saved_state is None:
+                raise ValueError("Invalid singleton_tip or singleton_tip_state")
+
+            delay_time = uint64(farmer_record["delay_time"])
+            delay_puzzle_hash = bytes32(hexstr_to_bytes(farmer_record["delay_puzzle_hash"]))
+
+        assert last_solution is not None and saved_state is not None
+        saved_coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(last_solution.coin.name())
+        if saved_coin_record is None:
+            raise ValueError(f"Not found last solution coin 0x{last_solution.coin.name()}")
+        saved_solution: CoinSolution = last_solution # Last coin solution that is buried in the blockchain, for this singleton
+        last_not_none_state: PoolState = saved_state # Current state of the singleton
+
+        while True:
+            next_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_solution)
+            if next_coin is None:
+                raise ValueError("The singleton is invalid")
+            next_coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(next_coin.name())
+            if next_coin_record is None:
+                raise ValueError(f"Not found coin 0x{next_coin.name()}")
+            if not next_coin_record.spent:
+                if not self._validate_pool_puzzle_hash(
+                    launcher_id,
+                    delay_puzzle_hash,
+                    delay_time,
+                    last_not_none_state,
+                    next_coin_record.coin.puzzle_hash,
+                    self.service.constants.GENESIS_CHALLENGE,
+                ):
+                    raise ValueError(f"Invalid singleton puzzle_hash for 0x{launcher_id}")
+                break
+
+            last_solution = (await self.get_puzzle_and_solution({"coin_id": next_coin_record.coin.name().hex(), "height": next_coin_record.spent_block_index}))["coin_solution"]
+            if last_solution is None:
+                raise ValueError(f"Invalid puzzle_and_solution 0x{next_coin_record.coin.name()}")
+
+            pool_state: Optional[PoolState] = solution_to_extra_data(last_solution)
+            if pool_state is not None:
+                last_not_none_state = pool_state
+            if peak_height - confirmation_security_threshold > next_coin_record.spent_block_index:
+                # There is a state transition, and it is sufficiently buried
+                saved_solution = last_solution
+                saved_state = last_not_none_state
+                saved_coin_record = next_coin_record
+
+        p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_puzzle_hash)
+        singleton_state = {
+            "buried_singleton_tip": saved_solution,
+            "buried_singleton_tip_state": saved_state,
+            "singleton_tip_state": last_not_none_state,
+            "delay_puzzle_hash": delay_puzzle_hash,
+            "delay_time": delay_time,
+            "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash,
+            "coin_record": {
+                "confirmed_block_index": saved_coin_record.confirmed_block_index,
+                "spent_block_index": saved_coin_record.spent_block_index,
+            },
+        }
+        return {"singleton_state": singleton_state}
+
+    async def create_pool_absorb_tx(self, request: Dict) -> Optional[Dict]:
+        if "launcher_id" not in request:
+            raise ValueError("launcher_id not in request")
+
+        launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
+        launcher_coin: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(launcher_id)
+        if launcher_coin is None:
+            raise ValueError(f"Can not find launcher coin 0x{launcher_id}")
+
+        peak_height = uint32(request["peak_height"] if "peak_height" in request else 0x7fffffff)
+        confirmation_security_threshold = request["confirmation_security_threshold"] if "confirmation_security_threshold" in request else 0
+
+        # solution and state
+        singleton_state: Dict = (await self.get_pool_singleton_state(request))["singleton_state"]
+        last_solution: CoinSolution = singleton_state["buried_singleton_tip"]
+        last_state: PoolState = singleton_state["buried_singleton_tip_state"]
+        last_state_2: PoolState = singleton_state["singleton_tip_state"]
+        delay_time: uint64 = uint64(singleton_state["delay_time"])
+        delay_puzzle_hash: bytes32 = singleton_state["delay_puzzle_hash"]
+
+        if last_state != last_state_2:
+            raise ValueError("invalid last state")
+        if last_state.state == PoolSingletonState.SELF_POOLING:
+            raise ValueError(f"Don't try to absorb from former farmer 0x{launcher_id}.")
+
+        all_spends: List[CoinSolution] = []
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(
+            False,
+            [launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_puzzle_hash)],
+            uint32(request["start_height"] if "start_height" in request else 0),
+            uint32(peak_height - confirmation_security_threshold),
+        )
+        if len(coin_records) > 0:
+            # check solution
+            singleton_tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_solution(last_solution)
+            if singleton_tip_coin is None:
+                raise ValueError(f"Can not find most recent singleton coin from 0x{last_solution.coin.name()} solution")
+            singleton_coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(singleton_tip_coin.name())
+            if singleton_coin_record is None:
+                raise ValueError(f"Can not find singleton coin 0x{singleton_tip_coin.name()}")
+            if singleton_coin_record.spent:
+                raise ValueError(
+                    f"Singleton coin 0x{singleton_coin_record.coin.name()} is spent, will not "
+                    f"claim rewards"
+                )
+
+            max_coin = request["max_coin"] if "max_coin" in request else 100
+            for reward_coin_record in coin_records:
+                if len(all_spends) >= max_coin:
+                    break
+
+                found_block_index: Optional[uint32] = None
+                for block_index in range(reward_coin_record.confirmed_block_index, reward_coin_record.confirmed_block_index - 100, -1):
+                    if block_index < 0:
+                        break
+                    pool_parent = pool_parent_id(uint32(block_index), self.service.constants.GENESIS_CHALLENGE)
+                    if pool_parent == reward_coin_record.coin.parent_coin_info:
+                        found_block_index = uint32(block_index)
+                if not found_block_index:
+                    # The puzzle does not allow spending coins that are not a coinbase reward
+                    continue
+
+                absorb_spend: List[CoinSolution] = create_absorb_spend(
+                    last_solution,
+                    last_state,
+                    launcher_coin.coin,
+                    found_block_index,
+                    self.service.constants.GENESIS_CHALLENGE,
+                    delay_time,
+                    delay_puzzle_hash,
+                )
+                last_solution = absorb_spend[0]
+                all_spends += absorb_spend
+
+        spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
+        add_list: List[Coin] = list(spend_bundle.additions())
+        rem_list: List[Coin] = list(spend_bundle.removals())
+        fee: uint64 = uint64(sum(a.amount for a in add_list) - sum(r.amount for r in rem_list))
+        pool_absorb_tx = {
+            "additions": add_list,
+            "removals": rem_list,
+            "fee_amount": fee,
+            "spend_bundle": spend_bundle,
+        }
+        return {"pool_absorb_tx": pool_absorb_tx}
