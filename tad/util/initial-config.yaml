@@ -12,31 +12,32 @@ network_overrides: &network_overrides
     mainnet:
       NETWORK_TYPE: 0
       GENESIS_CHALLENGE: e6e94ecddf80277287f1c8c853165fb76f6b5a8ff55e098a398cba05ecbd5170
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
     testnet0:
       MIN_PLOT_SIZE: 18
       GENESIS_CHALLENGE: 00009bf7ecfbabc5417402cadaea89ef23d2a8cbd3c32ccae547909b8731a08e
       NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
+      NUMBER_ZERO_BITS_PLOT_FILTER: 1
     testnet1:
       MIN_PLOT_SIZE: 18
       GENESIS_CHALLENGE: 9c5a3961ca7ebcf1a4d0ad041a287fa08bb9234d64447a871f31397ff9d5a37b
       NETWORK_TYPE: 1
       INITIAL_FREEZE_PERIOD: 100
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
   config:
     mainnet:
-      address_prefix: "xch"
+      address_prefix: "tad"
       default_full_node_port: 4044
     testnet0:
-      address_prefix: "txch"
+      address_prefix: "ttad"
       default_full_node_port: 54044
     testnet1:
-      address_prefix: "txch"
+      address_prefix: "ttad"
       default_full_node_port: 54045
 
 selected_network: &selected_network "testnet0"
@@ -103,7 +104,7 @@ harvester:
 
 pool:
   # Replace this with a real puzzle hash
-  # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
+  # tad_target_address: ttad102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -123,7 +124,7 @@ farmer:
   pool_public_keys: []
 
   # Replace this with a real puzzle hash
-  # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
+  # tad_target_address: ttad102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True

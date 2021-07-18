@@ -147,7 +147,7 @@ class TestPoolWalletRpc:
         args.buffer = 100
         args.farmer_public_key = bytes(bt.farmer_pk).hex()
         args.pool_public_key = None
-        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "txch")
+        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "ttad")
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir

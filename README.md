@@ -7,7 +7,10 @@ If you'd like to participate in testnet please [join our Discord](https://discor
 **How is this fork different?**
 
 * We can support plotting NFT plots and get **FULL** reward.
+* Get most of space on the hard drive - we support k28+ plots  
 * No shady clones - you can always audit code by diff'ing it with tad upstream
+* Faster sync, giving ~8 times less roundtrips  
+
 
 ---------------------------------
 

@@ -3,7 +3,7 @@
 Welcome to the Tad Blockchain project!
 We're really tad team trying to make the best fork of the tad. Due to very limited resources we'd really appreciate help :)
 
-Feel free to open issues or even better - create PRs :)
+Feel free to open issues or even better - create a Pull Request :)
 You'll be rewarded, of course.
 
 ## Copyright

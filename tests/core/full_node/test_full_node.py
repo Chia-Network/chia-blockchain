@@ -1076,7 +1076,7 @@ class TestFullNodeProtocol:
         assert res.type == ProtocolMessageTypes.reject_blocks.value
 
         # Try fetching more blocks than constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(0), uint32(33), False))
+        res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(0), uint32(1025), False))
         assert res.type == ProtocolMessageTypes.reject_blocks.value
 
         # Ask without transactions
