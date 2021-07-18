@@ -1,18 +1,18 @@
 import click
 
-from chia import __version__
-from chia.cmds.configure import configure_cmd
-from chia.cmds.farm import farm_cmd
-from chia.cmds.init import init_cmd
-from chia.cmds.keys import keys_cmd
-from chia.cmds.netspace import netspace_cmd
-from chia.cmds.plots import plots_cmd
-from chia.cmds.show import show_cmd
-from chia.cmds.start import start_cmd
-from chia.cmds.stop import stop_cmd
-from chia.cmds.wallet import wallet_cmd
-from chia.cmds.plotnft import plotnft_cmd
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from tad import __version__
+from tad.cmds.configure import configure_cmd
+from tad.cmds.farm import farm_cmd
+from tad.cmds.init import init_cmd
+from tad.cmds.keys import keys_cmd
+from tad.cmds.netspace import netspace_cmd
+from tad.cmds.plots import plots_cmd
+from tad.cmds.show import show_cmd
+from tad.cmds.start import start_cmd
+from tad.cmds.stop import stop_cmd
+from tad.cmds.wallet import wallet_cmd
+from tad.cmds.plotnft import plotnft_cmd
+from tad.util.default_root import DEFAULT_ROOT_PATH
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -34,8 +34,8 @@ def monkey_patch_click() -> None:
 
 
 @click.group(
-    help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
-    epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
+    help=f"\n  Manage tad blockchain infrastructure ({__version__})\n",
+    epilog="Try 'tad start node', 'tad netspace -d 192', or 'tad show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
@@ -47,15 +47,15 @@ def cli(ctx: click.Context, root_path: str) -> None:
     ctx.obj["root_path"] = Path(root_path)
 
 
-@cli.command("version", short_help="Show chia version")
+@cli.command("version", short_help="Show tad version")
 def version_cmd() -> None:
     print(__version__)
 
 
-@cli.command("run_daemon", short_help="Runs chia daemon")
+@cli.command("run_daemon", short_help="Runs tad daemon")
 @click.pass_context
 def run_daemon_cmd(ctx: click.Context) -> None:
-    from chia.daemon.server import async_run_daemon
+    from tad.daemon.server import async_run_daemon
     import asyncio
 
     asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))

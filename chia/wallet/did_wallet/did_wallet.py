@@ -6,28 +6,28 @@ from typing import Dict, Optional, List, Any, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
-from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
-from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.program import Program
-from chia.types.spend_bundle import SpendBundle
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.util.transaction_type import TransactionType
-from chia.util.ints import uint64, uint32, uint8
+from tad.protocols import wallet_protocol
+from tad.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
+from tad.server.outbound_message import NodeType
+from tad.types.blockchain_format.coin import Coin
+from tad.types.coin_solution import CoinSolution
+from tad.types.announcement import Announcement
+from tad.types.blockchain_format.program import Program
+from tad.types.spend_bundle import SpendBundle
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.wallet.util.transaction_type import TransactionType
+from tad.util.ints import uint64, uint32, uint8
 
-from chia.wallet.did_wallet.did_info import DIDInfo
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from tad.wallet.did_wallet.did_info import DIDInfo
+from tad.wallet.lineage_proof import LineageProof
+from tad.wallet.transaction_record import TransactionRecord
+from tad.wallet.util.wallet_types import WalletType
+from tad.wallet.wallet import Wallet
+from tad.wallet.wallet_coin_record import WalletCoinRecord
+from tad.wallet.wallet_info import WalletInfo
+from tad.wallet.derivation_record import DerivationRecord
+from tad.wallet.did_wallet import did_wallet_puzzles
+from tad.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 class DIDWallet:

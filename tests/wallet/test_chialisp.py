@@ -1,6 +1,6 @@
 import pytest
 
-from chia.wallet.chialisp import (
+from tad.wallet.chialisp import (
     apply,
     args,
     cons,

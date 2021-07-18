@@ -4,13 +4,13 @@ export NODE_OPTIONS="--max-old-space-size=3000"
 
 
 if [ -z "$VIRTUAL_ENV" ]; then
-  echo "This requires the chia python virtual environment."
+  echo "This requires the tad python virtual environment."
   echo "Execute '. ./activate' before running."
 	exit 1
 fi
 
 if [ "$(id -u)" = 0 ]; then
-  echo "The Chia Blockchain GUI can not be installed or run by the root user."
+  echo "The Tad Blockchain GUI can not be installed or run by the root user."
 	exit 1
 fi
 
@@ -100,6 +100,6 @@ else
 fi
 
 echo ""
-echo "Chia blockchain install-gui.sh completed."
+echo "Tad blockchain install-gui.sh completed."
 echo ""
 echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI."

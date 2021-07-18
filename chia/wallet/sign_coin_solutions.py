@@ -4,9 +4,9 @@ from typing import List, Any
 import blspy
 from blspy import AugSchemeMPL
 
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from tad.types.coin_solution import CoinSolution
+from tad.types.spend_bundle import SpendBundle
+from tad.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 
 
 async def sign_coin_solutions(

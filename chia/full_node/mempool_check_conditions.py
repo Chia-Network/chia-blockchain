@@ -3,22 +3,22 @@ import time
 from typing import Tuple, Dict, List, Optional, Set
 from clvm import SExp
 
-from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.condition_costs import ConditionCost
-from chia.full_node.generator import create_generator_args, setup_generator_args
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.generator_types import BlockGenerator
-from chia.types.name_puzzle_condition import NPC
-from chia.util.clvm import int_from_bytes, int_to_bytes
-from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
-from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64, uint16
-from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from tad.consensus.cost_calculator import NPCResult
+from tad.consensus.condition_costs import ConditionCost
+from tad.full_node.generator import create_generator_args, setup_generator_args
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.program import NIL
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.coin_record import CoinRecord
+from tad.types.condition_with_args import ConditionWithArgs
+from tad.types.generator_types import BlockGenerator
+from tad.types.name_puzzle_condition import NPC
+from tad.util.clvm import int_from_bytes, int_to_bytes
+from tad.util.condition_tools import ConditionOpcode, conditions_by_opcode
+from tad.util.errors import Err, ValidationError
+from tad.util.ints import uint32, uint64, uint16
+from tad.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
+from tad.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 

@@ -1,19 +1,19 @@
 from typing import KeysView, Generator
 
 SERVICES_FOR_GROUP = {
-    "all": "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet".split(),
-    "node": "chia_full_node".split(),
-    "harvester": "chia_harvester".split(),
-    "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),
-    "farmer-no-wallet": "chia_harvester chia_farmer chia_full_node".split(),
-    "farmer-only": "chia_farmer".split(),
-    "timelord": "chia_timelord_launcher chia_timelord chia_full_node".split(),
-    "timelord-only": "chia_timelord".split(),
-    "timelord-launcher-only": "chia_timelord_launcher".split(),
-    "wallet": "chia_wallet chia_full_node".split(),
-    "wallet-only": "chia_wallet".split(),
-    "introducer": "chia_introducer".split(),
-    "simulator": "chia_full_node_simulator".split(),
+    "all": "tad_harvester tad_timelord_launcher tad_timelord tad_farmer tad_full_node tad_wallet".split(),
+    "node": "tad_full_node".split(),
+    "harvester": "tad_harvester".split(),
+    "farmer": "tad_harvester tad_farmer tad_full_node tad_wallet".split(),
+    "farmer-no-wallet": "tad_harvester tad_farmer tad_full_node".split(),
+    "farmer-only": "tad_farmer".split(),
+    "timelord": "tad_timelord_launcher tad_timelord tad_full_node".split(),
+    "timelord-only": "tad_timelord".split(),
+    "timelord-launcher-only": "tad_timelord_launcher".split(),
+    "wallet": "tad_wallet tad_full_node".split(),
+    "wallet-only": "tad_wallet".split(),
+    "introducer": "tad_introducer".split(),
+    "simulator": "tad_full_node_simulator".split(),
 }
 
 

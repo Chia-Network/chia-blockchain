@@ -8,14 +8,14 @@ from typing import Any, Callable, Dict, Optional, Union
 import pkg_resources
 import yaml
 
-from chia.util.path import mkdir
+from tad.util.path import mkdir
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
 
 
-def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> None:
+def create_default_tad_config(root_path: Path, filenames=["config.yaml"]) -> None:
     for filename in filenames:
         default_config_file_data = initial_config_file(filename)
         path = config_path_for_filename(root_path, filename)
@@ -49,7 +49,7 @@ def load_config(
         if not exit_on_error:
             raise ValueError("Config not found")
         print(f"can't find {path}")
-        print("** please run `chia init` to migrate or create new config files **")
+        print("** please run `tad init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
     r = yaml.safe_load(open(path, "r"))

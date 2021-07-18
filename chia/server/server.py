@@ -15,17 +15,17 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import protocol_version
-from chia.server.introducer_peers import IntroducerPeers
-from chia.server.outbound_message import Message, NodeType
-from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
-from chia.util.network import is_localhost, is_in_network
+from tad.protocols.protocol_message_types import ProtocolMessageTypes
+from tad.protocols.shared_protocol import protocol_version
+from tad.server.introducer_peers import IntroducerPeers
+from tad.server.outbound_message import Message, NodeType
+from tad.server.ssl_context import private_ssl_paths, public_ssl_paths
+from tad.server.ws_connection import WSTadConnection
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.peer_info import PeerInfo
+from tad.util.errors import Err, ProtocolError
+from tad.util.ints import uint16
+from tad.util.network import is_localhost, is_in_network
 
 
 def ssl_context_for_server(
@@ -58,7 +58,7 @@ def ssl_context_for_client(
     return ssl_context
 
 
-class ChiaServer:
+class TadServer:
     def __init__(
         self,
         port: int,
@@ -72,16 +72,16 @@ class ChiaServer:
         root_path: Path,
         config: Dict,
         private_ca_crt_key: Tuple[Path, Path],
-        chia_ca_crt_key: Tuple[Path, Path],
+        tad_ca_crt_key: Tuple[Path, Path],
         name: str = None,
         introducer_peers: Optional[IntroducerPeers] = None,
     ):
         # Keeps track of all connections to and from this node.
         logging.basicConfig(level=logging.DEBUG)
-        self.all_connections: Dict[bytes32, WSChiaConnection] = {}
+        self.all_connections: Dict[bytes32, WSTadConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
-        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
+        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSTadConnection]] = {
             NodeType.FULL_NODE: {},
             NodeType.WALLET: {},
             NodeType.HARVESTER: {},
@@ -122,7 +122,7 @@ class ChiaServer:
         else:
             self.p2p_crt_path, self.p2p_key_path = None, None
         self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
-        self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
+        self.tad_ca_crt_path, self.tad_ca_key_path = tad_ca_crt_key
         self.node_id = self.my_id()
 
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
@@ -166,7 +166,7 @@ class ChiaServer:
         """
         while True:
             await asyncio.sleep(600)
-            to_remove: List[WSChiaConnection] = []
+            to_remove: List[WSTadConnection] = []
             for connection in self.all_connections.values():
                 if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
                     if time.time() - connection.last_message_time > 1800:
@@ -203,7 +203,7 @@ class ChiaServer:
         else:
             self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
             ssl_context = ssl_context_for_server(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+                self.tad_ca_crt_path, self.tad_ca_key_path, self.p2p_crt_path, self.p2p_key_path
             )
 
         self.site = web.TCPSite(
@@ -227,9 +227,9 @@ class ChiaServer:
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
             return ws
-        connection: Optional[WSChiaConnection] = None
+        connection: Optional[WSTadConnection] = None
         try:
-            connection = WSChiaConnection(
+            connection = WSTadConnection(
                 self._local_type,
                 ws,
                 self._port,
@@ -288,7 +288,7 @@ class ChiaServer:
         await close_event.wait()
         return ws
 
-    async def connection_added(self, connection: WSChiaConnection, on_connect=None):
+    async def connection_added(self, connection: WSTadConnection, on_connect=None):
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
         if connection.peer_node_id in self.all_connections:
@@ -337,10 +337,10 @@ class ChiaServer:
             )
         else:
             ssl_context = ssl_context_for_client(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+                self.tad_ca_crt_path, self.tad_ca_key_path, self.p2p_crt_path, self.p2p_key_path
             )
         session = None
-        connection: Optional[WSChiaConnection] = None
+        connection: Optional[WSTadConnection] = None
         try:
             timeout = ClientTimeout(total=30)
             session = ClientSession(timeout=timeout)
@@ -374,7 +374,7 @@ class ChiaServer:
             if peer_id == self.node_id:
                 raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
-            connection = WSChiaConnection(
+            connection = WSTadConnection(
                 self._local_type,
                 ws,
                 self._port,
@@ -432,7 +432,7 @@ class ChiaServer:
 
         return False
 
-    def connection_closed(self, connection: WSChiaConnection, ban_time: int):
+    def connection_closed(self, connection: WSTadConnection, ban_time: int):
         if is_localhost(connection.peer_host) and ban_time != 0:
             self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
             ban_time = 0
@@ -481,7 +481,7 @@ class ChiaServer:
             if payload_inc is None or connection_inc is None:
                 continue
 
-            async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
+            async def api_call(full_message: Message, connection: WSTadConnection, task_id):
                 start_time = time.time()
                 try:
                     if self.received_message_callback is not None:
@@ -568,7 +568,7 @@ class ChiaServer:
         self,
         messages: List[Message],
         node_type: NodeType,
-        origin_peer: WSChiaConnection,
+        origin_peer: WSTadConnection,
     ):
         for node_id, connection in self.all_connections.items():
             if node_id == origin_peer.peer_node_id:
@@ -595,7 +595,7 @@ class ChiaServer:
             for message in messages:
                 await connection.send_message(message)
 
-    def get_outgoing_connections(self) -> List[WSChiaConnection]:
+    def get_outgoing_connections(self) -> List[WSTadConnection]:
         result = []
         for _, connection in self.all_connections.items():
             if connection.is_outbound:
@@ -603,7 +603,7 @@ class ChiaServer:
 
         return result
 
-    def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
+    def get_full_node_outgoing_connections(self) -> List[WSTadConnection]:
         result = []
         connections = self.get_full_node_connections()
         for connection in connections:
@@ -611,10 +611,10 @@ class ChiaServer:
                 result.append(connection)
         return result
 
-    def get_full_node_connections(self) -> List[WSChiaConnection]:
+    def get_full_node_connections(self) -> List[WSTadConnection]:
         return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
-    def get_connections(self) -> List[WSChiaConnection]:
+    def get_connections(self) -> List[WSTadConnection]:
         result = []
         for _, connection in self.all_connections.items():
             result.append(connection)
@@ -686,7 +686,7 @@ class ChiaServer:
             return inbound_count < self.config["max_inbound_timelord"]
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
+    def is_trusted_peer(self, peer: WSTadConnection, trusted_peers: Dict) -> bool:
         if trusted_peers is None:
             return False
         for trusted_peer in trusted_peers:

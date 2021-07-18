@@ -5,25 +5,25 @@ from typing import Callable, Optional, List, Any, Dict
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
-import chia.server.ws_connection as ws
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from chia.farmer.farmer import Farmer
-from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.harvester_protocol import PoolDifficulty
-from chia.protocols.pool_protocol import (
+import tad.server.ws_connection as ws
+from tad.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from tad.farmer.farmer import Farmer
+from tad.protocols import farmer_protocol, harvester_protocol
+from tad.protocols.harvester_protocol import PoolDifficulty
+from tad.protocols.pool_protocol import (
     get_current_authentication_token,
     PoolErrorCode,
     PostPartialRequest,
     PostPartialPayload,
 )
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
-from chia.server.server import ssl_context_for_root
-from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.util.api_decorators import api_request, peer_required
-from chia.util.ints import uint32, uint64
+from tad.protocols.protocol_message_types import ProtocolMessageTypes
+from tad.server.outbound_message import NodeType, make_msg
+from tad.server.server import ssl_context_for_root
+from tad.ssl.create_ssl import get_mozilla_ca_crt
+from tad.types.blockchain_format.pool_target import PoolTarget
+from tad.types.blockchain_format.proof_of_space import ProofOfSpace
+from tad.util.api_decorators import api_request, peer_required
+from tad.util.ints import uint32, uint64
 
 
 class FarmerAPI:
@@ -38,7 +38,7 @@ class FarmerAPI:
     @api_request
     @peer_required
     async def new_proof_of_space(
-        self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: ws.WSChiaConnection
+        self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: ws.WSTadConnection
     ):
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof

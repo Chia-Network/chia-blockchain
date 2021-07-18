@@ -5,20 +5,20 @@ from typing import Callable, List, Tuple
 
 from blspy import AugSchemeMPL, G2Element, G1Element
 
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from chia.harvester.harvester import Harvester
-from chia.plotting.plot_tools import PlotInfo, parse_plot_info
-from chia.protocols import harvester_protocol
-from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
-from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request, peer_required
-from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.derive_keys import master_sk_to_local_sk
+from tad.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from tad.harvester.harvester import Harvester
+from tad.plotting.plot_tools import PlotInfo, parse_plot_info
+from tad.protocols import harvester_protocol
+from tad.protocols.farmer_protocol import FarmingInfo
+from tad.protocols.harvester_protocol import Plot
+from tad.protocols.protocol_message_types import ProtocolMessageTypes
+from tad.server.outbound_message import make_msg
+from tad.server.ws_connection import WSTadConnection
+from tad.types.blockchain_format.proof_of_space import ProofOfSpace
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.util.api_decorators import api_request, peer_required
+from tad.util.ints import uint8, uint32, uint64
+from tad.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
@@ -49,7 +49,7 @@ class HarvesterAPI:
     @peer_required
     @api_request
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSTadConnection
     ):
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.

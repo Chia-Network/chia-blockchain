@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List
 
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.streamable import Streamable, streamable
+from tad.types.condition_opcodes import ConditionOpcode
+from tad.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

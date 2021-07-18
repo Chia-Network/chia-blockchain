@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64
-from chia.util.streamable import Streamable, streamable
-from chia.wallet.util.transaction_type import TransactionType
+from tad.consensus.coinbase import pool_parent_id, farmer_parent_id
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.mempool_inclusion_status import MempoolInclusionStatus
+from tad.types.spend_bundle import SpendBundle
+from tad.util.ints import uint8, uint32, uint64
+from tad.util.streamable import Streamable, streamable
+from tad.wallet.util.transaction_type import TransactionType
 
 
 @dataclass(frozen=True)

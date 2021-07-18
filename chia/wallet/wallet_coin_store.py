@@ -3,12 +3,12 @@ from typing import Dict, List, Optional, Set
 import aiosqlite
 import sqlite3
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32, uint64
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.util.db_wrapper import DBWrapper
+from tad.util.ints import uint32, uint64
+from tad.wallet.util.wallet_types import WalletType
+from tad.wallet.wallet_coin_record import WalletCoinRecord
 
 
 class WalletCoinStore:

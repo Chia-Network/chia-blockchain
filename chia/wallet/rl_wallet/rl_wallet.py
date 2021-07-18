@@ -8,17 +8,17 @@ from typing import Any, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.streamable import Streamable, streamable
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.rl_wallet.rl_wallet_puzzles import (
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.program import Program
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.coin_solution import CoinSolution
+from tad.types.spend_bundle import SpendBundle
+from tad.util.byte_types import hexstr_to_bytes
+from tad.util.ints import uint8, uint32, uint64, uint128
+from tad.util.streamable import Streamable, streamable
+from tad.wallet.derivation_record import DerivationRecord
+from tad.wallet.derive_keys import master_sk_to_wallet_sk
+from tad.wallet.rl_wallet.rl_wallet_puzzles import (
     make_clawback_solution,
     rl_make_aggregation_puzzle,
     rl_make_aggregation_solution,
@@ -26,12 +26,12 @@ from chia.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
     solution_for_rl,
 )
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_info import WalletInfo
+from tad.wallet.transaction_record import TransactionRecord
+from tad.wallet.util.transaction_type import TransactionType
+from tad.wallet.util.wallet_types import WalletType
+from tad.wallet.wallet import Wallet
+from tad.wallet.wallet_coin_record import WalletCoinRecord
+from tad.wallet.wallet_info import WalletInfo
 
 
 @dataclass(frozen=True)

@@ -1,22 +1,22 @@
 import logging
 from typing import Optional, Union
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.deficit import calculate_deficit
-from chia.consensus.difficulty_adjustment import (
+from tad.consensus.block_record import BlockRecord
+from tad.consensus.blockchain_interface import BlockchainInterface
+from tad.consensus.constants import ConsensusConstants
+from tad.consensus.deficit import calculate_deficit
+from tad.consensus.difficulty_adjustment import (
     _get_next_difficulty,
     _get_next_sub_slot_iters,
     can_finish_sub_and_full_epoch,
     get_next_sub_slot_iters_and_difficulty,
     height_can_be_first_in_epoch,
 )
-from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
+from tad.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
+from tad.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from tad.types.full_block import FullBlock
+from tad.types.unfinished_block import UnfinishedBlock
+from tad.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

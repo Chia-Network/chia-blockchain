@@ -6,11 +6,11 @@ from bitstring import BitArray
 from blspy import G1Element, AugSchemeMPL, PrivateKey
 from chiapos import Verifier
 
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash
-from chia.util.ints import uint8
-from chia.util.streamable import Streamable, streamable
+from tad.consensus.constants import ConsensusConstants
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.util.hash import std_hash
+from tad.util.ints import uint8
+from tad.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 

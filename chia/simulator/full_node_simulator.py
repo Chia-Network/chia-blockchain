@@ -1,12 +1,12 @@
 from typing import List, Optional
 
-from chia.consensus.block_record import BlockRecord
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import RespondBlock
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.types.full_block import FullBlock
-from chia.util.api_decorators import api_request
-from chia.util.ints import uint8
+from tad.consensus.block_record import BlockRecord
+from tad.full_node.full_node_api import FullNodeAPI
+from tad.protocols.full_node_protocol import RespondBlock
+from tad.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from tad.types.full_block import FullBlock
+from tad.util.api_decorators import api_request
+from tad.util.ints import uint8
 
 
 class FullNodeSimulator(FullNodeAPI):

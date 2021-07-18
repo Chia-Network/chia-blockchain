@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.util.streamable import Streamable, streamable
+from tad.types.blockchain_format.vdf import VDFInfo, VDFProof
+from tad.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

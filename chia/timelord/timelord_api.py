@@ -1,10 +1,10 @@
 import logging
 from typing import Callable, Optional
 
-from chia.protocols import timelord_protocol
-from chia.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
-from chia.util.api_decorators import api_request
-from chia.util.ints import uint64
+from tad.protocols import timelord_protocol
+from tad.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
+from tad.util.api_decorators import api_request
+from tad.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

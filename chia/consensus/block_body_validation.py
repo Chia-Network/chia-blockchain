@@ -6,39 +6,39 @@ from blspy import AugSchemeMPL, G1Element
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.block_root_validation import validate_block_merkle_roots
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.consensus.find_fork_point import find_fork_point_in_chain
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
-from chia.types.name_puzzle_condition import NPC
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.condition_tools import (
+from tad.consensus.block_record import BlockRecord
+from tad.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from tad.consensus.block_root_validation import validate_block_merkle_roots
+from tad.full_node.mempool_check_conditions import mempool_check_conditions_dict
+from tad.consensus.blockchain_interface import BlockchainInterface
+from tad.consensus.coinbase import create_farmer_coin, create_pool_coin
+from tad.consensus.constants import ConsensusConstants
+from tad.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from tad.consensus.find_fork_point import find_fork_point_in_chain
+from tad.full_node.block_store import BlockStore
+from tad.full_node.coin_store import CoinStore
+from tad.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.coin_record import CoinRecord
+from tad.types.condition_opcodes import ConditionOpcode
+from tad.types.condition_with_args import ConditionWithArgs
+from tad.types.full_block import FullBlock
+from tad.types.generator_types import BlockGenerator
+from tad.types.name_puzzle_condition import NPC
+from tad.types.unfinished_block import UnfinishedBlock
+from tad.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
     coin_announcements_names_for_npc,
     puzzle_announcements_names_for_npc,
 )
-from chia.util.errors import Err
-from chia.util.generator_tools import (
+from tad.util.errors import Err
+from tad.util.generator_tools import (
     additions_for_npc,
     tx_removals_and_additions,
 )
-from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
+from tad.util.hash import std_hash
+from tad.util.ints import uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

@@ -3,48 +3,48 @@ from unittest import TestCase
 
 from clvm_tools.clvmc import compile_clvm
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from tad.types.blockchain_format.program import Program, SerializedProgram
 
 wallet_program_files = set(
     [
-        "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cc.clvm",
-        "chia/wallet/puzzles/chialisp_deserialisation.clvm",
-        "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
-        "chia/wallet/puzzles/generator_for_single_coin.clvm",
-        "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
-        "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
-        "chia/wallet/puzzles/lock.inner.puzzle.clvm",
-        "chia/wallet/puzzles/p2_conditions.clvm",
-        "chia/wallet/puzzles/p2_delegated_conditions.clvm",
-        "chia/wallet/puzzles/p2_delegated_puzzle.clvm",
-        "chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm",
-        "chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm",
-        "chia/wallet/puzzles/p2_puzzle_hash.clvm",
-        "chia/wallet/puzzles/rl_aggregation.clvm",
-        "chia/wallet/puzzles/rl.clvm",
-        "chia/wallet/puzzles/sha256tree_module.clvm",
-        "chia/wallet/puzzles/singleton_top_layer.clvm",
-        "chia/wallet/puzzles/did_innerpuz.clvm",
-        "chia/wallet/puzzles/decompress_puzzle.clvm",
-        "chia/wallet/puzzles/decompress_coin_solution_entry_with_prefix.clvm",
-        "chia/wallet/puzzles/decompress_coin_solution_entry.clvm",
-        "chia/wallet/puzzles/block_program_zero.clvm",
-        "chia/wallet/puzzles/test_generator_deserialize.clvm",
-        "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
-        "chia/wallet/puzzles/p2_singleton.clvm",
-        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
-        "chia/wallet/puzzles/pool_member_innerpuz.clvm",
-        "chia/wallet/puzzles/singleton_launcher.clvm",
-        "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
+        "tad/wallet/puzzles/calculate_synthetic_public_key.clvm",
+        "tad/wallet/puzzles/cc.clvm",
+        "tad/wallet/puzzles/chialisp_deserialisation.clvm",
+        "tad/wallet/puzzles/rom_bootstrap_generator.clvm",
+        "tad/wallet/puzzles/generator_for_single_coin.clvm",
+        "tad/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
+        "tad/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
+        "tad/wallet/puzzles/lock.inner.puzzle.clvm",
+        "tad/wallet/puzzles/p2_conditions.clvm",
+        "tad/wallet/puzzles/p2_delegated_conditions.clvm",
+        "tad/wallet/puzzles/p2_delegated_puzzle.clvm",
+        "tad/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm",
+        "tad/wallet/puzzles/p2_m_of_n_delegate_direct.clvm",
+        "tad/wallet/puzzles/p2_puzzle_hash.clvm",
+        "tad/wallet/puzzles/rl_aggregation.clvm",
+        "tad/wallet/puzzles/rl.clvm",
+        "tad/wallet/puzzles/sha256tree_module.clvm",
+        "tad/wallet/puzzles/singleton_top_layer.clvm",
+        "tad/wallet/puzzles/did_innerpuz.clvm",
+        "tad/wallet/puzzles/decompress_puzzle.clvm",
+        "tad/wallet/puzzles/decompress_coin_solution_entry_with_prefix.clvm",
+        "tad/wallet/puzzles/decompress_coin_solution_entry.clvm",
+        "tad/wallet/puzzles/block_program_zero.clvm",
+        "tad/wallet/puzzles/test_generator_deserialize.clvm",
+        "tad/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
+        "tad/wallet/puzzles/p2_singleton.clvm",
+        "tad/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
+        "tad/wallet/puzzles/pool_member_innerpuz.clvm",
+        "tad/wallet/puzzles/singleton_launcher.clvm",
+        "tad/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
     ]
 )
 
 clvm_include_files = set(
-    ["chia/wallet/puzzles/create-lock-puzzlehash.clvm", "chia/wallet/puzzles/condition_codes.clvm"]
+    ["tad/wallet/puzzles/create-lock-puzzlehash.clvm", "tad/wallet/puzzles/condition_codes.clvm"]
 )
 
-CLVM_PROGRAM_ROOT = "chia/wallet/puzzles"
+CLVM_PROGRAM_ROOT = "tad/wallet/puzzles"
 
 
 def list_files(dir, glob):
@@ -71,7 +71,7 @@ class TestClvmCompilation(TestCase):
 
     def test_all_programs_listed(self):
         """
-        Checks to see if a new .clvm file was added to chia/wallet/puzzles, but not added to `wallet_program_files`
+        Checks to see if a new .clvm file was added to tad/wallet/puzzles, but not added to `wallet_program_files`
         """
         existing_files = list_files(CLVM_PROGRAM_ROOT, "*.clvm")
         existing_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in existing_files])

@@ -12,55 +12,55 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiabip158 import PyBIP158
 from cryptography.fernet import Fernet
 
-from chia import __version__
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.find_fork_point import find_fork_point_in_chain
-from chia.full_node.weight_proof import WeightProofHandler
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
-from chia.pools.pool_wallet import PoolWallet
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.db_wrapper import DBWrapper
-from chia.util.errors import Err
-from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.block_record import HeaderBlockRecord
-from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
-from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.settings.user_settings import UserSettings
-from chia.wallet.trade_manager import TradeManager
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.backup_utils import open_backup_file
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_action_store import WalletActionStore
-from chia.wallet.wallet_block_store import WalletBlockStore
-from chia.wallet.wallet_blockchain import WalletBlockchain
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import WalletCoinStore
-from chia.wallet.wallet_info import WalletInfo, WalletInfoBackup
-from chia.wallet.wallet_interested_store import WalletInterestedStore
-from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
-from chia.wallet.wallet_sync_store import WalletSyncStore
-from chia.wallet.wallet_transaction_store import WalletTransactionStore
-from chia.wallet.wallet_user_store import WalletUserStore
-from chia.server.server import ChiaServer
-from chia.wallet.did_wallet.did_wallet import DIDWallet
+from tad import __version__
+from tad.consensus.block_record import BlockRecord
+from tad.consensus.coinbase import pool_parent_id, farmer_parent_id
+from tad.consensus.constants import ConsensusConstants
+from tad.consensus.find_fork_point import find_fork_point_in_chain
+from tad.full_node.weight_proof import WeightProofHandler
+from tad.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
+from tad.pools.pool_wallet import PoolWallet
+from tad.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.program import Program
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.coin_solution import CoinSolution
+from tad.types.full_block import FullBlock
+from tad.types.header_block import HeaderBlock
+from tad.types.mempool_inclusion_status import MempoolInclusionStatus
+from tad.util.byte_types import hexstr_to_bytes
+from tad.util.db_wrapper import DBWrapper
+from tad.util.errors import Err
+from tad.util.hash import std_hash
+from tad.util.ints import uint32, uint64, uint128
+from tad.wallet.block_record import HeaderBlockRecord
+from tad.wallet.cc_wallet.cc_wallet import CCWallet
+from tad.wallet.derivation_record import DerivationRecord
+from tad.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
+from tad.wallet.key_val_store import KeyValStore
+from tad.wallet.rl_wallet.rl_wallet import RLWallet
+from tad.wallet.settings.user_settings import UserSettings
+from tad.wallet.trade_manager import TradeManager
+from tad.wallet.transaction_record import TransactionRecord
+from tad.wallet.util.backup_utils import open_backup_file
+from tad.wallet.util.transaction_type import TransactionType
+from tad.wallet.util.wallet_types import WalletType
+from tad.wallet.wallet import Wallet
+from tad.wallet.wallet_action import WalletAction
+from tad.wallet.wallet_action_store import WalletActionStore
+from tad.wallet.wallet_block_store import WalletBlockStore
+from tad.wallet.wallet_blockchain import WalletBlockchain
+from tad.wallet.wallet_coin_record import WalletCoinRecord
+from tad.wallet.wallet_coin_store import WalletCoinStore
+from tad.wallet.wallet_info import WalletInfo, WalletInfoBackup
+from tad.wallet.wallet_interested_store import WalletInterestedStore
+from tad.wallet.wallet_pool_store import WalletPoolStore
+from tad.wallet.wallet_puzzle_store import WalletPuzzleStore
+from tad.wallet.wallet_sync_store import WalletSyncStore
+from tad.wallet.wallet_transaction_store import WalletTransactionStore
+from tad.wallet.wallet_user_store import WalletUserStore
+from tad.server.server import TadServer
+from tad.wallet.did_wallet.did_wallet import DIDWallet
 
 
 class WalletStateManager:
@@ -107,7 +107,7 @@ class WalletStateManager:
     interested_store: WalletInterestedStore
     pool_store: WalletPoolStore
     weight_proof_handler: Any
-    server: ChiaServer
+    server: TadServer
     root_path: Path
 
     @staticmethod
@@ -116,7 +116,7 @@ class WalletStateManager:
         config: Dict,
         db_path: Path,
         constants: ConsensusConstants,
-        server: ChiaServer,
+        server: TadServer,
         root_path: Path,
         name: str = None,
     ):

@@ -1,14 +1,14 @@
 from typing import List, Tuple
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.coin_solution import CoinSolution
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.lineage_proof import LineageProof
-from chia.util.ints import uint64
-from chia.util.hash import std_hash
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.program import Program
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.condition_opcodes import ConditionOpcode
+from tad.types.coin_solution import CoinSolution
+from tad.wallet.puzzles.load_clvm import load_clvm
+from tad.wallet.lineage_proof import LineageProof
+from tad.util.ints import uint64
+from tad.util.hash import std_hash
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -39,7 +39,7 @@ def launch_conditions_and_coinsol(
     amount: uint64,
 ) -> Tuple[List[Program], CoinSolution]:
     if (amount % 2) == 0:
-        raise ValueError("Coin amount cannot be even. Subtract one mojo.")
+        raise ValueError("Coin amount cannot be even. Subtract one mtad.")
 
     launcher_coin = generate_launcher_coin(coin, amount)
     curried_singleton = SINGLETON_MOD.curry(

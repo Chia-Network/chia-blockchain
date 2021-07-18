@@ -2,9 +2,9 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.header_block import HeaderBlock
+from tad.util.ints import uint32
 
 log = logging.getLogger(__name__)
 

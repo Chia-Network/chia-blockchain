@@ -1,6 +1,6 @@
 import click
 
-from chia.util.service_groups import all_groups
+from tad.util.service_groups import all_groups
 
 
 @click.command("start", short_help="Start service groups")

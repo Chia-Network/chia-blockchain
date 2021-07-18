@@ -1,19 +1,19 @@
 import logging
 from typing import List, Optional, Union, Tuple
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.generator_types import BlockGenerator, GeneratorArg, GeneratorBlockCacheInterface, CompressorArg
-from chia.util.ints import uint32, uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from tad.types.blockchain_format.program import Program, SerializedProgram
+from tad.types.generator_types import BlockGenerator, GeneratorArg, GeneratorBlockCacheInterface, CompressorArg
+from tad.util.ints import uint32, uint64
+from tad.wallet.puzzles.load_clvm import load_clvm
+from tad.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
-# DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="tad.wallet.puzzles")
+DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="tad.wallet.puzzles")
+# DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="tad.wallet.puzzles")
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="tad.wallet.puzzles"
 )
 log = logging.getLogger(__name__)
 

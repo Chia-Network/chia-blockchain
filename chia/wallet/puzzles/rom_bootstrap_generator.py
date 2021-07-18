@@ -1,4 +1,4 @@
-from chia.types.blockchain_format.program import SerializedProgram
+from tad.types.blockchain_format.program import SerializedProgram
 
 from .load_clvm import load_clvm
 
