@@ -135,5 +135,5 @@ def uploadfarmerdata_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port
         print(f"Upload the farm summary and challenges data to community.chivescoin.org, and you can query the data in this site.")
         content = requests.post('https://community.chivescoin.org/farmerinfor/uploaddata.php', data={'FarmerSatus':FarmerSatusJson}).json()
         print(content)
-        time.sleep(5)
+        time.sleep(600)
 
