@@ -128,3 +128,7 @@ class TesKeychain(unittest.TestCase):
         assert seed_nfkd == seed_nfc
         assert seed_nfkd == seed_nfkc
         assert seed_nfkd == seed_nfd
+
+
+if __name__ == "__main__":
+    unittest.main()

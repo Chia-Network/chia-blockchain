@@ -171,7 +171,8 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
     signage_points.reverse()
     if limit != 0:
         signage_points = signage_points[:limit]
-
+    
+    #print(signage_points)
     for signage_point in signage_points:
         print(
             (
@@ -252,3 +253,108 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
             print("For details on farmed rewards and fees you should run 'chives wallet show'")
     else:
         print("Note: log into your key using 'chives wallet show' to see rewards for each key")
+
+
+async def uploadfarmerdata(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
+    plots = await get_plots(harvester_rpc_port)
+    blockchain_state = await get_blockchain_state(rpc_port)
+    farmer_running = await is_farmer_running(farmer_rpc_port)
+
+    wallet_not_ready: bool = False
+    wallet_not_running: bool = False
+    amounts = None
+    try:
+        amounts = await get_wallets_stats(wallet_rpc_port)
+    except Exception as e:
+        if isinstance(e, aiohttp.ClientConnectorError):
+            wallet_not_running = True
+        else:
+            wallet_not_ready = True
+
+    FarmingStatus = ""
+    if blockchain_state is None:
+        FarmingStatus = "Not available"
+    elif blockchain_state["sync"]["sync_mode"]:
+        FarmingStatus = "Syncing"
+    elif not blockchain_state["sync"]["synced"]:
+        FarmingStatus = "Not synced or not connected to peers"
+    elif not farmer_running:
+        FarmingStatus = "Not running"
+    else:
+        FarmingStatus = "Farming"
+
+    total_plot_size = 0
+    if plots is not None:
+        total_plot_size = sum(map(lambda x: x["file_size"], plots["plots"]))
+        PlotCount = len(plots['plots'])
+        TotalSizeOfPlots = format_bytes(total_plot_size)
+    else:
+        PlotCount = "Unknown"
+        TotalSizeOfPlots = "Unknown"
+
+    if blockchain_state is not None:
+        EstimatedNetworkSpace = format_bytes(blockchain_state["space"])
+    else:
+        EstimatedNetworkSpace = "Unknown"
+
+    minutes = -1
+    if blockchain_state is not None and plots is not None:
+        proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
+
+    if plots is not None and len(plots["plots"]) == 0:
+        ExpectedTimeToWin = "Never (no plots)"
+    else:
+        ExpectedTimeToWin = format_minutes(minutes)
+    
+    signage_points = await get_challenges(farmer_rpc_port)
+    if signage_points is None:
+        ""
+    else:
+        signage_points.reverse()
+        limit = 10
+        if limit != 0:
+            signage_points = signage_points[:limit]
+    
+    #get wallet address and fingerprint
+    from typing import List
+    from blspy import AugSchemeMPL, G1Element, G2Element
+    from chives.consensus.coinbase import create_puzzlehash_for_pk
+    from chives.util.bech32m import encode_puzzle_hash
+    from chives.util.config import load_config
+    from chives.util.default_root import DEFAULT_ROOT_PATH
+    from chives.util.ints import uint32
+    from chives.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic
+    from chives.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+
+    root_path = DEFAULT_ROOT_PATH
+    config = load_config(root_path, "config.yaml")
+    keychain: Keychain = Keychain()
+    private_keys = keychain.get_all_private_keys()
+    selected = config["selected_network"]
+    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+    if len(private_keys) == 0:
+        FingerPrint = "No private keys"
+    else:
+        for sk, seed in private_keys:
+            FingerPrint = sk.get_g1().get_fingerprint()
+            FingerPrint = str(FingerPrint)[0:6]
+            Address = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix)
+            break
+    
+    from hashlib import sha256
+    RETURN_TEXT     = {}
+    RETURN_TEXT['FingerPrint'] = FingerPrint
+    RETURN_TEXT['Address0'] = Address[0:45]
+    RETURN_TEXT['Address'] = sha256(Address[0:45].encode('utf-8')).hexdigest()
+    RETURN_TEXT['FarmingStatus'] = FarmingStatus
+    RETURN_TEXT['PlotCount'] = PlotCount
+    RETURN_TEXT['TotalSizeOfPlots'] = TotalSizeOfPlots
+    RETURN_TEXT['EstimatedNetworkSpace'] = EstimatedNetworkSpace
+    RETURN_TEXT['amounts'] = amounts
+    RETURN_TEXT['wallet_not_running'] = wallet_not_running
+    RETURN_TEXT['wallet_not_ready'] = wallet_not_ready
+    RETURN_TEXT['signage_points'] = signage_points
+    return RETURN_TEXT
+    #print(signage_points)
+    
