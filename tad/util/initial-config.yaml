@@ -267,7 +267,7 @@ full_node:
       port: 4044
   wallet_peer:
     host: *self_hostname
-    port: 8449
+    port: 4449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -315,8 +315,8 @@ introducer:
     public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 8449
-  rpc_port: 9256
+  port: 4449
+  rpc_port: 4456
 
   enable_profiler: False
 

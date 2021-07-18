@@ -20,6 +20,7 @@ If you'd like to participate in testnet please [join our Discord](https://discor
 Other ports: 
 - harvester: **4448**, RPC: **4458**
 - farmer: **4447** , RPC: **4457**
+- wallet: **4449**, RPC: **4456**
 - timelord_launcher: **4050**
 - timelord: **8446**
 - node: **4044**, RPC: **8555** 
