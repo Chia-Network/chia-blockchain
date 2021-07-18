@@ -1,4 +1,4 @@
-# Tad Blockchain network
+# TadCoin Blockchain network
 
 We're in the active development stage.
 
@@ -6,11 +6,28 @@ If you'd like to participate in testnet please [join our Discord](https://discor
 
 **How is this fork different?**
 
-* We can support plotting NFT plots and get **FULL** reward.
-* Get most of space on the hard drive - we support k28+ plots  
-* No shady clones - you can always audit code by diff'ing it with tad upstream
-* Faster sync, giving ~8 times less roundtrips  
+* We support both OG and NFT plots and get you **FULL** reward. Yes, that's right, full reward for any type of plots.
+* Get most of the space on the hard drive - we support k28+ plots  
+* Open Source and in forked off Chia Network. You can always audit code by diff'ing it with tad upstream
+* Faster sync, giving ~32 times less round trips
+* You don't need goddamn nodes IP addresses. Tad's network is wholesome.
 
+                                                         
+### Ports used by TadCoin
+
+➡ Full Node: **4044** ⬅
+
+Other ports: 
+- harvester: **4448**, RPC: **4458**
+- farmer: **4447** , RPC: **4457**
+- timelord_launcher: **4050**
+- timelord: **8446**
+- node: **4044**, RPC: **8555** 
+
+For unix system you can check if anything is using these ports with this handy command:
+```
+netstat -tnap | grep -e '4044|4448|4458|4447|4457|4050|8446|4044|8555'
+```
 
 ---------------------------------
 

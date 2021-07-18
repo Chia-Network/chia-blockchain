@@ -20,7 +20,7 @@ network_overrides: &network_overrides
       NETWORK_TYPE: 1
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
-      NUMBER_ZERO_BITS_PLOT_FILTER: 1
+      NUMBER_ZERO_BITS_PLOT_FILTER: 3
     testnet1:
       MIN_PLOT_SIZE: 18
       GENESIS_CHALLENGE: 9c5a3961ca7ebcf1a4d0ad041a287fa08bb9234d64447a871f31397ff9d5a37b
@@ -72,14 +72,14 @@ logging: &logging
 
 harvester:
   # The harvester server (if run) will run on this port
-  port: 8448
+  port: 4448
   farmer_peer:
     host: *self_hostname
-    port: 8447
+    port: 4447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8560
+  rpc_port: 4458
   num_threads: 30
   plot_loading_frequency_seconds: 120
 
@@ -112,14 +112,14 @@ pool:
 
 farmer:
   # The farmer server (if run) will run on this port
-  port: 8447
+  port: 4447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
     port: 4044
   harvester_peer:
     host: *self_hostname
-    port: 8448
+    port: 4448
 
   pool_public_keys: []
 
@@ -128,7 +128,7 @@ farmer:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8559
+  rpc_port: 4457
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -145,7 +145,7 @@ farmer:
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
   # The server where the VDF clients will connect to.
-  port: 8000
+  port: 4050
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
@@ -153,7 +153,7 @@ timelord_launcher:
 
 timelord:
   # The timelord server (if run) will run on this port
-  port: 8446
+  port: 4446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -171,7 +171,7 @@ timelord:
   # The ip and port where the TCP clients will connect.
   vdf_server:
     host: *self_hostname
-    port: 8000
+    port: 4050
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -210,7 +210,7 @@ full_node:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8555
+  rpc_port: 4555
 
   # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
@@ -258,10 +258,10 @@ full_node:
     - "dns-introducer.tadcoin.xyz"
   farmer_peer:
       host: *self_hostname
-      port: 8447
+      port: 4447
   timelord_peer:
       host: *self_hostname
-      port: 8446
+      port: 4446
   introducer_peer:
       host: introducer.tadcoin.xyz  # Tad AWS introducer IPv4/IPv6
       port: 4044
@@ -283,7 +283,7 @@ ui:
   port: 8222
 
   # Which port to use to communicate with the full node
-  rpc_port: 8555
+  rpc_port: 4555
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
