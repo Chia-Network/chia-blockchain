@@ -31,20 +31,13 @@ network_overrides: &network_overrides
   config:
     mainnet:
       address_prefix: "xch"
-      default_full_node_port: 8444
+      default_full_node_port: 4044
     testnet0:
       address_prefix: "txch"
+      default_full_node_port: 54044
     testnet1:
       address_prefix: "txch"
-    testnet2:
-      address_prefix: "txch"
-    testnet3:
-      address_prefix: "txch"
-    testnet4:
-      address_prefix: "txch"
-    testnet7:
-      address_prefix: "txch"
-      default_full_node_port: 58444
+      default_full_node_port: 54045
 
 selected_network: &selected_network "testnet0"
 ALERTS_URL: https://download.tadcoin.xyz/notify/mainnet_alert.txt
@@ -70,7 +63,7 @@ daemon_ssl:
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
-  log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_level: "INFO"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
   log_syslog: False  # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
@@ -122,7 +115,7 @@ farmer:
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 4044
   harvester_peer:
     host: *self_hostname
     port: 8448
@@ -171,7 +164,7 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 8444
+      port: 4044
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -206,7 +199,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 8444
+  port: 4044
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -270,7 +263,7 @@ full_node:
       port: 8446
   introducer_peer:
       host: introducer.tadcoin.xyz  # Tad AWS introducer IPv4/IPv6
-      port: 8444
+      port: 4044
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -336,7 +329,7 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 4044
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
@@ -354,7 +347,7 @@ wallet:
 
   introducer_peer:
     host: introducer.tadcoin.xyz # Tad AWS introducer IPv4/IPv6
-    port: 8444
+    port: 4044
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"

@@ -45,8 +45,8 @@ if [ "$(uname)" = "Linux" ]; then
 		sudo apt-get install -y python3.7-venv python3.7-distutils
 	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
 		echo "Installing on Ubuntu 20.04 LTS."
-		sudo apt-get update
-		sudo apt-get install -y python3.8-venv python3-distutils
+#		sudo apt-get update
+#		sudo apt-get install -y python3.8-venv python3-distutils
 	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
 		echo "Installing on Ubuntu 21.04 or newer."
 		sudo apt-get update
@@ -118,9 +118,9 @@ python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc=
 python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
 
 echo ""
-echo "Tad blockchain install.sh complete."
-echo "For assistance join us on Keybase in the #testnet chat channel:"
-echo "https://keybase.io/team/tad_network.public"
+echo "🤏 TAD blockchain install.sh complete."
+echo "Join testnet channel to become tester:"
+echo "https://discord.gg/4dkydqsQ"
 echo ""
 echo "To install the GUI type 'sh install-gui.sh' after '. ./activate'."
 echo ""
