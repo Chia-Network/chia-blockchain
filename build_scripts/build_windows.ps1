@@ -94,6 +94,7 @@ pip install wheel pep517
 pip install pywin32
 pip install pyinstaller==4.2
 pip install setuptools_scm
+pip install requests
 
 Write-Output "   ---"
 Write-Output "Get CHIVES_INSTALLER_VERSION"
