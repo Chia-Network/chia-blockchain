@@ -207,7 +207,7 @@ class Keychain:
     keyring_wrapper: KeyringWrapper
     user: str
 
-    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
+    def __init__(self, user: str = "user-silicoin-1.8", testing: bool = False):
         self.user = user
         self.testing = testing
         self.keyring_wrapper = KeyringWrapper.get_shared_instance()
