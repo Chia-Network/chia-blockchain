@@ -3,7 +3,8 @@ from tad.util.ints import uint32, uint64
 # 1 Tad coin = 1,000,000,000,000 = 1 trillion mtad.
 _mtad_per_tad = 1000000000000
 _blocks_per_year = 1681920  # 32 * 6 * 24 * 365
-
+_blocks_per_week = int(_blocks_per_year / 52)
+_blocks_per_half_year = int(_blocks_per_year / 2)
 
 def calculate_pool_reward(height: uint32) -> uint64:
     """
@@ -13,7 +14,7 @@ def calculate_pool_reward(height: uint32) -> uint64:
     (3 years, etc), due to fluctuations in difficulty. They will likely come early, if the network space and VDF
     rates increase continuously.
     """
-    return 0
+    return uint64(int(0))
 
     if height == 0:
         return uint64(int((7 / 8) * 200000 * _mtad_per_tad))
@@ -31,16 +32,17 @@ def calculate_pool_reward(height: uint32) -> uint64:
 
 def calculate_base_farmer_reward(height: uint32) -> uint64:
     """
-    Returns the base farmer reward at a certain block height.
-    The base fee reward is 1/8 of total block reward
-
     Returns the coinbase reward at a certain block height. These halving events will not be hit at the exact times
     (3 years, etc), due to fluctuations in difficulty. They will likely come early, if the network space and VDF
     rates increase continuously.
     """
 
     if height == 0:
-        return uint64(200000 * _mtad_per_tad)
+        return uint64(300000 * _mtad_per_tad)
+    elif 0 < height < _blocks_per_half_year:
+        week_number = int(height / _blocks_per_week)
+        return uint64(int((2 + week_number * 0.01) * _mtad_per_tad))
+
     # elif height < 3 * _blocks_per_year:
     #     return uint64(int((1 / 8) * 2 * _mtad_per_tad))
     # elif height < 6 * _blocks_per_year:

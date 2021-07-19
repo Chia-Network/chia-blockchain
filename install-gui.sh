@@ -80,7 +80,7 @@ if [ ! "$CI" ]; then
 	echo "Running git submodule update."
 	echo ""
 	git submodule update
-	cd chia-blockchain-gui
+	cd tad-blockchain-gui
 
 	if [ "$SUBMODULE_BRANCH" ];
 	then
