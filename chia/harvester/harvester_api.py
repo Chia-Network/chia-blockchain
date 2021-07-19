@@ -125,7 +125,7 @@ class HarvesterAPI:
                             # then send to farmer
                             try:
                                 proof_xs = plot_info.prover.get_full_proof(
-                                    sp_challenge_hash, index, self.harvester.disable_parallel_read
+                                    sp_challenge_hash, index, self.harvester.parallel_read
                                 )
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
