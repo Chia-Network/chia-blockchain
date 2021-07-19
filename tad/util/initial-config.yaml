@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 55400
+daemon_port: 4400
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -21,6 +21,7 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3ec7e6036da78389aed551d4e727f27d8ec2c7e95e6528772f446f7a9285fb7c"
       NUMBER_ZERO_BITS_PLOT_FILTER: 3
+      DIFFICULTY_CONSTANT_FACTOR: 134217728
     testnet1:
       MIN_PLOT_SIZE: 18
       GENESIS_CHALLENGE: 9c5a3961ca7ebcf1a4d0ad041a287fa08bb9234d64447a871f31397ff9d5a37b

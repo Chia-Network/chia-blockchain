@@ -23,7 +23,8 @@ Other ports:
 - wallet: **4449**, RPC: **4456**
 - timelord_launcher: **4050**
 - timelord: **8446**
-- node: **4044**, RPC: **8555** 
+- node: **4044**, RPC: **8555**
+- TAD daemon: **4400**
 
 For unix system you can check if anything is using these ports with this handy command:
 ```
