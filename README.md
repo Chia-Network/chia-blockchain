@@ -9,7 +9,6 @@ If you'd like to participate in testnet please [join our Discord](https://discor
 * We support both OG and NFT plots and get you **FULL** reward. Yes, that's right, full reward for any type of plots.
 * Get most of the space on the hard drive - we support k28+ plots  
 * Open Source and in forked off Chia Network. You can always audit code by diff'ing it with tad upstream
-* Faster sync, giving ~32 times less round trips
 * You don't need goddamn nodes IP addresses. Tad's network is wholesome.
 
                                                          
