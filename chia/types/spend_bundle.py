@@ -21,8 +21,12 @@ class SpendBundle(Streamable):
     between transactions are more flexible than in bitcoin).
     """
 
-    coin_spends: List[CoinSpend]
+    coin_solutions: List[CoinSpend]
     aggregated_signature: G2Element
+
+    @property
+    def coin_spends(self):
+        return self.coin_solutions
 
     @classmethod
     def aggregate(cls, spend_bundles) -> "SpendBundle":
