@@ -264,8 +264,8 @@ full_node:
       host: *self_hostname
       port: 4446
   introducer_peer:
-      host: introducer.tadcoin.xyz  # Tad AWS introducer IPv4/IPv6
-      port: 4044
+      host: introducer.tadcoin.xyz  
+      port: 4045
   wallet_peer:
     host: *self_hostname
     port: 4449
@@ -281,7 +281,7 @@ full_node:
 
 ui:
    # The ui node server (if run) will run on this port
-  port: 8222
+  port: 4222
 
   # Which port to use to communicate with the full node
   rpc_port: 4555
@@ -295,15 +295,15 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 55400
+  daemon_port: 4400
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
 
 introducer:
   host: *self_hostname
-  port: 8445
-  max_peers_to_send: 20
+  port: 4045
+  max_peers_to_send: 30
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
@@ -349,7 +349,7 @@ wallet:
 
   introducer_peer:
     host: introducer.tadcoin.xyz # Tad AWS introducer IPv4/IPv6
-    port: 4044
+    port: 4045
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
