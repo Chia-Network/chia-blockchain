@@ -230,13 +230,13 @@ class TestPoolWalletRpc:
         pool_config = pool_list[0]
         assert (
             pool_config["authentication_public_key"]
-            == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+            == "b3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         assert pool_config["launcher_id"] in {
-            "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
-            "0x2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
-            "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
+            "78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
+            "2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
+            "09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
         }
         assert pool_config["pool_url"] == ""
 
@@ -288,13 +288,13 @@ class TestPoolWalletRpc:
         pool_config = pool_list[0]
         assert (
             pool_config["authentication_public_key"]
-            == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
+            == "b3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
         assert pool_config["launcher_id"] in {
-            "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
-            "0x2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
-            "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
+            "78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
+            "2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
+            "09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
         }
         assert pool_config["pool_url"] == "http://pool.example.com"
 
@@ -730,19 +730,19 @@ class TestPoolWalletRpc:
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.current.to_json_dict() == {
-                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
+                "owner_pubkey": "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
                 "pool_url": None,
                 "relative_lock_height": 0,
                 "state": 1,
-                "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+                "target_puzzle_hash": "738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
                 "version": 1,
             }
             assert status.target.to_json_dict() == {
-                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
+                "owner_pubkey": "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
                 "pool_url": "https://pool.example.com",
                 "relative_lock_height": 5,
                 "state": 3,
-                "target_puzzle_hash": "0x9ba327777484b8300d60427e4f3b776ac81948dfedd069a8d3f55834e101696e",
+                "target_puzzle_hash": "9ba327777484b8300d60427e4f3b776ac81948dfedd069a8d3f55834e101696e",
                 "version": 1,
             }
 
