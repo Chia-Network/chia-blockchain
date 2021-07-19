@@ -39,17 +39,13 @@ def calculate_base_farmer_reward(height: uint32) -> uint64:
 
     if height == 0:
         return uint64(300000 * _mtad_per_tad)
-    elif 0 < height < _blocks_per_half_year:
-        week_number = int(height / _blocks_per_week)
-        return uint64(int((2 + week_number * 0.01) * _mtad_per_tad))
-
-    # elif height < 3 * _blocks_per_year:
-    #     return uint64(int((1 / 8) * 2 * _mtad_per_tad))
-    # elif height < 6 * _blocks_per_year:
-    #     return uint64(int((1 / 8) * 1 * _mtad_per_tad))
-    # elif height < 9 * _blocks_per_year:
-    #     return uint64(int((1 / 8) * 0.5 * _mtad_per_tad))
-    # elif height < 12 * _blocks_per_year:
-    #     return uint64(int((1 / 8) * 0.25 * _mtad_per_tad))
+    elif height < 3 * _blocks_per_year:
+        return uint64(int(2 * _mtad_per_tad))
+    elif height < 6 * _blocks_per_year:
+        return uint64(int(1 * _mtad_per_tad))
+    elif height < 9 * _blocks_per_year:
+        return uint64(int(0.5 * _mtad_per_tad))
+    elif height < 12 * _blocks_per_year:
+        return uint64(int(0.25 * _mtad_per_tad))
     else:
         return uint64(1 * _mtad_per_tad)
