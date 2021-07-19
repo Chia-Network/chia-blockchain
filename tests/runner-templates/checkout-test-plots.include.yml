@@ -2,7 +2,7 @@
       uses: actions/checkout@v2
       with:
         repository: 'Chia-Network/test-cache'
-        path: '.chia'
+        path: '.tad'
         ref: '0.27.0'
         fetch-depth: 1
 

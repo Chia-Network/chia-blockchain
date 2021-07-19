@@ -8,14 +8,14 @@ import aiosqlite
 import pytest
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint64
+from tad.types.blockchain_format.coin import Coin
+from tad.types.blockchain_format.program import Program, SerializedProgram
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.coin_solution import CoinSolution
+from tad.util.db_wrapper import DBWrapper
+from tad.util.ints import uint64
 
-from chia.wallet.wallet_pool_store import WalletPoolStore
+from tad.wallet.wallet_pool_store import WalletPoolStore
 
 log = logging.getLogger(__name__)
 

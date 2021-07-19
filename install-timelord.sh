@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$VIRTUAL_ENV" ]; then
-  echo "This requires the chia python virtual environment."
+  echo "This requires the tad python virtual environment."
   echo "Execute '. ./activate' before running."
 	exit 1
 fi
@@ -58,10 +58,10 @@ else
 	if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN; then
 		echo "Installing chiavdf from source on Ubuntu/Debian"
 		# If Ubuntu version is older than 20.04LTS then upgrade CMake
-		ubuntu_cmake_install
+#		ubuntu_cmake_install
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
 		echo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
-		sudo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
+#		sudo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"

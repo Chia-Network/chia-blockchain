@@ -5,16 +5,16 @@ from unittest import TestCase
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.ints import uint64
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles import (
+from tad.types.blockchain_format.program import Program
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.blockchain_format.coin import Coin
+from tad.types.coin_solution import CoinSolution
+from tad.types.spend_bundle import SpendBundle
+from tad.util.condition_tools import ConditionOpcode
+from tad.util.ints import uint64
+from tad.consensus.default_constants import DEFAULT_CONSTANTS
+from tad.wallet.lineage_proof import LineageProof
+from tad.wallet.puzzles import (
     p2_conditions,
     p2_delegated_puzzle_or_hidden_puzzle,
     singleton_top_layer,
@@ -29,10 +29,10 @@ from .coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 
 """
 This test suite aims to test:
-    - chia.wallet.puzzles.singleton_top_layer.py
-    - chia.wallet.puzzles.singleton_top_layer.clvm
-    - chia.wallet.puzzles.p2_singleton.clvm
-    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
+    - tad.wallet.puzzles.singleton_top_layer.py
+    - tad.wallet.puzzles.singleton_top_layer.clvm
+    - tad.wallet.puzzles.p2_singleton.clvm
+    - tad.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
 """
 
 T1 = CoinTimestamp(1, 10000000)
@@ -110,7 +110,7 @@ class TestSingleton(TestCase):
             )
             raise AssertionError("This should fail due to an even amount")
         except ValueError as msg:
-            assert str(msg) == "Coin amount cannot be even. Subtract one mojo."
+            assert str(msg) == "Coin amount cannot be even. Subtract one mtad."
             conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
                 starting_coin, adapted_puzzle, comment, START_AMOUNT
             )

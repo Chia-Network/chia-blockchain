@@ -14,72 +14,72 @@ from typing import Callable, Dict, List, Optional, Tuple, Any
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
 
-from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.full_node.bundle_tools import (
+from tad.cmds.init_funcs import create_all_ssl, create_default_tad_config
+from tad.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
     simple_solution_generator,
 )
-from chia.util.errors import Err
-from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots
-from chia.consensus.block_creation import unfinished_block_to_full_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coinbase import create_puzzlehash_for_pk, create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.deficit import calculate_deficit
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.consensus.pot_iterations import (
+from tad.util.errors import Err
+from tad.full_node.generator import setup_generator_args
+from tad.full_node.mempool_check_conditions import GENERATOR_MOD
+from tad.plotting.create_plots import create_plots
+from tad.consensus.block_creation import unfinished_block_to_full_block
+from tad.consensus.block_record import BlockRecord
+from tad.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from tad.consensus.blockchain_interface import BlockchainInterface
+from tad.consensus.coinbase import create_puzzlehash_for_pk, create_farmer_coin, create_pool_coin
+from tad.consensus.constants import ConsensusConstants
+from tad.consensus.default_constants import DEFAULT_CONSTANTS
+from tad.consensus.deficit import calculate_deficit
+from tad.consensus.full_block_to_block_record import block_to_block_record
+from tad.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from tad.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from tad.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
-from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
-from chia.full_node.signage_point import SignagePoint
-from chia.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import (
+from tad.consensus.vdf_info_computation import get_signage_point_vdf_info
+from tad.full_node.signage_point import SignagePoint
+from tad.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
+from tad.types.blockchain_format.classgroup import ClassgroupElement
+from tad.types.blockchain_format.coin import Coin, hash_coin_list
+from tad.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
+from tad.types.blockchain_format.pool_target import PoolTarget
+from tad.types.blockchain_format.proof_of_space import ProofOfSpace
+from tad.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from tad.types.blockchain_format.sized_bytes import bytes32
+from tad.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, CompressorArg
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
-from chia.types.name_puzzle_condition import NPC
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.block_cache import BlockCache
-from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
-from chia.util.config import load_config, save_config
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from chia.util.keychain import Keychain, bytes_to_mnemonic
-from chia.util.merkle_set import MerkleSet
-from chia.util.prev_transaction_block import get_prev_transaction_block
-from chia.util.path import mkdir
-from chia.util.vdf_prover import get_vdf_info_and_proof
+from tad.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from tad.types.blockchain_format.vdf import VDFInfo, VDFProof
+from tad.types.condition_with_args import ConditionWithArgs
+from tad.types.end_of_slot_bundle import EndOfSubSlotBundle
+from tad.types.full_block import FullBlock
+from tad.types.generator_types import BlockGenerator, CompressorArg
+from tad.types.spend_bundle import SpendBundle
+from tad.types.unfinished_block import UnfinishedBlock
+from tad.types.name_puzzle_condition import NPC
+from tad.util.bech32m import encode_puzzle_hash
+from tad.util.block_cache import BlockCache
+from tad.util.condition_tools import ConditionOpcode, conditions_by_opcode
+from tad.util.config import load_config, save_config
+from tad.util.hash import std_hash
+from tad.util.ints import uint8, uint16, uint32, uint64, uint128
+from tad.util.keychain import Keychain, bytes_to_mnemonic
+from tad.util.merkle_set import MerkleSet
+from tad.util.prev_transaction_block import get_prev_transaction_block
+from tad.util.path import mkdir
+from tad.util.vdf_prover import get_vdf_info_and_proof
 from tests.wallet_tools import WalletTool
-from chia.wallet.derive_keys import (
+from tad.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
@@ -131,7 +131,7 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        create_default_chia_config(root_path)
+        create_default_tad_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)
         self.keychain.delete_all_keys()
         self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
@@ -155,7 +155,7 @@ class BlockTools:
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            raise RuntimeError("Keys not generated. Run `tad generate keys`")
 
         self.load_plots()
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
@@ -223,7 +223,7 @@ class BlockTools:
             )
             # Create more plots, but to a pool address instead of public key
             args.pool_public_key = None
-            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
+            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "tad")
             args.num = num_pool_address_plots
             create_plots(
                 args,
@@ -1219,7 +1219,7 @@ def get_challenges(
 
 
 def get_plot_dir() -> Path:
-    cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
+    cache_path = Path(os.path.expanduser(os.getenv("TAD_ROOT", "~/.tad/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
 
