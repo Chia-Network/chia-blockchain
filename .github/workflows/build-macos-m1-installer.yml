@@ -35,9 +35,9 @@ jobs:
           rm -rf build_scripts/final_installer || true
           rm -rf build_scripts/dist || true
           rm -rf build_scripts/pyinstaller || true
-          rm -rf chia-blockchain-gui/build || true
-          rm -rf chia-blockchain-gui/daemon || true
-          rm -rf chia-blockchain-gui/node_modules || true
+          rm -rf tad-blockchain-gui/build || true
+          rm -rf tad-blockchain-gui/daemon || true
+          rm -rf tad-blockchain-gui/node_modules || true
 
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -102,7 +102,7 @@ jobs:
         run: |
           export PATH=$(brew --prefix node@12)/bin:$PATH
           . ./activate
-          cd ./chia-blockchain-gui
+          cd ./tad-blockchain-gui
           arch -arm64 git status
           cd ../build_scripts
           arch -arm64 sh build_macos_m1.sh
