@@ -55,5 +55,5 @@ class TestDIDWallet:
         assert isinstance(val, dict)
         if "success" in val:
             assert val["success"]
-        assert val["id"]
+        assert val["my_did"]
         assert val["type"] == WalletType.DISTRIBUTED_ID.value
