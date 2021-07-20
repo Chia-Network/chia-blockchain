@@ -5,7 +5,7 @@ import socket
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import PrivateKey
 

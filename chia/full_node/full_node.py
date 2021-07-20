@@ -1183,7 +1183,8 @@ class FullNode:
                     fork_height: Optional[uint32] = None
                 else:
                     raise ValueError(
-                        f"Failed to validate block {header_hash} height {block.height}: {Err(pre_validation_results[0].error).name}"
+                        f"Failed to validate block {header_hash} "
+                        f"height {block.height}: {Err(pre_validation_results[0].error).name}"
                     )
             else:
                 result_to_validate = (
