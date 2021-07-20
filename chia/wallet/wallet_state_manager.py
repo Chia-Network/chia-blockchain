@@ -599,6 +599,7 @@ class WalletStateManager:
             for cs in additional_coin_spends:
                 if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
                     already_have = False
+                    extra_data = None
                     for wallet_id, wallet in self.wallets.items():
                         if (
                             wallet.type() == WalletType.POOLING_WALLET
@@ -608,9 +609,12 @@ class WalletStateManager:
                             already_have = True
                     if not already_have:
                         try:
-                            solution_to_extra_data(cs)
+                            extra_data = solution_to_extra_data(cs)
                         except Exception as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
+                        if extra_data is None:
+                            self.log.debug(f"Not a pool wallet launcher")
                             continue
                         self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(
