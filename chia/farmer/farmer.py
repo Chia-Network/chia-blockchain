@@ -33,6 +33,7 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, save_config, config_path_for_filename
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
@@ -516,7 +517,7 @@ class Farmer:
                 config = load_config(self._root_path, "config.yaml")
                 new_list = []
                 for list_element in config["pool"]["pool_list"]:
-                    if bytes.fromhex(list_element["launcher_id"]) == bytes(launcher_id):
+                    if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
                         list_element["payout_instructions"] = payout_instructions
                     new_list.append(list_element)
 
