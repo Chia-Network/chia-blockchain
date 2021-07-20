@@ -44,7 +44,7 @@ class DIDWallet:
     async def create_new_did_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
-        amount: int,
+        amount: uint64,
         backups_ids: List = [],
         num_of_backup_ids_needed: uint64 = None,
         name: str = None,
