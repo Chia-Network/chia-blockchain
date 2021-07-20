@@ -231,10 +231,10 @@ async def show_async(
                 )
                 print(
                     f"Block Height           {block.height}\n"
-                    f"Header Hash            0x{block.header_hash.hex()}\n"
+                    f"Header Hash            {block.header_hash.hex()}\n"
                     f"Timestamp              {block_time_string}\n"
                     f"Weight                 {block.weight}\n"
-                    f"Previous Block         0x{block.prev_hash.hex()}\n"
+                    f"Previous Block         {block.prev_hash.hex()}\n"
                     f"Difficulty             {difficulty}\n"
                     f"Sub-slot iters         {block.sub_slot_iters}\n"
                     f"Cost                   {cost}\n"
@@ -242,7 +242,7 @@ async def show_async(
                     f"Is a Transaction Block?{block.is_transaction_block}\n"
                     f"Deficit                {block.deficit}\n"
                     f"PoSpace 'k' Size       {full_block.reward_chain_block.proof_of_space.size}\n"
-                    f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
+                    f"Plot Public Key        {full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
                     f"Pool Public Key        {pool_pk}\n"
                     f"Tx Filter Hash         {tx_filter_hash}\n"
                     f"Farmer Address         {farmer_address}\n"
