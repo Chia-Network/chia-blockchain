@@ -16,6 +16,7 @@ import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
@@ -712,7 +713,7 @@ class FullNode:
 
     async def sync_from_fork_point(
         self,
-        fork_point_height: int,
+        fork_point_height: uint32,
         target_peak_sb_height: uint32,
         peak_hash: bytes32,
         summaries: List[SubEpochSummary],
@@ -793,7 +794,7 @@ class FullNode:
         )
         await self.server.send_to_all([msg], NodeType.WALLET)
 
-    def get_peers_with_peak(self, peak_hash):
+    def get_peers_with_peak(self, peak_hash: bytes32) -> List:
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
         if len(peer_ids) == 0:
             self.log.warning(f"Not syncing, no peers with header_hash {peak_hash} ")
@@ -2024,7 +2025,7 @@ class FullNode:
             self.log.error(f"Exception Stack: {error_stack}")
 
 
-async def check_fork_next_block(blockchain, fork_point_height, peers_with_peak):
+async def check_fork_next_block(blockchain: BlockchainInterface, fork_point_height: uint32, peers_with_peak: List):
     our_peak_height = blockchain.get_peak_height()
     ses_heigths = blockchain.get_ses_heights()
     if len(ses_heigths) > 2 and our_peak_height is not None:

@@ -589,29 +589,29 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
-        executor = ProcessPoolExecutor(1)
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self.constants, summaries, weight_proof
-        )
-        segment_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_sub_epoch_segments, constants, rng, wp_segment_bytes, summary_bytes
-        )
-
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
-        )
-
-        valid_segment_task = segment_validation_task
-        valid_recent_blocks_task = recent_blocks_validation_task
-        valid_recent_blocks = await valid_recent_blocks_task
-        if not valid_recent_blocks:
-            log.error("failed validating weight proof recent blocks")
-            return False, uint32(0), []
-
-        valid_segments = await valid_segment_task
-        if not valid_segments:
-            log.error("failed validating weight proof sub epoch segments")
-            return False, uint32(0), []
+        # executor = ProcessPoolExecutor(1)
+        # constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
+        #     self.constants, summaries, weight_proof
+        # )
+        # segment_validation_task = asyncio.get_running_loop().run_in_executor(
+        #     executor, _validate_sub_epoch_segments, constants, rng, wp_segment_bytes, summary_bytes
+        # )
+        #
+        # recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
+        #     executor, _validate_recent_blocks, constants, wp_recent_chain_bytes, summary_bytes
+        # )
+        #
+        # valid_segment_task = segment_validation_task
+        # valid_recent_blocks_task = recent_blocks_validation_task
+        # valid_recent_blocks = await valid_recent_blocks_task
+        # if not valid_recent_blocks:
+        #     log.error("failed validating weight proof recent blocks")
+        #     return False, uint32(0), []
+        #
+        # valid_segments = await valid_segment_task
+        # if not valid_segments:
+        #     log.error("failed validating weight proof sub epoch segments")
+        #     return False, uint32(0), []
 
         return True, self.get_fork_point(summaries), summaries
 
