@@ -340,13 +340,13 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permis
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(
             f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
-            f"Please unset the environment variable and run chia init again\n"
+            f"Please unset the environment variable and run silicoin init again\n"
             f"or manually migrate config.yaml"
         )
 
     print(f"Chia directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
-        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
+        # This is reached if CHIA_ROOT is set, or if user has run silicoin init twice
         # before a new update.
         if fix_ssl_permissions:
             fix_ssl(root_path)

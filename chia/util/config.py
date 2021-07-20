@@ -49,7 +49,7 @@ def load_config(
         if not exit_on_error:
             raise ValueError("Config not found")
         print(f"can't find {path}")
-        print("** please run `chia init` to migrate or create new config files **")
+        print("** please run `silicoin init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
     r = yaml.safe_load(open(path, "r"))
