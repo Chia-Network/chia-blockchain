@@ -1,3 +1,5 @@
+from asyncio import Queue
+
 import asyncio
 import dataclasses
 import logging
@@ -715,96 +717,89 @@ class FullNode:
         peak_hash: bytes32,
         summaries: List[SubEpochSummary],
     ):
+        buffer_size = 4
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
-        peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
-        peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
-
-        if len(peers_with_peak) == 0:
-            raise RuntimeError(f"Not syncing, no peers with header_hash {peak_hash} ")
-        advanced_peak = False
+        peers_with_peak = self.get_peers_with_peak(peak_hash)
+        fork_point_height = await check_fork_next_block(self.blockchain, fork_point_height, peers_with_peak)
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
-        our_peak_height = self.blockchain.get_peak_height()
-        ses_heigths = self.blockchain.get_ses_heights()
-        if len(ses_heigths) > 2 and our_peak_height is not None:
-            ses_heigths.sort()
-            max_fork_ses_height = ses_heigths[-3]
-            # This is the fork point in SES in the case where no fork was detected
-            if self.blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
-                for peer in peers_with_peak:
-                    # Grab a block at peak + 1 and check if fork point is actually our current height
-                    block_response: Optional[Any] = await peer.request_block(
-                        full_node_protocol.RequestBlock(uint32(our_peak_height + 1), True)
-                    )
-                    if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
-                        peak = self.blockchain.get_peak()
-                        if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
-                            fork_point_height = our_peak_height
-                        break
-
-        for i in range(fork_point_height, target_peak_sb_height, batch_size):
-            start_height = i
-            end_height = min(target_peak_sb_height, start_height + batch_size)
-            request = RequestBlocks(uint32(start_height), uint32(end_height), True)
-            self.log.info(f"Requesting blocks: {start_height} to {end_height}")
-            batch_added = False
-            to_remove = []
-            for peer in peers_with_peak:
-                if peer.closed:
-                    to_remove.append(peer)
-                    continue
-                response = await peer.request_blocks(request, timeout=60)
-                if response is None:
-                    await peer.close()
-                    to_remove.append(peer)
-                    continue
-                if isinstance(response, RejectBlocks):
-                    to_remove.append(peer)
-                    continue
-                elif isinstance(response, RespondBlocks):
-                    success, advanced_peak, _ = await self.receive_block_batch(
-                        response.blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
-                    )
-                    if success is False:
-                        await peer.close(600)
+        async def fetch_block_batces(myQueue, peers_with_peak: List):
+            for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
+                # create fetch tasks
+                # wait until this is false if len(fetched_batchs) > buffer_size:
+                # create task for batch
+                end_height = min(target_peak_sb_height, start_height + batch_size)
+                self.log.info(f"fetch  {start_height} to {end_height}")
+                request = RequestBlocks(uint32(start_height), uint32(end_height), True)
+                fetched = False
+                for peer in random.sample(peers_with_peak, len(peers_with_peak)):
+                    if peer.closed:
+                        peers_with_peak.remove(peer)
                         continue
-                    else:
-                        batch_added = True
+                    response = await peer.request_blocks(request, timeout=10)
+                    if response is None:
+                        await peer.close()
+                        peers_with_peak.remove(peer)
+                    elif isinstance(response, RespondBlocks):
+                        await myQueue.put((peer, response.blocks))
+                        self.log.info(f"got {start_height} to {end_height} from peer {peer.peer_node_id}")
+                        fetched = True
                         break
+                if fetched is False:
+                    self.log.error(f"fetching {start_height} to {end_height} from peers failed")
+                if self.sync_store.peers_changed.is_set():
+                    peers_with_peak = self.get_peers_with_peak(peak_hash)
+                    self.sync_store.peers_changed.clear()
+            # finished signal with None
+            myQueue.put(None)
 
-            peak = self.blockchain.get_peak()
-            assert peak is not None
-            msg = make_msg(
-                ProtocolMessageTypes.new_peak_wallet,
-                wallet_protocol.NewPeakWallet(
-                    peak.header_hash,
-                    peak.height,
-                    peak.weight,
-                    uint32(max(peak.height - 1, uint32(0))),
-                ),
-            )
-            await self.server.send_to_all([msg], NodeType.WALLET)
-
-            for peer in to_remove:
-                peers_with_peak.remove(peer)
-
-            if self.sync_store.peers_changed.is_set():
-                peer_ids = self.sync_store.get_peers_that_have_peak([peak_hash])
-                peers_with_peak = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
-                self.log.info(f"Number of peers we are syncing from: {len(peers_with_peak)}")
-                self.sync_store.peers_changed.clear()
-
-            if batch_added is False:
-                self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
-                break
-            else:
-                self.log.info(f"Added blocks {start_height} to {end_height}")
-                self.blockchain.clean_block_record(
-                    min(
-                        end_height - self.constants.BLOCKS_CACHE_SIZE,
-                        peak.height - self.constants.BLOCKS_CACHE_SIZE,
-                    )
+        async def validate_block_batces(myQueue):
+            advanced_peak = False
+            while True:
+                peer, blocks = await myQueue.get()
+                if blocks is None:
+                    self.log.info(f"done fetching blocks")
+                    return
+                start_height = blocks[0].height
+                end_height = blocks[-1].height
+                self.log.info(f"handle  {start_height} to {end_height} ")
+                success, advanced_peak, _ = await self.receive_block_batch(
+                    blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
+                if success is False:
+                    if peer in peers_with_peak:
+                        peers_with_peak.remove(peer)
+                    await peer.close(600)
+                    self.log.error(f"Failed to fetch blocks {blocks[0].height} to {blocks[-1].height}")
+                    return
+                self.log.info(f"Added blocks {start_height} to {end_height}")
+                self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
+
+        loop = asyncio.get_event_loop()
+        batch_queue: asyncio.Queue = asyncio.Queue(loop=loop, maxsize=buffer_size)
+        await asyncio.gather(fetch_block_batces(batch_queue, peers_with_peak), validate_block_batces(batch_queue))
+        peak = self.blockchain.get_peak()
+        assert peak is not None
+        await self.send_peak_to_wallets()
+
+    async def send_peak_to_wallets(self):
+        peak = self.blockchain.get_peak()
+        assert peak is not None
+        msg = make_msg(
+            ProtocolMessageTypes.new_peak_wallet,
+            wallet_protocol.NewPeakWallet(
+                peak.header_hash, peak.height, peak.weight, uint32(max(peak.height - 1, uint32(0)))
+            ),
+        )
+        await self.server.send_to_all([msg], NodeType.WALLET)
+
+    def get_peers_with_peak(self, peak_hash):
+        peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
+        if len(peer_ids) == 0:
+            self.log.warning(f"Not syncing, no peers with header_hash {peak_hash} ")
+            return []
+        peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
+        return peers_with_peak
 
     async def receive_block_batch(
         self,
@@ -1191,8 +1186,7 @@ class FullNode:
                     fork_height: Optional[uint32] = None
                 else:
                     raise ValueError(
-                        f"Failed to validate block {header_hash} height "
-                        f"{block.height}: {Err(pre_validation_results[0].error).name}"
+                        f"Failed to validate block {header_hash} height {block.height}: {Err(pre_validation_results[0].error).name}"
                     )
             else:
                 result_to_validate = (
@@ -2028,3 +2022,24 @@ class FullNode:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception in broadcast_uncompact_blocks: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
+
+
+async def check_fork_next_block(blockchain, fork_point_height, peers_with_peak):
+    our_peak_height = blockchain.get_peak_height()
+    ses_heigths = blockchain.get_ses_heights()
+    if len(ses_heigths) > 2 and our_peak_height is not None:
+        ses_heigths.sort()
+        max_fork_ses_height = ses_heigths[-3]
+        # This is the fork point in SES in the case where no fork was detected
+        if blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
+            for peer in peers_with_peak:
+                # Grab a block at peak + 1 and check if fork point is actually our current height
+                block_response: Optional[Any] = await peer.request_block(
+                    full_node_protocol.RequestBlock(uint32(our_peak_height + 1), True)
+                )
+                if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
+                    peak = blockchain.get_peak()
+                    if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
+                        fork_point_height = our_peak_height
+                    break
+    return fork_point_height
