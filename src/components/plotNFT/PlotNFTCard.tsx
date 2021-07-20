@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
 import {
   TooltipTypography,
@@ -29,7 +29,7 @@ import {
 import {
   Delete as DeleteIcon,
   Link as LinkIcon,
-  // Payment as PaymentIcon,
+  Payment as PaymentIcon,
 } from '@material-ui/icons';
 import type PlotNFT from '../../types/PlotNFT';
 import PlotNFTName from './PlotNFTName';
@@ -43,9 +43,9 @@ import { mojo_to_chia } from '../../util/chia';
 import { deleteUnconfirmedTransactions } from '../../modules/incoming';
 import PlotNFTGraph from './PlotNFTGraph';
 import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
-// import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
+import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
 import getPercentPointsSuccessfull from '../../util/getPercentPointsSuccessfull';
-import encodePuzzleHash from '../../util/toBech32m';
+import usePayoutAddress from '../../hooks/usePayoutAddress';
 
 const StyledCard = styled(Card)`
   display: flex;
@@ -82,7 +82,7 @@ export default function PlotNFTCard(props: Props) {
     nft: {
       pool_state: {
         p2_singleton_puzzle_hash,
-        pool_config: { launcher_id, pool_url, payout_instructions },
+        pool_config: { launcher_id, pool_url },
         points_found_24h,
         points_acknowledged_24h,
       },
@@ -90,17 +90,7 @@ export default function PlotNFTCard(props: Props) {
     },
   } = props;
 
-  const networkPrefix = useSelector(
-    (state: RootState) => state.wallet_state.network_info?.network_prefix,
-  );
-
-  var payoutAddress: string;
-
-  try {
-    payoutAddress = encodePuzzleHash(payout_instructions, networkPrefix)
-  } catch {
-    payoutAddress = payout_instructions;
-  }
+  const { loading, payoutAddress } = usePayoutAddress(nft);
 
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
     points_acknowledged_24h,
@@ -145,11 +135,9 @@ export default function PlotNFTCard(props: Props) {
     openDialog(<PlotNFTGetPoolLoginLinkDialog nft={nft} />);
   }
 
-  /*
   function handlePayoutInstructions() {
     openDialog(<PlotNFTPayoutInstructionsDialog nft={nft} />);
   }
-  */
 
   const rows = [
     {
@@ -299,7 +287,7 @@ export default function PlotNFTCard(props: Props) {
                         </Typography>
                       </MenuItem>
                     )}
-                    {/* !isSelfPooling && (
+                    {!isSelfPooling && (
                       <MenuItem
                         onClick={() => {
                           onClose();
@@ -310,10 +298,10 @@ export default function PlotNFTCard(props: Props) {
                           <PaymentIcon />
                         </ListItemIcon>
                         <Typography variant="inherit" noWrap>
-                          <Trans>View Payout Instructions</Trans>
+                          <Trans>Edit Payout Instructions</Trans>
                         </Typography>
                       </MenuItem>
-                    ) */}
+                    )}
                     <MenuItem
                       onClick={() => {
                         onClose();
@@ -374,7 +362,7 @@ export default function PlotNFTCard(props: Props) {
             </Typography>
             <Tooltip title={payoutAddress} copyToClipboard>
               <Typography variant="body2" noWrap>
-                {payoutAddress}
+                {loading ? <Loading size="1rem" /> : payoutAddress ?? <Trans>Not Available</Trans>}
               </Typography>
             </Tooltip>
           </Flex>

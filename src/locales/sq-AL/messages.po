@@ -88,8 +88,8 @@ msgstr "Shto Plote ne radhë"
 #: src/components/plot/PlotHeader.tsx:63
 #: src/components/plot/add/PlotAdd.tsx:160
 #: src/components/plot/overview/PlotOverviewHero.tsx:54
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:232
-#: src/components/plotNFT/PlotNFTCard.tsx:284
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:230
+#: src/components/plotNFT/PlotNFTCard.tsx:272
 msgid "Add a Plot"
 msgstr "Shto nje Plot"
 
@@ -143,7 +143,7 @@ msgstr "Sasia për monedhën fillestare"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Je i sigurt që do ta fshish këtë Plot? Pasi nuk mund ta riktheni."
 
-#: src/components/plotNFT/PlotNFTCard.tsx:135
+#: src/components/plotNFT/PlotNFTCard.tsx:125
 #: src/components/wallet/standard/WalletStandard.tsx:632
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr "Je i sigurt që dëshiron të fshish transaksione të pakonfirmuara?"
@@ -270,6 +270,7 @@ msgstr "Mund të ruhet ne bërthamen mnemonic"
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
 #: src/components/farm/FarmManageFarmingRewards.tsx:196
 #: src/components/fullNode/FullNodeAddConnection.tsx:89
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:123
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:30
 #: src/components/trading/CreateOffer.jsx:139
@@ -298,7 +299,7 @@ msgstr "Kodimi i Sfidës"
 msgid "Change"
 msgstr "Ndrysho"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:420
+#: src/components/plotNFT/PlotNFTCard.tsx:408
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
@@ -328,7 +329,7 @@ msgstr "Zgjidh numrin e Ploteve"
 msgid "Choose Plot Size"
 msgstr "Zgjill madhesinë e plotit"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:396
+#: src/components/plotNFT/PlotNFTCard.tsx:384
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
 msgstr "Merr Shpërblimet"
@@ -381,7 +382,7 @@ msgstr "Konfirmo"
 msgid "Confirm Disconnect"
 msgstr "Konfirmo shkëputjen"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:131
+#: src/components/plotNFT/PlotNFTCard.tsx:121
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
 msgstr "Konfirmimi"
@@ -552,13 +553,13 @@ msgstr "Krijimi i plotit NFT për Vetë-Grumbullim"
 msgid "Currency code is not defined"
 msgstr "Kodi i valutës nuk është përcaktuar"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:141
-#: src/components/plotNFT/PlotNFTCard.tsx:193
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:139
+#: src/components/plotNFT/PlotNFTCard.tsx:181
 msgid "Current Difficulty"
 msgstr "Vështirësia aktuale"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:158
-#: src/components/plotNFT/PlotNFTCard.tsx:210
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:156
+#: src/components/plotNFT/PlotNFTCard.tsx:198
 msgid "Current Points Balance"
 msgstr "Bilanci aktual i pikëve"
 
@@ -592,7 +593,7 @@ msgstr "Vonesa"
 #: src/components/plot/PlotAction.tsx:57
 #: src/components/plot/queue/PlotQueueActions.tsx:43
 #: src/components/plot/queue/PlotQueueActions.tsx:97
-#: src/components/plotNFT/PlotNFTCard.tsx:132
+#: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/selectKey/SelectKey.tsx:67
 #: src/components/selectKey/SelectKey.tsx:109
 #: src/components/wallet/standard/WalletStandard.tsx:629
@@ -604,7 +605,7 @@ msgstr "Fshij"
 msgid "Delete Plot"
 msgstr "Fshij plotin"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:327
+#: src/components/plotNFT/PlotNFTCard.tsx:315
 #: src/components/wallet/standard/WalletStandard.tsx:663
 msgid "Delete Unconfirmed Transactions"
 msgstr "Fshi transaksionet e pakonfirmuara"
@@ -688,6 +689,12 @@ msgstr "Terhiq dhe zgjidh skedarin e ruajtur"
 #: src/electron/main.tsx:263
 msgid "Edit"
 msgstr "Modifiko"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:259
+#: src/components/plotNFT/PlotNFTCard.tsx:301
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
+msgid "Edit Payout Instructions"
+msgstr ""
 
 #: src/components/wallet/WalletImport.tsx:147
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -1007,7 +1014,7 @@ msgstr "Gjendje e pavlefshme"
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 msgstr "Shtë një lidhje identifikimi një herë që mund të përdoret për t'u identifikuar në faqen e internetit të një poll. Ai përmban një nënshkrim duke përdorur çelësin e fermerit nga parcela NFT. Jo të gjitha pollet e mbështesin këtë veçori."
 
-#: src/components/plotNFT/PlotNFTCard.tsx:418
+#: src/components/plotNFT/PlotNFTCard.tsx:406
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
 msgstr "Bashkohu me Pollin"
@@ -1055,13 +1062,13 @@ msgstr "Lartësia e Fundit e Fermuar"
 msgid "Latest Block Challenges"
 msgstr "Sfidat e fundit të bllokut"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:297
-#: src/components/plotNFT/PlotNFTCard.tsx:362
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:295
+#: src/components/plotNFT/PlotNFTCard.tsx:350
 msgid "Launcher Id"
 msgstr "Id e lëshuesit"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:99
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:114
 msgid "Learn More"
 msgstr "Mëso më shumë"
 
@@ -1235,6 +1242,7 @@ msgstr "Asnjë nga plotet tuaja nuk e ka kaluar filtrin akoma."
 #: src/components/farm/card/FarmCardNotAvailable.tsx:20
 #: src/components/farm/card/FarmCardNotAvailable.tsx:23
 #: src/components/plot/PlotStatus.tsx:19
+#: src/components/plotNFT/PlotNFTCard.tsx:365
 msgid "Not Available"
 msgstr "Jo i disponueshëm"
 
@@ -1264,8 +1272,8 @@ msgstr "Nuk gjenden Plotet"
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Vini re se kjo nuk ndryshon adresat tuaja të grumbullimit të pagesave. Kjo ndikon vetëm në komplotet e formatit të vjetër dhe në shpërblimin 0.25XCH për komplotet e bashkimit."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:120
-#: src/components/plotNFT/PlotNFTCard.tsx:172
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:118
+#: src/components/plotNFT/PlotNFTCard.tsx:160
 msgid "Number of Plots"
 msgstr "Numri i ploteve"
 
@@ -1279,7 +1287,6 @@ msgstr "Numri i thredsave"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:111
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:112
 msgid "OK"
 msgstr "Ok"
 
@@ -1299,7 +1306,7 @@ msgstr "Mesatarisht ka një minutë midis çdo transaksion blloku. Nëse nuk ka 
 msgid "Outgoing"
 msgstr "Dalëse"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:373
+#: src/components/plotNFT/PlotNFTCard.tsx:361
 msgid "Payout Address"
 msgstr ""
 
@@ -1503,18 +1510,18 @@ msgstr "Plotimi me bitfield të aktivizuar ka rreth 30% më pak shkrime të për
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:176
-#: src/components/plotNFT/PlotNFTCard.tsx:228
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:174
+#: src/components/plotNFT/PlotNFTCard.tsx:216
 msgid "Points Found Since Start"
 msgstr "Pikët e Gjetura Që nga Fillimi"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:187
-#: src/components/plotNFT/PlotNFTCard.tsx:239
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:185
+#: src/components/plotNFT/PlotNFTCard.tsx:227
 msgid "Points Found in Last 24 Hours"
 msgstr "Pikët që gjenden në 24 orët e fundit"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:196
-#: src/components/plotNFT/PlotNFTCard.tsx:248
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:194
+#: src/components/plotNFT/PlotNFTCard.tsx:236
 msgid "Points Successful in Last 24 Hours"
 msgstr "Pikët e Suksesshme në 24 Orët e Fundit"
 
@@ -1535,8 +1542,7 @@ msgstr "Çelësi i pollit"
 msgid "Pool Login Link"
 msgstr "Lidhja e hyrjes në poll"
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:63
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:75
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "Pool Payout Instructions"
 msgstr "Udhëzimet e Pagimit të Pollit"
 
@@ -1581,8 +1587,8 @@ msgstr "Polli nuk ofron target_puzzle_hash."
 msgid "Pool public key:"
 msgstr "Çelësi publik i pollit:"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:274
-#: src/components/plotNFT/PlotNFTCard.tsx:339
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:272
+#: src/components/plotNFT/PlotNFTCard.tsx:327
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
 msgstr "Polli:"
@@ -1753,6 +1759,7 @@ msgid "Safe To Skip"
 msgstr "I sigurt për të kapërcyer"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:199
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:126
 #: src/components/trading/CreateOffer.jsx:142
 msgid "Save"
 msgstr "Ruaj"
@@ -1932,8 +1939,8 @@ msgstr "Krahina"
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:115
-#: src/components/plotNFT/PlotNFTCard.tsx:157
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:113
+#: src/components/plotNFT/PlotNFTCard.tsx:145
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
@@ -2091,7 +2098,7 @@ msgstr "Numri i përgjithshëm i VDF (funksioni i verifikimit të vonesës) ose 
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Tarifat totale të transaksioneve në këtë bllok. Shpërblyer për fermerin."
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr "Këto janë udhëzimet se si fermeri dëshiron të paguhet. Si parazgjedhje kjo do të jetë një adresë XCH, por mund të vendoset në çdo varg me madhësi më të vogël se 1024 karaktere, kështu që mund të përfaqësojë një tjetër identifikues të bllokut ose sistemit të pagesave."
 
@@ -2103,8 +2110,8 @@ msgstr "Këto plote janë të pavlefshme, ju mund t'i fshini ato."
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "Kjo ju lejon të shtoni një direktori që ka plote në të. Nëse nuk keni krijuar ndonjë plot, shkoni në ekranin e krijomit të ploteve."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:132
-#: src/components/plotNFT/PlotNFTCard.tsx:184
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:130
+#: src/components/plotNFT/PlotNFTCard.tsx:172
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "Kjo vështirësi është një vështirësi artificialisht më e ulët sesa në rrjetin real, dhe përdoret gjatë bujqësisë, në mënyrë që të gjeni më shumë prova dhe t'i dërgoni ato në poll. Sa më shumë plote të keni, aq më e vështirë do të keni. Sidoqoftë, vështirësia nuk ndikon në shpërblimet."
 
@@ -2142,13 +2149,13 @@ msgstr "Kjo është sasia totale e chia në blockchain në nën bllok bllokun ak
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Ky është bilanci i përgjithshëm + bilanci në pritje: është ai që do të jetë bilanci juaj pasi të jenë konfirmuar të gjitha transaksionet në pritje."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:151
-#: src/components/plotNFT/PlotNFTCard.tsx:203
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:149
+#: src/components/plotNFT/PlotNFTCard.tsx:191
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "Ky është numri i përgjithshëm i pikëve që ka kjo plotNFT me këtë grup, që nga pagesa e fundit. Polli do të rivendosë pikët pasi të ketë bërë një pagesë."
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:168
-#: src/components/plotNFT/PlotNFTCard.tsx:220
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:166
+#: src/components/plotNFT/PlotNFTCard.tsx:208
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "Ky është numri i përgjithshëm i pikëve që fermeri juaj ka gjetur për këtë plot NFT. Çdo plot i k32 do të marrë rreth 10 pikë në ditë, kështu që nëse keni 10TiB, duhet të prisni rreth 1000 pikë në ditë, ose 41 pikë në orë."
 
@@ -2156,7 +2163,7 @@ msgstr "Ky është numri i përgjithshëm i pikëve që fermeri juaj ka gjetur p
 msgid "This node is fully caught up and validating the network"
 msgstr "Kjo nyje është kapur plotësisht dhe po vërteton rrjetin"
 
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:310
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:308
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "Kjo plot NFT i është caktuar një çelësi tjetër. Ju ende mund të krijoni komplot për këtë plot NFT, por nuk mund të bëni ndryshime."
 
@@ -2278,7 +2285,7 @@ msgstr "Tipi"
 msgid "Unable to create plot NFT"
 msgstr "Në pamundësi për të krijuar plotin NFT"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:162
+#: src/components/plotNFT/PlotNFTCard.tsx:150
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
 msgstr "Shpërblime të pakërkuara"
@@ -2338,7 +2345,7 @@ msgstr "Shiko Ofertën"
 #~ msgid "View Payout Instructions"
 #~ msgstr "View Payout Instructions"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:298
+#: src/components/plotNFT/PlotNFTCard.tsx:286
 msgid "View Pool Login Link"
 msgstr "Shikoni lidhjen e hyrjes në poll"
 
@@ -2478,7 +2485,7 @@ msgstr "Ju jeni në gjendje pritje. Ju lutemi të prisni për konfirmim"
 msgid "You are not self pooling"
 msgstr "Ju nuk po beni poll vetëm"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:436
+#: src/components/plotNFT/PlotNFTCard.tsx:424
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
 msgstr "Ende mund të krijoni plote për këtë plot NFT, por nuk mund të bëni ndryshime derisa të përfundojë sinkronizimi."
 

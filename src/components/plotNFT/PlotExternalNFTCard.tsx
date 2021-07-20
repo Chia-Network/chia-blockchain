@@ -20,16 +20,16 @@ import {
   MenuItem,
   ListItemIcon,
 } from '@material-ui/core';
-// import { Link as LinkIcon, Payment as PaymentIcon } from '@material-ui/icons';
+import { /* Link as LinkIcon, */ Payment as PaymentIcon } from '@material-ui/icons';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTExternalState from './PlotNFTExternalState';
 import PlotIcon from '../icons/Plot';
 import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
 import PlotNFTExternal from '../../types/PlotNFTExternal';
-// import useOpenDialog from '../../hooks/useOpenDialog';
+import useOpenDialog from '../../hooks/useOpenDialog';
 import PlotNFTGraph from './PlotNFTGraph';
 // import PlotNFTGetPoolLoginLinkDialog from './PlotNFTGetPoolLoginLinkDialog';
-// import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
+import PlotNFTPayoutInstructionsDialog from './PlotNFTPayoutInstructionsDialog';
 import getPercentPointsSuccessfull from '../../util/getPercentPointsSuccessfull';
 
 const StyledCard = styled(Card)`
@@ -81,7 +81,7 @@ export default function PlotExternalNFTCard(props: Props) {
   );
 
   const history = useHistory();
-  // const openDialog = useOpenDialog();
+  const openDialog = useOpenDialog();
   const { plots, isSelfPooling } = usePlotNFTExternalDetails(nft);
   const totalPointsFound24 = points_found_24h.reduce(
     (accumulator, item) => accumulator + item[1],
@@ -103,11 +103,9 @@ export default function PlotExternalNFTCard(props: Props) {
   }
   */
 
-  /*
   function handlePayoutInstructions() {
     openDialog(<PlotNFTPayoutInstructionsDialog nft={nft} />);
   }
-  */
 
   const rows = [
     {
@@ -247,7 +245,7 @@ export default function PlotExternalNFTCard(props: Props) {
                         </Typography>
                       </MenuItem>
                     )*/}
-                    {/* !isSelfPooling && (
+                    {!isSelfPooling && (
                       <MenuItem
                         onClick={() => {
                           onClose();
@@ -258,10 +256,10 @@ export default function PlotExternalNFTCard(props: Props) {
                           <PaymentIcon />
                         </ListItemIcon>
                         <Typography variant="inherit" noWrap>
-                          <Trans>View Payout Instructions</Trans>
+                          <Trans>Edit Payout Instructions</Trans>
                         </Typography>
                       </MenuItem>
-                    ) */}
+                    )}
                   </Box>
                 )}
               </More>
