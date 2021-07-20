@@ -727,7 +727,6 @@ class FullNode:
                 # wait until this is false if len(fetched_batchs) > buffer_size:
                 # create task for batch
                 end_height = min(target_peak_sb_height, start_height + batch_size)
-                self.log.info(f"fetch  {start_height} to {end_height}")
                 request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                 fetched = False
                 for peer in random.sample(peers_with_peak, len(peers_with_peak)):
@@ -740,11 +739,10 @@ class FullNode:
                         peers_with_peak.remove(peer)
                     elif isinstance(response, RespondBlocks):
                         await myQueue.put((peer, response.blocks))
-                        self.log.info(f"got {start_height} to {end_height} from peer {peer.peer_node_id}")
                         fetched = True
                         break
                 if fetched is False:
-                    self.log.error(f"fetching {start_height} to {end_height} from peers failed")
+                    self.log.error(f"failed fetching {start_height} to {end_height} from peers")
                 if self.sync_store.peers_changed.is_set():
                     peers_with_peak = self.get_peers_with_peak(peak_hash)
                     self.sync_store.peers_changed.clear()
