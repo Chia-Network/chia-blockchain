@@ -614,7 +614,7 @@ class WalletStateManager:
                             self.log.debug(f"Not a pool wallet launcher {e}")
                             continue
                         if extra_data is None:
-                            self.log.debug(f"Not a pool wallet launcher")
+                            self.log.debug("Not a pool wallet launcher")
                             continue
                         self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(

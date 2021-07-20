@@ -4,16 +4,16 @@ import pytest
 
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+# from chia.types.blockchain_format.coin import Coin
+# from chia.types.blockchain_format.sized_bytes import bytes32
+# from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+# from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
-from tests.time_out_assert import time_out_assert
-from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
+# from tests.time_out_assert import time_out_assert
+# from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 
 
 @pytest.fixture(scope="module")
@@ -50,7 +50,14 @@ class TestDIDWallet:
         assert fund_owners_initial_balance > 0
         api_one = WalletRpcApi(wallet_node)
         val = await api_one.create_new_wallet(
-            {"wallet_type": "did_wallet", "did_type": "new", "backup_dids": [], "num_of_backup_ids_needed": 0, "amount": 201, "host": f"{self_hostname}:5000"}
+            {
+                "wallet_type": "did_wallet",
+                "did_type": "new",
+                "backup_dids": [],
+                "num_of_backup_ids_needed": 0,
+                "amount": 201,
+                "host": f"{self_hostname}:5000",
+            }
         )
         assert isinstance(val, dict)
         if "success" in val:
