@@ -44,7 +44,7 @@ class DIDWallet:
     async def create_new_did_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
-        amount: int,
+        amount: uint64,
         backups_ids: List = [],
         num_of_backup_ids_needed: uint64 = None,
         name: str = None,
@@ -73,10 +73,9 @@ class DIDWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
-        bal = await self.standard_wallet.get_confirmed_balance()
-        if amount > bal:
-            raise ValueError("Not enough balance")
-
+        # bal = await self.standard_wallet.get_confirmed_balance()
+        # if amount > bal:
+        #     raise ValueError("Not enough balance")
         spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
