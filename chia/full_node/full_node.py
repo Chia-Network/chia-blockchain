@@ -1,5 +1,3 @@
-from asyncio import Queue
-
 import asyncio
 import dataclasses
 import logging
@@ -32,7 +30,6 @@ from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import (
-    RejectBlocks,
     RequestBlocks,
     RespondBlock,
     RespondBlocks,
@@ -759,11 +756,10 @@ class FullNode:
             while True:
                 peer, blocks = await myQueue.get()
                 if blocks is None:
-                    self.log.info(f"done fetching blocks")
+                    self.log.debug("done fetching blocks")
                     return
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                self.log.info(f"handle  {start_height} to {end_height} ")
                 success, advanced_peak, _ = await self.receive_block_batch(
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
