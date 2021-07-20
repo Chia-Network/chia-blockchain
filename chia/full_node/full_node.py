@@ -721,7 +721,7 @@ class FullNode:
         fork_point_height = await check_fork_next_block(self.blockchain, fork_point_height, peers_with_peak)
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
-        async def fetch_block_batces(myQueue, peers_with_peak: List):
+        async def fetch_block_batces(batch_queue, peers_with_peak: List):
             for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
                 # create fetch tasks
                 # wait until this is false if len(fetched_batchs) > buffer_size:
@@ -738,7 +738,7 @@ class FullNode:
                         await peer.close()
                         peers_with_peak.remove(peer)
                     elif isinstance(response, RespondBlocks):
-                        await myQueue.put((peer, response.blocks))
+                        await batch_queue.put((peer, response.blocks))
                         fetched = True
                         break
                 if fetched is False:
@@ -747,12 +747,12 @@ class FullNode:
                     peers_with_peak = self.get_peers_with_peak(peak_hash)
                     self.sync_store.peers_changed.clear()
             # finished signal with None
-            myQueue.put(None)
+            batch_queue.put(None)
 
-        async def validate_block_batces(myQueue):
+        async def validate_block_batces(batch_queue):
             advanced_peak = False
             while True:
-                peer, blocks = await myQueue.get()
+                peer, blocks = await batch_queue.get()
                 if blocks is None:
                     self.log.debug("done fetching blocks")
                     return
