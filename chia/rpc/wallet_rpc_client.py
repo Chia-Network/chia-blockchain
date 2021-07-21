@@ -175,6 +175,18 @@ class WalletRpcClient(RpcClient):
             response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
         return TransactionRecord.from_json_dict(response["signed_tx"])
 
+    async def create_new_did_wallet(self, amount):
+        request: Dict[str, Any] = {
+            "wallet_type": "did_wallet",
+            "did_type": "new",
+            "backup_dids": [],
+            "num_of_backup_ids_needed": 0,
+            "amount": amount,
+            "host": f"{self.hostname}:{self.port}",
+        }
+        response = await self.fetch("create_new_wallet", request)
+        return response
+
     async def create_new_pool_wallet(
         self,
         target_puzzlehash: Optional[bytes32],
