@@ -82,8 +82,11 @@ class FullNodeSync:
                 elif isinstance(response, RespondBlocks):
                     try:
                         success, advanced_peak, _ = await self.full_node.receive_block_batch(
-                                    response.blocks, peer, None if self.advanced_peak else uint32(self.fork_point_height), self.summaries
-                                )
+                            response.blocks,
+                            peer,
+                            None if self.advanced_peak else uint32(self.fork_point_height),
+                            self.summaries,
+                        )
                     except ValueError as e:
                         self.full_node.log.error(f"Error in receiving a block batch: {e}")
 
@@ -131,9 +134,11 @@ class FullNodeSync:
 
     def get_fastest_peer(self, request_counter):
         peer_ids: Set[bytes32] = self.full_node.sync_store.get_peers_that_have_peak([self.peak_hash])
-        peers_with_peak: List[WSChiaConnection] = [c for c in self.full_node.server.all_connections.values() if c.peer_node_id in peer_ids]
+        peers_with_peak: List[WSChiaConnection] = [
+            c for c in self.full_node.server.all_connections.values() if c.peer_node_id in peer_ids
+        ]
         if len(peers_with_peak) == 0:
-           return None
+            return None
 
         if request_counter % 10:
             # check peers

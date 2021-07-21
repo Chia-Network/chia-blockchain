@@ -709,12 +709,13 @@ class FullNode:
                 return None
             await self._finish_sync()
 
-    async def sync_from_fork_multi(self,
+    async def sync_from_fork_multi(
+        self,
         fork_point_height: int,
         target_peak_sb_height: uint32,
         peak_hash: bytes32,
         summaries: List[SubEpochSummary],
-        ):
+    ):
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
@@ -741,7 +742,9 @@ class FullNode:
                         break
 
         full_node_sync = FullNodeSync(self)
-        await full_node_sync.initialize(fork_point_height,target_peak_sb_height, self.constants.MAX_BLOCK_COUNT_PER_REQUESTS, summaries, peak_hash )
+        await full_node_sync.initialize(
+            fork_point_height, target_peak_sb_height, self.constants.MAX_BLOCK_COUNT_PER_REQUESTS, summaries, peak_hash
+        )
         await full_node_sync.start_sync()
 
     async def sync_from_fork_point(
