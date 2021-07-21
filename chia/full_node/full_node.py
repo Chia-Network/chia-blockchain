@@ -767,9 +767,7 @@ class FullNode:
                     if peer in peers_with_peak:
                         peers_with_peak.remove(peer)
                     await peer.close(600)
-                    raise ValueError(
-                        f"Failed to validate block batch {start_height} to {end_height}"
-                    )
+                    raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
@@ -778,7 +776,7 @@ class FullNode:
         fetch_task = asyncio.Task(fetch_block_batces(batch_queue, peers_with_peak))
         validate_task = asyncio.Task(validate_block_batces(batch_queue))
         try:
-            await asyncio.gather(fetch_task,validate_task)
+            await asyncio.gather(fetch_task, validate_task)
         except Exception as e:
             fetch_task.cancel()
             self.log.error(f"sync from fork point failed err: {e}")
