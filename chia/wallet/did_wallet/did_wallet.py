@@ -73,10 +73,10 @@ class DIDWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
-        bal = await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.standard_wallet.id())
+        std_wallet_id = self.standard_wallet.wallet_id
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
-
         spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")

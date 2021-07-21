@@ -514,7 +514,7 @@ class WalletStateManager:
         return get_balance_from_coin_records(unspent_coin_records)
 
     async def get_confirmed_balance_for_wallet(
-        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None, locked=False
     ) -> uint128:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
