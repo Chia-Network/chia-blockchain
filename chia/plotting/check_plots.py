@@ -53,8 +53,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     if num == 0:
         return None
 
+    parallel_read: bool = config["harvester"].get("parallel_read", True)
+
     v = Verifier()
-    log.info("Loading plots in config.yaml using plot_tools loading code\n")
+    log.info(f"Loading plots in config.yaml using plot_tools loading code (parallel read: {parallel_read})\n")
     kc: Keychain = Keychain()
     pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
     pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]]
@@ -100,7 +102,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
-                        proof = pr.get_full_proof(challenge, index)
+                        proof = pr.get_full_proof(challenge, index, parallel_read)
                         total_proofs += 1
                         ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                         assert quality_str == ver_quality_str
