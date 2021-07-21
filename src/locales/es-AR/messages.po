@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-20 20:06\n"
+"PO-Revision-Date: 2021-07-21 02:03\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:62
 msgid "(Optional)"
-msgstr ""
+msgstr "(Opcional)"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:64
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -332,7 +332,7 @@ msgstr "Elegir el Tamaño de la Parcela"
 #: src/components/plotNFT/PlotNFTCard.tsx:384
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
-msgstr ""
+msgstr "Reclamar Recompensas"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
@@ -503,7 +503,7 @@ msgstr "Crear un Respaldo"
 
 #: src/components/plot/add/PlotAddNFT.tsx:42
 msgid "Create a Plot NFT"
-msgstr ""
+msgstr "Crear una Parcela NFT"
 
 #: src/components/selectKey/SelectKey.tsx:211
 msgid "Create a new private key"
@@ -543,7 +543,7 @@ msgstr "Creado por nosotros:"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr ""
+msgstr "Crear Parcela NFT y Unirse a la Piscina"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
@@ -694,7 +694,7 @@ msgstr "Editar"
 #: src/components/plotNFT/PlotNFTCard.tsx:301
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
 msgid "Edit Payout Instructions"
-msgstr ""
+msgstr "Editar las Instrucciones de Pago"
 
 #: src/components/wallet/WalletImport.tsx:147
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
