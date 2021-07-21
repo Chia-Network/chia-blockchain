@@ -747,15 +747,17 @@ class FullNode:
                     peers_with_peak = self.get_peers_with_peak(peak_hash)
                     self.sync_store.peers_changed.clear()
             # finished signal with None
-            batch_queue.put(None)
+            await batch_queue.put(None)
 
         async def validate_block_batces(batch_queue):
             advanced_peak = False
             while True:
-                peer, blocks = await batch_queue.get()
-                if blocks is None:
+
+                res = await batch_queue.get()
+                if res is None:
                     self.log.debug("done fetching blocks")
                     return
+                peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
                 success, advanced_peak, _ = await self.receive_block_batch(
@@ -765,14 +767,21 @@ class FullNode:
                     if peer in peers_with_peak:
                         peers_with_peak.remove(peer)
                     await peer.close(600)
-                    self.log.error(f"Failed to fetch blocks {blocks[0].height} to {blocks[-1].height}")
-                    return
+                    raise ValueError(
+                        f"Failed to validate block batch {start_height} to {end_height}"
+                    )
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         loop = asyncio.get_event_loop()
         batch_queue: asyncio.Queue = asyncio.Queue(loop=loop, maxsize=buffer_size)
-        await asyncio.gather(fetch_block_batces(batch_queue, peers_with_peak), validate_block_batces(batch_queue))
+        fetch_task = asyncio.Task(fetch_block_batces(batch_queue, peers_with_peak))
+        validate_task = asyncio.Task(validate_block_batces(batch_queue))
+        try:
+            await asyncio.gather(fetch_task,validate_task)
+        except Exception as e:
+            fetch_task.cancel()
+            self.log.error(f"sync from fork point failed err: {e}")
         peak = self.blockchain.get_peak()
         assert peak is not None
         await self.send_peak_to_wallets()
