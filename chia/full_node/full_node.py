@@ -392,24 +392,33 @@ class FullNode:
                             False,
                         )
         else:
-            if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
-                # This is the normal case of receiving the next block
-                if await self.short_sync_backtrack(
-                    peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
-                ):
+            try:
+                if request.height <= curr_peak_height + self.config["short_sync_blocks_behind_threshold"]:
+                    # This is the normal case of receiving the next block
+                    if await self.short_sync_backtrack(
+                        peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
+                    ):
+                        return None
+
+                if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                    # This is the case of syncing up more than a few blocks, at the start of the chain
+                    # TODO(almog): fix weight proofs so they work at the beginning as well
+                    self.log.debug("Doing batch sync, no backup")
+                    await self.short_sync_batch(peer, uint32(0), request.height)
                     return None
 
-            if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-                # This is the case of syncing up more than a few blocks, at the start of the chain
-                # TODO(almog): fix weight proofs so they work at the beginning as well
-                self.log.debug("Doing batch sync, no backup")
-                await self.short_sync_batch(peer, uint32(0), request.height)
-                return None
+                if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
+                    # This case of being behind but not by so much
+                    if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
+                        return None
 
-            if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
-                # This case of being behind but not by so much
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
-                    return None
+            except ValueError as ve:
+                self.log.warn(ve)
+                self.log.warn(f"Peer {peer} - banned for 5 minutes")
+                # treat errors here harsely
+                peer.close(ban_time=600)
+            except Exception as e:
+                self.log.warn(e)
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
