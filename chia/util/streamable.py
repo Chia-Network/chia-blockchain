@@ -87,14 +87,14 @@ def dataclass_from_dict(klass, d):
 
 def recurse_jsonify(d):
     """
-    Makes bytes objects and unhashable types into strings and makes large ints into
+    Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
     """
     if isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
             if type(item) in unhashable_types or issubclass(type(item), bytes):
-                item = bytes(item).hex()
+                item = f"0x{bytes(item).hex()}"
             if isinstance(item, dict):
                 item = recurse_jsonify(item)
             if isinstance(item, list):
@@ -111,7 +111,7 @@ def recurse_jsonify(d):
     else:
         for key, value in d.items():
             if type(value) in unhashable_types or issubclass(type(value), bytes):
-                d[key] = bytes(value).hex()
+                d[key] = f"0x{bytes(value).hex()}"
             if isinstance(value, dict):
                 d[key] = recurse_jsonify(value)
             if isinstance(value, list):
