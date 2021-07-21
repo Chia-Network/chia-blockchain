@@ -33,7 +33,7 @@ from chia.pools.pool_puzzles import (
     launcher_id_to_p2_puzzle_hash,
     is_pool_singleton_inner_puzzle,
     get_pubkey_from_member_inner_puzzle,
-    solution_to_extra_data,
+    solution_to_pool_state,
     uncurry_pool_waitingroom_inner_puzzle,
     get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
 )
@@ -166,7 +166,7 @@ class TestPoolPuzzles(TestCase):
         )
         # Test that we can retrieve the extra data
         assert get_delayed_puz_info_from_launcher_spend(launcher_coinsol) == (DELAY_TIME, DELAY_PH)
-        assert solution_to_extra_data(launcher_coinsol) == pool_state
+        assert solution_to_pool_state(launcher_coinsol) == pool_state
 
         # TEST TRAVEL AFTER LAUNCH
         # fork the state
@@ -298,7 +298,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # Test that we can retrieve the extra data
-        assert solution_to_extra_data(travel_coinsol) == target_pool_state
+        assert solution_to_pool_state(travel_coinsol) == target_pool_state
         # sign the serialized state
         data = Program.to(bytes(target_pool_state)).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
@@ -382,7 +382,7 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,
         )
         # Test that we can retrieve the extra data
-        assert solution_to_extra_data(return_coinsol) == pool_state
+        assert solution_to_pool_state(return_coinsol) == pool_state
         # sign the serialized target state
         data = Program.to([pooling_innerpuz.get_tree_hash(), START_AMOUNT, bytes(pool_state)]).get_tree_hash()
         sig: G2Element = AugSchemeMPL.sign(
