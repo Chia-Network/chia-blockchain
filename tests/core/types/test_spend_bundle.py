@@ -7,7 +7,7 @@ from chia.types.spend_bundle import SpendBundle
 
 
 BLANK_SPEND_BUNDLE = SpendBundle(coin_spends=[], aggregated_signature=G2Element())
-NULL_SIGNATURE = "0xc" + "0" * 191
+NULL_SIGNATURE = "c" + "0" * 191
 
 
 class TestStructStream(unittest.TestCase):
