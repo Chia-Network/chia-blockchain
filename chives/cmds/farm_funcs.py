@@ -343,7 +343,9 @@ async def uploadfarmerdata(rpc_port: int, wallet_rpc_port: int, harvester_rpc_po
             break
     
     from hashlib import sha256
+    import platform
     RETURN_TEXT     = {}
+    RETURN_TEXT['MinerName'] = platform.node()
     RETURN_TEXT['FingerPrint'] = FingerPrint
     RETURN_TEXT['Address0'] = Address[0:45]
     RETURN_TEXT['Address'] = sha256(Address[0:45].encode('utf-8')).hexdigest()
