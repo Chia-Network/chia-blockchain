@@ -109,7 +109,7 @@ async def show_async(
             print(
                 "Type          IP                    Ports       NodeID      Last Connect"
                 + "      MiB Up|Dwn      SB Height  Hash"
-            )
+            ) 
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
