@@ -10,10 +10,10 @@ GENERATOR_MOD = get_generator()
 
 DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
 DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
-# DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="chia.wallet.puzzles")
+# DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clvm", package_or_requirement="chia.wallet.puzzles")
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
 )
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 def create_block_generator(
     generator: SerializedProgram, block_heights_list: List[uint32], generator_block_cache: GeneratorBlockCacheInterface
 ) -> Optional[BlockGenerator]:
-    """ `create_block_generator` will returns None if it fails to look up any referenced block """
+    """`create_block_generator` will returns None if it fails to look up any referenced block"""
     generator_arg_list: List[GeneratorArg] = []
     for i in block_heights_list:
         previous_generator = generator_block_cache.get_generator_for_block_height(i)

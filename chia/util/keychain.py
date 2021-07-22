@@ -73,6 +73,8 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     bit_array = BitArray()
     for i in range(0, len(mnemonic)):
         word = mnemonic[i]
+        if word not in word_list:
+            raise ValueError(f"'{word}' is not in the mnemonic dictionary; may be misspelled")
         value = word_list[word]
         bit_array.append(BitArray(uint=value, length=11))
 

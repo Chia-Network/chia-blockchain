@@ -1,10 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 
 import click
 
 
 async def show_async(
-    rpc_port: int,
+    rpc_port: Optional[int],
     state: bool,
     show_connections: bool,
     exit_node: bool,
@@ -28,6 +28,7 @@ async def show_async(
     from chia.util.config import load_config
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
+    from chia.util.misc import format_bytes
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -49,18 +50,14 @@ async def show_async(
             total_iters = peak.total_iters if peak is not None else 0
             num_blocks: int = 10
 
-            if sync_mode:
-                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
-                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
-                print(
-                    "Current Blockchain Status: Full Node syncing to block",
-                    sync_max_block,
-                    "\nCurrently synced to block:",
-                    sync_current_block,
-                )
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
                 print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
+            elif peak is not None and sync_mode:
+                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
+                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
+                print(f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block}.")
+                print("Peak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
@@ -85,16 +82,7 @@ async def show_async(
                 )
 
                 print("Estimated network space: ", end="")
-                network_space_human_readable = blockchain_state["space"] / 1024 ** 4
-                if network_space_human_readable >= 1024:
-                    network_space_human_readable = network_space_human_readable / 1024
-                    if network_space_human_readable >= 1024:
-                        network_space_human_readable = network_space_human_readable / 1024
-                        print(f"{network_space_human_readable:.3f} EiB")
-                    else:
-                        print(f"{network_space_human_readable:.3f} PiB")
-                else:
-                    print(f"{network_space_human_readable:.3f} TiB")
+                print(format_bytes(blockchain_state["space"]))
                 print(f"Current difficulty: {difficulty}")
                 print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
                 print("Total iterations since the start of the blockchain:", total_iters)
@@ -308,8 +296,8 @@ async def show_async(
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
 def show_cmd(
-    rpc_port: int,
-    wallet_rpc_port: int,
+    rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int],
     state: bool,
     connections: bool,
     exit_node: bool,

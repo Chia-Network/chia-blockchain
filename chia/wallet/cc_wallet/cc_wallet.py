@@ -15,7 +15,7 @@ from chia.protocols.wallet_protocol import PuzzleSolutionResponse
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
@@ -246,7 +246,10 @@ class CCWallet:
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(
-                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+                program,
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
+                safe_mode=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
@@ -280,7 +283,7 @@ class CCWallet:
         assert self.cc_info.my_genesis_checker is not None
         return bytes(self.cc_info.my_genesis_checker).hex()
 
-    async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], height: uint32):
+    async def coin_added(self, coin: Coin, height: uint32):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CC wallet has been notified that {coin} was added")
 
@@ -727,7 +730,7 @@ class CCWallet:
             sigs = sigs + await self.get_sigs(innerpuz, innersol, coin.name())
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             puzzle_reveal = cc_puzzle_for_inner_puzzle(CC_MOD, self.cc_info.my_genesis_checker, innerpuz)
-            # Use coin info to create solution and add coin and solution to list of CoinSolutions
+            # Use coin info to create solution and add coin and solution to list of CoinSpends
             solution = [
                 innersol,
                 coin.as_list(),
@@ -738,7 +741,7 @@ class CCWallet:
                 None,
                 None,
             ]
-            list_of_solutions.append(CoinSolution(coin, puzzle_reveal, Program.to(solution)))
+            list_of_solutions.append(CoinSpend(coin, puzzle_reveal, Program.to(solution)))
 
         aggsig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle(list_of_solutions, aggsig)

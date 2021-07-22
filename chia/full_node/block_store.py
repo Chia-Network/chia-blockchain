@@ -127,7 +127,12 @@ class BlockStore:
         return None
 
     def rollback_cache_block(self, header_hash: bytes32):
-        self.block_cache.remove(header_hash)
+        try:
+            self.block_cache.remove(header_hash)
+        except KeyError:
+            # this is best effort. When rolling back, we may not have added the
+            # block to the cache yet
+            pass
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)
@@ -231,26 +236,6 @@ class BlockStore:
         if row is not None:
             return BlockRecord.from_bytes(row[0])
         return None
-
-    async def get_block_records(
-        self,
-    ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
-        """
-        Returns a dictionary with all blocks, as well as the header hash of the peak,
-        if present.
-        """
-        cursor = await self.db.execute("SELECT * from block_records")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        ret: Dict[bytes32, BlockRecord] = {}
-        peak: Optional[bytes32] = None
-        for row in rows:
-            header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = BlockRecord.from_bytes(row[3])
-            if row[5]:
-                assert peak is None  # Sanity check, only one peak
-                peak = header_hash
-        return ret, peak
 
     async def get_block_records_in_range(
         self,
@@ -360,9 +345,12 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_first_not_compactified(self, min_height: int) -> Optional[int]:
+    async def get_first_not_compactified(self) -> Optional[int]:
+        # Since orphan blocks do not get compactified, we need to check whether all blocks with a
+        # certain height are not compact. And if we do have compact orphan blocks, then all that
+        # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            "SELECT MIN(height) from full_blocks WHERE is_fully_compactified=0 AND height>=?", (min_height,)
+            "SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 ORDER BY height LIMIT 1"
         )
         row = await cursor.fetchone()
         await cursor.close()

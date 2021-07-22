@@ -7,7 +7,7 @@ from blspy import AugSchemeMPL, PrivateKey, PublicKeyMPL, SignatureMPL
 from cryptography.fernet import Fernet
 
 from chia.server.server import ssl_context_for_root
-from chia.ssl.create_ssl import get_mozzila_ca_crt
+from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_backup_sk
@@ -72,8 +72,8 @@ def get_backup_info(file_path, private_key):
 
 
 async def post(session: aiohttp.ClientSession, url: str, data: Any):
-    mozzila_root = get_mozzila_ca_crt()
-    ssl_context = ssl_context_for_root(mozzila_root)
+    mozilla_root = get_mozilla_ca_crt()
+    ssl_context = ssl_context_for_root(mozilla_root)
     response = await session.post(url, json=data, ssl=ssl_context)
     return await response.json()
 

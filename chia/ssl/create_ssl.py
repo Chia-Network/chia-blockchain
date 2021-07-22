@@ -17,7 +17,7 @@ def get_chia_ca_crt_key() -> Tuple[Any, Any]:
     return crt, key
 
 
-def get_mozzila_ca_crt() -> str:
+def get_mozilla_ca_crt() -> str:
     mozilla_path = Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
     return str(mozilla_path)
 

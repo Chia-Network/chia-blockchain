@@ -46,7 +46,7 @@ def _get_filenames(directory: Path) -> List[Path]:
                 if child.suffix == ".plot" and not child.name.startswith("._"):
                     all_files.append(child)
             else:
-                log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
+                log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
@@ -234,7 +234,10 @@ def load_plots(
 
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
+
+                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+                    local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
+                )
 
                 with plot_ids_lock:
                     if prover.get_id() in plot_ids:

@@ -30,14 +30,14 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.block_tools import get_signage_point
+from tests.block_tools import get_signage_point
 from chia.util.clvm import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from chia.util.wallet_tools import WalletTool
+from tests.wallet_tools import WalletTool
 from tests.core.fixtures import empty_blockchain  # noqa: F401
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.transaction_record import TransactionRecord
@@ -292,7 +292,7 @@ class TestFullNodeBlockCompression:
 
         # Creates a cc wallet
         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
-        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.get_send_queue()
+        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
         tr = tx_queue[0]
         await time_out_assert(
             10,
@@ -1487,7 +1487,8 @@ class TestFullNodeProtocol:
             )
         )
 
-        assert cc_eos_count == 3 and icc_eos_count == 3
+        # Note: the below numbers depend on the block cache, so might need to be updated
+        assert cc_eos_count == 4 and icc_eos_count == 3
         for compact_proof in timelord_protocol_finished:
             await full_node_1.full_node.respond_compact_proof_of_time(compact_proof)
         stored_blocks = await full_node_1.get_all_full_blocks()
@@ -1508,7 +1509,8 @@ class TestFullNodeProtocol:
                 has_compact_cc_sp_vdf = True
             if block.challenge_chain_ip_proof.normalized_to_identity:
                 has_compact_cc_ip_vdf = True
-        assert cc_eos_compact_count == 3
+        # Note: the below numbers depend on the block cache, so might need to be updated
+        assert cc_eos_compact_count == 4
         assert icc_eos_compact_count == 3
         assert has_compact_cc_sp_vdf
         assert has_compact_cc_ip_vdf

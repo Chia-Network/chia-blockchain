@@ -19,7 +19,7 @@ from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerPr
 from chia.cmds.init_funcs import chia_init
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
-from chia.ssl.create_ssl import get_mozzila_ca_crt
+from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
@@ -51,8 +51,8 @@ service_plotter = "chia plots create"
 async def fetch(url: str):
     async with ClientSession() as session:
         try:
-            mozzila_root = get_mozzila_ca_crt()
-            ssl_context = ssl_context_for_root(mozzila_root)
+            mozilla_root = get_mozilla_ca_crt()
+            ssl_context = ssl_context_for_root(mozilla_root)
             response = await session.get(url, ssl=ssl_context)
             if not response.ok:
                 log.warning("Response not OK.")
@@ -396,6 +396,9 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
+        f = request.get("f")
+        p = request.get("p")
+        c = request.get("c")
         a = request.get("a")
         e = request["e"]
         x = request["x"]
@@ -414,6 +417,15 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
+
+        if f is not None:
+            command_args.append(f"-f{f}")
+
+        if p is not None:
+            command_args.append(f"-p{p}")
+
+        if c is not None:
+            command_args.append(f"-c{c}")
 
         if e is True:
             command_args.append("-e")
@@ -517,6 +529,14 @@ class WebSocketServer:
         size = request.get("k")
         count = request.get("n", 1)
         queue = request.get("queue", "default")
+
+        if ("p" in request) and ("c" in request):
+            response = {
+                "success": False,
+                "service_name": service_name,
+                "error": "Choose one of pool_contract_address and pool_public_key",
+            }
+            return response
 
         for k in range(count):
             id = str(uuid.uuid4())
@@ -740,6 +760,13 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
+    # Windows-specific.
+    # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
+    try:
+        creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore
+    except AttributeError:  # Not on Windows.
+        creationflags = 0
+
     plotter_path = plotter_log_path(root_path, id)
 
     if plotter_path.parent.exists():
@@ -749,7 +776,14 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(service_array, shell=False, stderr=outfile, stdout=outfile, startupinfo=startupinfo)
+    process = subprocess.Popen(
+        service_array,
+        shell=False,
+        stderr=outfile,
+        stdout=outfile,
+        startupinfo=startupinfo,
+        creationflags=creationflags,
+    )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
@@ -773,11 +807,6 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     os.environ["CHIA_ROOT"] = str(root_path)
 
     log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
-
-    lockfile = singleton(service_launch_lock_path(root_path, service_command))
-    if lockfile is None:
-        logging.error(f"{service_command}: already running")
-        raise subprocess.SubprocessError
 
     # Insert proper e
     service_array = service_command.split()
