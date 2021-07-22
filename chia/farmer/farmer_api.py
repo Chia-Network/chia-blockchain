@@ -48,16 +48,6 @@ class FarmerAPI:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
             self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
-        max_pos_per_sp = 5
-        if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
-            # This will likely never happen for any farmer with less than 10% of global space
-            # It's meant to make testnets more stable
-            self.farmer.log.info(
-                f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
-                f"{new_proof_of_space.sp_hash}"
-            )
-            return None
-
         if new_proof_of_space.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
                 f"Received response for a signage point that we do not have {new_proof_of_space.sp_hash}"
