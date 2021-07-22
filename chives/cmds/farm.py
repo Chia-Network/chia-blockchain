@@ -120,6 +120,7 @@ def challenges_cmd(farmer_rpc_port: int, limit: int) -> None:
     show_default=True,
 )
 def uploadfarmerdata_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
+    print("If has 'ModuleNotFoundError: No module named requests', please execute the command in cmd:'pip install requests', and back to restart it.")
     print("Ready to upload harvester data to community.chivescoin.org...")
     from .farm_funcs import summary,challenges,uploadfarmerdata
     import asyncio
