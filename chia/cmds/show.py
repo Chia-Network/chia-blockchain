@@ -103,13 +103,12 @@ async def show_async(
             # if called together with show_connections, leave a blank line
             if show_connections:
                 print("")
-        if show_connections:
-            connections = await client.get_connections()
-            print("Connections:")
             print(
-                "Type          IP                    Ports       NodeID      Last Connect"
+                "Type          IP                                                  Ports       NodeID      Last Connect"
                 + "      MiB Up|Dwn      SB Height  Hash"
-            ) 
+
+
+            )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
@@ -129,7 +128,7 @@ async def show_async(
                     if peak_height is None:
                         peak_height = 0
                     con_str = (
-                        f"{NodeType(con['type']).name:13} {host:20} "
+                        f"{NodeType(con['type']).name:13} {host:50} "
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
@@ -138,13 +137,14 @@ async def show_async(
                     )
                 else:
                     con_str = (
-                        f"{NodeType(con['type']).name:13} {host:20} "
+                        f"{NodeType(con['type']).name:13} {host:50} "
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
                         f"{mb_up:7.1f}|{mb_down:<7.1f}"
                     )
                 print(con_str)
+
             # if called together with state, leave a blank line
             if state:
                 print("")
