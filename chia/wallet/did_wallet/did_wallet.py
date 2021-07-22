@@ -57,7 +57,10 @@ class DIDWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-
+        std_wallet_id = self.standard_wallet.wallet_id
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id, None, True)
+        if amount > bal:
+            raise ValueError("Not enough balance")
         if amount & 1 == 0:
             raise ValueError("DID amount must be odd number")
         self.wallet_state_manager = wallet_state_manager
@@ -77,9 +80,16 @@ class DIDWallet:
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
-        spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
+
+        try:
+            spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
+        except Exception:
+            await wallet_state_manager.user_store.delete_wallet(self.id())
+            raise
+
         if spend_bundle is None:
-            raise ValueError("failed to generate ID for wallet")
+            await wallet_state_manager.user_store.delete_wallet(self.id())
+            raise
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
