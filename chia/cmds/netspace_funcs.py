@@ -53,14 +53,14 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
                 f"Block Height: {older_block_header.height}\n"
                 f"Weight:           {older_block_header.weight}\n"
                 f"VDF Iterations:   {older_block_header.total_iters}\n"
-                f"Header Hash:      {older_block_header.header_hash}\n"
+                f"Header Hash:      0x{older_block_header.header_hash}\n"
             )
             print(
                 "Newer Block\n"
                 f"Block Height: {newer_block_header.height}\n"
                 f"Weight:           {newer_block_header.weight}\n"
                 f"VDF Iterations:   {newer_block_header.total_iters}\n"
-                f"Header Hash:      {newer_block_header.header_hash}\n"
+                f"Header Hash:      0x{newer_block_header.header_hash}\n"
             )
             print(format_bytes(network_space_bytes_estimate))
 
