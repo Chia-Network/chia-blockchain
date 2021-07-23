@@ -44,6 +44,16 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             ]
+        elif change == "new_plots":
+            return [
+                create_payload_dict(
+                    "get_harvesters",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            ]
+
         return []
 
     async def get_signage_point(self, request: Dict) -> Dict:
