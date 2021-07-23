@@ -1311,3 +1311,19 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.respond_compact_vdf(request, peer)
+
+    @peer_required
+    @api_request
+    async def register_interest_in_puzzle_hash(
+        self, request: wallet_protocol.RegisterForUpdates, peer: ws.WSChiaConnection
+    ):
+        # Send all coins with requested puzzle hash that have been created after the specified height
+        pass
+
+    @peer_required
+    @api_request
+    async def register_interest_in_coin(
+        self, request: wallet_protocol.RegisterForCoinUpdates, peer: ws.WSChiaConnection
+    ):
+        # If the coin state changed after the specified height send a updated coin state
+        pass

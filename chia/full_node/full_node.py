@@ -36,6 +36,7 @@ from chia.protocols.full_node_protocol import (
     RespondSignagePoint,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -44,6 +45,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
+from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
@@ -111,6 +113,8 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
+        self.coin_subscriptions: Dict[bytes32, List[bytes32]] = {}  # Puzzle Hash : List[Peer ID]
+        self.ph_subscriptions: Dict[bytes32, List[bytes32]] = {}  # Puzzle Hash : List[Peer ID]
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -823,6 +827,40 @@ class FullNode:
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
         return peers_with_peak
 
+    async def update_wallets(self, height, peak_hash, prev_hash, state_update: List[CoinRecord]):
+        changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
+
+        for coin_record in state_update:
+            if coin_record.name in self.coin_subscriptions:
+                subscribed_peers = self.coin_subscriptions[coin_record.name]
+                spent_h = None
+                if coin_record.spent:
+                    spent_h = coin_record.spent_block_index
+                coin_state = CoinState(coin_record.coin, spent_h, coin_record.confirmed_block_index)
+                for peer in subscribed_peers:
+                    if peer not in changes_for_peer:
+                        changes_for_peer[peer] = set()
+                    changes_for_peer[peer].add(coin_state)
+
+            if coin_record.coin.puzzle_hash in self.ph_subscriptions:
+                subscribed_peers = self.ph_subscriptions[coin_record.coin.puzzle_hash]
+                spent_h = None
+                if coin_record.spent:
+                    spent_h = coin_record.spent_block_index
+                coin_state = CoinState(coin_record.coin, spent_h, coin_record.confirmed_block_index)
+                for peer in subscribed_peers:
+                    if peer not in changes_for_peer:
+                        changes_for_peer[peer] = set()
+                    changes_for_peer[peer].add(coin_state)
+
+        for peer, changes in changes_for_peer.items():
+            if peer not in self.server.all_connections:
+                continue
+            ws_peer: ws.WSChiaConnection = self.server.all_connections[peer]
+            state = CoinStateUpdate(height, peak_hash, prev_hash, changes)
+            msg = make_msg(ProtocolMessageTypes.coin_state_update, state)
+            await ws_peer.send_message(msg)
+
     async def receive_block_batch(
         self,
         all_blocks: List[FullBlock],
@@ -857,7 +895,7 @@ class FullNode:
 
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
-            (result, error, fork_height,) = await self.blockchain.receive_block(
+            result, error, fork_height, coin_changes = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
             if result == ReceiveBlockResult.NEW_PEAK:
@@ -1214,7 +1252,9 @@ class FullNode:
                     pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                 )
                 assert result_to_validate.required_iters == pre_validation_results[0].required_iters
-                added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
+                added, error_code, fork_height, coin_changes = await self.blockchain.receive_block(
+                    block, result_to_validate, None
+                )
                 if (
                     self.full_node_store.previous_generator is not None
                     and fork_height is not None

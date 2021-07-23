@@ -153,3 +153,48 @@ class RespondHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
     header_blocks: List[HeaderBlock]
+
+
+@dataclass(frozen=True)
+@streamable
+class CoinState(Streamable):
+    coin: Coin
+    spent_height: Optional[uint32]
+    created_height: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RegisterForUpdates(Streamable):
+    puzzle_hash: bytes32
+    min_height: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RegisterForUpdatesResponse(Streamable):
+    puzzle_hash: bytes32
+    min_height: uint32
+    coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class RegisterForCoinUpdates(Streamable):
+    coin_id: List[bytes32]
+    min_height: Optional[uint32]
+
+
+@dataclass(frozen=True)
+@streamable
+class RegisterForCoinUpdatesResponse(Streamable):
+    coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class CoinStateUpdate(Streamable):
+    height: uint32
+    peak_hash: bytes32
+    previous_peak: bytes32
+    items: List[CoinState]

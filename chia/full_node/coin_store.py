@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import aiosqlite
 
@@ -61,10 +61,14 @@ class CoinStore:
         self.coin_record_cache = LRUCache(cache_size)
         return self
 
-    async def new_block(self, block: FullBlock, tx_additions: List[Coin], tx_removals: List[bytes32]):
+    async def new_block(
+        self, block: FullBlock, tx_additions: List[Coin], tx_removals: List[bytes32]
+    ) -> Optional[Tuple[List[CoinRecord], List[CoinRecord]]]:
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
+        added_coin_records = []
+        removed_coin_records = []
         if block.is_transaction_block() is False:
             return None
         assert block.foliage_transaction_block is not None
@@ -78,6 +82,7 @@ class CoinStore:
                 False,
                 block.foliage_transaction_block.timestamp,
             )
+            added_coin_records.append(record)
             await self._add_coin_record(record, False)
 
         included_reward_coins = block.get_included_reward_coins()
@@ -95,14 +100,18 @@ class CoinStore:
                 True,
                 block.foliage_transaction_block.timestamp,
             )
+            added_coin_records.append(reward_coin_r)
             await self._add_coin_record(reward_coin_r, False)
 
         total_amount_spent: int = 0
         for coin_name in tx_removals:
-            total_amount_spent += await self._set_spent(coin_name, block.height)
+            removed_coin_record = await self._set_spent(coin_name, block.height)
+            total_amount_spent += removed_coin_record.coin.amount
+            removed_coin_records.append(removed_coin_record)
 
         # Sanity check, already checked in block_body_validation
         assert sum([a.amount for a in tx_additions]) <= total_amount_spent
+        return removed_coin_records, added_coin_records
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
@@ -302,7 +311,7 @@ class CoinStore:
         await cursor.close()
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_name: bytes32, index: uint32) -> uint64:
+    async def _set_spent(self, coin_name: bytes32, index: uint32) -> CoinRecord:
         current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
             raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
@@ -317,4 +326,4 @@ class CoinStore:
             current.timestamp,
         )  # type: ignore # noqa
         await self._add_coin_record(spent, True)
-        return current.coin.amount
+        return current
