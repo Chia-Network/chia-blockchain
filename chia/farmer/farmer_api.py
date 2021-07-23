@@ -6,6 +6,7 @@ import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws
+from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -49,14 +50,15 @@ class FarmerAPI:
             self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
         max_pos_per_sp = 5
-        if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
-            # This will likely never happen for any farmer with less than 10% of global space
-            # It's meant to make testnets more stable
-            self.farmer.log.info(
-                f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
-                f"{new_proof_of_space.sp_hash}"
-            )
-            return None
+
+        if self.farmer.constants.NETWORK_TYPE != NetworkType.MAINNET:
+            # This is meant to make testnets more stable, when difficulty is very low
+            if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
+                self.farmer.log.info(
+                    f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
+                    f"{new_proof_of_space.sp_hash}"
+                )
+                return None
 
         if new_proof_of_space.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
