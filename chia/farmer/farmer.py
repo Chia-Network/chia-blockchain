@@ -682,6 +682,6 @@ class Farmer:
                 if await self.update_cached_harvesters():
                     self.state_changed("new_plots", await self.get_harvesters())
             except Exception:
-                log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.print_exc()}")
+                log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.format_exc()}")
 
             await asyncio.sleep(1)
