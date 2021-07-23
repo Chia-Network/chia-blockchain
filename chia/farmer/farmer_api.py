@@ -475,7 +475,7 @@ class FarmerAPI:
         self.farmer.state_changed(
             "new_farming_info",
             {
-                "fa90ing_info": {
+                "farming_info": {
                     "challenge_hash": request.challenge_hash,
                     "signage_point": request.sp_hash,
                     "passed_filter": request.passed,
