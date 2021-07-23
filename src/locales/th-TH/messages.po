@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-21 08:18\n"
+"PO-Revision-Date: 2021-07-23 19:40\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -694,7 +694,7 @@ msgstr "แก้ไข"
 #: src/components/plotNFT/PlotNFTCard.tsx:301
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
 msgid "Edit Payout Instructions"
-msgstr ""
+msgstr "เปลี่ยนวิธีการจ่าย"
 
 #: src/components/wallet/WalletImport.tsx:147
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -908,7 +908,7 @@ msgstr "HD หรือ คีย์กำหนดลำดับชั้น�
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "พล็อต Harvester"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -2100,7 +2100,7 @@ msgstr "ค่าธรรมเนียมในการทำธุรกร
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "นี่คือคู่มือที่อธิบายว่า Farmer ได้รับเหรียญอย่างไร โดยค่ามาตรฐานจะเป็นที่อยู่กระเป๋า XCH แต่สามารถเปลี่ยนเป็นสตริงใดก็ได้ที่มีขนาดน้อยกว่า 1024 ตัวอักษร ที่เกี่ยวโยงไปถึงบล็อคเชนหรือระบบจ่ายเงินอื่นๆ"
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2113,7 +2113,7 @@ msgstr "กรณีที่มีไฟล์ Plot แล้ว คุณส�
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:130
 #: src/components/plotNFT/PlotNFTCard.tsx:172
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr ""
+msgstr "ระดับความยากนี้จะต่ำกว่าที่อยู่ในเครือข่ายจริงและจะถูกใช้เมื่อกำลังฟาร์ม สิ่งเหล่านี้ทำเพื่อที่จะหา proof ได้มากขึ้นและส่งไปที่พูล ยิ่งมีพล็อตมากเท่าใด ยิ่งมีระดับความยากขึ้นเท่านั้น อย่างไรก็ตาม ระดับความยากจะไม่ส่งผลต่อรางวัลที่ได้"
 
 #: src/components/trading/CreateOffer.jsx:123
 #: src/hooks/useSelectDirectory.tsx:31
@@ -2152,12 +2152,12 @@ msgstr "นี่คือยอดทั้งหมด + ยอดที่ร
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:149
 #: src/components/plotNFT/PlotNFTCard.tsx:191
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "นี่คือจำนวนแต้มทั้งหมดที่พล็อต NFT นี้มีในพูลนี้ตั้งแต่การจ่ายครั้งล่าสุด พูลจะรีเซ็ตแต้มหลังจากการจ่าย"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:166
 #: src/components/plotNFT/PlotNFTCard.tsx:208
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
-msgstr ""
+msgstr "นี่คือจำนสนแต้มทั้งหมดที่ Farmer ของคุณพบในพล็อต NFT นี้ พล็อต k32 แต่ละพล็อตจะได้ประมาณ 10 แต้มต่อวัน หมายถึงว่าถ้าคุณมี 10 TiB จะคาดว่าได้แต้มจำนวน 1000 แต้มต่อวันหรือ 41 แต้มต่อชั่วโมง"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:46
 msgid "This node is fully caught up and validating the network"
