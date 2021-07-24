@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-23 19:40\n"
+"PO-Revision-Date: 2021-07-24 01:35\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:62
 msgid "(Optional)"
-msgstr "(ตัวเลือก)"
+msgstr "(ไม่จำเป็น)"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:64
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -2165,11 +2165,11 @@ msgstr "Node นี้ติดตั้งอย่างสมบูรณ์�
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:308
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
-msgstr ""
+msgstr "พล็อต NFT นี้ถูกลงไว้กับคีย์ที่แตกต่างกัน คุณยังสามารถสร้างพล็อตสำหรับพล็อต NFT นี้ได้อยู่แต่จะไม่สามารถแก้ไขได้"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "พล็อต NFT นี้ไม่ได้เชื่อมต่อกับพูล"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2283,12 +2283,12 @@ msgstr "ประเภท"
 
 #: src/components/plot/add/PlotAdd.tsx:101
 msgid "Unable to create plot NFT"
-msgstr ""
+msgstr "ไม่สามารถสร้างพล็อต NFT ได้"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:150
 #: src/components/pool/PoolOverview.tsx:66
 msgid "Unclaimed Rewards"
-msgstr ""
+msgstr "รางวัลที่ยังไม่ได้ถูกเคลม"
 
 #: src/components/fullNode/FullNode.jsx:98
 msgid "Unfinished"
@@ -2304,7 +2304,7 @@ msgstr "ไม่ทราบ"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 msgid "Unsaved Changes"
-msgstr ""
+msgstr "ความเปลี่ยนแปลงที่ยังไม่ถูกบันทึก"
 
 #: src/components/wallet/create/createRLAdmin.jsx:281
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
@@ -2321,11 +2321,11 @@ msgstr "VDF Sub Slot Iterations"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 msgid "Value seems high"
-msgstr ""
+msgstr "ค่าดูเหมือนจะสูง"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
-msgstr ""
+msgstr "ยืนยันข้อมูลของพูล"
 
 #: src/electron/main.tsx:295
 msgid "View"
@@ -2347,7 +2347,7 @@ msgstr "ดูข้อเสนอ"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:286
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "ดูลิงค์ล็อคอินของพูล"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2374,12 +2374,12 @@ msgstr "รอการซิงโครไนซ์"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
 msgid "Waiting for the transaction to be confirmed"
-msgstr ""
+msgstr "กำลังรอยืนยันธุรกรรม"
 
 #: src/components/pool/PoolOverview.tsx:185
 #: src/components/wallet/standard/WalletStandard.tsx:674
 msgid "Wallet Status:"
-msgstr ""
+msgstr "สถานะกระเป๋าเงิน"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2420,7 +2420,7 @@ msgstr "วอลเล็ต"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:57
 msgid "Want to Join a Pool? Create a Plot NFT"
-msgstr ""
+msgstr "อยากจะเข้าร่วมพูล? สร้างพล็อต NFT เลย"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
 msgid "Want to earn more Chia? Add more plots to your farm."
@@ -2432,15 +2432,15 @@ msgstr "ต้องการหน่วงเวลาก่อนที่พ
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "คำเตือน: คีย์นี้ถูกใช้กับกระเป๋าเงินที่มียอดเงินไม่เป็นศูนย์ คุณจะไม่สามารถเข้าถึงกระเป๋าเงินนี้ได้ถ้าคุณลบคีย์นี้"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "คำเตือน: คีย์นี้ถูกใช้กับที่อยู่กระเป๋าที่ใช้รับรางวัลจากการฟาร์ม คุณจะไม่สามารถเข้าถึงรางวัลที่จะได้รับในอนาคตถ้าคุณลบคีย์นี้"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "คำเตือน: คีย์นี้ถูกใช้กับที่อยู่กระเป๋าเงินที่รับรางวัลจากพูล คุณจะไม่สามารถเข้าถึงรางวัลที่จะได้รับในอนาคตถ้าคุณลบคีย์นี้"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
@@ -2479,11 +2479,11 @@ msgstr "ใช่"
 #: src/hooks/useAbsorbRewards.tsx:29
 #: src/hooks/useJoinPool.tsx:35
 msgid "You are in pending state. Please wait for confirmation"
-msgstr ""
+msgstr "คุณอยู่ในสถานะรอการยืนยัน กรุณารอการยืนยัน"
 
 #: src/hooks/useAbsorbRewards.tsx:37
 msgid "You are not self pooling"
-msgstr ""
+msgstr "คูณไม่ได้กำลังฟาร์มแบบพูลส่วนตัว"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:424
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
