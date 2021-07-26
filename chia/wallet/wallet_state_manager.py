@@ -539,7 +539,14 @@ class WalletStateManager:
         """
         # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
         # and this method is called only for the unspent_coin_records==None case.
-        confirmed = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
+        confirmed_amount = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
+        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+
+    async def get_unconfirmed_balance_already_locked(self, wallet_id) -> uint128:
+        confirmed_amount = await self.get_confirmed_balance_for_wallet_already_locked(wallet_id)
+        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+
+    async def _get_unconfirmed_balance(self, wallet_id, confirmed: uint128) -> uint128:
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount: int = 0
         addition_amount: int = 0
