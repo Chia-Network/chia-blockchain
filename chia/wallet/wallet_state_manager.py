@@ -562,7 +562,7 @@ class WalletStateManager:
                 if await self.does_coin_belong_to_wallet(addition, wallet_id):
                     addition_amount += addition.amount
 
-        result = confirmed - removal_amount + addition_amount
+        result = (confirmed + addition_amount) - removal_amount
         return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
