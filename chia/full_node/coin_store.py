@@ -203,7 +203,7 @@ class CoinStore:
         coins = set()
         parent_ids_db = tuple([pid.hex() for pid in parent_ids])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record INDEXED BY coin_puzzle_hash WHERE coin_parent in ({"?," * (len(parent_ids_db) - 1)}?) '
+            f'SELECT * from coin_record WHERE coin_parent in ({"?," * (len(parent_ids_db) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             parent_ids_db + (start_height, end_height),
