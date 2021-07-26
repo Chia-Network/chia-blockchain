@@ -50,12 +50,6 @@ class TestDIDWallet:
 
         log.info("Waiting for initial money in Wallet 0 ...")
 
-        async def got_initial_money():
-            fund_owners_initial_balance = await wallet.get_confirmed_balance()
-            return fund_owners_initial_balance > 0
-
-        await time_out_assert(timeout=MAX_WAIT_SECS, function=got_initial_money)
-
         api_one = WalletRpcApi(wallet_node_0)
         config = bt.config
         daemon_port = config["daemon_port"]
@@ -73,6 +67,12 @@ class TestDIDWallet:
             config,
             connect_to_daemon=False,
         )
+
+        async def got_initial_money():
+            balances = await client.get_wallet_balance("1")
+            return balances["confirmed_wallet_balance"] > 0
+        await time_out_assert(timeout=MAX_WAIT_SECS, function=got_initial_money)
+
         val = await client.create_new_did_wallet(201)
 
         assert isinstance(val, dict)
