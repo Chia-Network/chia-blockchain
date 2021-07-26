@@ -509,7 +509,8 @@ class WalletStateManager:
     async def get_confirmed_balance_for_wallet_already_locked(self, wallet_id: int) -> uint128:
         # This is a workaround to be able to call la locking operation when already locked
         # for example, in the create method of DID wallet
-        assert self.lock.locked() is False
+        if self.lock.locked() is False:
+            raise AssertionError("expected wallet_state_manager to be locked")
         unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
         return get_balance_from_coin_records(unspent_coin_records)
 
@@ -527,6 +528,8 @@ class WalletStateManager:
         return get_balance_from_coin_records(unspent_coin_records)
 
     async def get_confirmed_balance_for_wallet_with_lock(self, wallet_id: int) -> Set[WalletCoinRecord]:
+        if self.lock.locked() is True:
+            raise AssertionError("expected wallet_state_manager to be unlocked")
         async with self.lock:
             return await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
