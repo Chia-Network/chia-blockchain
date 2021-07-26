@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-21 02:03\n"
+"PO-Revision-Date: 2021-07-26 09:11\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -565,7 +565,7 @@ msgstr "目前積分餘額"
 
 #: src/components/trading/TradingOverview.jsx:182
 msgid "Current trade status"
-msgstr "目前貿易狀態"
+msgstr "目前交易狀態"
 
 #: src/components/selectKey/SelectKey.tsx:185
 msgid "DANGER: permanently delete private key"
@@ -608,7 +608,7 @@ msgstr "刪除耕地"
 #: src/components/plotNFT/PlotNFTCard.tsx:315
 #: src/components/wallet/standard/WalletStandard.tsx:663
 msgid "Delete Unconfirmed Transactions"
-msgstr "刪除與農會的合約"
+msgstr "刪除未確認的交易"
 
 #: src/components/selectKey/SelectKey.tsx:108
 #: src/components/selectKey/SelectKey.tsx:229
@@ -654,7 +654,7 @@ msgstr "禁用 bitfield 耕地"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:26
 msgid "Discard"
-msgstr "放棄變更"
+msgstr "放棄"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -975,7 +975,7 @@ msgstr "轉入"
 
 #: src/components/core/components/Fee/Fee.tsx:36
 msgid "Incorrect value"
-msgstr "錯誤費用數值"
+msgstr "數值不正確"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:18
 msgid "Index"
