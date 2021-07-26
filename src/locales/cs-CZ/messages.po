@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-26 09:12\n"
+"PO-Revision-Date: 2021-07-26 15:12\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -2621,3 +2621,4 @@ msgstr "Poplatky za transakce {currencyCode}"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
