@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-25 19:59\n"
+"PO-Revision-Date: 2021-07-26 01:56\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -1017,25 +1017,25 @@ msgstr "Je to jednorázový přihlašovací odkaz, který může být použit k 
 #: src/components/plotNFT/PlotNFTCard.tsx:406
 #: src/components/pool/PoolOverview.tsx:113
 msgid "Join Pool"
-msgstr "Připojit se k poolu"
+msgstr "Připojit se k Poolu"
 
 #: src/components/plot/add/PlotAddNFT.tsx:59
 #: src/components/plot/add/PlotAddNFT.tsx:141
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr "Připojit se k poolu"
+msgstr "Připojit se k Poolu"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
-msgstr "Připojte se k poolu a získejte konzistentní odměnu XCH. Průměrné výnosy jsou stejné, ale mnohem méně volatilní."
+msgstr "Připojte se k Poolu a získejte konzistentní odměnu XCH. Průměrné výnosy jsou stejné, ale mnohem méně volatilní."
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:59
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr "Připojte se ke sdružení a získejte konzistentní odměnu XCH. Průměrné výnosy jsou stejné, ale mnohem méně volatilní. Přiřaďte vykreslování k NFT. Můžete snadno přepínat sdružení, aniž byste museli znovu vykreslovat."
+msgstr "Připojte se ke Poolu a získejte konzistentní odměnu XCH. Průměrné výnosy jsou stejné, ale mnohem méně volatilní. Přiřaďte vykreslování k NFT. Můžete snadno přepínat Pooly, aniž byste museli znovu vykreslovat."
 
 #: src/components/plot/add/PlotAddNFT.tsx:133
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr "Připojte se k poolu a získejte konzistentní farmářskou odměnu XCH. Vytvořte NFT pole a přiřaďte svá nová pole do skupiny."
+msgstr "Připojte se k Poolu a získejte konzistentní farmářskou odměnu XCH. Vytvořte NFT pole a přiřaďte svá nová pole do skupiny."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
@@ -1074,7 +1074,7 @@ msgstr "Zjistit více"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
-msgstr "Opustit pool"
+msgstr "Opustit Pool"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "List view"
@@ -1082,7 +1082,7 @@ msgstr "Zobrazení jako seznam"
 
 #: src/components/pool/Pool.tsx:21
 msgid "Loading Plot NFTs"
-msgstr "Načítání NFT polí"
+msgstr "Načítání vykreslovani NFT polí"
 
 #: src/components/wallet/Wallets.tsx:172
 msgid "Loading list of wallets"
@@ -1270,7 +1270,7 @@ msgstr "Pole nenalezena"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:184
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr "Všimněte si, že toto nezmění vaše pool adresy. To se týká pouze starého formátu polí a odměny 0,25XCH pool polí."
+msgstr "Všimněte si, že toto nezmění vaše Pool adresy. To se týká pouze starého formátu polí a odměny 0,25XCH pool polí."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:118
 #: src/components/plotNFT/PlotNFTCard.tsx:160
