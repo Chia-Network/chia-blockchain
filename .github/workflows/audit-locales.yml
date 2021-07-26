@@ -46,7 +46,7 @@ jobs:
           ${{ runner.os }}-
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v2.1.5
+      uses: actions/setup-node@v2.3.0
       with:
         node-version: '12.x'
 
