@@ -615,10 +615,11 @@ function AddressCard(props: AddressCardProps) {
 
 type StandardWalletProps = {
   wallet_id: number;
+  showTitle?: boolean;
 };
 
 export default function StandardWallet(props: StandardWalletProps) {
-  const { wallet_id } = props;
+  const { wallet_id, showTitle } = props;
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
 
@@ -643,44 +644,47 @@ export default function StandardWallet(props: StandardWalletProps) {
     <Flex flexDirection="column" gap={1}>
       <Flex gap={1} alignItems="center">
         <Flex flexGrow={1}>
-          <Typography variant="h5" gutterBottom>
-            <Trans>Chia Wallet</Trans>
-          </Typography>
-        </Flex>
-        <More>
-          {({ onClose }) => (
-            <Box>
-              <MenuItem
-                onClick={() => {
-                  onClose();
-                  handleDeleteUnconfirmedTransactions();
-                }}
-              >
-                <ListItemIcon>
-                  <DeleteIcon />
-                </ListItemIcon>
-                <Typography variant="inherit" noWrap>
-                  <Trans>Delete Unconfirmed Transactions</Trans>
-                </Typography>
-              </MenuItem>
-            </Box>
+          {showTitle && (
+            <Typography variant="h5" gutterBottom>
+              <Trans>Chia Wallet</Trans>
+            </Typography>
           )}
-        </More>
+        </Flex>
+        <Flex gap={1} alignItems="center">
+          <Flex alignItems="center">
+            <Typography variant="body1" color="textSecondary">
+              <Trans>Wallet Status:</Trans>
+            </Typography>
+            &nbsp;
+            <WalletStatus height />
+          </Flex>
+          <More>
+            {({ onClose }) => (
+              <Box>
+                <MenuItem
+                  onClick={() => {
+                    onClose();
+                    handleDeleteUnconfirmedTransactions();
+                  }}
+                >
+                  <ListItemIcon>
+                    <DeleteIcon />
+                  </ListItemIcon>
+                  <Typography variant="inherit" noWrap>
+                    <Trans>Delete Unconfirmed Transactions</Trans>
+                  </Typography>
+                </MenuItem>
+              </Box>
+            )}
+          </More>
+        </Flex>
       </Flex>
 
-      <Flex flexDirection="column" gap={2}>
-        <Flex gap={1} justifyContent="flex-end">
-          <Typography variant="body1" color="textSecondary">
-            <Trans>Wallet Status:</Trans>
-          </Typography>
-          <WalletStatus height />
-        </Flex>
-        <Flex flexDirection="column" gap={3}>
-          <WalletCards wallet_id={wallet_id} />
-          <SendCard wallet_id={wallet_id} />
-          <AddressCard wallet_id={wallet_id} />
-          <WalletHistory walletId={wallet_id} />
-        </Flex>
+      <Flex flexDirection="column" gap={3}>
+        <WalletCards wallet_id={wallet_id} />
+        <SendCard wallet_id={wallet_id} />
+        <AddressCard wallet_id={wallet_id} />
+        <WalletHistory walletId={wallet_id} />
       </Flex>
     </Flex>
   );
