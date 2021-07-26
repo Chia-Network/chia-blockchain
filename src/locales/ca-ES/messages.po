@@ -2621,4 +2621,3 @@ msgstr "{currencyCode} Comissions de transacció de l'usuari"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
-
