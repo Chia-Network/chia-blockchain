@@ -65,9 +65,12 @@ class HarvesterCacheEntry:
         self.data: Optional[dict] = None
         self.last_update: float = 0
 
+    def bump_last_update(self):
+        self.last_update = time.time()
+
     def set_data(self, data):
         self.data = data
-        self.last_update = time.time()
+        self.bump_last_update()
 
     def needs_update(self):
         return time.time() - self.last_update > UPDATE_HARVESTER_CACHE_INTERVAL
@@ -579,6 +582,7 @@ class Farmer:
             cache_entry = await self.get_cached_harvesters(connection)
             if cache_entry.needs_update():
                 self.log.debug(f"update_cached_harvesters update harvester: {connection.peer_node_id}")
+                cache_entry.bump_last_update()
                 response = await connection.request_plots(
                     harvester_protocol.RequestPlots(), timeout=UPDATE_HARVESTER_CACHE_INTERVAL
                 )
