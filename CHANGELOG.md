@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.2.3 Chia blockchain 2021-07-21
+## 1.2.3 Chia blockchain 2021-07-26
 
 ### Added
 
@@ -15,25 +15,35 @@ for setuptools_scm/PEP 440 reasons.
 - Added backwards compatibility for Coin Solutions in push_tx since renaming it to CoinSpend.
 - Added an option to set the default constants on the simulator.
 - Added a warning to user to not send money to the pool contract address.
-- Added new CLI command: 'chia plotnft show' to show plot count
 - Added capability to enable use of a backup key in future, to claim funds that were sent to p2_singleton_puzzle_hash, which today are just ignored.
-- We have added many new translations in this release. Thanks to @L3Sota,  @hodokami and @L3Sota for Japanese; @danielrangel6, @memph1x and @dvd101x for Spanish (Mexico); @fsavaget, @semnosao and @ygalvao for Portuguese (Brazilian); @juands1644 for Spanish (Argentina); @darkflare for Portuguese; @wong8888, @RuiZhe, @LM_MA, @ezio20121225, @GRIP123, @11221206 and @nicko1122 for Chinese Traditional; @atomsymbol for Slovak; @SirGeoff and @rolandfarkasCOM for Hungarian; @ordtrogen for Swedish; @HansCZ for Czech; @SupperDog for Chinese Simplified; @baturman and @Ansugo for Turkish; @thebacktrack for Russian; @itservicelukaswinter for German; @saeed508, @Amirr_ezA and @themehran for Persian; @hgthtung for Vietnamese; @f00b4r for Finnish; @IMIMIM for Latvian; @Rothnita and @vanntha85 for Khmer; @Rothnita for Thai; @marcin1990 for Polish; @mydienst for Bosnian; @dvd101x and @darkflare for Spanish; @ATSHOOTER for Albanian; @Munyuk81 for Indonesian; @loppefaaret for Danish; @sharjeelazizn and @nzjake for English; @nzjake for English (New Zealand). We apologize if we missed anyone and welcome corrections.
+- Thanks @aarcro for adding timing metrics to plot check.
+- Thanks @chadwick2143 for adding the ability to set the port to use for the harvester.
+- Added more friendly error reporting for peername errors.
+- We have added many new translations in this release. Thanks to @L3Sota,  @hodokami and @L3Sota for Japanese; @danielrangel6, @memph1x and @dvd101x for Spanish (Mexico); @fsavaget, @semnosao and @ygalvao for Portuguese (Brazilian); @juands1644 for Spanish (Argentina); @darkflare for Portuguese; @wong8888, @RuiZhe, @LM_MA, @ezio20121225, @GRIP123, @11221206 and @nicko1122 for Chinese Traditional; @atomsymbol for Slovak; @SirGeoff and @rolandfarkasCOM for Hungarian; @ordtrogen for Swedish; @HansCZ and @kafkic for Czech; @SupperDog for Chinese Simplified; @baturman and @Ansugo for Turkish; @thebacktrack for Russian; @itservicelukaswinter for German; @saeed508, @Amirr_ezA and @themehran for Persian; @hgthtung for Vietnamese; @f00b4r for Finnish; @IMIMIM for Latvian; @Rothnita and @vanntha85 for Khmer; @Rothnita and @Gammaubl for Thai; @marcin1990 for Polish; @mydienst for Bosnian; @dvd101x and @darkflare for Spanish; @ATSHOOTER for Albanian; @Munyuk81 for Indonesian; @loppefaaret for Danish; @sharjeelazizn and @nzjake for English; @nzjake for English (New Zealand). We apologize if we missed anyone and welcome corrections.
 
 ### Changed
 
-- We dropped the 0x prefix from JSON conversions that will change results in both CLI and RPCs.
 - Updated blspy to 1.0.5.
+- Updated chiapos to 1.0.4.
 - Included all Chialisp files in source distribution.
 - Removed left-over debug logging from test_wallet_pool_store.
 - Made changes to allow us to use the name coin_spend everywhere in our code, without changing it in the API requests, both outgoing and incoming. Enables us to decide at a later date when to cut over completely to the coin_spend name.
-- Thanks @mishan for your change to the GUI to display Percent Successful Points, from previously relying on 'get_pool_state,' to updating the output to show using 'chia plotnft'.
+- Thanks @mishan for your change to 'chia plotnft show' to display Percent Successful Points.
+- Thanks @Playwo for your change to make pool payout instructions case insensitive.
+- GUI sees update when plots or harvesters change.
+- Increased the cache interval to help large farmers.
+- Removed proof limit for mainnet, but not testnet. This helps with pools that have very low difficulties. Thanks to @AlexSSD7 for pointing out the issue.
+- We now also allow hex strings prefixed with 0x which is required because we currently prefix the strings in JSON conversion.
+- Thanks to @opayen for your help in updating our MacOS icon.
 
 ### Fixed
 
-- Thanks to @dfaranha for helping fix a parsing error in Relic inputs for BLS signatures
-- Fixed error type in wallet_blockchain.py
+- Thanks to @dfaranha for helping fix a parsing error in Relic inputs for BLS signatures.
+- Fixed error type in wallet_blockchain.py.
 - Thanks to @seraphik for a fix on our Linux installer that required root privileges.
 - Thanks @felixbrucker for helping fix invalid content-type header issues in pool API requests.
+- The wallet ignores coins sent by accident to the pool contract address and allows self pooling rewards to be claimed in this case.
+- Thanks @mgraczyk for fixing the use of print_exc in farmer.
 
 ## 1.2.2 Chia blockchain 2021-07-13
 
