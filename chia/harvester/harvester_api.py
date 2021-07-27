@@ -189,22 +189,23 @@ class HarvesterAPI:
         awaitables = []
         passed = 0
         total = 0
-        for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
-            try:
-                if try_plot_filename.exists():
-                    # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
-                    # This is being executed at the beginning of the slot
-                    total += 1
-                    if ProofOfSpace.passes_plot_filter(
-                        self.harvester.constants,
-                        try_plot_info.prover.get_id(),
-                        new_challenge.challenge_hash,
-                        new_challenge.sp_hash,
-                    ):
-                        passed += 1
-                        awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
-            except Exception as e:
-                self.harvester.log.error(f"Error plot file {try_plot_filename} may no longer exist {e}")
+        with self.harvester.plot_manager:
+            for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
+                try:
+                    if try_plot_filename.exists():
+                        # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
+                        # This is being executed at the beginning of the slot
+                        total += 1
+                        if ProofOfSpace.passes_plot_filter(
+                            self.harvester.constants,
+                            try_plot_info.prover.get_id(),
+                            new_challenge.challenge_hash,
+                            new_challenge.sp_hash,
+                        ):
+                            passed += 1
+                            awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+                except Exception as e:
+                    self.harvester.log.error(f"Error plot file {try_plot_filename} may no longer exist {e}")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
@@ -250,19 +251,20 @@ class HarvesterAPI:
         be used for pooling.
         """
         plot_filename = Path(request.plot_identifier[64:]).resolve()
-        try:
-            plot_info = self.harvester.plot_manager.plots[plot_filename]
-        except KeyError:
-            self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
-            return None
+        with self.harvester.plot_manager:
+            try:
+                plot_info = self.harvester.plot_manager.plots[plot_filename]
+            except KeyError:
+                self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
+                return None
 
-        # Look up local_sk from plot to save locked memory
-        (
-            pool_public_key_or_puzzle_hash,
-            farmer_public_key,
-            local_master_sk,
-        ) = parse_plot_info(plot_info.prover.get_memo())
-        local_sk = master_sk_to_local_sk(local_master_sk)
+            # Look up local_sk from plot to save locked memory
+            (
+                pool_public_key_or_puzzle_hash,
+                farmer_public_key,
+                local_master_sk,
+            ) = parse_plot_info(plot_info.prover.get_memo())
+            local_sk = master_sk_to_local_sk(local_master_sk)
 
         if isinstance(pool_public_key_or_puzzle_hash, G1Element):
             include_taproot = False

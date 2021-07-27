@@ -118,6 +118,7 @@ class PlotManager:
     last_refresh_time: float
     refresh_parameter: PlotsRefreshParameter
     log: Any
+    _lock: threading.Lock
 
     def __init__(
         self,
@@ -141,6 +142,13 @@ class PlotManager:
         self.last_refresh_time = 0
         self.refresh_parameter = refresh_parameter
         self.log = logging.getLogger(__name__)
+        self._lock = threading.Lock()
+
+    def __enter__(self):
+        self._lock.acquire()
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self._lock.release()
 
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
@@ -163,7 +171,8 @@ class PlotManager:
         return all_files
 
     def plot_count(self):
-        return len(self.plots)
+        with self:
+            return len(self.plots)
 
     def add_plot_directory(self, str_path: str) -> Dict:
         log.debug(f"add_plot_directory {str_path}")
@@ -191,9 +200,10 @@ class PlotManager:
 
     def remove_plot(self, path: Path):
         log.debug(f"remove_plot {str(path)}")
-        path = path.resolve()
-        if path in self.plots:
-            del self.plots[path]
+        with self:
+            path = path.resolve()
+            if path in self.plots:
+                del self.plots[path]
 
         # Remove absolute and relative paths
         if path.exists():
@@ -250,7 +260,7 @@ class PlotManager:
                     prover = DiskProver(str(filename))
 
                     log.debug(f"process_file {str(filename)}")
-                    
+
                     expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                     stat_info = filename.stat()
 
@@ -350,7 +360,7 @@ class PlotManager:
             (total_size2, new_provers2) = y
             return total_size1 + total_size2, {**new_provers1, **new_provers2}
 
-        with ThreadPoolExecutor() as executor:
+        with self, ThreadPoolExecutor() as executor:
             initial_value: Tuple[int, Dict[Path, PlotInfo]] = (0, {})
             total_size, self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
 

@@ -68,31 +68,32 @@ class Harvester:
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
         response_plots: List[Dict] = []
-        for path, plot_info in self.plot_manager.plots.items():
-            prover = plot_info.prover
-            response_plots.append(
-                {
-                    "filename": str(path),
-                    "size": prover.get_size(),
-                    "plot-seed": prover.get_id(),  # Deprecated
-                    "plot_id": prover.get_id(),
-                    "pool_public_key": plot_info.pool_public_key,
-                    "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
-                    "plot_public_key": plot_info.plot_public_key,
-                    "file_size": plot_info.file_size,
-                    "time_modified": plot_info.time_modified,
-                }
+        with self.plot_manager:
+            for path, plot_info in self.plot_manager.plots.items():
+                prover = plot_info.prover
+                response_plots.append(
+                    {
+                        "filename": str(path),
+                        "size": prover.get_size(),
+                        "plot-seed": prover.get_id(),  # Deprecated
+                        "plot_id": prover.get_id(),
+                        "pool_public_key": plot_info.pool_public_key,
+                        "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
+                        "plot_public_key": plot_info.plot_public_key,
+                        "file_size": plot_info.file_size,
+                        "time_modified": plot_info.time_modified,
+                    }
+                )
+            self.log.debug(
+                f"get_plots response: plots: {len(response_plots)}, "
+                f"failed_to_open_filenames: {len(self.plot_manager.failed_to_open_filenames)}, "
+                f"no_key_filenames: {len(self.plot_manager.no_key_filenames)}"
             )
-        self.log.debug(
-            f"get_plots response: plots: {len(response_plots)}, "
-            f"failed_to_open_filenames: {len(self.plot_manager.failed_to_open_filenames)}, "
-            f"no_key_filenames: {len(self.plot_manager.no_key_filenames)}"
-        )
-        return (
-            response_plots,
-            [str(s) for s, _ in self.plot_manager.failed_to_open_filenames.items()],
-            [str(s) for s in self.plot_manager.no_key_filenames],
-        )
+            return (
+                response_plots,
+                [str(s) for s, _ in self.plot_manager.failed_to_open_filenames.items()],
+                [str(s) for s in self.plot_manager.no_key_filenames],
+            )
 
     async def refresh_plots(self):
         locked: bool = self._refresh_lock.locked()
