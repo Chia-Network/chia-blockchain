@@ -214,11 +214,6 @@ class PlotManager:
 
     def remove_plot(self, path: Path):
         log.debug(f"remove_plot {str(path)}")
-        with self:
-            path = path.resolve()
-            if path in self.plots:
-                del self.plots[path]
-
         # Remove absolute and relative paths
         if path.exists():
             path.unlink()
@@ -251,11 +246,20 @@ class PlotManager:
                 time.sleep(1)
 
             total_loaded_plots: int = 0
+            total_removed_plots: int = 0
             total_loaded_size: int = 0
             total_duration: float = 0
             while self.needs_refresh() and self._refreshing_enabled:
-                loaded_plots, loaded_size, processed_files, remaining_files, duration = self.refresh_batch()
+                (
+                    loaded_plots,
+                    loaded_size,
+                    removed_plots,
+                    processed_files,
+                    remaining_files,
+                    duration,
+                ) = self.refresh_batch()
                 total_loaded_plots += loaded_plots
+                total_removed_plots += removed_plots
                 total_loaded_size += loaded_size
                 total_duration += duration
                 if self._refresh_callback is not None:
@@ -268,11 +272,11 @@ class PlotManager:
                 time.sleep(float(batch_sleep) / 1000.0)
 
             self.log.debug(
-                f"_refresh_task: total_loaded_plots {total_loaded_plots} "
+                f"_refresh_task: total_loaded_plots {total_loaded_plots}, total_removed_plots {total_removed_plots}, "
                 f"total_loaded_size {total_loaded_size / (1024 ** 4)} TiB, total_duration {total_duration} seconds"
             )
 
-    def refresh_batch(self) -> Tuple[int, int, int, int, float]:
+    def refresh_batch(self) -> Tuple[int, int, int, int, int, float]:
         start_time: float = time.time()
         plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
         all_filenames: List[Path] = []
@@ -282,6 +286,7 @@ class PlotManager:
         loaded_plots: int = 0
         loaded_size: int = 0
         remaining_plots: int = 0
+        removed_plots: int = 0
         counter_lock = threading.Lock()
 
         log.debug(f"refresh_batch: {len(all_filenames)} files in directories {self.get_plot_directories()}")
@@ -430,17 +435,43 @@ class PlotManager:
             return {**x, **y}
 
         with self, ThreadPoolExecutor() as executor:
+
+            # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
+            def plot_removed(test_path: Path):
+                return not test_path.exists() or test_path.parent not in plot_filenames
+
+            with self.plot_filename_paths_lock:
+                filenames_to_remove: List[str] = []
+                for plot_filename, paths_entry in self.plot_filename_paths.items():
+                    loaded_path, duplicated_paths = paths_entry
+                    if plot_removed(Path(loaded_path) / Path(plot_filename)):
+                        filenames_to_remove.append(plot_filename)
+                        removed_plots += 1
+                        # No need to check the duplicates here since we drop the whole entry
+                        continue
+
+                    paths_to_remove: List[str] = []
+                    for path in duplicated_paths:
+                        if plot_removed(Path(path) / Path(plot_filename)):
+                            paths_to_remove.append(path)
+                            removed_plots += 1
+                    for path in paths_to_remove:
+                        duplicated_paths.remove(path)
+
+                for filename in filenames_to_remove:
+                    del self.plot_filename_paths[filename]
+
             initial_value: Dict[Path, PlotInfo] = {}
             self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
 
         duration: float = time.time() - start_time
 
         self.log.debug(
-            f"refresh_batch: loaded_plots {loaded_plots}, loaded_size {loaded_size / (1024 ** 4)} TiB, processed_plots {processed_plots}, "
-            f"remaining_plots {remaining_plots}, batch_size {self.refresh_parameter.batch_size}, "
-            f"duration: {duration} seconds"
+            f"refresh_batch: loaded_plots {loaded_plots}, loaded_size {loaded_size / (1024 ** 4)} TiB, "
+            f"removed_plots {removed_plots}, processed_plots {processed_plots}, remaining_plots {remaining_plots}, "
+            f"batch_size {self.refresh_parameter.batch_size}, duration: {duration} seconds"
         )
-        return loaded_plots, loaded_size, processed_plots, remaining_plots, duration
+        return loaded_plots, loaded_size, removed_plots, processed_plots, remaining_plots, duration
 
 
 def find_duplicate_plot_IDs(all_filenames=None) -> None:
