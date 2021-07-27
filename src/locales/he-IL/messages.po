@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-20 20:06\n"
+"PO-Revision-Date: 2021-07-27 00:40\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -265,7 +265,7 @@ msgstr "רכוש"
 
 #: src/components/selectKey/SelectKey.tsx:170
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "ניתן לגבות ל-Mnemonic Seed"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
 #: src/components/farm/FarmManageFarmingRewards.tsx:196
@@ -285,7 +285,7 @@ msgstr "בטל ושלם"
 
 #: src/components/plot/PlotsNotFound.tsx:39
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "זהירות, מחיקת הפלוטים שנבחרו יסיר אותם לנצח. אנא בדוק שכל התקני האחסון מחוברים באופן תקין."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
@@ -293,7 +293,7 @@ msgstr "אתגר"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:14
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Challenge Hash"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:111
 msgid "Change"
@@ -307,7 +307,7 @@ msgstr ""
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "צ'אט ב-KeyBase"
 
 #: src/electron/main.tsx:419
 msgid "Chia"
