@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 @streamable
 class PlotsRefreshParameter(Streamable):
     interval_seconds: uint16 = uint16(120)
+    batch_size: uint16 = uint16(30)
+    batch_sleep_milliseconds: uint16 = uint16(10)
 
 
 @dataclass
@@ -212,15 +214,18 @@ class PlotManager:
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def refresh(self) -> int:
-        self.last_refresh_time = time.time()
+    def refresh(self) -> Tuple[int, int, int, int, float]:
+        start_time = time.time()
         log.info(f"Searching directories {self.get_plot_directories()}")
 
         plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
         all_filenames: List[Path] = []
         for paths in plot_filenames.values():
             all_filenames += paths
+        processed_plots: int = 0
         loaded_plots: int = 0
+        loaded_size: int = 0
+        remaining_plots: int = 0
         counter_lock = threading.Lock()
 
         log.debug(f"refresh_batch: {len(all_filenames)} files in directories {self.get_plot_directories()}")
@@ -228,35 +233,44 @@ class PlotManager:
         if self.match_str is not None:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
-        def process_file(filename: Path) -> Tuple[int, Dict]:
+        def process_file(filename: Path) -> Dict:
             new_provers: Dict[Path, PlotInfo] = {}
+            nonlocal processed_plots
             nonlocal loaded_plots
+            nonlocal loaded_size
+            nonlocal remaining_plots
             filename_str = str(filename)
             if self.match_str is not None and self.match_str not in filename_str:
-                return 0, new_provers
+                return new_provers
             if filename.exists():
                 if (
                     filename in self.failed_to_open_filenames
                     and (time.time() - self.failed_to_open_filenames[filename]) > 1200
                 ):
                     # Try once every 20 minutes to open the file
-                    return 0, new_provers
+                    return new_provers
                 if filename in self.plots:
                     try:
                         stat_info = filename.stat()
                     except Exception as e:
                         log.error(f"Failed to open file {filename}. {e}")
-                        return 0, new_provers
+                        return new_provers
                     if stat_info.st_mtime == self.plots[filename].time_modified:
                         new_provers[filename] = self.plots[filename]
-                        return stat_info.st_size, new_provers
+                        return new_provers
                 entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(filename.name)
                 if entry is not None:
                     loaded_parent, duplicates = entry
                     if str(filename.parent) in duplicates:
                         log.debug(f"Skip duplicated plot {str(filename)}")
-                        return 0, new_provers
+                        return new_provers
                 try:
+                    with counter_lock:
+                        if processed_plots >= self.refresh_parameter.batch_size:
+                            remaining_plots += 1
+                            return new_provers
+                        processed_plots += 1
+
                     prover = DiskProver(str(filename))
 
                     log.debug(f"process_file {str(filename)}")
@@ -272,7 +286,7 @@ class PlotManager:
                             f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
                             f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                         )
-                        return 0, new_provers
+                        return new_provers
 
                     (
                         pool_public_key_or_puzzle_hash,
@@ -285,7 +299,7 @@ class PlotManager:
                         log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")
                         self.no_key_filenames.add(filename)
                         if not self.open_no_key_filenames:
-                            return 0, new_provers
+                            return new_provers
 
                     if isinstance(pool_public_key_or_puzzle_hash, G1Element):
                         pool_public_key = pool_public_key_or_puzzle_hash
@@ -303,7 +317,7 @@ class PlotManager:
                         log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
                         self.no_key_filenames.add(filename)
                         if not self.open_no_key_filenames:
-                            return 0, new_provers
+                            return new_provers
 
                     stat_info = filename.stat()
                     local_sk = master_sk_to_local_sk(local_master_sk)
@@ -322,7 +336,7 @@ class PlotManager:
                                 f"Have multiple copies of the plot {filename} in "
                                 f"{self.plot_filename_paths[filename.name][1]}."
                             )
-                            return 0, new_provers
+                            return new_provers
 
                     new_provers[filename] = PlotInfo(
                         prover,
@@ -335,12 +349,13 @@ class PlotManager:
 
                     with counter_lock:
                         loaded_plots += 1
+                        loaded_size += stat_info.st_size
 
                 except Exception as e:
                     tb = traceback.format_exc()
                     log.error(f"Failed to open file {filename}. {e} {tb}")
                     self.failed_to_open_filenames[filename] = int(time.time())
-                    return 0, new_provers
+                    return new_provers
                 log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
                 if self.show_memo:
@@ -352,23 +367,23 @@ class PlotManager:
                     plot_memo_str: str = plot_memo.hex()
                     log.info(f"Memo: {plot_memo_str}")
 
-                return stat_info.st_size, new_provers
-            return 0, new_provers
+                return new_provers
+            return new_provers
 
-        def reduce_function(x: Tuple[int, Dict], y: Tuple[int, Dict]) -> Tuple[int, Dict]:
-            (total_size1, new_provers1) = x
-            (total_size2, new_provers2) = y
-            return total_size1 + total_size2, {**new_provers1, **new_provers2}
+        def reduce_function(x: Dict, y: Dict) -> Dict:
+            return {**x, **y}
 
         with self, ThreadPoolExecutor() as executor:
-            initial_value: Tuple[int, Dict[Path, PlotInfo]] = (0, {})
-            total_size, self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
+            initial_value: Dict[Path, PlotInfo] = {}
+            self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
+
+        duration: float = time.time() - start_time
 
         log.info(
-            f"Loaded a total of {self.plot_count()} plots of size {total_size / (1024 ** 4)} TiB, in"
-            f" {time.time() - self.last_refresh_time} seconds"
+            f"Loaded a total of {self.plot_count()} plots of size {loaded_size / (1024 ** 4)} TiB, in"
+            f" {time.time() - start_time} seconds"
         )
-        return loaded_plots
+        return loaded_plots, loaded_size, processed_plots, remaining_plots, duration
 
 
 def find_duplicate_plot_IDs(all_filenames=None) -> None:

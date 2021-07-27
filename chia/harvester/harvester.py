@@ -1,6 +1,7 @@
 import asyncio
 import concurrent
 import logging
+import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -100,10 +101,32 @@ class Harvester:
         if not locked:
             async with self._refresh_lock:
                 # Avoid double refreshing of plots
-                loaded_plots = self.plot_manager.refresh()
-        self.log.info(f"{loaded_plots} new plots loaded")
-        if loaded_plots > 0:
-            self._state_changed("plots")
+                total_loaded_plots: int = 0
+                total_loaded_size: int = 0
+                total_duration: float = 0
+                while True:
+                    loaded_plots, loaded_size, processed_files, remaining_files, duration = self.plot_manager.refresh()
+                    total_loaded_plots += loaded_plots
+                    total_loaded_size += loaded_size
+                    total_duration += duration
+                    self.log.info(
+                        f"refresh_plots: loaded_plots {loaded_plots}, loaded_size {loaded_size / (1024 ** 4)} TiB, "
+                        f"processed_files {processed_files}, remaining_files {remaining_files}, duration {duration}, "
+                        f"batch_size {self.plot_manager.refresh_parameter.batch_size}"
+                    )
+                    if loaded_plots > 0:
+                        self._state_changed("plots")
+                    if remaining_files == 0:
+                        self.log.info(
+                            f"refresh_plots: total_loaded_plots {total_loaded_plots}, "
+                            f"total_loaded_size {total_loaded_size / (1024 ** 4)} TiB, "
+                            f"total_duration {total_duration} seconds"
+                        )
+                        self.plot_manager.last_refresh_time = time.time()
+                        break
+                    batch_sleep = self.plot_manager.refresh_parameter.batch_sleep_milliseconds
+                    self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
+                    time.sleep(float(batch_sleep) / 1000.0)
 
     def delete_plot(self, str_path: str):
         self.plot_manager.remove_plot(Path(str_path))
