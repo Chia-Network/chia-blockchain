@@ -183,12 +183,13 @@ class TestRpc:
 
             assert len(await client_2.get_plot_directories()) == 3
 
+            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots + 2
 
             await client_2.delete_plot(str(plot_dir / filename))
             await client_2.delete_plot(str(plot_dir / filename_2))
-            await client_2.refresh_plots()
+            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
             res_3 = await client_2.get_plots()
 
             assert len(res_3["plots"]) == num_plots + 1

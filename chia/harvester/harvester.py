@@ -1,7 +1,6 @@
 import asyncio
 import concurrent
 import logging
-import time
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -22,6 +21,7 @@ class Harvester:
     cached_challenges: List
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
+    event_loop: asyncio.events.AbstractEventLoop
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
@@ -35,7 +35,9 @@ class Harvester:
         if "plots_refresh_parameter" in config:
             refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
 
-        self.plot_manager = PlotManager(root_path, refresh_parameter=refresh_parameter)
+        self.plot_manager = PlotManager(
+            root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
+        )
         self._is_shutdown = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self.state_changed_callback = None
@@ -47,10 +49,12 @@ class Harvester:
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
+        self.event_loop = asyncio.get_event_loop()
 
     def _close(self):
         self._is_shutdown = True
         self.executor.shutdown(wait=True)
+        self.plot_manager.stop_refreshing()
 
     async def _await_closed(self):
         pass
@@ -61,6 +65,14 @@ class Harvester:
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
+
+    def _plot_refresh_callback(self, loaded_plots: int, processed_files: int, remaining_files: int):
+        self.log.info(
+            f"_plot_refresh_callback: loaded_plots {loaded_plots}, processed_files {processed_files}, "
+            f"remaining_files {remaining_files}"
+        )
+        if loaded_plots > 0:
+            self.event_loop.call_soon_threadsafe(self._state_changed, "plots")
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
@@ -96,38 +108,6 @@ class Harvester:
                 [str(s) for s in self.plot_manager.no_key_filenames],
             )
 
-    async def refresh_plots(self):
-        locked: bool = self._refresh_lock.locked()
-        if not locked:
-            async with self._refresh_lock:
-                # Avoid double refreshing of plots
-                total_loaded_plots: int = 0
-                total_loaded_size: int = 0
-                total_duration: float = 0
-                while True:
-                    loaded_plots, loaded_size, processed_files, remaining_files, duration = self.plot_manager.refresh()
-                    total_loaded_plots += loaded_plots
-                    total_loaded_size += loaded_size
-                    total_duration += duration
-                    self.log.info(
-                        f"refresh_plots: loaded_plots {loaded_plots}, loaded_size {loaded_size / (1024 ** 4)} TiB, "
-                        f"processed_files {processed_files}, remaining_files {remaining_files}, duration {duration}, "
-                        f"batch_size {self.plot_manager.refresh_parameter.batch_size}"
-                    )
-                    if loaded_plots > 0:
-                        self._state_changed("plots")
-                    if remaining_files == 0:
-                        self.log.info(
-                            f"refresh_plots: total_loaded_plots {total_loaded_plots}, "
-                            f"total_loaded_size {total_loaded_size / (1024 ** 4)} TiB, "
-                            f"total_duration {total_duration} seconds"
-                        )
-                        self.plot_manager.last_refresh_time = time.time()
-                        break
-                    batch_sleep = self.plot_manager.refresh_parameter.batch_sleep_milliseconds
-                    self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
-                    time.sleep(float(batch_sleep) / 1000.0)
-
     def delete_plot(self, str_path: str):
         self.plot_manager.remove_plot(Path(str_path))
         self._state_changed("plots")
@@ -135,7 +115,6 @@ class Harvester:
 
     async def add_plot_directory(self, str_path: str) -> bool:
         self.plot_manager.add_plot_directory(str_path)
-        await self.refresh_plots()
         return True
 
     async def get_plot_directories(self) -> List[str]:

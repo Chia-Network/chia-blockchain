@@ -46,7 +46,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.plot_tools import PlotInfo, PlotManager, parse_plot_info
+from chia.plotting.plot_tools import PlotInfo, PlotManager, PlotsRefreshParameter, parse_plot_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -246,14 +246,30 @@ class BlockTools:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
 
-        plot_manager: PlotManager = PlotManager(self.root_path)
+        refresh_done = False
+        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(uint16(120), uint16(2), uint16(10))
+
+        def test_callback(loaded_plots: int, processed_files: int, remaining_files: int):
+            if remaining_files == 0:
+                nonlocal refresh_done
+                refresh_done = True
+            else:
+                assert 0 < loaded_plots <= refresh_parameter.batch_size
+                assert loaded_plots == processed_files
+                assert remaining_files > 0
+
+        plot_manager: PlotManager = PlotManager(
+            self.root_path, refresh_parameter=refresh_parameter, refresh_callback=test_callback
+        )
         plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
-        loaded_plots, loaded_size, processed_plots, remaining_plots, duration = plot_manager.refresh()
-        assert loaded_plots > 0
-        assert loaded_size > 0
-        assert loaded_plots == processed_plots
-        assert remaining_plots == 0
-        assert duration > 0
+        plot_manager.start_refreshing()
+
+        retry = 5
+        while not refresh_done and retry > 0:
+            time.sleep(1)
+            retry -= 1
+        assert refresh_done
+        plot_manager.stop_refreshing()
         self.plots: Dict[Path, PlotInfo] = plot_manager.plots
         # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
         self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[

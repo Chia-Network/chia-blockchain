@@ -41,11 +41,7 @@ class HarvesterAPI:
             harvester_handshake.farmer_public_keys, harvester_handshake.pool_public_keys
         )
 
-        await self.harvester.refresh_plots()
-
-        if self.harvester.plot_manager.plot_count() == 0:
-            self.harvester.log.warning("Not farming any plots on this harvester. Check your configuration.")
-            return None
+        self.harvester.plot_manager.start_refreshing()
 
     @peer_required
     @api_request
@@ -70,10 +66,6 @@ class HarvesterAPI:
 
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
-
-        # Refresh plots to see if there are any new ones
-        if self.harvester.plot_manager.needs_refresh():
-            await self.harvester.refresh_plots()
 
         loop = asyncio.get_running_loop()
 

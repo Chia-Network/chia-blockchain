@@ -1,25 +1,41 @@
 import logging
 from collections import Counter
 from pathlib import Path
-from time import time
+from time import time, sleep
 from typing import List
 
 from blspy import G1Element
 from chiapos import Verifier
 
-from chia.plotting.plot_tools import find_duplicate_plot_IDs, PlotManager, parse_plot_info
+from chia.plotting.plot_tools import (
+    find_duplicate_plot_IDs,
+    PlotManager,
+    PlotsRefreshParameter,
+    parse_plot_info,
+)
 from chia.util.config import load_config
 from chia.util.hash import std_hash
+from chia.util.ints import uint16
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
 
+def plot_refresh_callback(loaded_plots: int, _: int, remaining_files: int):
+    log.info(f"loaded {loaded_plots} plots, {remaining_files} remaining")
+
+
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
+    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(uint16(100), uint16(100), uint16(1))
     plot_manager: PlotManager = PlotManager(
-        root_path, match_str=grep_string, show_memo=debug_show_memo, open_no_key_filenames=True
+        root_path,
+        match_str=grep_string,
+        show_memo=debug_show_memo,
+        open_no_key_filenames=True,
+        refresh_parameter=plot_refresh_parameter,
+        refresh_callback=plot_refresh_callback,
     )
     if num is not None:
         if num == 0:
@@ -65,7 +81,13 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()],
         [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]],
     )
-    plot_manager.refresh()
+    plot_manager.start_refreshing()
+
+    while plot_manager.needs_refresh():
+        sleep(1)
+
+    plot_manager.stop_refreshing()
+
     if plot_manager.plot_count() > 0:
         log.info("")
         log.info("")

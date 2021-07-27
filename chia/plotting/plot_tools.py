@@ -5,7 +5,7 @@ import traceback
 from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element, PrivateKey
@@ -121,6 +121,9 @@ class PlotManager:
     refresh_parameter: PlotsRefreshParameter
     log: Any
     _lock: threading.Lock
+    _refresh_thread: Optional[threading.Thread]
+    _refreshing_enabled: bool
+    _refresh_callback: Optional[Callable]
 
     def __init__(
         self,
@@ -129,6 +132,7 @@ class PlotManager:
         show_memo: bool = False,
         open_no_key_filenames: bool = False,
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
+        refresh_callback: Optional[Callable] = None,
     ):
         self.root_path = root_path
         self.plots = {}
@@ -145,12 +149,18 @@ class PlotManager:
         self.refresh_parameter = refresh_parameter
         self.log = logging.getLogger(__name__)
         self._lock = threading.Lock()
+        self._refresh_thread = None
+        self._refreshing_enabled = False
+        self._refresh_callback = refresh_callback
 
     def __enter__(self):
         self._lock.acquire()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
+
+    def set_refresh_callback(self, callback: Callable):
+        self._refresh_callback = callback
 
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
@@ -182,6 +192,7 @@ class PlotManager:
         if str(Path(str_path).resolve()) not in self.get_plot_directories(config):
             config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(self.root_path, "config.yaml", config)
+        self.trigger_refresh()
         return config
 
     def remove_plot_directory(self, str_path: str) -> None:
@@ -199,6 +210,7 @@ class PlotManager:
 
         config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
         save_config(self.root_path, "config.yaml", config)
+        self.trigger_refresh()
 
     def remove_plot(self, path: Path):
         log.debug(f"remove_plot {str(path)}")
@@ -211,13 +223,57 @@ class PlotManager:
         if path.exists():
             path.unlink()
 
+        self.trigger_refresh()
+
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def refresh(self) -> Tuple[int, int, int, int, float]:
-        start_time = time.time()
-        log.info(f"Searching directories {self.get_plot_directories()}")
+    def start_refreshing(self):
+        self._refreshing_enabled = True
+        if self._refresh_thread is None or not self._refresh_thread.is_alive():
+            self._refresh_thread = threading.Thread(target=self._refresh_task)
+            self._refresh_thread.start()
 
+    def stop_refreshing(self):
+        self._refreshing_enabled = False
+        if self._refresh_thread is not None and self._refresh_thread.is_alive():
+            self._refresh_thread.join()
+            self._refresh_thread = None
+
+    def trigger_refresh(self):
+        log.debug("trigger_refresh")
+        self.last_refresh_time = 0
+
+    def _refresh_task(self):
+        while self._refreshing_enabled:
+
+            while not self.needs_refresh() and self._refreshing_enabled:
+                time.sleep(1)
+
+            total_loaded_plots: int = 0
+            total_loaded_size: int = 0
+            total_duration: float = 0
+            while self.needs_refresh() and self._refreshing_enabled:
+                loaded_plots, loaded_size, processed_files, remaining_files, duration = self.refresh_batch()
+                total_loaded_plots += loaded_plots
+                total_loaded_size += loaded_size
+                total_duration += duration
+                if self._refresh_callback is not None:
+                    self._refresh_callback(loaded_plots, processed_files, remaining_files)
+                if remaining_files == 0:
+                    self.last_refresh_time = time.time()
+                    break
+                batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
+                self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
+                time.sleep(float(batch_sleep) / 1000.0)
+
+            self.log.debug(
+                f"_refresh_task: total_loaded_plots {total_loaded_plots} "
+                f"total_loaded_size {total_loaded_size / (1024 ** 4)} TiB, total_duration {total_duration} seconds"
+            )
+
+    def refresh_batch(self) -> Tuple[int, int, int, int, float]:
+        start_time: float = time.time()
         plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
         all_filenames: List[Path] = []
         for paths in plot_filenames.values():
@@ -379,9 +435,10 @@ class PlotManager:
 
         duration: float = time.time() - start_time
 
-        log.info(
-            f"Loaded a total of {self.plot_count()} plots of size {loaded_size / (1024 ** 4)} TiB, in"
-            f" {time.time() - start_time} seconds"
+        self.log.debug(
+            f"refresh_batch: loaded_plots {loaded_plots}, loaded_size {loaded_size / (1024 ** 4)} TiB, processed_plots {processed_plots}, "
+            f"remaining_plots {remaining_plots}, batch_size {self.refresh_parameter.batch_size}, "
+            f"duration: {duration} seconds"
         )
         return loaded_plots, loaded_size, processed_plots, remaining_plots, duration
 
