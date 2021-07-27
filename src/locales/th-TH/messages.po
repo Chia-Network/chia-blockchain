@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-27 06:39\n"
+"PO-Revision-Date: 2021-07-27 12:39\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1008,7 +1008,7 @@ msgstr "ช่วงเวลา"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
-msgstr "ที่อยู่ไม่ถูกต้อง"
+msgstr "สถานะไม่ถูกต้อง"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
