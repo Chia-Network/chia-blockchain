@@ -273,7 +273,7 @@ class WSChiaConnection:
             request_start_t = time.time()
             result = await self.create_request(msg, timeout)
             self.log.debug(
-                f"Time for request {attr_name}: {self.get_peer_info()} = {time.time() - request_start_t}, "
+                f"Time for request {attr_name}: {self.get_peer_info_or_host()} = {time.time() - request_start_t}, "
                 f"None? {result is None}"
             )
             if result is not None:
@@ -467,4 +467,13 @@ class WSChiaConnection:
             return None
         connection_host = result[0]
         port = self.peer_server_port if self.peer_server_port is not None else self.peer_port
+        return PeerInfo(connection_host, port)
+
+    def get_peer_info_or_host(self) -> PeerInfo:
+        result = self.get_peer_info()
+        if result is not None:
+            return result
+
+        port = self.peer_server_port if self.peer_server_port is not None else self.peer_port
+        connection_host = self.peer_host
         return PeerInfo(connection_host, port)

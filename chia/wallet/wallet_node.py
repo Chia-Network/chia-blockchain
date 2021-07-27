@@ -424,7 +424,7 @@ class WalletNode:
                     self.wallet_state_manager.state_changed("sync_changed")
                     await self.wallet_state_manager.new_peak()
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
-                    self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
+                    self.log.info(f"Invalid block from peer: {peer.get_peer_info_or_host()} {error}")
                     await peer.close()
                     return
                 else:
@@ -532,7 +532,9 @@ class WalletNode:
                 except Exception as e:
                     await peer.close()
                     exc = traceback.format_exc()
-                    self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
+                    self.log.error(
+                        f"Error while trying to fetch from peer: {peer.get_peer_info_or_host()} : {e} : {exc}"
+                    )
             if not added:
                 raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
 

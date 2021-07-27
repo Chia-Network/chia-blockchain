@@ -313,10 +313,13 @@ class FullNode:
                 fetch_tx: bool = unfinished_block is None or curr_height != target_height
                 curr = await peer.request_block(full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx))
                 if curr is None:
-                    raise ValueError(f"Failed to fetch block {curr_height} from {peer.get_peer_info()}, timed out")
+                    raise ValueError(
+                        f"Failed to fetch block {curr_height} from {peer.get_peer_info_or_host()}, timed out"
+                    )
                 if curr is None or not isinstance(curr, full_node_protocol.RespondBlock):
                     raise ValueError(
-                        f"Failed to fetch block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
+                        f"Failed to fetch block {curr_height} from {peer.get_peer_info_or_host()},"
+                        "wrong type {type(curr)}"
                     )
                 responses.append(curr)
                 if self.blockchain.contains_block(curr.block.prev_header_hash) or curr_height == 0:
@@ -542,7 +545,7 @@ class FullNode:
                 await self.send_peak_to_timelords()
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
-        self.log.info(f"peer disconnected {connection.get_peer_info()}")
+        self.log.info(f"peer disconnected {connection.get_peer_info_or_host()}")
         self._state_changed("close_connection")
         self._state_changed("sync_mode")
         if self.sync_store is not None:
@@ -847,7 +850,7 @@ class FullNode:
                 advanced_peak = True
             elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
-                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
+                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info_or_host()} ")
                 return False, advanced_peak, fork_height
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
