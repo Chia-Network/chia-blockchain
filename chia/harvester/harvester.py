@@ -3,27 +3,17 @@ import concurrent
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple
-
-from blspy import G1Element
+from typing import Callable, Dict, List, Optional, Tuple
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
-from chia.plotting.plot_tools import PlotInfo
-from chia.plotting.plot_tools import add_plot_directory as add_plot_directory_pt
-from chia.plotting.plot_tools import get_plot_directories as get_plot_directories_pt
-from chia.plotting.plot_tools import load_plots
-from chia.plotting.plot_tools import remove_plot_directory as remove_plot_directory_pt
+from chia.plotting.plot_tools import PlotsRefreshParameter, PlotManager
 
 log = logging.getLogger(__name__)
 
 
 class Harvester:
-    provers: Dict[Path, PlotInfo]
-    failed_to_open_filenames: Dict[Path, int]
-    no_key_filenames: Set[Path]
-    farmer_public_keys: List[G1Element]
-    pool_public_keys: List[G1Element]
+    plot_manager: PlotManager
     root_path: Path
     _is_shutdown: bool
     executor: ThreadPoolExecutor
@@ -33,27 +23,25 @@ class Harvester:
     _refresh_lock: asyncio.Lock
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
-        self.root_path = root_path
+        self.log = log
+        # TODO, remove checks below later after some versions / time
+        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
+        if "plot_loading_frequency_seconds" in config:
+            self.log.warning(
+                "plot_loading_frequency_seconds is deprecated but found in config. Replace it with the "
+                "new section `plots_refresh_parameter`. See `initial-config.yaml`."
+            )
+        if "plots_refresh_parameter" in config:
+            refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
 
-        # From filename to prover
-        self.provers = {}
-        self.failed_to_open_filenames = {}
-        self.no_key_filenames = set()
-
+        self.plot_manager = PlotManager(root_path, refresh_parameter=refresh_parameter)
         self._is_shutdown = False
-        self.farmer_public_keys = []
-        self.pool_public_keys = []
-        self.match_str = None
-        self.show_memo: bool = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
         self.cached_challenges = []
-        self.log = log
         self.state_changed_callback: Optional[Callable] = None
-        self.last_load_time: float = 0
-        self.plot_load_frequency = config.get("plot_loading_frequency_seconds", 120)
         self.parallel_read: bool = config.get("parallel_read", True)
 
     async def _start(self):
@@ -78,9 +66,9 @@ class Harvester:
         self._state_changed("close_connection")
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
-        self.log.debug(f"get_plots prover items: {len(self.provers)}")
+        self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
         response_plots: List[Dict] = []
-        for path, plot_info in self.provers.items():
+        for path, plot_info in self.plot_manager.plots.items():
             prover = plot_info.prover
             response_plots.append(
                 {
@@ -97,13 +85,13 @@ class Harvester:
             )
         self.log.debug(
             f"get_plots response: plots: {len(response_plots)}, "
-            f"failed_to_open_filenames: {len(self.failed_to_open_filenames)}, "
-            f"no_key_filenames: {len(self.no_key_filenames)}"
+            f"failed_to_open_filenames: {len(self.plot_manager.failed_to_open_filenames)}, "
+            f"no_key_filenames: {len(self.plot_manager.no_key_filenames)}"
         )
         return (
             response_plots,
-            [str(s) for s, _ in self.failed_to_open_filenames.items()],
-            [str(s) for s in self.no_key_filenames],
+            [str(s) for s, _ in self.plot_manager.failed_to_open_filenames.items()],
+            [str(s) for s in self.plot_manager.no_key_filenames],
         )
 
     async def refresh_plots(self):
@@ -112,40 +100,25 @@ class Harvester:
         if not locked:
             async with self._refresh_lock:
                 # Avoid double refreshing of plots
-                (changed, self.provers, self.failed_to_open_filenames, self.no_key_filenames,) = load_plots(
-                    self.provers,
-                    self.failed_to_open_filenames,
-                    self.farmer_public_keys,
-                    self.pool_public_keys,
-                    self.match_str,
-                    self.show_memo,
-                    self.root_path,
-                )
+                changed = self.plot_manager.refresh()
         if changed:
             self._state_changed("plots")
 
     def delete_plot(self, str_path: str):
-        path = Path(str_path).resolve()
-        if path in self.provers:
-            del self.provers[path]
-
-        # Remove absolute and relative paths
-        if path.exists():
-            path.unlink()
-
+        self.plot_manager.remove_plot(Path(str_path))
         self._state_changed("plots")
         return True
 
     async def add_plot_directory(self, str_path: str) -> bool:
-        add_plot_directory_pt(str_path, self.root_path)
+        self.plot_manager.add_plot_directory(str_path)
         await self.refresh_plots()
         return True
 
     async def get_plot_directories(self) -> List[str]:
-        return get_plot_directories_pt(self.root_path)
+        return self.plot_manager.get_plot_directories()
 
     async def remove_plot_directory(self, str_path: str) -> bool:
-        remove_plot_directory_pt(str_path, self.root_path)
+        self.plot_manager.remove_plot_directory(str_path)
         return True
 
     def set_server(self, server):

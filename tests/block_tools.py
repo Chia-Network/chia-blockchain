@@ -46,7 +46,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
+from chia.plotting.plot_tools import PlotInfo, PlotManager, parse_plot_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -246,8 +246,10 @@ class BlockTools:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
 
-        _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
-        self.plots: Dict[Path, PlotInfo] = loaded_plots
+        plot_manager: PlotManager = PlotManager(self.root_path)
+        plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+        assert plot_manager.refresh()
+        self.plots: Dict[Path, PlotInfo] = plot_manager.plots
         # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
         self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
             "plot_directories"

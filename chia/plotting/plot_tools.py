@@ -5,7 +5,7 @@ import traceback
 from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element, PrivateKey
@@ -15,9 +15,17 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expecte
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, save_config
+from chia.util.ints import uint16
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+@streamable
+class PlotsRefreshParameter(Streamable):
+    interval_seconds: uint16 = uint16(120)
 
 
 @dataclass
@@ -49,16 +57,6 @@ def _get_filenames(directory: Path) -> List[Path]:
                 log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
-    return all_files
-
-
-def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
-    # Returns a map from directory to a list of all plots in the directory
-    directory_names: List[str] = config["plot_directories"]
-    all_files: Dict[Path, List[Path]] = {}
-    for directory_name in directory_names:
-        directory = Path(directory_name).resolve()
-        all_files[directory] = _get_filenames(directory)
     return all_files
 
 
@@ -106,188 +104,249 @@ def stream_plot_info_ph(
     return data
 
 
-def add_plot_directory(str_path: str, root_path: Path) -> Dict:
-    config = load_config(root_path, "config.yaml")
-    if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
-        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
-    save_config(root_path, "config.yaml", config)
-    return config
+class PlotManager:
+    plots: Dict[Path, PlotInfo]
+    failed_to_open_filenames: Dict[Path, int]
+    no_key_filenames: Set[Path]
+    farmer_public_keys: List[G1Element]
+    pool_public_keys: List[G1Element]
+    match_str: Optional[str]
+    show_memo: bool
+    open_no_key_filenames: bool
+    last_refresh_time: float
+    refresh_parameter: PlotsRefreshParameter
+    log: Any
 
+    def __init__(
+        self,
+        root_path: Path,
+        match_str: Optional[str] = None,
+        show_memo: bool = False,
+        open_no_key_filenames: bool = False,
+        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
+    ):
+        self.root_path = root_path
+        self.plots = {}
+        self.failed_to_open_filenames = {}
+        self.no_key_filenames = set()
+        self.farmer_public_keys = []
+        self.pool_public_keys = []
+        self.match_str = match_str
+        self.show_memo = show_memo
+        self.open_no_key_filenames = open_no_key_filenames
+        self.last_refresh_time = 0
+        self.refresh_parameter = refresh_parameter
+        self.log = logging.getLogger(__name__)
 
-def get_plot_directories(root_path: Path) -> List[str]:
-    config = load_config(root_path, "config.yaml")
-    return [str(Path(str_path).resolve()) for str_path in config["harvester"]["plot_directories"]]
+    def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
+        self.farmer_public_keys = farmer_public_keys
+        self.pool_public_keys = pool_public_keys
 
+    def public_keys_available(self):
+        return len(self.farmer_public_keys) and len(self.pool_public_keys)
 
-def remove_plot_directory(str_path: str, root_path: Path) -> None:
-    config = load_config(root_path, "config.yaml")
-    str_paths: List[str] = config["harvester"]["plot_directories"]
-    # If path str matches exactly, remove
-    if str_path in str_paths:
-        str_paths.remove(str_path)
+    def get_plot_directories(self, config: Dict = None) -> List[str]:
+        if config is None:
+            config = load_config(self.root_path, "config.yaml")
+        return config["harvester"]["plot_directories"]
 
-    # If path matcehs full path, remove
-    new_paths = [Path(sp).resolve() for sp in str_paths]
-    if Path(str_path).resolve() in new_paths:
-        new_paths.remove(Path(str_path).resolve())
+    def get_plot_filenames(self) -> Dict[Path, List[Path]]:
+        # Returns a map from directory to a list of all plots in the directory
+        all_files: Dict[Path, List[Path]] = {}
+        for directory_name in self.get_plot_directories():
+            directory = Path(directory_name).resolve()
+            all_files[directory] = _get_filenames(directory)
+        return all_files
 
-    config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
-    save_config(root_path, "config.yaml", config)
+    def plot_count(self):
+        return len(self.plots)
 
+    def add_plot_directory(self, str_path: str) -> Dict:
+        log.debug(f"add_plot_directory {str_path}")
+        config = load_config(self.root_path, "config.yaml")
+        if str(Path(str_path).resolve()) not in self.get_plot_directories(config):
+            config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+        save_config(self.root_path, "config.yaml", config)
+        return config
 
-def load_plots(
-    provers: Dict[Path, PlotInfo],
-    failed_to_open_filenames: Dict[Path, int],
-    farmer_public_keys: Optional[List[G1Element]],
-    pool_public_keys: Optional[List[G1Element]],
-    match_str: Optional[str],
-    show_memo: bool,
-    root_path: Path,
-    open_no_key_filenames=False,
-) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
-    start_time = time.time()
-    config_file = load_config(root_path, "config.yaml", "harvester")
-    changed = False
-    no_key_filenames: Set[Path] = set()
-    log.info(f'Searching directories {config_file["plot_directories"]}')
+    def remove_plot_directory(self, str_path: str) -> None:
+        log.debug(f"remove_plot_directory {str_path}")
+        config = load_config(self.root_path, "config.yaml")
+        str_paths: List[str] = self.get_plot_directories(config)
+        # If path str matches exactly, remove
+        if str_path in str_paths:
+            str_paths.remove(str_path)
 
-    plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
-    all_filenames: List[Path] = []
-    for paths in plot_filenames.values():
-        all_filenames += paths
-    plot_ids: Set[bytes32] = set()
-    plot_ids_lock = threading.Lock()
+        # If path matcehs full path, remove
+        new_paths = [Path(sp).resolve() for sp in str_paths]
+        if Path(str_path).resolve() in new_paths:
+            new_paths.remove(Path(str_path).resolve())
 
-    if match_str is not None:
-        log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
+        config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
+        save_config(self.root_path, "config.yaml", config)
 
-    def process_file(filename: Path) -> Tuple[int, Dict]:
-        new_provers: Dict[Path, PlotInfo] = {}
-        nonlocal changed
-        filename_str = str(filename)
-        if match_str is not None and match_str not in filename_str:
-            return 0, new_provers
-        if filename.exists():
-            if filename in failed_to_open_filenames and (time.time() - failed_to_open_filenames[filename]) < 1200:
-                # Try once every 20 minutes to open the file
+    def remove_plot(self, path: Path):
+        log.debug(f"remove_plot {str(path)}")
+        path = path.resolve()
+        if path in self.plots:
+            del self.plots[path]
+
+        # Remove absolute and relative paths
+        if path.exists():
+            path.unlink()
+
+    def needs_refresh(self) -> bool:
+        return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
+
+    def refresh(self) -> bool:
+        self.last_refresh_time = time.time()
+        changed = False
+        log.info(f"Searching directories {self.get_plot_directories()}")
+
+        plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
+        all_filenames: List[Path] = []
+        for paths in plot_filenames.values():
+            all_filenames += paths
+        plot_ids: Set[bytes32] = set()
+        plot_ids_lock = threading.Lock()
+
+        log.debug(f"refresh_batch: {len(all_filenames)} files in directories {self.get_plot_directories()}")
+
+        if self.match_str is not None:
+            log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
+
+        def process_file(filename: Path) -> Tuple[int, Dict]:
+            new_provers: Dict[Path, PlotInfo] = {}
+            nonlocal changed
+            filename_str = str(filename)
+            if self.match_str is not None and self.match_str not in filename_str:
                 return 0, new_provers
-            if filename in provers:
-                try:
-                    stat_info = filename.stat()
-                except Exception as e:
-                    log.error(f"Failed to open file {filename}. {e}")
+            if filename.exists():
+                if (
+                    filename in self.failed_to_open_filenames
+                    and (time.time() - self.failed_to_open_filenames[filename]) < 1200
+                ):
+                    # Try once every 20 minutes to open the file
                     return 0, new_provers
-                if stat_info.st_mtime == provers[filename].time_modified:
+                if filename in self.plots:
+                    try:
+                        stat_info = filename.stat()
+                    except Exception as e:
+                        log.error(f"Failed to open file {filename}. {e}")
+                        return 0, new_provers
+                    if stat_info.st_mtime == self.plots[filename].time_modified:
+                        with plot_ids_lock:
+                            if self.plots[filename].prover.get_id() in plot_ids:
+                                log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                                return 0, new_provers
+                            plot_ids.add(self.plots[filename].prover.get_id())
+                        new_provers[filename] = self.plots[filename]
+                        return stat_info.st_size, new_provers
+                try:
+                    prover = DiskProver(str(filename))
+
+                    log.debug(f"process_file {str(filename)}")
+                    
+                    expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    stat_info = filename.stat()
+
+                    # TODO: consider checking if the file was just written to (which would mean that the file is still
+                    # being copied). A segfault might happen in this edge case.
+
+                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                        log.warning(
+                            f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
+                            f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                        )
+                        return 0, new_provers
+
+                    (
+                        pool_public_key_or_puzzle_hash,
+                        farmer_public_key,
+                        local_master_sk,
+                    ) = parse_plot_info(prover.get_memo())
+
+                    # Only use plots that correct keys associated with them
+                    if self.farmer_public_keys is not None and farmer_public_key not in self.farmer_public_keys:
+                        log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")
+                        self.no_key_filenames.add(filename)
+                        if not self.open_no_key_filenames:
+                            return 0, new_provers
+
+                    if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+                        pool_public_key = pool_public_key_or_puzzle_hash
+                        pool_contract_puzzle_hash = None
+                    else:
+                        assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+                        pool_public_key = None
+                        pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
+
+                    if (
+                        self.pool_public_keys is not None
+                        and pool_public_key is not None
+                        and pool_public_key not in self.pool_public_keys
+                    ):
+                        log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
+                        self.no_key_filenames.add(filename)
+                        if not self.open_no_key_filenames:
+                            return 0, new_provers
+
+                    stat_info = filename.stat()
+                    local_sk = master_sk_to_local_sk(local_master_sk)
+
+                    plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+                        local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
+                    )
+
                     with plot_ids_lock:
-                        if provers[filename].prover.get_id() in plot_ids:
+                        if prover.get_id() in plot_ids:
                             log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
                             return 0, new_provers
-                        plot_ids.add(provers[filename].prover.get_id())
-                    new_provers[filename] = provers[filename]
-                    return stat_info.st_size, new_provers
-            try:
-                prover = DiskProver(str(filename))
+                        plot_ids.add(prover.get_id())
 
-                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
-                stat_info = filename.stat()
-
-                # TODO: consider checking if the file was just written to (which would mean that the file is still
-                # being copied). A segfault might happen in this edge case.
-
-                if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                    log.warning(
-                        f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
-                        f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                    new_provers[filename] = PlotInfo(
+                        prover,
+                        pool_public_key,
+                        pool_contract_puzzle_hash,
+                        plot_public_key,
+                        stat_info.st_size,
+                        stat_info.st_mtime,
                     )
+
+                    changed = True
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    log.error(f"Failed to open file {filename}. {e} {tb}")
+                    self.failed_to_open_filenames[filename] = int(time.time())
                     return 0, new_provers
+                log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
-                (
-                    pool_public_key_or_puzzle_hash,
-                    farmer_public_key,
-                    local_master_sk,
-                ) = parse_plot_info(prover.get_memo())
+                if self.show_memo:
+                    plot_memo: bytes32
+                    if pool_contract_puzzle_hash is None:
+                        plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
+                    else:
+                        plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
+                    plot_memo_str: str = plot_memo.hex()
+                    log.info(f"Memo: {plot_memo_str}")
 
-                # Only use plots that correct keys associated with them
-                if farmer_public_keys is not None and farmer_public_key not in farmer_public_keys:
-                    log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")
-                    no_key_filenames.add(filename)
-                    if not open_no_key_filenames:
-                        return 0, new_provers
+                return stat_info.st_size, new_provers
+            return 0, new_provers
 
-                if isinstance(pool_public_key_or_puzzle_hash, G1Element):
-                    pool_public_key = pool_public_key_or_puzzle_hash
-                    pool_contract_puzzle_hash = None
-                else:
-                    assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
-                    pool_public_key = None
-                    pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
+        def reduce_function(x: Tuple[int, Dict], y: Tuple[int, Dict]) -> Tuple[int, Dict]:
+            (total_size1, new_provers1) = x
+            (total_size2, new_provers2) = y
+            return total_size1 + total_size2, {**new_provers1, **new_provers2}
 
-                if (
-                    pool_public_keys is not None
-                    and pool_public_key is not None
-                    and pool_public_key not in pool_public_keys
-                ):
-                    log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
-                    no_key_filenames.add(filename)
-                    if not open_no_key_filenames:
-                        return 0, new_provers
+        with ThreadPoolExecutor() as executor:
+            initial_value: Tuple[int, Dict[Path, PlotInfo]] = (0, {})
+            total_size, self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
 
-                stat_info = filename.stat()
-                local_sk = master_sk_to_local_sk(local_master_sk)
-
-                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
-                    local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
-                )
-
-                with plot_ids_lock:
-                    if prover.get_id() in plot_ids:
-                        log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
-                        return 0, new_provers
-                    plot_ids.add(prover.get_id())
-
-                new_provers[filename] = PlotInfo(
-                    prover,
-                    pool_public_key,
-                    pool_contract_puzzle_hash,
-                    plot_public_key,
-                    stat_info.st_size,
-                    stat_info.st_mtime,
-                )
-
-                changed = True
-            except Exception as e:
-                tb = traceback.format_exc()
-                log.error(f"Failed to open file {filename}. {e} {tb}")
-                failed_to_open_filenames[filename] = int(time.time())
-                return 0, new_provers
-            log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
-
-            if show_memo:
-                plot_memo: bytes32
-                if pool_contract_puzzle_hash is None:
-                    plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
-                else:
-                    plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
-                plot_memo_str: str = plot_memo.hex()
-                log.info(f"Memo: {plot_memo_str}")
-
-            return stat_info.st_size, new_provers
-        return 0, new_provers
-
-    def reduce_function(x: Tuple[int, Dict], y: Tuple[int, Dict]) -> Tuple[int, Dict]:
-        (total_size1, new_provers1) = x
-        (total_size2, new_provers2) = y
-        return total_size1 + total_size2, {**new_provers1, **new_provers2}
-
-    with ThreadPoolExecutor() as executor:
-        initial_value: Tuple[int, Dict[Path, PlotInfo]] = (0, {})
-        total_size, new_provers = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
-
-    log.info(
-        f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
-        f" {time.time()-start_time} seconds"
-    )
-    return changed, new_provers, failed_to_open_filenames, no_key_filenames
+        log.info(
+            f"Loaded a total of {self.plot_count()} plots of size {total_size / (1024 ** 4)} TiB, in"
+            f" {time.time() - self.last_refresh_time} seconds"
+        )
+        return changed
 
 
 def find_duplicate_plot_IDs(all_filenames=None) -> None:

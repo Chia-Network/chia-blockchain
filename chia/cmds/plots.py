@@ -5,23 +5,12 @@ from pathlib import Path
 
 import click
 
+from chia.plotting.plot_tools import PlotManager
+
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
-
-def show_plots(root_path: Path):
-    from chia.plotting.plot_tools import get_plot_directories
-
-    print("Directories where plots are being searched for:")
-    print("Note that subdirectories must be added manually")
-    print(
-        "Add with 'chia plots add -d [dir]' and remove with"
-        + " 'chia plots remove -d [dir]'"
-        + " Scan and check plots with 'chia plots check'"
-    )
-    print()
-    for str_path in get_plot_directories(root_path):
-        print(f"{str_path}")
+plot_manager: PlotManager
 
 
 @click.group("plots", short_help="Manage your plots")
@@ -34,6 +23,9 @@ def plots_cmd(ctx: click.Context):
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
     initialize_logging("", {"log_stdout": True}, root_path)
+
+    global plot_manager
+    plot_manager = PlotManager(root_path)
 
 
 @plots_cmd.command("create", short_help="Create plots")
@@ -183,11 +175,8 @@ def check_cmd(
     default=".",
     show_default=True,
 )
-@click.pass_context
-def add_cmd(ctx: click.Context, final_dir: str):
-    from chia.plotting.plot_tools import add_plot_directory
-
-    add_plot_directory(Path(final_dir), ctx.obj["root_path"])
+def add_cmd(final_dir: str):
+    plot_manager.add_plot_directory(final_dir)
     print(f'Added plot directory "{final_dir}".')
 
 
@@ -200,15 +189,21 @@ def add_cmd(ctx: click.Context, final_dir: str):
     default=".",
     show_default=True,
 )
-@click.pass_context
-def remove_cmd(ctx: click.Context, final_dir: str):
-    from chia.plotting.plot_tools import remove_plot_directory
-
-    remove_plot_directory(Path(final_dir), ctx.obj["root_path"])
+def remove_cmd(final_dir: str):
+    plot_manager.remove_plot_directory(final_dir)
     print(f'Removed plot directory "{final_dir}".')
 
 
 @plots_cmd.command("show", short_help="Shows the directory of current plots")
-@click.pass_context
-def show_cmd(ctx: click.Context):
-    show_plots(ctx.obj["root_path"])
+def show_cmd():
+    print("Directories where plots are being searched for:")
+    print("Note that subdirectories must be added manually")
+    print(
+        "Add with 'chia plots add -d [dir]' and remove with"
+        + " 'chia plots remove -d [dir]'"
+        + " Scan and check plots with 'chia plots check'"
+    )
+    print()
+    global plot_manager
+    for str_path in plot_manager.get_plot_directories():
+        print(f"{str_path}")

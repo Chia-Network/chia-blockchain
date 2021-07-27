@@ -37,12 +37,13 @@ class HarvesterAPI:
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
         We cannot use any plots which have different keys in them.
         """
-        self.harvester.farmer_public_keys = harvester_handshake.farmer_public_keys
-        self.harvester.pool_public_keys = harvester_handshake.pool_public_keys
+        self.harvester.plot_manager.set_public_keys(
+            harvester_handshake.farmer_public_keys, harvester_handshake.pool_public_keys
+        )
 
         await self.harvester.refresh_plots()
 
-        if len(self.harvester.provers) == 0:
+        if self.harvester.plot_manager.plot_count() == 0:
             self.harvester.log.warning("Not farming any plots on this harvester. Check your configuration.")
             return None
 
@@ -63,7 +64,7 @@ class HarvesterAPI:
         4. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
         5. Returns the proof of space to the farmer
         """
-        if len(self.harvester.pool_public_keys) == 0 or len(self.harvester.farmer_public_keys) == 0:
+        if not self.harvester.plot_manager.public_keys_available():
             # This means that we have not received the handshake yet
             return None
 
@@ -71,9 +72,8 @@ class HarvesterAPI:
         assert len(new_challenge.challenge_hash) == 32
 
         # Refresh plots to see if there are any new ones
-        if start - self.harvester.last_load_time > self.harvester.plot_load_frequency:
+        if self.harvester.plot_manager.needs_refresh():
             await self.harvester.refresh_plots()
-            self.harvester.last_load_time = time.time()
 
         loop = asyncio.get_running_loop()
 
@@ -189,7 +189,7 @@ class HarvesterAPI:
         awaitables = []
         passed = 0
         total = 0
-        for try_plot_filename, try_plot_info in self.harvester.provers.items():
+        for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
             try:
                 if try_plot_filename.exists():
                     # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
@@ -239,7 +239,7 @@ class HarvesterAPI:
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
             f" Found {total_proofs_found} proofs. Time: {time.time() - start:.5f} s. "
-            f"Total {len(self.harvester.provers)} plots"
+            f"Total {self.harvester.plot_manager.plot_count()} plots"
         )
 
     @api_request
@@ -251,7 +251,7 @@ class HarvesterAPI:
         """
         plot_filename = Path(request.plot_identifier[64:]).resolve()
         try:
-            plot_info = self.harvester.provers[plot_filename]
+            plot_info = self.harvester.plot_manager.plots[plot_filename]
         except KeyError:
             self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
             return None

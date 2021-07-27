@@ -2,12 +2,12 @@ import logging
 from collections import Counter
 from pathlib import Path
 from time import time
-from typing import Dict, List
+from typing import List
 
 from blspy import G1Element
 from chiapos import Verifier
 
-from chia.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots, parse_plot_info
+from chia.plotting.plot_tools import find_duplicate_plot_IDs, PlotManager, parse_plot_info
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -18,6 +18,9 @@ log = logging.getLogger(__name__)
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
+    plot_manager: PlotManager = PlotManager(
+        root_path, match_str=grep_string, show_memo=debug_show_memo, open_no_key_filenames=True
+    )
     if num is not None:
         if num == 0:
             log.warning("Not opening plot files")
@@ -42,12 +45,9 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.warning("Checking for duplicate Plot IDs")
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
-    show_memo: bool = debug_show_memo
-
     if list_duplicates:
-        plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config["harvester"])
         all_filenames: List[Path] = []
-        for paths in plot_filenames.values():
+        for paths in plot_manager.get_plot_filenames().values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
 
@@ -61,19 +61,12 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     # Prompts interactively if the keyring is protected by a master passphrase. To use the daemon
     # for keychain access, KeychainProxy/connect_to_keychain should be used instead of Keychain.
     kc: Keychain = Keychain()
-    pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
-    pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]]
-    _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
-        {},
-        {},
-        pks,
-        pool_public_keys,
-        grep_string,
-        show_memo,
-        root_path,
-        open_no_key_filenames=True,
+    plot_manager.set_public_keys(
+        [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()],
+        [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]],
     )
-    if len(provers) > 0:
+    plot_manager.refresh()
+    if plot_manager.plot_count() > 0:
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
@@ -82,7 +75,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     total_size = 0
     bad_plots_list: List[Path] = []
 
-    for plot_path, plot_info in provers.items():
+    for plot_path, plot_info in plot_manager.plots.items():
         pr = plot_info.prover
         log.info(f"Testing plot {plot_path} k={pr.get_size()}")
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
@@ -158,14 +151,14 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
-    grand_total_bad = total_bad_plots + len(failed_to_open_filenames)
+    grand_total_bad = total_bad_plots + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")
         for bad_plot_path in bad_plots_list:
             log.warning(f"{bad_plot_path}")
-    if len(no_key_filenames) > 0:
+    if len(plot_manager.no_key_filenames) > 0:
         log.warning(
-            f"There are {len(no_key_filenames)} plots with a farmer or pool public key that "
+            f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "
             f"is not on this machine. The farmer private key must be in the keychain in order to "
             f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
         )
