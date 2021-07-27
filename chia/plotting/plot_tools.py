@@ -106,6 +106,8 @@ def stream_plot_info_ph(
 
 class PlotManager:
     plots: Dict[Path, PlotInfo]
+    plot_filename_paths: Dict[str, Tuple[str, Set[str]]]
+    plot_filename_paths_lock: threading.Lock
     failed_to_open_filenames: Dict[Path, int]
     no_key_filenames: Set[Path]
     farmer_public_keys: List[G1Element]
@@ -127,6 +129,8 @@ class PlotManager:
     ):
         self.root_path = root_path
         self.plots = {}
+        self.plot_filename_paths = {}
+        self.plot_filename_paths_lock = threading.Lock()
         self.failed_to_open_filenames = {}
         self.no_key_filenames = set()
         self.farmer_public_keys = []
@@ -206,8 +210,6 @@ class PlotManager:
         all_filenames: List[Path] = []
         for paths in plot_filenames.values():
             all_filenames += paths
-        plot_ids: Set[bytes32] = set()
-        plot_ids_lock = threading.Lock()
         loaded_plots: int = 0
         counter_lock = threading.Lock()
 
@@ -236,13 +238,14 @@ class PlotManager:
                         log.error(f"Failed to open file {filename}. {e}")
                         return 0, new_provers
                     if stat_info.st_mtime == self.plots[filename].time_modified:
-                        with plot_ids_lock:
-                            if self.plots[filename].prover.get_id() in plot_ids:
-                                log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
-                                return 0, new_provers
-                            plot_ids.add(self.plots[filename].prover.get_id())
                         new_provers[filename] = self.plots[filename]
                         return stat_info.st_size, new_provers
+                entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(filename.name)
+                if entry is not None:
+                    loaded_parent, duplicates = entry
+                    if str(filename.parent) in duplicates:
+                        log.debug(f"Skip duplicated plot {str(filename)}")
+                        return 0, new_provers
                 try:
                     prover = DiskProver(str(filename))
 
@@ -299,11 +302,17 @@ class PlotManager:
                         local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
                     )
 
-                    with plot_ids_lock:
-                        if prover.get_id() in plot_ids:
-                            log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                    with self.plot_filename_paths_lock:
+                        if filename.name not in self.plot_filename_paths:
+                            self.plot_filename_paths[filename.name] = (str(Path(prover.get_filename()).parent), set())
+                        else:
+                            self.plot_filename_paths[filename.name][1].add(str(Path(prover.get_filename()).parent))
+                        if len(self.plot_filename_paths[filename.name][1]) > 0:
+                            log.warning(
+                                f"Have multiple copies of the plot {filename} in "
+                                f"{self.plot_filename_paths[filename.name][1]}."
+                            )
                             return 0, new_provers
-                        plot_ids.add(prover.get_id())
 
                     new_provers[filename] = PlotInfo(
                         prover,
