@@ -96,12 +96,12 @@ class Harvester:
 
     async def refresh_plots(self):
         locked: bool = self._refresh_lock.locked()
-        changed: bool = False
         if not locked:
             async with self._refresh_lock:
                 # Avoid double refreshing of plots
-                changed = self.plot_manager.refresh()
-        if changed:
+                loaded_plots = self.plot_manager.refresh()
+        self.log.info(f"{loaded_plots} new plots loaded")
+        if loaded_plots > 0:
             self._state_changed("plots")
 
     def delete_plot(self, str_path: str):

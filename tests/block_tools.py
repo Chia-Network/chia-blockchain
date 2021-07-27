@@ -248,7 +248,7 @@ class BlockTools:
 
         plot_manager: PlotManager = PlotManager(self.root_path)
         plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
-        assert plot_manager.refresh()
+        assert plot_manager.refresh() > 0
         self.plots: Dict[Path, PlotInfo] = plot_manager.plots
         # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
         self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[

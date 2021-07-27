@@ -198,9 +198,8 @@ class PlotManager:
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def refresh(self) -> bool:
+    def refresh(self) -> int:
         self.last_refresh_time = time.time()
-        changed = False
         log.info(f"Searching directories {self.get_plot_directories()}")
 
         plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
@@ -209,6 +208,8 @@ class PlotManager:
             all_filenames += paths
         plot_ids: Set[bytes32] = set()
         plot_ids_lock = threading.Lock()
+        loaded_plots: int = 0
+        counter_lock = threading.Lock()
 
         log.debug(f"refresh_batch: {len(all_filenames)} files in directories {self.get_plot_directories()}")
 
@@ -217,7 +218,7 @@ class PlotManager:
 
         def process_file(filename: Path) -> Tuple[int, Dict]:
             new_provers: Dict[Path, PlotInfo] = {}
-            nonlocal changed
+            nonlocal loaded_plots
             filename_str = str(filename)
             if self.match_str is not None and self.match_str not in filename_str:
                 return 0, new_provers
@@ -313,7 +314,9 @@ class PlotManager:
                         stat_info.st_mtime,
                     )
 
-                    changed = True
+                    with counter_lock:
+                        loaded_plots += 1
+
                 except Exception as e:
                     tb = traceback.format_exc()
                     log.error(f"Failed to open file {filename}. {e} {tb}")
@@ -346,7 +349,7 @@ class PlotManager:
             f"Loaded a total of {self.plot_count()} plots of size {total_size / (1024 ** 4)} TiB, in"
             f" {time.time() - self.last_refresh_time} seconds"
         )
-        return changed
+        return loaded_plots
 
 
 def find_duplicate_plot_IDs(all_filenames=None) -> None:
