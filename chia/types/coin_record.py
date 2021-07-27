@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
@@ -24,3 +25,10 @@ class CoinRecord(Streamable):
     @property
     def name(self) -> bytes32:
         return self.coin.name()
+
+    @property
+    def coin_state(self) -> CoinState:
+        spent_h = None
+        if self.spent:
+            spent_h = self.spent_block_index
+        return CoinState(self.coin, spent_h, self.confirmed_block_index)

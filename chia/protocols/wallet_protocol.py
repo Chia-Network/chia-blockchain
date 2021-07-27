@@ -165,15 +165,15 @@ class CoinState(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RegisterForUpdates(Streamable):
-    puzzle_hash: bytes32
+class RegisterForPhUpdates(Streamable):
+    puzzle_hashes: List[bytes32]
     min_height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
-class RegisterForUpdatesResponse(Streamable):
-    puzzle_hash: bytes32
+class RespondToPhUpdates(Streamable):
+    puzzle_hashes: List[bytes32]
     min_height: uint32
     coin_states: List[CoinState]
 

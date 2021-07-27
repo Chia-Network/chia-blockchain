@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 
 import aiosqlite
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -221,13 +222,44 @@ class CoinStore:
             f"{'' if include_spent_coins else 'AND spent=0'}",
             names_db + (start_height, end_height),
         )
-
         rows = await cursor.fetchall()
 
         await cursor.close()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+
+        return list(coins)
+
+    async def get_coin_states_by_puzzle_hashes(
+        self,
+        include_spent_coins: bool,
+        puzzle_hashes: List[bytes32],
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2 ** 32) - 1),
+    ) -> List[CoinState]:
+        if len(puzzle_hashes) == 0:
+            return []
+
+        coins = set()
+        puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
+        cursor = await self.coin_record_db.execute(
+            f'SELECT * from coin_record WHERE puzzle_hash in ({"?," * (len(puzzle_hashes_db) - 1)}?) '
+            f"AND confirmed_index>=? AND confirmed_index<? "
+            f"{'' if include_spent_coins else 'AND spent=0'}",
+            puzzle_hashes_db + (start_height, end_height),
+        )
+
+        rows = await cursor.fetchall()
+
+        await cursor.close()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            spent_h = None
+            if row[3]:
+                spent_h = row[2]
+            coins.add(CoinState(coin, spent_h, row[1]))
+
         return list(coins)
 
     async def get_coin_records_by_parent_ids(

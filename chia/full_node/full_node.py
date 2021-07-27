@@ -833,25 +833,17 @@ class FullNode:
         for coin_record in state_update:
             if coin_record.name in self.coin_subscriptions:
                 subscribed_peers = self.coin_subscriptions[coin_record.name]
-                spent_h = None
-                if coin_record.spent:
-                    spent_h = coin_record.spent_block_index
-                coin_state = CoinState(coin_record.coin, spent_h, coin_record.confirmed_block_index)
                 for peer in subscribed_peers:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_state)
+                    changes_for_peer[peer].add(coin_record.coin_state)
 
             if coin_record.coin.puzzle_hash in self.ph_subscriptions:
                 subscribed_peers = self.ph_subscriptions[coin_record.coin.puzzle_hash]
-                spent_h = None
-                if coin_record.spent:
-                    spent_h = coin_record.spent_block_index
-                coin_state = CoinState(coin_record.coin, spent_h, coin_record.confirmed_block_index)
                 for peer in subscribed_peers:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_state)
+                    changes_for_peer[peer].add(coin_record.coin_state)
 
         for peer, changes in changes_for_peer.items():
             if peer not in self.server.all_connections:

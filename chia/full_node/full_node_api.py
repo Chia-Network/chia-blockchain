@@ -18,7 +18,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest
+from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest, CoinState
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -1315,10 +1315,23 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def register_interest_in_puzzle_hash(
-        self, request: wallet_protocol.RegisterForUpdates, peer: ws.WSChiaConnection
+        self, request: wallet_protocol.RegisterForPhUpdates, peer: ws.WSChiaConnection
     ):
+
+        # Add peer to the "Subscribed" dictionary
+        for puzzle_hash in request.puzzle_hashes:
+            if puzzle_hash not in self.full_node.ph_subscriptions:
+                self.full_node.ph_subscriptions[puzzle_hash] = []
+            self.full_node.ph_subscriptions[puzzle_hash].append(peer.peer_node_id)
+
         # Send all coins with requested puzzle hash that have been created after the specified height
-        pass
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
+            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
+        )
+
+        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, states)
+        msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+        return msg
 
     @peer_required
     @api_request
