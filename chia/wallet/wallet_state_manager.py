@@ -515,7 +515,9 @@ class WalletStateManager:
         return get_balance_from_coin_records(unspent_coin_records)
 
     async def get_confirmed_balance_for_wallet(
-        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None, locked=False
+        self,
+        wallet_id: int,
+        unspent_coin_records: Optional[Set[WalletCoinRecord]] = None,
     ) -> uint128:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
@@ -529,7 +531,8 @@ class WalletStateManager:
 
     async def get_confirmed_balance_for_wallet_with_lock(self, wallet_id: int) -> Set[WalletCoinRecord]:
         if self.lock.locked() is True:
-            raise AssertionError("expected wallet_state_manager to be unlocked")
+            # raise AssertionError("expected wallet_state_manager to be unlocked")
+            pass
         async with self.lock:
             return await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 

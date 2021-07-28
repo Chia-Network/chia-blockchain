@@ -69,9 +69,10 @@ class TestDIDWallet:
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
         # Wallet1 sets up DIDWallet1 without any backup set
-        did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
-        )
+        async with wallet_node_0.wallet_state_manager.lock:
+            did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -81,9 +82,11 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_0.get_pending_change_balance, 0)
         # Wallet1 sets up DIDWallet_1 with DIDWallet_0 as backup
         backup_ids = [bytes.fromhex(did_wallet_0.get_my_DID())]
-        did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(201), backup_ids
-        )
+
+        async with wallet_node_0.wallet_state_manager.lock:
+            did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(201), backup_ids
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -96,9 +99,10 @@ class TestDIDWallet:
         did_wallet_1.create_backup(filename)
 
         # Wallet2 recovers DIDWallet2 to a new set of keys
-        did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node_1.wallet_state_manager, wallet_1, filename
-        )
+        async with wallet_node_1.wallet_state_manager.lock:
+            did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
+                wallet_node_1.wallet_state_manager, wallet_1, filename
+            )
         coins = await did_wallet_1.select_coins(1)
         coin = coins.copy().pop()
         assert did_wallet_2.did_info.temp_coin == coin
@@ -175,9 +179,10 @@ class TestDIDWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(101)
-        )
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101)
+            )
 
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
@@ -188,9 +193,10 @@ class TestDIDWallet:
 
         recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
-        did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
-        )
+        async with wallet_node_2.wallet_state_manager.lock:
+            did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
+            )
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -202,9 +208,10 @@ class TestDIDWallet:
 
         recovery_list.append(bytes.fromhex(did_wallet_2.get_my_DID()))
 
-        did_wallet_3: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_2.wallet_state_manager, wallet2, uint64(201), recovery_list
-        )
+        async with wallet_node_2.wallet_state_manager.lock:
+            did_wallet_3: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_2.wallet_state_manager, wallet2, uint64(201), recovery_list
+            )
 
         ph2 = await wallet.get_new_puzzlehash()
         for i in range(1, num_blocks):
@@ -219,11 +226,12 @@ class TestDIDWallet:
         filename = "test.backup"
         did_wallet_3.create_backup(filename)
 
-        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node.wallet_state_manager,
-            wallet,
-            filename,
-        )
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
+                wallet_node.wallet_state_manager,
+                wallet,
+                filename,
+            )
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
@@ -278,9 +286,10 @@ class TestDIDWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(101)
-        )
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101)
+            )
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -323,9 +332,10 @@ class TestDIDWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(101)
-        )
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101)
+            )
 
         ph2 = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
@@ -335,9 +345,10 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
-        did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
-        )
+        async with wallet_node_2.wallet_state_manager.lock:
+            did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
+            )
         ph = await wallet.get_new_puzzlehash()
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -361,11 +372,12 @@ class TestDIDWallet:
         filename = "test.backup"
         did_wallet_2.create_backup(filename)
 
-        did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node.wallet_state_manager,
-            wallet,
-            filename,
-        )
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(
+                wallet_node.wallet_state_manager,
+                wallet,
+                filename,
+            )
         new_ph = await did_wallet_3.get_new_inner_hash()
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
@@ -392,11 +404,12 @@ class TestDIDWallet:
         filename = "test.backup"
         did_wallet.create_backup(filename)
 
-        did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
-            wallet_node_2.wallet_state_manager,
-            wallet2,
-            filename,
-        )
+        async with wallet_node_2.wallet_state_manager.lock:
+            did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
+                wallet_node_2.wallet_state_manager,
+                wallet2,
+                filename,
+            )
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
 
