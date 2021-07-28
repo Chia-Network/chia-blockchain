@@ -106,6 +106,26 @@ def stream_plot_info_ph(
     return data
 
 
+@dataclass
+class PlotRefreshResult:
+    loaded_plots: int = 0
+    loaded_size: float = 0
+    removed_plots: int = 0
+    processed_files: int = 0
+    remaining_files: int = 0
+    duration: float = 0
+
+    def __add__(self, other):
+        result: PlotRefreshResult = PlotRefreshResult()
+        result.loaded_plots = self.loaded_plots + other.loaded_plots
+        result.loaded_size = self.loaded_size + other.loaded_size
+        result.removed_plots = self.removed_plots + other.removed_plots
+        result.processed_files = self.processed_files + other.processed_files
+        result.remaining_files = other.remaining_files
+        result.duration = self.duration + other.duration
+        return result
+
+
 class PlotManager:
     plots: Dict[Path, PlotInfo]
     plot_filename_paths: Dict[str, Tuple[str, Set[str]]]
@@ -245,26 +265,13 @@ class PlotManager:
             while not self.needs_refresh() and self._refreshing_enabled:
                 time.sleep(1)
 
-            total_loaded_plots: int = 0
-            total_removed_plots: int = 0
-            total_loaded_size: int = 0
-            total_duration: float = 0
+            total_result: PlotRefreshResult = PlotRefreshResult()
             while self.needs_refresh() and self._refreshing_enabled:
-                (
-                    loaded_plots,
-                    loaded_size,
-                    removed_plots,
-                    processed_files,
-                    remaining_files,
-                    duration,
-                ) = self.refresh_batch()
-                total_loaded_plots += loaded_plots
-                total_removed_plots += removed_plots
-                total_loaded_size += loaded_size
-                total_duration += duration
+                batch_result: PlotRefreshResult = self.refresh_batch()
+                total_result += batch_result
                 if self._refresh_callback is not None:
-                    self._refresh_callback(loaded_plots, processed_files, remaining_files)
-                if remaining_files == 0:
+                    self._refresh_callback(batch_result)
+                if batch_result.remaining_files == 0:
                     self.last_refresh_time = time.time()
                     break
                 batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
@@ -272,21 +279,20 @@ class PlotManager:
                 time.sleep(float(batch_sleep) / 1000.0)
 
             self.log.debug(
-                f"_refresh_task: total_loaded_plots {total_loaded_plots}, total_removed_plots {total_removed_plots}, "
-                f"total_loaded_size {total_loaded_size / (1024 ** 4)} TiB, total_duration {total_duration} seconds"
+                f"_refresh_task: total_result.loaded_plots {total_result.loaded_plots}, "
+                f"total_result.removed_plots {total_result.removed_plots}, "
+                f"total_result.loaded_size {total_result.loaded_size / (1024 ** 4):.2f} TiB, "
+                f"total_duration {total_result.duration:.2f} seconds"
             )
 
-    def refresh_batch(self) -> Tuple[int, int, int, int, int, float]:
+    def refresh_batch(self) -> PlotRefreshResult:
         start_time: float = time.time()
         plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
         all_filenames: List[Path] = []
         for paths in plot_filenames.values():
             all_filenames += paths
-        processed_plots: int = 0
-        loaded_plots: int = 0
-        loaded_size: int = 0
-        remaining_plots: int = 0
-        removed_plots: int = 0
+
+        result: PlotRefreshResult = PlotRefreshResult()
         counter_lock = threading.Lock()
 
         log.debug(f"refresh_batch: {len(all_filenames)} files in directories {self.get_plot_directories()}")
@@ -296,10 +302,6 @@ class PlotManager:
 
         def process_file(filename: Path) -> Dict:
             new_provers: Dict[Path, PlotInfo] = {}
-            nonlocal processed_plots
-            nonlocal loaded_plots
-            nonlocal loaded_size
-            nonlocal remaining_plots
             filename_str = str(filename)
             if self.match_str is not None and self.match_str not in filename_str:
                 return new_provers
@@ -327,10 +329,10 @@ class PlotManager:
                         return new_provers
                 try:
                     with counter_lock:
-                        if processed_plots >= self.refresh_parameter.batch_size:
-                            remaining_plots += 1
+                        if result.processed_files >= self.refresh_parameter.batch_size:
+                            result.remaining_files += 1
                             return new_provers
-                        processed_plots += 1
+                        result.processed_files += 1
 
                     prover = DiskProver(str(filename))
 
@@ -409,8 +411,8 @@ class PlotManager:
                     )
 
                     with counter_lock:
-                        loaded_plots += 1
-                        loaded_size += stat_info.st_size
+                        result.loaded_plots += 1
+                        result.loaded_size += stat_info.st_size
 
                 except Exception as e:
                     tb = traceback.format_exc()
@@ -446,7 +448,7 @@ class PlotManager:
                     loaded_path, duplicated_paths = paths_entry
                     if plot_removed(Path(loaded_path) / Path(plot_filename)):
                         filenames_to_remove.append(plot_filename)
-                        removed_plots += 1
+                        result.removed_plots += 1
                         # No need to check the duplicates here since we drop the whole entry
                         continue
 
@@ -454,7 +456,7 @@ class PlotManager:
                     for path in duplicated_paths:
                         if plot_removed(Path(path) / Path(plot_filename)):
                             paths_to_remove.append(path)
-                            removed_plots += 1
+                            result.removed_plots += 1
                     for path in paths_to_remove:
                         duplicated_paths.remove(path)
 
@@ -464,14 +466,16 @@ class PlotManager:
             initial_value: Dict[Path, PlotInfo] = {}
             self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
 
-        duration: float = time.time() - start_time
+        result.duration = time.time() - start_time
 
         self.log.debug(
-            f"refresh_batch: loaded_plots {loaded_plots}, loaded_size {loaded_size / (1024 ** 4)} TiB, "
-            f"removed_plots {removed_plots}, processed_plots {processed_plots}, remaining_plots {remaining_plots}, "
-            f"batch_size {self.refresh_parameter.batch_size}, duration: {duration} seconds"
+            f"refresh_batch: loaded_plots {result.loaded_plots}, "
+            f"loaded_size {result.loaded_size / (1024 ** 4):.2f} TiB, "
+            f"removed_plots {result.removed_plots}, processed_plots {result.processed_files}, "
+            f"remaining_plots {result.remaining_files}, batch_size {self.refresh_parameter.batch_size}, "
+            f"duration: {result.duration:.2f} seconds"
         )
-        return loaded_plots, loaded_size, removed_plots, processed_plots, remaining_plots, duration
+        return result
 
 
 def find_duplicate_plot_IDs(all_filenames=None) -> None:

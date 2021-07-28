@@ -46,7 +46,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.plot_tools import PlotInfo, PlotManager, PlotsRefreshParameter, parse_plot_info
+from chia.plotting.plot_tools import PlotInfo, PlotManager, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -249,14 +249,16 @@ class BlockTools:
         refresh_done = False
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(uint16(120), uint16(2), uint16(10))
 
-        def test_callback(loaded_plots: int, processed_files: int, remaining_files: int):
-            if remaining_files == 0:
+        def test_callback(update_result: PlotRefreshResult):
+            if update_result.remaining_files == 0:
                 nonlocal refresh_done
                 refresh_done = True
             else:
-                assert 0 < loaded_plots <= refresh_parameter.batch_size
-                assert loaded_plots == processed_files
-                assert remaining_files > 0
+                assert 0 < update_result.loaded_plots <= refresh_parameter.batch_size
+                assert update_result.loaded_plots == update_result.processed_files
+                assert update_result.remaining_files > 0
+                assert update_result.loaded_size > 0
+                assert 0 < update_result.duration < 5
 
         plot_manager: PlotManager = PlotManager(
             self.root_path, refresh_parameter=refresh_parameter, refresh_callback=test_callback

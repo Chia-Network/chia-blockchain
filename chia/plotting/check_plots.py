@@ -10,6 +10,7 @@ from chiapos import Verifier
 from chia.plotting.plot_tools import (
     find_duplicate_plot_IDs,
     PlotManager,
+    PlotRefreshResult,
     PlotsRefreshParameter,
     parse_plot_info,
 )
@@ -22,8 +23,8 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_s
 log = logging.getLogger(__name__)
 
 
-def plot_refresh_callback(loaded_plots: int, _: int, remaining_files: int):
-    log.info(f"loaded {loaded_plots} plots, {remaining_files} remaining")
+def plot_refresh_callback(refresh_result: PlotRefreshResult):
+    log.info(f"loaded {refresh_result.loaded_plots} plots, {refresh_result.remaining_files} remaining")
 
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):

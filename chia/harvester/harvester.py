@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
-from chia.plotting.plot_tools import PlotsRefreshParameter, PlotManager
+from chia.plotting.plot_tools import PlotsRefreshParameter, PlotManager, PlotRefreshResult
 
 log = logging.getLogger(__name__)
 
@@ -66,12 +66,15 @@ class Harvester:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    def _plot_refresh_callback(self, loaded_plots: int, processed_files: int, remaining_files: int):
+    def _plot_refresh_callback(self, update_result: PlotRefreshResult):
         self.log.info(
-            f"_plot_refresh_callback: loaded_plots {loaded_plots}, processed_files {processed_files}, "
-            f"remaining_files {remaining_files}"
+            f"refresh_batch: loaded_plots {update_result.loaded_plots}, "
+            f"loaded_size {update_result.loaded_size / (1024 ** 4):.2f} TiB, "
+            f"removed_plots {update_result.removed_plots}, processed_plots {update_result.processed_files}, "
+            f"remaining_plots {update_result.remaining_files}, "
+            f"duration: {update_result.duration:.2f} seconds"
         )
-        if loaded_plots > 0:
+        if update_result.loaded_plots > 0:
             self.event_loop.call_soon_threadsafe(self._state_changed, "plots")
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
