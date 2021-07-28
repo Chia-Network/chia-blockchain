@@ -7,7 +7,7 @@ Tests are recognized by the file glob `test_*.py`.
 Changing the contents of a file does not require running `build-workflows.py`.
 
 We currently use github actions. Default runners have two vcpus.
-The workflows are located in [../.github/workflows/](https://github.com/Chia-Network/chia-blockchain/tree/main/.github/workflows).
+The workflows are located in [../.github/workflows/](https://github.com/silicoin-network/silicoin-blockchain/tree/main/.github/workflows).
 
 The inputs to `build-workflows.py` are the templates in `runner-templates`, the file `testconfig.py` in this directory, and the optional `config.py` files in some test subdirectories.
 Files in the template directory ending in `include.yml` are included in jobs based on the per-directory settings.
@@ -21,7 +21,7 @@ The subdirectory jobs do not include the tests from their parents.
 
 ## testconfig.py
 
-In the top tests directory, [testconfig.py](https://github.com/Chia-Network/chia-blockchain/tree/main/tests/testconfig.py)
+In the top tests directory, [testconfig.py](https://github.com/silicoin-network/silicoin-blockchain/tree/main/tests/testconfig.py)
 contains the application settings and the per-directory default settings.
 
 ## config.py
