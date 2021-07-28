@@ -36,6 +36,9 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - name: Cleanup any leftovers that exist from previous runs
+      run: bash build_scripts/clean-runner.sh || true
+
     - name: Setup Python environment
       uses: actions/setup-python@v2
       with:
@@ -96,7 +99,7 @@ jobs:
         sh install.sh
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v2.2.0
+      uses: actions/setup-node@v2.3.0
       with:
         node-version: '12.x'
 

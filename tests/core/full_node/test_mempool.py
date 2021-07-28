@@ -34,6 +34,12 @@ from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.consensus.condition_costs import ConditionCost
+from chia.consensus.cost_calculator import NPCResult
+from chia.types.blockchain_format.program import SerializedProgram
+from clvm_tools import binutils
+from chia.types.generator_types import BlockGenerator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from clvm.casts import int_from_bytes
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
@@ -158,6 +164,54 @@ class TestMempoolManager:
             spend_bundle,
             spend_bundle.name(),
         )
+
+    # this test makes sure that one spend successfully asserts the announce from
+    # another spend, even though the assert condition is duplicated 100 times
+    @pytest.mark.asyncio
+    async def test_coin_announcement_duplicate_consumed(self, two_nodes):
+        def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
+            announce = Announcement(coin_2.name(), b"test")
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            dic = {cvp.opcode: [cvp] * 100}
+
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
+            dic2 = {cvp.opcode: [cvp2]}
+            spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
+            spend_bundle2 = generate_test_spend_bundle(coin_2, dic2)
+            bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
+            return bundle
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+
+        assert mempool_bundle is bundle
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+    # this test makes sure that one spend successfully asserts the announce from
+    # another spend, even though the create announcement is duplicated 100 times
+    @pytest.mark.asyncio
+    async def test_coin_duplicate_announcement_consumed(self, two_nodes):
+        def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
+            announce = Announcement(coin_2.name(), b"test")
+            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+            dic = {cvp.opcode: [cvp]}
+
+            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"])
+            dic2 = {cvp.opcode: [cvp2] * 100}
+            spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
+            spend_bundle2 = generate_test_spend_bundle(coin_2, dic2)
+            bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
+            return bundle
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+
+        assert mempool_bundle is bundle
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):
@@ -1878,3 +1932,198 @@ class TestConditionParser:
 
             with pytest.raises(ValidationError):
                 cost, args = parse_condition_args(SExp.to([]), opcode, False)
+
+
+# the following tests generate generator programs and run them through get_name_puzzle_conditions()
+
+COST_PER_BYTE = 12000
+MAX_BLOCK_COST_CLVM = 11000000000
+
+
+def generator_condition_tester(
+    conditions: str, safe_mode: bool = False, quote: bool = True, max_cost: int = MAX_BLOCK_COST_CLVM
+) -> NPCResult:
+    prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
+    print(f"program: {prg}")
+    program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
+    generator = BlockGenerator(program, [])
+    print(f"len: {len(bytes(program))}")
+    npc_result: NPCResult = get_name_puzzle_conditions(
+        generator, max_cost, cost_per_byte=COST_PER_BYTE, safe_mode=safe_mode
+    )
+    return npc_result
+
+
+class TestGeneratorConditions:
+    def test_duplicate_height_time_conditions(self):
+        # ASSERT_SECONDS_RELATIVE
+        # ASSERT_SECONDS_ABSOLUTE
+        # ASSERT_HEIGHT_RELATIVE
+        # ASSERT_HEIGHT_ABSOLUTE
+        for cond in [80, 81, 82, 83]:
+            # even though the generator outputs multiple conditions, we only
+            # need to return the highest one (i.e. most strict)
+            npc_result = generator_condition_tester(" ".join([f"({cond} {i})" for i in range(50, 101)]))
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
+            opcode = ConditionOpcode(bytes([cond]))
+            max_arg = 0
+            assert npc_result.npc_list[0].conditions[0][0] == opcode
+            for c in npc_result.npc_list[0].conditions[0][1]:
+                assert c.opcode == opcode
+                max_arg = max(max_arg, int_from_bytes(c.vars[0]))
+            assert max_arg == 100
+
+    def test_just_announcement(self):
+        # CREATE_COIN_ANNOUNCEMENT
+        # CREATE_PUZZLE_ANNOUNCEMENT
+        for cond in [60, 62]:
+            message = "a" * 1024
+            # announcements are validated on the Rust side and never returned
+            # back. They are either satisified or cause an immediate failure
+            npc_result = generator_condition_tester(f'({cond} "{message}") ' * 50)
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
+            # create-announcements and assert-announcements are dropped once
+            # validated
+
+    #            assert npc_result.npc_list[0].conditions == []
+
+    def test_multiple_reserve_fee(self):
+        # RESERVE_FEE
+        cond = 52
+        # even though the generator outputs 3 conditions, we only need to return one copy
+        # with all the fees accumulated
+        npc_result = generator_condition_tester(f"({cond} 100) " * 3)
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode(bytes([cond]))
+        reserve_fee = 0
+        assert len(npc_result.npc_list[0].conditions) == 1
+        assert npc_result.npc_list[0].conditions[0][0] == opcode
+        for c in npc_result.npc_list[0].conditions[0][1]:
+            assert c.opcode == opcode
+            reserve_fee += int_from_bytes(c.vars[0])
+
+        assert reserve_fee == 300
+
+    #    def test_duplicate_outputs(self):
+    # CREATE_COIN
+    # creating multiple coins with the same properties (same parent, same
+    # target puzzle hash and same amount) is not allowed. That's a consensus
+    # failure.
+    #        puzzle_hash = "abababababababababababababababab"
+    #        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 10) ' * 2)
+    #        assert npc_result.error == Err.DUPLICATE_OUTPUT.value
+    #        assert len(npc_result.npc_list) == 0
+
+    def test_create_coin_cost(self):
+        # CREATE_COIN
+        puzzle_hash = "abababababababababababababababab"
+
+        # this max cost is exactly enough for the create coin condition
+        npc_result = generator_condition_tester(
+            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + 1800000
+        )
+        assert npc_result.error is None
+        assert npc_result.clvm_cost == 20470
+        assert len(npc_result.npc_list) == 1
+
+        # if we subtract one from max cost, this should fail
+        npc_result = generator_condition_tester(
+            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + 1800000 - 1
+        )
+        assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
+
+    def test_agg_sig_cost(self):
+        # AGG_SIG_ME
+        pubkey = "abababababababababababababababababababababababab"
+
+        # this max cost is exactly enough for the AGG_SIG condition
+        npc_result = generator_condition_tester(
+            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + 1200000
+        )
+        assert npc_result.error is None
+        assert npc_result.clvm_cost == 20512
+        assert len(npc_result.npc_list) == 1
+
+        # if we subtract one from max cost, this should fail
+        npc_result = generator_condition_tester(
+            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + 1200000 - 1
+        )
+        assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
+
+    def test_create_coin_different_parent(self):
+
+        # if the coins we create have different parents, they are never
+        # considered duplicate, even when they have the same puzzle hash and
+        # amount
+        puzzle_hash = "abababababababababababababababab"
+        program = SerializedProgram.from_bytes(
+            binutils.assemble(
+                f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'  # noqa
+            ).as_bin()
+        )
+        generator = BlockGenerator(program, [])
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, safe_mode=False
+        )
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 2
+        opcode = ConditionOpcode.CREATE_COIN
+        for c in npc_result.npc_list:
+            assert c.conditions == [
+                (
+                    opcode.value,
+                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10])])],
+                )
+            ]
+
+    def test_create_coin_different_puzzhash(self):
+        # CREATE_COIN
+        # coins with different puzzle hashes are not considered duplicate
+        puzzle_hash_1 = "abababababababababababababababab"
+        puzzle_hash_2 = "cbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcb"
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5) (51 "{puzzle_hash_2}" 5)')
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode.CREATE_COIN
+        assert (
+            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5])])
+            in npc_result.npc_list[0].conditions[0][1]
+        )
+        assert (
+            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5])])
+            in npc_result.npc_list[0].conditions[0][1]
+        )
+
+    def test_create_coin_different_amounts(self):
+        # CREATE_COIN
+        # coins with different amounts are not considered duplicate
+        puzzle_hash = "abababababababababababababababab"
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 5) (51 "{puzzle_hash}" 4)')
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode.CREATE_COIN
+        assert (
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5])])
+            in npc_result.npc_list[0].conditions[0][1]
+        )
+        assert (
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4])])
+            in npc_result.npc_list[0].conditions[0][1]
+        )
+
+    def test_unknown_condition(self):
+        for sm in [True, False]:
+            for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
+                npc_result = generator_condition_tester(c, sm)
+                print(npc_result)
+                if sm:
+                    assert npc_result.error == Err.INVALID_CONDITION.value
+                    assert npc_result.npc_list == []
+                else:
+                    assert npc_result.error is None
+
+
+#                    assert npc_result.npc_list[0].conditions == []

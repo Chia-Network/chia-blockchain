@@ -52,6 +52,7 @@ from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.transaction_type import TransactionType
@@ -733,7 +734,7 @@ class PoolWallet:
         )
 
         if len(unspent_coin_records) == 0:
-            raise ValueError("Nothing to claim")
+            raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
         coin_to_height_farmed: Dict[Coin, uint32] = {}
         for tx_record in farming_rewards:
@@ -751,6 +752,8 @@ class PoolWallet:
         all_spends: List[CoinSpend] = []
         total_amount = 0
         for coin_record in unspent_coin_records:
+            if coin_record.coin not in coin_to_height_farmed:
+                continue
             if len(all_spends) >= 100:
                 # Limit the total number of spends, so it fits into the block
                 break
@@ -769,6 +772,8 @@ class PoolWallet:
             self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
+        if len(all_spends) == 0:
+            raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
         # No signatures are required to absorb
         spend_bundle: SpendBundle = SpendBundle(all_spends, G2Element())
@@ -850,11 +855,16 @@ class PoolWallet:
         )
         return len(unconfirmed) > 0
 
-    async def get_confirmed_balance(self, record_list=None) -> uint64:
+    async def get_confirmed_balance(self, _=None) -> uint64:
+        amount: uint64 = uint64(0)
         if (await self.get_current_state()).current.state == SELF_POOLING:
-            return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.wallet_id, record_list)
-        else:
-            return uint64(0)
+            unspent_coin_records: List[WalletCoinRecord] = list(
+                await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
+            )
+            for record in unspent_coin_records:
+                if record.coinbase:
+                    amount = uint64(amount + record.coin.amount)
+        return amount
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint64:
         return await self.get_confirmed_balance(record_list)

@@ -456,9 +456,27 @@ class TestPoolWalletRpc:
         await asyncio.sleep(2)
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
-        self.delete_plot(plot_id)
 
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
+
+        tr: TransactionRecord = await client.send_transaction(
+            1, 100, encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch")
+        )
+        await time_out_assert(
+            10,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+        await self.farm_blocks(full_node_api, our_ph, 2)
+        # Balance ignores non coinbase TX
+        bal = await client.get_wallet_balance(2)
+        assert bal["confirmed_wallet_balance"] == 0
+
+        with pytest.raises(ValueError):
+            await client.pw_absorb_rewards(2)
+
+        self.delete_plot(plot_id)
 
     @pytest.mark.asyncio
     async def test_absorb_pooling(self, one_wallet_node_and_rpc):

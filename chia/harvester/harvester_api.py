@@ -124,7 +124,9 @@ class HarvesterAPI:
                             # Found a very good proof of space! will fetch the whole proof from disk,
                             # then send to farmer
                             try:
-                                proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
+                                proof_xs = plot_info.prover.get_full_proof(
+                                    sp_challenge_hash, index, self.harvester.parallel_read
+                                )
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(

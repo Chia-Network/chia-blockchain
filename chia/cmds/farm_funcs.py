@@ -17,7 +17,7 @@ from chia.util.network import is_localhost
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
-async def get_harvesters(farmer_rpc_port: int) -> Optional[Dict[str, Any]]:
+async def get_harvesters(farmer_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
@@ -36,7 +36,7 @@ async def get_harvesters(farmer_rpc_port: int) -> Optional[Dict[str, Any]]:
     return plots
 
 
-async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
+async def get_blockchain_state(rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
     blockchain_state = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -56,7 +56,7 @@ async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
     return blockchain_state
 
 
-async def get_average_block_time(rpc_port: int) -> float:
+async def get_average_block_time(rpc_port: Optional[int]) -> float:
     try:
         blocks_to_compare = 500
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -100,7 +100,7 @@ async def get_average_block_time(rpc_port: int) -> float:
     return SECONDS_PER_BLOCK
 
 
-async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
+async def get_wallets_stats(wallet_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
     amounts = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -119,7 +119,7 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
     return amounts
 
 
-async def is_farmer_running(farmer_rpc_port: int) -> bool:
+async def is_farmer_running(farmer_rpc_port: Optional[int]) -> bool:
     is_running = False
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -140,7 +140,7 @@ async def is_farmer_running(farmer_rpc_port: int) -> bool:
     return is_running
 
 
-async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]:
+async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[List[Dict[str, Any]]]:
     signage_points = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -160,7 +160,7 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
     return signage_points
 
 
-async def challenges(farmer_rpc_port: int, limit: int) -> None:
+async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
     signage_points = await get_challenges(farmer_rpc_port)
     if signage_points is None:
         return None
@@ -178,7 +178,12 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
         )
 
 
-async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
+async def summary(
+    rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int],
+    harvester_rpc_port: Optional[int],
+    farmer_rpc_port: Optional[int],
+) -> None:
     all_harvesters = await get_harvesters(farmer_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)

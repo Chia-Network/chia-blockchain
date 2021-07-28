@@ -166,10 +166,15 @@ class TestRpc:
             assert len(res_2["plots"]) == num_plots
 
             # Test farmer get_harvesters
-            await farmer_rpc_api.service.update_cached_harvesters()
-            farmer_res = await client.get_harvesters()
-            assert len(list(farmer_res["harvesters"])) == 1
-            assert len(list(farmer_res["harvesters"][0]["plots"])) == num_plots
+            async def test_get_harvesters():
+                farmer_res = await client.get_harvesters()
+                if len(list(farmer_res["harvesters"])) != 1:
+                    return False
+                if len(list(farmer_res["harvesters"][0]["plots"])) != num_plots:
+                    return False
+                return True
+
+            await time_out_assert(5, test_get_harvesters)
 
             assert len(await client_2.get_plot_directories()) == 1
 

@@ -96,11 +96,14 @@ class RpcServer:
         return inner
 
     async def get_connections(self, request: Dict) -> Dict:
+        request_node_type: Optional[NodeType] = None
+        if "node_type" in request:
+            request_node_type = NodeType(request["node_type"])
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
         if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
             # TODO add peaks for peers
-            connections = self.rpc_api.service.server.get_connections()
+            connections = self.rpc_api.service.server.get_connections(request_node_type)
             con_info = []
             if self.rpc_api.service.sync_store is not None:
                 peak_store = self.rpc_api.service.sync_store.peer_to_peak
@@ -130,7 +133,7 @@ class RpcServer:
                 }
                 con_info.append(con_dict)
         else:
-            connections = self.rpc_api.service.server.get_connections()
+            connections = self.rpc_api.service.server.get_connections(request_node_type)
             con_info = [
                 {
                     "type": con.connection_type,
