@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-27 12:38\n"
+"PO-Revision-Date: 2021-07-29 15:00\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -561,7 +561,7 @@ msgstr "Tämänhetkinen Vaikeuskerroin"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:156
 #: src/components/plotNFT/PlotNFTCard.tsx:198
 msgid "Current Points Balance"
-msgstr "Tämänhetkinen Pisteiden Saldo"
+msgstr "Tämänhetkinen Pistesaldo"
 
 #: src/components/trading/TradingOverview.jsx:182
 msgid "Current trade status"
@@ -1056,7 +1056,7 @@ msgstr "Viimeisin Yritetty Todiste"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:19
 msgid "Last Height Farmed"
-msgstr "Viimeisin Tuotettu Lohkokorkeus"
+msgstr "Viimeisin Voitettu Lohko"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:36
 msgid "Latest Block Challenges"
@@ -1513,7 +1513,7 @@ msgstr "Bitfield-plottaaminen kirjoittaa 30% vähemmän levylle ja on lähes ain
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:174
 #: src/components/plotNFT/PlotNFTCard.tsx:216
 msgid "Points Found Since Start"
-msgstr "Pisteitä Löytynyt Aloittamisen Jälkeen"
+msgstr "Pisteitä Aloittamisen Jälkeen"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:185
 #: src/components/plotNFT/PlotNFTCard.tsx:227
@@ -1523,7 +1523,7 @@ msgstr "Pisteitä löytynyt viimeisen 24 tunnin aikana"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:194
 #: src/components/plotNFT/PlotNFTCard.tsx:236
 msgid "Points Successful in Last 24 Hours"
-msgstr "Pisteitä viimeisen 24 tunnin aikana"
+msgstr "Pisteitä onnistuneesti viimeisen 24 tunnin aikana"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
