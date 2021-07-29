@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-29 01:23\n"
+"PO-Revision-Date: 2021-07-29 15:00\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -1028,7 +1028,7 @@ msgstr "HD или иерархические детерминированные 
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Участки для локальных комбайнов"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1143,19 +1143,19 @@ msgstr "Присоединиться к пулу"
 #: src/components/plot/add/PlotAddNFT.tsx:141
 #: src/components/pool/PoolHero.tsx:31
 msgid "Join a Pool"
-msgstr ""
+msgstr "Присоединиться к пулу"
 
 #: src/components/plot/add/PlotAddNFT.tsx:44
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
-msgstr ""
+msgstr "Присоединяйтесь к пулу и получайте последовательные награды за фермерство в XCH. Средний доход одинаковый, но намного, менее волатильный."
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:59
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr ""
+msgstr "Присоединяйтесь к пулу и получайте последовательные награды за фермерство в XCH. Средний доход одинаковый, но намного, менее волатильный. Назначить участки в NFT участки. Вы можете легко переключаться на пулы без повторного засеивания."
 
 #: src/components/plot/add/PlotAddNFT.tsx:133
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr ""
+msgstr "Присоединяйтесь к пулу и получите более последовательные награды за фермерство в XCH. Создайте участки NFT и назначьте свои новые участки в группу."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
@@ -1190,23 +1190,23 @@ msgstr ""
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:114
 msgid "Learn More"
-msgstr ""
+msgstr "Подробнее"
 
 #: src/components/plotNFT/PlotNFTState.tsx:58
 msgid "Leaving Pool"
-msgstr ""
+msgstr "Выход из пула"
 
 #: src/components/pool/PoolOverview.tsx:176
 msgid "List view"
-msgstr ""
+msgstr "Список"
 
 #: src/components/pool/Pool.tsx:21
 msgid "Loading Plot NFTs"
-msgstr ""
+msgstr "Загрузка участка NFT"
 
 #: src/components/wallet/Wallets.tsx:172
 msgid "Loading list of wallets"
-msgstr ""
+msgstr "Загрузка списка кошельков"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:41
 msgid "Loading..."
@@ -1274,7 +1274,7 @@ msgstr "МиБ Исх./Вх."
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
-msgstr ""
+msgstr "Минимальная сложность"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
 msgid "Minutes"
@@ -1348,11 +1348,11 @@ msgstr "Идентификатор узла"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "ID узла"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
-msgstr ""
+msgstr "Пусто"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:68
 msgid "None of your plots have passed the plot filter yet."
@@ -1390,12 +1390,12 @@ msgstr "Участки не найдены"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:184
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr ""
+msgstr "Обратите внимание, что это не меняет адреса выплат пула. Это влияет только на старый формат участков и на вознаграждение 0.25XCH за участки в пуле."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:118
 #: src/components/plotNFT/PlotNFTCard.tsx:160
 msgid "Number of Plots"
-msgstr ""
+msgstr "Количество участков"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
 msgid "Number of buckets"
@@ -1428,7 +1428,7 @@ msgstr "Исходящие"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:361
 msgid "Payout Address"
-msgstr ""
+msgstr "Адрес выплат"
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -1465,7 +1465,7 @@ msgstr "Ожидаемый итоговый баланс"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
 #: src/hooks/useAbsorbRewards.tsx:45
 msgid "Please Confirm"
-msgstr ""
+msgstr "Подтвердите, пожалуйста"
 
 #: src/components/trading/CreateOffer.jsx:100
 msgid "Please add a trade pair"
@@ -1538,11 +1538,11 @@ msgstr "Пожалуйста, укажите временную директор
 
 #: src/hooks/useAbsorbRewards.tsx:21
 msgid "Please wait for synchronization"
-msgstr ""
+msgstr "Дождитесь окончания синхронизации"
 
 #: src/hooks/useJoinPool.tsx:27
 msgid "Please wait for wallet synchronization"
-msgstr ""
+msgstr "Дождитесь окончания синхронизации кошелька"
 
 #: src/components/plot/Plot.tsx:18
 msgid "Plot"
@@ -1563,12 +1563,12 @@ msgstr "Публ. ключ"
 
 #: src/components/pool/PoolOverview.tsx:40
 msgid "Plot NFT"
-msgstr ""
+msgstr "Участок NFT"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
 #: src/components/plotNFT/PlotNFTChangePool.tsx:81
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
-msgstr ""
+msgstr "Участок NFT с p2_singleton_puzzle_hash {plotNFTId} не существует"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1600,7 +1600,7 @@ msgstr "Плот дубликат {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
-msgstr ""
+msgstr "Участок NFT переходит в (целевое состояние). Это может занять некоторое время. Пожалуйста, не закрывайте приложение, пока процесс не завершен."
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -1633,26 +1633,26 @@ msgstr "Разметка участков при включенной функц
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:174
 #: src/components/plotNFT/PlotNFTCard.tsx:216
 msgid "Points Found Since Start"
-msgstr ""
+msgstr "Пункты с начала запуска"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:185
 #: src/components/plotNFT/PlotNFTCard.tsx:227
 msgid "Points Found in Last 24 Hours"
-msgstr ""
+msgstr "Пункты за последние 24 часа"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:194
 #: src/components/plotNFT/PlotNFTCard.tsx:236
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Принятые пункты за последние 24 часа"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr ""
+msgstr "Пул"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
-msgstr ""
+msgstr "Адрес контракта пула"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:81
 msgid "Pool Key"
@@ -1660,11 +1660,11 @@ msgstr "Ключ пула"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Ссылка для входа на пул"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Инструкции по выплате пула"
 
 #: src/components/block/Block.jsx:263
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1681,7 +1681,7 @@ msgstr "Адрес выплаты пулу"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:149
 msgid "Pool Reward Address is not properly formatted."
-msgstr ""
+msgstr "Неверный формат адреса вознаграждения фермера."
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:148
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
@@ -1689,7 +1689,7 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:144
 msgid "Pool Reward Address must not be empty."
-msgstr ""
+msgstr "Адрес наград фермера не должен быть пустым."
 
 #: src/components/block/Block.jsx:313
 msgid "Pool Reward Amount"
@@ -1697,21 +1697,21 @@ msgstr "Сумма вознаграждения пула"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
 msgid "Pool does not provide relative_lock_height."
-msgstr ""
+msgstr "Pool не предоставляет relative_lock_height."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
 msgid "Pool does not provide target_puzzle_hash."
-msgstr ""
+msgstr "Пул не предоставляет target_puzzle_hash."
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Публичный ключ пула:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:272
 #: src/components/plotNFT/PlotNFTCard.tsx:327
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
-msgstr ""
+msgstr "Пул:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
@@ -1728,11 +1728,11 @@ msgstr "Порт"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
 #: src/components/plotNFT/PlotNFTChangePool.tsx:74
 msgid "Preparing Plot NFT"
-msgstr ""
+msgstr "Подготовка участка NFT"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
 msgid "Preparing standard wallet"
-msgstr ""
+msgstr "Подготовка стандартного кошелька"
 
 #: src/components/block/Block.jsx:347
 msgid "Previous"
@@ -1772,7 +1772,7 @@ msgstr "Доказательств найдено"
 
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
-msgstr ""
+msgstr "Версия Протокола"
 
 #: src/components/wallet/create/createRLAdmin.jsx:297
 msgid "Pubkey"
@@ -1942,11 +1942,11 @@ msgstr "Выберите временное место назначения дл
 
 #: src/components/plot/add/PlotAddNFT.tsx:81
 msgid "Select your Plot NFT"
-msgstr ""
+msgstr "Выберите Ваш участок NFT"
 
 #: src/components/plot/add/PlotAddNFT.tsx:72
 msgid "Select your Plot NFT from the dropdown or create a new one."
-msgstr ""
+msgstr "Выберите свой участок NFT из выпадающего списка или создайте новый."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
@@ -1961,7 +1961,7 @@ msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
 msgid "Self pool. When you win a block you will earn XCH rewards."
-msgstr ""
+msgstr "Cвой пул. Когда вы выиграете блок, вы получите награду в XCH."
 
 #: src/components/trading/CreateOffer.jsx:164
 #: src/components/trading/TradesTable.tsx:47
@@ -2018,7 +2018,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Что-то пошло не так"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2180,7 +2180,7 @@ msgstr "Узел синхронизируется, что означает, чт
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr ""
+msgstr "URL пула \"{normalizedUrl}\" не работает. Это пул? Ошибка: {0}"
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
@@ -2272,7 +2272,7 @@ msgstr "Это общий баланс + отложенный баланс: эт
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:149
 #: src/components/plotNFT/PlotNFTCard.tsx:191
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "Это общее количество баллов, которое есть у участка NFT с этим пулом с момента последней выплаты. Пул сбрасывает баллы после выплаты."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:166
 #: src/components/plotNFT/PlotNFTCard.tsx:208
