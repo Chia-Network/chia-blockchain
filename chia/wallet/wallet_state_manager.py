@@ -559,7 +559,8 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for removal in record.removals:
-                removal_amount += removal.amount
+                if await self.does_coin_belong_to_wallet(removal, wallet_id):
+                    removal_amount += removal.amount
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id):
