@@ -223,22 +223,7 @@ class DIDWallet:
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint64:
         confirmed = await self.get_confirmed_balance(record_list)
-        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.wallet_info.id
-        )
-        addition_amount = 0
-        removal_amount = 0
-
-        for record in unconfirmed_tx:
-            if record.type == TransactionType.INCOMING_TX:
-                addition_amount += record.amount
-            else:
-                removal_amount += record.amount
-
-        result = confirmed - removal_amount + addition_amount
-
-        self.log.info(f"Unconfirmed balance for did wallet is {result}")
-        return uint64(result)
+        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
