@@ -56,12 +56,17 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 # sets the version for chia-blockchain in package.json
-npm version $CHIA_INSTALLER_VERSION --no-git-tag-version
+cp package.json package.json.orig
+jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
+
+# reset the package.json to the original
+mv package.json.orig package.json
+
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-packager failed!"
 	exit $LAST_EXIT_CODE
