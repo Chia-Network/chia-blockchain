@@ -101,10 +101,7 @@ class ChiaServer:
         # Task list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
 
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(name if name else __name__)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
         self.api = api
@@ -281,6 +278,11 @@ class ChiaServer:
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
+        except ValueError as e:
+            if connection is not None:
+                await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
+            self.log.warning(f"{e} - closing connection")
+            close_event.set()
         except Exception as e:
             if connection is not None:
                 await connection.close(ws_close_code=WSCloseCode.PROTOCOL_ERROR, error=Err.UNKNOWN)
@@ -362,54 +364,54 @@ class ChiaServer:
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
-                await session.close()
                 return False
             except asyncio.TimeoutError:
                 self.log.debug(f"Timeout error connecting to {url}")
-                await session.close()
                 return False
-            if ws is not None:
-                assert ws._response.connection is not None and ws._response.connection.transport is not None
-                transport = ws._response.connection.transport  # type: ignore
-                cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
-                der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
-                peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-                if peer_id == self.node_id:
-                    raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
+            if ws is None:
+                return False
 
-                connection = WSChiaConnection(
-                    self._local_type,
-                    ws,
-                    self._port,
-                    self.log,
-                    True,
-                    False,
-                    target_node.host,
-                    self.incoming_messages,
-                    self.connection_closed,
-                    peer_id,
-                    self._inbound_rate_limit_percent,
-                    self._outbound_rate_limit_percent,
-                    session=session,
-                )
-                handshake = await connection.perform_handshake(
-                    self._network_id,
-                    protocol_version,
-                    self._port,
-                    self._local_type,
-                )
-                assert handshake is True
-                await self.connection_added(connection, on_connect)
-                connection_type_str = ""
-                if connection.connection_type is not None:
-                    connection_type_str = connection.connection_type.name.lower()
-                self.log.info(f"Connected with {connection_type_str} {target_node}")
-                if is_feeler:
-                    asyncio.create_task(connection.close())
-                return True
-            else:
-                await session.close()
-                return False
+            assert ws._response.connection is not None and ws._response.connection.transport is not None
+            transport = ws._response.connection.transport  # type: ignore
+            cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
+            der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+            peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
+            if peer_id == self.node_id:
+                raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
+
+            connection = WSChiaConnection(
+                self._local_type,
+                ws,
+                self._port,
+                self.log,
+                True,
+                False,
+                target_node.host,
+                self.incoming_messages,
+                self.connection_closed,
+                peer_id,
+                self._inbound_rate_limit_percent,
+                self._outbound_rate_limit_percent,
+                session=session,
+            )
+            handshake = await connection.perform_handshake(
+                self._network_id,
+                protocol_version,
+                self._port,
+                self._local_type,
+            )
+            assert handshake is True
+            await self.connection_added(connection, on_connect)
+            # the session has been adopted by the connection, don't close it at
+            # the end of the function
+            session = None
+            connection_type_str = ""
+            if connection.connection_type is not None:
+                connection_type_str = connection.connection_type.name.lower()
+            self.log.info(f"Connected with {connection_type_str} {target_node}")
+            if is_feeler:
+                asyncio.create_task(connection.close())
+            return True
         except client_exceptions.ClientConnectorError as e:
             self.log.info(f"{e}")
         except ProtocolError as e:
@@ -429,9 +431,9 @@ class ChiaServer:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
             error_stack = traceback.format_exc()
             self.log.error(f"Exception {e}, exception Stack: {error_stack}")
-
-        if session is not None:
-            await session.close()
+        finally:
+            if session is not None:
+                await session.close()
 
         return False
 
@@ -617,10 +619,11 @@ class ChiaServer:
     def get_full_node_connections(self) -> List[WSChiaConnection]:
         return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
-    def get_connections(self) -> List[WSChiaConnection]:
+    def get_connections(self, node_type: Optional[NodeType] = None) -> List[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
-            result.append(connection)
+            if node_type is None or connection.connection_type == node_type:
+                result.append(connection)
         return result
 
     async def close_all_connections(self) -> None:

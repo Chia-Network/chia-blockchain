@@ -113,7 +113,11 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             sk = AugSchemeMPL.key_gen(token_bytes(32))
 
         # The plot public key is the combination of the harvester and farmer keys
-        plot_public_key = ProofOfSpace.generate_plot_public_key(master_sk_to_local_sk(sk).get_g1(), farmer_public_key)
+        # New plots will also include a taproot of the keys, for extensibility
+        include_taproot: bool = pool_contract_puzzle_hash is not None
+        plot_public_key = ProofOfSpace.generate_plot_public_key(
+            master_sk_to_local_sk(sk).get_g1(), farmer_public_key, include_taproot
+        )
 
         # The plot id is based on the harvester, farmer, and pool keys
         if pool_public_key is not None:

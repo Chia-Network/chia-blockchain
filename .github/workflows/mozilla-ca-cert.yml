@@ -1,0 +1,32 @@
+name: "Update Mozilla CA sub module"
+on:
+  workflow_dispatch:
+    branches:
+      - $default-branch
+
+jobs:
+  update_ca_module:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: "${{ github.event.inputs.chia_ref }}"
+          repository: chia-network/chia-blockchain
+          submodules: recursive
+          token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "Add changes to new branch"
+        run: |
+          cd ./mozilla-ca
+          git pull origin main
+      - name: "Create Pull Request"
+        uses: peter-evans/create-pull-request@v3
+        with:
+          base: main
+          body: "Newest Mozilla CA cert"
+          branch: mozilla-ca-updates
+          commit-message: "adding ca updates"
+          delete-branch: true
+          reviewers: "justinengland,hoffmang9,cmmarslender,nirajpathak13"
+          title: "CA Cert updates"
+          token: "${{ secrets.GITHUB_TOKEN }}"

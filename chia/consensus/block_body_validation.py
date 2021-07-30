@@ -2,7 +2,7 @@ import collections
 import logging
 from typing import Dict, List, Optional, Set, Tuple, Union, Callable
 
-from blspy import AugSchemeMPL, G1Element
+from blspy import G1Element
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -27,6 +27,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util import cached_bls
 from chia.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
     coin_announcements_names_for_npc,
@@ -330,7 +331,10 @@ async def validate_block_body(
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
                     assert curr_block_generator is not None and curr.transactions_info is not None
                     curr_npc_result = get_name_puzzle_conditions(
-                        curr_block_generator, min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost), False
+                        curr_block_generator,
+                        min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
+                        cost_per_byte=constants.COST_PER_BYTE,
+                        safe_mode=False,
                     )
                     removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
                 else:
@@ -385,6 +389,7 @@ async def validate_block_body(
                     # This coin is not in the current heaviest chain, so it must be in the fork
                     if rem not in additions_since_fork:
                         # Check for spending a coin that does not exist in this fork
+                        log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
                         return Err.UNKNOWN_UNSPENT, None
                     new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
@@ -473,8 +478,15 @@ async def validate_block_body(
         if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE, None
 
-        # noinspection PyTypeChecker
-        if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+        # The pairing cache is not useful while syncing as each pairing is seen
+        # only once, so the extra effort of populating it is not justified.
+        # However, we force caching of pairings just for unfinished blocks
+        # as the cache is likely to be useful when validating the corresponding
+        # finished blocks later.
+        force_cache: bool = isinstance(block, UnfinishedBlock)
+        if not cached_bls.aggregate_verify(
+            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
+        ):
             return Err.BAD_AGGREGATE_SIGNATURE, None
 
         return None, npc_result

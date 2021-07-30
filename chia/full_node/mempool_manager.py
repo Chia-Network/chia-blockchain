@@ -5,9 +5,10 @@ import logging
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
-from blspy import AugSchemeMPL, G1Element
+from blspy import G1Element
 from chiabip158 import PyBIP158
 
+from chia.util import cached_bls
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
@@ -38,10 +39,10 @@ from chia.util.streamable import recurse_jsonify
 log = logging.getLogger(__name__)
 
 
-def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int) -> bytes:
+def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int) -> bytes:
     program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(get_name_puzzle_conditions(program, max_cost, True))
+    return bytes(get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True))
 
 
 class MempoolManager:
@@ -215,7 +216,11 @@ class MempoolManager:
         """
         start_time = time.time()
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
-            self.pool, get_npc_multiprocess, bytes(new_spend), self.constants.MAX_BLOCK_COST_CLVM
+            self.pool,
+            get_npc_multiprocess,
+            bytes(new_spend),
+            int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
+            self.constants.COST_PER_BYTE,
         )
         end_time = time.time()
         log.info(f"It took {end_time - start_time} to pre validate transaction")
@@ -245,6 +250,8 @@ class MempoolManager:
         log.debug(f"Cost: {cost}")
 
         if cost > int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM):
+            # we shouldn't ever end up here, since the cost is limited when we
+            # execute the CLVM program.
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
         if npc_result.error is not None:
@@ -421,7 +428,7 @@ class MempoolManager:
 
         if validate_signature:
             # Verify aggregated signature
-            if not AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature):
+            if not cached_bls.aggregate_verify(pks, msgs, new_spend.aggregated_signature, True):
                 log.warning(f"Aggsig validation error {pks} {msgs} {new_spend}")
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
         # Remove all conflicting Coins and SpendBundles

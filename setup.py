@@ -1,12 +1,12 @@
 from setuptools import setup
 
 dependencies = [
-    "blspy==1.0.2",  # Signature library
+    "blspy==1.0.5",  # Signature library
     "chiavdf==1.0.2",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
-    "chiapos==1.0.3",  # proof of space
-    "clvm==0.9.6",
-    "clvm_rs==0.1.7",
+    "chiapos==1.0.4",  # proof of space
+    "clvm==0.9.7",
+    "clvm_rs==0.1.8",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.1",  # Allows users to open ports on their router
+    "miniupnpc==2.2.2",  # Allows users to open ports on their router
 ]
 
 dev_dependencies = [
@@ -60,6 +60,7 @@ kwargs = dict(
         "build_scripts",
         "chia",
         "chia.cmds",
+        "chia.clvm",
         "chia.consensus",
         "chia.daemon",
         "chia.full_node",
@@ -68,6 +69,7 @@ kwargs = dict(
         "chia.harvester",
         "chia.introducer",
         "chia.plotting",
+        "chia.pools",
         "chia.protocols",
         "chia.rpc",
         "chia.server",
@@ -101,7 +103,7 @@ kwargs = dict(
     },
     package_data={
         "chia": ["pyinstaller.spec"],
-        "chia.wallet.puzzles": ["*.clvm", "*.clvm.hex"],
+        "": ["*.clvm", "*.clvm.hex", "*.clib", "*.clinc", "*.clsp"],
         "chia.util": ["initial-*.yaml", "english.txt"],
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
