@@ -8,7 +8,7 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-30 20:24\n"
+"PO-Revision-Date: 2021-07-31 21:01\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -385,7 +385,7 @@ msgstr "Verbindung trennen bestätigen"
 #: src/components/plotNFT/PlotNFTCard.tsx:121
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Bestätigung"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -698,7 +698,7 @@ msgstr "Ändern"
 #: src/components/plotNFT/PlotNFTCard.tsx:301
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
 msgid "Edit Payout Instructions"
-msgstr ""
+msgstr "Auszahlungseinstellungen bearbeiten"
 
 #: src/components/wallet/WalletImport.tsx:147
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -1484,7 +1484,7 @@ msgstr "Plot ist ein Duplikat von {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
-msgstr ""
+msgstr "PlotNFT verändert sich zum (target state). Das kann eine Weile dauern. Bitte schließe die Anwendung nicht bis dies abgeschlossen ist."
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
@@ -1528,7 +1528,7 @@ msgstr "Punkte in den letzten 24 Stunden gefunden"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:194
 #: src/components/plotNFT/PlotNFTCard.tsx:236
 msgid "Points Successful in Last 24 Hours"
-msgstr ""
+msgstr "Punkte Erfolgreich in den letzten 24 Stunden"
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
@@ -1545,11 +1545,11 @@ msgstr "Pool Schlüssel"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
 msgid "Pool Login Link"
-msgstr ""
+msgstr "Pool Login Link"
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
 msgid "Pool Payout Instructions"
-msgstr ""
+msgstr "Pool Auszahlungsanweisungen"
 
 #: src/components/block/Block.jsx:263
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
@@ -1903,7 +1903,7 @@ msgstr "Glätte deine XCH Farming-Belohnungen indem du einem Pool beitrittst."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 msgid "Something went wrong"
-msgstr ""
+msgstr "Etwas ist schiefgelaufen"
 
 #: src/electron/main.tsx:470
 msgid "Speech"
@@ -2069,11 +2069,11 @@ msgstr "Die Pool-URL \"{normalizedUrl}\" funktioniert nicht. Ist es ein Pool? Fe
 
 #: src/hooks/usePoolInfo.ts:43
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "Die Pool URL ist nicht valide. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:39
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "Die Pool URL muss 'https' verwenden. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2105,7 +2105,7 @@ msgstr "Die gesamten Transaktionsgebühren in diesem Block. Die Belohnung bekomm
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "Hier sind die Anweisungen wie der Farmer bezahlt werden möchte. Standardmäßig ist dies eine XCH - Adresse, aber es kann ein beliebiger String kleiner als 1024 Zeichen sein, welcher auch eine andere Blockchain oder ein anderes Bezahlungssystem repräsentieren kann."
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
@@ -2174,7 +2174,7 @@ msgstr "Dieses Plot-NFT ist einem anderen Schlüssel zugeordnet. Du kannst noch 
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 msgid "This plot NFT is not connected to pool"
-msgstr ""
+msgstr "Dieser Plot-NFT ist nicht mit dem Pool verbunden"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -2352,7 +2352,7 @@ msgstr "Angebot anzeigen"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:286
 msgid "View Pool Login Link"
-msgstr ""
+msgstr "Pool Login Link anzeigen"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
@@ -2437,15 +2437,15 @@ msgstr "Möchtest du eine Verzögerung haben, bevor der nächste Plot beginnt?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Warnung: Dieser Key wird für eine Wallet benutzt die möglicherweise nicht leer ist. Beim Löschen des Keys könnte der Zugang zur Wallet verloren gehen"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Warnung: Dieser Key wird für deine Farming-Belohnungen verwendet. Durch das Löschen dieses Keys kannst du den Zugriff auf zukünftige Farming-Belohnungen verlieren"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Warnung: Dieser Key wird für deine Pool-Farming-Belohnungen verwendet. Durch das Löschen dieses Keys kannst du den Zugriff auf zukünftige Pool-Farming-Belohnungen verlieren"
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
