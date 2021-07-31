@@ -1338,5 +1338,15 @@ class FullNodeAPI:
     async def register_interest_in_coin(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: ws.WSChiaConnection
     ):
-        # If the coin state changed after the specified height send a updated coin state
-        pass
+        for coin_id in request.coin_ids:
+            if coin_id not in self.full_node.coin_subscriptions:
+                self.full_node.coin_subscriptions[coin_id] = []
+            self.full_node.coin_subscriptions[coin_id].append(peer.peer_node_id)
+
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
+            include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
+        )
+
+        response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
+        msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+        return msg
