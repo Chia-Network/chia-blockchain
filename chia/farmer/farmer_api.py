@@ -421,7 +421,6 @@ class FarmerAPI:
             else:
                 pool_dict["points_found_24h"] = []
 
-
             if pool_dict["pool_config"].pool_url == "":
                 # Self pooling
                 continue
