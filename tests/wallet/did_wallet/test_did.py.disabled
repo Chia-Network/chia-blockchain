@@ -30,6 +30,11 @@ class TestDIDWallet:
             yield _
 
     @pytest.fixture(scope="function")
+    async def three_wallet_nodes(self):
+        async for _ in setup_simulators_and_wallets(1, 3, {}):
+            yield _
+
+    @pytest.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
@@ -40,20 +45,25 @@ class TestDIDWallet:
             yield _
 
     @pytest.mark.asyncio
-    async def test_creation_from_backup_file(self, two_wallet_nodes):
+    async def test_creation_from_backup_file(self, three_wallet_nodes):
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
-        wallet_node_0, server_2 = wallets[0]
-        wallet_node_1, server_3 = wallets[1]
+        wallet_node_0, server_0 = wallets[0]
+        wallet_node_1, server_1 = wallets[1]
+        wallet_node_2, server_2 = wallets[2]
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+        wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet_0.get_new_puzzlehash()
+        ph1 = await wallet_1.get_new_puzzlehash()
+        ph2 = await wallet_2.get_new_puzzlehash()
 
+        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -67,6 +77,10 @@ class TestDIDWallet:
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
         # Wallet1 sets up DIDWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
@@ -83,9 +97,9 @@ class TestDIDWallet:
         # Wallet1 sets up DIDWallet_1 with DIDWallet_0 as backup
         backup_ids = [bytes.fromhex(did_wallet_0.get_my_DID())]
 
-        async with wallet_node_0.wallet_state_manager.lock:
+        async with wallet_node_1.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(201), backup_ids
+                wallet_node_1.wallet_state_manager, wallet_1, uint64(201), backup_ids
             )
 
         for i in range(1, num_blocks):
@@ -99,9 +113,9 @@ class TestDIDWallet:
         did_wallet_1.create_backup(filename)
 
         # Wallet2 recovers DIDWallet2 to a new set of keys
-        async with wallet_node_1.wallet_state_manager.lock:
+        async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
-                wallet_node_1.wallet_state_manager, wallet_1, filename
+                wallet_node_2.wallet_state_manager, wallet_2, filename
             )
         coins = await did_wallet_1.select_coins(1)
         coin = coins.copy().pop()
@@ -139,15 +153,19 @@ class TestDIDWallet:
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 201)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 201)
 
-        # DIDWallet3 spends the money back to itself
-        ph2 = await wallet_1.get_new_puzzlehash()
-        await did_wallet_2.create_exit_spend(ph2)
+        some_ph = 32 * b"\2"
+        await did_wallet_2.create_exit_spend(some_ph)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, wallet_1.get_confirmed_balance, 200)
-        await time_out_assert(15, wallet_1.get_unconfirmed_balance, 200)
+        async def get_coins_with_ph():
+            coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, some_ph)
+            if len(coins) == 1:
+                return True
+            return False
+
+        await time_out_assert(15, get_coins_with_ph, True)
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
 
