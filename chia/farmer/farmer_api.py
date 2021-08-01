@@ -412,6 +412,16 @@ class FarmerAPI:
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
         pool_difficulties: List[PoolDifficulty] = []
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
+            cutoff_24h = time.time() - (24 * 60 * 60)
+            for index, [timestamp, points] in enumerate(pool_dict["points_found_24h"]):
+                if timestamp > cutoff_24h:
+                    if index > 0:
+                        pool_dict["points_found_24h"] = pool_dict["points_found_24h"][index:]
+                    break
+            else:
+                pool_dict["points_found_24h"] = []
+
+
             if pool_dict["pool_config"].pool_url == "":
                 # Self pooling
                 continue
