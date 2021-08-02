@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu core-types Test
+name: Ubuntu core-custom_types Test
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu core-types Test
+    name: Ubuntu core-custom_types Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -102,10 +102,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
-    - name: Test core-types code with pytest
+    - name: Test core-custom_types code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/types/test_coin.py tests/core/types/test_proof_of_space.py tests/core/types/test_spend_bundle.py -s -v --durations 0
+        ./venv/bin/py.test tests/core/custom_types/test_coin.py tests/core/custom_types/test_proof_of_space.py tests/core/custom_types/test_spend_bundle.py -s -v --durations 0 
 
 
 #
