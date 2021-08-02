@@ -8,7 +8,7 @@ msgstr ""
 "Language: lt_LT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-20 20:06\n"
+"PO-Revision-Date: 2021-08-02 19:01\n"
 "Last-Translator: \n"
 "Language-Team: Lithuanian\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && (n%100>19 || n%100<11) ? 0 : (n%10>=2 && n%10<=9) && (n%100>19 || n%100<11) ? 1 : n%1!=0 ? 2: 3);\n"
@@ -205,11 +205,11 @@ msgstr ""
 #: src/components/block/Block.jsx:157
 #: src/components/block/Block.jsx:332
 msgid "Block"
-msgstr ""
+msgstr "Blokas"
 
 #: src/components/block/Block.jsx:137
 msgid "Block Test"
-msgstr ""
+msgstr "Bloko testas"
 
 #: src/components/block/Block.jsx:235
 msgid "Block VDF Iterations"
@@ -217,7 +217,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:336
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Bloko aukštis {0} Chia blokų grandinėje"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -233,7 +233,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
-msgstr ""
+msgstr "Blokai"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -243,7 +243,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:79
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:110
 msgid "Browse"
-msgstr ""
+msgstr "Naršyti"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:73
 msgid "But you are currently farming <0/>"
@@ -253,7 +253,7 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:47
 #: src/components/trading/TradingOverview.jsx:288
 msgid "Buy"
-msgstr ""
+msgstr "Pirkti"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
@@ -277,11 +277,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:400
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Cancel"
-msgstr ""
+msgstr "Atšaukti"
 
 #: src/components/trading/TradingOverview.jsx:389
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Atšaukti ir naudoti"
 
 #: src/components/plot/PlotsNotFound.tsx:39
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -289,7 +289,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
-msgstr ""
+msgstr "Iššūkis"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:14
 msgid "Challenge Hash"
@@ -311,7 +311,7 @@ msgstr ""
 
 #: src/electron/main.tsx:419
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron/main.tsx:358
 msgid "Chia Blockchain Wiki"
@@ -337,7 +337,7 @@ msgstr ""
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
 msgid "Close"
-msgstr ""
+msgstr "Uždaryti"
 
 #: src/components/app/AppRouter.tsx:27
 msgid "Closing down node and server"
@@ -345,12 +345,12 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
-msgstr ""
+msgstr "Monetos:"
 
 #: src/components/trading/CreateOffer.jsx:172
 #: src/components/trading/TradesTable.tsx:24
 msgid "Colour"
-msgstr ""
+msgstr "Spalva"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:223
 msgid "Colour Info"
