@@ -189,7 +189,7 @@ class SpendSim:
         await self.mempool_manager.coin_store.rollback_to_block(block_height)
         self.mempool_manager.mempool.spends = {}
         self.block_height = block_height
-        if new_br_list:
+        if len(new_br_list) > 0:
             self.timestamp = new_br_list[-1].timestamp
         else:
             self.timestamp = uint64(self.defaults.INITIAL_FREEZE_END_TIMESTAMP + 1)
