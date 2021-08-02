@@ -763,9 +763,8 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                results = await self.pre_validate_batch(blocks, peer, summaries)
                 success, advanced_peak, _ = await self.receive_block_batch(
-                    blocks, peer, None if advanced_peak else uint32(fork_point_height), results
+                    blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
                     if peer in peers_with_peak:
