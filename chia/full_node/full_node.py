@@ -51,6 +51,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -717,7 +718,9 @@ class FullNode:
         buffer_size = 4
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak = self.get_peers_with_peak(peak_hash)
-        fork_point_height = await check_fork_next_block(self.blockchain, fork_point_height, peers_with_peak)
+        fork_point_height = await check_fork_next_block(
+            self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
+        )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
         async def fetch_block_batces(batch_queue, peers_with_peak: List):
@@ -753,7 +756,6 @@ class FullNode:
         async def validate_block_batces(batch_queue):
             advanced_peak = False
             while True:
-
                 res = await batch_queue.get()
                 if res is None:
                     self.log.debug("done fetching blocks")
@@ -761,8 +763,9 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
+                results = await self.pre_validate_batch(blocks, peer, summaries)
                 success, advanced_peak, _ = await self.receive_block_batch(
-                    blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
+                    blocks, peer, None if advanced_peak else uint32(fork_point_height), results
                 )
                 if success is False:
                     if peer in peers_with_peak:
@@ -1177,9 +1180,7 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
-            pre_validation_results: Optional[
-                List[PreValidationResult]
-            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
@@ -2028,22 +2029,13 @@ class FullNode:
             self.log.error(f"Exception Stack: {error_stack}")
 
 
-async def check_fork_next_block(blockchain: BlockchainInterface, fork_point_height: uint32, peers_with_peak: List):
-    our_peak_height = blockchain.get_peak_height()
-    ses_heigths = blockchain.get_ses_heights()
-    if len(ses_heigths) > 2 and our_peak_height is not None:
-        ses_heigths.sort()
-        max_fork_ses_height = ses_heigths[-3]
-        # This is the fork point in SES in the case where no fork was detected
-        if blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
-            for peer in peers_with_peak:
-                # Grab a block at peak + 1 and check if fork point is actually our current height
-                block_response: Optional[Any] = await peer.request_block(
-                    full_node_protocol.RequestBlock(uint32(our_peak_height + 1), True)
-                )
-                if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
-                    peak = blockchain.get_peak()
-                    if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
-                        fork_point_height = our_peak_height
-                    break
-    return fork_point_height
+async def node_next_block_check(
+    peer: ws.WSChiaConnection, potential_peek: uint32, blockchain: BlockchainInterface
+) -> bool:
+
+    block_response: Optional[Any] = await peer.request_block(full_node_protocol.RequestBlock(potential_peek, True))
+    if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
+        peak = blockchain.get_peak()
+        if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
+            return True
+    return False
