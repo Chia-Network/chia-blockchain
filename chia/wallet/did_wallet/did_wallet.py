@@ -362,7 +362,7 @@ class DIDWallet:
             assert additions is not None
             assert isinstance(additions, RespondAdditions)
             # All additions in this block here:
-            new_puzhash = (await self.get_new_innerpuz()).get_tree_hash()
+            new_puzhash = await self.get_new_inner_hash()
             new_pubkey = bytes(
                 (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
             )
