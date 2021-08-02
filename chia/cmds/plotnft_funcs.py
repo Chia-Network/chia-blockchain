@@ -148,7 +148,7 @@ async def pprint_pool_wallet_state(
             summed_points_found_24h = sum(points_found_24h)
             summed_points_acknowledged_24h = sum(points_acknowledged_24h)
             if summed_points_found_24h == 0:
-                success_pct = 0
+                success_pct = 0.0
             else:
                 success_pct = summed_points_acknowledged_24h / summed_points_found_24h
             print(f"Points found (24h): {summed_points_found_24h}")
