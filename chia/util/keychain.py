@@ -204,15 +204,15 @@ class Keychain:
     """
 
     testing: bool
-    test_keyring_wrapper: Optional[KeyringWrapper]
+    keyring_wrapper: KeyringWrapper
     user: str
 
     def __init__(
-        self, user: str = "user-chia-1.8", testing: bool = False, test_keyring_wrapper: Optional[KeyringWrapper] = None
+        self, user: str = "user-chia-1.8", testing: bool = False
     ):
         self.user = user
         self.testing = testing
-        self.test_keyring_wrapper = test_keyring_wrapper
+        self.keyring_wrapper = KeyringWrapper.get_shared_instance()
 
     def _get_service(self) -> str:
         """
@@ -222,12 +222,6 @@ class Keychain:
             return f"chia-{self.user}-test"
         else:
             return f"chia-{self.user}"
-
-    @property
-    def keyring_wrapper(self) -> KeyringWrapper:
-        if self.test_keyring_wrapper is not None:
-            return self.test_keyring_wrapper
-        return KeyringWrapper.get_shared_instance()
 
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
