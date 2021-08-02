@@ -249,7 +249,10 @@ class BlockTools:
 
         _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
-        self._config = load_config(self.root_path, "config.yaml")
+        # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
+        self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
+            "plot_directories"
+        ]
 
     @property
     def config(self) -> Dict:
