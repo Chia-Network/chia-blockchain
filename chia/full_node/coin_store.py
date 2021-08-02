@@ -388,4 +388,4 @@ class CoinStore:
             current.timestamp,
         )  # type: ignore # noqa
         await self._add_coin_record(spent, True)
-        return current
+        return spent
