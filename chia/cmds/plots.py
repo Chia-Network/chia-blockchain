@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from chia.plotting.plot_tools import PlotManager
+from chia.plotting.manager import PlotManager
 
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)

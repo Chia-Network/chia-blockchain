@@ -7,7 +7,7 @@ from typing import List
 from blspy import G1Element
 from chiapos import Verifier
 
-from chia.plotting.plot_tools import PlotManager
+from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotRefreshResult, PlotsRefreshParameter, find_duplicate_plot_IDs, parse_plot_info
 from chia.util.config import load_config
 from chia.util.hash import std_hash
@@ -69,7 +69,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     parallel_read: bool = config["harvester"].get("parallel_read", True)
 
     v = Verifier()
-    log.info(f"Loading plots in config.yaml using plot_tools loading code (parallel read: {parallel_read})\n")
+    log.info(f"Loading plots in config.yaml using plot_manager loading code (parallel read: {parallel_read})\n")
     # Prompts interactively if the keyring is protected by a master passphrase. To use the daemon
     # for keychain access, KeychainProxy/connect_to_keychain should be used instead of Keychain.
     kc: Keychain = Keychain()

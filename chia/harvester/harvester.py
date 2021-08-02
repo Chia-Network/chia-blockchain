@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
-from chia.plotting.plot_tools import PlotManager
+from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult
 
 log = logging.getLogger(__name__)
