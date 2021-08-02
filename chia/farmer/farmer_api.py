@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Callable, Optional, List, Any, Dict
+from typing import Callable, Optional, List, Any, Dict, Sequence, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -25,6 +25,16 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.util.api_decorators import api_request, peer_required
 from chia.util.ints import uint32, uint64
+
+
+def strip_old_entries(pairs: Sequence[Tuple[float, Any]], before: float):
+    for index, [timestamp, points] in enumerate(pairs):
+        if timestamp >= before:
+            if index == 0:
+                return pairs
+            if index > 0:
+                return pairs[index:]
+    return []
 
 
 class FarmerAPI:
@@ -411,15 +421,13 @@ class FarmerAPI:
     @api_request
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
         pool_difficulties: List[PoolDifficulty] = []
+        cutoff_24h = time.time() - (24 * 60 * 60)
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
-            cutoff_24h = time.time() - (24 * 60 * 60)
-            for index, [timestamp, points] in enumerate(pool_dict["points_found_24h"]):
-                if timestamp > cutoff_24h:
-                    if index > 0:
-                        pool_dict["points_found_24h"] = pool_dict["points_found_24h"][index:]
-                    break
-            else:
-                pool_dict["points_found_24h"] = []
+            for key in ["points_found_24h", "points_acknowledged_24h"]:
+                if key not in pool_dict:
+                    continue
+
+                pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
             if pool_dict["pool_config"].pool_url == "":
                 # Self pooling
