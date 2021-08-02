@@ -2,7 +2,7 @@ import collections
 import logging
 from typing import Dict, List, Optional, Set, Tuple, Union, Callable
 
-from blspy import AugSchemeMPL, G1Element
+from blspy import G1Element
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -27,6 +27,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util import cached_bls
 from chia.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
     coin_announcements_names_for_npc,
@@ -477,8 +478,15 @@ async def validate_block_body(
         if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE, None
 
-        # noinspection PyTypeChecker
-        if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+        # The pairing cache is not useful while syncing as each pairing is seen
+        # only once, so the extra effort of populating it is not justified.
+        # However, we force caching of pairings just for unfinished blocks
+        # as the cache is likely to be useful when validating the corresponding
+        # finished blocks later.
+        force_cache: bool = isinstance(block, UnfinishedBlock)
+        if not cached_bls.aggregate_verify(
+            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
+        ):
             return Err.BAD_AGGREGATE_SIGNATURE, None
 
         return None, npc_result

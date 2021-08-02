@@ -6,6 +6,7 @@ import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws
+from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -49,14 +50,15 @@ class FarmerAPI:
             self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
         max_pos_per_sp = 5
-        if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
-            # This will likely never happen for any farmer with less than 10% of global space
-            # It's meant to make testnets more stable
-            self.farmer.log.info(
-                f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
-                f"{new_proof_of_space.sp_hash}"
-            )
-            return None
+
+        if self.farmer.constants.NETWORK_TYPE != NetworkType.MAINNET:
+            # This is meant to make testnets more stable, when difficulty is very low
+            if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
+                self.farmer.log.info(
+                    f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
+                    f"{new_proof_of_space.sp_hash}"
+                )
+                return None
 
         if new_proof_of_space.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
@@ -209,21 +211,17 @@ class FarmerAPI:
                 agg_sig: G2Element = AugSchemeMPL.aggregate([plot_signature, authentication_signature])
 
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
-                post_partial_body = json.dumps(post_partial_request.to_json_dict())
                 self.farmer.log.info(
                     f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
-                headers = {
-                    "content-type": "application/json;",
-                }
+
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
                             f"{pool_url}/partial",
-                            data=post_partial_body,
-                            headers=headers,
+                            json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt()),
                         ) as resp:
                             if resp.ok:

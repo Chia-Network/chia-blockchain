@@ -1,6 +1,7 @@
 import logging
 from collections import Counter
 from pathlib import Path
+from time import time
 from typing import Dict, List
 
 from blspy import G1Element
@@ -53,8 +54,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     if num == 0:
         return None
 
+    parallel_read: bool = config["harvester"].get("parallel_read", True)
+
     v = Verifier()
-    log.info("Loading plots in config.yaml using plot_tools loading code\n")
+    log.info(f"Loading plots in config.yaml using plot_tools loading code (parallel read: {parallel_read})\n")
     kc: Keychain = Keychain()
     pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
     pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]]
@@ -97,16 +100,36 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             challenge = std_hash(i.to_bytes(32, "big"))
             # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
             try:
+                quality_start_time = int(round(time() * 1000))
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
+                    quality_spent_time = int(round(time() * 1000)) - quality_start_time
+                    if quality_spent_time > 5000:
+                        log.warning(
+                            f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 5 seconds "
+                            f"to minimize risk of losing rewards."
+                        )
+                    else:
+                        log.info(f"\tLooking up qualities took: {quality_spent_time} ms.")
+
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
-                        proof = pr.get_full_proof(challenge, index)
+                        proof_start_time = int(round(time() * 1000))
+                        proof = pr.get_full_proof(challenge, index, parallel_read)
+                        proof_spent_time = int(round(time() * 1000)) - proof_start_time
+                        if proof_spent_time > 15000:
+                            log.warning(
+                                f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
+                                f"to minimize risk of losing rewards."
+                            )
+                        else:
+                            log.info(f"\tFinding proof took: {proof_spent_time} ms")
                         total_proofs += 1
                         ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                         assert quality_str == ver_quality_str
                     except AssertionError as e:
                         log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
                         caught_exception = True
+                    quality_start_time = int(round(time() * 1000))
             except KeyboardInterrupt:
                 log.warning("Interrupted, closing")
                 return None

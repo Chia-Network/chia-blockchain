@@ -56,7 +56,7 @@ class WSChiaConnection:
 
         peername = self.ws._writer.transport.get_extra_info("peername")
         if peername is None:
-            raise ValueError(f"Was not able to get peername from {self.ws_witer} at {self.peer_host}")
+            raise ValueError(f"Was not able to get peername from {self.peer_host}")
 
         connection_port = peername[1]
         self.peer_port = connection_port

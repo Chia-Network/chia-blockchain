@@ -490,10 +490,6 @@ class FullNodeRpcApi:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 
-        # This is for backwards compatibility since CoinSolution has been renamed to CoinSpend
-        if "coin_solutions" in request["spend_bundle"]:
-            request["spend_bundle"]["coin_spends"] = request["spend_bundle"].pop("coin_solutions")
-
         spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
 
