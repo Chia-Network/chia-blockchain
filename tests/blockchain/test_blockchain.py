@@ -1814,38 +1814,6 @@ class TestBodyValidation:
         assert err == Err.INVALID_REWARD_COINS
 
     @pytest.mark.asyncio
-    # each block is 10 seconds, we pull 3 blocks and the test freeze time is
-    # 1000
-    @pytest.mark.parametrize("genesis_time,expected_error", [(970, Err.INITIAL_TRANSACTION_FREEZE), (971, None)])
-    async def test_initial_freeze(self, empty_blockchain, genesis_time: int, expected_error: Optional[Err]):
-        # 6
-        b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(
-            3,
-            guarantee_transaction_block=True,
-            pool_reward_puzzle_hash=bt.pool_ph,
-            farmer_reward_puzzle_hash=bt.pool_ph,
-            genesis_timestamp=uint64(genesis_time),
-            time_per_block=10,
-        )
-        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
-        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
-        wt: WalletTool = bt.get_pool_wallet_tool()
-        tx: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
-        )
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=tx,
-            time_per_block=10,
-        )
-        err = (await b.receive_block(blocks[-1]))[1]
-        assert err == expected_error
-
-    @pytest.mark.asyncio
     async def test_invalid_transactions_generator_hash(self, empty_blockchain):
         # 7
         b = empty_blockchain
