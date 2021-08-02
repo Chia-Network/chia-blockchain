@@ -772,6 +772,7 @@ class FullNode:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
+                await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         loop = asyncio.get_event_loop()
@@ -783,9 +784,6 @@ class FullNode:
         except Exception as e:
             fetch_task.cancel()
             self.log.error(f"sync from fork point failed err: {e}")
-        peak = self.blockchain.get_peak()
-        assert peak is not None
-        await self.send_peak_to_wallets()
 
     async def send_peak_to_wallets(self):
         peak = self.blockchain.get_peak()
