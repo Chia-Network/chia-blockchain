@@ -423,7 +423,7 @@ class FarmerAPI:
         pool_difficulties: List[PoolDifficulty] = []
         cutoff_24h = time.time() - (24 * 60 * 60)
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
-            for key in ["points_found_24h", "points_acknowledged_24h", "pool_errors_24h"]:
+            for key in ["points_found_24h", "points_acknowledged_24h"]:
                 if key not in pool_dict:
                     continue
 
