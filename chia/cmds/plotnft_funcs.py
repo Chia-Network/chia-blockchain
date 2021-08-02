@@ -140,10 +140,11 @@ async def pprint_pool_wallet_state(
     if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
         print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
         if pool_wallet_info.launcher_id in pool_state_dict:
+            pool_state = pool_state_dict[pool_wallet_info.launcher_id]
             print(f"Current difficulty: {pool_state_dict[pool_wallet_info.launcher_id]['current_difficulty']}")
             print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points']}")
-            points_found_24h = [points for timestamp, points in pool_state_dict[pool_wallet_info.launcher_id]["points_found_24h"]]
-            points_acknowledged_24h = [points for timestamp, points in pool_state_dict[pool_wallet_info.launcher_id]["points_acknowledged_24h"]]
+            points_found_24h = [points for timestamp, points in pool_state["points_found_24h"]]
+            points_acknowledged_24h = [points for timestamp, points in pool_state["points_acknowledged_24h"]]
             summed_points_found_24h = sum(points_found_24h)
             summed_points_acknowledged_24h = sum(points_acknowledged_24h)
             if summed_points_found_24h == 0:
