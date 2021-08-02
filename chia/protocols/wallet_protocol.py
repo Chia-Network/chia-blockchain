@@ -197,6 +197,6 @@ class RespondToCoinUpdates(Streamable):
 @streamable
 class CoinStateUpdate(Streamable):
     height: uint32
+    fork_height: uint32
     peak_hash: bytes32
-    previous_peak: bytes32
     items: List[CoinState]

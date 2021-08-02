@@ -168,7 +168,7 @@ class FullNode:
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
-            await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
+            await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None, [])
         if self.config["send_uncompact_interval"] != 0:
             sanitize_weight_proof_only = False
             if "sanitize_weight_proof_only" in self.config:
@@ -283,14 +283,16 @@ class FullNode:
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.lock:
-                    success, advanced_peak, fork_height = await self.receive_block_batch(response.blocks, peer, None)
+                    success, advanced_peak, fork_height, coin_changes = await self.receive_block_batch(
+                        response.blocks, peer, None
+                    )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if advanced_peak:
                         peak = self.blockchain.get_peak()
                         peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
                         assert peak is not None and peak_fb is not None and fork_height is not None
-                        await self.peak_post_processing(peak_fb, peak, fork_height, peer)
+                        await self.peak_post_processing(peak_fb, peak, fork_height, peer, coin_changes)
                         self.log.info(f"Added blocks {height}-{end_height}")
         except Exception:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
@@ -827,7 +829,9 @@ class FullNode:
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
         return peers_with_peak
 
-    async def update_wallets(self, height, peak_hash, prev_hash, state_update: List[CoinRecord]):
+    async def update_wallets(
+        self, height: uint32, fork_height: uint32, peak_hash: bytes32, state_update: List[CoinRecord]
+    ):
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
         for coin_record in state_update:
@@ -849,7 +853,7 @@ class FullNode:
             if peer not in self.server.all_connections:
                 continue
             ws_peer: ws.WSChiaConnection = self.server.all_connections[peer]
-            state = CoinStateUpdate(height, peak_hash, prev_hash, changes)
+            state = CoinStateUpdate(height, fork_height, peak_hash, list(changes))
             msg = make_msg(ProtocolMessageTypes.coin_state_update, state)
             await ws_peer.send_message(msg)
 
@@ -859,7 +863,7 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32]]:
+    ) -> Tuple[bool, bool, Optional[uint32], List[CoinRecord]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
 
@@ -869,7 +873,7 @@ class FullNode:
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
-            return True, False, fork_height
+            return True, False, fork_height, []
 
         pre_validate_start = time.time()
         pre_validation_results: Optional[
@@ -877,13 +881,13 @@ class FullNode:
         ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
-            return False, False, None
+            return False, False, None, []
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
                 )
-                return False, advanced_peak, fork_height
+                return False, advanced_peak, fork_height, []
 
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
@@ -895,7 +899,7 @@ class FullNode:
             elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
-                return False, advanced_peak, fork_height
+                return False, advanced_peak, fork_height, []
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
@@ -906,7 +910,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: {advanced_peak}"
             )
-        return True, advanced_peak, fork_height
+        return True, advanced_peak, fork_height, coin_changes
 
     async def _finish_sync(self):
         """
@@ -926,7 +930,7 @@ class FullNode:
 
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
             if peak is not None:
-                await self.peak_post_processing(peak_fb, peak, max(peak.height - 1, 0), None)
+                await self.peak_post_processing(peak_fb, peak, max(peak.height - 1, 0), None, [])
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
@@ -1004,7 +1008,12 @@ class FullNode:
         await self.server.send_to_all([msg], NodeType.FARMER)
 
     async def peak_post_processing(
-        self, block: FullBlock, record: BlockRecord, fork_height: uint32, peer: Optional[ws.WSChiaConnection]
+        self,
+        block: FullBlock,
+        record: BlockRecord,
+        fork_height: uint32,
+        peer: Optional[ws.WSChiaConnection],
+        coin_changes: List[CoinRecord],
     ):
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
@@ -1139,6 +1148,7 @@ class FullNode:
                 fork_height,
             ),
         )
+        await self.update_wallets(record.height, fork_height, record.header_hash, coin_changes)
         await self.server.send_to_all([msg], NodeType.WALLET)
 
         # Check if we detected a spent transaction, to load up our generator cache
@@ -1216,7 +1226,7 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
-
+        coin_changes = []
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
@@ -1247,6 +1257,7 @@ class FullNode:
                 added, error_code, fork_height, coin_changes = await self.blockchain.receive_block(
                     block, result_to_validate, None
                 )
+
                 if (
                     self.full_node_store.previous_generator is not None
                     and fork_height is not None
@@ -1270,7 +1281,7 @@ class FullNode:
                 new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
                 assert new_peak is not None and fork_height is not None
 
-                await self.peak_post_processing(block, new_peak, fork_height, peer)
+                await self.peak_post_processing(block, new_peak, fork_height, peer, coin_changes)
 
             elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
                 self.log.info(
