@@ -7,19 +7,16 @@ from typing import List, Optional, Tuple, Union
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
 
-from chia.util.ints import uint16
-from chia.util.streamable import Streamable, streamable
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-@streamable
-class PlotsRefreshParameter(Streamable):
-    interval_seconds: uint16 = uint16(120)
-    batch_size: uint16 = uint16(30)
-    batch_sleep_milliseconds: uint16 = uint16(10)
+@dataclass
+class PlotsRefreshParameter:
+    interval_seconds: int = 120
+    batch_size: int = 30
+    batch_sleep_milliseconds: int = 10
 
 
 @dataclass

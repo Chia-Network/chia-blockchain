@@ -9,6 +9,7 @@ import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult
+from chia.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class Harvester:
                 "new section `plots_refresh_parameter`. See `initial-config.yaml`."
             )
         if "plots_refresh_parameter" in config:
-            refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
+            refresh_parameter = dataclass_from_dict(PlotsRefreshParameter, config["plots_refresh_parameter"])
 
         self.plot_manager = PlotManager(
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback

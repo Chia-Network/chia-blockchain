@@ -11,7 +11,6 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotRefreshResult, PlotsRefreshParameter, find_duplicate_plot_IDs, parse_plot_info
 from chia.util.config import load_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint16
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
@@ -24,7 +23,7 @@ def plot_refresh_callback(refresh_result: PlotRefreshResult):
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
-    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(uint16(100), uint16(100), uint16(1))
+    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(100, 100, 1)
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,
