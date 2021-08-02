@@ -49,7 +49,8 @@ def tidy_passphrase(passphrase: str) -> str:
 
 def prompt_for_new_passphrase() -> str:
     if MIN_PASSPHRASE_LEN > 0:
-        print(f"\nPassphrases must be {MIN_PASSPHRASE_LEN} or more characters in length")  # noqa
+        n = MIN_PASSPHRASE_LEN
+        print(f"\nPassphrases must be {n} or more characters in length")  # lgtm [py/clear-text-logging-sensitive-data]
     while True:
         passphrase = tidy_passphrase(getpass("New Passphrase: "))
         confirmation = tidy_passphrase(getpass("Confirm Passphrase: "))
@@ -59,7 +60,7 @@ def prompt_for_new_passphrase() -> str:
         if valid_passphrase:
             return passphrase
         elif error_msg:
-            print(f"{error_msg}\n")  # noqa
+            print(f"{error_msg}\n")  # lgtm [py/clear-text-logging-sensitive-data]
 
 
 def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
