@@ -7,7 +7,7 @@ from blspy import AugSchemeMPL
 from chiapos import DiskPlotter
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.plotting.plot_tools import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult
+from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.rpc.farmer_rpc_client import FarmerRpcClient

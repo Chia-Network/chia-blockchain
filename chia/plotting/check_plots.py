@@ -7,13 +7,8 @@ from typing import List
 from blspy import G1Element
 from chiapos import Verifier
 
-from chia.plotting.plot_tools import (
-    find_duplicate_plot_IDs,
-    PlotManager,
-    PlotRefreshResult,
-    PlotsRefreshParameter,
-    parse_plot_info,
-)
+from chia.plotting.plot_tools import PlotManager
+from chia.plotting.util import PlotRefreshResult, PlotsRefreshParameter, find_duplicate_plot_IDs, parse_plot_info
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint16

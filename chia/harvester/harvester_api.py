@@ -7,7 +7,7 @@ from blspy import AugSchemeMPL, G2Element, G1Element
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester
-from chia.plotting.plot_tools import PlotInfo, parse_plot_info
+from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot

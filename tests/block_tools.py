@@ -46,7 +46,8 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.plot_tools import PlotInfo, PlotManager, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
+from chia.plotting.util import PlotInfo, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
+from chia.plotting.plot_tools import PlotManager
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
