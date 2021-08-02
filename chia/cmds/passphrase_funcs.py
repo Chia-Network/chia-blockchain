@@ -32,9 +32,12 @@ def verify_passphrase_meets_requirements(
     if match and meets_len_requirement:
         return True, None
     elif not match:
-        return False, "Passphrases do not match"
+        return False, "Passphrases do not match"  # lgtm [py/clear-text-logging-sensitive-data]
     elif not meets_len_requirement:
-        return False, f"Minimum passphrase length is {MIN_PASSPHRASE_LEN}"
+        return (
+            False,
+            f"Minimum passphrase length is {MIN_PASSPHRASE_LEN}",
+        )  # lgtm [py/clear-text-logging-sensitive-data]
     else:
         raise Exception("Unexpected passphrase verification case")
 
@@ -49,7 +52,9 @@ def tidy_passphrase(passphrase: str) -> str:
 
 def prompt_for_new_passphrase() -> str:
     if MIN_PASSPHRASE_LEN > 0:
-        print(f"\nPassphrases must be {MIN_PASSPHRASE_LEN} or more characters in length")
+        print(
+            f"\nPassphrases must be {MIN_PASSPHRASE_LEN} or more characters in length"
+        )  # lgtm [py/clear-text-logging-sensitive-data]
     while True:
         passphrase = tidy_passphrase(getpass("New Passphrase: "))
         confirmation = tidy_passphrase(getpass("Confirm Passphrase: "))
