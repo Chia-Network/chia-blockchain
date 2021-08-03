@@ -181,6 +181,12 @@ def parse_bool(f: BinaryIO) -> bool:
         raise ValueError("Bool byte must be 0 or 1")
 
 
+def parse_uint32(f: BinaryIO, byteorder: str = "big") -> uint32:
+    size_bytes = f.read(4)
+    assert size_bytes is not None and len(size_bytes) == 4  # Checks for EOF
+    return uint32(int.from_bytes(size_bytes, byteorder))
+
+
 def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Optional[Any]:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
@@ -193,9 +199,7 @@ def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -
 
 
 def parse_bytes(f: BinaryIO) -> bytes:
-    list_size_bytes = f.read(4)
-    assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-    list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
+    list_size = parse_uint32(f)
     bytes_read = f.read(list_size)
     assert bytes_read is not None and len(bytes_read) == list_size
     return bytes_read
@@ -204,9 +208,7 @@ def parse_bytes(f: BinaryIO) -> bytes:
 def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> List[Any]:
     full_list: List = []
     # wjb assert inner_type != get_args(List)[0]
-    list_size_bytes = f.read(4)
-    assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-    list_size = uint32(int.from_bytes(list_size_bytes, "big"))
+    list_size = parse_uint32(f)
     for list_index in range(list_size):
         full_list.append(parse_inner_type_f(f))
     return full_list
@@ -226,9 +228,7 @@ def parse_size_hints(f: BinaryIO, f_type: Type, bytes_to_read: int) -> Any:
 
 
 def parse_str(f: BinaryIO) -> str:
-    str_size_bytes = f.read(4)
-    assert str_size_bytes is not None and len(str_size_bytes) == 4  # Checks for EOF
-    str_size: uint32 = uint32(int.from_bytes(str_size_bytes, "big"))
+    str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
     assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
     return bytes.decode(str_read_bytes, "utf-8")
