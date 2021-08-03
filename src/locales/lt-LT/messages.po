@@ -8,7 +8,7 @@ msgstr ""
 "Language: lt_LT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-02 19:01\n"
+"PO-Revision-Date: 2021-08-03 01:04\n"
 "Last-Translator: \n"
 "Language-Team: Lithuanian\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && (n%100>19 || n%100<11) ? 0 : (n%10>=2 && n%10<=9) && (n%100>19 || n%100<11) ? 1 : n%1!=0 ? 2: 3);\n"
@@ -285,7 +285,7 @@ msgstr "Atšaukti ir naudoti"
 
 #: src/components/plot/PlotsNotFound.tsx:39
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "Atsargiai, ištrynus šiuos Plot'us, jie bus ištrinti visam laikui. Jeigu norite trinti patikrinkite ar visi įrenginiai tinkamai prijungti."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:16
 msgid "Challenge"
@@ -293,7 +293,7 @@ msgstr "Iššūkis"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:14
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Iššūkio Hash'as"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:111
 msgid "Change"
@@ -307,7 +307,7 @@ msgstr ""
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Susirašykite ant Keybase platformos"
 
 #: src/electron/main.tsx:419
 msgid "Chia"
@@ -315,19 +315,19 @@ msgstr "Chia"
 
 #: src/electron/main.tsx:358
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia grandinės informacija ant Wiki"
 
 #: src/components/wallet/standard/WalletStandard.tsx:647
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia piniginė"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:36
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Pasirink Plot'o kieki"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:61
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Pasirink Plot'o dydi"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:384
 #: src/components/pool/PoolOverview.tsx:92
@@ -341,7 +341,7 @@ msgstr "Uždaryti"
 
 #: src/components/app/AppRouter.tsx:27
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Atsijungia nuo taško ir serverio"
 
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
@@ -354,29 +354,29 @@ msgstr "Spalva"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:223
 msgid "Colour Info"
-msgstr ""
+msgstr "Spalvos informacija"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:110
 msgid "Colour String"
-msgstr ""
+msgstr "Spalvos Textas (String)"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:228
 msgid "Colour:"
-msgstr ""
+msgstr "Spalva:"
 
 #: src/components/wallet/create/WalletCreate.jsx:118
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Spalvota moneta"
 
 #: src/components/wallet/create/WalletCreate.jsx:160
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Spalvotos monetos pasirinkimas"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:168
 #: src/electron/main.tsx:195
 #: src/hooks/useAbsorbRewards.tsx:46
 msgid "Confirm"
-msgstr ""
+msgstr "Patvirtinti"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:21
 msgid "Confirm Disconnect"
@@ -389,7 +389,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Patvirtintas bloke:"
 
 #: src/components/wallet/WalletHistory.tsx:51
 msgid "Confirmed at height {0}"
@@ -397,7 +397,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:92
 msgid "Connect"
-msgstr ""
+msgstr "Prisijunk"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:68
 #: src/components/fullNode/FullNodeConnections.tsx:112
@@ -411,20 +411,20 @@ msgstr ""
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
 msgid "Connected"
-msgstr ""
+msgstr "Prisijungęs"
 
 #: src/components/app/AppRouter.tsx:34
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Jungiamasis prie piniginės"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
 msgid "Connection Status"
-msgstr ""
+msgstr "Ryšio būsena"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:111
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:109
 msgid "Connection Status:"
-msgstr ""
+msgstr "Ryšio būsena:"
 
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connection type"
@@ -447,7 +447,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
 msgid "Copy"
-msgstr ""
+msgstr "Kopijuoti"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
 msgid "Copy to Clipboard"
@@ -1426,20 +1426,20 @@ msgstr ""
 
 #: src/components/plot/Plot.tsx:18
 msgid "Plot"
-msgstr ""
+msgstr "Plot'as"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:12
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:41
 msgid "Plot Count"
-msgstr ""
+msgstr "Plot'ų kiekis"
 
 #: src/components/block/Block.jsx:299
 msgid "Plot Id"
-msgstr ""
+msgstr "Plot'o numeris"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "Plot Key"
-msgstr ""
+msgstr "Plot'o raktas"
 
 #: src/components/pool/PoolOverview.tsx:40
 msgid "Plot NFT"
@@ -1456,7 +1456,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:259
 msgid "Plot Public Key"
-msgstr ""
+msgstr "Plot'o viešasis raktas"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1464,11 +1464,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:80
 msgid "Plot Size"
-msgstr ""
+msgstr "Plot'o dydis"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
 msgid "Plot in Parallel"
-msgstr ""
+msgstr "Kurk kelius plot'us tuo pačiu metu"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:46
 msgid "Plot is duplicate of {0}"
@@ -1484,7 +1484,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
-msgstr ""
+msgstr "Plot'ai"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:22
 msgid "Plots Passed Filter"
@@ -1603,7 +1603,7 @@ msgstr ""
 #: src/components/fullNode/FullNodeAddConnection.tsx:80
 #: src/components/fullNode/FullNodeConnections.tsx:46
 msgid "Port"
-msgstr ""
+msgstr "Port'as"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
 #: src/components/plotNFT/PlotNFTChangePool.tsx:74
@@ -1616,7 +1616,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:347
 msgid "Previous"
-msgstr ""
+msgstr "Ankstesnis"
 
 #: src/components/block/Block.jsx:203
 #~ msgid "Previous Block Hash"
@@ -1624,7 +1624,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:215
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "Ankstesnis Hash'as"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1680,7 +1680,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:115
 msgid "RAM max usage"
-msgstr ""
+msgstr "RAM maksimalus naudojimas"
 
 #: src/components/wallet/Wallets.tsx:51
 #~ msgid "RL Wallet"
@@ -1692,16 +1692,16 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 msgid "Rate Limited"
-msgstr ""
+msgstr "Greičio limitas"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:391
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:438
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Greičio limito informacija"
 
 #: src/components/wallet/create/WalletCreate.jsx:214
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Greičio limito nustatymai"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
 msgid "Rate Limited User Wallet Setup"
@@ -1710,7 +1710,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:650
 #: src/components/wallet/standard/WalletStandard.tsx:576
 msgid "Receive Address"
-msgstr ""
+msgstr "Gavimo adresas"
 
 #: src/components/wallet/create/WalletCreate.jsx:282
 msgid "Recover DID wallet"
@@ -1719,7 +1719,7 @@ msgstr ""
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Atnaujinti plot'us"
 
 #: src/components/pool/PoolInfo.tsx:32
 msgid "Relative Lock Height"
@@ -1727,23 +1727,23 @@ msgstr ""
 
 #: src/electron/main.tsx:374
 msgid "Release Notes"
-msgstr ""
+msgstr "Išleidimo informacija"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:36
 msgid "Removing"
-msgstr ""
+msgstr "Trinamas"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:265
 msgid "Rename"
-msgstr ""
+msgstr "Pervadinti"
 
 #: src/electron/main.tsx:393
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Pranešti apie problemą..."
 
 #: src/components/backup/BackupRestore.tsx:160
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "Atkurkti spalvotų monetų ir kitų išmaniųjų piniginių metaduomenis iš atsarginės kopijos "
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1756,13 +1756,13 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:186
 msgid "Safe To Skip"
-msgstr ""
+msgstr "Saugu praleisti"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:199
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:126
 #: src/components/trading/CreateOffer.jsx:142
 msgid "Save"
-msgstr ""
+msgstr "Išsaugoti"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -1770,47 +1770,47 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:41
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Ieškoti bloko pagal antraštės Hash'a"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:93
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Antra laikina aplanko vieta"
 
 #: src/components/selectKey/SelectKey.tsx:174
 msgid "See private key"
-msgstr ""
+msgstr "Pamatyti saugu raktą"
 
 #: src/middleware/middleware_api.jsx:293
 msgid "Seed:"
-msgstr ""
+msgstr "Užraktas:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:87
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Pasirink antrą laikiną vietą"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:23
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Pasirinkite aplanką kur norite laikyti Plot'us ilgam laikui"
 
 #: src/components/selectKey/SelectKey.tsx:133
 msgid "Select Key"
-msgstr ""
+msgstr "Pasirink raktą"
 
 #: src/components/trading/ViewOffer.jsx:37
 msgid "Select Offer"
-msgstr ""
+msgstr "Pasirink pasiūlyma"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Pasirink laikiną vietą"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Pasirink piniginę"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:25
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Pasirinkite ploto vietą aplankale kur norite laikyti ilgam laikui. Mes rekomenduojame naudoti standartinį HDD."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 #~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
@@ -1818,7 +1818,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr ""
+msgstr "Pasirinkite laikiną ploto vietą aplankale. Mes rekomenduojame naudoti greitą SSD."
 
 #: src/components/plot/add/PlotAddNFT.tsx:81
 msgid "Select your Plot NFT"
@@ -1832,7 +1832,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:108
 msgid "Selected"
-msgstr ""
+msgstr "Pasirinktas"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -1847,13 +1847,13 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:47
 #: src/components/trading/TradingOverview.jsx:288
 msgid "Sell"
-msgstr ""
+msgstr "Parduoti"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:620
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:542
 msgid "Send"
-msgstr ""
+msgstr "Siųsti"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:460
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
@@ -1865,7 +1865,7 @@ msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Rodyti išplėstinius nustatymus "
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -1874,11 +1874,11 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradesTable.tsx:16
 msgid "Side"
-msgstr ""
+msgstr "Pusė"
 
 #: src/components/selectKey/SelectKey.tsx:138
 msgid "Sign In"
-msgstr ""
+msgstr "Prisijungti"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
@@ -1902,21 +1902,21 @@ msgstr ""
 
 #: src/electron/main.tsx:470
 msgid "Speech"
-msgstr ""
+msgstr "Kalba"
 
 #: src/components/wallet/create/createRLAdmin.jsx:230
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Išleidžiama Suma"
 
 #: src/components/wallet/create/createRLAdmin.jsx:202
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "išleidžiama suma intervalui"
 
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
 #: src/components/wallet/coloured/WalletColoured.tsx:384
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
 msgid "Spendable Balance"
-msgstr ""
+msgstr "išleidžiamas balansas"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:443
@@ -1934,7 +1934,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:100
 msgid "State"
-msgstr ""
+msgstr "Būsena"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
@@ -1947,11 +1947,11 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:22
 #: src/components/wallet/Wallets.tsx:118
 msgid "Status"
-msgstr ""
+msgstr "Būsena"
 
 #: src/components/trading/TradingOverview.jsx:179
 msgid "Status:"
-msgstr ""
+msgstr "Būsena:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1983,23 +1983,23 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:347
 msgid "Submit"
-msgstr ""
+msgstr "Pateikti"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 #: src/components/wallet/WalletStatus.tsx:33
 msgid "Synced"
-msgstr ""
+msgstr "Sinchronizuotas"
 
 #: src/components/farm/FarmerStatus.tsx:19
 #: src/components/farm/card/FarmCardStatus.tsx:18
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/wallet/WalletStatus.tsx:38
 msgid "Syncing"
-msgstr ""
+msgstr "Sinchronizuojama..."
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:21
 msgid "Syncing <0/>/<1/>"
-msgstr ""
+msgstr "Sinchronizuojama <0/><1/>"
 
 #: src/components/fullNode/FullNode.jsx:107
 #~ msgid "Syncing {progress}/{tip}"
@@ -2035,24 +2035,24 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
 msgid "Temporary folder location"
-msgstr ""
+msgstr "Laikina aplanko vieta"
 
 #: src/components/app/AppTimeBomb.tsx:30
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Programa nustos veikti bloko aukštyje 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:97
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Žemiau yra visas Node'as, prie kurio prijungtas jūsų ūkininkas. <0> Sužinokite daugiau </0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:34
 #: src/components/plot/add/PlotAddChooseSize.tsx:91
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "Mažiausias reikalingas dydis yra k=32"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:39
 msgid "The node is not synced"
-msgstr ""
+msgstr "Node'as nesinchranizuotas dar"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:29
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -2205,13 +2205,13 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "To"
-msgstr ""
+msgstr "Kam"
 
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:32
 #: src/components/wallet/coloured/WalletColoured.tsx:379
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
 msgid "Total Balance"
-msgstr ""
+msgstr "Bendras balansas"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -2223,15 +2223,15 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
 msgid "Total Network Space"
-msgstr ""
+msgstr "Bendra tinklo erdvė"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:146
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Pilnas plot'o dydis:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Pilnas plot'ų dydis"
 
 #: src/components/block/Block.jsx:225
 msgid "Total VDF Iterations"
@@ -2279,7 +2279,7 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:25
 msgid "Type"
-msgstr ""
+msgstr "Tipas"
 
 #: src/components/plot/add/PlotAdd.tsx:101
 msgid "Unable to create plot NFT"
@@ -2292,15 +2292,15 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:98
 msgid "Unfinished"
-msgstr ""
+msgstr "Nebaigtas"
 
 #: src/components/trading/TradingOverview.jsx:175
 msgid "Unique identifier"
-msgstr ""
+msgstr "Unikalus identifikatorius"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
 msgid "Unknown"
-msgstr ""
+msgstr "Nežinoma"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 msgid "Unsaved Changes"
@@ -2329,16 +2329,16 @@ msgstr ""
 
 #: src/electron/main.tsx:295
 msgid "View"
-msgstr ""
+msgstr "Rodyti"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:79
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:63
 msgid "View Log"
-msgstr ""
+msgstr "Peržiūrėti įrašus"
 
 #: src/components/trading/TradeManager.tsx:54
 msgid "View Offer"
-msgstr ""
+msgstr "Rodyti pasiūlymus"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
@@ -2351,17 +2351,17 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 msgid "View pending balances"
-msgstr ""
+msgstr "Rodyti laukiančius balansus"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:393
 msgid "View pending balances..."
-msgstr ""
+msgstr "Rodyti laukiantį balansą"
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:26
 #: src/components/plot/PlotStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:27
 msgid "Wait for synchronization"
-msgstr ""
+msgstr "Palauk kol sinchronizuos"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
@@ -2412,7 +2412,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:45
 #: src/components/wallet/Wallets.tsx:173
 msgid "Wallets"
-msgstr ""
+msgstr "Piniginės"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -2424,7 +2424,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Nori uždirbti daugiau Chia? Pridėk daugiau plot'ų į savo fermą."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:86
 msgid "Want to have a delay before the next plot starts?"
@@ -2444,7 +2444,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:205
 msgid "Weight"
-msgstr ""
+msgstr "Svoris"
 
 #: src/components/block/Block.jsx:208
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
@@ -2452,7 +2452,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:141
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Sveiki atvykę į Chia. Prašome prisijungti su egzistuojančiu raktu arba sukurkite naują raktą"
 
 #: src/components/wallet/WalletAdd.tsx:66
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
@@ -2464,17 +2464,17 @@ msgstr ""
 
 #: src/electron/main.tsx:340
 msgid "Window"
-msgstr ""
+msgstr "Langas"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:36
 msgid "Without fees"
-msgstr ""
+msgstr "Be mokesčių"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:35
 #: src/components/trading/TradingOverview.jsx:209
 #: src/electron/main.tsx:193
 msgid "Yes"
-msgstr ""
+msgstr "Taip"
 
 #: src/hooks/useAbsorbRewards.tsx:29
 #: src/hooks/useJoinPool.tsx:35
@@ -2539,11 +2539,11 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Tavo fermos informacija"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:95
 msgid "Your Full Node Connection"
-msgstr ""
+msgstr "Tavo pilno Node'o prisijungimas"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "Your Harvester Network"
@@ -2564,16 +2564,16 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:41
 #: src/components/wallet/Wallets.tsx:143
 msgid "connections:"
-msgstr ""
+msgstr "Jungtys:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
 #: src/components/wallet/Wallets.tsx:135
 msgid "height:"
-msgstr ""
+msgstr "Aukštis:"
 
 #: src/components/wallet/Wallets.tsx:129
 msgid "not synced"
-msgstr ""
+msgstr "nesinchronizuota"
 
 #: src/components/plot/add/PlotAdd.tsx:105
 msgid "p2_singleton_puzzle_hash is not defined"
@@ -2582,17 +2582,17 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:27
 #: src/components/wallet/Wallets.tsx:123
 msgid "status:"
-msgstr ""
+msgstr "Būsena:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
 #: src/components/wallet/Wallets.tsx:128
 msgid "synced"
-msgstr ""
+msgstr "sinchronizuotas"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
 #: src/components/wallet/Wallets.tsx:127
 msgid "syncing"
-msgstr ""
+msgstr "sinchronizuojama..."
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
