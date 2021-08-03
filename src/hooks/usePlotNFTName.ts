@@ -9,23 +9,41 @@ import {
 import type PlotNFTExternal from '../types/PlotNFTExternal';
 import type PlotNFT from '../types/PlotNFT';
 
+const uniqueNames: {
+  [key: string]: string;
+} = {};
+
+function getUniqueName(seed: string, iteration: number = 0): string {
+  const computedName = Object.keys(uniqueNames).find((key) => uniqueNames[key] === seed);
+  if (computedName) {
+    return computedName;
+  }
+
+  const generator = seedrandom(iteration ? `${seed}-${iteration}` : seed);
+
+  const uniqueName = uniqueNamesGenerator({
+    dictionaries: [colors, animals, adjectives],
+    length: 2,
+    seed: generator.int32(),
+    separator: ' ',
+    style: 'capital',
+  });
+
+  if (uniqueNames[uniqueName] && uniqueNames[uniqueName] !== seed) {
+    return getUniqueName(seed, iteration + 1);
+  }
+
+  uniqueNames[uniqueName] = seed;
+
+  return uniqueName;
+}
+
 export default function usePlotNFTName(nft: PlotNFT | PlotNFTExternal): string {
-  const name = useMemo(() => {
-    const {
-      pool_state: { p2_singleton_puzzle_hash },
-    } = nft;
-
-    const generator = seedrandom(p2_singleton_puzzle_hash);
-    const seed = generator.int32();
-
-    return uniqueNamesGenerator({
-      dictionaries: [colors, animals, adjectives], // colors can be omitted here as not used
-      length: 2,
-      seed,
-      separator: ' ',
-      style: 'capital',
-    });
-  }, [nft]);
+  const p2_singleton_puzzle_hash = nft?.pool_state?.p2_singleton_puzzle_hash;
+  const name = useMemo(
+    () => getUniqueName(p2_singleton_puzzle_hash), 
+    [p2_singleton_puzzle_hash],
+  );
 
   return name;
 }
