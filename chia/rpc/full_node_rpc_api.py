@@ -36,6 +36,8 @@ class FullNodeRpcApi:
             "/get_unfinished_block_headers": self.get_unfinished_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
+            # this function is just here for backwards-compatibility. It will probably
+            # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
@@ -68,9 +70,11 @@ class FullNodeRpcApi:
             return payloads
         return []
 
+    # this function is just here for backwards-compatibility. It will probably
+    # be removed in the future
     async def get_initial_freeze_period(self, _: Dict):
-        freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
-        return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
+        # Mon May 03 2021 17:00:00 GMT+0000
+        return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 
     async def get_blockchain_state(self, _request: Dict):
         """

@@ -858,8 +858,6 @@ class WalletStateManager:
         """
         Called from wallet before new transaction is sent to the full_node
         """
-        if self.peak is None or int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            raise ValueError("Initial Freeze Period")
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record, False)
         self.tx_pending_changed()

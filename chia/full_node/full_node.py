@@ -507,8 +507,7 @@ class FullNode:
             # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
             synced = await self.synced()
             peak_height = self.blockchain.get_peak_height()
-            current_time = int(time.time())
-            if synced and peak_height is not None and current_time > self.constants.INITIAL_FREEZE_END_TIMESTAMP:
+            if synced and peak_height is not None:
                 my_filter = self.mempool_manager.get_filter()
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
@@ -1622,10 +1621,6 @@ class FullNode:
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
-
-        # No transactions in mempool in initial client. Remove 6 weeks after launch
-        if int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            return MempoolInclusionStatus.FAILED, Err.INITIAL_TRANSACTION_FREEZE
 
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION

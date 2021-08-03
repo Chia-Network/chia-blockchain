@@ -69,7 +69,7 @@ class SpendSim:
         self.mempool_manager = MempoolManager(coin_store, defaults)
         self.block_records = []
         self.blocks = []
-        self.timestamp = defaults.INITIAL_FREEZE_END_TIMESTAMP + 1
+        self.timestamp = 1
         self.block_height = 0
         self.defaults = defaults
         return self
@@ -192,7 +192,7 @@ class SpendSim:
         if new_br_list:
             self.timestamp = new_br_list[-1].timestamp
         else:
-            self.timestamp = uint64(self.defaults.INITIAL_FREEZE_END_TIMESTAMP + 1)
+            self.timestamp = uint64(1)
 
 
 class SimClient:
