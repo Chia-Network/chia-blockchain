@@ -73,7 +73,7 @@ class DIDWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
-        bal = await self.standard_wallet.get_confirmed_balance()
+        bal = await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.standard_wallet.id())
         if amount > bal:
             raise ValueError("Not enough balance")
 
