@@ -2621,4 +2621,3 @@ msgstr "{currencyCode} Užívateľské poplatky za transakcie"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} few {mojos} many {mojos} other {mojos}}"
-

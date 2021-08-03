@@ -2621,4 +2621,3 @@ msgstr "{currencyCode} User Transaction Fees, extra beer money"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
-
