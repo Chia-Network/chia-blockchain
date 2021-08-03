@@ -187,6 +187,10 @@ def parse_uint32(f: BinaryIO, byteorder: str = "big") -> uint32:
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
+def write_uint32(f: BinaryIO, value: uint32, byteorder: str = "big"):
+    f.write(value.to_bytes(4, byteorder))
+
+
 def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Optional[Any]:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
@@ -293,7 +297,7 @@ class Streamable:
                 f.write(bytes([1]))
                 self.stream_one_item(inner_type, item, f)
         elif f_type == bytes:
-            f.write(uint32(len(item)).to_bytes(4, "big"))
+            write_uint32(f, uint32(len(item)))
             f.write(item)
         elif hasattr(f_type, "stream"):
             item.stream(f)
@@ -301,7 +305,7 @@ class Streamable:
             f.write(bytes(item))
         elif is_type_List(f_type):
             assert is_type_List(type(item))
-            f.write(uint32(len(item)).to_bytes(4, "big"))
+            write_uint32(f, uint32(len(item)))
             inner_type = get_args(f_type)[0]
             # wjb assert inner_type != get_args(List)[0]  # type: ignore
             for element in item:
@@ -314,7 +318,7 @@ class Streamable:
 
         elif f_type is str:
             str_bytes = item.encode("utf-8")
-            f.write(uint32(len(str_bytes)).to_bytes(4, "big"))
+            write_uint32(f, uint32(len(str_bytes)))
             f.write(str_bytes)
         elif f_type is bool:
             f.write(int(item).to_bytes(1, "big"))
