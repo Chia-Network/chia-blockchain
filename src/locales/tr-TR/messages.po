@@ -8,7 +8,7 @@ msgstr ""
 "Language: tr_TR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-26 15:12\n"
+"PO-Revision-Date: 2021-08-03 15:35\n"
 "Last-Translator: \n"
 "Language-Team: Turkish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -95,7 +95,7 @@ msgstr "Plot Ekle"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:51
 msgid "Add a Plot NFT"
-msgstr "Plot NFT Ekleyin"
+msgstr "Yeni NFT Plot Ekleyin"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:68
 msgid "Add a plot"
@@ -297,13 +297,13 @@ msgstr "Zorluk Hash Değeri"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:111
 msgid "Change"
-msgstr ""
+msgstr "Değiştir"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:408
 #: src/components/plotNFT/PlotNFTChangePool.tsx:110
 #: src/components/pool/PoolOverview.tsx:115
 msgid "Change Pool"
-msgstr ""
+msgstr "Havuzu Değiştir"
 
 #: src/electron/main.tsx:401
 msgid "Chat on KeyBase"
@@ -332,7 +332,7 @@ msgstr "Plot Büyüklüğünü Seçin"
 #: src/components/plotNFT/PlotNFTCard.tsx:384
 #: src/components/pool/PoolOverview.tsx:92
 msgid "Claim Rewards"
-msgstr ""
+msgstr "Ödülleri Al"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:114
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:89
@@ -385,7 +385,7 @@ msgstr "Bağlantıyı Kesmeyi Onayla"
 #: src/components/plotNFT/PlotNFTCard.tsx:121
 #: src/components/wallet/standard/WalletStandard.tsx:628
 msgid "Confirmation"
-msgstr ""
+msgstr "Doğrulama"
 
 #: src/components/trading/TradingOverview.jsx:201
 msgid "Confirmed at block:"
@@ -406,7 +406,7 @@ msgstr "Diğer eşlere bağlan"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
 msgid "Connect to pool"
-msgstr ""
+msgstr "Havuza Bağlan"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
@@ -503,7 +503,7 @@ msgstr "Bir Yedek Oluştur"
 
 #: src/components/plot/add/PlotAddNFT.tsx:42
 msgid "Create a Plot NFT"
-msgstr ""
+msgstr "Bir NFT Plot Üret"
 
 #: src/components/selectKey/SelectKey.tsx:211
 msgid "Create a new private key"
@@ -543,7 +543,7 @@ msgstr "%@ tarafından oluşturuldu:"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr ""
+msgstr "Bir NFT Plot Üret ve Havuza Katıl"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
 msgid "Creating Plot NFT for Self Pooling"
@@ -975,7 +975,7 @@ msgstr "Gelen"
 
 #: src/components/core/components/Fee/Fee.tsx:36
 msgid "Incorrect value"
-msgstr ""
+msgstr "Yanlış değer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:18
 msgid "Index"
@@ -1008,7 +1008,7 @@ msgstr "Aralık"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
-msgstr ""
+msgstr "Geçersiz Durum"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
@@ -1528,11 +1528,11 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:60
 #: src/components/pool/Pool.tsx:25
 msgid "Pool"
-msgstr ""
+msgstr "Havuz"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
-msgstr ""
+msgstr "Havuz Sözleşme Adresi"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:81
 msgid "Pool Key"
@@ -2499,7 +2499,7 @@ msgstr "Grafiğe senkronize olmanıza veya bağlanmanıza gerek yoktur. Çizim i
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
 msgid "You have made changes. Do you want to discard them?"
-msgstr ""
+msgstr "Kaydedilmemiş değişiklikler var. Değişiklikleri çıkarmak ister misiniz?"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2551,7 +2551,7 @@ msgstr "Kazıcı Ağınız"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr ""
+msgstr "Maden Özetiniz"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2621,3 +2621,4 @@ msgstr "{currencyCode} Kullanıcı Transfer Ücretleri"
 #: src/components/core/components/Amount/Amount.tsx:80
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
+
