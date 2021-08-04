@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+import atexit
 import logging
 from secrets import token_bytes
 from typing import List, Optional
@@ -16,14 +17,23 @@ from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
-from tests.block_tools import get_signage_point, BlockTools
+from tests.block_tools import get_signage_point, create_block_tools
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.core.fixtures import default_1000_blocks, create_blockchain  # noqa: F401
 from tests.setup_nodes import test_constants as test_constants_original
+from tests.util.keyring import TempKeyring
 
+
+def cleanup_keyring(keyring: TempKeyring):
+    keyring.cleanup()
+
+
+temp_keyring = TempKeyring()
+keychain = temp_keyring.get_keychain()
+atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
 test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2 ** 12})
-bt = BlockTools(test_constants)
+bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
 @pytest.fixture(scope="session")

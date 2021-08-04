@@ -9,7 +9,7 @@ import pytest
 from blspy import G1Element, AugSchemeMPL
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.plotting.create_plots import create_plots
+from chia.plotting.create_plots import create_plots, PlotKeys
 from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondBlock
@@ -138,16 +138,13 @@ class TestPoolWalletRpc:
         return num_blocks
         # TODO also return calculated block rewards
 
-    def create_pool_plot(self, p2_singleton_puzzle_hash: bytes32, shuil=None) -> bytes32:
+    async def create_pool_plot(self, p2_singleton_puzzle_hash: bytes32, shuil=None) -> bytes32:
         plot_dir = get_plot_dir()
         temp_dir = get_plot_tmp_dir()
         args = Namespace()
         args.size = 22
         args.num = 1
         args.buffer = 100
-        args.farmer_public_key = bytes(bt.farmer_pk).hex()
-        args.pool_public_key = None
-        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "txch")
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -165,8 +162,11 @@ class TestPoolWalletRpc:
         )
         plot_id = ProofOfSpace.calculate_plot_id_ph(p2_singleton_puzzle_hash, plot_public_key)
         try:
-            create_plots(
+            plot_keys = PlotKeys(bt.farmer_pk, None, encode_puzzle_hash(p2_singleton_puzzle_hash, "txch"))
+
+            await create_plots(
                 args,
+                plot_keys,
                 bt.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys,
@@ -174,7 +174,7 @@ class TestPoolWalletRpc:
         except KeyboardInterrupt:
             shuil.rmtree(plot_dir, ignore_errors=True)
             raise
-        bt.load_plots()
+        await bt.setup_plots()
         return plot_id
 
     def delete_plot(self, plot_id: bytes32):
@@ -408,7 +408,7 @@ class TestPoolWalletRpc:
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
-        plot_id: bytes32 = self.create_pool_plot(status.p2_singleton_puzzle_hash)
+        plot_id: bytes32 = await self.create_pool_plot(status.p2_singleton_puzzle_hash)
         all_blocks = await full_node_api.get_all_full_blocks()
         blocks = bt.get_consecutive_blocks(
             3,
@@ -505,7 +505,7 @@ class TestPoolWalletRpc:
 
         log.warning(f"{await wallet_0.get_confirmed_balance()}")
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
-        plot_id: bytes32 = self.create_pool_plot(status.p2_singleton_puzzle_hash)
+        plot_id: bytes32 = await self.create_pool_plot(status.p2_singleton_puzzle_hash)
         all_blocks = await full_node_api.get_all_full_blocks()
         blocks = bt.get_consecutive_blocks(
             3,

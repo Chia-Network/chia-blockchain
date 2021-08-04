@@ -1,32 +1,116 @@
+import colorama
+import pkg_resources
+import sys
 import unicodedata
+
+from bitstring import BitArray  # pyright: reportMissingImports=false
+from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+from chia.util.hash import std_hash
+from chia.util.keyring_wrapper import KeyringWrapper
+from getpass import getpass
 from hashlib import pbkdf2_hmac
+from pathlib import Path
 from secrets import token_bytes
-from sys import platform
+from time import sleep
 from typing import List, Optional, Tuple
 
-import keyring as keyring_main
-import pkg_resources
-from bitstring import BitArray
-from blspy import AugSchemeMPL, G1Element, PrivateKey
-from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
-from chia.util.hash import std_hash
-
+DEFAULT_PASSPHRASE_PROMPT = (
+    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
+)  # noqa: E501
+FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
+MAX_RETRIES = 3
 
-if platform == "win32" or platform == "cygwin":
-    import keyring.backends.Windows
 
-    keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
-elif platform == "darwin":
-    import keyring.backends.macOS
+class KeyringIsLocked(Exception):
+    pass
 
-    keyring.set_keyring(keyring.backends.macOS.Keyring())
-elif platform == "linux":
-    keyring = CryptFileKeyring()
-    keyring.keyring_key = "your keyring password"  # type: ignore
-else:
-    keyring = keyring_main
+
+class KeyringRequiresMigration(Exception):
+    pass
+
+
+class KeyringCurrentPassphaseIsInvalid(Exception):
+    pass
+
+
+class KeyringMaxUnlockAttempts(Exception):
+    pass
+
+
+def supports_keyring_passphrase() -> bool:
+    # TODO: Enable for Linux once GUI work is finalized (including migration)
+    return False
+    # from sys import platform
+
+    # return platform == "linux"
+
+
+def set_keys_root_path(keys_root_path: Path) -> None:
+    """
+    Used to set the keys_root_path prior to instantiating the KeyringWrapper shared instance.
+    """
+    KeyringWrapper.set_keys_root_path(keys_root_path)
+
+
+def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
+    """
+    Obtains the master passphrase for the keyring, optionally using the cached
+    value (if previously set). If the passphrase isn't already cached, the user is
+    prompted interactively to enter their passphrase a max of MAX_RETRIES times
+    before failing.
+    """
+    if use_passphrase_cache:
+        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
+        if passphrase:
+            # If the cached passphrase was previously validated, we assume it's... valid
+            if validated:
+                return passphrase
+
+            # Cached passphrase needs to be validated
+            if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+                return passphrase
+            else:
+                # Cached passphrase is bad, clear the cache
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
+
+    # Prompt interactively with up to MAX_RETRIES attempts
+    for i in range(MAX_RETRIES):
+        colorama.init()
+
+        passphrase = getpass(prompt)
+
+        if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+            # If using the passphrase cache, and the user inputted a passphrase, update the cache
+            if use_passphrase_cache:
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+            return passphrase
+
+        sleep(FAILED_ATTEMPT_DELAY)
+        print("Incorrect passphrase\n")
+    raise KeyringMaxUnlockAttempts("maximum passphrase attempts reached")
+
+
+def unlocks_keyring(use_passphrase_cache=False):
+    """
+    Decorator used to unlock the keyring interactively, if necessary
+    """
+
+    def inner(func):
+        def wrapper(*args, **kwargs):
+            try:
+                if KeyringWrapper.get_shared_instance().has_master_passphrase():
+                    obtain_current_passphrase(use_passphrase_cache=use_passphrase_cache)
+            except Exception as e:
+                print(f"Unable to unlock the keyring: {e}")
+                sys.exit(1)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return inner
 
 
 def bip39_word_list() -> str:
@@ -120,11 +204,13 @@ class Keychain:
     """
 
     testing: bool
+    keyring_wrapper: KeyringWrapper
     user: str
 
     def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
-        self.testing = testing
         self.user = user
+        self.testing = testing
+        self.keyring_wrapper = KeyringWrapper.get_shared_instance()
 
     def _get_service(self) -> str:
         """
@@ -135,13 +221,14 @@ class Keychain:
         else:
             return f"chia-{self.user}"
 
+    @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
         Returns the keychain contents for a specific 'user' (key index). The contents
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = keyring.get_password(self._get_service(), user)
+        read_str = self.keyring_wrapper.get_passphrase(self._get_service(), user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
@@ -171,6 +258,7 @@ class Keychain:
                 return index
             index += 1
 
+    @unlocks_keyring(use_passphrase_cache=True)
     def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
@@ -187,7 +275,7 @@ class Keychain:
             # Prevents duplicate add
             return key
 
-        keyring.set_password(
+        self.keyring_wrapper.set_passphrase(
             self._get_service(),
             self._get_private_key_user(index),
             bytes(key.get_g1()).hex() + entropy.hex(),
@@ -297,7 +385,7 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                    self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -312,7 +400,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -330,7 +418,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
+                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -339,3 +427,87 @@ class Keychain:
             if (pkent is None or delete_exception) and index > MAX_KEYS:
                 break
             index += 1
+
+    @staticmethod
+    def is_keyring_locked() -> bool:
+        """
+        Returns whether the keyring is in a locked state. If the keyring doesn't have a master passphrase set,
+        or if a master passphrase is set and the cached passphrase is valid, the keyring is "unlocked"
+        """
+        # Unlocked: If a master passphrase isn't set, or if the cached passphrase is valid
+        if not Keychain.has_master_passphrase() or (
+            Keychain.has_cached_passphrase()
+            and Keychain.master_passphrase_is_valid(Keychain.get_cached_master_passphrase())
+        ):
+            return False
+
+        # Locked: Everything else
+        return True
+
+    @staticmethod
+    def needs_migration() -> bool:
+        """
+        Returns a bool indicating whether the underlying keyring needs to be migrated to the new
+        format for passphrase support.
+        """
+        return KeyringWrapper.get_shared_instance().using_legacy_keyring()
+
+    @staticmethod
+    def has_master_passphrase() -> bool:
+        """
+        Returns a bool indicating whether the underlying keyring data
+        is secured by a passphrase.
+        """
+        return KeyringWrapper.get_shared_instance().has_master_passphrase()
+
+    @staticmethod
+    def master_passphrase_is_valid(passphrase: str, force_reload: bool = False) -> bool:
+        """
+        Checks whether the provided passphrase can unlock the keyring. If force_reload
+        is true, the keyring payload will be re-read from the backing file. If false,
+        the passphrase will be checked against the in-memory payload.
+        """
+        return KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase, force_reload=force_reload)
+
+    @staticmethod
+    def has_cached_passphrase() -> bool:
+        """
+        Returns whether the master passphrase has been cached (it may need to be validated)
+        """
+        return KeyringWrapper.get_shared_instance().has_cached_master_passphrase()
+
+    @staticmethod
+    def get_cached_master_passphrase() -> str:
+        """
+        Returns the cached master passphrase
+        """
+        passphrase, _ = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
+        return passphrase
+
+    @staticmethod
+    def set_cached_master_passphrase(passphrase: Optional[str]) -> None:
+        """
+        Caches the provided master passphrase
+        """
+        KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase)
+
+    @staticmethod
+    def set_master_passphrase(
+        current_passphrase: Optional[str], new_passphrase: str, allow_migration: bool = True
+    ) -> None:
+        """
+        Encrypts the keyring contents to new passphrase, provided that the current
+        passphrase can decrypt the contents
+        """
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            current_passphrase, new_passphrase, allow_migration=allow_migration
+        )
+
+    @staticmethod
+    def remove_master_passphrase(current_passphrase: Optional[str]) -> None:
+        """
+        Removes the user-provided master passphrase, and replaces it with the default
+        master passphrase. The keyring contents will remain encrypted, but to the
+        default passphrase.
+        """
+        KeyringWrapper.get_shared_instance().remove_master_passphrase(current_passphrase)

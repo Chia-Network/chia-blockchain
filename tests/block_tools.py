@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import logging
 import os
@@ -15,6 +16,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
+from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
@@ -23,7 +25,7 @@ from chia.full_node.bundle_tools import (
 from chia.util.errors import Err
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots
+from chia.plotting.create_plots import create_plots, PlotKeys
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -122,7 +124,11 @@ class BlockTools:
     """
 
     def __init__(
-        self, constants: ConsensusConstants = test_constants, root_path: Optional[Path] = None, const_dict=None
+        self,
+        constants: ConsensusConstants = test_constants,
+        root_path: Optional[Path] = None,
+        const_dict=None,
+        keychain: Optional[Keychain] = None,
     ):
         self._tempdir = None
         if root_path is None:
@@ -130,33 +136,11 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        create_default_chia_config(root_path)
-        self.keychain = Keychain("testing-1.8.0", True)
-        self.keychain.delete_all_keys()
-        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
-        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
-        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
-        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
-        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-        )
-        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-        )
-        self.init_plots(root_path)
+        self.local_keychain = keychain
 
+        create_default_chia_config(root_path)
         create_all_ssl(root_path)
 
-        self.all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
-        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
-
-        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
-        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
-
-        self.load_plots()
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
@@ -170,6 +154,38 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
+    async def setup_keys(self):
+        if self.local_keychain:
+            self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
+        else:
+            self.keychain_proxy = await connect_to_keychain_and_validate(
+                self.root_path, log, user="testing-1.8.0", testing=True
+            )
+
+        await self.keychain_proxy.delete_all_keys()
+        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
+        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+        self.farmer_master_sk = await self.keychain_proxy.add_private_key(
+            bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+        )
+        self.pool_master_sk = await self.keychain_proxy.add_private_key(
+            bytes_to_mnemonic(self.pool_master_sk_entropy), ""
+        )
+        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+        )
+        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+        )
+        self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
+
+        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
+            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+
     def change_config(self, new_config: Dict):
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -177,11 +193,7 @@ class BlockTools:
         self.constants = updated_constants
         save_config(self.root_path, "config.yaml", self._config)
 
-    def load_plots(self):
-        _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
-        self.plots: Dict[Path, PlotInfo] = loaded_plots
-
-    def init_plots(self, root_path: Path):
+    async def setup_plots(self):
         plot_dir = get_plot_dir()
         mkdir(plot_dir)
         temp_dir = get_plot_tmp_dir()
@@ -194,9 +206,6 @@ class BlockTools:
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = num_pool_public_key_plots  # Some plots created to a pool public key, and some to a pool puzzle hash
         args.buffer = 100
-        args.farmer_public_key = bytes(self.farmer_pk).hex()
-        args.pool_public_key = bytes(self.pool_pk).hex()
-        args.pool_contract_address = None
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -213,26 +222,36 @@ class BlockTools:
             for i in range(num_pool_public_key_plots + num_pool_address_plots)
         ]
         try:
+            plot_keys_1 = PlotKeys(self.farmer_pk, self.pool_pk, None)
+
             # No datetime in the filename, to get deterministic filenames and not re-plot
-            create_plots(
+            await create_plots(
                 args,
-                root_path,
+                plot_keys_1,
+                self.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[:num_pool_public_key_plots],
             )
             # Create more plots, but to a pool address instead of public key
-            args.pool_public_key = None
-            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
+            plot_keys_2 = PlotKeys(self.farmer_pk, None, encode_puzzle_hash(self.pool_ph, "xch"))
             args.num = num_pool_address_plots
-            create_plots(
+            await create_plots(
                 args,
-                root_path,
+                plot_keys_2,
+                self.root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
+
+        _, loaded_plots, _, _ = load_plots({}, {}, self.farmer_pubkeys, self.pool_pubkeys, None, False, self.root_path)
+        self.plots: Dict[Path, PlotInfo] = loaded_plots
+        # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
+        self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
+            "plot_directories"
+        ]
 
     @property
     def config(self) -> Dict:
@@ -1835,3 +1854,30 @@ def create_test_unfinished_block(
         block_generator.program if block_generator else None,
         block_generator.block_height_list() if block_generator else [],
     )
+
+
+async def create_block_tools_async(
+    constants: ConsensusConstants = test_constants,
+    root_path: Optional[Path] = None,
+    const_dict=None,
+    keychain: Optional[Keychain] = None,
+) -> BlockTools:
+    bt = BlockTools(constants, root_path, const_dict, keychain)
+    await bt.setup_keys()
+    await bt.setup_plots()
+
+    return bt
+
+
+def create_block_tools(
+    constants: ConsensusConstants = test_constants,
+    root_path: Optional[Path] = None,
+    const_dict=None,
+    keychain: Optional[Keychain] = None,
+) -> BlockTools:
+    bt = BlockTools(constants, root_path, const_dict, keychain)
+
+    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
+    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
+
+    return bt
