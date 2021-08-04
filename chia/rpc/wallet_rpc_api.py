@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -65,6 +64,8 @@ class WalletRpcApi:
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/farm_block": self.farm_block,  # Only when node simulator is running
+            # this function is just here for backwards-compatibility. It will probably
+            # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
             "/get_network_info": self.get_network_info,
             # Wallet management
@@ -657,9 +658,11 @@ class WalletRpcApi:
             "wallet_id": wallet_id,
         }
 
+    # this function is just here for backwards-compatibility. It will probably
+    # be removed in the future
     async def get_initial_freeze_period(self, _: Dict):
-        freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
-        return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
+        # Mon May 03 2021 17:00:00 GMT+0000
+        return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 
     async def get_next_address(self, request: Dict) -> Dict:
         """
@@ -695,10 +698,6 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
-            raise ValueError(f"No transactions before: {end_date}")
-
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
@@ -725,10 +724,6 @@ class WalletRpcApi:
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
-
-        if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
-            raise ValueError(f"No transactions before: {end_date}")
 
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
