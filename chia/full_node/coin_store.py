@@ -153,7 +153,8 @@ class CoinStore:
 
         coins = set()
         cursor = await self.coin_record_db.execute(
-            f"SELECT * from coin_record WHERE puzzle_hash=? AND confirmed_index>=? AND confirmed_index<? "
+            f"SELECT * from coin_record INDEXED BY coin_puzzle_hash WHERE puzzle_hash=? "
+            f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             (puzzle_hash.hex(), start_height, end_height),
         )
@@ -178,7 +179,8 @@ class CoinStore:
         coins = set()
         puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
         cursor = await self.coin_record_db.execute(
-            f'SELECT * from coin_record WHERE puzzle_hash in ({"?," * (len(puzzle_hashes_db) - 1)}?) '
+            f"SELECT * from coin_record INDEXED BY coin_puzzle_hash "
+            f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes_db) - 1)}?) '
             f"AND confirmed_index>=? AND confirmed_index<? "
             f"{'' if include_spent_coins else 'AND spent=0'}",
             puzzle_hashes_db + (start_height, end_height),

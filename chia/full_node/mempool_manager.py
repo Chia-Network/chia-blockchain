@@ -84,11 +84,7 @@ class MempoolManager:
         Returns aggregated spendbundle that can be used for creating new block,
         additions and removals in that spend_bundle
         """
-        if (
-            self.peak is None
-            or self.peak.header_hash != last_tb_header_hash
-            or int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP
-        ):
+        if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
 
         cost_sum = 0  # Checks that total cost does not exceed block maximum
@@ -508,8 +504,6 @@ class MempoolManager:
         if self.peak == new_peak:
             return []
         assert new_peak.timestamp is not None
-        if new_peak.timestamp <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            return []
 
         self.peak = new_peak
 
