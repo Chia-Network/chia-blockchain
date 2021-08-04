@@ -723,11 +723,8 @@ class FullNode:
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
-        async def fetch_block_batces(batch_queue, peers_with_peak: List):
+        async def fetch_block_batches(batch_queue, peers_with_peak: List):
             for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
-                # create fetch tasks
-                # wait until this is false if len(fetched_batchs) > buffer_size:
-                # create task for batch
                 end_height = min(target_peak_sb_height, start_height + batch_size)
                 request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                 fetched = False
@@ -753,7 +750,7 @@ class FullNode:
             # finished signal with None
             await batch_queue.put(None)
 
-        async def validate_block_batces(batch_queue):
+        async def validate_block_batches(batch_queue):
             advanced_peak = False
             while True:
                 res = await batch_queue.get()
@@ -777,8 +774,8 @@ class FullNode:
 
         loop = asyncio.get_event_loop()
         batch_queue: asyncio.Queue = asyncio.Queue(loop=loop, maxsize=buffer_size)
-        fetch_task = asyncio.Task(fetch_block_batces(batch_queue, peers_with_peak))
-        validate_task = asyncio.Task(validate_block_batces(batch_queue))
+        fetch_task = asyncio.Task(fetch_block_batches(batch_queue, peers_with_peak))
+        validate_task = asyncio.Task(validate_block_batches(batch_queue))
         try:
             await asyncio.gather(fetch_task, validate_task)
         except Exception as e:
