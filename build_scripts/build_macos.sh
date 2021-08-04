@@ -15,14 +15,14 @@ echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
 npm install electron/electron-osx-sign -g
-npm install notarize-cli -g
+npm install @chia-network/notarize-cli -g
 
 echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-pip install pyinstaller==4.2
+pip install pyinstaller==4.5
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?

@@ -44,7 +44,7 @@ class SyncStore:
     def get_sync_target_hash(self) -> Optional[bytes32]:
         return self.sync_target_header_hash
 
-    def get_sync_target_height(self) -> Optional[bytes32]:
+    def get_sync_target_height(self) -> Optional[uint32]:
         return self.sync_target_height
 
     def set_sync_mode(self, sync_mode: bool):
