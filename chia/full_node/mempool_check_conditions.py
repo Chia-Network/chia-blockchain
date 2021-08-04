@@ -284,9 +284,9 @@ def parse_condition(cond: SExp, safe_mode: bool) -> Tuple[int, Optional[Conditio
         cost, args = parse_condition_args(cond.rest(), opcode, safe_mode)
         cvl = ConditionWithArgs(opcode, args) if args is not None else None
     elif not safe_mode:
-        opcode = ConditionOpcode.UNKNOWN
-        cvl = ConditionWithArgs(opcode, cond.rest().as_atom_list())
-        cost = 0
+        # we don't need to save unknown conditions. We can't do anything with them anyway
+        # safe_mode just tells us whether we can tolerate them or not
+        return 0, None
     else:
         raise ValidationError(Err.INVALID_CONDITION)
     return cost, cvl

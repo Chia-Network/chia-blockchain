@@ -111,7 +111,7 @@ def delete(fingerprint: int):
 
 
 @unlocks_keyring(use_passphrase_cache=True)
-def sign(message: str, fingerprint: int, hd_path: str):
+def sign(message: str, fingerprint: int, hd_path: str, as_bytes: bool):
     k = Keychain()
     private_keys = k.get_all_private_keys()
 
@@ -120,8 +120,9 @@ def sign(message: str, fingerprint: int, hd_path: str):
         if sk.get_g1().get_fingerprint() == fingerprint:
             for c in path:
                 sk = AugSchemeMPL.derive_child_sk(sk, c)
+            data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
             print("Public key:", sk.get_g1())
-            print("Signature:", AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
+            print("Signature:", AugSchemeMPL.sign(sk, data))
             return None
     print(f"Fingerprint {fingerprint} not found in keychain")
 
