@@ -16,13 +16,21 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from chia.cmds.init_funcs import chia_init
+from chia.cmds.init_funcs import check_keys, chia_init
+from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
+from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
+from chia.util.keychain import (
+    Keychain,
+    KeyringCurrentPassphaseIsInvalid,
+    KeyringRequiresMigration,
+    supports_keyring_passphrase,
+)
 from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -113,7 +121,15 @@ async def ping() -> Dict[str, Any]:
 
 
 class WebSocketServer:
-    def __init__(self, root_path: Path, ca_crt_path: Path, ca_key_path: Path, crt_path: Path, key_path: Path):
+    def __init__(
+        self,
+        root_path: Path,
+        ca_crt_path: Path,
+        ca_key_path: Path,
+        crt_path: Path,
+        key_path: Path,
+        run_check_keys_on_unlock: bool = False,
+    ):
         self.root_path = root_path
         self.log = log
         self.services: Dict = dict()
@@ -127,6 +143,8 @@ class WebSocketServer:
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
+        self.keychain_server = KeychainServer()
+        self.run_check_keys_on_unlock = run_check_keys_on_unlock
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -270,6 +288,9 @@ class WebSocketServer:
         ]
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
+        # Keychain commands should be handled by KeychainServer
+        elif command in keychain_commands and supports_keyring_passphrase():
+            response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()
         elif command == "start_service":
@@ -282,6 +303,16 @@ class WebSocketServer:
             response = await self.stop_service(cast(Dict[str, Any], data))
         elif command == "is_running":
             response = await self.is_running(cast(Dict[str, Any], data))
+        elif command == "is_keyring_locked":
+            response = await self.is_keyring_locked()
+        elif command == "keyring_status":
+            response = await self.keyring_status()
+        elif command == "unlock_keyring":
+            response = await self.unlock_keyring(cast(Dict[str, Any], data))
+        elif command == "set_keyring_passphrase":
+            response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
+        elif command == "remove_keyring_passphrase":
+            response = await self.remove_keyring_passphrase(cast(Dict[str, Any], data))
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
@@ -294,6 +325,114 @@ class WebSocketServer:
 
         full_response = format_response(message, response)
         return full_response, [websocket]
+
+    async def is_keyring_locked(self) -> Dict[str, Any]:
+        locked: bool = Keychain.is_keyring_locked()
+        response: Dict[str, Any] = {"success": True, "is_keyring_locked": locked}
+        return response
+
+    async def keyring_status(self) -> Dict[str, Any]:
+        passphrase_support_enabled: bool = supports_keyring_passphrase()
+        user_passphrase_is_set: bool = not using_default_passphrase()
+        locked: bool = Keychain.is_keyring_locked()
+        needs_migration: bool = Keychain.needs_migration()
+        response: Dict[str, Any] = {
+            "success": True,
+            "is_keyring_locked": locked,
+            "passphrase_support_enabled": passphrase_support_enabled,
+            "user_passphrase_is_set": user_passphrase_is_set,
+            "needs_migration": needs_migration,
+        }
+        return response
+
+    async def unlock_keyring(self, request: Dict[str, Any]):
+        success: bool = False
+        error: Optional[str] = None
+        key: Optional[str] = request.get("key", None)
+        if type(key) is not str:
+            return {"success": False, "error": "missing key"}
+
+        try:
+            if Keychain.master_passphrase_is_valid(key, force_reload=True):
+                Keychain.set_cached_master_passphrase(key)
+                success = True
+            else:
+                error = "bad passphrase"
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
+            error = "validation exception"
+
+        if success and self.run_check_keys_on_unlock:
+            try:
+                self.log.info("Running check_keys now that the keyring is unlocked")
+                check_keys(self.root_path)
+                self.run_check_keys_on_unlock = False
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
+
+        response: Dict[str, Any] = {"success": success, "error": error}
+        return response
+
+    async def set_keyring_passphrase(self, request: Dict[str, Any]):
+        success: bool = False
+        error: Optional[str] = None
+        current_passphrase: Optional[str] = None
+        new_passphrase: Optional[str] = None
+
+        if using_default_passphrase():
+            current_passphrase = default_passphrase()
+
+        if Keychain.has_master_passphrase() and not current_passphrase:
+            current_passphrase = request.get("current_passphrase", None)
+            if type(current_passphrase) is not str:
+                return {"success": False, "error": "missing current_passphrase"}
+
+        new_passphrase = request.get("new_passphrase", None)
+        if type(new_passphrase) is not str:
+            return {"success": False, "error": "missing new_passphrase"}
+
+        try:
+            assert new_passphrase is not None  # mypy, I love you
+            Keychain.set_master_passphrase(current_passphrase, new_passphrase, allow_migration=False)
+        except KeyringRequiresMigration:
+            error = "keyring requires migration"
+        except KeyringCurrentPassphaseIsInvalid:
+            error = "current passphrase is invalid"
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Failed to set keyring passphrase: {e} {tb}")
+        else:
+            success = True
+
+        response: Dict[str, Any] = {"success": success, "error": error}
+        return response
+
+    async def remove_keyring_passphrase(self, request: Dict[str, Any]):
+        success: bool = False
+        error: Optional[str] = None
+        current_passphrase: Optional[str] = None
+
+        if not Keychain.has_master_passphrase():
+            return {"success": False, "error": "passphrase not set"}
+
+        current_passphrase = request.get("current_passphrase", None)
+        if type(current_passphrase) is not str:
+            return {"success": False, "error": "missing current_passphrase"}
+
+        try:
+            Keychain.remove_master_passphrase(current_passphrase)
+        except KeyringCurrentPassphaseIsInvalid:
+            error = "current passphrase is invalid"
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Failed to remove keyring passphrase: {e} {tb}")
+        else:
+            success = True
+
+        response: Dict[str, Any] = {"success": success, "error": error}
+        return response
 
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
@@ -486,6 +625,11 @@ class WebSocketServer:
 
             service_name = config["service_name"]
             command_args = config["command_args"]
+
+            # Set the -D/--connect_to_daemon flag to signify that the child should connect
+            # to the daemon to access the keychain
+            command_args.append("-D")
+
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
@@ -812,6 +956,12 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
+
+    if service_command == "chia_full_node_simulator":
+        # Set the -D/--connect_to_daemon flag to signify that the child should connect
+        # to the daemon to access the keychain
+        service_array.append("-D")
+
     startupinfo = None
     if os.name == "nt":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
@@ -974,8 +1124,10 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
     return f
 
 
-async def async_run_daemon(root_path: Path) -> int:
-    chia_init(root_path)
+async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
+    # When wait_for_unlock is true, we want to skip the check_keys() call in chia_init
+    # since it might be necessary to wait for the GUI to unlock the keyring first.
+    chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
@@ -1002,23 +1154,29 @@ async def async_run_daemon(root_path: Path) -> int:
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    ws_server = WebSocketServer(
+        root_path, ca_crt_path, ca_key_path, crt_path, key_path, run_check_keys_on_unlock=wait_for_unlock
+    )
     await ws_server.start()
     assert ws_server.websocket_server is not None
     await ws_server.websocket_server.wait_closed()
     log.info("Daemon WebSocketServer closed")
+    # sys.stdout.close()
     return 0
 
 
-def run_daemon(root_path: Path) -> int:
-    return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path))
+def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
+    result = asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, wait_for_unlock))
+    return result
 
 
-def main() -> int:
+def main(argv) -> int:
     from chia.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.keychain import Keychain
 
-    return run_daemon(DEFAULT_ROOT_PATH)
+    wait_for_unlock = "--wait-for-unlock" in argv and Keychain.is_keyring_locked()
+    return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
