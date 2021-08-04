@@ -36,8 +36,9 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path):
         found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
         if found_passphrase != passphrase:
             log.error(
-                f"[pid:{os.getpid()}] error: didn't get expected passphrase: get_passphrase: {found_passphrase}"
-                f", expected: {passphrase}"
+                f"[pid:{os.getpid()}] error: didn't get expected passphrase: "
+                f"get_passphrase: {found_passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
+                f", expected: {passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
             )
         assert found_passphrase == passphrase
 
