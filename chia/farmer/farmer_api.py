@@ -260,6 +260,13 @@ class FarmerAPI:
                 except Exception as e:
                     self.farmer.log.error(f"Error connecting to pool: {e}")
                     return
+                finally:
+                    cutoff_24h = time.time() - (24 * 60 * 60)
+                    for key in ["points_found_24h", "points_acknowledged_24h"]:
+                        if key not in pool_state_dict:
+                            continue
+
+                        pool_state_dict[key] = strip_old_entries(pairs=pool_state_dict[key], before=cutoff_24h)
 
                 return
 
@@ -421,14 +428,7 @@ class FarmerAPI:
     @api_request
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
         pool_difficulties: List[PoolDifficulty] = []
-        cutoff_24h = time.time() - (24 * 60 * 60)
         for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
-            for key in ["points_found_24h", "points_acknowledged_24h"]:
-                if key not in pool_dict:
-                    continue
-
-                pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
-
             if pool_dict["pool_config"].pool_url == "":
                 # Self pooling
                 continue
