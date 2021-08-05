@@ -98,15 +98,6 @@ def mempool_assert_relative_time_exceeds(
     return None
 
 
-def mempool_assert_my_parent_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
-    """
-    Checks if coin's parent ID matches the ID from the condition
-    """
-    if unspent.coin.parent_coin_info != condition.vars[0]:
-        return Err.ASSERT_MY_PARENT_ID_FAILED
-    return None
-
-
 def get_name_puzzle_conditions(
     generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool
 ) -> NPCResult:
@@ -182,7 +173,7 @@ def mempool_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 error = mempool_assert_relative_time_exceeds(cvp, unspent, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
-                error = mempool_assert_my_parent_id(cvp, unspent)
+                assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
                 assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_AMOUNT:
