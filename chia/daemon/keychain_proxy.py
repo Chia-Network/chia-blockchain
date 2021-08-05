@@ -336,6 +336,11 @@ async def connect_to_keychain_and_validate(
         connection = await connect_to_keychain(
             net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, user, testing
         )
+
+        # If proxying to a local keychain, don't attempt to ping
+        if connection.use_local_keychain():
+            return connection
+
         r = await connection.ping()
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
