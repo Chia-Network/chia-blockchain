@@ -45,16 +45,16 @@ class PlotManager:
     _lock: threading.Lock
     _refresh_thread: Optional[threading.Thread]
     _refreshing_enabled: bool
-    _refresh_callback: Optional[Callable]
+    _refresh_callback: Callable
 
     def __init__(
         self,
         root_path: Path,
+        refresh_callback: Callable,
         match_str: Optional[str] = None,
         show_memo: bool = False,
         open_no_key_filenames: bool = False,
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
-        refresh_callback: Optional[Callable] = None,
     ):
         self.root_path = root_path
         self.plots = {}
@@ -73,7 +73,7 @@ class PlotManager:
         self._lock = threading.Lock()
         self._refresh_thread = None
         self._refreshing_enabled = False
-        self._refresh_callback = refresh_callback
+        self._refresh_callback = refresh_callback  # type: ignore
 
     def __enter__(self):
         self._lock.acquire()
@@ -82,7 +82,7 @@ class PlotManager:
         self._lock.release()
 
     def set_refresh_callback(self, callback: Callable):
-        self._refresh_callback = callback
+        self._refresh_callback = callback  # type: ignore
 
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
@@ -124,8 +124,7 @@ class PlotManager:
             while self.needs_refresh() and self._refreshing_enabled:
                 batch_result: PlotRefreshResult = self.refresh_batch()
                 total_result += batch_result
-                if self._refresh_callback is not None:
-                    self._refresh_callback(batch_result)
+                self._refresh_callback(batch_result)
                 if batch_result.remaining_files == 0:
                     self.last_refresh_time = time.time()
                     break
