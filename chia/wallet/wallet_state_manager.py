@@ -63,6 +63,14 @@ from chia.server.server import ChiaServer
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 
 
+def try_get_spend_from_list(launcher_coin_id: bytes32, block_spends: List[CoinSpend]) -> Optional[CoinSpend]:
+    launcher_spend: Optional[CoinSpend] = None
+    for spend in block_spends:
+        if spend.coin.name() == launcher_coin_id:
+            launcher_spend = spend
+    return launcher_spend
+
+
 def get_balance_from_coin_records(coin_records: Set[WalletCoinRecord]) -> uint128:
     amount: uint128 = uint128(0)
     for record in coin_records:
@@ -613,10 +621,25 @@ class WalletStateManager:
                             self.log.debug(f"Not a pool wallet launcher {e}")
                             continue
                         self.log.info("Found created launcher. Creating pool wallet")
-                        pool_wallet = await PoolWallet.create(
-                            self, self.main_wallet, cs.coin.name(), additional_coin_spends, height, True, "pool_wallet"
-                        )
-                        created_pool_wallet_ids.append(pool_wallet.wallet_id)
+                        try:
+                            pool_wallet = await PoolWallet.create(
+                                self,
+                                self.main_wallet,
+                                cs.coin.name(),
+                                additional_coin_spends,
+                                height,
+                                True,
+                                "pool_wallet",
+                            )
+                            created_pool_wallet_ids.append(pool_wallet.wallet_id)
+                        except Exception as e:
+                            # If this fails, the user will not be able to use this PoolWallet
+                            launcher_spend = try_get_spend_from_list(cs.coin.name(), additional_coin_spends)
+                            self.log.debug(
+                                f"Failed to create PoolWallet at block. Likely malformed PoolState. "
+                                f"launcher_id: {cs.coin.name()} Spend:{launcher_spend} Exception: {e}"
+                            )
+                            continue
 
             for wallet_id, wallet in self.wallets.items():
                 if wallet.type() == WalletType.POOLING_WALLET:
