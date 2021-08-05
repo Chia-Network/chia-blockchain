@@ -107,15 +107,6 @@ def mempool_assert_my_parent_id(condition: ConditionWithArgs, unspent: CoinRecor
     return None
 
 
-def mempool_assert_my_puzzlehash(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
-    """
-    Checks if coin's puzzlehash matches the puzzlehash from the condition
-    """
-    if unspent.coin.puzzle_hash != condition.vars[0]:
-        return Err.ASSERT_MY_PUZZLEHASH_FAILED
-    return None
-
-
 def get_name_puzzle_conditions(
     generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool
 ) -> NPCResult:
@@ -193,7 +184,7 @@ def mempool_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
                 error = mempool_assert_my_parent_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
-                error = mempool_assert_my_puzzlehash(cvp, unspent)
+                assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_AMOUNT:
                 assert False
             if error:
