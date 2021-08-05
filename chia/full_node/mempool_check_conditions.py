@@ -116,15 +116,6 @@ def mempool_assert_my_puzzlehash(condition: ConditionWithArgs, unspent: CoinReco
     return None
 
 
-def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
-    """
-    Checks if coin's amount matches the amount from the condition
-    """
-    if unspent.coin.amount != int_from_bytes(condition.vars[0]):
-        return Err.ASSERT_MY_AMOUNT_FAILED
-    return None
-
-
 def get_name_puzzle_conditions(
     generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool
 ) -> NPCResult:
@@ -204,7 +195,7 @@ def mempool_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
                 error = mempool_assert_my_puzzlehash(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_AMOUNT:
-                error = mempool_assert_my_amount(cvp, unspent)
+                assert False
             if error:
                 return error
 
