@@ -125,7 +125,7 @@ class PlotManager:
         if str_path in str_paths:
             str_paths.remove(str_path)
 
-        # If path matcehs full path, remove
+        # If path matches full path, remove
         new_paths = [Path(sp).resolve() for sp in str_paths]
         if Path(str_path).resolve() in new_paths:
             new_paths.remove(Path(str_path).resolve())
