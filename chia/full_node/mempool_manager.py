@@ -29,8 +29,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
-    coin_announcements_names_for_npc,
-    puzzle_announcements_names_for_npc,
 )
 from chia.util.errors import Err
 from chia.util.generator_tools import additions_for_npc
@@ -382,8 +380,6 @@ class MempoolManager:
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
         error: Optional[Err] = None
-        coin_announcements_in_spend: Set[bytes32] = coin_announcements_names_for_npc(npc_list)
-        puzzle_announcements_in_spend: Set[bytes32] = puzzle_announcements_names_for_npc(npc_list)
         for npc in npc_list:
             coin_record: CoinRecord = removal_record_dict[npc.coin_name]
             # Check that the revealed removal puzzles actually match the puzzle hash
@@ -398,8 +394,6 @@ class MempoolManager:
             assert self.peak.timestamp is not None
             error = mempool_check_conditions_dict(
                 coin_record,
-                coin_announcements_in_spend,
-                puzzle_announcements_in_spend,
                 npc.condition_dict,
                 uint32(chialisp_height),
                 self.peak.timestamp,

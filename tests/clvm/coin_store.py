@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, Optional, Set
+from typing import Dict, Iterator, Optional
 
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict  # noqa
 from chia.types.blockchain_format.coin import Coin
@@ -9,8 +9,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import (
     conditions_dict_for_solution,
-    coin_announcement_names_for_conditions_dict,
-    puzzle_announcement_names_for_conditions_dict,
 )
 from chia.util.ints import uint32, uint64
 
@@ -63,9 +61,6 @@ class CoinStore:
     ) -> int:
         # this should use blockchain consensus code
 
-        coin_announcements: Set[bytes32] = set()
-        puzzle_announcements: Set[bytes32] = set()
-
         conditions_dicts = []
         for coin_spend in spend_bundle.coin_spends:
             assert isinstance(coin_spend.coin, Coin)
@@ -75,18 +70,6 @@ class CoinStore:
             if conditions_dict is None:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
             conditions_dicts.append(conditions_dict)
-            coin_announcements.update(
-                coin_announcement_names_for_conditions_dict(
-                    conditions_dict,
-                    coin_spend.coin,
-                )
-            )
-            puzzle_announcements.update(
-                puzzle_announcement_names_for_conditions_dict(
-                    conditions_dict,
-                    coin_spend.coin,
-                )
-            )
 
         ephemeral_db = dict(self._db)
         for coin in spend_bundle.additions():
@@ -108,8 +91,6 @@ class CoinStore:
                 raise BadSpendBundleError(f"coin not found for id 0x{coin_spend.coin.name().hex()}")  # noqa
             err = mempool_check_conditions_dict(
                 coin_record,
-                coin_announcements,
-                puzzle_announcements,
                 conditions_dict,
                 uint32(prev_transaction_block_height),
                 uint64(timestamp),

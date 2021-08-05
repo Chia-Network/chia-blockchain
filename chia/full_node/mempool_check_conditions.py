@@ -24,18 +24,6 @@ from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 GENERATOR_MOD = get_generator()
 
 
-def mempool_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes32]) -> Optional[Err]:
-    """
-    Check if an announcement is included in the list of announcements
-    """
-    announcement_hash = bytes32(condition.vars[0])
-
-    if announcement_hash not in announcements:
-        return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
-
-    return None
-
-
 log = logging.getLogger(__name__)
 
 
@@ -432,8 +420,6 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes
 
 def mempool_check_conditions_dict(
     unspent: CoinRecord,
-    coin_announcement_names: Set[bytes32],
-    puzzle_announcement_names: Set[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
     timestamp: uint64,
@@ -448,9 +434,9 @@ def mempool_check_conditions_dict(
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
-                error = mempool_assert_announcement(cvp, coin_announcement_names)
+                assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
-                error = mempool_assert_announcement(cvp, puzzle_announcement_names)
+                assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
                 error = mempool_assert_absolute_block_height_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
