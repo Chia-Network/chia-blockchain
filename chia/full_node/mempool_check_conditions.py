@@ -148,13 +148,7 @@ def mempool_check_conditions_dict(
         cvp: ConditionWithArgs
         for cvp in con_list:
             error: Optional[Err] = None
-            if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
-                assert False
-            elif cvp.opcode is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
-                assert False
-            elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
-                assert False
-            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+            if cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
                 error = mempool_assert_absolute_block_height_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
                 error = mempool_assert_relative_block_height_exceeds(cvp, unspent, prev_transaction_block_height)
@@ -162,6 +156,12 @@ def mempool_check_conditions_dict(
                 error = mempool_assert_absolute_time_exceeds(cvp, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 error = mempool_assert_relative_time_exceeds(cvp, unspent, timestamp)
+            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+                assert False
+            elif cvp.opcode is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
+                assert False
+            elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
+                assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
                 assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
