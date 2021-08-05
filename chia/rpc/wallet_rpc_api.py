@@ -78,6 +78,7 @@ class WalletRpcApi:
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
             "/create_backup": self.create_backup,
+            "/get_backup_info": self.get_backup_info,
             "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
