@@ -30,9 +30,9 @@ class Harvester:
         # TODO, remove checks below later after some versions / time
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
         if "plot_loading_frequency_seconds" in config:
-            self.log.warning(
-                "plot_loading_frequency_seconds is deprecated but found in config. Replace it with the "
-                "new section `plots_refresh_parameter`. See `initial-config.yaml`."
+            self.log.info(
+                "`harvester.plot_loading_frequency_seconds` is deprecated. Consider replacing it with the new section "
+                "`harvester.plots_refresh_parameter`. See `initial-config.yaml`."
             )
         if "plots_refresh_parameter" in config:
             refresh_parameter = dataclass_from_dict(PlotsRefreshParameter, config["plots_refresh_parameter"])
