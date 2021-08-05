@@ -7,7 +7,13 @@ import yaml
 
 from chia import __version__
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
+from chia.ssl.create_ssl import (
+    ensure_ssl_dirs,
+    generate_ca_signed_cert,
+    get_chia_ca_crt_key,
+    make_ca_cert,
+    write_ssl_cert_and_key,
+)
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import (
     create_default_chia_config,
@@ -169,19 +175,15 @@ def create_all_ssl(root: Path):
         os.remove(old_crt_path)
 
     ssl_dir = config_dir / "ssl"
-    if not ssl_dir.exists():
-        ssl_dir.mkdir()
     ca_dir = ssl_dir / "ca"
-    if not ca_dir.exists():
-        ca_dir.mkdir()
+    ensure_ssl_dirs([ssl_dir, ca_dir])
 
     private_ca_key_path = ca_dir / "private_ca.key"
     private_ca_crt_path = ca_dir / "private_ca.crt"
     chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
     chia_ca_crt_path = ca_dir / "chia_ca.crt"
     chia_ca_key_path = ca_dir / "chia_ca.key"
-    chia_ca_crt_path.write_bytes(chia_ca_crt)
-    chia_ca_key_path.write_bytes(chia_ca_key)
+    write_ssl_cert_and_key(chia_ca_crt_path, chia_ca_crt, chia_ca_key_path, chia_ca_key)
 
     if not private_ca_key_path.exists() or not private_ca_crt_path.exists():
         # Create private CA
@@ -210,8 +212,7 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
 
     for node_name in names:
         node_dir = ssl_dir / node_name
-        if not node_dir.exists():
-            node_dir.mkdir()
+        ensure_ssl_dirs([node_dir])
         if private:
             prefix = "private"
         else:
