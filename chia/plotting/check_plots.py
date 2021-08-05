@@ -8,7 +8,13 @@ from blspy import G1Element
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import PlotRefreshResult, PlotsRefreshParameter, find_duplicate_plot_IDs, parse_plot_info
+from chia.plotting.util import (
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    get_plot_filenames,
+    find_duplicate_plot_IDs,
+    parse_plot_info,
+)
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
@@ -58,7 +64,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
 
     if list_duplicates:
         all_filenames: List[Path] = []
-        for paths in plot_manager.get_plot_filenames().values():
+        for paths in get_plot_filenames(root_path).values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
 

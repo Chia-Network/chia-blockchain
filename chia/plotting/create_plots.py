@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.manager import PlotManager
+from chia.plotting.util import add_plot_directory
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -238,7 +238,7 @@ async def create_plots(args, keys: PlotKeys, root_path, use_datetime=True, test_
             if resolved_final_dir not in plot_directories_list:
                 # Adds the directory to the plot directories if it is not present
                 log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                config = PlotManager(root_path).add_plot_directory(resolved_final_dir)
+                config = add_plot_directory(root_path, resolved_final_dir)
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")

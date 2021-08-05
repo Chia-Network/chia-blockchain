@@ -15,14 +15,14 @@ from chia.plotting.util import (
     PlotInfo,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    get_filenames,
+    get_plot_directories,
+    get_plot_filenames,
     parse_plot_info,
     stream_plot_info_pk,
     stream_plot_info_ph,
 )
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, save_config
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
@@ -91,56 +91,9 @@ class PlotManager:
     def public_keys_available(self):
         return len(self.farmer_public_keys) and len(self.pool_public_keys)
 
-    def get_plot_directories(self, config: Dict = None) -> List[str]:
-        if config is None:
-            config = load_config(self.root_path, "config.yaml")
-        return config["harvester"]["plot_directories"]
-
-    def get_plot_filenames(self) -> Dict[Path, List[Path]]:
-        # Returns a map from directory to a list of all plots in the directory
-        all_files: Dict[Path, List[Path]] = {}
-        for directory_name in self.get_plot_directories():
-            directory = Path(directory_name).resolve()
-            all_files[directory] = get_filenames(directory)
-        return all_files
-
     def plot_count(self):
         with self:
             return len(self.plots)
-
-    def add_plot_directory(self, str_path: str) -> Dict:
-        log.debug(f"add_plot_directory {str_path}")
-        config = load_config(self.root_path, "config.yaml")
-        if str(Path(str_path).resolve()) not in self.get_plot_directories(config):
-            config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
-        save_config(self.root_path, "config.yaml", config)
-        self.trigger_refresh()
-        return config
-
-    def remove_plot_directory(self, str_path: str) -> None:
-        log.debug(f"remove_plot_directory {str_path}")
-        config = load_config(self.root_path, "config.yaml")
-        str_paths: List[str] = self.get_plot_directories(config)
-        # If path str matches exactly, remove
-        if str_path in str_paths:
-            str_paths.remove(str_path)
-
-        # If path matches full path, remove
-        new_paths = [Path(sp).resolve() for sp in str_paths]
-        if Path(str_path).resolve() in new_paths:
-            new_paths.remove(Path(str_path).resolve())
-
-        config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
-        save_config(self.root_path, "config.yaml", config)
-        self.trigger_refresh()
-
-    def remove_plot(self, path: Path):
-        log.debug(f"remove_plot {str(path)}")
-        # Remove absolute and relative paths
-        if path.exists():
-            path.unlink()
-
-        self.trigger_refresh()
 
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
@@ -189,7 +142,7 @@ class PlotManager:
 
     def refresh_batch(self) -> PlotRefreshResult:
         start_time: float = time.time()
-        plot_filenames: Dict[Path, List[Path]] = self.get_plot_filenames()
+        plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
         all_filenames: List[Path] = []
         for paths in plot_filenames.values():
             all_filenames += paths
@@ -197,7 +150,7 @@ class PlotManager:
         result: PlotRefreshResult = PlotRefreshResult()
         counter_lock = threading.Lock()
 
-        log.debug(f"refresh_batch: {len(all_filenames)} files in directories {self.get_plot_directories()}")
+        log.debug(f"refresh_batch: {len(all_filenames)} files in directories {get_plot_directories(self.root_path)}")
 
         if self.match_str is not None:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')

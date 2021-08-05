@@ -8,7 +8,14 @@ from typing import Callable, Dict, List, Optional, Tuple
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult
+from chia.plotting.util import (
+    add_plot_directory,
+    get_plot_directories,
+    remove_plot_directory,
+    remove_plot,
+    PlotsRefreshParameter,
+    PlotRefreshResult,
+)
 from chia.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
@@ -27,6 +34,7 @@ class Harvester:
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
+        self.root_path = root_path
         # TODO, remove checks below later after some versions / time
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
         if "plot_loading_frequency_seconds" in config:
@@ -114,19 +122,22 @@ class Harvester:
             )
 
     def delete_plot(self, str_path: str):
-        self.plot_manager.remove_plot(Path(str_path))
+        remove_plot(Path(str_path))
+        self.plot_manager.trigger_refresh()
         self._state_changed("plots")
         return True
 
     async def add_plot_directory(self, str_path: str) -> bool:
-        self.plot_manager.add_plot_directory(str_path)
+        add_plot_directory(self.root_path, str_path)
+        self.plot_manager.trigger_refresh()
         return True
 
     async def get_plot_directories(self) -> List[str]:
-        return self.plot_manager.get_plot_directories()
+        return get_plot_directories(self.root_path)
 
     async def remove_plot_directory(self, str_path: str) -> bool:
-        self.plot_manager.remove_plot_directory(str_path)
+        remove_plot_directory(self.root_path, str_path)
+        self.plot_manager.trigger_refresh()
         return True
 
     def set_server(self, server):

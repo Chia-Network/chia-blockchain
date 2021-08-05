@@ -193,6 +193,7 @@ class TestRpc:
                 expected_result.removed_plots = expect_removed
                 expected_result.processed_files = expect_processed
                 await trigger
+                harvester.plot_manager.trigger_refresh()
                 assert len(await client_2.get_plot_directories()) == expected_directories
                 await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
                 result = await client_2.get_plots()
