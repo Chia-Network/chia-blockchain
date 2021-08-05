@@ -23,16 +23,6 @@ GENERATOR_MOD = get_generator()
 log = logging.getLogger(__name__)
 
 
-def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
-    """
-    Checks if CoinID matches the id from the condition
-    """
-    if unspent.coin.name() != condition.vars[0]:
-        log.warning(f"My name: {unspent.coin.name()} got: {condition.vars[0].hex()}")
-        return Err.ASSERT_MY_COIN_ID_FAILED
-    return None
-
-
 def mempool_assert_absolute_block_height_exceeds(
     condition: ConditionWithArgs, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
@@ -159,7 +149,7 @@ def mempool_check_conditions_dict(
         for cvp in con_list:
             error: Optional[Err] = None
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
-                error = mempool_assert_my_coin_id(cvp, unspent)
+                assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
                 assert False
             elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
