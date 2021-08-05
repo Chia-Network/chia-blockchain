@@ -86,3 +86,6 @@ class ProtocolMessageTypes(Enum):
     new_signage_point_harvester = 66
     request_plots = 67
     respond_plots = 68
+
+    request_proof_of_weight_v2 = 69
+    respond_proof_of_weight_v2 = 70

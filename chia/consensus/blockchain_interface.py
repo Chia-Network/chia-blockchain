@@ -5,7 +5,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochChallengeSegmentV2
 from chia.util.ints import uint32
 
 
@@ -76,6 +76,17 @@ class BlockchainInterface:
         self,
         sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
+        pass
+
+    async def persist_sub_epoch_challenge_segments_v2(
+        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegmentV2]
+    ):
+        pass
+
+    async def get_sub_epoch_challenge_segments_v2(
+        self,
+        sub_epoch_summary_height: uint32,
+    ) -> Optional[List[SubEpochChallengeSegmentV2]]:
         pass
 
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:

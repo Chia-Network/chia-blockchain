@@ -8,7 +8,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.types.weight_proof import WeightProof
+from chia.types.weight_proof import WeightProof, WeightProofV2
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
@@ -59,6 +59,20 @@ class RequestProofOfWeight(Streamable):
 @streamable
 class RespondProofOfWeight(Streamable):
     wp: WeightProof
+    tip: bytes32
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestProofOfWeightV2(Streamable):
+    total_number_of_blocks: uint32
+    tip: bytes32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondProofOfWeightV2(Streamable):
+    wp: WeightProofV2
     tip: bytes32
 
 
