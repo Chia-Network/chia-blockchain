@@ -637,7 +637,7 @@ class WalletStateManager:
                             launcher_spend = try_get_spend_from_list(cs.coin.name(), additional_coin_spends)
                             self.log.debug(
                                 f"Failed to create PoolWallet at block. Likely malformed PoolState. "
-                                f"launcher_id: {cs.coin.name()} Spend:{launcher_spend} Exception: {e}"
+                                f"height: {height} launcher_id: {cs.coin.name()} Spend:{launcher_spend} Exception: {e}"
                             )
                             continue
 
