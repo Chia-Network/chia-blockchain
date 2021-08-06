@@ -141,7 +141,12 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.websocket_server = None
-        self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
+        try:
+            self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
+        except Exception as e:
+            self.log.error(e)
+            print("Failed to create SSL context, exiting...")
+            sys.exit(1)
         self.shut_down = False
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
@@ -1132,6 +1137,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
+
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]

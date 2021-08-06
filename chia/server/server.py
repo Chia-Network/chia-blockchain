@@ -26,11 +26,19 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
+from chia.util.ssl import SSLInvalidPermissions, verify_ssl_certs_and_keys
 
 
 def ssl_context_for_server(
-    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
+    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path, check_permissions: bool = True
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        invalid_files_and_modes: List[Tuple[Path, int]] = verify_ssl_certs_and_keys(
+            [(ca_cert, ca_key), (private_cert_path, private_key_path)]
+        )
+        if len(invalid_files_and_modes) > 0:
+            raise SSLInvalidPermissions(invalid_files_and_modes)
+
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
@@ -38,19 +46,26 @@ def ssl_context_for_server(
     return ssl_context
 
 
-def ssl_context_for_root(
-    ca_cert_file: str,
-) -> Optional[ssl.SSLContext]:
+def ssl_context_for_root(ca_cert_file: str, check_permissions: bool = True) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        invalid_files_and_modes: List[Tuple[Path, int]] = verify_ssl_certs_and_keys([(Path(ca_cert_file), None)])
+        if len(invalid_files_and_modes) > 0:
+            raise SSLInvalidPermissions(invalid_files_and_modes)
+
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
 
 
 def ssl_context_for_client(
-    ca_cert: Path,
-    ca_key: Path,
-    private_cert_path: Path,
-    private_key_path: Path,
+    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path, check_permissions: bool = True
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        invalid_files_and_modes: List[Tuple[Path, int]] = verify_ssl_certs_and_keys(
+            [(ca_cert, ca_key), (private_cert_path, private_key_path)]
+        )
+        if len(invalid_files_and_modes) > 0:
+            raise SSLInvalidPermissions(invalid_files_and_modes)
+
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
