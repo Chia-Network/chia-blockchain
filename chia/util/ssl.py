@@ -16,6 +16,7 @@ RESTRICT_MASK_KEY_FILE: int = (
 
 
 class SSLInvalidPermissions(Exception):
+    """Exception which encapsulates info regarding SSL file permission errors"""
     def __init__(self, files: List[Tuple[Path, int]]):
         msg = "One or more file permissions are too open:\n"
         for (file, mode) in files:
@@ -41,6 +42,7 @@ def print_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int, sho
 def verify_ssl_certs_and_keys(
     cert_and_key_paths: List[Tuple[Optional[Path], Optional[Path]]]
 ) -> List[Tuple[Path, int]]:
+    """Check that file permissions are properly set for the provided SSL cert and key files"""
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
         return []
@@ -138,6 +140,7 @@ def check_ssl(root_path: Path) -> None:
             except Exception as e:
                 print(f"Unable to check permissions for {key_path}: {e}")
 
+    # Check the Mozilla Root CAs as well
     mozilla_root_ca = get_mozilla_ca_crt()
     (good_perms, mode) = verify_file_permissions(Path(mozilla_root_ca), RESTRICT_MASK_CERT_FILE)
     if not good_perms:

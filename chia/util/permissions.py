@@ -16,4 +16,5 @@ def verify_file_permissions(path: Path, mask: int) -> Tuple[bool, int]:
 
 
 def octal_mode_string(mode: int) -> str:
+    """Yields a permission mode string: e.g. 0644"""
     return f"0{oct(mode)[-3:]}"
