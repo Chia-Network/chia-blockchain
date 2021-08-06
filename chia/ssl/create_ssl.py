@@ -11,6 +11,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
 
+DEFAULT_PERMISSIONS_CERT_FILE = 0o644
+DEFAULT_PERMISSIONS_KEY_FILE = 0o600
+
 
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:
     crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
@@ -26,7 +29,10 @@ def get_mozilla_ca_crt() -> str:
 def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes):
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 
-    for path, data, mode in [(cert_path, cert_data, 0o644), (key_path, key_data, 0o600)]:
+    for path, data, mode in [
+        (cert_path, cert_data, DEFAULT_PERMISSIONS_CERT_FILE),
+        (key_path, key_data, DEFAULT_PERMISSIONS_KEY_FILE),
+    ]:
         with open(os.open(str(path), flags, mode), "wb") as f:
             f.write(data)
 

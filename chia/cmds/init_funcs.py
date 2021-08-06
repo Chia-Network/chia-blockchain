@@ -1,5 +1,7 @@
 import os
 import shutil
+import stat
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,6 +15,8 @@ from chia.ssl.create_ssl import (
     get_chia_ca_crt_key,
     make_ca_cert,
     write_ssl_cert_and_key,
+    DEFAULT_PERMISSIONS_CERT_FILE,
+    DEFAULT_PERMISSIONS_KEY_FILE,
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import (
@@ -20,6 +24,7 @@ from chia.util.config import (
     initial_config_file,
     load_config,
     save_config,
+    traverse_dict,
     unflatten_properties,
 )
 from chia.util.ints import uint32
@@ -50,6 +55,96 @@ def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict
             dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
         elif k not in updated or ignore is True:
             updated[k] = v
+
+
+def verify_file_permissions(path: Path, mask: int) -> Tuple[bool, int]:
+    """
+    Check that the file's permissions are properly restricted, as compared to the
+    permission mask
+    """
+    if not path.exists():
+        raise Exception(f"file {path} does not exist")
+
+    mode = os.stat(path).st_mode & 0o777
+    return (mode & mask == 0, mode)
+
+
+def check_ssl(root_path: Path) -> None:
+    """
+    Sanity checks on the SSL configuration. Checks that file permissions are properly
+    set on the keys and certs, warning and exiting if permissions are incorrect.
+    """
+    config: Dict = load_config(root_path, "config.yaml")
+    cert_config_key_paths = [
+        "chia_ssl_ca:crt",
+        "daemon_ssl:private_crt",
+        "farmer:ssl:private_crt",
+        "farmer:ssl:public_crt",
+        "full_node:ssl:private_crt",
+        "full_node:ssl:public_crt",
+        "harvester:chia_ssl_ca:crt",
+        "harvester:private_ssl_ca:crt",
+        "harvester:ssl:private_crt",
+        "introducer:ssl:public_crt",
+        "private_ssl_ca:crt",
+        "timelord:ssl:private_crt",
+        "timelord:ssl:public_crt",
+        "ui:daemon_ssl:private_crt",
+        "wallet:ssl:private_crt",
+        "wallet:ssl:public_crt",
+    ]
+    key_config_key_paths = [
+        "chia_ssl_ca:key",
+        "daemon_ssl:private_key",
+        "farmer:ssl:private_key",
+        "farmer:ssl:public_key",
+        "full_node:ssl:private_key",
+        "full_node:ssl:public_key",
+        "harvester:chia_ssl_ca:key",
+        "harvester:private_ssl_ca:key",
+        "harvester:ssl:private_key",
+        "introducer:ssl:public_key",
+        "private_ssl_ca:key",
+        "timelord:ssl:private_key",
+        "timelord:ssl:public_key",
+        "ui:daemon_ssl:private_key",
+        "wallet:ssl:private_key",
+        "wallet:ssl:public_key",
+    ]
+
+    # Masks containing permission bits we don't allow
+    cert_perm_mask: int = stat.S_IWGRP | stat.S_IXGRP | stat.S_IWOTH | stat.S_IXOTH  # 0o033
+    key_perm_mask: int = (
+        stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
+    )  # 0o077
+    valid: bool = True
+    warned: bool = False
+
+    for (key_paths, mask, expected_mode) in [
+        (cert_config_key_paths, cert_perm_mask, DEFAULT_PERMISSIONS_CERT_FILE),
+        (key_config_key_paths, key_perm_mask, DEFAULT_PERMISSIONS_KEY_FILE),
+    ]:
+        for key_path in key_paths:
+            try:
+                file = root_path / Path(traverse_dict(config, key_path))
+                # Check that the file permissions are not too permissive
+                (good_perms, mode) = verify_file_permissions(file, mask)
+                if not good_perms:
+                    if not warned:
+                        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+                        print("@             WARNING: UNPROTECTED SSL FILE!              @")
+                        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+                        warned = True
+                    print(
+                        f"Permissions 0{oct(mode)[-3:]} for '{file}' are too open. "
+                        f"Expected 0{oct(expected_mode)[-3:]}"
+                    )
+                    valid = False
+            except Exception as e:
+                print(f"Unable to check permissions for {key_path}: {e}")
+    if not valid:
+        print("Please fix your file permissions and try again.")
+        sys.exit(1)
 
 
 def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
@@ -162,9 +257,9 @@ def migrate_from(
     return 1
 
 
-def create_all_ssl(root: Path):
+def create_all_ssl(root_path: Path):
     # remove old key and crt
-    config_dir = root / "config"
+    config_dir = root_path / "config"
     old_key_path = config_dir / "trusted.key"
     old_crt_path = config_dir / "trusted.crt"
     if old_key_path.exists():
@@ -187,7 +282,7 @@ def create_all_ssl(root: Path):
 
     if not private_ca_key_path.exists() or not private_ca_crt_path.exists():
         # Create private CA
-        print(f"Can't find private CA, creating a new one in {root} to generate TLS certificates")
+        print(f"Can't find private CA, creating a new one in {root_path} to generate TLS certificates")
         make_ca_cert(private_ca_crt_path, private_ca_key_path)
         # Create private certs for each node
         ca_key = private_ca_key_path.read_bytes()
@@ -195,7 +290,7 @@ def create_all_ssl(root: Path):
         generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
     else:
         # This is entered when user copied over private CA
-        print(f"Found private CA in {root}, using it to generate TLS certificates")
+        print(f"Found private CA in {root_path}, using it to generate TLS certificates")
         ca_key = private_ca_key_path.read_bytes()
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
@@ -315,7 +410,7 @@ def chia_full_version_str() -> str:
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(root_path: Path, *, should_check_keys: bool = True):
+def chia_init(root_path: Path, *, should_check_keys: bool = True, should_check_ssl: bool = True):
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
@@ -335,6 +430,8 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True):
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
         # This is reached if CHIA_ROOT is set, or if user has run chia init twice
         # before a new update.
+        if should_check_ssl:
+            check_ssl(root_path)
         if should_check_keys:
             check_keys(root_path)
         print(f"{root_path} already exists, no migration action taken")
@@ -342,6 +439,8 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True):
 
     create_default_chia_config(root_path)
     create_all_ssl(root_path)
+    if should_check_ssl:
+        check_ssl(root_path)
     if should_check_keys:
         check_keys(root_path)
     print("")
