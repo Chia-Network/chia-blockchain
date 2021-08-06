@@ -1,5 +1,6 @@
 import logging
 import ssl
+import sys
 
 from blspy import AugSchemeMPL, PrivateKey
 from chia.cmds.init_funcs import check_keys
@@ -19,6 +20,7 @@ from chia.util.keychain import (
     mnemonic_to_seed,
     supports_keyring_passphrase,
 )
+from chia.util.ssl import SSLInvalidPermissions
 from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -345,6 +347,9 @@ async def connect_to_keychain_and_validate(
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
+    except SSLInvalidPermissions:
+        print("Failed to create SSL context, exiting...")
+        sys.exit(1)
     except Exception as e:
         print(f"Keychain(daemon) not started yet: {e}")
         return None

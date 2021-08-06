@@ -77,6 +77,10 @@ def check_ssl(root_path: Path) -> None:
     """
     from chia.ssl.create_ssl import get_mozilla_ca_crt
 
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        # TODO: ACLs for SSL certs/keys on Windows
+        return []
+
     config: Dict = load_config(root_path, "config.yaml")
     cert_config_key_paths = [
         "chia_ssl_ca:crt",
