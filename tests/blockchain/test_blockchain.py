@@ -1611,7 +1611,7 @@ class TestBodyValidation:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
     @pytest.mark.parametrize(
-        "with_garbage,expected", [(True, ReceiveBlockResult.INVALID_BLOCK), (False, ReceiveBlockResult.NEW_PEAK)]
+        "with_garbage,expected", [(True, (ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_CONDITION,None)), (False, (ReceiveBlockResult.NEW_PEAK, None, 2))]
     )
     async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected):
         b = empty_blockchain
@@ -1654,7 +1654,7 @@ class TestBodyValidation:
             transaction_data=bundles,
             time_per_block=10,
         )
-        assert (await b.receive_block(blocks[-1]))[0] == expected
+        assert (await b.receive_block(blocks[-1])) == expected
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
