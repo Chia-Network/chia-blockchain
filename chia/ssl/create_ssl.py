@@ -33,6 +33,9 @@ def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, ke
         (cert_path, cert_data, DEFAULT_PERMISSIONS_CERT_FILE),
         (key_path, key_data, DEFAULT_PERMISSIONS_KEY_FILE),
     ]:
+        if path.exists():
+            path.unlink()
+
         with open(os.open(str(path), flags, mode), "wb") as f:
             f.write(data)
 
