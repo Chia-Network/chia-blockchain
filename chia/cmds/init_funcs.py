@@ -419,6 +419,10 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, should_check_s
     protected Keychain. When launching the daemon from the GUI, we want the GUI to
     handle unlocking the keychain.
     """
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        # TODO: ACLs for SSL certs/keys on Windows
+        should_check_ssl = False
+
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(
             f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
