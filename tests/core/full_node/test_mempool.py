@@ -1594,6 +1594,14 @@ class TestConditionParser:
                     SExp.to([valid_pubkey, valid_message, b"garbage"]), condition_code, safe_mode
                 )
 
+            # note how this is a list that isn't terminated with a NULL
+            # we still treat this as a list of two items, ignoring the garbage
+            cost, args = parse_condition_args(
+                SExp.to((valid_pubkey, (valid_message, b"garbage"))), condition_code, safe_mode
+            )
+            assert cost == ConditionCost.AGG_SIG.value
+            assert args == [valid_pubkey, valid_message]
+
     @pytest.mark.parametrize("safe_mode", [True, False])
     def test_parse_condition_create_coin(self, safe_mode: bool):
 
