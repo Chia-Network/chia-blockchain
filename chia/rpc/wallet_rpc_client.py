@@ -105,10 +105,17 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(
         self,
         wallet_id: str,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
     ) -> List[TransactionRecord]:
+        request = {"wallet_id": wallet_id}
+        if start is not None:
+            request["start"] = start
+        if end is not None:
+            request["end"] = end
         res = await self.fetch(
             "get_transactions",
-            {"wallet_id": wallet_id},
+            request,
         )
         reverted_tx: List[TransactionRecord] = []
         for modified_tx in res["transactions"]:
