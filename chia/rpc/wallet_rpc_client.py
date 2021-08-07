@@ -108,7 +108,7 @@ class WalletRpcClient(RpcClient):
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> List[TransactionRecord]:
-        request = {"wallet_id": wallet_id}
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
         if start is not None:
             request["start"] = start
         if end is not None:
