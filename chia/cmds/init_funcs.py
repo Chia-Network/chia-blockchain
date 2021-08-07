@@ -25,7 +25,15 @@ from chia.util.config import (
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
-from chia.util.ssl import check_ssl
+from chia.util.ssl import (
+    DEFAULT_PERMISSIONS_CERT_FILE,
+    DEFAULT_PERMISSIONS_KEY_FILE,
+    RESTRICT_MASK_CERT_FILE,
+    RESTRICT_MASK_KEY_FILE,
+    check_and_fix_permissions_for_ssl_file,
+    check_ssl,
+    fix_ssl,
+)
 from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
@@ -226,13 +234,19 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
 
 
 def copy_cert_files(cert_path: Path, new_path: Path):
-    for ext in "*.crt", "*.key":
-        for old_path_child in cert_path.glob(ext):
-            new_path_child = new_path / old_path_child.name
-            copy_files_rec(old_path_child, new_path_child)
+    # for ext in "*.crt", "*.key":
+    for old_path_child in cert_path.glob("*.crt"):
+        new_path_child = new_path / old_path_child.name
+        copy_files_rec(old_path_child, new_path_child)
+        check_and_fix_permissions_for_ssl_file(new_path_child, RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE)
+
+    for old_path_child in cert_path.glob("*.key"):
+        new_path_child = new_path / old_path_child.name
+        copy_files_rec(old_path_child, new_path_child)
+        check_and_fix_permissions_for_ssl_file(new_path_child, RESTRICT_MASK_KEY_FILE, DEFAULT_PERMISSIONS_KEY_FILE)
 
 
-def init(create_certs: Optional[Path], root_path: Path):
+def init(create_certs: Optional[Path], root_path: Path, fix_ssl_permissions: bool = False):
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):
@@ -248,13 +262,13 @@ def init(create_certs: Optional[Path], root_path: Path):
         else:
             print(f"** {root_path} does not exist. Executing core init **")
             # sanity check here to prevent infinite recursion
-            if chia_init(root_path) == 0 and root_path.exists():
-                return init(create_certs, root_path)
+            if chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions) == 0 and root_path.exists():
+                return init(create_certs, root_path, fix_ssl_permissions)
 
             print(f"** {root_path} was not created. Exiting **")
             return -1
     else:
-        return chia_init(root_path)
+        return chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions)
 
 
 def chia_version_number() -> Tuple[str, str, str, str]:
@@ -316,7 +330,9 @@ def chia_full_version_str() -> str:
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(root_path: Path, *, should_check_keys: bool = True, should_check_ssl: bool = True):
+def chia_init(
+    root_path: Path, *, should_check_keys: bool = True, should_check_ssl: bool = True, fix_ssl_permissions: bool = False
+):
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
@@ -336,7 +352,9 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, should_check_s
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
         # This is reached if CHIA_ROOT is set, or if user has run chia init twice
         # before a new update.
-        if should_check_ssl:
+        if fix_ssl_permissions:
+            fix_ssl(root_path)
+        elif should_check_ssl:
             check_ssl(root_path)
         if should_check_keys:
             check_keys(root_path)
@@ -345,7 +363,9 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, should_check_s
 
     create_default_chia_config(root_path)
     create_all_ssl(root_path)
-    if should_check_ssl:
+    if fix_ssl_permissions:
+        fix_ssl(root_path)
+    elif should_check_ssl:
         check_ssl(root_path)
     if should_check_keys:
         check_keys(root_path)
