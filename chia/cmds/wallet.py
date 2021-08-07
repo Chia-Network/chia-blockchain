@@ -53,7 +53,14 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=None,
     help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
-def get_transactions_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, offset: int, verbose: bool, paginate: Optional[bool]) -> None:
+def get_transactions_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    offset: int,
+    verbose: bool,
+    paginate: Optional[bool],
+) -> None:
     extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
