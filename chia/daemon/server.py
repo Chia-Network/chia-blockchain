@@ -1137,7 +1137,6 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
-
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]

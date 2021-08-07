@@ -64,8 +64,6 @@ class SSLInvalidPermissions(Exception):
         msg += f"for crt files and {octal_mode_string(DEFAULT_PERMISSIONS_KEY_FILE)} for key files"
         super().__init__(msg)
 
-    pass
-
 
 def print_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int, show_banner: bool = True) -> None:
     if show_banner:
@@ -73,7 +71,8 @@ def print_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int, sho
         print("@             WARNING: UNPROTECTED SSL FILE!              @")
         print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
     print(
-        f"Permissions {octal_mode_string(actual_mode)} for '{path}' are too open. "
+        f"Permissions {octal_mode_string(actual_mode)} for "
+        f"'{path}' are too open. "  # lgtm [py/clear-text-logging-sensitive-data]
         f"Expected {octal_mode_string(expected_mode)}"
     )
 
@@ -120,7 +119,7 @@ def check_ssl(root_path: Path) -> None:
 
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
-        return []
+        return None
 
     config: Dict = load_config(root_path, "config.yaml")
     files_to_check: List[Tuple[Path, int, int]] = []
@@ -137,7 +136,9 @@ def check_ssl(root_path: Path) -> None:
                 file = root_path / Path(traverse_dict(config, key_path))
                 files_to_check.append((file, mask, expected_mode))
             except Exception as e:
-                print(f"Failed to lookup config value for {key_path}: {e}")
+                print(
+                    f"Failed to lookup config value for {key_path}: {e}"  # lgtm [py/clear-text-logging-sensitive-data]
+                )
 
     # Check the Mozilla Root CAs as well
     mozilla_root_ca = get_mozilla_ca_crt()
@@ -152,7 +153,7 @@ def check_ssl(root_path: Path) -> None:
                 banner_shown = True
                 valid = False
         except Exception as e:
-            print(f"Unable to check permissions for {key_path}: {e}")
+            print(f"Unable to check permissions for {key_path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
 
     if not valid:
         print("One or more SSL files were found with permission issues.")
@@ -164,7 +165,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
     """Check file permissions and attempt to fix them if found to be too open"""
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
-        return True
+        return (True, False)
 
     valid: bool = True
     updated: bool = False
@@ -174,11 +175,14 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
         (good_perms, mode) = verify_file_permissions(file, mask)
         if not good_perms:
             valid = False
-            print(f"Attempting to set permissions {octal_mode_string(mode)} on {file}")
+            print(
+                f"Attempting to set permissions {octal_mode_string(mode)} on "
+                f"{file}"  # lgtm [py/clear-text-logging-sensitive-data]
+            )
             os.chmod(str(file), updated_mode)
             updated = True
     except Exception as e:
-        print(f"Failed to change permissions on {file}: {e}")
+        print(f"Failed to change permissions on {file}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
         valid = False
 
     return (valid, updated)
@@ -206,7 +210,9 @@ def fix_ssl(root_path: Path) -> None:
                 file = root_path / Path(traverse_dict(config, key_path))
                 files_to_fix.append((file, mask, updated_mode))
             except Exception as e:
-                print(f"Failed to lookup config value for {key_path}: {e}")
+                print(
+                    f"Failed to lookup config value for {key_path}: {e}"  # lgtm [py/clear-text-logging-sensitive-data]
+                )
 
     # Check the Mozilla Root CAs as well
     mozilla_root_ca = get_mozilla_ca_crt()

@@ -234,7 +234,6 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
 
 
 def copy_cert_files(cert_path: Path, new_path: Path):
-    # for ext in "*.crt", "*.key":
     for old_path_child in cert_path.glob("*.crt"):
         new_path_child = new_path / old_path_child.name
         copy_files_rec(old_path_child, new_path_child)
