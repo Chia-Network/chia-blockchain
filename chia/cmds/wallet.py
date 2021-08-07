@@ -65,6 +65,17 @@ def get_transactions_cmd(
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
+    import sys
+    import click.utils
+
+    # The pacification avoids output like below when piping through `head -n 1`
+    # which will close stdout.
+    #
+    # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+    # BrokenPipeError: [Errno 32] Broken pipe
+    sys.stdout = click.utils.PacifyFlushWrapper(sys.stdout)
+    sys.stderr = click.utils.PacifyFlushWrapper(sys.stderr)
+
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
 
 
