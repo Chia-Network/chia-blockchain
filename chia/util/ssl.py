@@ -181,7 +181,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
         print(f"Failed to change permissions on {file}: {e}")
         valid = False
 
-    return [valid, updated]
+    return (valid, updated)
 
 
 def fix_ssl(root_path: Path) -> None:
