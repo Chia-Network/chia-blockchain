@@ -35,7 +35,7 @@ class HarvesterRpcApi:
         }
 
     async def refresh_plots(self, request: Dict) -> Dict:
-        await self.service.refresh_plots()
+        self.service.plot_manager.trigger_refresh()
         return {}
 
     async def delete_plot(self, request: Dict) -> Dict:

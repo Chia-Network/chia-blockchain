@@ -124,7 +124,11 @@ harvester:
   start_rpc_server: True
   rpc_port: 8560
   num_threads: 30
-  plot_loading_frequency_seconds: 120
+  plots_refresh_parameter:
+    interval_seconds: 120 # The interval in seconds to refresh the plot file manager
+    batch_size: 30 # How many plot files the harvester processes before it waits batch_sleep_milliseconds
+    batch_sleep_milliseconds: 10 # Milliseconds the harvester sleeps between batch processing
+
 
   # If True use parallel reads in chiapos
   parallel_read: True
