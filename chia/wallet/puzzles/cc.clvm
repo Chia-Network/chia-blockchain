@@ -79,9 +79,9 @@
 ;
 
 ;; GLOSSARY:
-;;  mod_hash: this code's sha256 tree hash
-;;  genesis_coin_checker: the function that determines if a coin can mint new ccs
-;;  inner-puzzle: an independent puzzle protecting the coins. Solutions to this puzzle are expected to
+;;  MOD_HASH: this code's sha256 tree hash
+;;  GENESIS_COIN_CHECKER: the function that determines if a coin can mint new ccs
+;;  INNER_PUZZLE: an independent puzzle protecting the coins. Solutions to this puzzle are expected to
 ;;              generate `AGG_SIG` conditions and possibly `CREATE_COIN` conditions.
 ;; ---- items above are curried into the puzzle hash ----
 ;;  inner-puzzle-solution: the solution to the inner puzzle
@@ -96,10 +96,10 @@
 ;; and automatically hashed in to the announcement generated with CREATE_COIN_ANNOUNCEMENT.
 ;;
 
-(mod (mod_hash                ;; curried into puzzle
-      genesis_coin_checker    ;; curried into puzzle
-      inner_puzzle            ;; curried into puzzle
-      inner_puzzle_solution   ;; if invalid, inner_puzzle will fail
+(mod (MOD_HASH                ;; curried into puzzle
+      GENESIS_COIN_CHECKER    ;; curried into puzzle
+      INNER_PUZZLE            ;; curried into puzzle
+      inner_puzzle_solution   ;; if invalid, INNER_PUZZLE will fail
       prev_coin_bundle        ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       this_coin_bundle        ;; verified with ASSERT_MY_COIN_ID
       next_coin_bundle        ;; used to generate ASSERT_COIN_ANNOUNCEMENT
@@ -171,12 +171,12 @@
 
      ;;;;; end library code
 
-     ;; return the puzzle hash for a cc with the given `genesis_coin_checker_hash` & `inner_puzzle`
-     (defun cc_puzzle_hash ((mod_hash mod_hash_hash genesis_coin_checker genesis_coin_checker_hash) inner_puzzle_hash)
-       (sha256tree_esc (curry mod_hash mod_hash_hash genesis_coin_checker_hash inner_puzzle_hash)
-                       mod_hash
-                       mod_hash_hash
-                       genesis_coin_checker_hash
+     ;; return the puzzle hash for a cc with the given `GENESIS_COIN_CHECKER_hash` & `INNER_PUZZLE`
+     (defun cc_puzzle_hash ((MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash) inner_puzzle_hash)
+       (sha256tree_esc (curry MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER_hash inner_puzzle_hash)
+                       MOD_HASH
+                       MOD_HASH_hash
+                       GENESIS_COIN_CHECKER_hash
                        inner_puzzle_hash)
      )
 
@@ -310,11 +310,11 @@
      ;; return true iff the lineage proof is valid
      ;; lineage_proof is of one of two forms:
      ;;  (1 . (parent_parent_coin_id parent_inner_puzzle_hash parent_amount))
-     ;;  (0 . some_opaque_proof_passed_to_genesis_coin_checker)
+     ;;  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
      ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
 
-     (defun genesis_coin_checker_for_lpp ((mod_hash mod_hash_hash genesis_coin_checker genesis_coin_checker_hash))
-       genesis_coin_checker
+     (defun GENESIS_COIN_CHECKER_for_lpp ((MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash))
+       GENESIS_COIN_CHECKER
      )
 
      (defun-inline is_lineage_proof_valid (
@@ -322,7 +322,7 @@
        (if
          (f lineage_proof)
          (is_parent_cc lineage_proof_parameters coin_info (r lineage_proof))
-         (a (genesis_coin_checker_for_lpp lineage_proof_parameters)
+         (a (GENESIS_COIN_CHECKER_for_lpp lineage_proof_parameters)
              (list lineage_proof_parameters coin_info (r lineage_proof)))
        )
      )
@@ -367,8 +367,8 @@
 
     (main
         ;; cache some stuff: output conditions, and lineage_proof_parameters
-        (list mod_hash (sha256tree1 mod_hash) genesis_coin_checker (sha256tree1 genesis_coin_checker))
-        (a inner_puzzle inner_puzzle_solution)
+        (list MOD_HASH (sha256tree1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
+        (a INNER_PUZZLE inner_puzzle_solution)
         prev_coin_bundle
         this_coin_bundle
         next_coin_bundle
