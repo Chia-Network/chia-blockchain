@@ -109,58 +109,13 @@
      ;;;;; start library code
 
      (include condition_codes.clvm)
+     (include curry-and-treehash.clinc)
 
      (defmacro assert items
          (if (r items)
              (list if (f items) (c assert (r items)) (q . (x)))
              (f items)
          )
-     )
-
-     ;; utility function used by `curry_args`
-     (defun fix_curry_args (items core)
-       (if items
-           (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
-           core
-       )
-     )
-
-     ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-     (defun curry_args (func list_of_args) (qq (a (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1))))))
-
-     ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
-     (defun curry (func . args) (curry_args func args))
-
-     (defun is_in_list (atom items)
-       ;; returns 1 iff `atom` is in the list of `items`
-       (if items
-         (if (= atom (f items))
-           1
-           (is_in_list atom (r items))
-         )
-         0
-       )
-     )
-
-     ;; hash a tree with escape values representing already_hashed subtrees
-     ;; This optimization can be useful if you know the puzzle hash of a sub_expression.
-     ;; You probably actually want to use `curry_and_hash` though.
-     (defun sha256tree_esc_list
-            (TREE LITERALS)
-            (if (l TREE)
-                (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
-                (if (is_in_list TREE LITERALS)
-                    TREE
-                    (sha256 1 TREE)
-                )
-            )
-     )
-
-     ;; hash a tree with escape values representing already-hashed subtrees
-     ;; This optimization can be useful if you know the tree hash of a sub-expression.
-     (defun sha256tree_esc
-        (TREE . LITERAL)
-        (sha256tree_esc_list TREE LITERAL)
      )
 
      ; takes a lisp tree and returns the hash of it
@@ -173,11 +128,11 @@
 
      ;; return the puzzle hash for a cc with the given `GENESIS_COIN_CHECKER_hash` & `INNER_PUZZLE`
      (defun cc_puzzle_hash ((MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash) inner_puzzle_hash)
-       (sha256tree_esc (curry MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER_hash inner_puzzle_hash)
-                       MOD_HASH
-                       MOD_HASH_hash
-                       GENESIS_COIN_CHECKER_hash
-                       inner_puzzle_hash)
+       (puzzle-hash-of-curried-function MOD_HASH
+                                        inner_puzzle_hash
+                                        GENESIS_COIN_CHECKER_hash
+                                        MOD_HASH_hash
+       )
      )
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
@@ -313,7 +268,7 @@
      ;;  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
      ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
 
-     (defun GENESIS_COIN_CHECKER_for_lpp ((MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash))
+     (defun genesis_coin_checker_for_lpp ((MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash))
        GENESIS_COIN_CHECKER
      )
 
@@ -322,7 +277,7 @@
        (if
          (f lineage_proof)
          (is_parent_cc lineage_proof_parameters coin_info (r lineage_proof))
-         (a (GENESIS_COIN_CHECKER_for_lpp lineage_proof_parameters)
+         (a (genesis_coin_checker_for_lpp lineage_proof_parameters)
              (list lineage_proof_parameters coin_info (r lineage_proof)))
        )
      )
