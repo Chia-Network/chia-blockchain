@@ -1,6 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
-from typing import List
+from typing import List, Optional
 
 import pytest
 from colorlog import logging
@@ -11,6 +11,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
@@ -152,6 +153,62 @@ class TestSimpleSyncProtocol:
 
         assert all_coins == notified_all_coins
 
+        wsm: WalletStateManager = wallet_node.wallet_state_manager
+        wallet: Wallet = wsm.wallets[1]
+        puzzle_hash = await wallet.get_new_puzzlehash()
+
+        for i in range(0, num_blocks):
+            if i == num_blocks - 1:
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(junk_ph))
+            else:
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+
+        funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        msg_1 = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
+        msg_response_1 = await full_node_api.register_interest_in_puzzle_hash(msg_1, fake_wallet_peer)
+        assert msg_response_1.type == ProtocolMessageTypes.respond_to_ph_update.value
+        data_response_1: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response_1.data)
+        assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
+
+        tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+        assert len(tx_record.spend_bundle.removals()) == 1
+        spent_coin = tx_record.spend_bundle.removals()[0]
+        assert spent_coin.puzzle_hash == puzzle_hash
+
+        await wallet.push_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+
+        all_messages = []
+        await asyncio.sleep(2)
+        while not incoming_queue.empty():
+            message, peer = await incoming_queue.get()
+            all_messages.append(message)
+
+        notified_state = None
+
+        for message in all_messages:
+            if message.type == ProtocolMessageTypes.coin_state_update.value:
+                data_response: CoinStateUpdate = CoinStateUpdate.from_bytes(message.data)
+                for coin_state in data_response.items:
+                    if coin_state.coin.name() == spent_coin.name():
+                        notified_state = coin_state
+
+        assert notified_state is not None
+        assert notified_state.coin == spent_coin
+        assert notified_state.spent_height is not None
+
     @pytest.mark.asyncio
     async def test_subscribe_for_coin_id(self, wallet_node_simulator):
         num_blocks = 4
@@ -192,7 +249,7 @@ class TestSimpleSyncProtocol:
 
         coins = set()
         coins.add(coin_to_spend)
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(10), coins=coins)
+        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0), coins=coins)
         await standard_wallet.push_transaction(tx_record)
 
         await time_out_assert(
@@ -218,3 +275,50 @@ class TestSimpleSyncProtocol:
                     assert coin_state.spent_height is not None
 
         assert notified_coins == coins
+
+        # Test getting notification for coin that is about to be created
+        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+
+        tx_record.spend_bundle.additions()
+
+        added_target: Optional[Coin] = None
+        for coin in tx_record.spend_bundle.additions():
+            if coin.puzzle_hash == puzzle_hash:
+                added_target = coin
+
+        assert added_target is not None
+
+        msg = wallet_protocol.RegisterForCoinUpdates([added_target.name()], 0)
+        msg_response = await full_node_api.register_interest_in_coin(msg, fake_wallet_peer)
+        assert msg_response is not None
+        assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+        data_response: RespondToCoinUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
+        assert len(data_response.coin_states) == 0
+
+        await standard_wallet.push_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+
+        all_messages = []
+        await asyncio.sleep(2)
+        while not incoming_queue.empty():
+            message, peer = await incoming_queue.get()
+            all_messages.append(message)
+
+        notified_state = None
+
+        for message in all_messages:
+            if message.type == ProtocolMessageTypes.coin_state_update.value:
+                data_response: CoinStateUpdate = CoinStateUpdate.from_bytes(message.data)
+                for coin_state in data_response.items:
+                    if coin_state.coin.name() == added_target.name():
+                        notified_state = coin_state
+
+        assert notified_state is not None
+        assert notified_state.coin == added_target
+        assert notified_state.spent_height is None
