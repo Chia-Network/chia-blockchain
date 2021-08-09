@@ -160,7 +160,7 @@ class RespondHeaderBlocks(Streamable):
 class CoinState(Streamable):
     coin: Coin
     spent_height: Optional[uint32]
-    created_height: uint32
+    created_height: Optional[uint32]
 
 
 @dataclass(frozen=True)

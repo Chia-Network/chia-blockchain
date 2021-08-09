@@ -332,7 +332,10 @@ class Blockchain(BlockchainInterface):
                 fork_height = find_fork_point_in_chain(self, block_record, peak)
 
             if block_record.prev_hash != peak.header_hash:
-                await self.coin_store.rollback_to_block(fork_height)
+                roll_changes: List[CoinRecord] = await self.coin_store.rollback_to_block(fork_height)
+                for coin_record in roll_changes:
+                    lastest_coin_state[coin_record.name] = coin_record
+
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.__sub_epoch_summaries.keys():

@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import aiosqlite
 
@@ -319,9 +319,10 @@ class CoinStore:
             coins.add(CoinState(coin, spent_h, row[1]))
         return list(coins)
 
-    async def rollback_to_block(self, block_index: int):
+    async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """
         Note that block_index can be negative, in which case everything is rolled back
+        Returns the list of coin records that have been modified
         """
         # Update memory cache
         delete_queue: bytes32 = []
@@ -342,14 +343,38 @@ class CoinStore:
         for coin_name in delete_queue:
             self.coin_record_cache.remove(coin_name)
 
+        coin_changes: Dict[bytes32, CoinRecord] = {}
+        cursor_deleted = await self.coin_record_db.execute(
+            "SELECT * FROM coin_record WHERE confirmed_index>?", (block_index,)
+        )
+        rows = await cursor_deleted.fetchall()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            record = CoinRecord(coin, 0, row[2], row[3], row[4], 0)
+            coin_changes[record.name] = record
+        await cursor_deleted.close()
+
         # Delete from storage
         c1 = await self.coin_record_db.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
         await c1.close()
+
+        cursor_unspent = await self.coin_record_db.execute(
+            "SELECT * FROM coin_record WHERE confirmed_index>?", (block_index,)
+        )
+        rows = await cursor_unspent.fetchall()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            record = CoinRecord(coin, row[1], 0, False, row[4], row[8])
+            if not record.name in coin_changes:
+                coin_changes[record.nbame] = record
+        await cursor_unspent.close()
+
         c2 = await self.coin_record_db.execute(
             "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",
             (block_index,),
         )
         await c2.close()
+        return list(coin_changes.values())
 
     # Store CoinRecord in DB and ram cache
     async def _add_coin_record(self, record: CoinRecord, allow_replace: bool) -> None:

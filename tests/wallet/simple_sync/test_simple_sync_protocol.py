@@ -10,7 +10,7 @@ from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.peer_info import PeerInfo
@@ -44,6 +44,14 @@ class TestSimpleSyncProtocol:
     async def wallet_node_simulator(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
+
+    async def get_all_messages_in_queue(self, queue):
+        all_messages = []
+        await asyncio.sleep(2)
+        while not queue.empty():
+            message, peer = await queue.get()
+            all_messages.append(message)
+        return all_messages
 
     @pytest.mark.asyncio
     async def test_subscribe_for_ph(self, wallet_node_simulator):
@@ -89,11 +97,7 @@ class TestSimpleSyncProtocol:
             else:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
-        all_messages = []
-        await asyncio.sleep(2)
-        while not incoming_queue.empty():
-            message, peer = await incoming_queue.get()
-            all_messages.append(message)
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
         zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [zero_ph])
         all_zero_coin = set(zero_coin)
@@ -136,11 +140,7 @@ class TestSimpleSyncProtocol:
         all_coins = set(zero_coins)
         all_coins.update(one_coins)
 
-        all_messages = []
-        await asyncio.sleep(2)
-        while not incoming_queue.empty():
-            message, peer = await incoming_queue.get()
-            all_messages.append(message)
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
         notified_all_coins = set()
 
@@ -190,11 +190,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-        all_messages = []
-        await asyncio.sleep(2)
-        while not incoming_queue.empty():
-            message, peer = await incoming_queue.get()
-            all_messages.append(message)
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
         notified_state = None
 
@@ -260,11 +256,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-        all_messages = []
-        await asyncio.sleep(2)
-        while not incoming_queue.empty():
-            message, peer = await incoming_queue.get()
-            all_messages.append(message)
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
         notified_coins = set()
         for message in all_messages:
@@ -304,11 +296,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-        all_messages = []
-        await asyncio.sleep(2)
-        while not incoming_queue.empty():
-            message, peer = await incoming_queue.get()
-            all_messages.append(message)
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
         notified_state = None
 
@@ -322,3 +310,77 @@ class TestSimpleSyncProtocol:
         assert notified_state is not None
         assert notified_state.coin == added_target
         assert notified_state.spent_height is None
+
+    @pytest.mark.asyncio
+    async def test_subscribe_for_ph_reorg(self, wallet_node_simulator):
+        num_blocks = 4
+        long_blocks = 20
+        full_nodes, wallets = wallet_node_simulator
+        full_node_api = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        wsm: WalletStateManager = wallet_node.wallet_state_manager
+        standard_wallet: Wallet = wsm.wallets[1]
+        puzzle_hash = await standard_wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+
+        fake_wallet_peer = fn_server.all_connections[peer_id]
+        zero_ph = 32 * b"\0"
+
+        # Farm to create a coin that we'll track
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
+
+        for i in range(0, long_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
+
+        msg = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
+
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
+
+        expected_height = uint32(long_blocks + 2 * num_blocks + 1)
+        await time_out_assert(15, full_node_api.full_node.blockchain.get_peak_height, expected_height)
+
+        coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+        assert len(coin_records) > 0
+        fork_height = expected_height - num_blocks - 5
+        req = ReorgProtocol(fork_height, expected_height + 5, zero_ph)
+        await full_node_api.reorg_from_index_to_new_index(req)
+
+        coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+        assert coin_records == []
+
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+
+        coin_update_messages = []
+        for message in all_messages:
+            if message.type == ProtocolMessageTypes.coin_state_update.value:
+                data_response: CoinStateUpdate = CoinStateUpdate.from_bytes(message.data)
+                coin_update_messages.append(data_response)
+
+        # First state is creation, second one is a reorg
+        assert len(coin_update_messages) == 2
+        first = coin_update_messages[0]
+
+        assert len(first.items) == 2
+        first_state_coin_1 = first.items[0]
+        assert first_state_coin_1.spent_height is None
+        assert first_state_coin_1.created_height is not None
+        first_state_coin_2 = first.items[1]
+        assert first_state_coin_2.spent_height is None
+        assert first_state_coin_2.created_height is not None
+
+        second = coin_update_messages[1]
+        assert second.fork_height == fork_height
+        assert len(second.items) == 2
+        second_state_coin_1 = second.items[0]
+        assert second_state_coin_1.spent_height is None
+        assert second_state_coin_1.created_height is None
+        second_state_coin_2 = second.items[1]
+        assert second_state_coin_2.spent_height is None
+        assert second_state_coin_2.created_height is None
