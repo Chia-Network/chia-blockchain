@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import sys
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -37,12 +36,9 @@ class RpcServer:
         self.key_path = root_path / net_config["daemon_ssl"]["private_key"]
         self.ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
         self.ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
-        try:
-            self.ssl_context = ssl_context_for_server(self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path)
-        except Exception as e:
-            self.log.error(e)
-            print("Failed to create SSL context, exiting...")
-            sys.exit(1)
+        self.ssl_context = ssl_context_for_server(
+            self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
+        )
 
     async def stop(self):
         self.shut_down = True

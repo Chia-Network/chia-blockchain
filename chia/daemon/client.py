@@ -1,13 +1,11 @@
 import asyncio
 import json
 import ssl
-import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import websockets
 
-from chia.util.ssl import SSLInvalidPermissions
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
@@ -144,9 +142,6 @@ async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
-    except SSLInvalidPermissions:
-        print("Failed to create SSL context, exiting...")
-        sys.exit(1)
     except Exception:
         if not quiet:
             print("Daemon not started yet")

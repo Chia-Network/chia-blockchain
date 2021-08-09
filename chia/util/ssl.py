@@ -3,8 +3,9 @@ import stat
 import sys
 from chia.util.config import load_config, traverse_dict
 from chia.util.permissions import octal_mode_string, verify_file_permissions
+from logging import Logger
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 DEFAULT_PERMISSIONS_CERT_FILE: int = 0o644
 DEFAULT_PERMISSIONS_KEY_FILE: int = 0o600
@@ -53,32 +54,31 @@ KEY_CONFIG_KEY_PATHS = [
 ]
 
 
-class SSLInvalidPermissions(Exception):
-    """Exception which encapsulates info regarding SSL file permission errors"""
-
-    def __init__(self, files: List[Tuple[Path, int]]):
-        msg = "One or more file permissions are too open:\n"
-        for (file, mode) in files:
-            msg += f"\t{file} (permissions = {octal_mode_string(mode)})\n"
-        msg += f"Expected permissions are {octal_mode_string(DEFAULT_PERMISSIONS_CERT_FILE)} "
-        msg += f"for crt files and {octal_mode_string(DEFAULT_PERMISSIONS_KEY_FILE)} for key files"
-        super().__init__(msg)
+# Set to keep track of which files we've already warned about
+warned_ssl_files: Set[Path] = set()
 
 
-def print_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int, show_banner: bool = True) -> None:
-    if show_banner:
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        print("@             WARNING: UNPROTECTED SSL FILE!              @")
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-    print(
-        f"Permissions {octal_mode_string(actual_mode)} for "
-        f"'{path}' are too open. "  # lgtm [py/clear-text-logging-sensitive-data]
-        f"Expected {octal_mode_string(expected_mode)}"
-    )
+def print_ssl_perm_warning(
+    path: Path, actual_mode: int, expected_mode: int, *, show_banner: bool = True, log: Optional[Logger] = None
+) -> None:
+    if path not in warned_ssl_files:
+        if show_banner and len(warned_ssl_files) == 0:
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            print("@             WARNING: UNPROTECTED SSL FILE!              @")
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        msg = (
+            f"Permissions {octal_mode_string(actual_mode)} for "
+            f"'{path}' are too open. "  # lgtm [py/clear-text-logging-sensitive-data]
+            f"Expected {octal_mode_string(expected_mode)}"
+        )
+        if log is not None:
+            log.error(f"{msg}")
+        print(f"{msg}")
+        warned_ssl_files.add(path)
 
 
 def verify_ssl_certs_and_keys(
-    cert_and_key_paths: List[Tuple[Optional[Path], Optional[Path]]]
+    cert_and_key_paths: List[Tuple[Optional[Path], Optional[Path]]], log: Optional[Logger] = None
 ) -> List[Tuple[Path, int]]:
     """Check that file permissions are properly set for the provided SSL cert and key files"""
     if sys.platform == "win32" or sys.platform == "cygwin":
@@ -93,7 +93,7 @@ def verify_ssl_certs_and_keys(
             cert_perms_valid, cert_actual_mode = verify_file_permissions(cert_path, RESTRICT_MASK_CERT_FILE)
             if not cert_perms_valid:
                 print_ssl_perm_warning(
-                    cert_path, cert_actual_mode, DEFAULT_PERMISSIONS_CERT_FILE, show_banner=not banner_shown
+                    cert_path, cert_actual_mode, DEFAULT_PERMISSIONS_CERT_FILE, show_banner=not banner_shown, log=log
                 )
                 banner_shown = True
                 invalid_files_and_modes.append((cert_path, cert_actual_mode))
@@ -102,7 +102,7 @@ def verify_ssl_certs_and_keys(
             key_perms_valid, key_actual_mode = verify_file_permissions(key_path, RESTRICT_MASK_KEY_FILE)
             if not key_perms_valid:
                 print_ssl_perm_warning(
-                    key_path, key_actual_mode, DEFAULT_PERMISSIONS_KEY_FILE, show_banner=not banner_shown
+                    key_path, key_actual_mode, DEFAULT_PERMISSIONS_KEY_FILE, show_banner=not banner_shown, log=log
                 )
                 banner_shown = True
                 invalid_files_and_modes.append((key_path, key_actual_mode))
@@ -157,8 +157,7 @@ def check_ssl(root_path: Path) -> None:
 
     if not valid:
         print("One or more SSL files were found with permission issues.")
-        print("Use `chia init --fix-ssl-permissions` and try again.")
-        sys.exit(1)
+        print("Run `chia init --fix-ssl-permissions` to fix issues.")
 
 
 def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: int) -> Tuple[bool, bool]:

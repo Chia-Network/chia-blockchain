@@ -226,7 +226,7 @@ class Farmer:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
-                    f"{pool_config.pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())
+                    f"{pool_config.pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
@@ -266,7 +266,7 @@ class Farmer:
                 async with session.get(
                     f"{pool_config.pool_url}/farmer",
                     params=get_farmer_params,
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
@@ -304,7 +304,7 @@ class Farmer:
                 async with session.post(
                     f"{pool_config.pool_url}/farmer",
                     json=post_farmer_request.to_json_dict(),
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
@@ -342,7 +342,7 @@ class Farmer:
                 async with session.put(
                     f"{pool_config.pool_url}/farmer",
                     json=put_farmer_request.to_json_dict(),
-                    ssl=ssl_context_for_root(get_mozilla_ca_crt()),
+                    ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
