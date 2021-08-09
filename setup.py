@@ -40,6 +40,11 @@ dev_dependencies = [
     "ipython",  # For asyncio debugging
 ]
 
+
+def long_description():
+    with open("README.md", "r", encoding="utf-8") as f:
+        return f.read()
+
 kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
@@ -109,8 +114,7 @@ kwargs = dict(
         "mozilla-ca": ["cacert.pem"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
-    with open("README.md", "r", encoding="utf-8") as f,
-        long_description=f.read()
+    long_description=long_description(),
     long_description_content_type="text/markdown",
     zip_safe=False,
 )
