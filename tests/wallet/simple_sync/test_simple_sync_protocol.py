@@ -337,7 +337,8 @@ class TestSimpleSyncProtocol:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
         msg = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
-
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
+        assert msg_response is not None
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
         for i in range(0, num_blocks):
@@ -384,3 +385,70 @@ class TestSimpleSyncProtocol:
         second_state_coin_2 = second.items[1]
         assert second_state_coin_2.spent_height is None
         assert second_state_coin_2.created_height is None
+
+    @pytest.mark.asyncio
+    async def test_subscribe_for_coin_id_reorg(self, wallet_node_simulator):
+        num_blocks = 4
+        long_blocks = 20
+        full_nodes, wallets = wallet_node_simulator
+        full_node_api = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        wsm: WalletStateManager = wallet_node.wallet_state_manager
+        standard_wallet: Wallet = wsm.wallets[1]
+        puzzle_hash = await standard_wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+
+        fake_wallet_peer = fn_server.all_connections[peer_id]
+        zero_ph = 32 * b"\0"
+
+        # Farm to create a coin that we'll track
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
+
+        for i in range(0, long_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
+
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
+
+        expected_height = uint32(long_blocks + 2 * num_blocks + 1)
+        await time_out_assert(15, full_node_api.full_node.blockchain.get_peak_height, expected_height)
+
+        coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+        assert len(coin_records) > 0
+
+        for coin_rec in coin_records:
+            msg = wallet_protocol.RegisterForCoinUpdates([coin_rec.name], 0)
+            msg_response = await full_node_api.register_interest_in_coin(msg, fake_wallet_peer)
+            assert msg_response is not None
+
+        fork_height = expected_height - num_blocks - 5
+        req = ReorgProtocol(fork_height, expected_height + 5, zero_ph)
+        await full_node_api.reorg_from_index_to_new_index(req)
+
+        coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
+        assert coin_records == []
+
+        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+
+        coin_update_messages = []
+        for message in all_messages:
+            if message.type == ProtocolMessageTypes.coin_state_update.value:
+                data_response: CoinStateUpdate = CoinStateUpdate.from_bytes(message.data)
+                coin_update_messages.append(data_response)
+
+        assert len(coin_update_messages) == 1
+        update = coin_update_messages[0]
+        coin_states = update.items
+        assert len(coin_states) == 2
+        first_coin = coin_states[0]
+        assert first_coin.spent_height is None
+        assert first_coin.created_height is None
+        second_coin = coin_states[1]
+        assert second_coin.spent_height is None
+        assert second_coin.created_height is None
