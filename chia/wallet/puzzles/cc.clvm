@@ -274,12 +274,11 @@
      ;;  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
      ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
 
-     (defun genesis_coin_checker_for_lpp ((MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash))
-       GENESIS_COIN_CHECKER
+     (defun-inline genesis_coin_checker_for_lpp (lineage_proof_parameters)
+       (f (r (r lineage_proof_parameters)))
      )
 
-     (defun-inline is_lineage_proof_valid (
-       lineage_proof_parameters coin_info lineage_proof)
+     (defun-inline is_lineage_proof_valid (lineage_proof_parameters coin_info lineage_proof)
        (if
          (f lineage_proof)
          (is_parent_cc lineage_proof_parameters coin_info (r lineage_proof))
