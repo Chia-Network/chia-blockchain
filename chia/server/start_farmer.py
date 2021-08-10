@@ -1,5 +1,5 @@
 import pathlib
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -23,8 +23,8 @@ def service_kwargs_for_farmer(
     root_path: pathlib.Path,
     config: Dict,
     config_pool: Dict,
-    keychain: Keychain,
     consensus_constants: ConsensusConstants,
+    keychain: Optional[Keychain] = None,
 ) -> Dict:
 
     connect_peers = []
@@ -35,7 +35,7 @@ def service_kwargs_for_farmer(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    farmer = Farmer(root_path, config, config_pool, keychain, consensus_constants=updated_constants)
+    farmer = Farmer(root_path, config, config_pool, consensus_constants=updated_constants, local_keychain=keychain)
     peer_api = FarmerAPI(farmer)
     network_id = config["selected_network"]
     kwargs = dict(
@@ -59,8 +59,7 @@ def service_kwargs_for_farmer(
 def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
-    keychain = Keychain()
-    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS)
+    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, config, config_pool, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

@@ -120,9 +120,6 @@ class FullNodeAPI:
         if not (await self.full_node.synced()):
             return None
 
-        if int(time.time()) <= self.full_node.constants.INITIAL_FREEZE_END_TIMESTAMP:
-            return None
-
         # Ignore if already seen
         if self.full_node.mempool_manager.seen(transaction.transaction_id):
             return None

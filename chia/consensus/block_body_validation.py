@@ -83,10 +83,7 @@ async def validate_block_body(
         while not prev_tb.is_transaction_block:
             prev_tb = blocks.block_record(prev_tb.prev_hash)
         assert prev_tb.timestamp is not None
-        if (
-            prev_tb.timestamp > constants.INITIAL_FREEZE_END_TIMESTAMP
-            and len(block.transactions_generator_ref_list) > 0
-        ):
+        if len(block.transactions_generator_ref_list) > 0:
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
         return None, None  # This means the block is valid
@@ -156,11 +153,8 @@ async def validate_block_body(
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS, None
 
-    if block.foliage_transaction_block.timestamp > constants.INITIAL_FREEZE_END_TIMESTAMP:
-        if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
-            # No duplicates, after transaction freeze period. Duplicates cause no issues because we filter them out
-            # anyway.
-            return Err.INVALID_REWARD_COINS, None
+    if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
+        return Err.INVALID_REWARD_COINS, None
 
     removals: List[bytes32] = []
     coinbase_additions: List[Coin] = list(expected_reward_coins)
@@ -171,13 +165,9 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # We check in header validation that timestamp is not more that 10 minutes into the future
-    if (
-        block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
-        and block.transactions_generator is not None
-    ):
-        # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
-        return Err.INITIAL_TRANSACTION_FREEZE, None
+    # In header validation we check that timestamp is not more that 10 minutes into the future
+    # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
+    # (this test has been removed)
 
     # 7a. The generator root must be the hash of the serialized bytes of
     #     the generator for this block (or zeroes if no generator)

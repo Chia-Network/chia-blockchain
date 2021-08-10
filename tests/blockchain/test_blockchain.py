@@ -29,7 +29,7 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from tests.block_tools import BlockTools, get_vdf_info_and_proof
+from tests.block_tools import create_block_tools_async, get_vdf_info_and_proof
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint64, uint32
@@ -43,6 +43,7 @@ from tests.core.fixtures import default_10000_blocks_compact  # noqa: F401
 from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.core.fixtures import create_blockchain
 from tests.setup_nodes import bt, test_constants
+from tests.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
@@ -459,10 +460,10 @@ class TestBlockHeaderValidation:
         assert result == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.SHOULD_NOT_HAVE_ICC
 
-    @pytest.mark.asyncio
-    async def test_invalid_icc_sub_slot_vdf(self):
-        bt_high_iters = BlockTools(
-            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14))
+    async def do_test_invalid_icc_sub_slot_vdf(self, keychain):
+        bt_high_iters = await create_block_tools_async(
+            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14)),
+            keychain=keychain,
         )
         bc1, connection, db_path = await create_blockchain(bt_high_iters.constants)
         blocks = bt_high_iters.get_consecutive_blocks(10)
@@ -545,6 +546,11 @@ class TestBlockHeaderValidation:
         await connection.close()
         bc1.shut_down()
         db_path.unlink()
+
+    @pytest.mark.asyncio
+    async def test_invalid_icc_sub_slot_vdf(self):
+        with TempKeyring() as keychain:
+            await self.do_test_invalid_icc_sub_slot_vdf(keychain)
 
     @pytest.mark.asyncio
     async def test_invalid_icc_into_cc(self, empty_blockchain):
@@ -1814,38 +1820,6 @@ class TestBodyValidation:
         assert err == Err.INVALID_REWARD_COINS
 
     @pytest.mark.asyncio
-    # each block is 10 seconds, we pull 3 blocks and the test freeze time is
-    # 1000
-    @pytest.mark.parametrize("genesis_time,expected_error", [(970, Err.INITIAL_TRANSACTION_FREEZE), (971, None)])
-    async def test_initial_freeze(self, empty_blockchain, genesis_time: int, expected_error: Optional[Err]):
-        # 6
-        b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(
-            3,
-            guarantee_transaction_block=True,
-            pool_reward_puzzle_hash=bt.pool_ph,
-            farmer_reward_puzzle_hash=bt.pool_ph,
-            genesis_timestamp=uint64(genesis_time),
-            time_per_block=10,
-        )
-        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
-        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
-        wt: WalletTool = bt.get_pool_wallet_tool()
-        tx: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
-        )
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=tx,
-            time_per_block=10,
-        )
-        err = (await b.receive_block(blocks[-1]))[1]
-        assert err == expected_error
-
-    @pytest.mark.asyncio
     async def test_invalid_transactions_generator_hash(self, empty_blockchain):
         # 7
         b = empty_blockchain
@@ -2107,46 +2081,47 @@ class TestBodyValidation:
         # limit in Coin
         pass
         #
-        # new_test_constants = test_constants.replace(
-        #     **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
-        # )
-        # b, connection, db_path = await create_blockchain(new_test_constants)
-        # bt_2 = BlockTools(new_test_constants)
-        # bt_2.constants = bt_2.constants.replace(
-        #     **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
-        # )
-        # blocks = bt_2.get_consecutive_blocks(
-        #     3,
-        #     guarantee_transaction_block=True,
-        #     farmer_reward_puzzle_hash=bt.pool_ph,
-        #     pool_reward_puzzle_hash=bt.pool_ph,
-        # )
-        # assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        # assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
-        # assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
-        #
-        # wt: WalletTool = bt_2.get_pool_wallet_tool()
-        #
-        # condition_dict = {ConditionOpcode.CREATE_COIN: []}
-        # output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt_2.pool_ph, int_to_bytes(2 ** 64)])
-        # condition_dict[ConditionOpcode.CREATE_COIN].append(output)
-        #
-        # tx: SpendBundle = wt.generate_signed_transaction_multiple_coins(
-        #     10,
-        #     wt.get_new_puzzlehash(),
-        #     list(blocks[1].get_included_reward_coins()),
-        #     condition_dic=condition_dict,
-        # )
-        # try:
-        #     blocks = bt_2.get_consecutive_blocks(
-        #         1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        # with TempKeyring() as keychain:
+        #     new_test_constants = test_constants.replace(
+        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
         #     )
-        #     assert False
-        # except Exception as e:
-        #     pass
-        # await connection.close()
-        # b.shut_down()
-        # db_path.unlink()
+        #     b, connection, db_path = await create_blockchain(new_test_constants)
+        #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
+        #     bt_2.constants = bt_2.constants.replace(
+        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     )
+        #     blocks = bt_2.get_consecutive_blocks(
+        #         3,
+        #         guarantee_transaction_block=True,
+        #         farmer_reward_puzzle_hash=bt.pool_ph,
+        #         pool_reward_puzzle_hash=bt.pool_ph,
+        #     )
+        #     assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        #     assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        #     assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        #     wt: WalletTool = bt_2.get_pool_wallet_tool()
+
+        #     condition_dict = {ConditionOpcode.CREATE_COIN: []}
+        #     output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt_2.pool_ph, int_to_bytes(2 ** 64)])
+        #     condition_dict[ConditionOpcode.CREATE_COIN].append(output)
+
+        #     tx: SpendBundle = wt.generate_signed_transaction_multiple_coins(
+        #         10,
+        #         wt.get_new_puzzlehash(),
+        #         list(blocks[1].get_included_reward_coins()),
+        #         condition_dic=condition_dict,
+        #     )
+        #     try:
+        #         blocks = bt_2.get_consecutive_blocks(
+        #             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        #         )
+        #         assert False
+        #     except Exception as e:
+        #         pass
+        #     await connection.close()
+        #     b.shut_down()
+        #     db_path.unlink()
 
     @pytest.mark.asyncio
     async def test_invalid_merkle_roots(self, empty_blockchain):

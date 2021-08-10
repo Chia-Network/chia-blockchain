@@ -8,10 +8,17 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from blspy import PrivateKey
-
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.daemon.keychain_proxy import (
+    KeychainProxy,
+    KeychainProxyConnectionFailure,
+    KeyringIsEmpty,
+    KeyringIsLocked,
+    connect_to_keychain_and_validate,
+    wrap_local_keychain,
+)
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
@@ -59,6 +66,8 @@ class WalletNode:
     key_config: Dict
     config: Dict
     constants: ConsensusConstants
+    keychain_proxy: Optional[KeychainProxy]
+    local_keychain: Optional[Keychain]  # For testing only. KeychainProxy is used in normal cases
     server: Optional[ChiaServer]
     log: logging.Logger
     wallet_peers: WalletPeers
@@ -80,19 +89,20 @@ class WalletNode:
     def __init__(
         self,
         config: Dict,
-        keychain: Keychain,
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = None,
+        local_keychain: Optional[Keychain] = None,
     ):
         self.config = config
         self.constants = consensus_constants
+        self.keychain_proxy = None
+        self.local_keychain = local_keychain
         self.root_path = root_path
         self.log = logging.getLogger(name if name else __name__)
         # Normal operation data
         self.cached_blocks: Dict = {}
         self.future_block_hashes: Dict = {}
-        self.keychain = keychain
 
         # Sync data
         self._shut_down = False
@@ -114,21 +124,32 @@ class WalletNode:
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
 
-    def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
-        private_keys = self.keychain.get_all_private_keys()
-        if len(private_keys) == 0:
+    async def ensure_keychain_proxy(self) -> KeychainProxy:
+        if not self.keychain_proxy:
+            if self.local_keychain:
+                self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
+            else:
+                self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+                if not self.keychain_proxy:
+                    raise KeychainProxyConnectionFailure("Failed to connect to keychain service")
+        return self.keychain_proxy
+
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        key: PrivateKey = None
+        try:
+            keychain_proxy = await self.ensure_keychain_proxy()
+            key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+        except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
-
-        private_key: Optional[PrivateKey] = None
-        if fingerprint is not None:
-            for sk, _ in private_keys:
-                if sk.get_g1().get_fingerprint() == fingerprint:
-                    private_key = sk
-                    break
-        else:
-            private_key = private_keys[0][0]  # If no fingerprint, take the first private key
-        return private_key
+        except KeyringIsLocked:
+            self.log.warning("Keyring is locked")
+            return None
+        except KeychainProxyConnectionFailure as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Missing keychain_proxy: {e} {tb}")
+            raise e  # Re-raise so that the caller can decide whether to continue or abort
+        return key
 
     async def _start(
         self,
@@ -137,7 +158,12 @@ class WalletNode:
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
     ) -> bool:
-        private_key = self.get_key_for_fingerprint(fingerprint)
+        try:
+            private_key = await self.get_key_for_fingerprint(fingerprint)
+        except KeychainProxyConnectionFailure:
+            self.log.error("Failed to connect to keychain service")
+            return False
+
         if private_key is None:
             self.logged_in = False
             return False
