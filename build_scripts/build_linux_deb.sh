@@ -9,7 +9,7 @@ elif [ "$1" = "amd64" ]; then
 else
 	PLATFORM="$1"
 	DIR_NAME="chia-blockchain-linux-arm64"
-fi
+fi123
 
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
