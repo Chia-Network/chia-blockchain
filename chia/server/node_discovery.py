@@ -208,7 +208,7 @@ class FullNodeDiscovery:
             if self.resolver is None:
                 self.log.warn("Skipping DNS query: asyncresolver not initialized.")
                 return
-            for rdtype in ['A', 'AAAA']:
+            for rdtype in ["A", "AAAA"]:
                 peers: List[TimestampedPeerInfo] = []
                 result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
                 for ip in result:
