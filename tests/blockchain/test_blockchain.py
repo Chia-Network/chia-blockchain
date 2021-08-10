@@ -44,6 +44,10 @@ from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.core.fixtures import create_blockchain
 from tests.setup_nodes import bt, test_constants
 from tests.util.keyring import TempKeyring
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
@@ -1604,6 +1608,58 @@ class TestPreValidation:
 
 
 class TestBodyValidation:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
+    @pytest.mark.parametrize(
+        "with_garbage,expected",
+        [
+            (True, (ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_CONDITION, None)),
+            (False, (ReceiveBlockResult.NEW_PEAK, None, 2)),
+        ],
+    )
+    async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+            genesis_timestamp=10000,
+            time_per_block=10,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx1: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        coin1: Coin = tx1.additions()[0]
+        secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
+        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        public_key = synthetic_secret_key.get_g1()
+
+        args = [public_key, b"msg"]
+        if with_garbage:
+            args.append(b"garbage")
+        conditions = {opcode: [ConditionWithArgs(opcode, args)]}
+
+        tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
+        assert coin1 in tx2.removals()
+        coin2: Coin = tx2.additions()[0]
+
+        bundles = SpendBundle.aggregate([tx1, tx2])
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=bundles,
+            time_per_block=10,
+        )
+        assert (await b.receive_block(blocks[-1])) == expected
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
