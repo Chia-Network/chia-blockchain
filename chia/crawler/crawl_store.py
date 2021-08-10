@@ -16,6 +16,7 @@ class CrawlStore:
     lock: asyncio.Lock
 
     host_to_records: Dict
+    host_to_selected_time: Dict
     host_to_reliability: Dict
     banned_peers: int
     ignored_peers: int
@@ -71,6 +72,7 @@ class CrawlStore:
         self.ignored_peers = 0
         self.banned_peers = 0
         self.reliable_peers = 0
+        self.host_to_selected_time = {}
         await self.unload_from_db()
         return self
 
@@ -183,9 +185,14 @@ class CrawlStore:
             record = self.host_to_records[peer_id]
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
                 add = True
+            if peer_id in self.host_to_selected_time:
+                last_selected = self.host_to_selected_time[peer_id]
+                if time.time() - last_selected < 120:
+                    add = False
             if add:
                 if now - record.last_try_timestamp >= 1000 and now - record.connected_timestamp >= 1000:
                     records.append(record)
+                    self.host_to_selected_time[peer_id] = time.time()
         batch_size = max(min_batch_size, len(records) // 10)
         batch_size = min(batch_size, max_batch_size)
         if len(records) > batch_size:
