@@ -168,8 +168,8 @@
      )
 
      ;; given a coin triplet, return the id of the coin
-     (defun coin_id_for_coin ((parent_id puzzle_hash amount))
-       (sha256 parent_id puzzle_hash amount)
+     (defun-inline coin_id_for_coin (coin)
+       (sha256 (f coin) (f (r coin)) (f (r (r coin))))
      )
 
      ;; utility to fetch coin amount from coin
