@@ -192,12 +192,13 @@ class CrawlStore:
             if add:
                 if now - record.last_try_timestamp >= 1000 and now - record.connected_timestamp >= 1000:
                     records.append(record)
-                    self.host_to_selected_time[peer_id] = time.time()
         batch_size = max(min_batch_size, len(records) // 10)
         batch_size = min(batch_size, max_batch_size)
         if len(records) > batch_size:
             random.shuffle(records)
             records = records[:batch_size]
+        for record in records:
+            self.host_to_selected_time[record.peer_id] = time.time()
         return records
 
     def get_total_records(self) -> int:
