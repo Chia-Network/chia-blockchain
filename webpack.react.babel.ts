@@ -148,12 +148,15 @@ export default {
       use: ['style-loader', 'css-loader'],
     }, {
       test: /\.(woff|woff2?|ttf|eot)$/,
-      use: [{
-        loader: 'url-loader',
-        options: {
-          limit: 10000,
+      type: 'asset',
+      parser: {
+        dataUrlCondition: {
+          maxSize: 10000,
         },
-      }],
+      },
+      generator: {
+        filename: '[name]-[contenthash:8][ext]',
+      },
     }, {
       test: /\.svg$/,
       use: ['@svgr/webpack', 'url-loader'],
