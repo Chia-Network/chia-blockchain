@@ -1,5 +1,6 @@
 # flake8: noqa: E501
 import logging
+from os import unlink
 from pathlib import Path
 from secrets import token_bytes
 from shutil import copy, move
@@ -10,6 +11,7 @@ from chiapos import DiskPlotter
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult
+from chia.plotting.manager import PlotManager
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -200,6 +202,7 @@ class TestRpc:
                 await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
                 result = await client_2.get_plots()
                 assert len(result["plots"]) == expect_total_plots
+                assert len(harvester.plot_manager.cache) == expect_total_plots
                 assert len(harvester.plot_manager.failed_to_open_filenames) == 0
 
             # Add plot_dir with two new plots
@@ -293,6 +296,68 @@ class TestRpc:
                 expected_directories=1,
                 expect_total_plots=0,
             )
+            # Recover the plots to test caching
+            # First make sure cache gets written if required and new plots are loaded
+            await test_case(
+                client_2.add_plot_directory(str(get_plot_dir())),
+                expect_loaded=20,
+                expect_removed=0,
+                expect_processed=20,
+                expected_directories=2,
+                expect_total_plots=20,
+            )
+            assert harvester.plot_manager.cache.path().exists()
+            unlink(harvester.plot_manager.cache.path())
+            # Should not write the cache again on shutdown because it didn't change
+            assert not harvester.plot_manager.cache.path().exists()
+            harvester.plot_manager.stop_refreshing()
+            assert not harvester.plot_manager.cache.path().exists()
+            # Manually trigger `save_cache` and make sure it creates a new cache file
+            harvester.plot_manager.cache.save()
+            assert harvester.plot_manager.cache.path().exists()
+
+            expected_result.loaded_plots = 20
+            expected_result.removed_plots = 0
+            expected_result.processed_files = 20
+            expected_result.remaining_files = 0
+            plot_manager: PlotManager = PlotManager(harvester.root_path, test_refresh_callback)
+            plot_manager.start_refreshing()
+            assert len(harvester.plot_manager.cache) == len(plot_manager.cache)
+            await time_out_assert(5, plot_manager.needs_refresh, value=False)
+            for path, plot_info in harvester.plot_manager.plots.items():
+                assert path in plot_manager.plots
+                assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
+                assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
+                assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
+                assert plot_manager.plots[path].prover.get_size() == plot_info.prover.get_size()
+                assert plot_manager.plots[path].pool_public_key == plot_info.pool_public_key
+                assert plot_manager.plots[path].pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash
+                assert plot_manager.plots[path].plot_public_key == plot_info.plot_public_key
+                assert plot_manager.plots[path].file_size == plot_info.file_size
+                assert plot_manager.plots[path].time_modified == plot_info.time_modified
+
+            assert harvester.plot_manager.plot_filename_paths == plot_manager.plot_filename_paths
+            assert harvester.plot_manager.failed_to_open_filenames == plot_manager.failed_to_open_filenames
+            assert harvester.plot_manager.no_key_filenames == plot_manager.no_key_filenames
+            plot_manager.stop_refreshing()
+            # Modify the content of the plot_manager.dat
+            with open(harvester.plot_manager.cache.path(), "r+b") as file:
+                file.write(b"\xff\xff")  # Sets Cache.version to 65535
+            # Make sure it just loads the plots normally if it fails to load the cache
+            plot_manager = PlotManager(harvester.root_path, test_refresh_callback)
+            plot_manager.cache.load()
+            assert len(plot_manager.cache) == 0
+            plot_manager.set_public_keys(
+                harvester.plot_manager.farmer_public_keys, harvester.plot_manager.pool_public_keys
+            )
+            expected_result.loaded_plots = 20
+            expected_result.removed_plots = 0
+            expected_result.processed_files = 20
+            expected_result.remaining_files = 0
+            plot_manager.start_refreshing()
+            await time_out_assert(5, plot_manager.needs_refresh, value=False)
+            assert len(plot_manager.plots) == len(harvester.plot_manager.plots)
+            plot_manager.stop_refreshing()
 
             # Test re-trying if processing a plot failed
             # First save the plot
