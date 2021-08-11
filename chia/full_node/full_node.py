@@ -723,31 +723,35 @@ class FullNode:
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
         async def fetch_block_batches(batch_queue, peers_with_peak: List):
-            for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
-                end_height = min(target_peak_sb_height, start_height + batch_size)
-                request = RequestBlocks(uint32(start_height), uint32(end_height), True)
-                fetched = False
-                for peer in random.sample(peers_with_peak, len(peers_with_peak)):
-                    if peer.closed:
-                        peers_with_peak.remove(peer)
-                        continue
-                    response = await peer.request_blocks(request, timeout=10)
-                    if response is None:
-                        await peer.close()
-                        peers_with_peak.remove(peer)
-                    elif isinstance(response, RespondBlocks):
-                        await batch_queue.put((peer, response.blocks))
-                        fetched = True
-                        break
-                if fetched is False:
-                    self.log.error(f"failed fetching {start_height} to {end_height} from peers")
-                    await batch_queue.put(None)
-                    return
-                if self.sync_store.peers_changed.is_set():
-                    peers_with_peak = self.get_peers_with_peak(peak_hash)
-                    self.sync_store.peers_changed.clear()
-            # finished signal with None
-            await batch_queue.put(None)
+            try:
+                for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
+                    end_height = min(target_peak_sb_height, start_height + batch_size)
+                    request = RequestBlocks(uint32(start_height), uint32(end_height), True)
+                    fetched = False
+                    for peer in random.sample(peers_with_peak, len(peers_with_peak)):
+                        if peer.closed:
+                            peers_with_peak.remove(peer)
+                            continue
+                        response = await peer.request_blocks(request, timeout=10)
+                        if response is None:
+                            await peer.close()
+                            peers_with_peak.remove(peer)
+                        elif isinstance(response, RespondBlocks):
+                            await batch_queue.put((peer, response.blocks))
+                            fetched = True
+                            break
+                    if fetched is False:
+                        self.log.error(f"failed fetching {start_height} to {end_height} from peers")
+                        await batch_queue.put(None)
+                        return
+                    if self.sync_store.peers_changed.is_set():
+                        peers_with_peak = self.get_peers_with_peak(peak_hash)
+                        self.sync_store.peers_changed.clear()
+            except Exception as e:
+                self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
+            finally:
+                # finished signal with None
+                await batch_queue.put(None)
 
         async def validate_block_batches(batch_queue):
             advanced_peak = False
