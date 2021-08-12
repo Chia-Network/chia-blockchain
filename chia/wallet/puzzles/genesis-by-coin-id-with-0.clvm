@@ -4,14 +4,14 @@
 ; coin id as parent; or created by anyone if their value is 0.
 
 (mod (
-      genesis-id
-      lineage-proof-parameters
-      my-coin-info
-      (parent-coin zero-parent-inner-puzzle-hash)
+      genesis_id
+      lineage_proof_parameters
+      my_coin_info
+      (parent_coin zero_parent_inner_puzzle_hash)
     )
 
     ;; boolean or macro
-    ;; This lets you write something like (if (or COND1 COND2 COND3) (do-something) (do-something-else))
+    ;; This lets you write something like (if (or COND1 COND2 COND3) (do_something) (do_something_else))
     (defmacro or ARGS
         (if ARGS
             (qq (if (unquote (f ARGS))
@@ -22,18 +22,21 @@
     )
 
     (defun-inline main (
-      genesis-id
-      my-coin-info
+      genesis_id
+      my_coin_info
     )
-
-      (or
-        (= (f (r (r my-coin-info))) 0)
-        (= (f my-coin-info) genesis-id)
+      (if (or
+            (= (f (r (r my_coin_info))) 0)
+            (= (f my_coin_info) genesis_id)
+          )
+        1
+        (x)
       )
+
     )
 
     (main
-      genesis-id
-      my-coin-info
+      genesis_id
+      my_coin_info
     )
 )
