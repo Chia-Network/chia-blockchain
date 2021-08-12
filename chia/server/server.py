@@ -675,7 +675,7 @@ class ChiaServer:
             ip = None
 
         # Fallback to `checkip` from amazon.
-        if ip is not None:
+        if ip is None:
             try:
                 timeout = ClientTimeout(total=15)
                 async with ClientSession(timeout=timeout) as session:
