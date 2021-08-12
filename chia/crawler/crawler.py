@@ -223,6 +223,7 @@ class Crawler:
                 available_peers = len(self.host_to_version)
                 addresses_count = len(self.best_timestamp_per_peer)
                 total_records = self.crawl_store.get_total_records()
+                ipv6_count = self.crawl_store.get_ipv6_peers()
                 self.log.error(f"IP addresses gossiped with timestamp in the last 5 days: {addresses_count}.")
                 self.log.error(f"Total nodes reachable in the last 5 days: {available_peers}.")
                 self.log.error("Version distribution (at least 100 nodes):")
@@ -232,6 +233,7 @@ class Crawler:
                 self.log.error(f"Banned addresses: {banned_peers}")
                 self.log.error(f"Temporary ignored addresses: {ignored_peers}")
                 self.log.error(f"Peers to crawl from: {total_records - banned_peers - ignored_peers}")
+                self.log.error(f"Total IPV6: {ipv6_count}")
                 self.log.error("***")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")

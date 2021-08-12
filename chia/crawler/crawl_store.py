@@ -3,6 +3,7 @@ import asyncio
 import random
 import logging
 import time
+import ipaddress
 import aiosqlite
 from typing import List, Dict
 from chia.crawler.peer_record import PeerRecord, PeerReliability
@@ -168,6 +169,7 @@ class CrawlStore:
     async def get_peers_to_crawl(self, min_batch_size, max_batch_size) -> List[PeerRecord]:
         now = int(time.time())
         records = []
+        records_v6 = []
         counter = 0
         self.ignored_peers = 0
         self.banned_peers = 0
@@ -190,16 +192,42 @@ class CrawlStore:
                 if time.time() - last_selected < 120:
                     add = False
             if add:
-                if now - record.last_try_timestamp >= 1000 and now - record.connected_timestamp >= 1000:
-                    records.append(record)
+                v6 = True
+                try:
+                    _ = ipaddress.IPv6Address(peer_id)
+                except ValueError:
+                    v6 = False
+                delta_time = 600 if v6 else 1000
+                if now - record.last_try_timestamp >= delta_time and now - record.connected_timestamp >= delta_time:
+                    if not v6:
+                        records.append(record)
+                    else:
+                        records_v6.append(record)
+
         batch_size = max(min_batch_size, len(records) // 10)
         batch_size = min(batch_size, max_batch_size)
         if len(records) > batch_size:
             random.shuffle(records)
             records = records[:batch_size]
+        if len(records_v6) > batch_size:
+            random.shuffle(records_v6)
+            records_v6 = records_v6[:batch_size]
+        records += records_v6
         for record in records:
             self.host_to_selected_time[record.peer_id] = time.time()
         return records
+
+    def get_ipv6_peers(self) -> int:
+        counter = 0
+        for peer_id in self.host_to_reliability:
+            v6 = True
+            try:
+                _ = ipaddress.IPv6Address(peer_id)
+            except ValueError:
+                v6 = False
+            if v6:
+                counter += 1
+        return counter
 
     def get_total_records(self) -> int:
         return len(self.host_to_records)
