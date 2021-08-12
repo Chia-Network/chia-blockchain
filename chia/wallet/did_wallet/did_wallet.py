@@ -68,7 +68,7 @@ class DIDWallet:
             num_of_backup_ids_needed = uint64(len(backups_ids))
         if num_of_backup_ids_needed > len(backups_ids):
             raise ValueError("Cannot require more IDs than are known.")
-        self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None)
+        self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None, False)
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
@@ -143,7 +143,7 @@ class DIDWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
-        self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None)
+        self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None, False)
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
@@ -285,6 +285,8 @@ class DIDWallet:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info("DID wallet has been notified that coin was added")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
+        if self.did_info.temp_coin is not None:
+            self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
         new_info = DIDInfo(
             self.did_info.origin_coin,
             self.did_info.backup_ids,
@@ -294,6 +296,7 @@ class DIDWallet:
             None,
             None,
             None,
+            False,
         )
         await self.save_info(new_info, True)
 
@@ -347,6 +350,7 @@ class DIDWallet:
                 None,
                 None,
                 None,
+                False,
             )
             await self.save_info(did_info, False)
             await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
@@ -404,6 +408,7 @@ class DIDWallet:
                                 coin,
                                 new_puzhash,
                                 new_pubkey,
+                                False,
                             )
                             await self.save_info(did_info, False)
                             removal_request = wallet_protocol.RequestRemovals(sub_height, header_hash, None)
@@ -855,6 +860,18 @@ class DIDWallet:
             name=token_bytes(),
         )
         await self.standard_wallet.push_transaction(did_record)
+        new_did_info = DIDInfo(
+            self.did_info.origin_coin,
+            self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
+            self.did_info.parent_info,
+            self.did_info.current_inner,
+            self.did_info.temp_coin,
+            self.did_info.temp_puzhash,
+            self.did_info.temp_pubkey,
+            True,
+        )
+        await self.save_info(new_did_info, True)
         return spend_bundle
 
     async def get_new_innerpuz(self) -> Program:
@@ -956,6 +973,7 @@ class DIDWallet:
             None,
             None,
             None,
+            False,
         )
         await self.save_info(did_info, False)
         eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
@@ -1017,6 +1035,7 @@ class DIDWallet:
             self.did_info.temp_coin,
             self.did_info.temp_puzhash,
             self.did_info.temp_pubkey,
+            self.did_info.sent_recovery_transaction,
         )
         await self.save_info(did_info, in_transaction)
 
@@ -1031,6 +1050,7 @@ class DIDWallet:
             self.did_info.current_inner,
             self.did_info.temp_coin,
             self.did_info.temp_puzhash,
+            self.did_info.temp_pubkey,
             self.did_info.temp_pubkey,
         )
         await self.save_info(did_info, False)
