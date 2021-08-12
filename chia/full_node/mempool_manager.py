@@ -406,11 +406,7 @@ class MempoolManager:
 
             if error:
                 if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
-                    potential = MempoolItem(
-                        new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
-                    )
-                    self.add_to_potential_tx_set(potential)
-                    return uint64(cost), MempoolInclusionStatus.PENDING, error
+                    return None, MempoolInclusionStatus.FAILED, error
                 break
 
             if validate_signature:
