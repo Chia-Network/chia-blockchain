@@ -133,12 +133,12 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
       "root:child:a"
     """
     if type(d) is not dict:
-        raise Exception(f"unable to traverse into non-dict value with key path: {key_path}")
+        raise TypeError(f"unable to traverse into non-dict value with key path: {key_path}")
 
     # Extract one path component at a time
     components = key_path.split(":", maxsplit=1)
     if components is None or len(components) == 0:
-        raise Exception(f"invalid config key path: {key_path}")
+        raise KeyError(f"invalid config key path: {key_path}")
 
     key = components[0]
     remaining_key_path = components[1] if len(components) > 1 else None
@@ -149,4 +149,4 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
             return traverse_dict(val, remaining_key_path)
         return val
     else:
-        raise Exception(f"value not found for key: {key}")
+        raise KeyError(f"value not found for key: {key}")
