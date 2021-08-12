@@ -12,6 +12,7 @@ from clvm_tools.curry import curry, uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
+from chia.util.byte_types import hexstr_to_bytes
 
 from .tree_hash import sha256_treehash
 
@@ -54,8 +55,16 @@ class Program(SExp):
         assert f.read() == b""
         return result
 
+    @classmethod
+    def fromhex(cls, hexstr: str) -> "Program":
+        return cls.from_bytes(hexstr_to_bytes(hexstr))
+
     def to_serialized_program(self) -> "SerializedProgram":
         return SerializedProgram.from_bytes(bytes(self))
+
+    @classmethod
+    def from_serialized_program(cls, sp: "SerializedProgram") -> "Program":
+        return cls.from_bytes(bytes(sp))
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
@@ -165,6 +174,10 @@ class SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(blob)
         return ret
+
+    @classmethod
+    def fromhex(cls, hexstr: str) -> "SerializedProgram":
+        return cls.from_bytes(hexstr_to_bytes(hexstr))
 
     @classmethod
     def from_program(cls, p: Program) -> "SerializedProgram":
