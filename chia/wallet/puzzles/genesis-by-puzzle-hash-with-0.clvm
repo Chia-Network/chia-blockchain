@@ -4,14 +4,14 @@
 ; puzzle hash; or created by anyone if their value is 0.
 
 (mod (
-      genesis-puzzle-hash
-      lineage-proof-parameters
-      my-coin-info
-      (parent-coin zero-parent-inner-puzzle-hash)
+      genesis_puzzle_hash
+      lineage_proof_parameters
+      my_coin_info
+      (parent_coin zero_parent_inner_puzzle_hash)
     )
 
     ;; boolean and macro
-    ;; This lets you write something like (if (and COND1 COND2 COND3) (do-something) (do-something-else))
+    ;; This lets you write something like (if (and COND1 COND2 COND3) (do_something) (do_something_else))
     (defmacro and ARGS
         (if ARGS
             (qq (if (unquote (f ARGS))
@@ -22,7 +22,7 @@
     )
 
     ;; boolean or macro
-    ;; This lets you write something like (if (or COND1 COND2 COND3) (do-something) (do-something-else))
+    ;; This lets you write something like (if (or COND1 COND2 COND3) (do_something) (do_something_else))
     (defmacro or ARGS
         (if ARGS
             (qq (if (unquote (f ARGS))
@@ -33,23 +33,25 @@
     )
 
     (defun-inline main (
-      genesis-puzzle-hash
-      my-coin-info
-      parent-coin
+      genesis_puzzle_hash
+      my_coin_info
+      parent_coin
     )
-
-      (or
-        (= (f (r (r my-coin-info))) 0)
-        (and
-          (= (sha256 (f parent-coin) (f (r parent-coin)) (f (r (r parent-coin)))) (f my-coin-info))
-          (= (f (r parent-coin)) genesis-puzzle-hash)
-        )
+      (if (or
+            (= (f (r (r my_coin_info))) 0)
+            (and
+              (= (sha256 (f parent_coin) (f (r parent_coin)) (f (r (r parent_coin)))) (f my_coin_info))
+              (= (f (r parent_coin)) genesis_puzzle_hash)
+            )
+          )
+          1
+          (x)
       )
     )
 
     (main
-      genesis-puzzle-hash
-      my-coin-info
-      parent-coin
+      genesis_puzzle_hash
+      my_coin_info
+      parent_coin
     )
 )
