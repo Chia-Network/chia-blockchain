@@ -20,3 +20,4 @@ class DIDInfo(Streamable):
     temp_coin: Optional[Coin]  # partially recovered wallet uses these to hold info
     temp_puzhash: Optional[bytes32]
     temp_pubkey: Optional[bytes]
+    sent_recovery_transaction: bool
