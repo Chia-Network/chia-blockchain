@@ -291,6 +291,19 @@
        (is_lineage_proof_valid lineage_proof_parameters coin lineage_proof)
      )
 
+     (defun merge_list (one two)
+      (if one
+        (c (f one) (merge_list (r one) two))
+        two
+      )
+     )
+
+     (defun if_is_list_merge (inspected_item output)
+       (if (l inspected_item)
+           (merge_list inspected_item output)
+           output
+        )
+     )
 
 
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -303,24 +316,26 @@
          next_coin_bundle
          prev_subtotal
       )
-      (assert
+      (if_is_list_merge
         ; ensure prev is a cc (is this really necessary?)
         (is_bundle_valid prev_coin_bundle lineage_proof_parameters)
+        (if_is_list_merge
+          ; ensure this is a cc (to ensure parent wasn't counterfeit)
+          (is_bundle_valid this_coin_bundle lineage_proof_parameters)
+          (if_is_list_merge
+            ; ensure next is a cc (to ensure its announcements can be trusted)
+            (is_bundle_valid next_coin_bundle lineage_proof_parameters)
 
-        ; ensure this is a cc (to ensure parent wasn't counterfeit)
-        (is_bundle_valid this_coin_bundle lineage_proof_parameters)
-
-        ; ensure next is a cc (to ensure its announcements can be trusted)
-        (is_bundle_valid next_coin_bundle lineage_proof_parameters)
-
-        (generate_final_output_conditions
-          prev_subtotal
-          ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-          (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)))
-          (morph_conditions inner_conditions lineage_proof_parameters)
-          (coin_info_for_coin_bundle prev_coin_bundle)
-          (coin_info_for_coin_bundle this_coin_bundle)
-          (coin_info_for_coin_bundle next_coin_bundle)
+            (generate_final_output_conditions
+              prev_subtotal
+              ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
+              (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)))
+              (morph_conditions inner_conditions lineage_proof_parameters)
+              (coin_info_for_coin_bundle prev_coin_bundle)
+              (coin_info_for_coin_bundle this_coin_bundle)
+              (coin_info_for_coin_bundle next_coin_bundle)
+            )
+          )
         )
       )
     )
