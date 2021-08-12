@@ -16,6 +16,9 @@ async def check_fork_next_block(
         # This is the fork point in SES in the case where no fork was detected
         if blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
             for peer in peers_with_peak:
+                if peer.closed:
+                    peers_with_peak.remove(peer)
+                    continue
                 # Grab a block at peak + 1 and check if fork point is actually our current height
                 if await check_block_future(peer, potential_peek, blockchain):
                     fork_point_height = our_peak_height

@@ -722,7 +722,7 @@ class FullNode:
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
-        async def fetch_block_batches(batch_queue, peers_with_peak: List):
+        async def fetch_block_batches(batch_queue, peers_with_peak: List[ws.WSChiaConnection]):
             try:
                 for start_height in range(fork_point_height, target_peak_sb_height, batch_size):
                     end_height = min(target_peak_sb_height, start_height + batch_size)
@@ -776,7 +776,9 @@ class FullNode:
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         loop = asyncio.get_event_loop()
-        batch_queue: asyncio.Queue = asyncio.Queue(loop=loop, maxsize=buffer_size)
+        batch_queue: asyncio.Queue[Tuple[ws.WSChiaConnection, List[FullBlock]]] = asyncio.Queue(
+            loop=loop, maxsize=buffer_size
+        )
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue, peers_with_peak))
         validate_task = asyncio.Task(validate_block_batches(batch_queue))
         try:
