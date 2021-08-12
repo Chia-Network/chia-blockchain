@@ -29,6 +29,7 @@ from chia.util.keychain import (
     Keychain,
     KeyringCurrentPassphaseIsInvalid,
     KeyringRequiresMigration,
+    passphrase_requirements,
     supports_keyring_passphrase,
 )
 from chia.util.path import mkdir
@@ -309,6 +310,8 @@ class WebSocketServer:
             response = await self.keyring_status()
         elif command == "unlock_keyring":
             response = await self.unlock_keyring(cast(Dict[str, Any], data))
+        elif command == "migrate_keyring":
+            response = await self.migrate_keyring(cast(Dict[str, Any], data))
         elif command == "set_keyring_passphrase":
             response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
         elif command == "remove_keyring_passphrase":
@@ -336,16 +339,18 @@ class WebSocketServer:
         user_passphrase_is_set: bool = not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
         needs_migration: bool = Keychain.needs_migration()
+        requirements: Dict[str, Any] = passphrase_requirements()
         response: Dict[str, Any] = {
             "success": True,
             "is_keyring_locked": locked,
             "passphrase_support_enabled": passphrase_support_enabled,
             "user_passphrase_is_set": user_passphrase_is_set,
             "needs_migration": needs_migration,
+            "passphrase_requirements": requirements,
         }
         return response
 
-    async def unlock_keyring(self, request: Dict[str, Any]):
+    async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -375,7 +380,36 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def set_keyring_passphrase(self, request: Dict[str, Any]):
+    async def migrate_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if Keychain.needs_migration() is False:
+            return {"success": False, "error": "migration not needed"}
+
+        success: bool = False
+        error: Optional[str] = None
+        passphrase: Optional[str] = request.get("passphrase", None)
+        cleanup_legacy_keyring: bool = request.get("cleanup_legacy_keyring", False)
+
+        if passphrase is not None and type(passphrase) is not str:
+            return {"success": False, "error": 'expected string value for "passphrase"'}
+
+        if not Keychain.passphrase_meets_requirements(passphrase):
+            return {"success": False, "error": "passphrase doesn't satisfy requirements"}
+
+        if type(cleanup_legacy_keyring) is not bool:
+            return {"success": False, "error": 'expected bool value for "cleanup_legacy_keyring"'}
+
+        try:
+            Keychain.migrate_legacy_keyring(passphrase=passphrase, cleanup_legacy_keyring=cleanup_legacy_keyring)
+            success = True
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
+            error = f"migration failed: {e}"
+
+        response: Dict[str, Any] = {"success": success, "error": error}
+        return response
+
+    async def set_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -409,7 +443,7 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def remove_keyring_passphrase(self, request: Dict[str, Any]):
+    async def remove_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
