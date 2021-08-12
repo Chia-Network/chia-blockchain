@@ -220,9 +220,8 @@ class FullNodeDiscovery:
                         )
                     )
                 self.log.info(f"Received {len(peers)} peers from DNS seeder, using rdtype = {rdtype}.")
-                if len(peers) == 0:
-                    continue
-                await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
+                if len(peers) > 0:
+                    await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
             self.log.warn(f"querying DNS introducer failed: {e}")
 
