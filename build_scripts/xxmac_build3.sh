@@ -11,23 +11,6 @@ rm -rf Silicoin-darwin-x64
 CHIA_INSTALLER_VERSION=$1
 
 
-# echo "Installing npm and electron packagers ========================================================================"
-# npm install electron-installer-dmg -g
-# npm install electron-packager -g
-# npm install electron/electron-osx-sign -g
-# npm install notarize-cli -g
-
-echo "Build ========================================================================"
-npm install
-npm audit fix
-npm run build
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "npm run build failed!"
-	exit $LAST_EXIT_CODE
-fi
-
-
 echo "Package ========================================================================"
 electron-packager . Silicoin --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.silicoin.blockchain \
