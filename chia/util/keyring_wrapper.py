@@ -314,11 +314,12 @@ class KeyringWrapper:
                 print(" Verified")
             else:
                 print(" Failed")
-                raise Exception("Migrated keys don't match original keys")
+                raise ValueError("Migrated keys don't match original keys")
         except Exception as e:
             print(f"\nMigration failed: {e}")
             print("Leaving legacy keyring intact")
             self.legacy_keyring = migration_results.legacy_keyring  # Restore the legacy keyring
+            raise e
 
         return success
 

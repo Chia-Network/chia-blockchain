@@ -403,8 +403,8 @@ class WebSocketServer:
             success = True
         except Exception as e:
             tb = traceback.format_exc()
-            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
-            error = f"migration failed: {e}"
+            self.log.error(f"Legacy keyring migration failed: {e} {tb}")
+            error = f"keyring migration failed: {e}"
 
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
