@@ -427,6 +427,9 @@ class WebSocketServer:
         if type(new_passphrase) is not str:
             return {"success": False, "error": "missing new_passphrase"}
 
+        if not Keychain.passphrase_meets_requirements(new_passphrase):
+            return {"success": False, "error": "passphrase doesn't satisfy requirements"}
+
         try:
             assert new_passphrase is not None  # mypy, I love you
             Keychain.set_master_passphrase(current_passphrase, new_passphrase, allow_migration=False)

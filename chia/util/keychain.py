@@ -21,6 +21,7 @@ DEFAULT_PASSPHRASE_PROMPT = (
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
+MIN_PASSPHRASE_LEN = 8
 
 
 class KeyringIsLocked(Exception):
@@ -51,8 +52,6 @@ def passphrase_requirements() -> Dict[str, Any]:
     """
     Returns a dictionary specifying current passphrase requirements
     """
-    from chia.cmds.passphrase_funcs import MIN_PASSPHRASE_LEN
-
     if not supports_keyring_passphrase:
         return {}
 

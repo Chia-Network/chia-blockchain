@@ -7,7 +7,6 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Optional, Tuple
 
-MIN_PASSPHRASE_LEN = 8
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
 PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
 
@@ -27,14 +26,15 @@ def verify_passphrase_meets_requirements(
     new_passphrase: str, confirmation_passphrase: str
 ) -> Tuple[bool, Optional[str]]:
     match = new_passphrase == confirmation_passphrase
-    meets_len_requirement = len(new_passphrase) >= MIN_PASSPHRASE_LEN
+    min_length = Keychain.minimum_passphrase_length()
+    meets_len_requirement = len(new_passphrase) >= min_length
 
     if match and meets_len_requirement:
         return True, None
     elif not match:
         return False, "Passphrases do not match"
     elif not meets_len_requirement:
-        return False, f"Minimum passphrase length is {MIN_PASSPHRASE_LEN}"
+        return False, f"Minimum passphrase length is {min_length}"
     else:
         raise Exception("Unexpected passphrase verification case")
 
@@ -48,8 +48,9 @@ def tidy_passphrase(passphrase: str) -> str:
 
 
 def prompt_for_new_passphrase() -> str:
-    if MIN_PASSPHRASE_LEN > 0:
-        n = MIN_PASSPHRASE_LEN
+    min_length: int = Keychain.minimum_passphrase_length()
+    if min_length > 0:
+        n = min_length
         print(f"\nPassphrases must be {n} or more characters in length")  # lgtm [py/clear-text-logging-sensitive-data]
     while True:
         passphrase = tidy_passphrase(getpass("New Passphrase: "))
