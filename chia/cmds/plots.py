@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def show_plots(root_path: Path):
-    from chia.plotting.plot_tools import get_plot_directories
+    from chia.plotting.util import get_plot_directories
 
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually")
@@ -185,10 +185,9 @@ def check_cmd(
 )
 @click.pass_context
 def add_cmd(ctx: click.Context, final_dir: str):
-    from chia.plotting.plot_tools import add_plot_directory
+    from chia.plotting.util import add_plot_directory
 
-    add_plot_directory(Path(final_dir), ctx.obj["root_path"])
-    print(f'Added plot directory "{final_dir}".')
+    add_plot_directory(ctx.obj["root_path"], final_dir)
 
 
 @plots_cmd.command("remove", short_help="Removes a directory of plots from config.yaml")
@@ -202,10 +201,9 @@ def add_cmd(ctx: click.Context, final_dir: str):
 )
 @click.pass_context
 def remove_cmd(ctx: click.Context, final_dir: str):
-    from chia.plotting.plot_tools import remove_plot_directory
+    from chia.plotting.util import remove_plot_directory
 
-    remove_plot_directory(Path(final_dir), ctx.obj["root_path"])
-    print(f'Removed plot directory "{final_dir}".')
+    remove_plot_directory(ctx.obj["root_path"], final_dir)
 
 
 @plots_cmd.command("show", short_help="Shows the directory of current plots")

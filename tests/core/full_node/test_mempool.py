@@ -1588,9 +1588,16 @@ class TestConditionParser:
             with pytest.raises(EvalError):
                 cost, args = parse_condition_args(SExp.to([]), condition_code, safe_mode)
 
-            # garbage at the end of the arguments list is allowed but stripped
+            # garbage at the end of the arguments list is not allowed
+            with pytest.raises(ValidationError):
+                cost, args = parse_condition_args(
+                    SExp.to([valid_pubkey, valid_message, b"garbage"]), condition_code, safe_mode
+                )
+
+            # note how this is a list that isn't terminated with a NULL
+            # we still treat this as a list of two items, ignoring the garbage
             cost, args = parse_condition_args(
-                SExp.to([valid_pubkey, valid_message, b"garbage"]), condition_code, safe_mode
+                SExp.to((valid_pubkey, (valid_message, b"garbage"))), condition_code, safe_mode
             )
             assert cost == ConditionCost.AGG_SIG.value
             assert args == [valid_pubkey, valid_message]

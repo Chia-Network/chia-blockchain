@@ -7,7 +7,7 @@ from blspy import AugSchemeMPL
 from chiapos import DiskPlotter
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.plotting.plot_tools import stream_plot_info_ph, stream_plot_info_pk
+from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk, PlotRefreshResult
 from chia.protocols import farmer_protocol
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -176,25 +176,120 @@ class TestRpc:
 
             await time_out_assert(5, test_get_harvesters)
 
-            assert len(await client_2.get_plot_directories()) == 1
+            expected_result: PlotRefreshResult = PlotRefreshResult()
 
-            await client_2.add_plot_directory(str(plot_dir))
-            await client_2.add_plot_directory(str(plot_dir_sub))
+            def test_refresh_callback(refresh_result: PlotRefreshResult):
+                assert refresh_result.loaded_plots == expected_result.loaded_plots
+                assert refresh_result.removed_plots == expected_result.removed_plots
+                assert refresh_result.processed_files == expected_result.processed_files
+                assert refresh_result.remaining_files == expected_result.remaining_files
 
-            assert len(await client_2.get_plot_directories()) == 3
+            harvester.plot_manager.set_refresh_callback(test_refresh_callback)
 
-            res_2 = await client_2.get_plots()
-            assert len(res_2["plots"]) == num_plots + 2
+            async def test_case(
+                trigger, expect_loaded, expect_removed, expect_processed, expected_directories, expect_total_plots
+            ):
+                expected_result.loaded_plots = expect_loaded
+                expected_result.removed_plots = expect_removed
+                expected_result.processed_files = expect_processed
+                await trigger
+                harvester.plot_manager.trigger_refresh()
+                assert len(await client_2.get_plot_directories()) == expected_directories
+                await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+                result = await client_2.get_plots()
+                assert len(result["plots"]) == expect_total_plots
 
-            await client_2.delete_plot(str(plot_dir / filename))
-            await client_2.delete_plot(str(plot_dir / filename_2))
-            await client_2.refresh_plots()
-            res_3 = await client_2.get_plots()
-
-            assert len(res_3["plots"]) == num_plots + 1
-
-            await client_2.remove_plot_directory(str(plot_dir))
-            assert len(await client_2.get_plot_directories()) == 2
+            # Add plot_dir with two new plots
+            await test_case(
+                client_2.add_plot_directory(str(plot_dir)),
+                expect_loaded=2,
+                expect_removed=0,
+                expect_processed=2,
+                expected_directories=2,
+                expect_total_plots=num_plots + 2,
+            )
+            # Add plot_dir_sub with one duplicate
+            await test_case(
+                client_2.add_plot_directory(str(plot_dir_sub)),
+                expect_loaded=0,
+                expect_removed=0,
+                expect_processed=1,
+                expected_directories=3,
+                expect_total_plots=num_plots + 2,
+            )
+            # Delete one plot
+            await test_case(
+                client_2.delete_plot(str(plot_dir / filename)),
+                expect_loaded=0,
+                expect_removed=1,
+                expect_processed=0,
+                expected_directories=3,
+                expect_total_plots=num_plots + 1,
+            )
+            # Remove directory with the duplicate
+            await test_case(
+                client_2.remove_plot_directory(str(plot_dir_sub)),
+                expect_loaded=0,
+                expect_removed=1,
+                expect_processed=0,
+                expected_directories=2,
+                expect_total_plots=num_plots + 1,
+            )
+            # Re-add the directory with the duplicate for other tests
+            await test_case(
+                client_2.add_plot_directory(str(plot_dir_sub)),
+                expect_loaded=0,
+                expect_removed=0,
+                expect_processed=1,
+                expected_directories=3,
+                expect_total_plots=num_plots + 1,
+            )
+            # Remove the directory which has the duplicated plot loaded. This removes the duplicated plot from plot_dir
+            # and in the same run loads the plot from plot_dir_sub which is not longer seen as duplicate.
+            await test_case(
+                client_2.remove_plot_directory(str(plot_dir)),
+                expect_loaded=1,
+                expect_removed=1,
+                expect_processed=1,
+                expected_directories=2,
+                expect_total_plots=num_plots + 1,
+            )
+            # Re-add the directory now the plot seen as duplicate is from plot_dir, not from plot_dir_sub like before
+            await test_case(
+                client_2.add_plot_directory(str(plot_dir)),
+                expect_loaded=0,
+                expect_removed=0,
+                expect_processed=1,
+                expected_directories=3,
+                expect_total_plots=num_plots + 1,
+            )
+            # Remove the duplicated plot
+            await test_case(
+                client_2.delete_plot(str(plot_dir / filename_2)),
+                expect_loaded=0,
+                expect_removed=1,
+                expect_processed=0,
+                expected_directories=3,
+                expect_total_plots=num_plots + 1,
+            )
+            # Remove the directory with the loaded plot which is not longer a duplicate
+            await test_case(
+                client_2.remove_plot_directory(str(plot_dir_sub)),
+                expect_loaded=0,
+                expect_removed=1,
+                expect_processed=0,
+                expected_directories=2,
+                expect_total_plots=num_plots,
+            )
+            # Remove the directory which contains all other plots
+            await test_case(
+                client_2.remove_plot_directory(str(get_plot_dir())),
+                expect_loaded=0,
+                expect_removed=20,
+                expect_processed=0,
+                expected_directories=1,
+                expect_total_plots=0,
+            )
 
             targets_1 = await client.get_reward_targets(False)
             assert "have_pool_sk" not in targets_1
