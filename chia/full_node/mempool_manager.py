@@ -480,7 +480,7 @@ class MempoolManager:
 
         while self.potential_cache_cost > self.potential_cache_max_total_cost:
             first_in = list(self.potential_txs.keys())[0]
-            self.potential_cache_max_total_cost -= self.potential_txs[first_in].cost
+            self.potential_cache_cost -= self.potential_txs[first_in].cost
             self.potential_txs.pop(first_in)
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
@@ -525,6 +525,7 @@ class MempoolManager:
 
             potential_txs_copy = self.potential_txs.copy()
             self.potential_txs = {}
+            self.potential_cache_cost = 0
             txs_added = []
             for item in potential_txs_copy.values():
                 cost, status, error = await self.add_spendbundle(
