@@ -8,7 +8,7 @@ msgstr ""
 "Language: sq_AL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-26 15:12\n"
+"PO-Revision-Date: 2021-08-15 03:45\n"
 "Last-Translator: \n"
 "Language-Team: Albanian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -657,7 +657,7 @@ msgstr "Fshij të gjithë Celsat"
 
 #: src/components/selectKey/SelectKey.tsx:66
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Fshij çelësin {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:113
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -738,7 +738,7 @@ msgstr "Modifiko"
 #: src/components/plotNFT/PlotNFTCard.tsx:301
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
 msgid "Edit Payout Instructions"
-msgstr ""
+msgstr "Ndryshoni udhëzimet e pagesës"
 
 #: src/components/wallet/WalletImport.tsx:147
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -1369,7 +1369,7 @@ msgstr "Dalëse"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:361
 msgid "Payout Address"
-msgstr ""
+msgstr "Adresa e pagesës"
 
 #: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
 msgid "Peak Height"
@@ -2561,15 +2561,15 @@ msgstr "Dëshironi të keni një vonesë para se të fillojë ploti tjetër?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Paralajmërim: Ky çelës përdoret për një portofol që mund të ketë një bilanc jo-zero. Duke fshirë këtë çelës mund të humbni qasjen në këtë portofol"
 
 #: src/components/selectKey/SelectKey.tsx:72
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Paralajmërim: Ky çelës përdoret për adresën tuaj të shpërblimeve. Duke fshirë këtë çelës, ju mund të humbni qasjen në çdo shpërblim të ardhshëm"
 
 #: src/components/selectKey/SelectKey.tsx:79
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Paralajmërim: Ky çelës përdoret për adresën tuaj të shpërblimeve në poll. Duke fshirë këtë çelës, mund të humbni qasjen në çdo shpërblim të ardhshëm të pollit"
 
 #: src/components/block/Block.jsx:206
 msgid "Weight"
@@ -2754,3 +2754,4 @@ msgstr "{currencyCode} Tarifat e Transaksionit të Përdoruesit"
 #: src/components/core/components/Amount/Amount.tsx:82
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr "{mojo, plural, one {mojo} other {mojos}}"
+
