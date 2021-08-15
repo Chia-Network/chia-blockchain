@@ -26,11 +26,21 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
+from chia.util.ssl import verify_ssl_certs_and_keys
 
 
 def ssl_context_for_server(
-    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
+    ca_cert: Path,
+    ca_key: Path,
+    private_cert_path: Path,
+    private_key_path: Path,
+    *,
+    check_permissions: bool = True,
+    log: Optional[logging.Logger] = None,
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        verify_ssl_certs_and_keys([(ca_cert, ca_key), (private_cert_path, private_key_path)], log)
+
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
@@ -39,8 +49,11 @@ def ssl_context_for_server(
 
 
 def ssl_context_for_root(
-    ca_cert_file: str,
+    ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        verify_ssl_certs_and_keys([(Path(ca_cert_file), None)], log)
+
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
 
@@ -50,7 +63,13 @@ def ssl_context_for_client(
     ca_key: Path,
     private_cert_path: Path,
     private_key_path: Path,
+    *,
+    check_permissions: bool = True,
+    log: Optional[logging.Logger] = None,
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        verify_ssl_certs_and_keys([(ca_cert, ca_key), (private_cert_path, private_key_path)], log)
+
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
@@ -198,12 +217,16 @@ class ChiaServer:
         authenticate = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
         if authenticate:
             ssl_context = ssl_context_for_server(
-                self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
+                self.ca_private_crt_path,
+                self.ca_private_key_path,
+                self._private_cert_path,
+                self._private_key_path,
+                log=self.log,
             )
         else:
             self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
             ssl_context = ssl_context_for_server(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
 
         self.site = web.TCPSite(
