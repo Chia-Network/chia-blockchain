@@ -1,37 +1,78 @@
 import pathlib
+import inspect
+import importlib
 
-import pkg_resources
+from typing import Union
+
 from clvm_tools.clvmc import compile_clvm
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 
 
-def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
+# Helper function that allows for packages to be decribed as a string, Path, or package string
+def string_to_path(pkg_or_path: Union[str, pathlib.Path]) -> pathlib.Path:
+    as_path = pathlib.Path(pkg_or_path)
+    if as_path.exists():
+        if as_path.is_dir():
+            return as_path
+        else:
+            raise ValueError("Cannot search for includes or CLVM in a file")
+    elif isinstance(pkg_or_path, pathlib.Path):
+        raise ModuleNotFoundError(f"Cannot find a path matching {pkg_or_path}")
+    else:
+        return pathlib.Path(importlib.import_module(pkg_or_path).__file__).parent
+
+
+def load_serialized_clvm(
+    clvm_filename,
+    package_or_requirement=None,
+    search_paths=["chia.clvm.clibs"],
+) -> SerializedProgram:
     """
-    This function takes a .clvm file in the given package and compiles it to a
-    .clvm.hex file if the .hex file is missing or older than the .clvm file, then
-    returns the contents of the .hex file as a `Program`.
+    This function takes a chialisp file in the given package and compiles it to a
+    .hex file if the .hex file is missing or older than the chialisp file, then
+    returns the contents of the .hex file as a `SerializedProgram`.
 
     clvm_filename: file name
-    package_or_requirement: usually `__name__` if the clvm file is in the same package
+    package_or_requirement: Defaults to the module from which the function was called
+    search_paths: A list of paths to search for `(include` files.  Defaults to a standard chia-blockchain module.
     """
+    if package_or_requirement is None:
+        module_name = inspect.getmodule(inspect.stack()[1][0])
+        if module_name is not None:
+            package_or_requirement = module_name.__name__
+        else:
+            raise ModuleNotFoundError("Couldn't find the module that load_clvm was called from")
+    package_or_requirement = string_to_path(package_or_requirement)
 
-    hex_filename = f"{clvm_filename}.hex"
+    path_list = [string_to_path(search_path) for search_path in search_paths]
 
-    try:
-        if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
-            full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
-            output = full_path.parent / hex_filename
-            compile_clvm(full_path, output, search_paths=[full_path.parent])
-    except NotImplementedError:
-        # pyinstaller doesn't support `pkg_resources.resource_exists`
-        # so we just fall through to loading the hex clvm
-        pass
+    full_path = package_or_requirement.joinpath(clvm_filename)
+    hex_filename = package_or_requirement.joinpath(f"{clvm_filename}.hex")
 
-    clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
+    if full_path.exists():
+        compile_clvm(
+            full_path,
+            hex_filename,
+            search_paths=[full_path.parent, *path_list],
+        )
+
+    clvm_hex = "".join(open(hex_filename, "r").read().split())  # Eliminate whitespace
     clvm_blob = bytes.fromhex(clvm_hex)
     return SerializedProgram.from_bytes(clvm_blob)
 
 
-def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
-    return Program.from_bytes(bytes(load_serialized_clvm(clvm_filename, package_or_requirement=package_or_requirement)))
+def load_clvm(clvm_filename, package_or_requirement=None, search_paths=["chia.clvm.clibs"]) -> Program:
+    if package_or_requirement is None:
+        module_name = inspect.getmodule(inspect.stack()[1][0])
+        if module_name is not None:
+            package_or_requirement = module_name.__name__
+        else:
+            raise ModuleNotFoundError("Couldn't find the module that load_clvm was called from")
+    return Program.from_bytes(
+        bytes(
+            load_serialized_clvm(
+                clvm_filename, package_or_requirement=package_or_requirement, search_paths=search_paths
+            )
+        )
+    )
