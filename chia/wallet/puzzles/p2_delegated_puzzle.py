@@ -17,7 +17,7 @@ from chia.types.blockchain_format.program import Program
 from . import p2_conditions
 from .load_clvm import load_clvm
 
-MOD = load_clvm("p2_delegated_puzzle.clvm")
+MOD = load_clvm("p2_delegated_puzzle.clsp")
 
 
 def puzzle_for_pk(public_key: bytes) -> Program:

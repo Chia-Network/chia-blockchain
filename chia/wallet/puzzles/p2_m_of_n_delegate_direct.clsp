@@ -20,7 +20,7 @@
 (mod
     (M public_key_list selectors delegated_puzzle solution)
 
-    (include condition_codes.clvm)
+    (include condition_codes.clib)
 
     ;; hash a tree
     ;; This is used to calculate a puzzle hash given a puzzle program.

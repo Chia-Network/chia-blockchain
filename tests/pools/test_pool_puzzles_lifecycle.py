@@ -48,8 +48,8 @@ from tests.clvm.coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 """
 This test suite aims to test:
     - chia.pools.pool_puzzles.py
-    - chia.wallet.puzzles.pool_member_innerpuz.clvm
-    - chia.wallet.puzzles.pool_waiting_room_innerpuz.clvm
+    - chia.wallet.puzzles.pool_member_innerpuz.clsp
+    - chia.wallet.puzzles.pool_waiting_room_innerpuz.clsp
 """
 
 

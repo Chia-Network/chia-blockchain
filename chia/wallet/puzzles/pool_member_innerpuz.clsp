@@ -25,7 +25,7 @@
   ; pool_reward_height is the block height that the reward was generated at. This is used to calculate the coin ID.
   ; key_value_list is signed extra data that the wallet may want to publicly announce for syncing purposes
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
   (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it

@@ -9,7 +9,7 @@ from chia.types.blockchain_format.program import Program
 
 from .load_clvm import load_clvm
 
-MOD = load_clvm("p2_m_of_n_delegate_direct.clvm")
+MOD = load_clvm("p2_m_of_n_delegate_direct.clsp")
 
 
 def puzzle_for_m_of_public_key_list(m, public_key_list) -> Program:

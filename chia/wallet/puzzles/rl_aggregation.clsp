@@ -3,7 +3,7 @@
       wallet-coin-primary-input
       wallet-coin-amount)
 
-    (include condition_codes.clvm)
+    (include condition_codes.clib)
 
     (defun sha256tree (tree)
         (if (l tree)
@@ -13,7 +13,7 @@
     (defun-inline create-my-id-condition ()
         (list ASSERT_MY_COIN_ID my-id))
 
-    (include create-lock-puzzlehash.clvm)
+    (include create_lock_puzzlehash.clib)
 
     (defun-inline parent-coin-id ()
         (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
