@@ -362,10 +362,8 @@ class TestRpc:
             assert pool_state[0]["pool_config"]["payout_instructions"] == "1234vy"
 
             now = time.time()
-            # arbitrary numbers to be unlikely to accidentally collide without
-            # requiring identity for an `is` check or support for non-int
-            # values.
-            before_24h = (now - (25 * 60 * 60), 2998471)
+            # Big arbitrary numbers used to be unlikely to accidentally collide.
+            before_24h = (now - (25 * 60 * 60), 29984713)
             since_24h = (now - (23 * 60 * 60), 93049817)
             for p2_singleton_puzzle_hash, pool_dict in farmer_api.farmer.pool_state.items():
                 for key in ["points_found_24h", "points_acknowledged_24h"]:
@@ -376,9 +374,10 @@ class TestRpc:
                 std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
             )
             await farmer_api.new_signage_point(sp)
-            for p2_singleton_puzzle_hash, pool_dict in farmer_api.farmer.pool_state.items():
+            client_pool_state = await client.get_pool_state()
+            for pool_dict in client_pool_state["pool_state"]:
                 for key in ["points_found_24h", "points_acknowledged_24h"]:
-                    assert pool_dict[key][0] == since_24h
+                    assert pool_dict[key][0] == list(since_24h)
 
         finally:
             # Checks that the RPC manages to stop the node
