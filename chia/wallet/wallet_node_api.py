@@ -1,14 +1,17 @@
+from typing import Union
+
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, execute_task
 from chia.util.errors import Err
+from chia.wallet.simple_wallet.simple_wallet_node import SimpleWalletNode
 from chia.wallet.wallet_node import WalletNode
 
 
 class WalletNodeAPI:
-    wallet_node: WalletNode
+    wallet_node: Union[SimpleWalletNode, WalletNode]
 
     def __init__(self, wallet_node) -> None:
         self.wallet_node = wallet_node
@@ -132,3 +135,15 @@ class WalletNodeAPI:
     @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
+
+    @api_request
+    async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate):
+        await self.wallet_node.state_update_received(request)
+
+    @api_request
+    async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
+        pass
+
+    @api_request
+    async def respond_to_coin_update(self, request: wallet_protocol.RespondToCoinUpdates):
+        pass

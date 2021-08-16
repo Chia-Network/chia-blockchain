@@ -11,6 +11,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.wallet.simple_wallet.simple_wallet_node import SimpleWalletNode
 from chia.wallet.wallet_node import WalletNode
 
 # See: https://bugs.python.org/issue29288
@@ -22,10 +23,7 @@ SERVICE_NAME = "wallet"
 
 
 def service_kwargs_for_wallet(
-    root_path: pathlib.Path,
-    config: Dict,
-    consensus_constants: ConsensusConstants,
-    keychain: Optional[Keychain] = None,
+    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants, keychain: KeychainOptional[Keychain] = None,, simple=False
 ) -> Dict:
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
@@ -37,12 +35,23 @@ def service_kwargs_for_wallet(
         config["trusted_peers"]["local_node"] = trusted_peer
     if "short_sync_blocks_behind_threshold" not in config:
         config["short_sync_blocks_behind_threshold"] = 20
-    node = WalletNode(
-        config,
-        root_path,
-        consensus_constants=updated_constants,
-        local_keychain=keychain,
-    )
+
+    if simple:
+        node = SimpleWalletNode(
+            config,
+            keychain,
+            root_path,
+            consensus_constants=updated_constants,
+        )
+    else:
+        node = WalletNode(
+            config,
+            keychain,
+            root_path,
+            consensus_constants=updated_constants,
+            local_keychain=keychain,
+
+        )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
 

@@ -11,7 +11,7 @@ from blspy import AugSchemeMPL, G2Element
 from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse
+from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -333,22 +333,17 @@ class CCWallet:
         height = response.height
         puzzle: Program = response.puzzle
         r = uncurry_cc(puzzle)
-        header_hash = self.wallet_state_manager.blockchain.height_to_hash(height)
-        block: Optional[
-            HeaderBlockRecord
-        ] = await self.wallet_state_manager.blockchain.block_store.get_header_block_record(header_hash)
-        if block is None:
-            return None
-
-        removals = block.removals
-
         if r is not None:
             mod_hash, genesis_coin_checker, inner_puzzle = r
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
             parent_coin = None
-            for coin in removals:
-                if coin.name() == coin_name:
-                    parent_coin = coin
+            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
+            if coin_record is None:
+                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.get_coin_state([coin_name])
+                if coin_states is not None:
+                    parent_coin = coin_states[0].coin
+            if coin_record is not None:
+                parent_coin = coin_record.coin
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
             lineage_proof = get_lineage_proof_from_coin_and_puz(parent_coin, puzzle)

@@ -1321,8 +1321,8 @@ class FullNodeAPI:
         # Add peer to the "Subscribed" dictionary
         for puzzle_hash in request.puzzle_hashes:
             if puzzle_hash not in self.full_node.ph_subscriptions:
-                self.full_node.ph_subscriptions[puzzle_hash] = []
-            self.full_node.ph_subscriptions[puzzle_hash].append(peer.peer_node_id)
+                self.full_node.ph_subscriptions[puzzle_hash] = set()
+            self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
@@ -1340,8 +1340,8 @@ class FullNodeAPI:
     ):
         for coin_id in request.coin_ids:
             if coin_id not in self.full_node.coin_subscriptions:
-                self.full_node.coin_subscriptions[coin_id] = []
-            self.full_node.coin_subscriptions[coin_id].append(peer.peer_node_id)
+                self.full_node.coin_subscriptions[coin_id] = set()
+            self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
             include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height

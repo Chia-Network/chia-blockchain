@@ -97,6 +97,11 @@ rate_limits_other = {
     ProtocolMessageTypes.farm_new_block: RLSettings(200, 200),
     ProtocolMessageTypes.request_plots: RLSettings(10, 10 * 1024 * 1024),
     ProtocolMessageTypes.respond_plots: RLSettings(10, 100 * 1024 * 1024),
+    ProtocolMessageTypes.coin_state_update: RLSettings(100, 100 * 1024 * 1024),
+    ProtocolMessageTypes.register_interest_in_puzzle_hash: RLSettings(100, 100 * 1024 * 1024),
+    ProtocolMessageTypes.respond_to_ph_update: RLSettings(100, 100 * 1024 * 1024),
+    ProtocolMessageTypes.register_interest_in_coin: RLSettings(100, 100 * 1024 * 1024),
+    ProtocolMessageTypes.respond_to_coin_update: RLSettings(100, 100 * 1024 * 1024),
 }
 
 

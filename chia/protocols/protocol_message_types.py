@@ -89,8 +89,7 @@ class ProtocolMessageTypes(Enum):
 
     # More wallet protocol
     coin_state_update = 69
-    register_for_ph_update = 70
+    register_interest_in_puzzle_hash = 70
     respond_to_ph_update = 71
-    register_for_coin_update = 72
-    respond_to_coin_update = 72
-    register_for_coin_update_response = 74
+    register_interest_in_coin = 72
+    respond_to_coin_update = 73

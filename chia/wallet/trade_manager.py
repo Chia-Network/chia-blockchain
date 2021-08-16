@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -96,59 +97,76 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(self, removals: List[Coin], additions: List[Coin], height: uint32):
+    async def coins_of_interest_farmed(self, coin_state: CoinState):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
         else completed trade or other side of trade canceled the trade by doing a spend.
         If our coins got farmed but coins from other side didn't, we successfully canceled trade by spending inputs.
         """
-        removal_dict = {}
-        addition_dict = {}
-        checked: Dict[bytes32, Coin] = {}
-        for coin in removals:
-            removal_dict[coin.name()] = coin
-        for coin in additions:
-            addition_dict[coin.name()] = coin
+        trade = await self.get_trade_by_coin(coin_state.coin)
+        if trade is None:
+            self.log.error(f"Coin: {Coin}, not in any trade")
+            return
 
-        all_coins = []
-        all_coins.extend(removals)
-        all_coins.extend(additions)
+        # Check if all coins that are part of the trade got farmed
+        # If coin is missing, trade failed
+        failed = False
+        all_coin_names_in_trade = []
+        for removed_coin in trade.removals:
+            all_coin_names_in_trade.append(removed_coin.name())
+        for added_coin in trade.additions:
+            all_coin_names_in_trade.append(added_coin.name())
 
-        for coin in all_coins:
-            if coin.name() in checked:
-                continue
-            trade = await self.get_trade_by_coin(coin)
-            if trade is None:
-                self.log.error(f"Coin: {Coin}, not in any trade")
-                continue
+        coin_state_is_addition = False
+        if coin_state.coin in trade.additions:
+            coin_state_is_addition = True
+        else:
+            coin_state_is_addition = False
 
-            # Check if all coins that are part of the trade got farmed
-            # If coin is missing, trade failed
-            failed = False
-            for removed_coin in trade.removals:
-                if removed_coin.name() not in removal_dict:
-                    self.log.error(f"{removed_coin} from trade not removed")
-                    failed = True
-                checked[removed_coin.name()] = removed_coin
-            for added_coin in trade.additions:
-                if added_coin.name() not in addition_dict:
-                    self.log.error(f"{added_coin} from trade not added")
-                    failed = True
-                checked[coin.name()] = coin
+        coin_states = await self.wallet_state_manager.get_coin_state(all_coin_names_in_trade)
+        assert coin_states is not None
 
-            if failed is False:
-                # Mark this trade as successful
-                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
-                self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
-            else:
-                # Either we canceled this trade or this trade failed
-                if trade.status == TradeStatus.PENDING_CANCEL.value:
-                    await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED, True)
-                    self.log.info(f"Trade with id: {trade.trade_id} canceled at height: {height}")
-                elif trade.status == TradeStatus.PENDING_CONFIRM.value:
-                    await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED, True)
-                    self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {height}")
+        #  For this trade to be confirmed all coins involved in a trade must be created/spent on same height
+        coin_states_dict: Dict[bytes32, CoinState] = {}
+        for cs in coin_states:
+            coin_states_dict[cs.coin.name()] = cs
+
+        all_heights = set()
+
+        for removed_coin in trade.removals:
+            removed_coin_state = coin_states_dict[removed_coin.name()]
+            if removed_coin_state.spent_height is None:
+                failed = True
+                break
+            all_heights.add(removed_coin_state.spent_height)
+
+        for added_coin in trade.additions:
+            added_coin_state = coin_states_dict.get(added_coin.name(), None)
+            if added_coin_state is None:
+                failed = True
+                break
+            if added_coin_state.created_height is None:
+                failed = True
+                break
+            all_heights.add(added_coin_state.created_height)
+
+        if len(all_heights) > 1:
+            failed = True
+
+        if failed is False:
+            # Mark this trade as successful
+            height = all_heights.pop()
+            await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
+            self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
+        else:
+            # Either we canceled this trade or this trade failed
+            if trade.status == TradeStatus.PENDING_CANCEL.value:
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED, True)
+                self.log.info(f"Trade with id: {trade.trade_id} canceled")
+            elif trade.status == TradeStatus.PENDING_CONFIRM.value:
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED, True)
+                self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
     async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""

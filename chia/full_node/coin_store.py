@@ -350,7 +350,7 @@ class CoinStore:
         rows = await cursor_deleted.fetchall()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            record = CoinRecord(coin, 0, row[2], row[3], row[4], 0)
+            record = CoinRecord(coin, uint32(0), row[2], row[3], row[4], uint64(0))
             coin_changes[record.name] = record
         await cursor_deleted.close()
 
@@ -364,9 +364,9 @@ class CoinStore:
         rows = await cursor_unspent.fetchall()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            record = CoinRecord(coin, row[1], 0, False, row[4], row[8])
+            record = CoinRecord(coin, row[1], uint32(0), False, row[4], row[8])
             if not record.name in coin_changes:
-                coin_changes[record.nbame] = record
+                coin_changes[record.name] = record
         await cursor_unspent.close()
 
         c2 = await self.coin_record_db.execute(

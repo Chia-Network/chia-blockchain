@@ -113,8 +113,8 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions: Dict[bytes32, List[bytes32]] = {}  # Puzzle Hash : List[Peer ID]
-        self.ph_subscriptions: Dict[bytes32, List[bytes32]] = {}  # Puzzle Hash : List[Peer ID]
+        self.coin_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
+        self.ph_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):

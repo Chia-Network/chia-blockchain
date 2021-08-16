@@ -315,7 +315,10 @@ class Blockchain(BlockchainInterface):
                     tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
                     tx_removals, tx_additions = [], []
-                added, removed = await self.coin_store.new_block(block, tx_additions, tx_removals)
+                added_removed = await self.coin_store.new_block(block, tx_additions, tx_removals)
+                added = None
+                if added_removed is not None:
+                    added, removed = added_removed
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record], added
             return None, None, [], []
