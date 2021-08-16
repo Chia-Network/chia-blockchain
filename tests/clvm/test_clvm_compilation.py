@@ -42,19 +42,19 @@ wallet_program_files = set(
 
 clvm_include_files = set(
     [
-        "chia/wallet/puzzles/create_lock_puzzlehash.clib",
-        "chia/wallet/puzzles/condition_codes.clib",
-        "chia/wallet/puzzles/curry_and_treehash.clib",
-        "chia/wallet/puzzles/singleton_truths.clib",
+        "chia/clvm/clibs/create_lock_puzzlehash.clib",
+        "chia/clvm/clibs/condition_codes.clib",
+        "chia/clvm/clibs/curry_and_treehash.clib",
+        "chia/clvm/clibs/singleton_truths.clib",
     ]
 )
 
-CLVM_PROGRAM_ROOT = "chia/wallet/puzzles"
+CLVM_PROGRAM_ROOT = "chia"
 
 
 def list_files(dir, glob):
     dir = Path(dir)
-    entries = dir.glob(glob)
+    entries = dir.rglob(glob)
     files = [f for f in entries if f.is_file()]
     return files
 
@@ -76,7 +76,7 @@ class TestClvmCompilation(TestCase):
 
     def test_all_programs_listed(self):
         """
-        Checks to see if a new .clsp file was added to chia/wallet/puzzles, but not added to `wallet_program_files`
+        Checks to see if a new chialisp file was added to chia/, but not added to `wallet_program_files`
         """
         existing_files = list_files(CLVM_PROGRAM_ROOT, "*.cl[vsi][mpb]")
         existing_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in existing_files])
@@ -95,11 +95,11 @@ class TestClvmCompilation(TestCase):
 
     # TODO: Test recompilation with all available compiler configurations & implementations
     def test_all_programs_are_compiled(self):
-        """Checks to see if a new .clsp file was added without its .hex file"""
+        """Checks to see if a new chialisp file was added without its .hex file"""
         all_compiled = True
         msg = "Please compile your program with:\n"
 
-        # Note that we cannot test all existing .clsp files - some are not
+        # Note that we cannot test all existing chialisp files - some are not
         # meant to be run as a "module" with load_clvm; some are include files
         # We test for inclusion in `test_all_programs_listed`
         for prog_path in wallet_program_files:
@@ -116,9 +116,14 @@ class TestClvmCompilation(TestCase):
 
     def test_recompilation_matches(self):
         self.maxDiff = None
+        unique_search_paths = []
+        for path in clvm_include_files:
+            search_dir = Path(path).parent
+            if search_dir not in unique_search_paths:
+                unique_search_paths.append(search_dir)
         for f in wallet_program_files:
             f = Path(f)
-            compile_clvm(f, path_with_ext(f, ".recompiled"), search_paths=[f.parent])
+            compile_clvm(f, path_with_ext(f, ".recompiled"), search_paths=[f.parent, *unique_search_paths])
             orig_hex = path_with_ext(f, ".hex").read_text().strip()
             new_hex = path_with_ext(f, ".recompiled").read_text().strip()
             self.assertEqual(orig_hex, new_hex, msg=f"Compilation of {f} does not match {f}.hex")
