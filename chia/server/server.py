@@ -548,6 +548,11 @@ class ChiaServer:
 
                     async def wrapped_coroutine() -> Optional[Message]:
                         try:
+                            if full_message.data == b"":
+                                connection.log.debug(
+                                    f"peer {connection.get_peer_info()} returned None response {full_message.type}"
+                                )
+                                return None
                             result = await coroutine
                             return result
                         except asyncio.CancelledError:
@@ -566,6 +571,9 @@ class ChiaServer:
 
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
+                        await connection.reply_to_request(response_message)
+                    elif hasattr(f, "can_return_none"):
+                        response_message = Message(full_message.type, full_message.id, b"")
                         await connection.reply_to_request(response_message)
                 except Exception as e:
                     if self.connection_close_task is None:

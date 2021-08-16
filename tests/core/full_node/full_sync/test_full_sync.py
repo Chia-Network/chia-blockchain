@@ -209,6 +209,37 @@ class TestFullSync:
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
+    async def test_sync_None_wp_response(self, three_nodes, default_1000_blocks, default_400_blocks):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        num_blocks_initial = len(default_1000_blocks) - 50
+        blocks_950 = default_1000_blocks[:num_blocks_initial]
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+
+        for block in blocks_950:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        # Also test request proof of weight
+        # Have the request header hash
+        start = time.time()
+        res = await full_node_1.request_proof_of_weight(
+            full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash)
+        )
+        assert res is None
+        res = time.time() - start
+        log.info(f"result was {res}")
+        assert res < 3
+        start = time.time()
+        res = await full_node_1.request_proof_of_weight(
+            full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
+        )
+        assert res is not None
+        res = time.time() - start
+        log.info(f"result was {res}")
+
+    @pytest.mark.asyncio
     async def test_batch_sync(self, two_nodes):
         # Must be below "sync_block_behind_threshold" in the config
         num_blocks = 20

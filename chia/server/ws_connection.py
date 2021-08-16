@@ -276,7 +276,7 @@ class WSChiaConnection:
                 f"Time for request {attr_name}: {self.get_peer_info()} = {time.time() - request_start_t}, "
                 f"None? {result is None}"
             )
-            if result is not None:
+            if result is not None and result.data != b"":
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
 
                 req_annotations = ret_attr.__annotations__
