@@ -686,14 +686,28 @@ class ChiaServer:
         ip = None
         port = self._port
 
+        # Use chia's service first.
         try:
-            async with ClientSession() as session:
-                async with session.get("https://checkip.amazonaws.com/") as resp:
+            timeout = ClientTimeout(total=15)
+            async with ClientSession(timeout=timeout) as session:
+                async with session.get("https://ip.chia.net/") as resp:
                     if resp.status == 200:
                         ip = str(await resp.text())
                         ip = ip.rstrip()
         except Exception:
             ip = None
+
+        # Fallback to `checkip` from amazon.
+        if ip is None:
+            try:
+                timeout = ClientTimeout(total=15)
+                async with ClientSession(timeout=timeout) as session:
+                    async with session.get("https://checkip.amazonaws.com/") as resp:
+                        if resp.status == 200:
+                            ip = str(await resp.text())
+                            ip = ip.rstrip()
+            except Exception:
+                ip = None
         if ip is None:
             return None
         peer = PeerInfo(ip, uint16(port))
