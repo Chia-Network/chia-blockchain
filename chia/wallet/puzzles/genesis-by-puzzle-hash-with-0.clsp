@@ -10,27 +10,7 @@
       (parent-coin zero-parent-inner-puzzle-hash)
     )
 
-    ;; boolean and macro
-    ;; This lets you write something like (if (and COND1 COND2 COND3) (do-something) (do-something-else))
-    (defmacro and ARGS
-        (if ARGS
-            (qq (if (unquote (f ARGS))
-                (unquote (c and (r ARGS)))
-                ()
-                ))
-            1)
-    )
-
-    ;; boolean or macro
-    ;; This lets you write something like (if (or COND1 COND2 COND3) (do-something) (do-something-else))
-    (defmacro or ARGS
-        (if ARGS
-            (qq (if (unquote (f ARGS))
-                1
-                (unquote (c or (r ARGS)))
-            ))
-        0)
-    )
+    (include utility_functions.clib) ; or, and
 
     (defun-inline main (
       genesis-puzzle-hash

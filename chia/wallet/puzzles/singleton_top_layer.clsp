@@ -13,26 +13,8 @@
   (include condition_codes.clib)
   (include curry_and_treehash.clib)
   (include singleton_truths.clib)
-
-  ; takes a lisp tree and returns the hash of it
-  (defun sha256tree1 (TREE)
-      (if (l TREE)
-          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)
-      )
-  )
-
-  ; "assert" is a macro that wraps repeated instances of "if"
-  ; usage: (assert A0 A1 ... An R)
-  ; all of A0, A1, ... An must evaluate to non-null, or an exception is raised
-  ; return the value of R (if we get that far)
-
-  (defmacro assert items
-    (if (r items)
-        (list if (f items) (c assert (r items)) (q . (x)))
-      (f items)
-      )
-    )
+  (include sha256tree.clib)
+  (include utility_functions.clib)
 
     (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
     (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
@@ -43,7 +25,7 @@
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
      (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
                                       inner_puzzle_hash
-                                      (sha256tree1 SINGLETON_STRUCT)
+                                      (sha256tree SINGLETON_STRUCT)
      )
   )
 
@@ -171,7 +153,7 @@
   ; if our value is not an odd amount then we are invalid
   ; this calculates my_innerpuzhash and passes all values to stager_one
   (if (logand my_amount 1)
-    (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
+    (stager_one SINGLETON_STRUCT lineage_proof (sha256tree INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
     (x)
   )
 )

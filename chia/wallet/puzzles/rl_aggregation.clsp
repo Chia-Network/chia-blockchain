@@ -4,16 +4,10 @@
       wallet-coin-amount)
 
     (include condition_codes.clib)
-
-    (defun sha256tree (tree)
-        (if (l tree)
-            (sha256 2 (sha256tree (f tree)) (sha256tree (r tree)))
-            (sha256 1 tree)))
+    (include sha256tree.clib)
 
     (defun-inline create-my-id-condition ()
         (list ASSERT_MY_COIN_ID my-id))
-
-    (include create_lock_puzzlehash.clib)
 
     (defun-inline parent-coin-id ()
         (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
