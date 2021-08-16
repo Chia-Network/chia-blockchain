@@ -143,10 +143,10 @@
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
      ;; prohibit CREATE_COIN_ANNOUNCEMENT
-     (defun-inline morph_condition (condition lineage_proof_parameters)
+     (defun-inline morph_condition (condition cc_mod_struct)
        (if (= (f condition) CREATE_COIN)
          (list CREATE_COIN
-               (cc_puzzle_hash lineage_proof_parameters (f (r condition)))
+               (cc_puzzle_hash cc_mod_struct (f (r condition)))
                (f (r (r condition)))
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
@@ -157,11 +157,11 @@
      )
 
      ;; tweak all `CREATE_COIN` conditions, enforcing created coins to be ccs
-     (defun morph_conditions (conditions lineage_proof_parameters)
+     (defun morph_conditions (conditions cc_mod_struct)
        (if conditions
          (c
-           (morph_condition (f conditions) lineage_proof_parameters)
-           (morph_conditions (r conditions) lineage_proof_parameters)
+           (morph_condition (f conditions) cc_mod_struct)
+           (morph_conditions (r conditions) cc_mod_struct)
          )
          ()
        )
@@ -256,13 +256,13 @@
 
      ;; return true iff parent of `this_coin_info` is provably a cc
      (defun is_parent_cc (
-       lineage_proof_parameters
+       cc_mod_struct
        this_coin_info
        (parent_parent_coin_id parent_inner_puzzle_hash parent_amount)
      )
        (= (f this_coin_info)
           (sha256 parent_parent_coin_id
-                  (cc_puzzle_hash lineage_proof_parameters parent_inner_puzzle_hash)
+                  (cc_puzzle_hash cc_mod_struct parent_inner_puzzle_hash)
                   parent_amount
           )
        )
@@ -274,21 +274,21 @@
      ;;  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
      ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
 
-     (defun-inline genesis_coin_checker_for_lpp (lineage_proof_parameters)
-       (f (r (r lineage_proof_parameters)))
+     (defun-inline genesis_coin_checker_for_lpp (cc_mod_struct)
+       (f (r (r cc_mod_struct)))
      )
 
-     (defun-inline is_lineage_proof_valid (lineage_proof_parameters coin_info lineage_proof)
+     (defun-inline is_lineage_proof_valid (cc_mod_struct coin_info lineage_proof)
        (if
          (f lineage_proof)
-         (is_parent_cc lineage_proof_parameters coin_info (r lineage_proof))
-         (a (genesis_coin_checker_for_lpp lineage_proof_parameters)
-             (list lineage_proof_parameters coin_info (r lineage_proof)))
+         (is_parent_cc cc_mod_struct coin_info (r lineage_proof))
+         (a (genesis_coin_checker_for_lpp cc_mod_struct)
+             (list cc_mod_struct coin_info (r lineage_proof)))
        )
      )
 
-     (defun is_bundle_valid ((coin . lineage_proof) lineage_proof_parameters)
-       (is_lineage_proof_valid lineage_proof_parameters coin lineage_proof)
+     (defun is_bundle_valid ((coin . lineage_proof) cc_mod_struct)
+       (is_lineage_proof_valid cc_mod_struct coin lineage_proof)
      )
 
      (defun merge_list (one two)
@@ -309,7 +309,7 @@
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
      (defun main (
-         lineage_proof_parameters
+         cc_mod_struct
          inner_conditions
          prev_coin_bundle
          this_coin_bundle
@@ -318,19 +318,19 @@
       )
       (if_is_list_merge
         ; ensure prev is a cc (is this really necessary?)
-        (is_bundle_valid prev_coin_bundle lineage_proof_parameters)
+        (is_bundle_valid prev_coin_bundle cc_mod_struct)
         (if_is_list_merge
           ; ensure this is a cc (to ensure parent wasn't counterfeit)
-          (is_bundle_valid this_coin_bundle lineage_proof_parameters)
+          (is_bundle_valid this_coin_bundle cc_mod_struct)
           (if_is_list_merge
             ; ensure next is a cc (to ensure its announcements can be trusted)
-            (is_bundle_valid next_coin_bundle lineage_proof_parameters)
+            (is_bundle_valid next_coin_bundle cc_mod_struct)
 
             (generate_final_output_conditions
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
               (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)))
-              (morph_conditions inner_conditions lineage_proof_parameters)
+              (morph_conditions inner_conditions cc_mod_struct)
               (coin_info_for_coin_bundle prev_coin_bundle)
               (coin_info_for_coin_bundle this_coin_bundle)
               (coin_info_for_coin_bundle next_coin_bundle)
@@ -341,8 +341,8 @@
     )
 
     (main
-        ;; cache some stuff: output conditions, and lineage_proof_parameters
-        (list MOD_HASH (sha256tree1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
+        ;; cache some stuff: output conditions, and cc_mod_struct
+        (list MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
         (a INNER_PUZZLE inner_puzzle_solution)
         prev_coin_bundle
         this_coin_bundle

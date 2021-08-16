@@ -3,9 +3,11 @@
 ; This checker allows new ccs to be created if they have a particular
 ; coin id as parent; or created by anyone if their value is 0.
 
+; The genesis_id is curried in, making this lineage_check program unique and giving the coloured coin it's unique colour
+
 (mod (
-      genesis_id
-      lineage_proof_parameters
+      GENESIS_ID
+      cc_mod_struct
       my_coin_info
       (parent_coin zero_parent_inner_puzzle_hash)
     )
@@ -22,12 +24,12 @@
     )
 
     (defun-inline main (
-      genesis_id
+      GENESIS_ID
       my_coin_info
     )
       (if (or
             (= (f (r (r my_coin_info))) 0)
-            (= (f my_coin_info) genesis_id)
+            (= (f my_coin_info) GENESIS_ID)
           )
         1
         (x)
@@ -36,7 +38,7 @@
     )
 
     (main
-      genesis_id
+      GENESIS_ID
       my_coin_info
     )
 )
