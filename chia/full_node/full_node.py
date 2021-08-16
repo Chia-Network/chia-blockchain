@@ -784,7 +784,8 @@ class FullNode:
         try:
             await asyncio.gather(fetch_task, validate_task)
         except Exception as e:
-            fetch_task.cancel()
+            assert validate_task.done()
+            fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
             self.log.error(f"sync from fork point failed err: {e}")
 
     async def send_peak_to_wallets(self):
