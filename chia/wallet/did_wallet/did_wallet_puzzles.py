@@ -10,10 +10,10 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.condition_opcodes import ConditionOpcode
 
 
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clsp")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clsp")
-SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clsp")
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer.clsp", package_or_requirement="chia.wallet.puzzles")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.wallet.puzzles")
+DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
+SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.wallet.puzzles")
 
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64) -> Program:

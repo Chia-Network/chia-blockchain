@@ -6,11 +6,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clsp")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp")
+SINGLETON_MOD = load_clvm("singleton_top_layer.clsp", package_or_requirement="chia.wallet.puzzles")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.wallet.puzzles")
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clsp", package_or_requirement="chia.wallet.puzzles")
+POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
