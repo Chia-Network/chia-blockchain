@@ -29,9 +29,9 @@ DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
 DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
 
-MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clsp")
 
-SYNTHETIC_MOD = load_clvm("calculate_synthetic_public_key.clvm")
+SYNTHETIC_MOD = load_clvm("calculate_synthetic_public_key.clsp")
 
 PublicKeyProgram = Union[bytes, Program]
 

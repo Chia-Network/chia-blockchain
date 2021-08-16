@@ -1,4 +1,4 @@
-; This is a "genesis checker" for use with cc.clvm.
+; This is a "genesis checker" for use with cc.clsp.
 ;
 ; This checker allows new ccs to be created if they have a particular
 ; coin id as parent; or created by anyone if their value is 0.

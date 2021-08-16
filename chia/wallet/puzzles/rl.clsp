@@ -10,7 +10,7 @@
     (defconstant AGGREGATE_MODE 2)
     (defconstant CLAWBACK_MODE 3)
 
-    (include condition_codes.clvm)
+    (include condition_codes.clib)
 
     (defun sha256tree (tree)
         (if (l tree)

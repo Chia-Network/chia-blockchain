@@ -4,7 +4,7 @@
 
 #BASE_DIR=`pwd | dirname`
 
-FILES=$(ls ./*.clvm)
+FILES=$(ls ./*.clsp)
 echo "$FILES"
 
 INCLUDE_DIR=$(pwd)

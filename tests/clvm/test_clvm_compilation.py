@@ -7,41 +7,46 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 
 wallet_program_files = set(
     [
-        "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cc.clvm",
-        "chia/wallet/puzzles/chialisp_deserialisation.clvm",
-        "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
-        "chia/wallet/puzzles/generator_for_single_coin.clvm",
-        "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
-        "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
-        "chia/wallet/puzzles/lock.inner.puzzle.clvm",
-        "chia/wallet/puzzles/p2_conditions.clvm",
-        "chia/wallet/puzzles/p2_delegated_conditions.clvm",
-        "chia/wallet/puzzles/p2_delegated_puzzle.clvm",
-        "chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm",
-        "chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm",
-        "chia/wallet/puzzles/p2_puzzle_hash.clvm",
-        "chia/wallet/puzzles/rl_aggregation.clvm",
-        "chia/wallet/puzzles/rl.clvm",
-        "chia/wallet/puzzles/sha256tree_module.clvm",
-        "chia/wallet/puzzles/singleton_top_layer.clvm",
-        "chia/wallet/puzzles/did_innerpuz.clvm",
-        "chia/wallet/puzzles/decompress_puzzle.clvm",
-        "chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm",
-        "chia/wallet/puzzles/decompress_coin_spend_entry.clvm",
-        "chia/wallet/puzzles/block_program_zero.clvm",
-        "chia/wallet/puzzles/test_generator_deserialize.clvm",
-        "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
-        "chia/wallet/puzzles/p2_singleton.clvm",
-        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
-        "chia/wallet/puzzles/pool_member_innerpuz.clvm",
-        "chia/wallet/puzzles/singleton_launcher.clvm",
-        "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
+        "chia/wallet/puzzles/calculate_synthetic_public_key.clsp",
+        "chia/wallet/puzzles/cc.clsp",
+        "chia/wallet/puzzles/chialisp_deserialisation.clsp",
+        "chia/wallet/puzzles/rom_bootstrap_generator.clsp",
+        "chia/wallet/puzzles/generator_for_single_coin.clsp",
+        "chia/wallet/puzzles/genesis-by-coin-id-with-0.clsp",
+        "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clsp",
+        "chia/wallet/puzzles/lock.inner.puzzle.clsp",
+        "chia/wallet/puzzles/p2_conditions.clsp",
+        "chia/wallet/puzzles/p2_delegated_conditions.clsp",
+        "chia/wallet/puzzles/p2_delegated_puzzle.clsp",
+        "chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clsp",
+        "chia/wallet/puzzles/p2_m_of_n_delegate_direct.clsp",
+        "chia/wallet/puzzles/p2_puzzle_hash.clsp",
+        "chia/wallet/puzzles/rl_aggregation.clsp",
+        "chia/wallet/puzzles/rl.clsp",
+        "chia/wallet/puzzles/sha256tree_module.clsp",
+        "chia/wallet/puzzles/singleton_top_layer.clsp",
+        "chia/wallet/puzzles/did_innerpuz.clsp",
+        "chia/wallet/puzzles/decompress_puzzle.clsp",
+        "chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clsp",
+        "chia/wallet/puzzles/decompress_coin_spend_entry.clsp",
+        "chia/wallet/puzzles/block_program_zero.clsp",
+        "chia/wallet/puzzles/test_generator_deserialize.clsp",
+        "chia/wallet/puzzles/test_multiple_generator_input_arguments.clsp",
+        "chia/wallet/puzzles/p2_singleton.clsp",
+        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clsp",
+        "chia/wallet/puzzles/pool_member_innerpuz.clsp",
+        "chia/wallet/puzzles/singleton_launcher.clsp",
+        "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clsp",
     ]
 )
 
 clvm_include_files = set(
-    ["chia/wallet/puzzles/create-lock-puzzlehash.clvm", "chia/wallet/puzzles/condition_codes.clvm"]
+    [
+        "chia/wallet/puzzles/create_lock_puzzlehash.clib",
+        "chia/wallet/puzzles/condition_codes.clib",
+        "chia/wallet/puzzles/curry_and_treehash.clib",
+        "chia/wallet/puzzles/singleton_truths.clib",
+    ]
 )
 
 CLVM_PROGRAM_ROOT = "chia/wallet/puzzles"
@@ -71,9 +76,9 @@ class TestClvmCompilation(TestCase):
 
     def test_all_programs_listed(self):
         """
-        Checks to see if a new .clvm file was added to chia/wallet/puzzles, but not added to `wallet_program_files`
+        Checks to see if a new .clsp file was added to chia/wallet/puzzles, but not added to `wallet_program_files`
         """
-        existing_files = list_files(CLVM_PROGRAM_ROOT, "*.clvm")
+        existing_files = list_files(CLVM_PROGRAM_ROOT, "*.cl[vsi][mpb]")
         existing_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in existing_files])
 
         expected_files = set(clvm_include_files).union(set(wallet_program_files))
@@ -90,11 +95,11 @@ class TestClvmCompilation(TestCase):
 
     # TODO: Test recompilation with all available compiler configurations & implementations
     def test_all_programs_are_compiled(self):
-        """Checks to see if a new .clvm file was added without its .hex file"""
+        """Checks to see if a new .clsp file was added without its .hex file"""
         all_compiled = True
         msg = "Please compile your program with:\n"
 
-        # Note that we cannot test all existing .clvm files - some are not
+        # Note that we cannot test all existing .clsp files - some are not
         # meant to be run as a "module" with load_clvm; some are include files
         # We test for inclusion in `test_all_programs_listed`
         for prog_path in wallet_program_files:

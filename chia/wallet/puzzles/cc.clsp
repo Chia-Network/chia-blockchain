@@ -108,7 +108,7 @@
 
      ;;;;; start library code
 
-     (include condition_codes.clvm)
+     (include condition_codes.clib)
 
      (defmacro assert items
          (if (r items)

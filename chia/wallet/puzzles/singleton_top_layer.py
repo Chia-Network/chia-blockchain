@@ -10,11 +10,11 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
-SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clsp")
+P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp")
+SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
