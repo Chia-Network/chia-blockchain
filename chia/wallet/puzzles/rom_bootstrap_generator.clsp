@@ -10,13 +10,7 @@
               1))
     )
 
-    (defun sha256tree
-           (TREE)
-           (if (l TREE)
-               (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-               (sha256 1 TREE)
-           )
-    )
+    (include sha256tree.clib)
 
     (defun process_coin_spend ((parent puzzle amount solution . spend_level_extras))
         (c parent (c (sha256tree puzzle) (c amount (c (a puzzle solution) spend_level_extras))))

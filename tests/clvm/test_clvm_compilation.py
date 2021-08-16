@@ -42,10 +42,11 @@ wallet_program_files = set(
 
 clvm_include_files = set(
     [
-        "chia/clvm/clibs/create_lock_puzzlehash.clib",
         "chia/clvm/clibs/condition_codes.clib",
         "chia/clvm/clibs/curry_and_treehash.clib",
         "chia/clvm/clibs/singleton_truths.clib",
+        "chia/clvm/clibs/sha256tree.clib",
+        "chia/clvm/clibs/utility_functions.clib",
     ]
 )
 

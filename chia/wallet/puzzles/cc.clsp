@@ -109,13 +109,8 @@
      ;;;;; start library code
 
      (include condition_codes.clib)
-
-     (defmacro assert items
-         (if (r items)
-             (list if (f items) (c assert (r items)) (q . (x)))
-             (f items)
-         )
-     )
+     (include sha256tree.clib)
+     (include utility_functions.clib) ; assert
 
      ;; utility function used by `curry_args`
      (defun fix_curry_args (items core)
@@ -162,12 +157,6 @@
         (TREE . LITERAL)
         (sha256tree_esc_list TREE LITERAL)
      )
-
-     ; takes a lisp tree and returns the hash of it
-     (defun sha256tree1 (TREE)
-           (if (l TREE)
-               (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-               (sha256 1 TREE)))
 
      ;;;;; end library code
 
@@ -218,8 +207,8 @@
 
      ;; calculate the hash of an announcement
      (defun-inline calculate-annoucement-id (this-coin-info this-subtotal next-coin-info)
-       ; NOTE: the next line containts a bug, as sha256tree1 ignores `this-subtotal`
-       (sha256 (coin-id-for-coin next-coin-info) (sha256tree1 (list this-coin-info this-subtotal)))
+       ; NOTE: the next line containts a bug, as sha256tree ignores `this-subtotal`
+       (sha256 (coin-id-for-coin next-coin-info) (sha256tree (list this-coin-info this-subtotal)))
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
@@ -235,7 +224,7 @@
      ;; here we commit to I_{k-1} and S_k
      (defun-inline create-announcement-condition (prev-coin-info prev-subtotal)
        (list CREATE_COIN_ANNOUNCEMENT
-             (sha256tree1 (list prev-coin-info prev-subtotal))
+             (sha256tree (list prev-coin-info prev-subtotal))
        )
       )
 
@@ -367,7 +356,7 @@
 
     (main
         ;; cache some stuff: output conditions, and lineage-proof-parameters
-        (list mod-hash (sha256tree1 mod-hash) genesis-coin-checker (sha256tree1 genesis-coin-checker))
+        (list mod-hash (sha256tree mod-hash) genesis-coin-checker (sha256tree genesis-coin-checker))
         (a inner-puzzle inner-puzzle-solution)
         prev-coin-bundle
         this-coin-bundle

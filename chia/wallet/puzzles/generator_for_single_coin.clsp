@@ -10,14 +10,10 @@
               1))
     )
 
-  ; takes a lisp tree and returns the hash of it
-  (defun sha256tree1 (TREE)
-      (if (l TREE)
-          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)))
+  (include sha256tree.clib)
 
   (defun check_coin_spend ((parent puzzle amount solution) coinname)
-      (= (sha256 parent (sha256tree1 puzzle) amount) coinname)
+      (= (sha256 parent (sha256tree puzzle) amount) coinname)
   )
 
   (defun check_for_coinname (coin_spends coinname)

@@ -25,14 +25,7 @@
   (include condition_codes.clib)
   (include curry_and_treehash.clib)
   (include singleton_truths.clib)
-
-  ; takes a lisp tree and returns the hash of it
-  (defun sha256tree1 (TREE)
-      (if (l TREE)
-          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)
-      )
-  )
+  (include sha256tree.clib)
 
   ; recovery message module - gets values curried in to make the puzzle
   (defun make_message_puzzle (recovering_coin newpuz pubkey)
@@ -41,7 +34,7 @@
 
   ; this function creates the assert announcement for each message coin approving a recovery
   (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
-    (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
+    (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
   )
 
   ; this function calculates a coin ID given the inner puzzle and singleton information
@@ -144,11 +137,11 @@
   (if mode
     (if (= mode 1)
       ; mode one - create messages and recreate singleton
-      (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message))) (create_messages message)))
+      (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree (list new_inner_puzhash new_amount message))) (create_messages message)))
     ; mode two - recovery
     ; check that recovery list is not empty
       (if recovery_list_reveal
-        (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
+        (if (= (sha256tree recovery_list_reveal) RECOVERY_DID_LIST_HASH)
           (check_messages_from_identities (singleton_struct_truth Truths) NUM_VERIFICATIONS_REQUIRED recovery_list_reveal (my_id_truth Truths) (list (create_new_coin new_amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
           (x)
         )
@@ -156,7 +149,7 @@
       )
     )
     ; mode zero - exit spend
-    (list (list CREATE_COIN 0x00 -113) (list CREATE_COIN message new_amount) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_amount message))))
+    (list (list CREATE_COIN 0x00 -113) (list CREATE_COIN message new_amount) (list AGG_SIG_ME MY_PUBKEY (sha256tree (list new_amount message))))
   )
 
 )
