@@ -95,6 +95,7 @@ if [ ! "$CI" ]; then
 	npm install
 	npm audit fix || true
 	npm run build
+	python ../installhelper.py
 else
 	echo "Skipping node.js in install.sh on MacOS ci."
 fi
