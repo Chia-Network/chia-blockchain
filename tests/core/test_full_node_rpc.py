@@ -119,6 +119,12 @@ class TestRpc:
             print(coins)
             assert len(coins) == 2
 
+            name = list(blocks[-1].get_included_reward_coins())[0].name()
+            name_2 = list(blocks[-1].get_included_reward_coins())[1].name()
+            coins = await client.get_coin_records_by_names([name, name_2])
+            print(coins)
+            assert len(coins) == 2
+
             additions, removals = await client.get_additions_and_removals(blocks[-1].header_hash)
             assert len(additions) >= 2 and len(removals) == 0
 
