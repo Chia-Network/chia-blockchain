@@ -42,7 +42,9 @@ log = logging.getLogger(__name__)
 def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int) -> bytes:
     program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True))
+    return bytes(
+        get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True, rust_checker=True)
+    )
 
 
 class MempoolManager:

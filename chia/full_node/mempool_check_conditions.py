@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Tuple, Dict, List, Optional, Set
 from clvm import SExp
+from clvm_rs import STRICT_MODE
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.condition_costs import ConditionCost
@@ -298,7 +299,7 @@ def parse_condition(cond: SExp, safe_mode: bool) -> Tuple[int, Optional[Conditio
     return cost, cvl
 
 
-def get_name_puzzle_conditions(
+def get_name_puzzle_conditions_python(
     generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool
 ) -> NPCResult:
     """
@@ -312,54 +313,102 @@ def get_name_puzzle_conditions(
     are considered failures. This is the mode when accepting transactions into
     the mempool.
     """
-    try:
-        block_program, block_program_args = setup_generator_args(generator)
-        max_cost -= len(bytes(generator.program)) * cost_per_byte
-        if max_cost < 0:
-            return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
-        if safe_mode:
-            clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(max_cost, block_program, block_program_args)
-        else:
-            clvm_cost, result = GENERATOR_MOD.run_with_cost(max_cost, block_program, block_program_args)
+    block_program, block_program_args = setup_generator_args(generator)
+    max_cost -= len(bytes(generator.program)) * cost_per_byte
+    if max_cost < 0:
+        return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
+    if safe_mode:
+        clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(max_cost, block_program, block_program_args)
+    else:
+        clvm_cost, result = GENERATOR_MOD.run_with_cost(max_cost, block_program, block_program_args)
 
-        max_cost -= clvm_cost
-        if max_cost < 0:
-            return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
-        npc_list: List[NPC] = []
+    max_cost -= clvm_cost
+    if max_cost < 0:
+        return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
+    npc_list: List[NPC] = []
 
-        for res in result.first().as_iter():
-            conditions_list: List[ConditionWithArgs] = []
+    for res in result.first().as_iter():
+        conditions_list: List[ConditionWithArgs] = []
 
-            if len(res.first().atom) != 32:
-                raise ValidationError(Err.INVALID_CONDITION)
-            spent_coin_parent_id: bytes32 = res.first().as_atom()
-            res = res.rest()
-            if len(res.first().atom) != 32:
-                raise ValidationError(Err.INVALID_CONDITION)
-            spent_coin_puzzle_hash: bytes32 = res.first().as_atom()
-            res = res.rest()
-            spent_coin_amount: uint64 = uint64(sanitize_int(res.first(), safe_mode))
-            res = res.rest()
-            spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
+        if len(res.first().atom) != 32:
+            raise ValidationError(Err.INVALID_CONDITION)
+        spent_coin_parent_id: bytes32 = res.first().as_atom()
+        res = res.rest()
+        if len(res.first().atom) != 32:
+            raise ValidationError(Err.INVALID_CONDITION)
+        spent_coin_puzzle_hash: bytes32 = res.first().as_atom()
+        res = res.rest()
+        spent_coin_amount: uint64 = uint64(sanitize_int(res.first(), safe_mode))
+        res = res.rest()
+        spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
 
-            for cond in res.first().as_iter():
-                cost, cvl = parse_condition(cond, safe_mode)
-                max_cost -= cost
-                if max_cost < 0:
-                    return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
-                if cvl is not None:
-                    conditions_list.append(cvl)
+        for cond in res.first().as_iter():
+            cost, cvl = parse_condition(cond, safe_mode)
+            max_cost -= cost
+            if max_cost < 0:
+                return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
+            if cvl is not None:
+                conditions_list.append(cvl)
 
-            conditions_dict = conditions_by_opcode(conditions_list)
-            if conditions_dict is None:
-                conditions_dict = {}
-            npc_list.append(
-                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()])
-            )
+        conditions_dict = conditions_by_opcode(conditions_list)
+        if conditions_dict is None:
+            conditions_dict = {}
+        npc_list.append(NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()]))
+    return NPCResult(None, npc_list, uint64(clvm_cost))
+
+
+def get_name_puzzle_conditions_rust(
+    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool
+) -> NPCResult:
+    block_program, block_program_args = setup_generator_args(generator)
+    max_cost -= len(bytes(generator.program)) * cost_per_byte
+    if max_cost < 0:
+        return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), [], uint64(0))
+
+    flags = STRICT_MODE if safe_mode else 0
+    err, result, clvm_cost = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
+    if err is not None:
+        return NPCResult(uint16(err), [], uint64(0))
+    else:
+        npc_list = []
+        for r in result:
+            conditions = []
+            for c in r.conditions:
+                cwa = []
+                for cond_list in c[1]:
+                    cwa.append(ConditionWithArgs(ConditionOpcode(bytes([cond_list.opcode])), cond_list.vars))
+                conditions.append((ConditionOpcode(bytes([c[0]])), cwa))
+            npc_list.append(NPC(r.coin_name, r.puzzle_hash, conditions))
         return NPCResult(None, npc_list, uint64(clvm_cost))
+
+
+def get_name_puzzle_conditions(
+    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, safe_mode: bool, rust_checker: bool
+) -> NPCResult:
+    """
+    This executes the generator program and returns the coins and their
+    conditions. If the cost of the program (size, CLVM execution and conditions)
+    exceed max_cost, the function fails. In order to accurately take the size
+    of the program into account when calculating cost, cost_per_byte must be
+    specified.
+    safe_mode determines whether the clvm program and conditions are executed in
+    strict mode or not. When in safe/strict mode, unknow operations or conditions
+    are considered failures. This is the mode when accepting transactions into
+    the mempool.
+    """
+    try:
+        if rust_checker:
+            return get_name_puzzle_conditions_rust(
+                generator, max_cost, cost_per_byte=cost_per_byte, safe_mode=safe_mode
+            )
+        else:
+            return get_name_puzzle_conditions_python(
+                generator, max_cost, cost_per_byte=cost_per_byte, safe_mode=safe_mode
+            )
     except ValidationError as e:
         return NPCResult(uint16(e.code.value), [], uint64(0))
-    except Exception:
+    except Exception as e:
+        log.debug(f"get_name_puzzle_condition failed: {e}")
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
 
 
