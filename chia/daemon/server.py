@@ -382,6 +382,13 @@ class WebSocketServer:
 
     async def migrate_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if Keychain.needs_migration() is False:
+            # If the keyring has already been migrated, we'll raise an error to the client.
+            # The reason for raising an error is because the migration request has side-
+            # effects beyond copying keys from the legacy keyring to the new keyring. The
+            # request may have set a passphrase and indicated that keys should be cleaned
+            # from the legacy keyring. If we were to return early and indicate success,
+            # the client and user's expectations may not match reality (were my keys
+            # deleted from the legacy keyring? was my passphrase set?).
             return {"success": False, "error": "migration not needed"}
 
         success: bool = False
