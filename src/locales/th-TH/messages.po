@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-07-27 12:39\n"
+"PO-Revision-Date: 2021-08-17 18:17\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -29,6 +29,10 @@ msgstr "*อยากสำรวจบล็อกของ Chia มากก�
 #: src/components/plot/add/PlotAddNFT.tsx:123
 msgid "+ Add New Plot NFT"
 msgstr "+ เพิ่มพล็อต NFT"
+
+#: src/components/wallet/Wallets.tsx:122
+msgid "+ Add Wallet"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -144,7 +148,7 @@ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "พล็อตที่ถูกลบจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่ว่าต้องการลบพล็อตนี้?"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:125
-#: src/components/wallet/standard/WalletStandard.tsx:632
+#: src/components/wallet/standard/WalletStandard.tsx:633
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr "คุณแน่ใจหรือไม่ว่าต้องการลบธุรกรรมที่ไม่ได้รับการยืนยัน?"
 
@@ -317,7 +321,7 @@ msgstr "Chia"
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/standard/WalletStandard.tsx:647
+#: src/components/wallet/standard/WalletStandard.tsx:649
 msgid "Chia Wallet"
 msgstr "Chia Wallet"
 
@@ -383,7 +387,7 @@ msgid "Confirm Disconnect"
 msgstr "ยืนยันการตัดการเชื่อมต่อ"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:121
-#: src/components/wallet/standard/WalletStandard.tsx:628
+#: src/components/wallet/standard/WalletStandard.tsx:629
 msgid "Confirmation"
 msgstr "การยืนยัน"
 
@@ -596,7 +600,7 @@ msgstr "หน่วงเวลา"
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/selectKey/SelectKey.tsx:67
 #: src/components/selectKey/SelectKey.tsx:109
-#: src/components/wallet/standard/WalletStandard.tsx:629
+#: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Delete"
 msgstr "ลบ"
 
@@ -606,7 +610,7 @@ msgid "Delete Plot"
 msgstr "ลบพล็อต"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:315
-#: src/components/wallet/standard/WalletStandard.tsx:663
+#: src/components/wallet/standard/WalletStandard.tsx:674
 msgid "Delete Unconfirmed Transactions"
 msgstr "ลบธุรกรรมที่ไม่ได้รับการยืนยัน"
 
@@ -1084,7 +1088,7 @@ msgstr "List view"
 msgid "Loading Plot NFTs"
 msgstr "กำลังโหลดพล็อต NFT"
 
-#: src/components/wallet/Wallets.tsx:172
+#: src/components/wallet/Wallets.tsx:111
 msgid "Loading list of wallets"
 msgstr "กำลังโหลดรายการกระเป๋าเงิน"
 
@@ -1945,7 +1949,7 @@ msgstr "สถานะ"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:118
+#: src/components/wallet/Wallets.tsx:52
 msgid "Status"
 msgstr "สถานะ"
 
@@ -2377,7 +2381,7 @@ msgid "Waiting for the transaction to be confirmed"
 msgstr "กำลังรอยืนยันธุรกรรม"
 
 #: src/components/pool/PoolOverview.tsx:185
-#: src/components/wallet/standard/WalletStandard.tsx:674
+#: src/components/wallet/standard/WalletStandard.tsx:656
 msgid "Wallet Status:"
 msgstr "สถานะกระเป๋าเงิน"
 
@@ -2410,7 +2414,7 @@ msgstr "สถานะกระเป๋าเงิน"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:173
+#: src/components/wallet/Wallets.tsx:112
 msgid "Wallets"
 msgstr "วอลเล็ต"
 
@@ -2562,16 +2566,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr "[Error 22] ไม่พบไฟล์ อาจเป็นไปได้ว่า Plot Folder ที่ระบุไว้ใน config.yaml มีปัญหา"
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:143
+#: src/components/wallet/Wallets.tsx:77
 msgid "connections:"
 msgstr "การเชื่อมต่อ:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:135
+#: src/components/wallet/Wallets.tsx:69
 msgid "height:"
 msgstr "ความสูง:"
 
-#: src/components/wallet/Wallets.tsx:129
+#: src/components/wallet/Wallets.tsx:63
 msgid "not synced"
 msgstr "ไม่ได้ซิงค์"
 
@@ -2580,17 +2584,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr "p2_singleton_puzzle_hash ไม่ได้กำหนดไว้"
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:123
+#: src/components/wallet/Wallets.tsx:57
 msgid "status:"
 msgstr "สถานะ:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:128
+#: src/components/wallet/Wallets.tsx:62
 msgid "synced"
 msgstr "ซิงค์แล้ว"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:127
+#: src/components/wallet/Wallets.tsx:61
 msgid "syncing"
 msgstr "กำลังซิงค์"
 
