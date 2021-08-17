@@ -557,10 +557,17 @@ class FullNode:
         self._shut_down = True
         if self._init_weight_proof is not None:
             self._init_weight_proof.cancel()
-        if self.blockchain is not None:
+        # blockchain is created in _start and in certain cases it may not exist here during _close
+        try:
             self.blockchain.shut_down()
-        if self.mempool_manager is not None:
+        except AttributeError:
+            pass
+        # same for mempool_manager
+        try:
             self.mempool_manager.shut_down()
+        except AttributeError:
+            pass
+
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
