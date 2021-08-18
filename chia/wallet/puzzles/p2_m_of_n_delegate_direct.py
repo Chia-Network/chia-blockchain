@@ -7,7 +7,7 @@ it includes N public keys, any M of which needs to sign the delegated puzzle.
 
 from chia.types.blockchain_format.program import Program
 
-from .load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 MOD = load_clvm("p2_m_of_n_delegate_direct.clsp")
 

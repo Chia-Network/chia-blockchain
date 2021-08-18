@@ -51,7 +51,7 @@ from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
 )
-from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
+from chia.clvm.singletons.singleton_drivers import SINGLETON_MOD
 
 singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 

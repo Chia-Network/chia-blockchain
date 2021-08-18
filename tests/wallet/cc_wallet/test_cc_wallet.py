@@ -10,9 +10,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.cc_wallet.cc_utils import cc_puzzle_hash_for_inner_puzzle_hash
+from chia.wallet.cc_wallet.cc_utils import CC_MOD, cc_puzzle_hash_for_inner_puzzle_hash
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from tests.setup_nodes import setup_simulators_and_wallets

@@ -12,7 +12,7 @@ the doctor ordered.
 
 from chia.types.blockchain_format.program import Program
 
-from .load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 MOD = load_clvm("p2_conditions.clsp")
 

@@ -9,9 +9,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.ints import uint64
-from chia.wallet.puzzles.cc_loader import CC_MOD, LOCK_INNER_PUZZLE
-from chia.wallet.puzzles.genesis_by_coin_id_with_0 import (
+from chia.clvm.load_clvm import load_clvm
+from chia.wallet.cc_wallet.puzzles.genesis_by_coin_id_with_0 import (
     genesis_coin_id_for_genesis_coin_checker,
     lineage_proof_for_coin,
     lineage_proof_for_genesis,
@@ -22,6 +21,7 @@ NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
+CC_MOD = load_clvm("cc.clsp", package_or_requirement="chia.wallet.cc_wallet.puzzles")
 # information needed to spend a cc
 # if we ever support more genesis conditions, like a re-issuable coin,
 # we may need also to save the `genesis_coin_mod` or its hash
@@ -79,17 +79,6 @@ def subtotals_for_deltas(deltas) -> List[int]:
     subtotal_offset = min(subtotals)
     subtotals = [_ - subtotal_offset for _ in subtotals]
     return subtotals
-
-
-def coin_spend_for_lock_coin(
-    prev_coin: Coin,
-    subtotal: int,
-    coin: Coin,
-) -> CoinSpend:
-    puzzle_reveal = LOCK_INNER_PUZZLE.curry(prev_coin.as_list(), subtotal)
-    coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
-    coin_spend = CoinSpend(coin, puzzle_reveal, Program.to(0))
-    return coin_spend
 
 
 def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:

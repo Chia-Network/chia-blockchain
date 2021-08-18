@@ -5,38 +5,45 @@ from clvm_tools.clvmc import compile_clvm
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 
-wallet_program_files = set(
+all_program_files = set(
     [
+        # Standard wallet
         "chia/wallet/puzzles/calculate_synthetic_public_key.clsp",
-        "chia/wallet/puzzles/cc.clsp",
-        "chia/wallet/puzzles/chialisp_deserialisation.clsp",
-        "chia/wallet/puzzles/rom_bootstrap_generator.clsp",
-        "chia/wallet/puzzles/generator_for_single_coin.clsp",
-        "chia/wallet/puzzles/genesis_by_coin_id_with_0.clsp",
-        "chia/wallet/puzzles/genesis_by_puzzle_hash_with_0.clsp",
-        "chia/wallet/puzzles/lock.inner.puzzle.clsp",
         "chia/wallet/puzzles/p2_conditions.clsp",
         "chia/wallet/puzzles/p2_delegated_conditions.clsp",
         "chia/wallet/puzzles/p2_delegated_puzzle.clsp",
         "chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clsp",
         "chia/wallet/puzzles/p2_m_of_n_delegate_direct.clsp",
         "chia/wallet/puzzles/p2_puzzle_hash.clsp",
-        "chia/wallet/puzzles/rl_aggregation.clsp",
-        "chia/wallet/puzzles/rl.clsp",
-        "chia/wallet/puzzles/sha256tree_module.clsp",
-        "chia/wallet/puzzles/singleton_top_layer.clsp",
-        "chia/wallet/puzzles/did_innerpuz.clsp",
-        "chia/wallet/puzzles/decompress_puzzle.clsp",
-        "chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clsp",
-        "chia/wallet/puzzles/decompress_coin_spend_entry.clsp",
-        "chia/wallet/puzzles/block_program_zero.clsp",
-        "chia/wallet/puzzles/test_generator_deserialize.clsp",
-        "chia/wallet/puzzles/test_multiple_generator_input_arguments.clsp",
-        "chia/wallet/puzzles/p2_singleton.clsp",
-        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clsp",
-        "chia/wallet/puzzles/pool_member_innerpuz.clsp",
-        "chia/wallet/puzzles/singleton_launcher.clsp",
-        "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clsp",
+        # Generators
+        "chia/full_node/generator_puzzles/chialisp_deserialisation.clsp",
+        "chia/full_node/generator_puzzles/rom_bootstrap_generator.clsp",
+        "chia/full_node/generator_puzzles/generator_for_single_coin.clsp",
+        "chia/full_node/generator_puzzles/decompress_puzzle.clsp",
+        "chia/full_node/generator_puzzles/decompress_coin_spend_entry_with_prefix.clsp",
+        "chia/full_node/generator_puzzles/decompress_coin_spend_entry.clsp",
+        "chia/full_node/generator_puzzles/block_program_zero.clsp",
+        # Coloured Coins
+        "chia/wallet/cc_wallet/puzzles/cc.clsp",
+        "chia/wallet/cc_wallet/puzzles/genesis_by_coin_id_with_0.clsp",
+        "chia/wallet/cc_wallet/puzzles/genesis_by_puzzle_hash_with_0.clsp",
+        # DIDs
+        "chia/wallet/did_wallet/puzzles/did_innerpuz.clsp",
+        # Rate limited wallet
+        "chia/wallet/rl_wallet/puzzles/rl_aggregation.clsp",
+        "chia/wallet/rl_wallet/puzzles/rl.clsp",
+        # Singletons
+        "chia/clvm/singletons/puzzles/singleton_launcher.clsp",
+        "chia/clvm/singletons/puzzles/singleton_top_layer.clsp",
+        "chia/clvm/singletons/puzzles/p2_singleton.clsp",
+        "chia/clvm/singletons/puzzles/p2_singleton_or_delayed_puzhash.clsp",
+        # Pools
+        "chia/pools/puzzles/pool_waitingroom_innerpuz.clsp",
+        "chia/pools/puzzles/pool_member_innerpuz.clsp",
+        # Tests
+        "tests/clvm/puzzles/sha256tree_module.clsp",
+        "tests/generator/puzzles/test_generator_deserialize.clsp",
+        "tests/generator/puzzles/test_multiple_generator_input_arguments.clsp",
     ]
 )
 
@@ -49,8 +56,6 @@ clvm_include_files = set(
         "chia/clvm/clibs/utility_functions.clib",
     ]
 )
-
-CLVM_PROGRAM_ROOT = "chia"
 
 
 def list_files(dir, glob):
@@ -77,22 +82,23 @@ class TestClvmCompilation(TestCase):
 
     def test_all_programs_listed(self):
         """
-        Checks to see if a new chialisp file was added to chia/, but not added to `wallet_program_files`
+        Checks to see if a new chialisp file was added to chia/, but not added to `all_program_files`
         """
-        existing_files = list_files(CLVM_PROGRAM_ROOT, "*.cl[vsi][mpb]")
-        existing_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in existing_files])
+        CLVM_FILE_PATTERN = "*.cl[vsi][mpb]"
+        existing_files = list_files("chia", CLVM_FILE_PATTERN) + list_files("tests", CLVM_FILE_PATTERN)
+        existing_file_paths = set([Path(x) for x in existing_files])
 
-        expected_files = set(clvm_include_files).union(set(wallet_program_files))
-        expected_file_paths = set([Path(x).relative_to(CLVM_PROGRAM_ROOT) for x in expected_files])
+        expected_files = set(clvm_include_files).union(set(all_program_files))
+        expected_file_paths = set([Path(x) for x in expected_files])
 
         self.assertEqual(
             expected_file_paths,
             existing_file_paths,
-            msg="Please add your new program to `wallet_program_files` or `clvm_include_files.values`",
+            msg="Please add your new program to `all_program_files` or `clvm_include_files.values`",
         )
 
     def test_include_and_source_files_separate(self):
-        self.assertEqual(clvm_include_files.intersection(wallet_program_files), set())
+        self.assertEqual(clvm_include_files.intersection(all_program_files), set())
 
     # TODO: Test recompilation with all available compiler configurations & implementations
     def test_all_programs_are_compiled(self):
@@ -103,7 +109,7 @@ class TestClvmCompilation(TestCase):
         # Note that we cannot test all existing chialisp files - some are not
         # meant to be run as a "module" with load_clvm; some are include files
         # We test for inclusion in `test_all_programs_listed`
-        for prog_path in wallet_program_files:
+        for prog_path in all_program_files:
             try:
                 output_path = path_with_ext(prog_path, ".hex")
                 hex = output_path.read_text()
@@ -122,7 +128,7 @@ class TestClvmCompilation(TestCase):
             search_dir = Path(path).parent
             if search_dir not in unique_search_paths:
                 unique_search_paths.append(search_dir)
-        for f in wallet_program_files:
+        for f in all_program_files:
             f = Path(f)
             compile_clvm(f, path_with_ext(f, ".recompiled"), search_paths=[f.parent, *unique_search_paths])
             orig_hex = path_with_ext(f, ".hex").read_text().strip()
@@ -134,7 +140,7 @@ class TestClvmCompilation(TestCase):
         """Checks to see if a .hex file is missing its .sha256tree file"""
         all_hashed = True
         msg = "Please hash your program with:\n"
-        for prog_path in wallet_program_files:
+        for prog_path in all_program_files:
             try:
                 hex = path_with_ext(prog_path, ".hex.sha256tree").read_text()
                 self.assertTrue(len(hex) > 0)
@@ -148,7 +154,7 @@ class TestClvmCompilation(TestCase):
     # TODO: Test all available shatree implementations on all progams
     def test_shatrees_match(self):
         """Checks to see that all .sha256tree files match their .hex files"""
-        for prog_path in wallet_program_files:
+        for prog_path in all_program_files:
             # load the .hex file as a program
             hex_filename = path_with_ext(prog_path, ".hex")
             clvm_hex = hex_filename.read_text()  # .decode("utf8")

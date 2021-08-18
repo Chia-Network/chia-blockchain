@@ -22,7 +22,7 @@ from clvm.casts import int_from_bytes
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
-from .load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 from .p2_conditions import puzzle_for_conditions
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
