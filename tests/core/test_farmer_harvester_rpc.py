@@ -174,7 +174,7 @@ class TestRpc:
                     return False
                 return True
 
-            await time_out_assert(5, test_get_harvesters)
+            await time_out_assert(30, test_get_harvesters)
 
             expected_result: PlotRefreshResult = PlotRefreshResult()
 
