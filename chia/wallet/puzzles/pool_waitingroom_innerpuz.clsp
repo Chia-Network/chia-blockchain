@@ -1,13 +1,15 @@
-(mod (POOL_PUZZLE_HASH
-      P2_SINGLETON_PUZZLE_HASH
-      OWNER_PUBKEY
-      POOL_REWARD_PREFIX
-      RELATIVE_LOCK_HEIGHT
-      Truths
-      spend_type
-      p1
-      p2
-      )
+(mod
+  (
+    POOL_PUZZLE_HASH
+    P2_SINGLETON_PUZZLE_HASH
+    OWNER_PUBKEY
+    POOL_REWARD_PREFIX
+    RELATIVE_LOCK_HEIGHT
+    Truths
+    spend_type
+    p1
+    p2
+  )
 
   ; POOL_PUZZLE_HASH is commitment to the pool's puzzle hash
   ; P2_SINGLETON_PUZZLE_HASH is the puzzlehash for your pay_to_singleton puzzle
@@ -48,15 +50,13 @@
   )
 
   ; main
-
   (if spend_type
-    (travel_spend RELATIVE_LOCK_HEIGHT p2 (my_amount_truth Truths) p1)
-    (absorb_pool_reward POOL_PUZZLE_HASH
-                        (my_inner_puzzle_hash_truth Truths)
-                        (my_amount_truth Truths)
-                        p1
-                        (calculate_pool_reward p2 P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
-    )
+      (travel_spend RELATIVE_LOCK_HEIGHT p2 (my_amount_truth Truths) p1)
+      (absorb_pool_reward POOL_PUZZLE_HASH
+                          (my_inner_puzzle_hash_truth Truths)
+                          (my_amount_truth Truths)
+                          p1
+                          (calculate_pool_reward p2 P2_SINGLETON_PUZZLE_HASH POOL_REWARD_PREFIX p1)
+      )
   )
-
 )

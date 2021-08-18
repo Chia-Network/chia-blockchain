@@ -1,0 +1,28 @@
+; This is a "genesis checker" for use with cc.clsp.
+;
+; This checker allows new ccs to be created if they have a particular
+; coin id as parent; or created by anyone if their value is 0.
+
+(mod
+  (
+    GENESIS_ID
+    lineage_proof_parameters
+    my_coin_info
+    (parent_coin zero_parent_inner_puzzle_hash)
+  )
+
+  (include utility_functions.clib) ; or
+
+  (defun-inline main (GENESIS_ID my_coin_info)
+    (or
+      (= (f (r (r my_coin_info))) 0)
+      (= (f my_coin_info) GENESIS_ID)
+    )
+  )
+
+  ; main
+  (main
+    GENESIS_ID
+    my_coin_info
+  )
+)

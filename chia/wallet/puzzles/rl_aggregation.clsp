@@ -1,20 +1,24 @@
-(mod (wallet_puzzle
-      my-id
-      wallet-coin-primary-input
-      wallet-coin-amount)
+(mod
+  (
+    WALLET_PUZZLE
+    my-id
+    wallet-coin-primary-input
+    wallet-coin-amount
+  )
 
-    (include condition_codes.clib)
-    (include sha256tree.clib)
+  (include condition_codes.clib)
+  (include sha256tree.clib)
 
-    (defun-inline create-my-id-condition ()
-        (list ASSERT_MY_COIN_ID my-id))
+  (defun-inline create-my-id-condition ()
+      (list ASSERT_MY_COIN_ID my-id))
 
-    (defun-inline parent-coin-id ()
-        (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
+  (defun-inline parent-coin-id ()
+      (sha256 wallet-coin-primary-input WALLET_PUZZLE wallet-coin-amount))
 
-    (defun-inline input-of-lock ()
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 (parent-coin-id) my-id)))
+  (defun-inline input-of-lock ()
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 (parent-coin-id) my-id)))
 
-    (list (create-my-id-condition)
-          (input-of-lock))
+  ; main
+  (list (create-my-id-condition)
+        (input-of-lock))
 )
