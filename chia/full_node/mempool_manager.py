@@ -480,7 +480,6 @@ class MempoolManager:
         return None
 
     async def new_peak(self, new_peak: Optional[BlockRecord]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
-        #        breakpoint()
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
