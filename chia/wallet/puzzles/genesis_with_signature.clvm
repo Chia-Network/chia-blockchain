@@ -1,0 +1,18 @@
+; This is a "genesis checker" for use with cc.clvm.
+;
+; This checker allows new ccs to be created if they have a particular
+; coin id as parent; or created by anyone if their value is 0.
+
+; The pubkey is curried in, making this lineage_check program unique and giving the coloured coin it's unique colour
+
+(mod (
+      PUBKEY
+      cc_mod_struct
+      my_coin_info
+      opaque_proof
+    )
+    (include condition_codes.clvm)
+
+    ; main
+    (list (list AGG_SIG_ME PUBKEY opaque_proof))
+)
