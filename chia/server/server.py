@@ -548,11 +548,6 @@ class ChiaServer:
 
                     async def wrapped_coroutine() -> Optional[Message]:
                         try:
-                            if full_message.data == b"":
-                                connection.log.debug(
-                                    f"peer {connection.get_peer_info()} returned None response {full_message.type}"
-                                )
-                                return None
                             result = await coroutine
                             return result
                         except asyncio.CancelledError:
