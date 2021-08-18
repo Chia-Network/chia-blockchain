@@ -401,7 +401,7 @@ class WalletNode:
                         connection.get_peer_info() != full_node_peer
                         and connection.get_peer_info() != full_node_resolved
                     ):
-                        self.log.info(f"Closing unnecessary connection to {connection.get_peer_info()}.")
+                        self.log.info(f"Closing unnecessary connection to {connection.get_peer_logging()}.")
                         asyncio.create_task(connection.close())
                 return True
         return False
@@ -450,7 +450,7 @@ class WalletNode:
                     self.wallet_state_manager.state_changed("sync_changed")
                     await self.wallet_state_manager.new_peak()
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
-                    self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
+                    self.log.info(f"Invalid block from peer: {peer.get_peer_logging()} {error}")
                     await peer.close()
                     return
                 else:
