@@ -1,97 +1,109 @@
-(mod (pubkey
-      rate_amount
-      interval_time
-      origin_id
-      clawback_pubkey
-      mode
-      . args)
+(mod
+  (
+    PUBKEY
+    RATE_AMOUNT
+    INTERVAL_TIME
+    ORIGIN_ID
+    CLAWBACK_PUBKEY
+    mode
+    . args
+  )
 
-    (defconstant RATE_LIMITED_MODE 1)
-    (defconstant AGGREGATE_MODE 2)
-    (defconstant CLAWBACK_MODE 3)
+  (defconstant RATE_LIMITED_MODE 1)
+  (defconstant AGGREGATE_MODE 2)
+  (defconstant CLAWBACK_MODE 3)
 
-    (include condition_codes.clib)
-    (include sha256tree.clib)
-    (include utility_functions.clib) ; or
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+  (include utility_functions.clib) ; or
 
-    (defun-inline aggsig-solution-with-key (key)
-        (list AGG_SIG_UNSAFE key (sha256tree (c mode args)))
+  (defun-inline aggsig_solution_with_key (key)
+      (list AGG_SIG_UNSAFE key (sha256tree (c mode args)))
+  )
+
+  (defmacro assert_old items ; TODO: This should use the import from utility_functions.clib instead
+      (if (r items)
+          (list if (f items) (c assert_old (r items)) (q (x)))
+          (f items)
+      )
+  )
+
+  (defun create_lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
+      (list CREATE_COIN_ANNOUNCEMENT
+            (sha256 consolidating_primary_input
+                    consolidating_coin_puzzle_hash
+                    outgoing_amount)))
+
+  (defun aggregation
+    (
+      ORIGIN_ID
+      (
+        my_puzzle_hash
+        consolidating_primary_input
+        consolidating_coin_puzzle_hash
+        outgoing_amount
+        primary_input
+        incoming_amount
+        parent_amount
+        my_parent_parent_id
+      )
     )
+    (assert_old (or (= (sha256 my_parent_parent_id my_puzzle_hash parent_amount)
+                   primary_input)
+                (= ORIGIN_ID primary_input))
+            (list (generate_assert_id_condition primary_input my_puzzle_hash incoming_amount)
+                  (create_lock consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
+                  (create_new_coin my_puzzle_hash (+ outgoing_amount incoming_amount)))))
 
-    (defmacro assert_old items ; TODO: This should use the import from utility_functions.clib instead
-        (if (r items)
-            (list if (f items) (c assert_old (r items)) (q (x)))
-            (f items)
-        )
+  (defun >= (a b)
+      (or (> a b)
+          (= a b)))
+
+  (defun generate_block_age_condition (min_block_time outgoing_amount RATE_AMOUNT INTERVAL_TIME)
+      (assert_old (>= (* min_block_time RATE_AMOUNT)
+                  (* outgoing_amount INTERVAL_TIME))
+          (list ASSERT_HEIGHT_RELATIVE min_block_time)))
+
+  (defun create_change (my_puzzlehash my_amount outgoing_amount fee)
+      (list CREATE_COIN my_puzzlehash (- my_amount (+ outgoing_amount fee))))
+
+  (defun generate_assert_id_condition (my_parent_id my_puzzlehash my_amount)
+      (list ASSERT_MY_COIN_ID (sha256 my_parent_id my_puzzlehash my_amount)))
+
+  (defun create_new_coin (outgoing_puzzle_hash outgoing_amount)
+      (list CREATE_COIN outgoing_puzzle_hash outgoing_amount))
+
+  (defun rate_limited_puzzle
+    (
+      RATE_AMOUNT
+      INTERVAL_TIME
+      ORIGIN_ID
+      (
+        my_parent_id
+        my_puzzlehash
+        my_amount
+        outgoing_puzzle_hash
+        outgoing_amount
+        min_block_time
+        parent_parent_id
+        parent_amount
+        fee
+      )
     )
+    (assert_old (or (= (sha256 parent_parent_id my_puzzlehash parent_amount)
+                   my_parent_id)
+                (= ORIGIN_ID my_parent_id))
+            (list (generate_block_age_condition min_block_time outgoing_amount RATE_AMOUNT INTERVAL_TIME)
+                  (create_change my_puzzlehash my_amount outgoing_amount fee)
+                  (generate_assert_id_condition my_parent_id my_puzzlehash my_amount)
+                  (create_new_coin outgoing_puzzle_hash outgoing_amount))))
 
-    (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
-        (list CREATE_COIN_ANNOUNCEMENT
-              (sha256 consolidating_primary_input
-                      consolidating_coin_puzzle_hash
-                      outgoing_amount))
-              )
-
-    (defun aggregation (origin_id
-                        (my_puzzle_hash
-                        consolidating_primary_input
-                        consolidating_coin_puzzle_hash
-                        outgoing_amount
-                        primary_input
-                        incoming_amount
-                        parent_amount
-                        my_parent_parent_id))
-        (assert_old (or (= (sha256 my_parent_parent_id my_puzzle_hash parent_amount)
-                       primary_input)
-                    (= origin_id primary_input))
-                (list (generate-assert-id-condition primary_input my_puzzle_hash incoming_amount)
-                      (create-lock consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
-                      (create-new-coin my_puzzle_hash (+ outgoing_amount incoming_amount)))))
-
-    (defun >= (a b)
-        (or (> a b)
-            (= a b)))
-
-    (defun generate-block-age-condition (min_block_time outgoing_amount rate_amount interval_time)
-        (assert_old (>= (* min_block_time rate_amount)
-                    (* outgoing_amount interval_time))
-            (list ASSERT_HEIGHT_RELATIVE min_block_time)))
-
-    (defun create-change (my_puzzlehash my_amount outgoing_amount fee)
-        (list CREATE_COIN my_puzzlehash (- my_amount (+ outgoing_amount fee))))
-
-    (defun generate-assert-id-condition (my_parent_id my_puzzlehash my_amount)
-        (list ASSERT_MY_COIN_ID (sha256 my_parent_id my_puzzlehash my_amount)))
-
-    (defun create-new-coin (outgoing_puzzle_hash outgoing_amount)
-        (list CREATE_COIN outgoing_puzzle_hash outgoing_amount))
-
-    (defun rate-limited-puzzle
-           (rate_amount
-            interval_time
-            origin_id
-            (my_parent_id
-            my_puzzlehash
-            my_amount
-            outgoing_puzzle_hash
-            outgoing_amount
-            min_block_time
-            parent_parent_id
-            parent_amount
-            fee))
-        (assert_old (or (= (sha256 parent_parent_id my_puzzlehash parent_amount)
-                       my_parent_id)
-                    (= origin_id my_parent_id))
-                (list (generate-block-age-condition min_block_time outgoing_amount rate_amount interval_time)
-                      (create-change my_puzzlehash my_amount outgoing_amount fee)
-                      (generate-assert-id-condition my_parent_id my_puzzlehash my_amount)
-                      (create-new-coin outgoing_puzzle_hash outgoing_amount))))
-
-    (if (= mode CLAWBACK_MODE)
-        (c (aggsig-solution-with-key clawback_pubkey)
-           args)
-        (c (aggsig-solution-with-key pubkey)
-           (if (= mode RATE_LIMITED_MODE)
-               (rate-limited-puzzle rate_amount interval_time origin_id args)
-               (aggregation origin_id args))))
+  ; main
+  (if (= mode CLAWBACK_MODE)
+      (c (aggsig_solution_with_key CLAWBACK_PUBKEY)
+         args)
+      (c (aggsig_solution_with_key PUBKEY)
+         (if (= mode RATE_LIMITED_MODE)
+             (rate_limited_puzzle RATE_AMOUNT INTERVAL_TIME ORIGIN_ID args)
+             (aggregation ORIGIN_ID args))))
 )

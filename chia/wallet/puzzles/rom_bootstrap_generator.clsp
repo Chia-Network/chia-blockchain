@@ -27,5 +27,6 @@
         (c (recurse coin_spends) block-level-extras)
     )
 
+    ; main
     (process-decompressor (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree))))
 )

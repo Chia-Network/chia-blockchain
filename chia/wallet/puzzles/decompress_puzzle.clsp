@@ -1,6 +1,12 @@
-(mod (deserialize puzzle_prefix pubkey suffix)
+(mod
+  (
+    deserialize
+    puzzle_prefix
+    pubkey
+    suffix
+  )
 
+  ; main
   (a deserialize (list (concat puzzle_prefix pubkey suffix)))
-
 )
 

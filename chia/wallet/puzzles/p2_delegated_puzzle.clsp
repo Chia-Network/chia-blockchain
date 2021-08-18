@@ -1,10 +1,14 @@
 (mod
-
-  (public_key delegated_puzzle delegated_puzzle_solution)
+  (
+    public_key
+    delegated_puzzle
+    delegated_puzzle_solution
+  )
 
   (include condition_codes.clib)
   (include sha256tree.clib)
 
+  ; main
   (c (list AGG_SIG_ME public_key (sha256tree delegated_puzzle))
     (a delegated_puzzle delegated_puzzle_solution))
 )

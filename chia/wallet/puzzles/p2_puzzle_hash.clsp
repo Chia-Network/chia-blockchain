@@ -1,10 +1,15 @@
 (mod
-  (inner_puzzle_hash inner_puzzle inner_puzzle_solution)
+  (
+    INNER_PUZZLE_HASH
+    inner_puzzle
+    inner_puzzle_solution
+  )
 
   (include sha256tree.clib)
 
-  (if (= inner_puzzle_hash (sha256tree inner_puzzle))
-    (a inner_puzzle inner_puzzle_solution)
-    (x)
+  ; main
+  (if (= INNER_PUZZLE_HASH (sha256tree inner_puzzle))
+      (a inner_puzzle inner_puzzle_solution)
+      (x)
   )
 )
