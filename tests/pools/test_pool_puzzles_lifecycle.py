@@ -19,7 +19,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
 )
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from chia.wallet.puzzles import singleton_top_layer
+from chia.clvm.singletons import singleton_drivers
 from chia.pools.pool_wallet_info import PoolState
 from chia.pools.pool_puzzles import (
     create_waiting_room_inner_puzzle,
@@ -48,8 +48,8 @@ from tests.clvm.coin_store import CoinStore, CoinTimestamp, BadSpendBundleError
 """
 This test suite aims to test:
     - chia.pools.pool_puzzles.py
-    - chia.wallet.puzzles.pool_member_innerpuz.clsp
-    - chia.wallet.puzzles.pool_waiting_room_innerpuz.clsp
+    - chia.pools.puzzles.pool_member_innerpuz.clsp
+    - chia.pools.puzzles.pool_waiting_room_innerpuz.clsp
 """
 
 
@@ -89,7 +89,7 @@ class TestPoolPuzzles(TestCase):
         # LAUNCHING
         # Create the escaping inner puzzle
         GENESIS_CHALLENGE = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
-        launcher_coin = singleton_top_layer.generate_launcher_coin(
+        launcher_coin = singleton_drivers.generate_launcher_coin(
             starting_coin,
             START_AMOUNT,
         )
@@ -141,7 +141,7 @@ class TestPoolPuzzles(TestCase):
         assert is_pool_singleton_inner_puzzle(pool_wr_innerpuz)
         assert get_pubkey_from_member_inner_puzzle(pooling_innerpuz) == pk
         # Generating launcher information
-        conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
+        conditions, launcher_coinsol = singleton_drivers.launch_conditions_and_coinsol(
             starting_coin, pooling_innerpuz, comment, START_AMOUNT
         )
         # Creating solution for standard transaction

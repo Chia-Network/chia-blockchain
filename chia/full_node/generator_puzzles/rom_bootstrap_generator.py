@@ -1,6 +1,6 @@
 from chia.types.blockchain_format.program import SerializedProgram
 
-from .load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 MOD = SerializedProgram.from_bytes(load_clvm("rom_bootstrap_generator.clsp").as_bin())
 

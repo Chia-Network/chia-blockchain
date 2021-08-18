@@ -1,2 +1,0 @@
-; a trivial puzzle used as the core of a lock puzzle
-(mod args (q ()))

@@ -17,8 +17,8 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_puzzle_or_hidden_puzzle,
-    singleton_top_layer,
 )
+from chia.clvm.singletons import singleton_drivers
 from tests.util.key_tool import KeyTool
 from tests.clvm.test_puzzles import (
     public_key_for_index,
@@ -29,10 +29,10 @@ from chia.clvm.spend_sim import SpendSim, SimClient
 
 """
 This test suite aims to test:
-    - chia.wallet.puzzles.singleton_top_layer.py
-    - chia.wallet.puzzles.singleton_top_layer.clsp
-    - chia.wallet.puzzles.p2_singleton.clsp
-    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clsp
+    - chia.clvm.singletons.singleton_drivers.py
+    - chia.clvm.singletons.puzzles.singleton_top_layer.clsp
+    - chia.clvm.singletons.puzzles.p2_singleton.clsp
+    - chia.clvm.singletons.puzzles.p2_singleton_or_delayed_puzhash.clsp
 """
 
 
@@ -90,7 +90,7 @@ class TestSingleton:
             key_lookup = KeyTool()
             pk: G1Element = public_key_for_index(1, key_lookup)
             starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)  # noqa
-            adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+            adapted_puzzle: Program = singleton_drivers.adapt_inner_to_singleton(starting_puzzle)  # noqa
             adapted_puzzle_hash: bytes32 = adapted_puzzle.get_tree_hash()
 
             # Get our starting standard coin created
@@ -105,13 +105,13 @@ class TestSingleton:
             # LAUNCHING
             # Try to create an even singleton (driver test)
             try:
-                conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
+                conditions, launcher_coinsol = singleton_drivers.launch_conditions_and_coinsol(  # noqa
                     starting_coin, adapted_puzzle, comment, (START_AMOUNT - 1)
                 )
                 raise AssertionError("This should fail due to an even amount")
             except ValueError as msg:
                 assert str(msg) == "Coin amount cannot be even. Subtract one mojo."
-                conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
+                conditions, launcher_coinsol = singleton_drivers.launch_conditions_and_coinsol(  # noqa
                     starting_coin, adapted_puzzle, comment, START_AMOUNT
                 )
 
@@ -135,7 +135,7 @@ class TestSingleton:
 
             # EVE
             singleton_eve: Coin = (await sim.all_non_reward_coins())[0]
-            launcher_coin: Coin = singleton_top_layer.generate_launcher_coin(
+            launcher_coin: Coin = singleton_drivers.generate_launcher_coin(
                 starting_coin,
                 START_AMOUNT,
             )
@@ -155,12 +155,12 @@ class TestSingleton:
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
             # Generate the lineage proof we will need from the launcher coin
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(launcher_coinsol)  # noqa
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(launcher_coinsol)  # noqa
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof,
                 singleton_eve.amount,
                 inner_solution,
@@ -183,9 +183,9 @@ class TestSingleton:
             # POST-EVE
             singleton: Coin = (await sim.all_non_reward_coins())[0]
             # Same delegated_puzzle / inner_solution. We're just recreating ourself
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_eve_coinsol)  # noqa
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_eve_coinsol)  # noqa
             # Same puzzle_reveal too
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof,
                 singleton.amount,
                 inner_solution,
@@ -207,12 +207,12 @@ class TestSingleton:
 
             # CLAIM A P2_SINGLETON
             singleton_child: Coin = (await sim.all_non_reward_coins())[0]
-            p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_puzzle(launcher_id)
+            p2_singleton_puz: Program = singleton_drivers.pay_to_singleton_puzzle(launcher_id)
             p2_singleton_ph: bytes32 = p2_singleton_puz.get_tree_hash()
             await sim.farm_block(p2_singleton_ph)
             p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
             p2_singleton_coin = p2_singleton_coin[0].coin
-            assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
+            assertion, announcement, claim_coinsol = singleton_drivers.claim_p2_singleton(
                 p2_singleton_coin,
                 adapted_puzzle_hash,
                 launcher_id,
@@ -228,12 +228,12 @@ class TestSingleton:
                 )
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_coinsol)
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof,
                 singleton_eve.amount,
                 inner_solution,
@@ -252,7 +252,7 @@ class TestSingleton:
             singleton_child: Coin = (await sim.all_non_reward_coins())[0]
             DELAY_TIME: uint64 = 1
             DELAY_PH: bytes32 = adapted_puzzle_hash
-            p2_singleton_puz: Program = singleton_top_layer.pay_to_singleton_or_delay_puzzle(
+            p2_singleton_puz: Program = singleton_drivers.pay_to_singleton_or_delay_puzzle(
                 launcher_id,
                 DELAY_TIME,
                 DELAY_PH,
@@ -262,7 +262,7 @@ class TestSingleton:
             await sim.farm_block(p2_singleton_ph)
             p2_singleton_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(p2_singleton_ph)
             p2_singleton_coin = sorted(p2_singleton_coin, key=lambda x: x.coin.amount)[0].coin
-            assertion, announcement, claim_coinsol = singleton_top_layer.claim_p2_singleton(
+            assertion, announcement, claim_coinsol = singleton_drivers.claim_p2_singleton(
                 p2_singleton_coin,
                 adapted_puzzle_hash,
                 launcher_id,
@@ -280,12 +280,12 @@ class TestSingleton:
                 )
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_claim_coinsol)
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof,
                 singleton_eve.amount,
                 inner_solution,
@@ -306,7 +306,7 @@ class TestSingleton:
 
             # TRY TO SPEND AWAY TOO SOON (Negative Test)
             await sim.rewind(save_height)
-            to_delay_ph_coinsol: CoinSpend = singleton_top_layer.spend_to_delayed_puzzle(
+            to_delay_ph_coinsol: CoinSpend = singleton_drivers.spend_to_delayed_puzzle(
                 p2_singleton_coin,
                 ARBITRARY_AMOUNT,
                 launcher_id,
@@ -334,12 +334,12 @@ class TestSingleton:
                 )
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_claim_coinsol)
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof, singleton_child.amount, inner_solution
             )
 
@@ -370,12 +370,12 @@ class TestSingleton:
                 )
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_claim_coinsol)
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof, singleton_child.amount, inner_solution
             )
 
@@ -412,12 +412,12 @@ class TestSingleton:
                 )
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_claim_coinsol)
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof, singleton_child.amount, inner_solution
             )
 
@@ -450,12 +450,12 @@ class TestSingleton:
                 )
             )
             inner_solution: Program = Program.to([[], delegated_puzzle, []])
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_even_coinsol)  # noqa
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_even_coinsol)  # noqa
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof,
                 1,
                 inner_solution,
@@ -481,7 +481,7 @@ class TestSingleton:
             # Remember, we're still spending singleton_child
             await sim.rewind(save_height)
             conditions = [
-                singleton_top_layer.MELT_CONDITION,
+                singleton_drivers.MELT_CONDITION,
                 [
                     ConditionOpcode.CREATE_COIN,
                     adapted_puzzle_hash,
@@ -490,12 +490,12 @@ class TestSingleton:
             ]
             delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)
             inner_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
-            lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
-            puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
+            lineage_proof: LineageProof = singleton_drivers.lineage_proof_for_coinsol(singleton_claim_coinsol)
+            puzzle_reveal: Program = singleton_drivers.puzzle_for_singleton(
                 launcher_id,
                 adapted_puzzle,
             )
-            full_solution: Program = singleton_top_layer.solution_for_singleton(
+            full_solution: Program = singleton_drivers.solution_for_singleton(
                 lineage_proof, singleton_child.amount, inner_solution
             )
 

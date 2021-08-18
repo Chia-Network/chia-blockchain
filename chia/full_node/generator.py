@@ -3,17 +3,17 @@ from typing import List, Optional, Union, Tuple
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator, GeneratorArg, GeneratorBlockCacheInterface, CompressorArg
 from chia.util.ints import uint32, uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from chia.clvm.load_clvm import load_clvm
+from chia.full_node.generator_puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.wallet.puzzles")
-# DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.full_node.generator_puzzles")
+DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.full_node.generator_puzzles")
+# DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clsp", package_or_requirement="chia.full_node.generator_puzzles")  # noqa
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.full_node.generator_puzzles"
 )
 log = logging.getLogger(__name__)
 

@@ -12,16 +12,18 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp", package_or_requirement="chia.wallet.puzzles")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.wallet.puzzles")
-P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp", package_or_requirement="chia.wallet.puzzles")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
+SINGLETON_MOD = load_clvm("singleton_top_layer.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
+P2_SINGLETON_MOD = load_clvm(
+    "p2_singleton_or_delayed_puzhash.clsp", package_or_requirement="chia.clvm.singletons.puzzles"
+)
+POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()

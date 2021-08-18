@@ -8,7 +8,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.chialisp import sexp
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 RATE_LIMITED_MODE = 1
 AGGREGATION_MODE = 2
@@ -35,7 +35,7 @@ def rl_puzzle_for_pk(
     ASSERT_COIN_BLOCK_AGE_EXCEEDS min_block_age
     """
 
-    MOD = load_clvm("rl.clsp", package_or_requirement="chia.wallet.puzzles")
+    MOD = load_clvm("rl.clsp", package_or_requirement="chia.wallet.rl_wallet.puzzles")
     return MOD.curry(pubkey, rate_amount, interval_time, origin_id, clawback_pk)
 
 
@@ -120,5 +120,5 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)
     """
 
-    MOD = load_clvm("rl_aggregation.clsp", package_or_requirement="chia.wallet.puzzles")
+    MOD = load_clvm("rl_aggregation.clsp", package_or_requirement="chia.wallet.rl_wallet.puzzles")
     return MOD.curry(wallet_puzzle)

@@ -3,7 +3,6 @@ from typing import Tuple, List, Optional
 from blspy import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
-from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
 from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, SELF_POOLING
@@ -13,17 +12,20 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
+from chia.clvm.load_clvm import load_clvm
+from chia.clvm.singletons.singleton_drivers import puzzle_for_singleton
 
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp", package_or_requirement="chia.wallet.puzzles")
-POOL_WAITING_ROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.wallet.puzzles")
-P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp", package_or_requirement="chia.wallet.puzzles")
+SINGLETON_MOD = load_clvm("singleton_top_layer.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
+P2_SINGLETON_MOD = load_clvm(
+    "p2_singleton_or_delayed_puzhash.clsp", package_or_requirement="chia.clvm.singletons.puzzles"
+)
+SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
+POOL_WAITING_ROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
+POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
 POOL_OUTER_MOD = SINGLETON_MOD
 
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()

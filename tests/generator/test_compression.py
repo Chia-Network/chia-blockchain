@@ -18,7 +18,7 @@ from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorA
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
 
@@ -28,17 +28,21 @@ from clvm.serialize import sexp_from_stream
 
 from clvm_tools import binutils
 
-TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="chia.wallet.puzzles")
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")
+TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="tests.generator.puzzles")
+TEST_MULTIPLE = load_clvm(
+    "test_multiple_generator_input_arguments.clsp", package_or_requirement="tests.generator.puzzles"
+)
+DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.full_node.generator_puzzles")
 
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.full_node.generator_puzzles")
+DECOMPRESS_CSE = load_clvm(
+    "decompress_coin_spend_entry.clsp", package_or_requirement="chia.full_node.generator_puzzles"
+)
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.full_node.generator_puzzles"
 )
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.wallet.puzzles")
-TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.full_node.generator_puzzles")
 
 Nil = Program.from_bytes(b"\x80")
 

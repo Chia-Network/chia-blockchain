@@ -12,13 +12,13 @@ from chia.types.generator_types import BlockGenerator, GeneratorArg
 from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.clvm.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
 
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.full_node.generator_puzzles")
 
 
 GENERATOR_CODE = """

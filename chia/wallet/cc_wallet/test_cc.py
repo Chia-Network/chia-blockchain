@@ -18,8 +18,8 @@ from chia.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     spendable_cc_list_from_coin_spend,
 )
-from chia.wallet.puzzles.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
-from chia.wallet.puzzles.genesis_by_puzzle_hash_with_0 import create_genesis_puzzle_or_zero_coin_checker
+from chia.wallet.cc_wallet.puzzles.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
+from chia.wallet.cc_wallet.puzzles.genesis_by_puzzle_hash_with_0 import create_genesis_puzzle_or_zero_coin_checker
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 
