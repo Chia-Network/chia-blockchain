@@ -19,6 +19,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
+from chia.types.mempool_item import MempoolItem
 from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err, ValidationError
@@ -27,6 +28,8 @@ from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
 from chia.full_node.mempool_check_conditions import parse_condition_args, parse_condition, get_name_puzzle_conditions
+from chia.full_node.pending_tx_cache import PendingTxCache
+from blspy import G2Element
 
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
@@ -80,6 +83,79 @@ async def two_nodes():
 
     async for _ in async_gen:
         yield _
+
+
+def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
+    spend_bundle_name = bytes([idx] * 32)
+    return MempoolItem(
+        SpendBundle([], G2Element()),
+        uint64(0),
+        NPCResult(None, [], cost),
+        cost,
+        spend_bundle_name,
+        [],
+        [],
+        SerializedProgram(),
+    )
+
+
+class TestPendingTxCache:
+    def test_recall(self):
+        c = PendingTxCache(100)
+        item = make_item(1)
+        c.add(item)
+        tx = c.drain()
+        assert tx == {item.spend_bundle_name: item}
+
+    def test_fifo_limit(self):
+        c = PendingTxCache(200)
+        # each item has cost 80
+        items = [make_item(i) for i in range(1, 4)]
+        for i in items:
+            c.add(i)
+        # the max cost is 200, only two transactions will fit
+        # we evict items FIFO, so the to most recently added will be left
+        tx = c.drain()
+        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+
+    def test_drain(self):
+        c = PendingTxCache(100)
+        item = make_item(1)
+        c.add(item)
+        tx = c.drain()
+        assert tx == {item.spend_bundle_name: item}
+
+        # drain will clear the cache, so a second call will be empty
+        tx = c.drain()
+        assert tx == {}
+
+    def test_cost(self):
+        c = PendingTxCache(200)
+        assert c.cost() == 0
+        item1 = make_item(1)
+        c.add(item1)
+        # each item has cost 80
+        assert c.cost() == 80
+
+        item2 = make_item(2)
+        c.add(item2)
+        assert c.cost() == 160
+
+        # the first item is evicted, so the cost stays the same
+        item3 = make_item(3)
+        c.add(item3)
+        assert c.cost() == 160
+
+        tx = c.drain()
+        assert tx == {item2.spend_bundle_name: item2, item3.spend_bundle_name: item3}
+
+        assert c.cost() == 0
+        item4 = make_item(4)
+        c.add(item4)
+        assert c.cost() == 80
+
+        tx = c.drain()
+        assert tx == {item4.spend_bundle_name: item4}
 
 
 class TestMempool:
@@ -640,6 +716,21 @@ class TestMempoolManager:
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
         assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
+
+    @pytest.mark.asyncio
+    async def test_assert_height_pending(self, two_nodes):
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        print(full_node_1.full_node.blockchain.get_peak())
+        current_height = full_node_1.full_node.blockchain.get_peak().height
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(current_height + 4)])
+        dic = {cvp.opcode: [cvp]}
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.PENDING
+        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_time_negative(self, two_nodes):

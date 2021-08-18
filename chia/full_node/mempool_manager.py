@@ -16,6 +16,7 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
+from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -52,8 +53,6 @@ class MempoolManager:
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
-        # Transactions that were unable to enter mempool, used for retry. (they were invalid)
-        self.potential_txs: Dict[bytes32, MempoolItem] = {}
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
@@ -66,8 +65,9 @@ class MempoolManager:
 
         self.limit_factor = 0.5
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
-        self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
-        self.potential_cache_cost: int = 0
+
+        # Transactions that were unable to enter mempool, used for retry. (they were invalid)
+        self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.seen_cache_size = 10000
         self.pool = ProcessPoolExecutor(max_workers=1)
 
@@ -366,7 +366,7 @@ class MempoolManager:
                 potential = MempoolItem(
                     new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
                 )
-                self.add_to_potential_tx_set(potential)
+                self.potential_cache.add(potential)
                 return (
                     uint64(cost),
                     MempoolInclusionStatus.PENDING,
@@ -411,7 +411,7 @@ class MempoolManager:
                     potential = MempoolItem(
                         new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
                     )
-                    self.add_to_potential_tx_set(potential)
+                    self.potential_cache.add(potential)
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break
 
@@ -467,22 +467,6 @@ class MempoolManager:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, []
 
-    def add_to_potential_tx_set(self, item: MempoolItem):
-        """
-        Adds SpendBundles that have failed to be added to the pool in potential tx set.
-        This is later used to retry to add them.
-        """
-        if item.spend_bundle_name in self.potential_txs:
-            return None
-
-        self.potential_txs[item.spend_bundle_name] = item
-        self.potential_cache_cost += item.cost
-
-        while self.potential_cache_cost > self.potential_cache_max_total_cost:
-            first_in = list(self.potential_txs.keys())[0]
-            self.potential_cache_max_total_cost -= self.potential_txs[first_in].cost
-            self.potential_txs.pop(first_in)
-
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
         if bundle_hash in self.mempool.spends:
@@ -496,6 +480,7 @@ class MempoolManager:
         return None
 
     async def new_peak(self, new_peak: Optional[BlockRecord]) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
+        #        breakpoint()
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
@@ -523,10 +508,9 @@ class MempoolManager:
                 if result != MempoolInclusionStatus.SUCCESS:
                     self.remove_seen(item.spend_bundle_name)
 
-            potential_txs_copy = self.potential_txs.copy()
-            self.potential_txs = {}
+            potential_txs = self.potential_cache.drain()
             txs_added = []
-            for item in potential_txs_copy.values():
+            for item in potential_txs.values():
                 cost, status, error = await self.add_spendbundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
                 )
