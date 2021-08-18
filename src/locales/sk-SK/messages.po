@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-17 18:18\n"
+"PO-Revision-Date: 2021-08-18 00:13\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -32,7 +32,7 @@ msgstr "+ Pridať nové NFT poľa"
 
 #: src/components/wallet/Wallets.tsx:122
 msgid "+ Add Wallet"
-msgstr ""
+msgstr "+ Pridať peňaženku"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
