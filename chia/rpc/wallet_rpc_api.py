@@ -677,7 +677,11 @@ class WalletRpcApi:
             else:
                 end = 50
 
-            transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+            transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
+                wallet_id,
+                start,
+                end,
+            )
 
         formatted_transactions = []
         selected = self.service.config["selected_network"]
