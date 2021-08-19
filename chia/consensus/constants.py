@@ -3,6 +3,9 @@ import dataclasses
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint8, uint32, uint64, uint128
+import logging
+
+log = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -66,8 +69,14 @@ class ConsensusConstants:
         Overrides str (hex) values with bytes.
         """
 
+        filtered_changes = {}
         for k, v in changes.items():
+            if not hasattr(self, k):
+                log.warn(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
+                continue
             if isinstance(v, str):
-                changes[k] = hexstr_to_bytes(v)
+                filtered_changes[k] = hexstr_to_bytes(v)
+            else:
+                filtered_changes[k] = v
 
-        return dataclasses.replace(self, **changes)
+        return dataclasses.replace(self, **filtered_changes)
