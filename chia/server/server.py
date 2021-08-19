@@ -16,7 +16,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import protocol_version, Capability
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -130,7 +130,7 @@ class ChiaServer:
         self.on_connect: Optional[Callable] = None
         self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
-
+        self.capabilities: List[Tuple[uint16, str]] = [(uint16(Capability.BASE.value), "1")]
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
@@ -177,6 +177,9 @@ class ChiaServer:
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
+
+    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]):
+        self.capabilities = capabilities
 
     async def garbage_collect_connections_task(self) -> None:
         """
@@ -268,10 +271,7 @@ class ChiaServer:
                 close_event,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
 
             assert handshake is True
@@ -420,10 +420,7 @@ class ChiaServer:
                 session=session,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
             assert handshake is True
             await self.connection_added(connection, on_connect)
@@ -565,13 +562,14 @@ class ChiaServer:
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
                     )
-
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
                     elif hasattr(f, "can_return_none"):
-                        response_message = Message(full_message.type, full_message.id, b"")
-                        await connection.reply_to_request(response_message)
+                        capabilities = connection.capabilities
+                        if capabilities is not None and (uint16(Capability.NONERESPONSE.value), "1") in capabilities:
+                            response_message = Message(full_message.type, full_message.id, b"")
+                            await connection.reply_to_request(response_message)
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()

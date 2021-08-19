@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -91,6 +91,7 @@ class WSChiaConnection:
         self.request_results: Dict[bytes32, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
+        self.capabilities: Optional[List[Tuple[uint16, str]]] = None
         if is_outbound:
             self.request_nonce: uint16 = uint16(0)
         else:
@@ -103,7 +104,14 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
-    async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
+    async def perform_handshake(
+        self,
+        network_id: str,
+        protocol_version: str,
+        server_port: int,
+        local_type: NodeType,
+        capabilities: List[Tuple[uint16, str]],
+    ):
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
@@ -113,7 +121,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    capabilities,
                 ),
             )
             assert outbound_handshake is not None
@@ -137,7 +145,8 @@ class WSChiaConnection:
 
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-
+            self.capabilities = inbound_handshake.capabilities
+            self.log.debug(f"handshake {inbound_handshake.capabilities}")
         else:
             try:
                 message = await self._read_one_message()
@@ -167,12 +176,14 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    capabilities,
                 ),
             )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
+            self.capabilities = inbound_handshake.capabilities
+            self.log.debug(f"handshake {inbound_handshake.capabilities}")
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
@@ -272,7 +283,7 @@ class WSChiaConnection:
             msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
             result = await self.create_request(msg, timeout)
-            self.log.debug(
+            self.log.info(
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
                 f"None? {result is None}"
             )
