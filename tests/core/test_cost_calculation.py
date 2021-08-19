@@ -79,12 +79,15 @@ class TestCostCalculation:
         assert npc_result.error is None
         assert len(bytes(program.program)) == 433
 
-        coin_name = npc_result.npc_list[0].coin_name
+        coin_name = npc_result.conds.spends[0].coin_id
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             program, coin_name, test_constants.MAX_BLOCK_COST_CLVM
         )
         assert error is None
 
+        assert npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + 404560
+
+        # Create condition + agg_sig_condition + length + cpu_cost
         assert (
             npc_result.cost
             == 404560
@@ -154,7 +157,7 @@ class TestCostCalculation:
         )
         assert npc_result.error is None
 
-        coin_name = npc_result.npc_list[0].coin_name
+        coin_name = npc_result.conds.spends[0].coin_id
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             generator, coin_name, test_constants.MAX_BLOCK_COST_CLVM
         )
@@ -205,7 +208,7 @@ class TestCostCalculation:
         end_time = time.time()
         duration = end_time - start_time
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == LARGE_BLOCK_COIN_CONSUMED_COUNT
+        assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
         assert duration < 0.5
