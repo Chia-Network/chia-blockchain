@@ -662,16 +662,23 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
-        if "start" in request:
-            start = request["start"]
-        else:
-            start = 0
-        if "end" in request:
-            end = request["end"]
-        else:
-            end = 50
 
-        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+        all = request.get("all", False)
+
+        if all:
+            transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions()
+        else:
+            if "start" in request:
+                start = request["start"]
+            else:
+                start = 0
+            if "end" in request:
+                end = request["end"]
+            else:
+                end = 50
+
+            transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+
         formatted_transactions = []
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]

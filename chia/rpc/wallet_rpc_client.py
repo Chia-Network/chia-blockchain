@@ -105,10 +105,13 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(
         self,
         wallet_id: str,
+        all: Optional[bool] = None,
         start: Optional[int] = None,
         end: Optional[int] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
+        if all is not None:
+            request["all"] = all
         if start is not None:
             request["start"] = start
         if end is not None:

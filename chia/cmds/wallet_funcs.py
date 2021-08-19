@@ -47,8 +47,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     paginate = args["paginate"]
     if paginate is None:
         paginate = sys.stdout.isatty()
-    # 1 trillion is over 1500 years of transactions at 20/second, so probably "all"
-    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id, start=0, end=1_000_000_000_000)
+    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id, all=True)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
