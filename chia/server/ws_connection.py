@@ -8,7 +8,7 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.shared_protocol import Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
