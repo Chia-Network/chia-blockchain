@@ -53,5 +53,6 @@ is available from the repository
 ## Resource Links
 
 [ChiaHub](https://www.chia-hub.com/)
+
 [Chia Forks Calculator](https://chiaforkscalculator.com/)
 
