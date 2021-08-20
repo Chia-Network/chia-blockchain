@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-17 18:17\n"
+"PO-Revision-Date: 2021-08-20 12:36\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "+ 新規プロットNFT を追加"
 
 #: src/components/wallet/Wallets.tsx:122
 msgid "+ Add Wallet"
-msgstr ""
+msgstr "+ ウォレットを追加"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
