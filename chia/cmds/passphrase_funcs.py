@@ -1,7 +1,10 @@
+import click
 import sys
 
+from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.keychain import Keychain, obtain_current_passphrase
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.ws_message import WsRpcMessage
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
@@ -188,25 +191,45 @@ def using_default_passphrase() -> bool:
 
 
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
-    from chia.daemon.client import connect_to_daemon_and_validate
-
+    """
+    Attempt to connect to the daemon and update the cached passphrase
+    """
     new_passphrase = Keychain.get_cached_master_passphrase()
     assert new_passphrase is not None
 
-    daemon = None
     try:
-        daemon = await connect_to_daemon_and_validate(root_path, quiet=True)
-        if daemon:
-            response = await daemon.unlock_keyring(new_passphrase)
+        async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+            if daemon is not None:
+                response = await daemon.unlock_keyring(new_passphrase)
+                if response is None:
+                    raise Exception("daemon didn't respond")
 
-            if not response:
-                raise Exception("daemon didn't respond")
-
-            if response["data"].get("success", False) is False:
-                error = response["data"].get("error", "unknown error")
-                raise Exception(error)
+                success: bool = response.get("data", {}).get("success", False)
+                if success is False:
+                    error = response.get("data", {}).get("error", "unknown error")
+                    raise Exception(error)
     except Exception as e:
         print(f"Failed to notify daemon of updated keyring passphrase: {e}")
 
-    if daemon:
-        await daemon.close()
+
+async def async_update_daemon_migration_completed_if_running() -> None:
+    """
+    Attempt to connect to the daemon to notify that keyring migration has completed.
+    This allows the daemon to refresh its keyring so that it can stop using the
+    legacy keyring.
+    """
+    ctx: click.Context = click.get_current_context()
+    root_path: Path = ctx.obj["root_path"]
+
+    if root_path is None:
+        print("Missing root_path in context. Unable to notify daemon")
+        return None
+
+    async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+        if daemon is not None:
+            passphrase: str = Keychain.get_cached_master_passphrase()
+
+            print("Updating daemon... ", end="")
+            response: WsRpcMessage = await daemon.notify_keyring_migration_completed(passphrase)
+            success: bool = response.get("data", {}).get("success", False)
+            print("succeeded" if success is True else "failed")

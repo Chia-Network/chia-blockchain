@@ -1,3 +1,4 @@
+import asyncio
 import keyring as keyring_main
 
 from blspy import PrivateKey  # pyright: reportMissingImports=false
@@ -43,6 +44,10 @@ class KeyringWrapper:
         the data from the legacy CryptFileKeyring (on write).
         """
         self.keys_root_path = keys_root_path
+        self.refresh_keyrings()
+
+    def refresh_keyrings(self):
+        self.keyring = None
         self.keyring = self._configure_backend()
 
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
@@ -358,6 +363,7 @@ class KeyringWrapper:
         perform a before/after comparison of the keyring contents, and on success we'll prompt
         to cleanup the legacy keyring.
         """
+        from chia.cmds.passphrase_funcs import async_update_daemon_migration_completed_if_running
 
         # Make sure the user is ready to begin migration.
         response = self.confirm_migration()
@@ -382,6 +388,9 @@ class KeyringWrapper:
             print("Removed keys from old keyring")
         else:
             print("Keys in old keyring left intact")
+
+        # Notify the daemon (if running) that migration has completed
+        asyncio.get_event_loop().run_until_complete(async_update_daemon_migration_completed_if_running())
 
     # Keyring interface
 

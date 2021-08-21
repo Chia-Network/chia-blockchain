@@ -464,6 +464,15 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().using_legacy_keyring()
 
     @staticmethod
+    def handle_migration_completed():
+        """
+        When migration completes outside of the current process, we rely on a notification to inform
+        the current process that it needs to reset/refresh its keyring. This allows us to stop using
+        the legacy keyring in an already-running daemon if migration is completed using the CLI.
+        """
+        KeyringWrapper.get_shared_instance().refresh_keyrings()
+
+    @staticmethod
     def migrate_legacy_keyring(passphrase: Optional[str] = None, cleanup_legacy_keyring: bool = False) -> None:
         """
         Begins legacy keyring migration in a non-interactive manner
