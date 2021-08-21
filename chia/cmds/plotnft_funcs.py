@@ -215,7 +215,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             wallet_id = summary["id"]
             typ = WalletType(int(summary["type"]))
             if typ == WalletType.POOLING_WALLET:
-                print(f"Wallet id {wallet_id}: ")
+                print(f"Wallet id: {wallet_id}")
                 pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
                 await pprint_pool_wallet_state(
                     wallet_client,
