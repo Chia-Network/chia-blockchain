@@ -211,6 +211,30 @@ class TestWalletRpc:
             transactions = await client.get_transactions("1")
             assert len(transactions) > 1
 
+            # TODO: make this "get all transactions" feature test be not garbage.
+            #       for example, taking 14 seconds is a bit attrocious.
+            total = 50
+            # create wins so we have some coins to spend all at once...
+            for _ in range(total//2):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+                new_balance += calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
+
+            for _ in range(5):
+                # just lets things settle or something
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            await time_out_assert(5, eventual_balance, new_balance)
+
+            for _ in range(total):
+                await client.send_transaction(wallet_id="1", amount=1, address=addr)
+
+            all_transactions = await client.get_transactions(wallet_id="1", all=True)
+            assert len(all_transactions) == len(transactions) + 2 * total  # 2* for wins+transactions
+            await client.delete_unconfirmed_transactions("1")
+            for _ in range(3):
+                # just lets things settle or something
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
             pks = await client.get_public_keys()
             assert len(pks) == 1
 
