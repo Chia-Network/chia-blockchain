@@ -215,7 +215,7 @@ class TestWalletRpc:
             #       for example, taking 14 seconds is a bit attrocious.
             total = 50
             # create wins so we have some coins to spend all at once...
-            for _ in range(total//2):
+            for _ in range(total // 2):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
                 new_balance += calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
