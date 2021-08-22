@@ -29,8 +29,8 @@ if [ "$(uname)" = "Linux" ]; then
 		OSNAME="$(uname -n)"
 		
 		# Check if we are running a Raspberry PI 4
-		if [ OSARCH == "aarch64" ] \
-		&& [ OSNAME == "raspberrypi" ]; then
+		if [ $OSARCH == "aarch64" ] \
+		&& [ $OSNAME == "raspberrypi" ]; then
 			# Check if NodeJS & NPM is installed
 			type npm >/dev/null 2>&1 || {
 					echo >&2 "Please install NODEJS&NPM manually then"
