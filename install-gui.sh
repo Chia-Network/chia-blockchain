@@ -25,16 +25,12 @@ if [ "$(uname)" = "Linux" ]; then
 		# Debian/Ubuntu
 		UBUNTU=true
 		
-		OSARCH="$(uname -m)"
-		OSNAME="$(uname -n)"
-		
 		# Check if we are running a Raspberry PI 4
-		if [ $OSARCH == "aarch64" ] \
-		&& [ $OSNAME == "raspberrypi" ]; then
+		if [ "$(uname -m)" = "aarch64" ] \
+		&& [ "$(uname -n)" = "raspberrypi" ]; then
 			# Check if NodeJS & NPM is installed
 			type npm >/dev/null 2>&1 || {
-					echo >&2 "Please install NODEJS&NPM manually then"
-					read -rsp $'Press enter to continue...\n'
+					echo >&2 "Please install NODEJS&NPM manually"
 			}
 		else
 			sudo apt-get install -y npm nodejs libxss1
