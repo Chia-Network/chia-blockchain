@@ -36,7 +36,7 @@ VAILD_REPLY_MESSAGE_MAP = {
 }
 
 
-def static_check_sent_message_response():
+def static_check_sent_message_response() -> None:
     """Check that allowed message data structures VAILD_REPLY_MESSAGE_MAP and NO_REPLY_EXPECTED are consistent."""
     # Reply and non-reply sets should not overlap: This check should be static
     overlap = set(NO_REPLY_EXPECTED).intersection(set(VAILD_REPLY_MESSAGE_MAP.keys()))
@@ -44,7 +44,7 @@ def static_check_sent_message_response():
         raise AssertionError("Overlapping NO_REPLY_EXPECTED and VAILD_REPLY_MESSAGE_MAP values: {}")
 
 
-def sent_message_response_ok(sent: ProtocolMessageTypes, received: Optional[ProtocolMessageTypes]):
+def sent_message_response_ok(sent: ProtocolMessageTypes, received: Optional[ProtocolMessageTypes]) -> bool:
     """
     Check to see that peers respect protocol message types in reply.
     Call with received == None to indicate that we do not expect a specific reply message type.
