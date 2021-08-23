@@ -16,6 +16,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_state_machine import sent_message_response_ok
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
@@ -611,13 +612,19 @@ class ChiaServer:
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type:
                 for message in messages:
-                    await connection.send_message(message)
+                    if sent_message_response_ok(message, None):
+                        await connection.send_message(message)
+                    else:
+                        self.log("send_to_all not sending message expecting a response: {message.type}")
 
     async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:
-                    await connection.send_message(message)
+                    if sent_message_response_ok(message, None):
+                        await connection.send_message(message)
+                    else:
+                        self.log("send_to_all_except not sending message expecting a response: {message.type}")
 
     async def send_to_specific(self, messages: List[Message], node_id: bytes32):
         if node_id in self.all_connections:
