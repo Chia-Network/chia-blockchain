@@ -612,19 +612,19 @@ class ChiaServer:
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type:
                 for message in messages:
-                    if sent_message_response_ok(message, None):
+                    if sent_message_response_ok(ProtocolMessageTypes(message.type), None):
                         await connection.send_message(message)
                     else:
-                        self.log("send_to_all not sending message expecting a response: {message.type}")
+                        self.log.error("send_to_all not sending message expecting a response: {message.type}")
 
     async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:
-                    if sent_message_response_ok(message, None):
+                    if sent_message_response_ok(ProtocolMessageTypes(message.type), None):
                         await connection.send_message(message)
                     else:
-                        self.log("send_to_all_except not sending message expecting a response: {message.type}")
+                        self.log.error("send_to_all_except not sending message expecting a response: {message.type}")
 
     async def send_to_specific(self, messages: List[Message], node_id: bytes32):
         if node_id in self.all_connections:
