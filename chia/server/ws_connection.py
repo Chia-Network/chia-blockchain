@@ -8,6 +8,7 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_state_machine import sent_message_response_ok
 from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -269,7 +270,7 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
+            msg: Message = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
             result = await self.create_request(msg, timeout)
             self.log.debug(
@@ -277,6 +278,8 @@ class WSChiaConnection:
                 f"None? {result is None}"
             )
             if result is not None:
+                if not sent_message_response_ok(msg.type, result.type):
+                    self.log(f"WSConnection.invoke sent message {msg.type} but received {result.type}")
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
 
                 req_annotations = ret_attr.__annotations__
