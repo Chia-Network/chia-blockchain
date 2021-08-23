@@ -1,6 +1,6 @@
 from typing import Optional
 
-from  chia.protocols.protocol_message_types import ProtocolMessageTypes as pmt, ProtocolMessageTypes
+from chia.protocols.protocol_message_types import ProtocolMessageTypes as pmt, ProtocolMessageTypes
 
 NO_REPLY_EXPECTED = [
     # full_node -> full_node messages
@@ -23,7 +23,6 @@ A state machine can be built from this message map.
 VAILD_REPLY_MESSAGE_MAP = {
     # messages for all services
     # pmt.handshake is handled in WSChiaConnection.perform_handshake
-
     # full_node -> full_node protocol messages
     pmt.request_transaction: [pmt.respond_transaction],
     pmt.request_proof_of_weight: [pmt.respond_proof_of_weight],
@@ -32,7 +31,7 @@ VAILD_REPLY_MESSAGE_MAP = {
     pmt.request_unfinished_block: [pmt.respond_unfinished_block],
     pmt.request_signage_point_or_end_of_sub_slot: [pmt.respond_signage_point, pmt.respond_end_of_sub_slot],
     pmt.request_compact_vdf: [pmt.respond_compact_vdf],
-    pmt.request_peers: [pmt.respond_peers]
+    pmt.request_peers: [pmt.respond_peers],
 }
 
 
