@@ -84,11 +84,11 @@
 ;;  INNER_PUZZLE: an independent puzzle protecting the coins. Solutions to this puzzle are expected to
 ;;              generate `AGG_SIG` conditions and possibly `CREATE_COIN` conditions.
 ;; ---- items above are curried into the puzzle hash ----
-;;  inner-puzzle-solution: the solution to the inner puzzle
-;;  prev-coin-bundle: the bundle for previous coin
-;;  this-coin-bundle: the bundle for this coin
-;;  next-coin-bundle: the bundle for next coin
-;;  prev-subtotal: the subtotal between prev-coin and this-coin
+;;  inner_puzzle_solution: the solution to the inner puzzle
+;;  prev_coin_bundle: the bundle for previous coin
+;;  this_coin_bundle: the bundle for this coin
+;;  next_coin_bundle: the bundle for next coin
+;;  prev_subtotal: the subtotal between prev-coin and this-coin
 ;;
 ;; coin-info: `(parent_id puzzle_hash amount)`. This defines the coin id used with ASSERT_MY_COIN_ID
 ;; coin-bundle: the cons box `(coin-info . lineage_proof)`
