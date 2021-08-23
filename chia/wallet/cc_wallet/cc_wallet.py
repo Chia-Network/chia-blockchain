@@ -91,7 +91,7 @@ class CCWallet:
         try:
             spend_bundle = await self.generate_new_coloured_coin(amount)
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
             raise
         if spend_bundle is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
