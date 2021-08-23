@@ -1,12 +1,13 @@
 (mod
   (
-    START_HEIGHT
+    MOD_HASH
     RATE_AMOUNT
     INTERVAL_TIME
-    WITHDRAWN_AMOUNT
+    EARNINGS_CAP
+    CREDIT
     INNER_PUZZLE
     Truths
-    current_height
+    time_passed
     inner_solution
   )
 
@@ -25,62 +26,85 @@
     )
   )
 
+  (defun min (a b)
+    (if (> a b)
+      b
+      a
+    )
+  )
+
+  (defun max (a b)
+    (if (> a b)
+      a
+      b
+    )
+  )
+
   (defun-inline morph_singleton_condition
     (
       singleton_condition
       MOD_HASH
-      START_HEIGHT
       RATE_AMOUNT
       INTERVAL_TIME
-      new_withdrawn_amount
+      EARNINGS_CAP
+      new_credit
     )
 
-    (list
+    (c
       CREATE_COIN
-      (puzzle_hash_of_curried_function MOD_HASH
-        (puzzle_hash singleton_condition)
-        (sha256 1 new_withdrawn_amount)
-        (sha256 1 INTERVAL_TIME)
-        (sha256 1 RATE_AMOUNT)
-        (sha256 1 START_HEIGHT)
+      (c
+        (puzzle_hash_of_curried_function MOD_HASH
+          (puzzle_hash singleton_condition)
+          (sha256 1 new_credit)
+          (sha256 1 EARNINGS_CAP)
+          (sha256 1 INTERVAL_TIME)
+          (sha256 1 RATE_AMOUNT)
+          (sha256 1 MOD_HASH)
+        )
+        (r (r singleton_condition))
       )
-      (coin_amount singleton_condition)
     )
   )
 
 
-  (defun-inline assert_rate (START_HEIGHT RATE_AMOUNT INTERVAL_TIME current_height new_withdrawn_amount)
+  (defun-inline assert_rate (EARNINGS_CAP possible_withdrawal_amount withdrawal_amount time_passed)
     (assert
-      ; RATE_AMOUNT/INTERVAL_TIME >= (WITHDRAWN_AMOUNT + spent_amount)/(current_height - START_HEIGHT) (cross multiplied)
-      (>= (* RATE_AMOUNT (- current_height START_HEIGHT)) (* new_withdrawn_amount INTERVAL_TIME))
-      (list ASSERT_HEIGHT_ABSOLUTE current_height)
+      (>= EARNINGS_CAP withdrawal_amount)
+      (>= possible_withdrawal_amount withdrawal_amount)
+      (list ASSERT_HEIGHT_RELATIVE time_passed)
     )
   )
 
-  (defun-inline generate_final_conditions
+  (defun-inline calculate_possible_withdrawal (RATE_AMOUNT INTERVAL_TIME CREDIT time_passed)
+    (+ (* time_passed (/ RATE_AMOUNT INTERVAL_TIME)) CREDIT)
+  )
+
+  (defun generate_final_conditions
     (
       singleton_condition
       remaining_conditions
-      new_withdrawn_amount
+      withdrawal_amount
+      possible_withdrawal_amount
       MOD_HASH
-      START_HEIGHT
       RATE_AMOUNT
       INTERVAL_TIME
-      current_height
+      EARNINGS_CAP
+      time_passed
     )
+
     (c
-      (assert_rate START_HEIGHT RATE_AMOUNT INTERVAL_TIME current_height new_withdrawn_amount)
+      (assert_rate EARNINGS_CAP possible_withdrawal_amount withdrawal_amount time_passed)
       (c
-        (morph_singleton_condition singleton_condition MOD_HASH START_HEIGHT RATE_AMOUNT INTERVAL_TIME new_withdrawn_amount)
+        (morph_singleton_condition
+          singleton_condition
+          MOD_HASH
+          RATE_AMOUNT
+          INTERVAL_TIME
+          EARNINGS_CAP
+          (- (min possible_withdrawal_amount EARNINGS_CAP) withdrawal_amount)
+        )
         remaining_conditions
       )
-    )
-  )
-
-  (defun-inline calculate_new_withdrawn_amount (WITHDRAWN_AMOUNT delta_amount)
-    (+
-      WITHDRAWN_AMOUNT
-      (if (> 0 delta_amount) 0 delta_amount) ; We don't add negative deltas (contributions) to the WITHDRAWN_AMOUNT
     )
   )
 
@@ -90,23 +114,25 @@
       remaining_conditions
       (
         MOD_HASH
-        START_HEIGHT
         RATE_AMOUNT
         INTERVAL_TIME
-        WITHDRAWN_AMOUNT
-        current_height
+        EARNINGS_CAP
+        CREDIT
+        time_passed
         my_amount
       )
     )
+
     (generate_final_conditions
       singleton_condition
       remaining_conditions
-      (calculate_new_withdrawn_amount WITHDRAWN_AMOUNT (- my_amount (coin_amount singleton_condition)))
+      (max (- my_amount (coin_amount singleton_condition)) 0)
+      (calculate_possible_withdrawal RATE_AMOUNT INTERVAL_TIME CREDIT time_passed)
       MOD_HASH
-      START_HEIGHT
       RATE_AMOUNT
       INTERVAL_TIME
-      current_height
+      EARNINGS_CAP
+      time_passed
     )
   )
 
@@ -117,7 +143,6 @@
               (= (f (f conditions)) CREATE_COIN)      ; this is a CREATE_COIN
               (logand (coin_amount (f conditions)) 1) ; the amount is odd
             )
-            ; (f conditions)
             (found_singleton (f conditions) (r conditions) args)
             (c
               (f conditions)
@@ -130,14 +155,14 @@
 
   ; main
   (search_for_singleton
-    (a INNER_PUZZLE inner_solution)
+    (a INNER_PUZZLE (c Truths inner_solution))
     (list
       MOD_HASH
-      START_HEIGHT
       RATE_AMOUNT
       INTERVAL_TIME
-      WITHDRAWN_AMOUNT
-      current_height
+      EARNINGS_CAP
+      CREDIT
+      time_passed
       (my_amount_truth Truths)
     )
   )
