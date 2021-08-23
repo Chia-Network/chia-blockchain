@@ -101,9 +101,21 @@ if THIS_IS_WINDOWS:
 
 datas = []
 
+def grab_all_clsp_hexes(datas):
+    filenames = pathlib.Path(f"{ROOT}/chia/").rglob("*.hex")
+    relative_parent = pathlib.Path(f"{ROOT}")
+    for name in filenames:
+        package_path = name.parent.relative_to(relative_parent).as_posix()
+        datas.append((name.as_posix(), package_path))
+        package_name = ".".join(package_path.split("/"))
+        if package_name not in hiddenimports:
+            hiddenimports.append(package_name)
+            
+hiddenimports.append("chia.clvm.clibs")
+grab_all_clsp_hexes(datas)
+
 datas.append((f"{ROOT}/chia/util/english.txt", "chia/util"))
 datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia/util"))
-datas.append((f"{ROOT}/chia/wallet/puzzles/*.hex", "chia/wallet/puzzles"))
 datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
 datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.append(version_data)
