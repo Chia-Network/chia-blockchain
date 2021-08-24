@@ -10,3 +10,9 @@ rm -rf build_scripts/pyinstaller || true
 rm -rf chia-blockchain-gui/build || true
 rm -rf chia-blockchain-gui/daemon || true
 rm -rf chia-blockchain-gui/node_modules || true
+
+# Do our best to get rid of any globally installed notarize-cli versions so the version in the current build script is
+# installed without conflicting with the other version that might be installed
+export PATH=$(brew --prefix node@12)/bin:$PATH || true
+npm uninstall -g notarize-cli || true
+npm uninstall -g @chia-network/notarize-cli || true
