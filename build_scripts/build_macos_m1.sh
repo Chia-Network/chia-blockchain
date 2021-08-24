@@ -18,7 +18,7 @@ echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
 npm install electron/electron-osx-sign -g
-npm install @chia-network/notarize-cli -g
+npm install notarize-cli -g
 
 echo "Create dist/"
 sudo rm -rf dist
