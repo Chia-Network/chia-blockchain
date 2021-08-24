@@ -16,3 +16,6 @@ rm -rf chia-blockchain-gui/node_modules || true
 export PATH=$(brew --prefix node@14)/bin:$PATH || true
 npm uninstall -g notarize-cli || true
 npm uninstall -g @chia-network/notarize-cli || true
+npm uninstall -g electron-installer-dmg || true
+npm uninstall -g electron-packager || true
+npm uninstall -g electron/electron-osx-sign || true
