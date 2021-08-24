@@ -427,7 +427,6 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes
         solution = result.rest().first()
         return None, puzzle, solution
     except Exception as e:
-        breakpoint()
         return e, None, None
 
 
