@@ -94,10 +94,10 @@ jobs:
       run: |
         sh install.sh
 
-    - name: Setup Node 12.x
+    - name: Setup Node 14.x
       uses: actions/setup-node@v2.4.0
       with:
-        node-version: '12.x'
+        node-version: '14.x'
 
     - name: Build MacOS DMG in Catalina
       env:
