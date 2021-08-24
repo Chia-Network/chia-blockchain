@@ -147,6 +147,12 @@ class TestCompression(TestCase):
         assert error is None
         assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(solution) == bytes(sb.coin_spends[0].solution)
+        # Test non compressed generator as well
+        s = simple_solution_generator(sb)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal, INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
 
     def test_spend_byndle_coin_spend(self):
         for i in range(0, 10):
