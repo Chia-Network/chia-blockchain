@@ -59,3 +59,13 @@ def execute_task(func):
         return func
 
     return inner()
+
+def replay_type(type):
+    def wrap(func):
+        def inner():
+            setattr(func, "replay_type", type)
+            return func
+
+        return inner()
+
+    return wrap
