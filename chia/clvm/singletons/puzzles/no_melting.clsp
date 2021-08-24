@@ -1,0 +1,34 @@
+(mod
+  (
+    MOD_HASH
+    INNER_PUZZLE
+    Truths
+    inner_solution
+  )
+
+  (include curry_and_treehash.clib)
+  (include singleton_finder.clib)
+
+  (defun-inline puzzle_hash (condition) (f (r condition)))
+
+  (defun-inline wrap_singleton (condition MOD_HASH)
+    (c CREATE_COIN
+      (c
+        (puzzle_hash_of_curried_function MOD_HASH
+          (puzzle_hash condition)
+          (sha256 1 MOD_HASH)
+        )
+        (r (r condition))
+      )
+    )
+  )
+
+  (defun found_singleton (singleton_condition remaining_conditions MOD_HASH)
+    (if (= (coin_amount singleton_condition) -113)
+      (x)
+      (c (wrap_singleton singleton_condition MOD_HASH) remaining_conditions)
+    )
+  )
+
+  (search_for_singleton (a INNER_PUZZLE (c Truths inner_solution)) found_singleton MOD_HASH)
+)

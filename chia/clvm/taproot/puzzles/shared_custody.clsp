@@ -1,0 +1,119 @@
+(mod
+  (
+    MOD_HASH
+    MERKLE_ROOT
+    Truths
+    proof_of_inclusion
+    inner_puzzle
+    inner_solution
+  )
+
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+  (include utility_functions.clib)
+  (include curry_and_treehash.clib)
+
+  (defun-inline coin_amount (condition) (f (r (r condition))))
+  (defun-inline puzzle_hash (condition) (f (r condition)))
+
+  (defun calculate_merkle_root (path starting_point additional_steps)
+    (if additional_steps
+      (calculate_merkle_root
+        (lsh path -1)
+        (if (logand path 1)
+          (tree_branch_hash
+            (f additional_steps)
+            starting_point
+          )
+          (tree_branch_hash
+            starting_point
+            (f additional_steps)
+          )
+        )
+        (r additional_steps)
+      )
+      starting_point
+    )
+  )
+
+  ; This could maybe be curried in for flexibility
+  (defun-inline do_merkle_proof (inner_puzzle_hash proof_of_inclusion)
+    (calculate_merkle_root
+      (f proof_of_inclusion)
+      (tree_node_hash inner_puzzle_hash)
+      (if (r proof_of_inclusion) (f (r proof_of_inclusion)) ())
+    )
+    ; proof_of_inclusion
+  )
+
+  (defun found_singleton
+    (
+      singleton_condition
+      remaining_conditions
+      (
+        MOD_HASH
+        proof_of_inclusion
+      )
+    )
+
+    (c
+      (c
+        CREATE_COIN
+        (c
+          (puzzle_hash_of_curried_function MOD_HASH
+            (tree_node_hash (do_merkle_proof (puzzle_hash singleton_condition) proof_of_inclusion))
+            (tree_node_hash MOD_HASH)
+          )
+          (r (r singleton_condition))
+        )
+      )
+      remaining_conditions
+    )
+    ; (puzzle_hash_of_curried_function MOD_HASH
+      ; (tree_node_hash (do_merkle_proof (puzzle_hash singleton_condition) proof_of_inclusion))
+    ;   (tree_node_hash MOD_HASH)
+    ; )
+    ; (do_merkle_proof (puzzle_hash singleton_condition) proof_of_inclusion)
+  )
+
+  (defun search_for_singleton (conditions args)
+    (if conditions
+        (if (and
+              (= (f (f conditions)) CREATE_COIN)      ; this is a CREATE_COIN
+              (logand (coin_amount (f conditions)) 1) ; the amount is odd
+            )
+            (found_singleton (f conditions) (r conditions) args)
+            (c
+              (f conditions)
+              (search_for_singleton (r conditions) args)
+            )
+        )
+        (x)
+    )
+  )
+
+  (defun-inline main
+    (
+      MERKLE_ROOT
+      inner_puzzle
+      inner_solution
+      args
+      Truths
+      calculated_root
+    )
+    (assert
+      (= calculated_root MERKLE_ROOT)
+      (search_for_singleton (a inner_puzzle (c Truths inner_solution)) args)
+    )
+  )
+
+  ; main
+  (main
+    MERKLE_ROOT
+    inner_puzzle
+    inner_solution
+    (list MOD_HASH proof_of_inclusion)
+    Truths
+    (do_merkle_proof (sha256tree inner_puzzle) proof_of_inclusion)
+  )
+)
