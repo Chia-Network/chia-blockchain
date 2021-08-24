@@ -60,7 +60,8 @@ def execute_task(func):
 
     return inner()
 
-def replay_type(type):
+
+def reply_type(type):
     def wrap(func):
         def inner():
             setattr(func, "replay_type", type)

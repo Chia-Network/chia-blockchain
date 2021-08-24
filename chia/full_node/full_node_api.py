@@ -32,7 +32,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, replay_type
+from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -62,6 +62,7 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_peers])
     async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
         if peer.peer_server_port is None:
             return None
@@ -188,7 +189,12 @@ class FullNodeAPI:
             return None
         return None
 
+    # pmt.request_signage_point_or_end_of_sub_slot: [pmt.respond_signage_point, pmt.respond_end_of_sub_slot],
+    # pmt.request_compact_vdf: [pmt.respond_compact_vdf],
+    # pmt.request_peers: [pmt.respond_peers],
+    #
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_transaction])
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
@@ -227,7 +233,7 @@ class FullNodeAPI:
         return None
 
     @api_request
-    @replay_type(ProtocolMessageTypes.respond_proof_of_weight)
+    @reply_type([ProtocolMessageTypes.respond_proof_of_weight])
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
@@ -273,6 +279,7 @@ class FullNodeAPI:
         return None
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_height(request.height):
             reject = RejectBlock(request.height)
@@ -289,6 +296,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             reject = RejectBlocks(request.start_height, request.end_height)
@@ -400,6 +408,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
     ) -> Optional[Message]:
@@ -510,6 +519,7 @@ class FullNodeAPI:
         return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_signage_point, ProtocolMessageTypes.respond_end_of_sub_slot])
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
@@ -1301,6 +1311,7 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_compact_vdf])
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
         if self.full_node.sync_store.get_sync_mode():
             return None
