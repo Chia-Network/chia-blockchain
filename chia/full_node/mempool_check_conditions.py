@@ -416,7 +416,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes
     try:
         block_program = generator.program
         if not generator.generator_args:
-            block_program_args = NIL
+            block_program_args = [NIL]
         else:
             block_program_args = create_generator_args(generator.generator_refs())
 
