@@ -23,6 +23,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.api_decorators import REPLY_TYPE, API_FUNCTION, EXECUTE_TASK
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
@@ -525,7 +526,7 @@ class ChiaServer:
                         self.log.error(f"Non existing function: {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
-                    if not hasattr(f, "api_function"):
+                    if not hasattr(f, API_FUNCTION):
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
@@ -535,7 +536,7 @@ class ChiaServer:
                             return None
 
                     timeout: Optional[int] = 600
-                    if hasattr(f, "execute_task"):
+                    if hasattr(f, EXECUTE_TASK):
                         # Don't timeout on methods with execute_task decorator, these need to run fully
                         self.execute_tasks.add(task_id)
                         timeout = None
@@ -565,9 +566,10 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
-                    elif hasattr(f, "reply_type"):
+                    elif hasattr(f, REPLY_TYPE):
                         capabilities = connection.capabilities
                         if capabilities is not None and (uint16(Capability.NONERESPONSE.value), "1") in capabilities:
+                            # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
                             response_message = Message(full_message.type, full_message.id, b"")
                             await connection.reply_to_request(response_message)
                 except Exception as e:

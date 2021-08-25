@@ -7,6 +7,13 @@ from chia.util.streamable import Streamable
 log = logging.getLogger(__name__)
 
 
+BYTES_REQUIRED = "bytes_required"
+PEER_REQUIRED = "peer_required"
+EXECUTE_TASK = "execute_task"
+REPLY_TYPE = "reply_type"
+API_FUNCTION = "api_function"
+
+
 def api_request(f):
     @functools.wraps(f)
     def f_substitute(*args, **kwargs):
@@ -22,13 +29,13 @@ def api_request(f):
             if param_name != "return" and isinstance(inter[param_name], Streamable):
                 if param_class.__name__ == "bytes":
                     continue
-                if hasattr(f, "bytes_required"):
+                if hasattr(f, BYTES_REQUIRED):
                     inter[f"{param_name}_bytes"] = bytes(inter[param_name])
                     continue
             if param_name != "return" and isinstance(inter[param_name], bytes):
                 if param_class.__name__ == "bytes":
                     continue
-                if hasattr(f, "bytes_required"):
+                if hasattr(f, BYTES_REQUIRED):
                     inter[f"{param_name}_bytes"] = inter[param_name]
                 if inter[param_name] == b"":
                     inter[param_name] = None
@@ -36,13 +43,13 @@ def api_request(f):
                     inter[param_name] = param_class.from_bytes(inter[param_name])
         return f(**inter)
 
-    setattr(f_substitute, "api_function", True)
+    setattr(f_substitute, API_FUNCTION, True)
     return f_substitute
 
 
 def peer_required(func):
     def inner():
-        setattr(func, "peer_required", True)
+        setattr(func, PEER_REQUIRED, True)
         return func
 
     return inner()
@@ -50,7 +57,7 @@ def peer_required(func):
 
 def bytes_required(func):
     def inner():
-        setattr(func, "bytes_required", True)
+        setattr(func, BYTES_REQUIRED, True)
         return func
 
     return inner()
@@ -58,7 +65,7 @@ def bytes_required(func):
 
 def execute_task(func):
     def inner():
-        setattr(func, "execute_task", True)
+        setattr(func, EXECUTE_TASK, True)
         return func
 
     return inner()
@@ -67,7 +74,7 @@ def execute_task(func):
 def reply_type(type):
     def wrap(func):
         def inner():
-            setattr(func, "reply_type", type)
+            setattr(func, REPLY_TYPE, type)
             return func
 
         return inner()
