@@ -1357,10 +1357,3 @@ class FullNodeAPI:
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
         return msg
-
-    @api_request
-    async def request_additions_simple(self, request: wallet_protocol.RequestAdditionsSimple) -> Optional[Message]:
-        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
-        added_coins = [record.coin for record in additions]
-        response = wallet_protocol.RespondAdditionsSimple(request.height, added_coins)
-        msg = make_msg(ProtocolMessageTypes.respond_additions, response)

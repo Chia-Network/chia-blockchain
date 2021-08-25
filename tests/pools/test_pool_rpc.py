@@ -559,7 +559,8 @@ class TestPoolWalletRpc:
         self.delete_plot(plot_id)
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert (
-            wallet_node_0.wallet_state_manager.get_peak().height == full_node_api.full_node.blockchain.get_peak().height
+            wallet_node_0.wallet_state_manager.blockchain.get_peak_height()
+            == full_node_api.full_node.blockchain.get_peak().height
         )
         # Balance stars at 6 XCH and 5 more blocks are farmed, total 22 XCH
         assert (await wallet_0.get_confirmed_balance()) == 21999999999999

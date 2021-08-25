@@ -113,7 +113,7 @@ class RejectRemovalsRequest(Streamable):
 @streamable
 class RequestAdditions(Streamable):
     height: uint32
-    header_hash: bytes32
+    header_hash: Optional[bytes32]
     puzzle_hashes: Optional[List[bytes32]]
 
 

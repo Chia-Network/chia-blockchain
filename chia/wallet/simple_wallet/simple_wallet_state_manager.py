@@ -15,6 +15,7 @@ from cryptography.fernet import Fernet
 from chia import __version__
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.pools.pool_wallet import PoolWallet
@@ -87,7 +88,7 @@ class SimpleWalletStateManager:
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
     subscribe_to_new_puzzle_hash: Optional[Callable]
-    subscribe_to_coin_id_update: Optional[Callable]
+    subscribe_to_coin_ids_update: Optional[Callable]
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     new_peak_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
@@ -128,7 +129,6 @@ class SimpleWalletStateManager:
         self.subscribe_to_new_puzzle_hash = subscribe_to_new_puzzle_hash
         self.get_coin_state = get_coin_state
         self.subscribe_to_coin_ids_update = subscribe_to_coin_ids
-        self.blockchain = await SimpleWalletBlockchain.create()
         self.new_wallet = False
         self.config = config
         self.constants = constants
@@ -149,6 +149,7 @@ class SimpleWalletStateManager:
         self.user_settings = await UserSettings.create(self.basic_store)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
+        self.blockchain = await SimpleWalletBlockchain.create(self.basic_store)
 
         self.sync_mode = False
 
@@ -242,80 +243,6 @@ class SimpleWalletStateManager:
         private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
         pubkey = private.get_g1()
         return pubkey, private
-
-    async def coins_of_interest_added(
-        self, coins: List[Coin], block: BlockRecord
-    ) -> Tuple[List[Coin], List[WalletCoinRecord]]:
-        (
-            trade_removals,
-            trade_additions,
-        ) = await self.trade_manager.get_coins_of_interest()
-        trade_adds: List[Coin] = []
-        height = block.height
-
-        pool_rewards = set()
-        farmer_rewards = set()
-        added = []
-
-        wallet_ids: Set[int] = set()
-        for coin in coins:
-            info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
-            if info is not None:
-                wallet_ids.add(info[0])
-
-        all_outgoing_tx: Dict[int, List[TransactionRecord]] = {}
-        for wallet_id in wallet_ids:
-            all_outgoing_tx[wallet_id] = await self.tx_store.get_all_transactions_for_wallet(
-                wallet_id, TransactionType.OUTGOING_TX
-            )
-
-        for coin in coins:
-            if coin.name() in trade_additions:
-                trade_adds.append(coin)
-
-            is_coinbase = False
-            is_fee_reward = False
-            if coin.parent_coin_info in pool_rewards:
-                is_coinbase = True
-            if coin.parent_coin_info in farmer_rewards:
-                is_fee_reward = True
-
-            info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
-            if info is not None:
-                wallet_id, wallet_type = info
-                added_coin_record = await self.coin_added(
-                    coin,
-                    is_coinbase,
-                    is_fee_reward,
-                    uint32(wallet_id),
-                    wallet_type,
-                    height,
-                    all_outgoing_tx.get(wallet_id, []),
-                )
-                added.append(added_coin_record)
-            else:
-                interested_wallet_id = await self.interested_store.get_interested_puzzle_hash_wallet_id(
-                    puzzle_hash=coin.puzzle_hash
-                )
-                if interested_wallet_id is not None:
-                    wallet_type = self.wallets[uint32(interested_wallet_id)].type()
-                    added_coin_record = await self.coin_added(
-                        coin,
-                        is_coinbase,
-                        is_fee_reward,
-                        uint32(interested_wallet_id),
-                        wallet_type,
-                        height,
-                        all_outgoing_tx.get(interested_wallet_id, []),
-                    )
-                    added.append(added_coin_record)
-
-            derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin.puzzle_hash)
-            if derivation_index is not None:
-                await self.puzzle_store.set_used_up_to(derivation_index, True)
-
-        return trade_adds, added
-
 
     async def create_more_puzzle_hashes(self, from_zero: bool = False, in_transaction=False):
         """
@@ -513,11 +440,11 @@ class SimpleWalletStateManager:
         self.pending_tx_callback()
 
     async def synced(self):
-        if self.sync_mode is True:
+        latest = await self.blockchain.get_latest_tx_block()
+        if latest is None:
             return False
-
-        self.blockchain.get_peak_height()
-
+        if latest.foliage_transaction_block.timestamp > int(time.time()) - 4 * 60:
+            return True
         return False
 
     def set_sync_mode(self, mode: bool):
@@ -623,7 +550,7 @@ class SimpleWalletStateManager:
         coin_states: List[CoinState],
         fork_height: Optional[uint32] = None,
         current_height: Optional[uint32] = None,
-    ) -> Tuple[List[WalletCoinRecord], List[WalletCoinRecord]]:
+    ) -> Tuple[List[WalletCoinRecord], List[CoinState]]:
         added = []
         removed = []
 
@@ -649,9 +576,9 @@ class SimpleWalletStateManager:
             if coin_state.created_height is not None and coin_state.spent_height is None:
                 farmer_reward = False
                 pool_reward = False
-                if coin_state.coin.amount == calculate_base_farmer_reward(coin_state.created_height):
+                if self.is_farmer_reward(coin_state.created_height, coin_state.coin.parent_coin_info):
                     farmer_reward = True
-                elif coin_state.coin.amount == calculate_pool_reward(coin_state.created_height):
+                elif self.is_pool_reward(coin_state.created_height, coin_state.coin.parent_coin_info):
                     pool_reward = True
 
                 if coin_state.coin.name() in trade_additions:
@@ -692,7 +619,7 @@ class SimpleWalletStateManager:
                 if record is None:
                     self.log.info(f"Record for removed coin {coin_state.coin.name()} is None. (ephemeral)")
                 else:
-                    await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
+                    record = await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
 
                     await self.coin_store.db_connection.commit()
                 for unconfirmed_record in all_unconfirmed:
@@ -700,8 +627,7 @@ class SimpleWalletStateManager:
                         if rem_coin.name() == coin_state.coin.name():
                             self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                             await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
-                if record is not None:
-                    removed.append(record)
+                removed.append(coin_state)
 
         for coin_state_added in trade_adds:
             await self.trade_manager.coins_of_interest_farmed(coin_state_added)
@@ -709,6 +635,26 @@ class SimpleWalletStateManager:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed)
 
         return added, removed
+
+    def is_pool_reward(self, created_height, parent_id):
+        for i in range(0, 100):
+            try_height = created_height - i
+            if try_height < 0:
+                break
+            calculated = pool_parent_id(try_height, self.constants.GENESIS_CHALLENGE)
+            if calculated == parent_id:
+                return True
+        return False
+
+    def is_farmer_reward(self, created_height, parent_id):
+        for i in range(0, 100):
+            try_height = created_height - i
+            if try_height < 0:
+                break
+            calculated = farmer_parent_id(try_height, self.constants.GENESIS_CHALLENGE)
+            if calculated == parent_id:
+                return True
+        return False
 
     async def coin_added(
         self,
@@ -801,6 +747,11 @@ class SimpleWalletStateManager:
         """
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record, False)
+        all_coins_names = []
+        all_coins_names.extend([coin.name() for coin in tx_record.additions])
+        all_coins_names.extend([coin.name() for coin in tx_record.removals])
+
+        await self.subscribe_to_coin_ids_update(all_coins_names)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
@@ -1045,10 +996,12 @@ class SimpleWalletStateManager:
         pool_wallet_interested: List[bytes32] = PoolWallet.get_next_interesting_coin_ids(spend)
         for coin_id in pool_wallet_interested:
             await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
+
+        await self.subscribe_to_coin_ids_update(pool_wallet_interested)
         return pool_wallet_interested
 
     async def new_peak(self, peak: wallet_protocol.NewPeakWallet):
-        self.blockchain.set_peak_height(peak.height)
+        await self.blockchain.set_peak_height(peak.height)
         for wallet_id, callback in self.new_peak_callbacks.items():
             await callback(peak)
 
@@ -1060,4 +1013,4 @@ class SimpleWalletStateManager:
 
     async def add_interested_coin_id(self, coin_id: bytes32, in_transaction: bool = False) -> None:
         await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
-        await self.subscribe_to_coin_id_update([coin_id])
+        await self.subscribe_to_coin_ids_update([coin_id])

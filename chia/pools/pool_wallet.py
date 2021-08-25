@@ -15,6 +15,7 @@ from chia.pools.pool_wallet_info import (
     LEAVING_POOL,
     create_pool_state,
 )
+from chia.protocols import wallet_protocol
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 
 from chia.types.announcement import Announcement
@@ -264,29 +265,39 @@ class PoolWallet:
             return [coin.name()]
         return []
 
-    async def apply_state_transitions(self, block_spends: List[CoinSpend], block_height: uint32):
+    async def apply_state_transitions(self, block_spends: List[Tuple[CoinSpend, uint32]]):
         """
         Updates the Pool state (including DB) with new singleton spends. The block spends can contain many spends
         that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
         The DB must be committed after calling this method. All validation should be done here.
         """
-        coin_name_to_spend: Dict[bytes32, CoinSpend] = {cs.coin.name(): cs for cs in block_spends}
+
+        coin_name_to_spend: Dict[bytes32, Tuple[CoinSpend, uint32]] = {
+            cs.coin.name(): (cs, height) for cs, height in block_spends
+        }
 
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_height = tip[0]
         tip_spend = tip[1]
-        assert block_height >= tip_height  # We should not have a spend with a lesser block height
+        # for cs, height in block_spends:
+        #     if height < tip_height:
+        #         if cs.coin.name() in coin_name_to_spend:
+        #             coin_name_to_spend.pop(cs.coin.name())
+        # assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
         while True:
             tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
             assert tip_coin is not None
             spent_coin_name: bytes32 = tip_coin.name()
+            await self.wallet_state_manager.subscribe_to_coin_ids_update([spent_coin_name])
             if spent_coin_name not in coin_name_to_spend:
+                self.log.error(f"spent_coin_name {spent_coin_name}")
                 break
-            spend: CoinSpend = coin_name_to_spend[spent_coin_name]
-            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, block_height)
+            spend, height = coin_name_to_spend[spent_coin_name]
+            assert height >= tip_height
+            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, spend, height)
             tip_spend = (await self.get_tip())[1]
-            self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend}")
+            self.log.error(f"New PoolWallet singleton tip_coin: {tip_spend}")
             coin_name_to_spend.pop(spent_coin_name)
 
             # If we have reached the target state, resets it to None. Loops back to get current state
@@ -330,7 +341,7 @@ class PoolWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         launcher_coin_id: bytes32,
-        block_spends: List[CoinSpend],
+        block_spends: List[Tuple[CoinSpend, uint32]],
         block_height: uint32,
         in_transaction: bool,
         name: str = None,
@@ -351,17 +362,17 @@ class PoolWallet:
         self.log = logging.getLogger(name if name else __name__)
 
         launcher_spend: Optional[CoinSpend] = None
-        for spend in block_spends:
+        launcher_height = None
+        for spend, height in block_spends:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
+                launcher_height = height
         assert launcher_spend is not None
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, launcher_height)
         await self.update_pool_config(True)
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
-        await self.wallet_state_manager.add_interested_puzzle_hash(
-            p2_puzzle_hash, self.wallet_id, True
-        )
+        await self.wallet_state_manager.add_interested_puzzle_hash(p2_puzzle_hash, self.wallet_id, True)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
         self.wallet_state_manager.set_new_peak_callback(self.wallet_id, self.new_peak)
@@ -798,9 +809,8 @@ class PoolWallet:
         await self.wallet_state_manager.add_pending_transaction(absorb_transaction)
         return absorb_transaction
 
-    async def new_peak(self, peak: BlockRecord) -> None:
+    async def new_peak(self, peak: wallet_protocol.NewPeakWallet) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
-
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         tip_height, tip_spend = await self.get_tip()
 
@@ -816,14 +826,8 @@ class PoolWallet:
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height
 
-            curr: BlockRecord = peak
-            while not curr.is_transaction_block:
-                curr = self.wallet_state_manager.blockchain.block_record(curr.prev_hash)
-
-            self.log.info(f"Last transaction block height: {curr.height} OK to leave at height {leave_height}")
-
             # Add some buffer (+2) to reduce chances of a reorg
-            if curr.height > leave_height + 2:
+            if peak.height > leave_height + 2:
                 unconfirmed: List[
                     TransactionRecord
                 ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)

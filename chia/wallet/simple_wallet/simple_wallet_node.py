@@ -8,10 +8,19 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 from blspy import PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
+from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinState, RespondToPhUpdates
+from chia.protocols.wallet_protocol import (
+    RespondToCoinUpdates,
+    CoinState,
+    RespondToPhUpdates,
+    RequestAdditions,
+    RespondAdditions,
+    RejectAdditionsRequest,
+    RespondBlockHeader,
+)
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -31,7 +40,9 @@ from chia.wallet.settings.settings_objects import BackupInitialized
 from chia.wallet.simple_wallet.simple_wallet_state_manager import SimpleWalletStateManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.backup_utils import open_backup_file
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.util.profiler import profile_task
 
@@ -137,8 +148,15 @@ class SimpleWalletNode:
         self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
         self.wallet_state_manager = await SimpleWalletStateManager.create(
-            private_key, self.config, path, self.constants, self.server, self.root_path, self.new_puzzle_hash_created, self.get_coin_state,
-            self.subscribe_to_coin_updates
+            private_key,
+            self.config,
+            path,
+            self.constants,
+            self.server,
+            self.root_path,
+            self.new_puzzle_hash_created,
+            self.get_coin_state,
+            self.subscribe_to_coin_updates,
         )
 
         self.wsm_close_task = None
@@ -339,22 +357,39 @@ class SimpleWalletNode:
 
     async def update_coin_state(self, full_node: WSChiaConnection):
         all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-        await self.subscribe_to_phs(all_puzzle_hashes, full_node)
+        current_height = self.wallet_state_manager.blockchain.get_peak_height()
+        request_height = uint32(max(0, current_height - 100))
+        await self.subscribe_to_phs(all_puzzle_hashes, full_node, request_height)
 
         all_coins = await self.wallet_state_manager.coin_store.get_all_coins()
         all_coin_names = [coin_record.name() for coin_record in all_coins]
-        await self.subscribe_to_coin_updates(all_coin_names, full_node)
+        removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        all_coin_names.extend(removed_dict.keys())
+        all_coin_names.extend(added_dict.keys())
+        await self.subscribe_to_coin_updates(all_coin_names, full_node, request_height)
 
-    async def subscribe_to_phs(self, puzzle_hashes, full_node):
-        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, 0)
-        all_state: Union[Optional, RespondToPhUpdates] = await full_node.register_interest_in_puzzle_hash(msg)
-        if all_state is not None:
+    async def subscribe_to_phs(self, puzzle_hashes, full_node=None, height=uint32(0)):
+        if full_node is None:
+            peer = self.get_full_node_peer()
+        else:
+            peer = full_node
+        if peer is None:
+            return
+        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, height)
+        all_state: Union[Optional, RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+        if all_state is not None and full_node is not None:
             await self.handle_coin_state_change(all_state.coin_states)
 
-    async def subscribe_to_coin_updates(self, coin_names, full_node):
-        msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
-        all_coins_state: Union[Optional, RespondToCoinUpdates] = await full_node.register_interest_in_coin(msg)
-        if all_coins_state is not None:
+    async def subscribe_to_coin_updates(self, coin_names, full_node=None, height=uint32(0)):
+        if full_node is None:
+            peer = self.get_full_node_peer()
+        else:
+            peer = full_node
+        if peer is None:
+            return
+        msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
+        all_coins_state: Union[Optional, RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        if all_coins_state is not None and full_node is not None:
             await self.handle_coin_state_change(all_coins_state.coin_states)
 
     async def get_coin_state(self, coin_names) -> Optional[List[CoinState]]:
@@ -368,56 +403,89 @@ class SimpleWalletNode:
         return coin_state.coin_states
 
     async def state_update_received(self, request: wallet_protocol.CoinStateUpdate):
-        await self.wallet_state_manager.new_coin_state(request.items, request.fork_height, request.height)
+        await self.handle_coin_state_change(request.items, request.fork_height, request.height)
 
-    async def handle_coin_state_change(self, state_updates: List[CoinState]):
-        added, removed = await self.wallet_state_manager.new_coin_state(state_updates)
+    async def handle_coin_state_change(self, state_updates: List[CoinState], fork_height=None, height=None):
+        added, removed = await self.wallet_state_manager.new_coin_state(state_updates, fork_height, height)
+        additional_coin_spends = await self.process_removals(removed)
+        if len(additional_coin_spends) > 0:
+            created_pool_wallet_ids: List[int] = []
+            for cs, height in additional_coin_spends:
+                if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                    already_have = False
+                    for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+                        if (
+                            wallet.type() == WalletType.POOLING_WALLET
+                            and (await wallet.get_current_state()).launcher_id == cs.coin.name()
+                        ):
+                            self.log.warning("Already have, not recreating")
+                            already_have = True
+                    if not already_have:
+                        try:
+                            solution_to_extra_data(cs)
+                        except Exception as e:
+                            self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
+                        self.log.info("Found created launcher. Creating pool wallet")
+                        pool_wallet = await PoolWallet.create(
+                            self.wallet_state_manager,
+                            self.wallet_state_manager.main_wallet,
+                            cs.coin.name(),
+                            additional_coin_spends,
+                            22,
+                            True,
+                            "pool_wallet",
+                        )
+                        created_pool_wallet_ids.append(pool_wallet.wallet_id)
 
-    async def get_additional_coin_spends(
-        self, peer, block, added_coins: List[Coin], removed_coins: List[Coin]
-    ) -> List[CoinSpend]:
-        assert self.wallet_state_manager is not None
-        additional_coin_spends: List[CoinSpend] = []
-        if len(removed_coins) > 0:
-            removed_coin_ids = set([coin.name() for coin in removed_coins])
-            all_added_coins = await self.get_additions(peer, block, [], get_all_additions=True)
-            assert all_added_coins is not None
-            if all_added_coins is not None:
+            for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+                if wallet.type() == WalletType.POOLING_WALLET:
+                    await wallet.apply_state_transitions(additional_coin_spends)
 
-                for coin in all_added_coins:
-                    # This searches specifically for a launcher being created, and adds the solution of the launcher
-                    if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and coin.parent_coin_info in removed_coin_ids:
-                        cs: CoinSpend = await self.fetch_puzzle_solution(peer, block.height, coin.name())
-                        additional_coin_spends.append(cs)
-                        # Apply this coin solution, which might add things to interested list
+    def get_full_node_peer(self):
+        nodes = self.server.get_full_node_connections()
+        if len(nodes) > 0:
+            return nodes[0]
+        else:
+            return None
+
+    async def process_removals(self, removed_coins: List[CoinState]):
+        peer = self.get_full_node_peer()
+        assert peer is not None
+        additional_coin_spends = []
+        for state in removed_coins:
+            sanity = await self.get_coin_state([state.coin.name()])
+            cs: CoinSpend = await self.fetch_puzzle_solution(peer, state.spent_height, state.coin)
+            additions = cs.additions()
+            for coin in additions:
+                # This searches specifically for a launcher being created, and adds the solution of the launcher
+                if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                    cs: CoinSpend = await self.fetch_puzzle_solution(peer, state.spent_height, coin)
+                    additional_coin_spends.append((cs, state.spent_height))
+                    # Apply this coin solution, which might add things to interested list
+                    await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
+
+            keep_searching = True
+            checked = set()
+            while keep_searching:
+                keep_searching = False
+                interested_ids: List[
+                    bytes32
+                ] = await self.wallet_state_manager.interested_store.get_interested_coin_ids()
+                for coin_id in interested_ids:
+                    if coin_id in checked:
+                        continue
+                    coin_states = await self.get_coin_state([coin_id])
+                    coin_state = coin_states[0]
+                    if coin_state.spent_height == state.spent_height:
+                        cs = await self.fetch_puzzle_solution(peer, state.spent_height, coin_state.coin)
                         await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
+                        additional_coin_spends.append((cs, state.spent_height))
+                        keep_searching = True
+                        checked.add(coin_id)
+                        break
 
-                all_removed_coins: Optional[List[Coin]] = await self.get_removals(
-                    peer, block, added_coins, removed_coins, request_all_removals=True
-                )
-                assert all_removed_coins is not None
-                all_removed_coins_dict: Dict[bytes32, Coin] = {coin.name(): coin for coin in all_removed_coins}
-                keep_searching = True
-                while keep_searching:
-                    # This keeps fetching solutions for coins we are interested list, in this block, until
-                    # there are no more interested things to fetch
-                    keep_searching = False
-                    interested_ids: List[
-                        bytes32
-                    ] = await self.wallet_state_manager.interested_store.get_interested_coin_ids()
-                    for coin_id in interested_ids:
-                        if coin_id in all_removed_coins_dict:
-                            coin = all_removed_coins_dict[coin_id]
-                            cs = await self.fetch_puzzle_solution(peer, block.height, coin.name())
-
-                            # Apply this coin solution, which might add things to interested list
-                            await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
-                            additional_coin_spends.append(cs)
-                            keep_searching = True
-                            all_removed_coins_dict.pop(coin_id)
-                            break
         return additional_coin_spends
-
 
     async def _periodically_check_full_node(self) -> None:
         tries = 0
@@ -452,13 +520,37 @@ class SimpleWalletNode:
                 return True
         return False
 
+    async def fetch_last_tx_block(self, height, peer):
+        request_height = height
+        current_tx_peak = await self.wallet_state_manager.blockchain.get_latest_tx_block()
+        while True:
+            if request_height == 0:
+                break
+            request = wallet_protocol.RequestBlockHeader(request_height)
+            response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+            if response is not None and isinstance(response, RespondBlockHeader):
+                if request_height == height:
+                    await self.wallet_state_manager.blockchain.set_peak_block(response.header_block)
+                if response.header_block.is_transaction_block:
+                    await self.wallet_state_manager.blockchain.set_latest_tx_block(response.header_block)
+                    break
+                if (
+                    current_tx_peak is not None
+                    and response.header_block.prev_header_hash == current_tx_peak.header_hash
+                ):
+                    # tx peak has not changed
+                    break
+            else:
+                break
+            request_height -= 1
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         await self.wallet_state_manager.new_peak(peak)
+        await self.fetch_last_tx_block(peak.height, peer)
 
-    async def fetch_puzzle_solution(self, peer, height: uint32, coin_name: bytes32) -> CoinSpend:
+    async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
         solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin_name, height)
+            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise ValueError(f"Was not able to obtain solution {solution_response}")
