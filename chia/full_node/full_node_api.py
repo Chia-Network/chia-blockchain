@@ -1317,12 +1317,15 @@ class FullNodeAPI:
     async def register_interest_in_puzzle_hash(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: ws.WSChiaConnection
     ):
+        if peer.peer_node_id not in self.full_node.peer_puzzle_hash:
+            self.full_node.peer_puzzle_hash[peer.peer_node_id] = set()
 
         # Add peer to the "Subscribed" dictionary
         for puzzle_hash in request.puzzle_hashes:
             if puzzle_hash not in self.full_node.ph_subscriptions:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
             self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
+            self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
@@ -1338,10 +1341,14 @@ class FullNodeAPI:
     async def register_interest_in_coin(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: ws.WSChiaConnection
     ):
+        if peer.peer_node_id not in self.full_node.peer_coin_ids:
+            self.full_node.peer_coin_ids[peer.peer_node_id] = set()
+
         for coin_id in request.coin_ids:
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
             self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
+            self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
             include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
@@ -1350,3 +1357,10 @@ class FullNodeAPI:
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
         return msg
+
+    @api_request
+    async def request_additions_simple(self, request: wallet_protocol.RequestAdditionsSimple) -> Optional[Message]:
+        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
+        added_coins = [record.coin for record in additions]
+        response = wallet_protocol.RespondAdditionsSimple(request.height, added_coins)
+        msg = make_msg(ProtocolMessageTypes.respond_additions, response)
