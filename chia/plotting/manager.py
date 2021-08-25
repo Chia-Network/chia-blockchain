@@ -339,7 +339,6 @@ class PlotManager:
                             if not self.open_no_key_filenames:
                                 return new_provers
 
-                        stat_info = file_path.stat()
                         local_sk = master_sk_to_local_sk(local_master_sk)
 
                         plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
