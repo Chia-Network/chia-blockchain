@@ -31,7 +31,6 @@ from chia.util.ssl import (
     RESTRICT_MASK_CERT_FILE,
     RESTRICT_MASK_KEY_FILE,
     check_and_fix_permissions_for_ssl_file,
-    check_ssl,
     fix_ssl,
 )
 from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
@@ -329,9 +328,7 @@ def chia_full_version_str() -> str:
     return f"{major}.{minor}.{patch}{dev}"
 
 
-def chia_init(
-    root_path: Path, *, should_check_keys: bool = True, should_check_ssl: bool = True, fix_ssl_permissions: bool = False
-):
+def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permissions: bool = False):
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
@@ -353,8 +350,6 @@ def chia_init(
         # before a new update.
         if fix_ssl_permissions:
             fix_ssl(root_path)
-        elif should_check_ssl:
-            check_ssl(root_path)
         if should_check_keys:
             check_keys(root_path)
         print(f"{root_path} already exists, no migration action taken")
@@ -364,8 +359,6 @@ def chia_init(
     create_all_ssl(root_path)
     if fix_ssl_permissions:
         fix_ssl(root_path)
-    elif should_check_ssl:
-        check_ssl(root_path)
     if should_check_keys:
         check_keys(root_path)
     print("")
