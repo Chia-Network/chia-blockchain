@@ -116,12 +116,24 @@ def spend_bundle_for_spendable_ccs(
         raise ValueError("spendable_cc_list and inner_solutions are different lengths")
 
     input_coins = [_.coin for _ in spendable_cc_list]
-
     # figure out what the output amounts are by running the inner puzzles & solutions
     output_amounts = []
+    mod_hash = mod_code.get_tree_hash()
+    mod_hash_hash = Program.to(mod_hash).get_tree_hash()
+    cc_struct = Program.to([mod_hash, mod_hash_hash, genesis_coin_checker, genesis_coin_checker.get_tree_hash()])
     for cc_spend_info, inner_solution in zip(spendable_cc_list, inner_solutions):
+        # TRUTHS are: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
+        # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER)
+        truths = Program.to([
+            cc_spend_info.coin.name(),
+            cc_spend_info.coin.puzzle_hash,
+            cc_spend_info.inner_puzzle.get_tree_hash(),
+            cc_spend_info.coin.amount,
+            cc_spend_info.lineage_proof,
+            cc_struct
+        ])
         error, conditions, cost = conditions_dict_for_solution(
-            cc_spend_info.inner_puzzle, inner_solution, INFINITE_COST
+            cc_spend_info.inner_puzzle, truths.cons(inner_solution), INFINITE_COST
         )
         total = 0
         if conditions:
