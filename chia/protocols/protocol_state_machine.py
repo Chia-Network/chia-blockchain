@@ -50,7 +50,8 @@ def sent_message_response_ok(sent: ProtocolMessageTypes, received: Optional[Prot
     """
     # Errors below are runtime protocol message mismatches from peers
     if received is None:
-        if sent in VAILD_REPLY_MESSAGE_MAP or sent not in NO_REPLY_EXPECTED:
+        # If we knew the peer NodeType is FULL_NODE, we could also check `sent not in NO_REPLY_EXPECTED`
+        if sent in VAILD_REPLY_MESSAGE_MAP:
             return False
     if sent in VAILD_REPLY_MESSAGE_MAP:
         if received not in VAILD_REPLY_MESSAGE_MAP[sent]:
