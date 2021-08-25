@@ -43,7 +43,11 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.puzzles.singleton_top_layer import adapt_inner_to_singleton, adapt_inner_puzzle_hash_to_singleton, remove_singleton_truth_wrapper
+from chia.wallet.puzzles.singleton_top_layer import (
+    adapt_inner_to_singleton,
+    adapt_inner_puzzle_hash_to_singleton,
+    remove_singleton_truth_wrapper,
+)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -623,7 +627,14 @@ class CCWallet:
         sigs: List[G2Element] = []
         first = True
         mod_hash = CC_MOD.get_tree_hash()
-        cc_struct = Program.to([mod_hash, Program.to(mod_hash).get_tree_hash(), self.cc_info.my_genesis_checker, self.cc_info.my_genesis_checker.get_tree_hash()])
+        cc_struct = Program.to(
+            [
+                mod_hash,
+                Program.to(mod_hash).get_tree_hash(),
+                self.cc_info.my_genesis_checker,
+                self.cc_info.my_genesis_checker.get_tree_hash(),
+            ]
+        )
         for coin in selected_coins:
             coin_inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             if first:
@@ -638,14 +649,9 @@ class CCWallet:
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
-            truths = Program.to([
-                coin.name(),
-                coin.puzzle_hash,
-                inner_puzzle.get_tree_hash(),
-                coin.amount,
-                lineage_proof,
-                cc_struct
-            ])
+            truths = Program.to(
+                [coin.name(), coin.puzzle_hash, inner_puzzle.get_tree_hash(), coin.amount, lineage_proof, cc_struct]
+            )
             sigs = sigs + (await self.get_sigs(coin_inner_puzzle, truths.cons(innersol), coin.name()))
 
         spend_bundle = spend_bundle_for_spendable_ccs(
@@ -699,7 +705,9 @@ class CCWallet:
         await self.add_lineage(origin_id, Program.to((0, [origin.as_list(), 0])))
         genesis_coin_checker: Program = create_genesis_or_zero_coin_checker(origin_id)
 
-        minted_cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(CC_MOD, genesis_coin_checker, cc_inner_hash)
+        minted_cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(
+            CC_MOD, genesis_coin_checker, cc_inner_hash
+        )
 
         tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins

@@ -124,14 +124,16 @@ def spend_bundle_for_spendable_ccs(
     for cc_spend_info, inner_solution in zip(spendable_cc_list, inner_solutions):
         # TRUTHS are: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
         # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER)
-        truths = Program.to([
-            cc_spend_info.coin.name(),
-            cc_spend_info.coin.puzzle_hash,
-            cc_spend_info.inner_puzzle.get_tree_hash(),
-            cc_spend_info.coin.amount,
-            cc_spend_info.lineage_proof,
-            cc_struct
-        ])
+        truths = Program.to(
+            [
+                cc_spend_info.coin.name(),
+                cc_spend_info.coin.puzzle_hash,
+                cc_spend_info.inner_puzzle.get_tree_hash(),
+                cc_spend_info.coin.amount,
+                cc_spend_info.lineage_proof,
+                cc_struct,
+            ]
+        )
         error, conditions, cost = conditions_dict_for_solution(
             cc_spend_info.inner_puzzle, truths.cons(inner_solution), INFINITE_COST
         )
