@@ -565,7 +565,7 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
-                    elif hasattr(f, "replay_type"):
+                    elif hasattr(f, "reply_type"):
                         capabilities = connection.capabilities
                         if capabilities is not None and (uint16(Capability.NONERESPONSE.value), "1") in capabilities:
                             response_message = Message(full_message.type, full_message.id, b"")
