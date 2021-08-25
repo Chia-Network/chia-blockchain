@@ -58,6 +58,33 @@ KEY_CONFIG_KEY_PATHS = [
 warned_ssl_files: Set[Path] = set()
 
 
+def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
+    """Lookup config values and append to a list of files whose permissions we need to check"""
+    from chia.ssl.create_ssl import get_mozilla_ca_crt
+
+    all_certs: List[Path] = []
+    all_keys: List[Path] = []
+
+    try:
+        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False)
+        for paths, parsed_list in [(CERT_CONFIG_KEY_PATHS, all_certs), (KEY_CONFIG_KEY_PATHS, all_keys)]:
+            for path in paths:
+                try:
+                    file = root_path / Path(traverse_dict(config, path))
+                    parsed_list.append(file)
+                except Exception as e:
+                    print(
+                        f"Failed to lookup config value for {path}: {e}"
+                    )  # lgtm [py/clear-text-logging-sensitive-data]
+
+        # Check the Mozilla Root CAs as well
+        all_certs.append(Path(get_mozilla_ca_crt()))
+    except ValueError:
+        pass
+
+    return all_certs, all_keys
+
+
 def get_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int) -> str:
     return (
         f"Permissions {octal_mode_string(actual_mode)} for "
@@ -118,47 +145,13 @@ def check_ssl(root_path: Path) -> None:
     Sanity checks on the SSL configuration. Checks that file permissions are properly
     set on the keys and certs, warning and exiting if permissions are incorrect.
     """
-    from chia.ssl.create_ssl import get_mozilla_ca_crt
-
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
         return None
 
-    config: Dict = load_config(root_path, "config.yaml")
-    files_to_check: List[Tuple[Path, int, int]] = []
-    valid: bool = True
-    banner_shown: bool = False
-
-    # Lookup config values and append to a list of files whose permissions we need to check
-    for (key_paths, mask, expected_mode) in [
-        (CERT_CONFIG_KEY_PATHS, RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE),
-        (KEY_CONFIG_KEY_PATHS, RESTRICT_MASK_KEY_FILE, DEFAULT_PERMISSIONS_KEY_FILE),
-    ]:
-        for key_path in key_paths:
-            try:
-                file = root_path / Path(traverse_dict(config, key_path))
-                files_to_check.append((file, mask, expected_mode))
-            except Exception as e:
-                print(
-                    f"Failed to lookup config value for {key_path}: {e}"  # lgtm [py/clear-text-logging-sensitive-data]
-                )
-
-    # Check the Mozilla Root CAs as well
-    mozilla_root_ca = get_mozilla_ca_crt()
-    files_to_check.append((Path(mozilla_root_ca), RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE))
-
-    for (file, mask, expected_mode) in files_to_check:
-        try:
-            # Check that the file permissions are not too permissive
-            (good_perms, mode) = verify_file_permissions(file, mask)
-            if not good_perms:
-                print_ssl_perm_warning(file, mode, expected_mode, show_banner=not banner_shown)
-                banner_shown = True
-                valid = False
-        except Exception as e:
-            print(f"Unable to check permissions for {key_path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
-
-    if not valid:
+    certs_to_check, keys_to_check = get_all_ssl_file_paths(root_path)
+    invalid_files = verify_ssl_certs_and_keys(certs_to_check, keys_to_check)
+    if len(invalid_files):
         print("One or more SSL files were found with permission issues.")
         print("Run `chia init --fix-ssl-permissions` to fix issues.")
 
@@ -192,33 +185,16 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
 
 def fix_ssl(root_path: Path) -> None:
     """Attempts to fix SSL cert/key file permissions that are too open"""
-    from chia.ssl.create_ssl import get_mozilla_ca_crt
 
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
         return None
 
-    config: Dict = load_config(root_path, "config.yaml")
-    files_to_fix: List[Tuple[Path, int, int]] = []
     updated: bool = False
     encountered_error: bool = False
 
-    for (key_paths, mask, updated_mode) in [
-        (CERT_CONFIG_KEY_PATHS, RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE),
-        (KEY_CONFIG_KEY_PATHS, RESTRICT_MASK_KEY_FILE, DEFAULT_PERMISSIONS_KEY_FILE),
-    ]:
-        for key_path in key_paths:
-            try:
-                file = root_path / Path(traverse_dict(config, key_path))
-                files_to_fix.append((file, mask, updated_mode))
-            except Exception as e:
-                print(
-                    f"Failed to lookup config value for {key_path}: {e}"  # lgtm [py/clear-text-logging-sensitive-data]
-                )
-
-    # Check the Mozilla Root CAs as well
-    mozilla_root_ca = get_mozilla_ca_crt()
-    files_to_fix.append((Path(mozilla_root_ca), RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE))
+    certs_to_check, keys_to_check = get_all_ssl_file_paths(root_path)
+    files_to_fix = verify_ssl_certs_and_keys(certs_to_check, keys_to_check)
 
     for (file, mask, updated_mode) in files_to_fix:
         # Check that permissions are correct, and if not, attempt to fix
