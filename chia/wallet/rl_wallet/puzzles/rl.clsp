@@ -76,7 +76,7 @@
   )
 
   (defun-inline calculate_possible_withdrawal (RATE_AMOUNT INTERVAL_TIME CREDIT time_passed)
-    (+ (* time_passed (/ RATE_AMOUNT INTERVAL_TIME)) CREDIT)
+    (+ (* (max 0 time_passed) (/ RATE_AMOUNT INTERVAL_TIME)) CREDIT)
   )
 
   (defun generate_final_conditions
