@@ -4,16 +4,14 @@ from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.util.ints import uint64
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.types.blockchain_format.coin import Coin
-from chia.wallet.puzzles.genesis_with_signature import (
-    create_genesis_sig_checker
-)
+from chia.wallet.puzzles.genesis_with_signature import create_genesis_sig_checker
 from chia.wallet.cc_wallet.cc_utils import cc_puzzle_for_inner_puzzle
 
 
 def test_signature_genesis():
-    pubkey = Program.to(0x00fadeddab)
+    pubkey = Program.to(0x00FADEDDAB)
     genesis_checker = create_genesis_sig_checker(pubkey)
-    innerpuz = Program.to([1, [51, 0x00cafef00d, 200]])
+    innerpuz = Program.to([1, [51, 0x00CAFEF00D, 200]])
     puzzle = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, innerpuz)
 
     coin = Coin(puzzle.get_tree_hash(), puzzle.get_tree_hash(), uint64(200))
@@ -25,4 +23,4 @@ def test_signature_genesis():
 
     result = puzzle.run_with_cost(INFINITE_COST, solution)
     assert result[1].first().first().as_int() == 50
-    assert result[1].first().rest().first().as_int() == 0x00fadeddab
+    assert result[1].first().rest().first().as_int() == 0x00FADEDDAB
