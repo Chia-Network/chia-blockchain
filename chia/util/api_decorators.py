@@ -64,10 +64,10 @@ def execute_task(func):
     return inner()
 
 
-def returns_none(type):
+def reply_type(type):
     def wrap(func):
         def inner():
-            setattr(func, "can_return_none", type)
+            setattr(func, "replay_type", type)
             return func
 
         return inner()
