@@ -58,6 +58,14 @@ KEY_CONFIG_KEY_PATHS = [
 warned_ssl_files: Set[Path] = set()
 
 
+def get_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int) -> str:
+    return (
+        f"Permissions {octal_mode_string(actual_mode)} for "
+        f"'{path}' are too open. "  # lgtm [py/clear-text-logging-sensitive-data]
+        f"Expected {octal_mode_string(expected_mode)}"
+    )
+
+
 def print_ssl_perm_warning(
     path: Path, actual_mode: int, expected_mode: int, *, show_banner: bool = True, log: Optional[Logger] = None
 ) -> None:
@@ -66,11 +74,7 @@ def print_ssl_perm_warning(
             print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
             print("@             WARNING: UNPROTECTED SSL FILE!              @")
             print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        msg = (
-            f"Permissions {octal_mode_string(actual_mode)} for "
-            f"'{path}' are too open. "  # lgtm [py/clear-text-logging-sensitive-data]
-            f"Expected {octal_mode_string(expected_mode)}"
-        )
+        msg = get_ssl_perm_warning(path, actual_mode, expected_mode)
         if log is not None:
             log.error(f"{msg}")
         print(f"{msg}")
