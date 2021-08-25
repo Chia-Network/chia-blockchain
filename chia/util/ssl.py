@@ -93,21 +93,6 @@ def get_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int) -> st
     )
 
 
-def print_ssl_perm_warning(
-    path: Path, actual_mode: int, expected_mode: int, *, show_banner: bool = True, log: Optional[Logger] = None
-) -> None:
-    if path not in warned_ssl_files:
-        if show_banner and len(warned_ssl_files) == 0:
-            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            print("@             WARNING: UNPROTECTED SSL FILE!              @")
-            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        msg = get_ssl_perm_warning(path, actual_mode, expected_mode)
-        if log is not None:
-            log.error(f"{msg}")
-        print(f"{msg}")
-        warned_ssl_files.add(path)
-
-
 def verify_ssl_certs_and_keys(
     cert_paths: List[Path], key_paths: List[Path], log: Optional[Logger] = None
 ) -> List[Tuple[Path, int, int]]:
@@ -117,19 +102,17 @@ def verify_ssl_certs_and_keys(
         return []
 
     invalid_files_and_modes: List[Tuple[Path, int, int]] = []
-    banner_shown: bool = False
 
     def verify_paths(paths: List[Path], restrict_mask: int, expected_permissions: int):
-        nonlocal banner_shown
         nonlocal invalid_files_and_modes
         for path in paths:
             try:
                 # Check that the file permissions are not too permissive
                 is_valid, actual_permissions = verify_file_permissions(path, restrict_mask)
                 if not is_valid:
-                    print_ssl_perm_warning(
-                        path, actual_permissions, expected_permissions, show_banner=not banner_shown, log=log
-                    )
+                    if log is not None:
+                        log.error(get_ssl_perm_warning(path, actual_permissions, expected_permissions))
+                    warned_ssl_files.add(path)
                     invalid_files_and_modes.append((path, actual_permissions, expected_permissions))
             except Exception as e:
                 print(f"Unable to check permissions for {path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
@@ -152,6 +135,13 @@ def check_ssl(root_path: Path) -> None:
     certs_to_check, keys_to_check = get_all_ssl_file_paths(root_path)
     invalid_files = verify_ssl_certs_and_keys(certs_to_check, keys_to_check)
     if len(invalid_files):
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        print("@             WARNING: UNPROTECTED SSL FILE!              @")
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        for path, actual_permissions, expected_permissions in invalid_files:
+            print(
+                get_ssl_perm_warning(path, actual_permissions, expected_permissions)
+            )  # lgtm [py/clear-text-logging-sensitive-data]
         print("One or more SSL files were found with permission issues.")
         print("Run `chia init --fix-ssl-permissions` to fix issues.")
 
