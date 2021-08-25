@@ -115,6 +115,8 @@ class FullNode:
         self.db_path = path_from_root(root_path, db_path_replaced)
         self.coin_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
         self.ph_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
+        self.peer_coin_ids: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[Coin ids]
+        self.peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[puzzle_hash]
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -564,6 +566,24 @@ class FullNode:
         self._state_changed("sync_mode")
         if self.sync_store is not None:
             self.sync_store.peer_disconnected(connection.peer_node_id)
+        self.remove_subscriptions(connection)
+
+    def remove_subscriptions(self, peer: ws.WSChiaConnection):
+        # Remove all ph | coin id subscription for this peer
+        node_id = peer.peer_node_id
+        if node_id in self.peer_puzzle_hash:
+            puzzle_hashes = self.peer_puzzle_hash[node_id]
+            for ph in puzzle_hashes:
+                if ph in self.ph_subscriptions:
+                    if node_id in self.ph_subscriptions[ph]:
+                        self.ph_subscriptions[ph].remove(node_id)
+
+        if node_id in self.peer_coin_ids:
+            coin_ids = self.peer_coin_ids[node_id]
+            for coin_id in coin_ids:
+                if coin_id in self.coin_subscriptions:
+                    if node_id in self.coin_subscriptions[coin_id]:
+                        self.coin_subscriptions[coin_id].remove(node_id)
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
