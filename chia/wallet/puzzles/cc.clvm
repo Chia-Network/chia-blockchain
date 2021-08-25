@@ -90,8 +90,8 @@
 ;;  next_coin_bundle: the bundle for next coin
 ;;  prev_subtotal: the subtotal between prev-coin and this-coin
 ;;
-;; coin-info: `(parent_id puzzle_hash amount)`. This defines the coin id used with ASSERT_MY_COIN_ID
-;; coin-bundle: the cons box `(coin-info . lineage_proof)`
+;; coin_info: `(parent_id puzzle_hash amount)`. This defines the coin id used with ASSERT_MY_COIN_ID
+;; coin-bundle: the cons box `(coin_info . lineage_proof)`
 ;;
 ;; and automatically hashed in to the announcement generated with CREATE_COIN_ANNOUNCEMENT.
 ;;
@@ -110,6 +110,7 @@
 
      (include condition_codes.clvm)
      (include curry-and-treehash.clinc)
+     (include singleton_truths.clib)
 
      (defmacro assert items
          (if (r items)
@@ -240,12 +241,10 @@
          this_coin_info
          next_coin_info
        )
-       (c (create_assert_my_id this_coin_info)
          (c (create_announcement_condition prev_coin_info prev_subtotal)
            (c (create_assert_next_announcement_condition this_coin_info this_subtotal next_coin_info)
              morphed_conditions)
          )
-       )
       )
 
     (defun-inline coin_info_for_coin_bundle (coin_bundle)
@@ -340,13 +339,45 @@
       )
     )
 
-    (main
+    ; COLOURED_COIN TRUTHS ARE: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
+
+    (defun stager_last (
+        cc_mod_struct
+        INNER_PUZZLE
+        inner_solution
+        inner_puzzle_hash
+        my_id
+        prev_coin_bundle
+        this_coin_bundle
+        next_coin_bundle
+        prev_subtotal
+     )
+
+        ;(a INNER_PUZZLE (c (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (r this_coin_bundle) cc_mod_struct) inner_solution))
+        ;INNER_PUZZLE
+
+       (main cc_mod_struct
+             (c (list ASSERT_MY_COIN_ID my_id) (a INNER_PUZZLE (c (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (r this_coin_bundle) cc_mod_struct) inner_solution)))
+             prev_coin_bundle
+             this_coin_bundle
+             next_coin_bundle
+             prev_subtotal
+       )
+    )
+
+    (stager_last
         ;; cache some stuff: output conditions, and cc_mod_struct
         (list MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
-        (a INNER_PUZZLE inner_puzzle_solution)
+        INNER_PUZZLE
+        inner_puzzle_solution
+        (sha256tree1 INNER_PUZZLE)
+        (coin_id_for_coin (f this_coin_bundle))
         prev_coin_bundle
         this_coin_bundle
         next_coin_bundle
         prev_subtotal
     )
+
+    ; CONFIRMED WORKING
+    ; (coin_id_for_coin (f this_coin_bundle))
 )
