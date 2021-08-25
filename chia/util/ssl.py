@@ -78,34 +78,33 @@ def print_ssl_perm_warning(
 
 
 def verify_ssl_certs_and_keys(
-    cert_and_key_paths: List[Tuple[Optional[Path], Optional[Path]]], log: Optional[Logger] = None
-) -> List[Tuple[Path, int]]:
+    cert_paths: List[Path], key_paths: List[Path], log: Optional[Logger] = None
+) -> List[Tuple[Path, int, int]]:
     """Check that file permissions are properly set for the provided SSL cert and key files"""
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
         return []
 
-    invalid_files_and_modes: List[Tuple[Path, int]] = []
+    invalid_files_and_modes: List[Tuple[Path, int, int]] = []
     banner_shown: bool = False
 
-    for (cert_path, key_path) in cert_and_key_paths:
-        if cert_path is not None:
-            cert_perms_valid, cert_actual_mode = verify_file_permissions(cert_path, RESTRICT_MASK_CERT_FILE)
-            if not cert_perms_valid:
-                print_ssl_perm_warning(
-                    cert_path, cert_actual_mode, DEFAULT_PERMISSIONS_CERT_FILE, show_banner=not banner_shown, log=log
-                )
-                banner_shown = True
-                invalid_files_and_modes.append((cert_path, cert_actual_mode))
+    def verify_paths(paths: List[Path], restrict_mask: int, expected_permissions: int):
+        nonlocal banner_shown
+        nonlocal invalid_files_and_modes
+        for path in paths:
+            try:
+                # Check that the file permissions are not too permissive
+                is_valid, actual_permissions = verify_file_permissions(path, restrict_mask)
+                if not is_valid:
+                    print_ssl_perm_warning(
+                        path, actual_permissions, expected_permissions, show_banner=not banner_shown, log=log
+                    )
+                    invalid_files_and_modes.append((path, actual_permissions, expected_permissions))
+            except Exception as e:
+                print(f"Unable to check permissions for {path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
 
-        if key_path is not None:
-            key_perms_valid, key_actual_mode = verify_file_permissions(key_path, RESTRICT_MASK_KEY_FILE)
-            if not key_perms_valid:
-                print_ssl_perm_warning(
-                    key_path, key_actual_mode, DEFAULT_PERMISSIONS_KEY_FILE, show_banner=not banner_shown, log=log
-                )
-                banner_shown = True
-                invalid_files_and_modes.append((key_path, key_actual_mode))
+    verify_paths(cert_paths, RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE)
+    verify_paths(key_paths, RESTRICT_MASK_KEY_FILE, DEFAULT_PERMISSIONS_KEY_FILE)
 
     return invalid_files_and_modes
 
