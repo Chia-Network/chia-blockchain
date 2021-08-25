@@ -167,7 +167,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
     """Check file permissions and attempt to fix them if found to be too open"""
     if sys.platform == "win32" or sys.platform == "cygwin":
         # TODO: ACLs for SSL certs/keys on Windows
-        return (True, False)
+        return True, False
 
     valid: bool = True
     updated: bool = False
@@ -187,7 +187,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
         print(f"Failed to change permissions on {file}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
         valid = False
 
-    return (valid, updated)
+    return valid, updated
 
 
 def fix_ssl(root_path: Path) -> None:
