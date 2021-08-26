@@ -307,7 +307,7 @@
 
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-     (defun main (
+     (defun stager_two (
          cc_mod_struct
          inner_conditions
          prev_coin_bundle
@@ -341,7 +341,7 @@
 
     ; COLOURED_COIN TRUTHS ARE: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
 
-    (defun stager_last (
+    (defun stager (
         cc_mod_struct
         INNER_PUZZLE
         inner_solution
@@ -352,11 +352,7 @@
         next_coin_bundle
         prev_subtotal
      )
-
-        ;(a INNER_PUZZLE (c (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (r this_coin_bundle) cc_mod_struct) inner_solution))
-        ;INNER_PUZZLE
-
-       (main cc_mod_struct
+      (stager_two cc_mod_struct
              (c (list ASSERT_MY_COIN_ID my_id) (a INNER_PUZZLE (c (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (r this_coin_bundle) cc_mod_struct) inner_solution)))
              prev_coin_bundle
              this_coin_bundle
@@ -365,8 +361,8 @@
        )
     )
 
-    (stager_last
-        ;; cache some stuff: output conditions, and cc_mod_struct
+    (stager
+        ;; caclculate stuff: cc_mod_struct, inner_puzzle_hash, coin_id
         (list MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
         INNER_PUZZLE
         inner_puzzle_solution
@@ -377,7 +373,4 @@
         next_coin_bundle
         prev_subtotal
     )
-
-    ; CONFIRMED WORKING
-    ; (coin_id_for_coin (f this_coin_bundle))
 )
