@@ -118,12 +118,6 @@ class TradeManager:
         for added_coin in trade.additions:
             all_coin_names_in_trade.append(added_coin.name())
 
-        coin_state_is_addition = False
-        if coin_state.coin in trade.additions:
-            coin_state_is_addition = True
-        else:
-            coin_state_is_addition = False
-
         coin_states = await self.wallet_state_manager.get_coin_state(all_coin_names_in_trade)
         assert coin_states is not None
 
@@ -135,7 +129,10 @@ class TradeManager:
         all_heights = set()
 
         for removed_coin in trade.removals:
-            removed_coin_state = coin_states_dict[removed_coin.name()]
+            removed_coin_state = coin_states_dict.get(removed_coin.name(), None)
+            if removed_coin_state is None:
+                failed = True
+                break
             if removed_coin_state.spent_height is None:
                 failed = True
                 break

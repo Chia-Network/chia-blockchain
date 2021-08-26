@@ -170,19 +170,11 @@ async def setup_wallet_node(
         else:
             del config["full_node_peer"]
 
-<<<<<<< HEAD
-        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
+        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain, simple_wallet)
         kwargs.update(
             parse_cli_args=False,
             connect_to_daemon=False,
         )
-=======
-    kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain, simple_wallet)
-    kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False,
-    )
->>>>>>> 589a7ff4f (stash)
 
         service = Service(**kwargs)
 
