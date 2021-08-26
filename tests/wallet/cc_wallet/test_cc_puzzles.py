@@ -1,5 +1,3 @@
-import pytest
-
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.util.ints import uint64
 from chia.wallet.puzzles.cc_loader import CC_MOD
