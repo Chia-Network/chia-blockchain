@@ -19,7 +19,7 @@ for setuptools_scm/PEP 440 reasons.
 - Added a py.typed file that allows other projects that pip install chia-blockchain to type check using our functions with mypy.
 - Added an RPC for coin records by multiple coin names.
 - Enabled querying AAAA records for DNS Introducer.
-- We now sets the version for the GUI when doing a manual install using the install-gui.sh script. Uses a python helper to get the version of the chia install and then converts it into proper npm format and puts that into package.json.
+- We now set the version for the GUI when doing a manual install using the install-gui.sh script. Uses a python helper to get the version of the chia install and then converts it into proper npm format and puts that into package.json.
 - Added some new class methods to the Program objects to improve ease of use.
 - Added an option to sign bytes as well as UTF-8 strings, which is particularly helpful if you're writing Chialisp puzzles that require signatures and you want to test them without necessarily writing a whole python script for signing the relevant data.
 - Added a first version of .pre-commit-config.yaml and applied the changes required by the following initial hooks in separate commits. To use this you need to install pre-commit, see <https://pre-commit.com/#installation/>.
@@ -32,14 +32,14 @@ submissions. Thanks to @RuiZhe for Chinese, Traditional; @HansCZ for Czech;
 - Thanks @altendky for Correct * to ** kwargs unpacking in time_out_assert().
 - Thanks @altendky for changing the default to paginate to chia wallet get_transactions to address cases such as piping and output redirection to a file where the command previously just hung while waiting for the user to press c for the next page.
 - Removed commented-out debug breakpoints.
-- Enabled Rust condition checker to add the ability to parse the output conditions froma  generator program in Rust. It also validates some of the conditions in Rust.
+- Enabled Rust condition checker to add the ability to parse the output conditions from a  generator program in Rust. It also validates some of the conditions in Rust.
 - Switched IP address lookup to first use Chia's service ip.chia.net.
-- Made changes so that When creating SSL certificate and private key files, we ensure that files are written with the proper file permissions.
+- Made changes so that when creating SSL certificate and private key files, we ensure that files are written with the proper file permissions.
 - Define a new encrypted keyring format to be used to store keys, and which is optionally encrypted to a user-supplied passphrase. GUI for the passphrase will come in an upcoming release.
 - Removed initial transaction freeze put in place at mainnet launch as it is no longer necessary.
 - Separate locking and non-locking cases for get_confirmed_balance_for_wallet, which will allow calling a few wallet_state_manager methods while already under the wallet_state_manager lock, for example during DID wallet creation.
 - Thanks to @Playwo for removing the index on coin_record spent column to speed up querying.
-- This change makes the conditions parser either ignore or fail when it encounters unknown conditions. It also removes the UNKNOWN enum value from ConditionOpcodes.
+- Made a change to the conditions parser to either ignore or fail when it encounters unknown conditions. It also removes the UNKNOWN enum value from ConditionOpcodes.
 - Renamed folder tests/core/types to tests/core/custom_types to address conflicts in debugger in PyCharm.
 - Disabled DID wallet tests while DID wallet is under construction.
 - Added pairing cache for faster aggregate signature verification.
@@ -56,7 +56,7 @@ submissions. Thanks to @RuiZhe for Chinese, Traditional; @HansCZ for Czech;
 - Thanks to @mgraczyk for fixing type annotation in sync_store.
 - Thanks to @darkverbito for fixing an issue on initial creation of a coloured coin where code always falls into default else clause due to lack of type conversion.
 - Fixed NPM publish in clvm_rs.
-- Thanks to @skweee for his investigation work.
+- Thanks to @skweee for his investigation work on fixing mempool TX cache cost, where the cost of the mempool TX cache (for spend bundles that can't be included in a block yet) would not be reset when the cache was emptied.
 
 ## 1.2.3 Chia blockchain 2021-07-26
 
