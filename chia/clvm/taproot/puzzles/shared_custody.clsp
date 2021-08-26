@@ -43,7 +43,6 @@
       (tree_node_hash inner_puzzle_hash)
       (if (r proof_of_inclusion) (f (r proof_of_inclusion)) ())
     )
-    ; proof_of_inclusion
   )
 
   (defun found_singleton
@@ -69,11 +68,6 @@
       )
       remaining_conditions
     )
-    ; (puzzle_hash_of_curried_function MOD_HASH
-      ; (tree_node_hash (do_merkle_proof (puzzle_hash singleton_condition) proof_of_inclusion))
-    ;   (tree_node_hash MOD_HASH)
-    ; )
-    ; (do_merkle_proof (puzzle_hash singleton_condition) proof_of_inclusion)
   )
 
   (defun search_for_singleton (conditions args)
