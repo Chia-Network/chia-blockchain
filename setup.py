@@ -2,7 +2,7 @@ from setuptools import setup
 
 dependencies = [
     "blspy==1.0.5",  # Signature library
-    "chiavdf==1.0.2",  # timelord and vdf verification
+    "chiavdf==1.0.3",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.4",  # proof of space
     "clvm==0.9.7",
