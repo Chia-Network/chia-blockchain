@@ -69,53 +69,57 @@ provided configuration with `pre-commit install`.
 ## How to:
 
 ### Make a release
+
 If there is a candidate branch:
-Resolve open PRs on the candidate branch and run testnet with the clients, from the most recent CI builds, to test the candidate version.
-Create a commit to the candidate branch with the change log for the release.
-Merge the candidate branch into main. (THIS HAS TO HAPPEN EVERY TIME)
-Create a tag for this release number from the candidate branch (e.g., 1.0.1)
-CI should cover everything but the announcements.
+1. Resolve open PRs on the candidate branch and run testnet with the clients, from the most recent CI builds, to test the candidate version.
+2. Create a commit to the candidate branch with the change log for the release.
+3. Merge the candidate branch into main. (THIS HAS TO HAPPEN EVERY TIME)
+4. Create a tag for this release number from the candidate branch (e.g., 1.0.1)
+5. CI should cover everything but the announcements.
 Delete the candidate branch
-If there are no candidate branches:
-Create a PR with the change log for the release.
-Create a tag for this release number from main (e.g., 1.0.1.)    
-CI should cover everything but the announcements.
+1. If there are no candidate branches:
+2. Create a PR with the change log for the release.
+3. Create a tag for this release number from main (e.g., 1.0.1.)    
+4. CI should cover everything but the announcements.
 
 ### Make a candidate branch
-Start with whichever merge commit hash that has the code we are comfortable releasing.
-Git reset head to the hash for the merge commit of your choosing, or head if you simply want the current state of main as your fork point.
-Git checkout -b candidate-x.x.x.
-Git push (probably requires specifying of a remote branch,e.g., candidate-x.x.x)
-Have engineers with changes for the release land their PRs on both main and the Candidate-x.x.x branch.
-Candidates can be tested against the official testnet or against a beta testnet. The person managing the release will decide which pattern to use for testing.
-Once the head of candidate-x.x.x is ready for release, submit a PR from the candidate branch back to main, wait till this PR is merged. Finally, create a tag from the candidate branch and delete the candidate branch when finished.
+
+1. Start with whichever merge commit hash that has the code we are comfortable releasing.
+2. Git reset head to the hash for the merge commit of your choosing, or head if you simply want the current state of main as your fork point.
+3. Git checkout -b candidate-x.x.x.
+4. Git push (probably requires specifying of a remote branch,e.g., candidate-x.x.x)
+5. Have engineers with changes for the release land their PRs on both main and the Candidate-x.x.x branch.
+6. Candidates can be tested against the official testnet or against a beta testnet. The person managing the release will decide which pattern to use for testing.
+7. Once the head of candidate-x.x.x is ready for release, submit a PR from the candidate branch back to main, wait till this PR is merged. Finally, create a tag from the candidate branch and delete the candidate branch when finished.
 
 ### Debug a specific configuration of main
+
 To debug a past version of main when changes have been merged into main and after a bug you are working on was introduced:
-Find the merge commit hash for the merge that introduced the bug producing changes.
-Git checkout -b <testing_branch_name>.
-Git reset --hard <commit hash>.
-Git push.
-Spin up a beta testnet for this branch.
-Perform testing and patch the bug on your beta testnet.
-Once ready with your patch, merge the head of main into your branch and submit a PR.
+1. Find the merge commit hash for the merge that introduced the bug producing changes.
+2. Git checkout -b <testing_branch_name>.
+3. Git reset --hard <commit hash>.
+4. Git push.
+5. Spin up a beta testnet for this branch.
+6. Perform testing and patch the bug on your beta testnet.
+7. Once ready with your patch, merge the head of main into your branch and submit a PR.
 
 ### Create an emergency patch
+
 Should an emergency patch be required, the following should be performed:
-Create a candidate branch (“candidate-xyx”) from the release tag we are patching.
-git checkout <tag>
-git checkout -b candidate-xyz
-Patch this branch
-Once patch is tested follow the same process of releasing from a candidate branch
-It is imperative that this branch be merged to main and deleted after the release.
+1. Create a candidate branch (“candidate-xyx”) from the release tag we are patching.
+2. git checkout <tag>
+3. git checkout -b candidate-xyz
+4. Patch this branch
+5. Once patch is tested follow the same process of releasing from a candidate branch
+6. It is imperative that this branch be merged to main and deleted after the release.
 
 ### Make a beta testnet (internal chia only)
-Beta testnets can be generated from any non-main branch of the chia-blockchain repo.
-If you would like to spin up a beta testnet, and you are an internal developer, ask in #devops
-Run the workflow referenced from here https://github.com/Chia-Network/testnet-config-generator/actions/workflows/make-testnet.yml
-This will create another branch and then trigger automation based on your source branch that also has constant changes for the testnet
-Kick off the workflow and the rest is magic.
-Candidate branches will have automatically deployed testnets via automation.
+1. Beta testnets can be generated from any non-main branch of the chia-blockchain repo.
+2. If you would like to spin up a beta testnet, and you are an internal developer, ask in #devops
+3. Run the workflow referenced from here https://github.com/Chia-Network/testnet-config-generator/actions/workflows/make-testnet.yml
+4. This will create another branch and then trigger automation based on your source branch that also has constant changes for the testnet
+5. Kick off the workflow and the rest is magic.
+6. Candidate branches will have automatically deployed testnets via automation.
 
 ### Run tests and linting
 
