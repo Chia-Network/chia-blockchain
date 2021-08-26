@@ -105,7 +105,7 @@ jobs:
     - name: Test core-custom_types code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/custom_types/test_coin.py tests/core/custom_types/test_proof_of_space.py tests/core/custom_types/test_spend_bundle.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/custom_types/test_coin.py tests/core/custom_types/test_proof_of_space.py tests/core/custom_types/test_spend_bundle.py -s -v --durations 0
 
 
 #
