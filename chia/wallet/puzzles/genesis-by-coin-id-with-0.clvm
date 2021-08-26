@@ -9,7 +9,7 @@
       GENESIS_ID
       cc_mod_struct
       my_coin_info
-      (parent_coin zero_parent_inner_puzzle_hash)
+      (parent_coin zero_parent_inner_puzzle_hash)  ; lineage_proof
     )
 
     ;; boolean or macro
