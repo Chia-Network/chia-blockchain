@@ -56,6 +56,7 @@ submissions. Thanks to @RuiZhe for Chinese, Traditional; @HansCZ for Czech;
 - Thanks to @mgraczyk for fixing type annotation in sync_store.
 - Thanks to @darkverbito for fixing an issue on initial creation of a coloured coin where code always falls into default else clause due to lack of type conversion.
 - Fixed NPM publish in clvm_rs.
+- Thanks to @skweee for his investigation work.
 
 ## 1.2.3 Chia blockchain 2021-07-26
 
