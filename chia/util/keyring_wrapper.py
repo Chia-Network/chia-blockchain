@@ -6,6 +6,7 @@ from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyring
 from chia.util.misc import prompt_yes_no
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
+from keyring.backends.macOS import Keyring as MacKeyring
 from pathlib import Path
 from sys import exit, platform
 from typing import Any, List, Optional, Tuple, Union
@@ -13,6 +14,21 @@ from typing import Any, List, Optional, Tuple, Union
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
 DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE = "$ chia passphrase set # all the cool kids are doing it!"
+
+
+def check_macos_keychain_keys_present(mac_keychain: MacKeyring) -> bool:
+    from keyring.credentials import SimpleCredential
+    from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
+
+    keychain_user: str = default_keychain_user()
+    keychain_service: str = default_keychain_service()
+
+    for index in range(0, MAX_KEYS):
+        current_user: str = get_private_key_user(keychain_user, index)
+        credential: Optional[SimpleCredential] = mac_keychain.get_credential(keychain_service, current_user)
+        if credential is not None:
+            return True
+    return False
 
 
 class KeyringWrapper:
@@ -77,7 +93,7 @@ class KeyringWrapper:
             if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
             else:
-                keyring.set_keyring(keyring.backends.macOS.Keyring())
+                keyring.set_keyring(MacKeyring())
         elif platform == "linux":
             if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
@@ -89,8 +105,8 @@ class KeyringWrapper:
 
         return keyring
 
-    def _configure_legacy_backend(self) -> CryptFileKeyring:
-        # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring
+    def _configure_legacy_backend(self) -> Union[CryptFileKeyring, MacKeyring]:
+        # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring or the Mac Keychain
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
         if filekeyring and not filekeyring.has_content():
             if platform == "linux":
@@ -100,14 +116,9 @@ class KeyringWrapper:
                     old_keyring.keyring_key = "your keyring password"  # type: ignore
                     return old_keyring
             elif platform == "darwin":
-                pass
-                # import keyring.backends.macOS
-
-                # mac_keychain = keyring.backends.macOS.Keyring()
-                # user = f"wallet-user-chia-1.8-0"
-                # service = f"chia-user-chia-1.8"
-                # cred = mac_keychain.get_credential(service, user)
-                # print(f"keychain cred: {cred}")
+                mac_keychain: MacKeyring = MacKeyring()
+                if check_macos_keychain_keys_present(mac_keychain):
+                    return mac_keychain
 
         return None
 
@@ -277,7 +288,7 @@ class KeyringWrapper:
         return prompt_yes_no("Begin keyring migration? (y/n) ")
 
     def migrate_legacy_keys(self) -> MigrationResults:
-        from chia.util.keychain import Keychain, MAX_KEYS
+        from chia.util.keychain import get_private_key_user, Keychain, MAX_KEYS
 
         print("Migrating contents from legacy keyring")
 
@@ -288,7 +299,7 @@ class KeyringWrapper:
         service = keychain.service
         user_passphrase_pairs = []
         index = 0
-        user = keychain._get_private_key_user(index)
+        user = get_private_key_user(keychain.user, index)
         while index <= MAX_KEYS:
             # Build up a list of user/passphrase tuples from the legacy keyring contents
             if user is not None:
@@ -298,7 +309,7 @@ class KeyringWrapper:
                 user_passphrase_pairs.append((user, passphrase))
 
             index += 1
-            user = keychain._get_private_key_user(index)
+            user = get_private_key_user(keychain.user, index)
 
         # Write the keys directly to the new keyring (self.keyring)
         for (user, passphrase) in user_passphrase_pairs:

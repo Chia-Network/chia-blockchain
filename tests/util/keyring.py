@@ -100,9 +100,7 @@ class TempKeyring:
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
-    def _patch_and_create_keychain(
-        self, user: str, service: str, populate: bool, existing_keyring_path: Optional[str]
-    ):
+    def _patch_and_create_keychain(self, user: str, service: str, populate: bool, existing_keyring_path: Optional[str]):
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
