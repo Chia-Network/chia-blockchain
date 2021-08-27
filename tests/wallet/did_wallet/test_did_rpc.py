@@ -84,8 +84,6 @@ class TestDIDWallet:
         assert len(val["my_did"]) == 64
         assert bytes.fromhex(val["my_did"])
 
-        did_wallet_id = val["wallet_id"]
-
         main_wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
         ph2 = await main_wallet_2.get_new_puzzlehash()
         for i in range(0, num_blocks + 1):
