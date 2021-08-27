@@ -53,7 +53,7 @@ def update_version():
     version: str = "0.0"
     output = subprocess.run(["chia", "version"], capture_output=True)
     if output.returncode == 0:
-        version = str(output.stdout.strip(), "utf-8")
+        version = str(output.stdout.strip(), "utf-8").splitlines()[-1]
 
     data["version"] = make_semver(version)
 
