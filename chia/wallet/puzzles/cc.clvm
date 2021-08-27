@@ -151,7 +151,7 @@
                (f (r (r condition)))
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
-           (x)
+           (list CREATE_COIN_ANNOUNCEMENT (concat 0xca (f (r condition))))
            condition
          )
        )
@@ -181,7 +181,7 @@
      ;; calculate the hash of an announcement
      (defun-inline calculate_annoucement_id (this_coin_info this_subtotal next_coin_info)
        ; NOTE: the next line containts a bug, as sha256tree1 ignores `this_subtotal`
-       (sha256 (coin_id_for_coin next_coin_info) (sha256tree1 (list this_coin_info this_subtotal)))
+       (sha256 (coin_id_for_coin next_coin_info) (concat 0xcb (sha256tree1 (list this_coin_info this_subtotal))))
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
@@ -197,7 +197,7 @@
      ;; here we commit to I_{k-1} and S_k
      (defun-inline create_announcement_condition (prev_coin_info prev_subtotal)
        (list CREATE_COIN_ANNOUNCEMENT
-             (sha256tree1 (list prev_coin_info prev_subtotal))
+             (concat 0xcb (sha256tree1 (list prev_coin_info prev_subtotal)))
        )
       )
 
