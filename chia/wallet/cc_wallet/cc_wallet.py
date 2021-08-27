@@ -95,7 +95,7 @@ class CCWallet:
             raise
         if spend_bundle is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
-            raise
+            raise ValueError("Failed to create spend.")
 
         await self.wallet_state_manager.add_new_wallet(self, self.id())
 
