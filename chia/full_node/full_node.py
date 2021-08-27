@@ -1922,7 +1922,7 @@ class FullNode:
 
                 self.log.info("Getting random heights for bluebox to compact")
                 heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
-                self.log.info('Heights found for bluebox to compact: [%s]' % ', '.join(map(str, heights)))
+                self.log.info("Heights found for bluebox to compact: [%s]" % ", ".join(map(str, heights)))
 
                 batches_finished = 0
                 for h in heights:
