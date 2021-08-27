@@ -7,9 +7,9 @@ from blspy import AugSchemeMPL, PrivateKey
 from chia.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 
 
-class TesKeychain(unittest.TestCase):
+class TestKeychain(unittest.TestCase):
     def test_basic_add_delete(self):
-        kc: Keychain = Keychain(testing=True)
+        kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
         assert kc._get_free_private_key_index() == 0
@@ -78,7 +78,7 @@ class TesKeychain(unittest.TestCase):
         assert kc.get_first_public_key() is not None
 
     def test_bip39_eip2333_test_vector(self):
-        kc: Keychain = Keychain(testing=True)
+        kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
         mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"

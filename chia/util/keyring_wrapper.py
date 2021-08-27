@@ -63,18 +63,21 @@ class KeyringWrapper:
             import keyring.backends.Windows
 
             keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
-        elif platform == "darwin":
-            import keyring.backends.macOS
-
-            keyring.set_keyring(keyring.backends.macOS.Keyring())
-            # TODO: New keyring + passphrase support can be enabled for macOS by updating
+            # TODO: New keyring + passphrase support can be enabled for Windows by updating
             # supports_keyring_passphrase() and uncommenting the lines below. Leaving the
             # lines below in place for testing.
             #
             # if supports_keyring_passphrase():
             #     keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
             # else:
-            #     keyring.set_keyring(keyring.backends.macOS.Keyring())
+            #     keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
+        elif platform == "darwin":
+            import keyring.backends.macOS
+
+            if supports_keyring_passphrase():
+                keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
+            else:
+                keyring.set_keyring(keyring.backends.macOS.Keyring())
         elif platform == "linux":
             if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
@@ -90,11 +93,21 @@ class KeyringWrapper:
         # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
         if filekeyring and not filekeyring.has_content():
-            old_keyring = CryptFileKeyring()
-            if Path(old_keyring.file_path).is_file():
-                # After migrating content from legacy_keyring, we'll prompt to clear those keys
-                old_keyring.keyring_key = "your keyring password"  # type: ignore
-                return old_keyring
+            if platform == "linux":
+                old_keyring = CryptFileKeyring()
+                if Path(old_keyring.file_path).is_file():
+                    # After migrating content from legacy_keyring, we'll prompt to clear those keys
+                    old_keyring.keyring_key = "your keyring password"  # type: ignore
+                    return old_keyring
+            elif platform == "darwin":
+                pass
+                # import keyring.backends.macOS
+
+                # mac_keychain = keyring.backends.macOS.Keyring()
+                # user = f"wallet-user-chia-1.8-0"
+                # service = f"chia-user-chia-1.8"
+                # cred = mac_keychain.get_credential(service, user)
+                # print(f"keychain cred: {cred}")
 
         return None
 
@@ -272,7 +285,7 @@ class KeyringWrapper:
         # Obtain contents from the legacy keyring. When using the Keychain interface
         # to read, the legacy keyring will be preferred over the new keyring.
         original_private_keys = keychain.get_all_private_keys()
-        service = keychain._get_service()
+        service = keychain.service
         user_passphrase_pairs = []
         index = 0
         user = keychain._get_private_key_user(index)

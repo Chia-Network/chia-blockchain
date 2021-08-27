@@ -15,6 +15,9 @@ from time import sleep
 from typing import Any, Dict, List, Optional, Tuple
 
 
+CURRENT_KEY_VERSION = "1.8"
+DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
+DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
 )  # noqa: E501
@@ -203,6 +206,14 @@ def mnemonic_to_seed(mnemonic: str, passphrase: str) -> bytes:
     return seed
 
 
+def default_keychain_user() -> str:
+    return DEFAULT_USER
+
+
+def default_keychain_service() -> str:
+    return DEFAULT_SERVICE
+
+
 class Keychain:
     """
     The keychain stores two types of keys: private keys, which are PrivateKeys from blspy,
@@ -214,23 +225,10 @@ class Keychain:
     list of all keys.
     """
 
-    testing: bool
-    keyring_wrapper: KeyringWrapper
-    user: str
-
-    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
-        self.user = user
-        self.testing = testing
+    def __init__(self, user: Optional[str] = None, service: Optional[str] = None):
+        self.user = user if user is not None else default_keychain_user()
+        self.service = service if service is not None else default_keychain_service()
         self.keyring_wrapper = KeyringWrapper.get_shared_instance()
-
-    def _get_service(self) -> str:
-        """
-        The keychain stores keys under a different name for tests.
-        """
-        if self.testing:
-            return f"chia-{self.user}-test"
-        else:
-            return f"chia-{self.user}"
 
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
@@ -239,7 +237,7 @@ class Keychain:
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = self.keyring_wrapper.get_passphrase(self._get_service(), user)
+        read_str = self.keyring_wrapper.get_passphrase(self.service, user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
@@ -252,10 +250,7 @@ class Keychain:
         """
         Returns the keychain user string for a key index.
         """
-        if self.testing:
-            return f"wallet-{self.user}-test-{index}"
-        else:
-            return f"wallet-{self.user}-{index}"
+        return f"wallet-{self.user}-{index}"
 
     def _get_free_private_key_index(self) -> int:
         """
@@ -287,7 +282,7 @@ class Keychain:
             return key
 
         self.keyring_wrapper.set_passphrase(
-            self._get_service(),
+            self.service,
             self._get_private_key_user(index),
             bytes(key.get_g1()).hex() + entropy.hex(),
         )
@@ -396,7 +391,7 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
+                    self.keyring_wrapper.delete_passphrase(self.service, self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -411,7 +406,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
+                self.keyring_wrapper.delete_passphrase(self.service, self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -429,7 +424,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
+                self.keyring_wrapper.delete_passphrase(self.service, self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True

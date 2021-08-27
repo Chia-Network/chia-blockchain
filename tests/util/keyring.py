@@ -91,17 +91,17 @@ class TempKeyring:
     def __init__(
         self,
         user: str = "testing-1.8.0",
-        testing: bool = True,
+        service: str = "testing-chia-1.8.0",
         populate: bool = False,
         existing_keyring_path: str = None,
         delete_on_cleanup: bool = True,
     ):
-        self.keychain = self._patch_and_create_keychain(user, testing, populate, existing_keyring_path)
+        self.keychain = self._patch_and_create_keychain(user, service, populate, existing_keyring_path)
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
     def _patch_and_create_keychain(
-        self, user: str, testing: bool, populate: bool, existing_keyring_path: Optional[str]
+        self, user: str, service: str, populate: bool, existing_keyring_path: Optional[str]
     ):
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
@@ -123,7 +123,7 @@ class TempKeyring:
         # We don't want CryptFileKeyring finding the real legacy keyring
         mock_data_root.return_value = temp_dir
 
-        keychain = Keychain(user=user, testing=testing)
+        keychain = Keychain(user=user, service=service)
         keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
 
         # Stash the temp_dir in the keychain instance
