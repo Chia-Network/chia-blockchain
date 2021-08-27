@@ -1041,7 +1041,7 @@ class DIDWallet:
             self.did_info.temp_coin,
             self.did_info.temp_puzhash,
             self.did_info.temp_pubkey,
-            self.did_info.temp_pubkey,
+            self.did_info.sent_recovery_transaction,
         )
         await self.save_info(did_info, False)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
