@@ -7,9 +7,10 @@ from chia.util.file_keyring import FileKeyring
 from chia.util.misc import prompt_yes_no
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from keyring.backends.macOS import Keyring as MacKeyring
+from keyring.backends.Windows import WinVaultKeyring as Win32Keyring
 from pathlib import Path
 from sys import exit, platform
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Type, Union
 
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
@@ -354,22 +355,31 @@ class KeyringWrapper:
 
     def confirm_legacy_keyring_cleanup(self, migration_results) -> bool:
         """
-        Ask the user whether we should remove keys from the legacy keyring.
+        Ask the user whether we should remove keys from the legacy keyring. In the case
+        of CryptFileKeyring, we can't just delete the file because other python processes
+        might use the same keyring file.
         """
-        return prompt_yes_no(
-            f"Remove keys from old keyring ({str(migration_results.legacy_keyring.file_path)})? (y/n) "
-        )
+        keyring_name: str = ""
+        legacy_keyring_type: Type = type(migration_results.legacy_keyring)
+
+        if legacy_keyring_type is CryptFileKeyring:
+            keyring_name = str(migration_results.legacy_keyring.file_path)
+        elif legacy_keyring_type is MacKeyring:
+            keyring_name = "macOS Keychain"
+        elif legacy_keyring_type is Win32Keyring:
+            keyring_name = "Windows Credential Manager"
+
+        prompt = "Remove keys from old keyring"
+        if len(keyring_name) > 0:
+            prompt += f" ({keyring_name})?"
+        else:
+            prompt += "?"
+        prompt += " (y/n) "
+        return prompt_yes_no(prompt)
 
     def cleanup_legacy_keyring(self, migration_results: MigrationResults):
-        """
-        Remove keys from the legacy keyring. We can't just delete the file because other
-        python processes might use the same keyring file.
-        """
         for user in migration_results.keychain_users:
             migration_results.legacy_keyring.delete_password(migration_results.keychain_service, user)
-
-        # TODO: CryptFileKeyring doesn't cleanup section headers
-        # [chia_2Duser_2Dchia_2D1_2E8] is left behind
 
     def migrate_legacy_keyring(self, cleanup_legacy_keyring: bool = False):
         results = self.migrate_legacy_keys()
