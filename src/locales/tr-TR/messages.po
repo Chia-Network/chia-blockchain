@@ -8,7 +8,7 @@ msgstr ""
 "Language: tr_TR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-18 00:13\n"
+"PO-Revision-Date: 2021-08-27 14:51\n"
 "Last-Translator: \n"
 "Language-Team: Turkish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -591,7 +591,7 @@ msgstr "Tarih"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Delay"
-msgstr "Ertele"
+msgstr "Gecikme"
 
 #: src/components/plot/PlotAction.tsx:27
 #: src/components/plot/PlotAction.tsx:57
@@ -720,7 +720,7 @@ msgstr "Hata: Renkli adrese chia gönderemiyorum. Lütfen bir chia adresi girin.
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
 msgid "Estimated Network Space"
-msgstr ""
+msgstr "Tahmini Ağ Büyüklüğü"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
@@ -756,7 +756,7 @@ msgstr "Çiftlik"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
 msgid "Farmer Public Key"
-msgstr "Ana Açık Anahtar"
+msgstr "Çiftçi Açık Anahtarı"
 
 #: src/components/block/Block.jsx:267
 msgid "Farmer Puzzle Hash"
@@ -880,7 +880,7 @@ msgstr "Tam Node"
 
 #: src/components/fullNode/FullNode.jsx:326
 msgid "Full Node Overview"
-msgstr ""
+msgstr "Tam Düğüme Genel Bakış"
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
@@ -912,7 +912,7 @@ msgstr "HD veya Hiyerarşik Deterministik anahtarlar, bir public key/private ana
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 msgid "Harvester Plots"
-msgstr ""
+msgstr "Kazım Arazileri"
 
 #: src/components/fullNode/FullNode.jsx:61
 msgid "Header Hash"
@@ -1174,7 +1174,7 @@ msgstr "Herkese Açık Anahtarım"
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 msgid "Network Name"
-msgstr "Network Adı"
+msgstr "Ağ Adı"
 
 #: src/components/fullNode/FullNode.jsx:106
 #~ msgid "Network has not yet been launched, once it launches full node will start automatically."
@@ -1232,7 +1232,7 @@ msgstr "Node ID'si"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Düğüm Kimliği"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "None"
@@ -1488,7 +1488,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
-msgstr "Plot'lar"
+msgstr "Arsalar"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:22
 msgid "Plots Passed Filter"
@@ -1589,13 +1589,13 @@ msgstr ""
 
 #: src/middleware/middleware_api.jsx:283
 msgid "Pool public key:"
-msgstr ""
+msgstr "Herkese Açık Havuz Anahtarı:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:272
 #: src/components/plotNFT/PlotNFTCard.tsx:327
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Pool:"
-msgstr ""
+msgstr "Havuz:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
@@ -1656,7 +1656,7 @@ msgstr "Kanıtlar Bulundu"
 
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
-msgstr ""
+msgstr "Protokol Sürümü: %1%s"
 
 #: src/components/wallet/create/createRLAdmin.jsx:297
 msgid "Pubkey"
@@ -1723,7 +1723,7 @@ msgstr "Eski cüzdanınızı kurtarma"
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
 msgid "Refresh Plots"
-msgstr "Plot'ları Yenile"
+msgstr "Arsaları Yenile"
 
 #: src/components/pool/PoolInfo.tsx:32
 msgid "Relative Lock Height"
@@ -1938,7 +1938,7 @@ msgstr "Harcama Limiti (aralık başına chia): {0}"
 
 #: src/components/fullNode/FullNode.jsx:100
 msgid "State"
-msgstr "Bölge"
+msgstr "Durum"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:59
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:67
@@ -2231,7 +2231,7 @@ msgstr "Toplam Ağ Alanı"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:146
 msgid "Total Plot Size:"
-msgstr "Plot'un Toplam Boyutu:"
+msgstr "Toplam Plot Boyutu:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
 msgid "Total Size of Plots"
@@ -2543,7 +2543,7 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
-msgstr "Maden Özetiniz"
+msgstr "Çiftlik Özetiniz"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:95
 msgid "Your Full Node Connection"
@@ -2555,7 +2555,7 @@ msgstr "Kazıcı Ağınız"
 
 #: src/components/pool/PoolOverview.tsx:160
 msgid "Your Pool Overview"
-msgstr "Maden Özetiniz"
+msgstr "Havuz Özetiniz"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
