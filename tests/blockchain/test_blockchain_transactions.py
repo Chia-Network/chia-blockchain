@@ -288,7 +288,8 @@ class TestBlockchainTransactions:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):
+    @pytest.mark.parametrize("rust_checker", [True, False])
+    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes, rust_checker: bool):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -311,7 +312,8 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
+        assert spend_coin
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_1_puzzlehash, spend_coin)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -326,14 +328,14 @@ class TestBlockchainTransactions:
 
         coin_2 = None
         for coin in run_and_get_removals_and_additions(
-            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE, rust_checker=rust_checker
         )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
                 break
         assert coin_2 is not None
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_2_puzzlehash, coin_2)
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_2_puzzlehash, coin_2)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -347,14 +349,14 @@ class TestBlockchainTransactions:
 
         coin_3 = None
         for coin in run_and_get_removals_and_additions(
-            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, test_constants.COST_PER_BYTE, rust_checker=rust_checker
         )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
                 break
         assert coin_3 is not None
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_3_puzzlehash, coin_3)
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_3_puzzlehash, coin_3)
 
         new_blocks = bt.get_consecutive_blocks(
             1,

@@ -16,6 +16,7 @@ from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import set_keys_root_path, supports_keyring_passphrase
+from chia.util.ssl import check_ssl
 from typing import Optional
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -71,6 +72,8 @@ def cli(
             cache_passphrase(read_passphrase_from_file(passphrase_file))
         except Exception as e:
             print(f"Failed to read passphrase: {e}")
+
+    check_ssl(Path(root_path))
 
 
 if not supports_keyring_passphrase():

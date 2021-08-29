@@ -363,7 +363,7 @@ class FullNodeAPI:
         Receive a full block from a peer full node (or ourselves).
         """
 
-        self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_info()}")
+        self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_logging()}")
         return None
 
     @api_request

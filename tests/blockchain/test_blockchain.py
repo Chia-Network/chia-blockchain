@@ -1821,13 +1821,16 @@ class TestBodyValidation:
         block: FullBlock = blocks[-1]
 
         # Too few
+        assert block.transactions_info
         too_few_reward_claims = block.transactions_info.reward_claims_incorporated[:-1]
         block_2: FullBlock = recursive_replace(
             block, "transactions_info.reward_claims_incorporated", too_few_reward_claims
         )
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
@@ -1844,9 +1847,11 @@ class TestBodyValidation:
             Coin(h, h, too_few_reward_claims[0].amount)
         ]
         block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", too_many_reward_claims)
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
@@ -1862,9 +1867,11 @@ class TestBodyValidation:
             block.transactions_info.reward_claims_incorporated[-1]
         ]
         block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", duplicate_reward_claims)
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
@@ -2049,7 +2056,7 @@ class TestBodyValidation:
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
-        assert (await b.receive_block(blocks[-1]))[1] == Err.INVALID_BLOCK_COST
+        assert (await b.receive_block(blocks[-1]))[1] in [Err.BLOCK_COST_EXCEEDS_MAX, Err.INVALID_BLOCK_COST]
 
     @pytest.mark.asyncio
     async def test_clvm_must_not_fail(self, empty_blockchain):
@@ -2083,9 +2090,11 @@ class TestBodyValidation:
 
         # zero
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(0))
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
@@ -2098,9 +2107,11 @@ class TestBodyValidation:
 
         # too low
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1))
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
@@ -2112,9 +2123,11 @@ class TestBodyValidation:
 
         # too high
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(1000000))
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )
@@ -2515,9 +2528,11 @@ class TestBodyValidation:
 
         # wrong feees
         block_2: FullBlock = recursive_replace(block, "transactions_info.fees", uint64(1239))
+        assert block_2.transactions_info
         block_2 = recursive_replace(
             block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
         )
+        assert block_2.foliage_transaction_block
         block_2 = recursive_replace(
             block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
         )

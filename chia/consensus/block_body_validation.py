@@ -325,6 +325,7 @@ async def validate_block_body(
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
                     cost_per_byte=constants.COST_PER_BYTE,
                     safe_mode=False,
+                    rust_checker=curr.height > constants.RUST_CONDITION_CHECKER,
                 )
                 removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
             else:
