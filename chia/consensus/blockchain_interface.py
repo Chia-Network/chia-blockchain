@@ -10,6 +10,9 @@ from chia.util.ints import uint32
 
 
 class BlockchainInterface:
+    def get_peak(self) -> Optional[BlockRecord]:
+        pass
+
     def get_peak_height(self) -> Optional[uint32]:
         pass
 

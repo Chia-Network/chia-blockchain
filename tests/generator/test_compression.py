@@ -12,6 +12,7 @@ from chia.full_node.bundle_tools import (
     spend_bundle_to_serialized_coin_spend_entry_list,
 )
 from chia.full_node.generator import run_generator, create_generator_args
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
 from chia.types.spend_bundle import SpendBundle
@@ -135,6 +136,23 @@ class TestCompression(TestCase):
         assert result_c is not None
         assert result_s is not None
         assert result_c == result_s
+
+    def test_get_removals_for_single_coin(self):
+        sb: SpendBundle = make_spend_bundle(1)
+        start, end = match_standard_transaction_at_any_index(original_generator)
+        ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
+        c = compressed_spend_bundle_solution(ca, sb)
+        removal = sb.coin_spends[0].coin.name()
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(c, removal, INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
+        # Test non compressed generator as well
+        s = simple_solution_generator(sb)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal, INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
 
     def test_spend_byndle_coin_spend(self):
         for i in range(0, 10):
