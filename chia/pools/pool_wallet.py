@@ -30,7 +30,7 @@ from chia.pools.pool_puzzles import (
     create_full_puzzle,
     SINGLETON_LAUNCHER,
     create_pooling_inner_puzzle,
-    solution_to_extra_data,
+    solution_to_pool_state,
     pool_state_to_inner_puzzle,
     get_most_recent_singleton_coin_from_coin_spend,
     launcher_id_to_p2_puzzle_hash,
@@ -194,24 +194,24 @@ class PoolWallet:
         assert tip_singleton_coin is not None
 
         curr_spend_i = len(all_spends) - 1
-        extra_data: Optional[PoolState] = None
+        pool_state: Optional[PoolState] = None
         last_singleton_spend_height = uint32(0)
-        while extra_data is None:
+        while pool_state is None:
             full_spend: CoinSpend = all_spends[curr_spend_i]
-            extra_data = solution_to_extra_data(full_spend)
+            pool_state = solution_to_pool_state(full_spend)
             last_singleton_spend_height = uint32(history[curr_spend_i][0])
             curr_spend_i -= 1
 
-        assert extra_data is not None
+        assert pool_state is not None
         current_inner = pool_state_to_inner_puzzle(
-            extra_data,
+            pool_state,
             launcher_coin.name(),
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
             delayed_seconds,
             delayed_puzhash,
         )
         return PoolWalletInfo(
-            extra_data,
+            pool_state,
             self.target_state,
             launcher_coin,
             launcher_id,
@@ -291,7 +291,7 @@ class PoolWallet:
 
             # If we have reached the target state, resets it to None. Loops back to get current state
             for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
-                latest_state: Optional[PoolState] = solution_to_extra_data(added_spend)
+                latest_state: Optional[PoolState] = solution_to_pool_state(added_spend)
                 if latest_state is not None:
                     if self.target_state == latest_state:
                         self.target_state = None
@@ -623,9 +623,9 @@ class PoolWallet:
         full_pooling_puzzle: Program = create_full_puzzle(puzzle, launcher_id=launcher_coin.name())
 
         puzzle_hash: bytes32 = full_pooling_puzzle.get_tree_hash()
-        extra_data_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
+        pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([puzzle_hash, amount, extra_data_bytes]).get_tree_hash()
+        announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message).name())
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
@@ -640,7 +640,7 @@ class PoolWallet:
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
-        genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, extra_data_bytes])
+        genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])
 
         launcher_cs: CoinSpend = CoinSpend(
             launcher_coin,
