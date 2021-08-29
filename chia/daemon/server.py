@@ -60,7 +60,7 @@ async def fetch(url: str):
     async with ClientSession() as session:
         try:
             mozilla_root = get_mozilla_ca_crt()
-            ssl_context = ssl_context_for_root(mozilla_root)
+            ssl_context = ssl_context_for_root(mozilla_root, log=log)
             response = await session.get(url, ssl=ssl_context)
             if not response.ok:
                 log.warning("Response not OK.")
@@ -141,7 +141,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.websocket_server = None
-        self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
+        self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.shut_down = False
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock

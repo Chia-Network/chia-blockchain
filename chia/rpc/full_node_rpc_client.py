@@ -82,6 +82,24 @@ class FullNodeRpcClient(RpcClient):
             return None
         return CoinRecord.from_json_dict(response["coin_record"])
 
+    async def get_coin_records_by_names(
+        self,
+        names: List[bytes32],
+        include_spent_coins: bool = True,
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+    ) -> List:
+        names_hex = [name.hex() for name in names]
+        d = {"names": names_hex, "include_spent_coins": include_spent_coins}
+        if start_height is not None:
+            d["start_height"] = start_height
+        if end_height is not None:
+            d["end_height"] = end_height
+        return [
+            CoinRecord.from_json_dict(coin)
+            for coin in (await self.fetch("get_coin_records_by_names", d))["coin_records"]
+        ]
+
     async def get_coin_records_by_puzzle_hash(
         self,
         puzzle_hash: bytes32,

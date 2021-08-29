@@ -16,10 +16,15 @@ from chia.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
 
 
+blockchain_db_counter: int = 0
+
+
 async def create_blockchain(constants: ConsensusConstants):
-    db_path = Path("blockchain_test.db")
+    global blockchain_db_counter
+    db_path = Path(f"blockchain_test-{blockchain_db_counter}.db")
     if db_path.exists():
         db_path.unlink()
+    blockchain_db_counter += 1
     connection = await aiosqlite.connect(db_path)
     wrapper = DBWrapper(connection)
     coin_store = await CoinStore.create(wrapper)
@@ -29,12 +34,12 @@ async def create_blockchain(constants: ConsensusConstants):
     return bc1, connection, db_path
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain():
+@pytest.fixture(scope="function", params=[0, 10000000])
+async def empty_blockchain(request):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
-    bc1, connection, db_path = await create_blockchain(test_constants)
+    bc1, connection, db_path = await create_blockchain(test_constants.replace(RUST_CONDITION_CHECKER=request.param))
     yield bc1
 
     await connection.close()

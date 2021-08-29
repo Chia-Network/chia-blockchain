@@ -26,11 +26,21 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
+from chia.util.ssl import verify_ssl_certs_and_keys
 
 
 def ssl_context_for_server(
-    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
+    ca_cert: Path,
+    ca_key: Path,
+    private_cert_path: Path,
+    private_key_path: Path,
+    *,
+    check_permissions: bool = True,
+    log: Optional[logging.Logger] = None,
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
+
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
@@ -39,8 +49,11 @@ def ssl_context_for_server(
 
 
 def ssl_context_for_root(
-    ca_cert_file: str,
+    ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
+
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
 
@@ -50,7 +63,13 @@ def ssl_context_for_client(
     ca_key: Path,
     private_cert_path: Path,
     private_key_path: Path,
+    *,
+    check_permissions: bool = True,
+    log: Optional[logging.Logger] = None,
 ) -> Optional[ssl.SSLContext]:
+    if check_permissions:
+        verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
+
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
@@ -198,12 +217,16 @@ class ChiaServer:
         authenticate = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
         if authenticate:
             ssl_context = ssl_context_for_server(
-                self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
+                self.ca_private_crt_path,
+                self.ca_private_key_path,
+                self._private_cert_path,
+                self._private_key_path,
+                log=self.log,
             )
         else:
             self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
             ssl_context = ssl_context_for_server(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
 
         self.site = web.TCPSite(
@@ -256,7 +279,9 @@ class ChiaServer:
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
             ):
-                self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
+                self.log.info(
+                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
+                )
                 await connection.close()
                 close_event.set()
             else:
@@ -531,7 +556,7 @@ class ChiaServer:
                             pass
                         except Exception as e:
                             tb = traceback.format_exc()
-                            connection.log.error(f"Exception: {e}, {connection.get_peer_info()}. {tb}")
+                            connection.log.error(f"Exception: {e}, {connection.get_peer_logging()}. {tb}")
                             raise e
                         return None
 
@@ -548,7 +573,7 @@ class ChiaServer:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()
                         connection.log.error(
-                            f"Exception: {e} {type(e)}, closing connection {connection.get_peer_info()}. {tb}"
+                            f"Exception: {e} {type(e)}, closing connection {connection.get_peer_logging()}. {tb}"
                         )
                     else:
                         connection.log.debug(f"Exception: {e} while closing connection")
@@ -663,14 +688,28 @@ class ChiaServer:
         ip = None
         port = self._port
 
+        # Use chia's service first.
         try:
-            async with ClientSession() as session:
-                async with session.get("https://checkip.amazonaws.com/") as resp:
+            timeout = ClientTimeout(total=15)
+            async with ClientSession(timeout=timeout) as session:
+                async with session.get("https://ip.chia.net/") as resp:
                     if resp.status == 200:
                         ip = str(await resp.text())
                         ip = ip.rstrip()
         except Exception:
             ip = None
+
+        # Fallback to `checkip` from amazon.
+        if ip is None:
+            try:
+                timeout = ClientTimeout(total=15)
+                async with ClientSession(timeout=timeout) as session:
+                    async with session.get("https://checkip.amazonaws.com/") as resp:
+                        if resp.status == 200:
+                            ip = str(await resp.text())
+                            ip = ip.rstrip()
+            except Exception:
+                ip = None
         if ip is None:
             return None
         peer = PeerInfo(ip, uint16(port))

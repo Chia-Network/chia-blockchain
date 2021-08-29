@@ -208,6 +208,7 @@ class Blockchain(BlockchainInterface):
                         min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=self.constants.COST_PER_BYTE,
                         safe_mode=False,
+                        rust_checker=block.height > self.constants.RUST_CONDITION_CHECKER,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
@@ -383,6 +384,7 @@ class Blockchain(BlockchainInterface):
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
                         safe_mode=False,
+                        rust_checker=block.height > self.constants.RUST_CONDITION_CHECKER,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions
@@ -535,6 +537,7 @@ class Blockchain(BlockchainInterface):
                 min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                 cost_per_byte=self.constants.COST_PER_BYTE,
                 safe_mode=False,
+                rust_checker=uint32(prev_height + 1) > self.constants.RUST_CONDITION_CHECKER,
             )
         error_code, cost_result = await validate_block_body(
             self.constants,
