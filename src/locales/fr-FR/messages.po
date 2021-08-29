@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-17 18:18\n"
+"PO-Revision-Date: 2021-08-29 20:55\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -1826,11 +1826,11 @@ msgstr "Sélectionner le répertoire temporaire où la parcelle sera stockée. N
 
 #: src/components/plot/add/PlotAddNFT.tsx:81
 msgid "Select your Plot NFT"
-msgstr ""
+msgstr "Sélectionnez votre NFT de parcelle"
 
 #: src/components/plot/add/PlotAddNFT.tsx:72
 msgid "Select your Plot NFT from the dropdown or create a new one."
-msgstr ""
+msgstr "Sélectionnez votre NFT de parcelle à partir du menu déroulant ou créez-en un nouveau."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
