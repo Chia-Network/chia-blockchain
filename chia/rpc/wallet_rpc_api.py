@@ -666,7 +666,9 @@ class WalletRpcApi:
         all = request.get("all", False)
 
         if all:
-            transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions()
+            transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions_for_wallet(
+                wallet_id=wallet_id,
+            )
         else:
             if "start" in request:
                 start = request["start"]
