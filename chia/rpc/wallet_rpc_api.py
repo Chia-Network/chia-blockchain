@@ -4,27 +4,35 @@ import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from blspy import PrivateKey, G1Element
+from blspy import G1Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.pools.pool_puzzles import SINGLETON_MOD_HASH, create_p2_singleton_puzzle
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
+from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import load_config
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
-from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_singleton_owner_sk,
+    master_sk_to_wallet_sk,
+)
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
@@ -33,8 +41,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
-from chia.util.config import load_config
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -112,6 +118,8 @@ class WalletRpcApi:
             "/pw_self_pool": self.pw_self_pool,
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
+            # Pool NFT
+            "/recover_pool_nft": self.recover_pool_nft,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -1264,4 +1272,29 @@ class WalletRpcApi:
         return {
             "state": state.to_json_dict(),
             "unconfirmed_transactions": unconfirmed_transactions,
+        }
+
+    async def recover_pool_nft(self, request):
+        aggregated_signature: str = "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        launcher_hash = bytes32(hexstr_to_bytes(request["launcher_hash"]))
+        contract_hash = bytes32(hexstr_to_bytes(request["contract_hash"]))
+        delay = uint64(604800)
+        for puzzle_hash_b32 in self.wallet_node.wallet_state_manager.puzzle_store.get_all_puzzle_hashes():
+            puzzle = create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_hash, delay, puzzle_hash_b32)
+
+            if contract_hash == puzzle.get_tree_hash():
+                program_puzzle = bytes(SerializedProgram.from_program(puzzle))
+                break
+        solutions = []
+        for coin in request["coins"]:
+            coin = Coin.from_json_dict(coin)
+            assert coin.puzzle_hash == contract_hash, "invalid coin"
+            coin_solution_hex: str = bytes(SerializedProgram.from_program(Program.to([uint64(coin.amount), 0]))).hex()
+            solutions.append({"coin": coin, "puzzle_reveal": program_puzzle.hex(), "solution": coin_solution_hex})
+
+        return {
+            "spend_bundle": {
+                "aggregated_signature": aggregated_signature,
+                "coin_solutions": solutions,
+            }
         }
