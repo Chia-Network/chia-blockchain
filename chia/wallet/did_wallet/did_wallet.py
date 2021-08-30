@@ -512,7 +512,7 @@ class DIDWallet:
         return spend_bundle
 
     # The message spend can send messages and also change your innerpuz
-    async def create_message_spend(self, messages: List[bytes], new_innerpuzhash: Optional[bytes32] = None):
+    async def create_message_spend(self, messages: List[Tuple[int, bytes]], new_innerpuzhash: Optional[bytes32] = None):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
@@ -659,7 +659,8 @@ class DIDWallet:
         innermessage = message.get_tree_hash()
         innerpuz: Program = self.did_info.current_inner
         # innerpuz solution is (mode, amount, message, new_inner_puzhash)
-        innersol = Program.to([1, coin.amount, [innermessage], innerpuz.get_tree_hash()])
+        messages = [(0, innermessage)]
+        innersol = Program.to([1, coin.amount, messages, innerpuz.get_tree_hash()])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -684,7 +685,7 @@ class DIDWallet:
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, [innermessage]]).get_tree_hash()
+        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, messages]).get_tree_hash()
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)

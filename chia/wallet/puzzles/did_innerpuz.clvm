@@ -117,10 +117,19 @@
     )
   )
 
-  ; for a list of messages create zero value coins with the message as the puzzle
+  ; for a list of messages in the format (type . message) create a message
+  ; type 0 is 0 value coin
+  ; type 1 is coin announcement
+  ; type 2 is puzzle announcement
   (defun create_messages (messages)
     (if messages
-      (c (list CREATE_COIN (f messages) 0) (create_messages (r messages)))
+      (if (f (f messages))
+        (if (= (f (f messages))) 1
+          (c (list CREATE_COIN_ANNOUNCEMENT (r (f messages)) 0) (create_messages (r messages)))
+          (c (list CREATE_PUZZLE_ANNOUNCEMENT (r (f messages)) 0) (create_messages (r messages)))
+        )
+        (c (list CREATE_COIN (r (f messages)) 0) (create_messages (r messages)))
+      )
       ()
     )
   )
