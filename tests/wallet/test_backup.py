@@ -4,12 +4,12 @@
 #
 # import pytest
 #
-# from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-# from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-# from chia.types.peer_info import PeerInfo
-# from chia.util.ints import uint16, uint32, uint64
+# from flange.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+# from flange.simulator.simulator_protocol import FarmNewBlockProtocol
+# from flange.types.peer_info import PeerInfo
+# from flange.util.ints import uint16, uint32, uint64
 # from tests.setup_nodes import setup_simulators_and_wallets
-# from chia.wallet.cc_wallet.cc_wallet import CCWallet
+# from flange.wallet.cc_wallet.cc_wallet import CCWallet
 # from tests.time_out_assert import time_out_assert
 #
 #

@@ -1,8 +1,7 @@
-[submodule "chia-blockchain-gui"]
-	path = chia-blockchain-gui
-	url = https://github.com/Chia-Network/chia-blockchain-gui.git
-	branch = pools
 [submodule "mozilla-ca"]
 	path = mozilla-ca
-	url = https://github.com/Chia-Network/mozilla-ca.git
+	url = https://github.com/Flange-Network/mozilla-ca.git
         branch = main
+[submodule "flange-blockchain-gui"]
+	path = flange-blockchain-gui
+	url = https://github.com/turbotas/flange-blockchain-gui

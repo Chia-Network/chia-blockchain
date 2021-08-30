@@ -1,5 +1,5 @@
 #
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Flange-Network/flange-blockchain/tree/main/tests#readme
 #
 name: Ubuntu core-daemon Test
 
@@ -66,17 +66,17 @@ jobs:
     - name: Checkout test blocks and plots
       uses: actions/checkout@v2
       with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
+        repository: 'Flange-Network/test-cache'
+        path: '.flange'
         ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        ln -s $GITHUB_WORKSPACE/.flange
+        echo "$HOME/.flange"
+        ls -al $HOME/.flange
 
     - name: Install ubuntu dependencies
       run: |
@@ -109,5 +109,5 @@ jobs:
 
 
 #
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Flange-Network/flange-blockchain/tree/main/tests#readme
 #

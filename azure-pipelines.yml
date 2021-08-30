@@ -38,7 +38,7 @@ steps:
   # Install an Apple certificate required to build on a macOS agent machine
   - task: InstallAppleCertificate@2
     inputs:
-      certSecureFile: 'chia-apple-dev-id-app.p12'
+      certSecureFile: 'flange-apple-dev-id-app.p12'
       certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
       keychain: temp
       deleteCert: true
@@ -50,7 +50,7 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
+      pip install -i https://pypi.flange.net/simple/ miniupnpc==2.2.2
       cd build_scripts
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
       python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
@@ -59,8 +59,8 @@ steps:
   - script: |
       . ./activate
       clang --version
-      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
+      pip wheel --use-pep517 --extra-index-url https://pypi.flange.net/simple/ --wheel-dir=wheels .
+      pip install --no-index --find-links=./wheels/ flange-blockchain
     displayName: "Build and install wheels"
 
   - task: NodeTool@0
@@ -100,7 +100,7 @@ steps:
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
+      export CHIA_VERSION="Flange-"$(<version.txt)
       shasum -a 256 $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg > $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
     displayName: "Create Checksums"
@@ -109,15 +109,15 @@ steps:
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-flange-net/builds/
     displayName: "Upload to S3"
 
   - bash: |
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
+      export CHIA_VERSION="Flange-"$(<version.txt)
 
       pip3 install py3createtorrent
-      py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/$CHIA_VERSION.dmg
+      py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg -o $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent --webseed https://download-flange-net.s3.us-west-2.amazonaws.com/install/$CHIA_VERSION.dmg
       ls
     displayName: "Create torrent file"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
@@ -127,10 +127,10 @@ steps:
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
       cd $(System.DefaultWorkingDirectory)/build_scripts/
-      export CHIA_VERSION="Chia-"$(<version.txt)
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/install/
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent s3://download-chia-net/torrents/
+      export CHIA_VERSION="Flange-"$(<version.txt)
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-flange-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-flange-net/install/
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.torrent s3://download-flange-net/torrents/
     displayName: "Upload Release Files"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
 
@@ -138,6 +138,6 @@ steps:
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_TAG=$(<version.txt)
       export REPO_NAME=$(echo $(Build.Repository.Name) | cut -d'/' -f 2)
-      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data "{\"chia_ref\": \"$CHIA_TAG\"}" $(GLUE_API_URL)/api/v1/${REPO_NAME}/${CHIA_TAG}/success/build-macos
+      curl -s -XPOST -H "Authorization: Bearer $(GLUE_ACCESS_TOKEN)" --data "{\"flange_ref\": \"$CHIA_TAG\"}" $(GLUE_API_URL)/api/v1/${REPO_NAME}/${CHIA_TAG}/success/build-macos
     displayName: "Mark installer complete"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))

@@ -8,27 +8,27 @@ from typing import Optional, List, Dict
 import pytest
 from blspy import G1Element, AugSchemeMPL
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.plotting.create_plots import create_plots
-from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
-from chia.protocols import full_node_protocol
-from chia.protocols.full_node_protocol import RespondBlock
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
+from flange.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from flange.plotting.create_plots import create_plots
+from flange.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from flange.protocols import full_node_protocol
+from flange.protocols.full_node_protocol import RespondBlock
+from flange.rpc.rpc_server import start_rpc_server
+from flange.rpc.wallet_rpc_api import WalletRpcApi
+from flange.rpc.wallet_rpc_client import WalletRpcClient
+from flange.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from flange.types.blockchain_format.proof_of_space import ProofOfSpace
+from flange.types.blockchain_format.sized_bytes import bytes32
 
-from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from flange.types.peer_info import PeerInfo
+from flange.util.bech32m import encode_puzzle_hash
 from tests.block_tools import get_plot_dir, get_plot_tmp_dir
-from chia.util.config import load_config
-from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32
-from chia.wallet.derive_keys import master_sk_to_local_sk
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
+from flange.util.config import load_config
+from flange.util.hash import std_hash
+from flange.util.ints import uint16, uint32
+from flange.wallet.derive_keys import master_sk_to_local_sk
+from flange.wallet.transaction_record import TransactionRecord
+from flange.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
 
@@ -147,7 +147,7 @@ class TestPoolWalletRpc:
         args.buffer = 100
         args.farmer_public_key = bytes(bt.farmer_pk).hex()
         args.pool_public_key = None
-        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "txch")
+        args.pool_contract_address = encode_puzzle_hash(p2_singleton_puzzle_hash, "txfl")
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -460,7 +460,7 @@ class TestPoolWalletRpc:
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
         tr: TransactionRecord = await client.send_transaction(
-            1, 100, encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch")
+            1, 100, encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txfl")
         )
         await time_out_assert(
             10,
@@ -561,7 +561,7 @@ class TestPoolWalletRpc:
         assert (
             wallet_node_0.wallet_state_manager.get_peak().height == full_node_api.full_node.blockchain.get_peak().height
         )
-        # Balance stars at 6 XCH and 5 more blocks are farmed, total 22 XCH
+        # Balance stars at 6  XFL and 5 more blocks are farmed, total 22 XCH
         assert (await wallet_0.get_confirmed_balance()) == 21999999999999
 
     @pytest.mark.asyncio
@@ -687,11 +687,11 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     assert False
 
-            async def have_chia():
+            async def have_flange():
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=WAIT_SECS, function=have_flange)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING"
@@ -799,11 +799,11 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     assert False
 
-            async def have_chia():
+            async def have_flange():
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=WAIT_SECS, function=have_flange)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL"
@@ -886,11 +886,11 @@ class TestPoolWalletRpc:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     assert False
 
-            async def have_chia():
+            async def have_flange():
                 await self.farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=WAIT_SECS, function=have_flange)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL"

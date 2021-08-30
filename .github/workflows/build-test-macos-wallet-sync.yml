@@ -1,5 +1,5 @@
 #
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Flange-Network/flange-blockchain/tree/main/tests#readme
 #
 name: MacOS wallet-sync Tests
 
@@ -59,17 +59,17 @@ jobs:
     - name: Checkout test blocks and plots
       uses: actions/checkout@v2
       with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
+        repository: 'Flange-Network/test-cache'
+        path: '.flange'
         ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
       run: |
         cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        ln -s $GITHUB_WORKSPACE/.flange
+        echo "$HOME/.flange"
+        ls -al $HOME/.flange
 
     - name: Run install script
       env:
@@ -95,5 +95,5 @@ jobs:
         . ./activate
         ./venv/bin/py.test tests/wallet/sync/test_wallet_sync.py -s -v --durations 0 
 #
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+# THIS FILE IS GENERATED. SEE https://github.com/Flange-Network/flange-blockchain/tree/main/tests#readme
 #

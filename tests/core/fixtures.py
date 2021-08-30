@@ -6,14 +6,14 @@ from typing import List
 import aiosqlite
 import pytest
 
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.types.full_block import FullBlock
-from chia.util.db_wrapper import DBWrapper
-from chia.util.path import mkdir
-from tests.setup_nodes import bt, test_constants
+from flange.consensus.blockchain import Blockchain
+from flange.consensus.constants import ConsensusConstants
+from flange.full_node.block_store import BlockStore
+from flange.full_node.coin_store import CoinStore
+from flange.types.full_block import FullBlock
+from flange.util.db_wrapper import DBWrapper
+from flange.util.path import mkdir
+from flange.setup_nodes import bt, test_constants
 
 
 async def create_blockchain(constants: ConsensusConstants):
@@ -96,8 +96,8 @@ def persistent_blocks(
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
-    block_path_dir = Path("~/.chia/blocks").expanduser()
-    file_path = Path(f"~/.chia/blocks/{db_name}").expanduser()
+    block_path_dir = Path("~/.flange/blocks").expanduser()
+    file_path = Path(f"~/.flange/blocks/{db_name}").expanduser()
     if not path.exists(block_path_dir):
         mkdir(block_path_dir.parent)
         mkdir(block_path_dir)

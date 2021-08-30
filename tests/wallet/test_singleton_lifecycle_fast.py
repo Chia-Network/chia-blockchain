@@ -4,15 +4,15 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from blspy import G1Element, G2Element
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
+from flange.types.blockchain_format.program import Program, SerializedProgram
+from flange.types.announcement import Announcement
+from flange.types.blockchain_format.coin import Coin
+from flange.types.blockchain_format.sized_bytes import bytes32
+from flange.types.coin_spend import CoinSpend
+from flange.types.spend_bundle import SpendBundle
+from flange.util.condition_tools import ConditionOpcode
+from flange.util.ints import uint64
+from flange.wallet.puzzles.load_clvm import load_clvm
 
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 
@@ -119,7 +119,7 @@ def solve_anyone_can_spend_with_padding(
 def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict) -> Program:
     """
     `lineage_proof`: a `Program` that proves the parent is also a singleton (or the launcher).
-    `coin_amount`: a necessarily-odd value of mojos in this coin.
+    `coin_amount`: a necessarily-odd value of ch in this coin.
     """
     singleton_struct, inner_puzzle = args
     inner_solution = solver.solve(puzzle_db, inner_puzzle, **kwargs)

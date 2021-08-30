@@ -1,23 +1,23 @@
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
-from chia.full_node.generator import run_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.name_puzzle_condition import NPC
-from chia.types.generator_types import BlockGenerator, GeneratorArg
-from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm
+from flange.full_node.generator import run_generator
+from flange.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from flange.types.blockchain_format.program import Program, SerializedProgram
+from flange.types.blockchain_format.sized_bytes import bytes32
+from flange.types.condition_with_args import ConditionWithArgs
+from flange.types.name_puzzle_condition import NPC
+from flange.types.generator_types import BlockGenerator, GeneratorArg
+from flange.util.clvm import int_to_bytes
+from flange.util.condition_tools import ConditionOpcode
+from flange.util.ints import uint32
+from flange.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
 
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm("flangelisp_deserialisation.clvm", package_or_requirement="flange.wallet.puzzles")
 
 
 GENERATOR_CODE = """

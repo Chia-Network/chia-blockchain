@@ -2,25 +2,25 @@
 import asyncio
 import time
 import pytest
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from flange.simulator.simulator_protocol import FarmNewBlockProtocol
+from flange.types.peer_info import PeerInfo
+from flange.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet import did_wallet_puzzles
+from flange.wallet.did_wallet.did_wallet import DIDWallet
+from flange.wallet.did_wallet import did_wallet_puzzles
 from clvm_tools import binutils
-from chia.types.blockchain_format.program import Program
-from chia.wallet.derivation_record import DerivationRecord
-from chia.types.coin_spend import CoinSpend
+from flange.types.blockchain_format.program import Program
+from flange.wallet.derivation_record import DerivationRecord
+from flange.types.coin_spend import CoinSpend
 from blspy import AugSchemeMPL
-from chia.types.spend_bundle import SpendBundle
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from flange.types.spend_bundle import SpendBundle
+from flange.wallet.transaction_record import TransactionRecord
+from flange.wallet.derive_keys import master_sk_to_wallet_sk
+from flange.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert
 from secrets import token_bytes
-from chia.wallet.util.transaction_type import TransactionType
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from flange.wallet.util.transaction_type import TransactionType
+from flange.consensus.default_constants import DEFAULT_CONSTANTS
 
 
 @pytest.fixture(scope="module")

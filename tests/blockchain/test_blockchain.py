@@ -10,30 +10,30 @@ import pytest
 from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.consensus.coinbase import create_farmer_coin
-from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import TransactionsInfo
-from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
+from flange.consensus.block_rewards import calculate_base_farmer_reward
+from flange.consensus.blockchain import ReceiveBlockResult
+from flange.consensus.coinbase import create_farmer_coin
+from flange.consensus.pot_iterations import is_overflow_block
+from flange.full_node.bundle_tools import detect_potential_template_generator
+from flange.types.blockchain_format.classgroup import ClassgroupElement
+from flange.types.blockchain_format.coin import Coin
+from flange.types.blockchain_format.foliage import TransactionsInfo
+from flange.types.blockchain_format.program import SerializedProgram
+from flange.types.blockchain_format.sized_bytes import bytes32
+from flange.types.blockchain_format.slots import InfusedChallengeChainSubSlot
+from flange.types.blockchain_format.vdf import VDFInfo, VDFProof
+from flange.types.condition_opcodes import ConditionOpcode
+from flange.types.condition_with_args import ConditionWithArgs
+from flange.types.end_of_slot_bundle import EndOfSubSlotBundle
+from flange.types.full_block import FullBlock
+from flange.types.spend_bundle import SpendBundle
+from flange.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import BlockTools, get_vdf_info_and_proof
-from chia.util.errors import Err
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint64, uint32
-from chia.util.merkle_set import MerkleSet
-from chia.util.recursive_replace import recursive_replace
+from flange.util.errors import Err
+from flange.util.hash import std_hash
+from flange.util.ints import uint8, uint64, uint32
+from flange.util.merkle_set import MerkleSet
+from flange.util.recursive_replace import recursive_replace
 from tests.wallet_tools import WalletTool
 from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
@@ -2430,7 +2430,7 @@ class TestBodyValidation:
 
         spend = list(blocks[-1].get_included_reward_coins())[0]
         print("spend=", spend)
-        # this create coin will spend all of the coin, so the 10 mojos below
+        # this create coin will spend all of the coin, so the 10 ch below
         # will be "minted".
         output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(spend.amount)])
         condition_dict = {ConditionOpcode.CREATE_COIN: [output]}
