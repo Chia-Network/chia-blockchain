@@ -51,6 +51,10 @@ def supports_keyring_passphrase() -> bool:
     # return platform == "linux"
 
 
+def supports_os_passphrase_storage() -> bool:
+    return sys.platform in ["darwin"]
+
+
 def passphrase_requirements() -> Dict[str, Any]:
     """
     Returns a dictionary specifying current passphrase requirements
@@ -550,14 +554,18 @@ class Keychain:
 
     @staticmethod
     def set_master_passphrase(
-        current_passphrase: Optional[str], new_passphrase: str, allow_migration: bool = True
+        current_passphrase: Optional[str],
+        new_passphrase: str,
+        *,
+        allow_migration: bool = True,
+        save_passphrase: bool = False,
     ) -> None:
         """
         Encrypts the keyring contents to new passphrase, provided that the current
         passphrase can decrypt the contents
         """
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            current_passphrase, new_passphrase, allow_migration=allow_migration
+            current_passphrase, new_passphrase, allow_migration=allow_migration, save_passphrase=save_passphrase
         )
 
     @staticmethod

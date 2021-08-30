@@ -188,14 +188,20 @@ class KeyringWrapper:
         self,
         current_passphrase: Optional[str],
         new_passphrase: str,
+        *,
         write_to_keyring: bool = True,
         allow_migration: bool = True,
+        save_passphrase: bool = False,
     ) -> None:
         """
         Sets a new master passphrase for the keyring
         """
 
-        from chia.util.keychain import KeyringCurrentPassphaseIsInvalid, KeyringRequiresMigration
+        from chia.util.keychain import (
+            KeyringCurrentPassphaseIsInvalid,
+            KeyringRequiresMigration,
+            supports_os_passphrase_storage,
+        )
 
         # Require a valid current_passphrase
         if (
@@ -220,12 +226,23 @@ class KeyringWrapper:
                 self.keyring.load_keyring(passphrase=current_passphrase)
                 self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
 
+        if save_passphrase:
+            supports_passphrase_storage: bool = supports_os_passphrase_storage()
+            assert supports_passphrase_storage is True
+            if supports_passphrase_storage:
+                self.save_master_passphrase_to_credential_store(new_passphrase)
+
     def remove_master_passphrase(self, current_passphrase: Optional[str]) -> None:
         """
         Remove the user-specific master passphrase. We still keep the keyring contents encrypted
         using the default passphrase.
         """
         self.set_master_passphrase(current_passphrase, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
+
+    def save_master_passphrase_to_credential_store(self, passphrase: str) -> None:
+        if platform == "darwin":
+            mac_keychain = MacKeyring()
+            mac_keychain.set_password("Chia Passphrase", "Chia Passphrase", passphrase)
 
     # Legacy keyring migration
 
@@ -266,9 +283,12 @@ class KeyringWrapper:
                 from chia.cmds.passphrase_funcs import prompt_for_new_passphrase
 
                 # Prompt for a master passphrase and cache it
-                new_passphrase = prompt_for_new_passphrase()
+                new_passphrase, save_passphrase = prompt_for_new_passphrase()
                 self.set_master_passphrase(
-                    current_passphrase=None, new_passphrase=new_passphrase, write_to_keyring=False
+                    current_passphrase=None,
+                    new_passphrase=new_passphrase,
+                    write_to_keyring=False,
+                    save_passphrase=save_passphrase,
                 )
             else:
                 print(
