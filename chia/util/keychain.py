@@ -35,7 +35,7 @@ class KeyringRequiresMigration(Exception):
     pass
 
 
-class KeyringCurrentPassphaseIsInvalid(Exception):
+class KeyringCurrentPassphraseIsInvalid(Exception):
     pass
 
 
