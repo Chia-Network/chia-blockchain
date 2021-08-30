@@ -8,6 +8,7 @@ from chia.util.misc import prompt_yes_no
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as Win32Keyring
+from keyring.errors import KeyringError
 from pathlib import Path
 from sys import exit, platform
 from typing import Any, List, Optional, Tuple, Type, Union
@@ -33,6 +34,20 @@ def check_macos_keychain_keys_present(mac_keychain: MacKeyring) -> bool:
         if credential is not None:
             return True
     return False
+
+
+def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError):
+    """
+    Check if the macOS Keychain error is errSecInteractionNotAllowed. This commonly
+    occurs when the keychain is accessed while headless (such as remoting into a Mac
+    via SSH). Because macOS Keychain operations may require prompting for login creds,
+    a connection to the WindowServer is required.
+    """
+
+    if "-25308" in str(error):
+        print(
+            "WARNING: Unable to access the macOS Keychain (-25308 errSecInteractionNotAllowed). Are you logged-in remotely?"
+        )
 
 
 class KeyringWrapper:
@@ -261,9 +276,12 @@ class KeyringWrapper:
     def save_master_passphrase_to_credential_store(self, passphrase: str) -> None:
         if platform == "darwin":
             mac_keychain = MacKeyring()
-            mac_keychain.set_password(
-                MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER, passphrase
-            )
+            try:
+                mac_keychain.set_password(
+                    MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER, passphrase
+                )
+            except KeyringError as e:
+                warn_if_macos_errSecInteractionNotAllowed(e)
         return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
@@ -273,16 +291,19 @@ class KeyringWrapper:
                 mac_keychain.delete_password(
                     MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER
                 )
-            except Exception:
-                pass
+            except KeyringError as e:
+                warn_if_macos_errSecInteractionNotAllowed(e)
         return None
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
         if platform == "darwin":
             mac_keychain = MacKeyring()
-            return mac_keychain.get_password(
-                MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER
-            )
+            try:
+                return mac_keychain.get_password(
+                    MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER
+                )
+            except KeyringError as e:
+                warn_if_macos_errSecInteractionNotAllowed(e)
         return None
 
     # Legacy keyring migration
