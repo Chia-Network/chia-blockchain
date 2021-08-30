@@ -162,7 +162,7 @@ class PlotManager:
             if file_path.exists():
                 if (
                     file_path in self.failed_to_open_filenames
-                    and (time.time() - self.failed_to_open_filenames[file_path]) > 1200
+                    and (time.time() - self.failed_to_open_filenames[file_path]) < 1200
                 ):
                     # Try once every 20 minutes to open the file
                     return new_provers
