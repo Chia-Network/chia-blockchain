@@ -1925,7 +1925,6 @@ class FullNode:
                 heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
                 self.log.info("Heights found for bluebox to compact: [%s]" % ", ".join(map(str, heights)))
 
-                batches_finished = 0
                 for h in heights:
 
                     headers = await self.blockchain.get_header_blocks_in_range(h, h, tx_filter=False)
@@ -1996,11 +1995,6 @@ class FullNode:
                                     uint8(CompressibleVDFField.CC_IP_VDF),
                                 )
                             )
-
-                    # Small sleep between batches.
-                    batches_finished += 1
-                    if batches_finished % 10 == 0:
-                        await asyncio.sleep(1)
 
                 if len(broadcast_list) > target_uncompact_proofs:
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
