@@ -9,7 +9,7 @@ RL_MOD = load_clvm("rl.clsp", package_or_requirement="chia.wallet.rl_wallet.puzz
 
 def create_rl_puzzle(
     amount_per: uint64,
-    interval_time: uint64,
+    interval_time: uint32,
     earnings_cap: uint64,
     initial_credit: uint64,
     inner_puzzle: Program,

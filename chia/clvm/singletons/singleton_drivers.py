@@ -17,6 +17,8 @@ P2_SINGLETON_OR_DELAYED_MOD = load_clvm(
     "p2_singleton_or_delayed_puzhash.clsp", package_or_requirement="chia.clvm.singletons.puzzles"
 )
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
+NO_MELT_MOD = load_clvm("no_melting.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
+TRUTHS_MOD = load_clvm("singleton_truths_only.clsp", package_or_requirement="chia.clvm.singletons.puzzles")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
@@ -31,6 +33,13 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
 def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     # (a (q . inner_puzzle) (r 1))
     return Program.to([2, (1, inner_puzzle), [6, 1]])
+
+
+def wrap_no_melt(inner_puzzle: Program) -> Program:
+    return NO_MELT_MOD.curry(
+        NO_MELT_MOD.get_tree_hash(),
+        inner_puzzle,
+    )
 
 
 # Take standard coin and amount -> launch conditions & launcher coin solution
@@ -130,6 +139,15 @@ def solution_for_singleton(
         ]
 
     return Program.to([parent_info, amount, inner_solution])
+
+
+def singleton_truths_for_coin_spend(spend: CoinSpend) -> Program:
+    _, args = spend.puzzle_reveal.to_program().uncurry()
+    truth_extractor: Program = TRUTHS_MOD.curry(
+        Program.to([5, 1]).run(args),
+        Program.to([5, [6, 1]]).run(args),
+    )
+    return truth_extractor.run(spend.solution.to_program())
 
 
 # Create a coin that a singleton can claim
