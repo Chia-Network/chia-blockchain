@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-30 02:52\n"
+"PO-Revision-Date: 2021-08-30 08:48\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -428,7 +428,7 @@ msgstr "Statut de la connexion"
 #: src/components/farm/FarmFullNodeConnections.tsx:111
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:109
 msgid "Connection Status:"
-msgstr "Statut de la connexion:"
+msgstr "Statut de la connexion :"
 
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connection type"
@@ -2383,7 +2383,7 @@ msgstr "En attente de confirmation de la transaction"
 #: src/components/pool/PoolOverview.tsx:185
 #: src/components/wallet/standard/WalletStandard.tsx:656
 msgid "Wallet Status:"
-msgstr "Etat du portefeuille :"
+msgstr "État du portefeuille :"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
