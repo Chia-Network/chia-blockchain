@@ -269,6 +269,9 @@ class PlotManager:
                         result.loaded_plots += 1
                         result.loaded_size += stat_info.st_size
 
+                    if file_path in self.failed_to_open_filenames:
+                        del self.failed_to_open_filenames[file_path]
+
                 except Exception as e:
                     tb = traceback.format_exc()
                     log.error(f"Failed to open file {file_path}. {e} {tb}")
