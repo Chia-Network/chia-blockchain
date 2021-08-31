@@ -32,7 +32,7 @@ from chia.util.keychain import (
     passphrase_requirements,
     supports_keyring_passphrase,
 )
-from chia.util.path import mkdir
+from chia.util.path import mkdir, path_from_root
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -55,6 +55,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 service_plotter = "chia plots create"
+service_logs = "daemon_logs"
 
 
 async def fetch(url: str):
@@ -183,6 +184,7 @@ class WebSocketServer:
         await self.exit()
         if self.websocket_server is not None:
             self.websocket_server.close()
+            await self.websocket_server.wait_closed()
         return {"success": True}
 
     async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
@@ -324,6 +326,8 @@ class WebSocketServer:
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
+        elif command == "get_logfile":
+            response = await self.get_logfile(cast(Dict[str, Any], data))
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
@@ -604,6 +608,39 @@ class WebSocketServer:
     def state_changed(self, service: str, message: Dict[str, Any]):
         asyncio.create_task(self._state_changed(service, message))
 
+    async def _watch_log_file(self, fp: TextIO, loop: asyncio.AbstractEventLoop):
+        """
+        Loops every 5 seconds and reads in data from the log file and sends out update
+        Stops when there are no more websockets open for this service
+        """
+        await asyncio.sleep(5)
+        while True:
+
+            # Get all websockets opened for this particular service
+            websockets = self.connections.get(service_logs)
+            if websockets is None or not websockets:
+                fp.close()
+                return None
+
+            new_data: List[str] = await loop.run_in_executor(
+                io_pool_exc, fp.readlines, 1048576
+            )  # sends lines in 10MiB chunks
+
+            if new_data:
+
+                response: str = create_payload("log_update", {"log": new_data}, service_logs, "wallet_ui")
+
+                for websocket in websockets:
+                    try:
+                        await websocket.send(response)
+                    except Exception as e:
+                        tb = traceback.format_exc()
+                        self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                        websockets.remove(websocket)
+                        await websocket.close()
+            else:
+                await asyncio.sleep(5)
+
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
         id = config["id"]
         final_words = ["Renamed final file"]
@@ -868,6 +905,35 @@ class WebSocketServer:
             config["error"] = str(e)
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
             return {"success": False}
+
+    async def get_logfile(self, request: Dict[str, Any]):
+        """
+        Read in up to 25MiB of data from the log file and return the data in the ack
+        Creates a long-running task for reading in updates to the log file
+        """
+        service_name = request["service"]
+
+        log_contents: str = ""
+        response: dict = {"success": False, "service_name": service_name}
+
+        if service_name != service_logs:
+            return response
+
+        try:
+            file_path = path_from_root(self.root_path, self.net_config.get("log_filename", "log/debug.log"))
+
+            fp = open(file_path, "r")
+            log_contents = fp.read(26214400)  # read in up to 25MiB
+            loop = asyncio.get_event_loop()
+            # create a task for reading in periodic updates
+            loop.create_task(self._watch_log_file(fp, loop))
+
+            # return the file data in the ack response as one big string
+            response = {"success": True, "service_name": service_name, "log": log_contents}
+        except Exception as e:
+            self.log.error(f"Unable to read log file {file_path}: {e}")
+
+        return response
 
     async def start_service(self, request: Dict[str, Any]):
         service_command = request["service"]

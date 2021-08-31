@@ -1,3 +1,4 @@
+from pathlib import Path
 from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_server
 from chia.types.peer_info import PeerInfo
@@ -13,7 +14,7 @@ from tests.util.keyring import TempKeyring
 import asyncio
 import atexit
 import json
-
+import os
 import aiohttp
 import pytest
 
@@ -46,6 +47,83 @@ class TestDaemon:
         ):
             yield _
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning:websockets.*")
+    @pytest.mark.asyncio
+    async def test_daemon_logs(self, get_daemon):
+        session = aiohttp.ClientSession()
+        crt_path = b_tools.root_path / b_tools.config["daemon_ssl"]["private_crt"]
+        key_path = b_tools.root_path / b_tools.config["daemon_ssl"]["private_key"]
+        ca_cert_path = b_tools.root_path / b_tools.config["private_ssl_ca"]["crt"]
+        ca_key_path = b_tools.root_path / b_tools.config["private_ssl_ca"]["key"]
+        ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
+
+        # Create test debug.log
+        file_path: Path = b_tools.root_path / "log"
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
+
+        file_path = file_path / "debug.log"
+        with open(file_path, "a+") as f:
+            f.write("This is a test")
+
+        ws = await session.ws_connect(
+            "wss://127.0.0.1:55401",
+            autoclose=True,
+            autoping=True,
+            heartbeat=60,
+            ssl=ssl_context,
+            max_msg_size=52428800,
+        )
+
+        # Register the service for getting the logs
+        service_name = "daemon_logs"
+        data = {"service": service_name}
+        payload = create_payload("register_service", data, service_name, "daemon")
+        await ws.send_str(payload)
+
+        response = await ws.receive()
+        assert response.type == aiohttp.WSMsgType.TEXT
+
+        # Check register_service response
+        message = json.loads(response.data.strip())
+
+        assert message["ack"] is True
+        assert message["data"]["success"] is True
+        assert message["destination"] == service_name
+
+        # send get_logfile payload
+        payload = create_payload("get_logfile", data, service_name, "daemon")
+        await ws.send_str(payload)
+
+        # check response, the data will have log contents
+        response = await ws.receive()
+        assert response.type == aiohttp.WSMsgType.TEXT
+
+        message = json.loads(response.data.strip())
+        assert message["ack"] is True
+        assert message["data"]["success"] is True
+        assert message["destination"] == service_name
+
+        assert message["data"]["log"] == "This is a test"
+
+        # Append some more data to the log file
+        with open(file_path, "a+") as f:
+            f.write("Second Line")
+
+        # Wait for the log_update message - unsolicated message
+        response = await ws.receive()
+        assert response.type == aiohttp.WSMsgType.TEXT
+
+        message = json.loads(response.data.strip())
+
+        assert message["destination"] == "wallet_ui"
+        assert message["command"] == "log_update"
+        assert message["data"]["log"][0] == "Second Line"
+
+        await ws.close()
+        await session.close()
+        await asyncio.sleep(10)  # gives the daemon some time to cleanup
+
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, simulation, get_daemon):
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
@@ -70,7 +148,7 @@ class TestDaemon:
             autoclose=True,
             autoping=True,
             heartbeat=60,
-            ssl_context=ssl_context,
+            ssl=ssl_context,
             max_msg_size=100 * 1024 * 1024,
         )
         service_name = "test_service_name"
@@ -114,4 +192,5 @@ class TestDaemon:
 
         await ws.close()
         read_handler.cancel()
+        await session.close()
         assert blockchain_state_found

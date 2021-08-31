@@ -151,7 +151,8 @@ class TempKeyring:
 
         if self.delete_on_cleanup:
             temp_dir = self.keychain._temp_dir
-            print(f"Cleaning up temp keychain in dir: {temp_dir}")
+            # this causes issues with vscode test discovery
+            # print(f"Cleaning up temp keychain in dir: {temp_dir}")
             shutil.rmtree(temp_dir)
 
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
