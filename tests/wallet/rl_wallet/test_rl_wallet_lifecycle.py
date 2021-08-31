@@ -23,9 +23,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 
 from tests.clvm.test_puzzles import secret_exponent_for_index
+from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 
 class TestRlWalletLifecycle:
+    cost = {}
+
     @pytest.fixture(scope="function")
     async def setup(self):
         sim = await SpendSim.create()
@@ -70,6 +73,7 @@ class TestRlWalletLifecycle:
             ],
             G2Element(),
         )
+        self.cost["Cost to launch"] = cost_of_spend_bundle(spend_bundle)
 
         results = await sim_client.push_tx(spend_bundle)
         assert results[0] == MempoolInclusionStatus.SUCCESS
@@ -130,6 +134,7 @@ class TestRlWalletLifecycle:
                 DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
                 INFINITE_COST,
             )
+            self.cost["Cost of user withdrawal"] = cost_of_spend_bundle(spend_bundle)
             results = await sim_client.push_tx(spend_bundle)
             assert results[0] == MempoolInclusionStatus.SUCCESS
             await sim.farm_block()
@@ -195,6 +200,7 @@ class TestRlWalletLifecycle:
                 DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
                 INFINITE_COST,
             )
+            self.cost["Cost of admin withdrawal"] = cost_of_spend_bundle(spend_bundle)
             results = await sim_client.push_tx(spend_bundle)
             assert results[0] == MempoolInclusionStatus.SUCCESS
             await sim.farm_block()
@@ -270,6 +276,7 @@ class TestRlWalletLifecycle:
                 DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
                 INFINITE_COST,
             )
+            self.cost["Cost of user contribution"] = cost_of_spend_bundle(spend_bundle)
             results = await sim_client.push_tx(spend_bundle)
             assert results[0] == MempoolInclusionStatus.SUCCESS
             await sim.farm_block()
@@ -344,6 +351,7 @@ class TestRlWalletLifecycle:
                 DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
                 INFINITE_COST,
             )
+            self.cost["Cost of admin contribution"] = cost_of_spend_bundle(spend_bundle)
             results = await sim_client.push_tx(spend_bundle)
             assert results[0] == MempoolInclusionStatus.SUCCESS
             await sim.farm_block()
@@ -433,7 +441,14 @@ class TestRlWalletLifecycle:
                 DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
                 INFINITE_COST,
             )
+            self.cost["Cost of admin melt"] = cost_of_spend_bundle(spend_bundle)
             results = await sim_client.push_tx(spend_bundle)
             assert results[0] == MempoolInclusionStatus.SUCCESS
         finally:
             await sim.close()
+
+    def test_cost(self):
+        import json
+        import logging
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.cost))

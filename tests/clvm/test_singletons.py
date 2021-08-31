@@ -19,6 +19,7 @@ from chia.wallet.puzzles import (
     p2_delegated_puzzle_or_hidden_puzzle,
 )
 from chia.clvm.singletons import singleton_drivers
+from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.util.key_tool import KeyTool
 from tests.clvm.test_puzzles import (
     public_key_for_index,
@@ -41,6 +42,7 @@ class TransactionPushError(Exception):
 
 
 class TestSingleton:
+    cost = {}
     # Helper function
     def sign_delegated_puz(self, del_puz: Program, coin: Coin) -> G2Element:
         synthetic_secret_key: PrivateKey = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(  # noqa
@@ -64,6 +66,7 @@ class TestSingleton:
         coinsols: List[CoinSpend],
         ex_error: Optional[Err] = None,
         fail_msg: str = "",
+        cost_msg: str = "",
     ):
         signature: G2Element = self.sign_delegated_puz(delegated_puzzle, coin)
         spend_bundle = SpendBundle(
@@ -74,6 +77,8 @@ class TestSingleton:
         try:
             result, error = await sim_client.push_tx(spend_bundle)
             if error is None:
+                if cost_msg != "":
+                    self.cost[cost_msg] = cost_of_spend_bundle(spend_bundle)
                 await sim.farm_block()
             elif ex_error is not None:
                 assert error == ex_error
@@ -131,6 +136,7 @@ class TestSingleton:
                 starting_coin,
                 delegated_puzzle,
                 [starting_coinsol, launcher_coinsol],
+                cost_msg = "Cost to launch",
             )
 
             # EVE
@@ -178,6 +184,7 @@ class TestSingleton:
                 singleton_eve,
                 delegated_puzzle,
                 [singleton_eve_coinsol],
+                cost_msg="Cost of eve spend",
             )
 
             # POST-EVE
@@ -203,6 +210,7 @@ class TestSingleton:
                 singleton,
                 delegated_puzzle,
                 [singleton_coinsol],
+                cost_msg="Cost of non eve spend",
             )
 
             # CLAIM A P2_SINGLETON
@@ -245,7 +253,7 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                sim, sim_client, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol]
+                sim, sim_client, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol], cost_msg="Cost of claiming p2_singleton",
             )
 
             # CLAIM A P2_SINGLETON_OR_DELAYED
@@ -301,7 +309,7 @@ class TestSingleton:
                 sim.get_height()
             )  # The last coin solution before this point is singleton_claim_coinsol
             await self.make_and_spend_bundle(
-                sim, sim_client, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol]
+                sim, sim_client, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol], cost_msg="Cost of claiming p2_singleton_or_delayed",
             )
 
             # TRY TO SPEND AWAY TOO SOON (Negative Test)
@@ -511,9 +519,16 @@ class TestSingleton:
                 singleton_child,
                 delegated_puzzle,
                 [melt_coinsol],
+                cost_msg = "Cost to melt",
             )
 
             melted_coin: Coin = (await sim.all_non_reward_coins())[0]
             assert melted_coin.puzzle_hash == adapted_puzzle_hash
         finally:
             await sim.close()
+
+    def test_cost(self):
+        import json
+        import logging
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.cost))

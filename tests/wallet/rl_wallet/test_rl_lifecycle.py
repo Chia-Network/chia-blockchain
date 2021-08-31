@@ -19,6 +19,8 @@ from chia.wallet.rl_wallet.rl_drivers import (
     uncurry_rl_puzzle,
 )
 
+from tests.clvm.benchmark_costs import cost_of_spend_bundle
+
 """
 This test suite aims to test rl.clsp and rl_drivers.py
 
@@ -32,6 +34,8 @@ Singleton -> Shared Custody -> No melt -> RL -> <inner puzzle>
 
 
 class TestRlLifecycle:
+    cost = {}
+
     @pytest.fixture(scope="function")
     async def setup(self):
         sim = await SpendSim.create()
@@ -76,6 +80,7 @@ class TestRlLifecycle:
             ],
             G2Element(),
         )
+        self.cost["Cost for spend"] = cost_of_spend_bundle(spend_bundle)
         results = await sim_client.push_tx(spend_bundle)
         return results
 
@@ -169,3 +174,9 @@ class TestRlLifecycle:
             )
         finally:
             await sim.close()
+
+    def test_cost(self):
+        import json
+        import logging
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.cost))

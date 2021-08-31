@@ -20,6 +20,8 @@ from chia.util.ints import uint64
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 
+from tests.clvm.benchmark_costs import cost_of_spend_bundle
+
 """
 This file is intended to test:
     - chia.clvm.taproot.taproot_drivers
@@ -32,6 +34,8 @@ to be used underneath the singleton top layer.
 
 
 class TestSingletonTaproot:
+    cost = {}
+
     @pytest.fixture(scope="function")
     async def setup(self):
         sim = await SpendSim.create()
@@ -78,6 +82,7 @@ class TestSingletonTaproot:
         await sim.farm_block()
 
         next_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(taproot_ph))[0].coin
+        total_cost = 0
         for puz in puzzle_list:
             inner_solution = Program.to([[51, puz.get_tree_hash(), starting_amount]])
             taproot_solution = create_taproot_solution(tree, puz, inner_solution)
@@ -92,6 +97,7 @@ class TestSingletonTaproot:
                 ],
                 G2Element(),
             )
+            total_cost += cost_of_spend_bundle(bundle)
             results = await sim_client.push_tx(bundle)
             assert results[0] == MempoolInclusionStatus.SUCCESS
             await sim.farm_block()
@@ -102,6 +108,8 @@ class TestSingletonTaproot:
                     include_spent_coins=False,
                 )
             )[0].coin
+
+        self.cost[f"Avg cost at depth {len(puzzle_list)}"] = total_cost/len(puzzle_list)
 
     @pytest.mark.asyncio
     async def test_one_puzzle(self, setup):
@@ -160,3 +168,9 @@ class TestSingletonTaproot:
 
         finally:
             await sim.close()
+
+    def test_cost(self):
+        import json
+        import logging
+        log = logging.getLogger(__name__)
+        log.warning(json.dumps(self.cost))
