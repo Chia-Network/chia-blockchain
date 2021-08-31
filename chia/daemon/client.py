@@ -1,6 +1,7 @@
 import asyncio
 import json
 import ssl
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -100,6 +101,12 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
+    async def notify_keyring_migration_completed(self, passphrase: Optional[str]) -> WsRpcMessage:
+        data: Dict[str, Any] = {"key": passphrase}
+        request: WsRpcMessage = self.format_request("notify_keyring_migration_completed", data)
+        response: WsRpcMessage = await self._get(request)
+        return response
+
     async def ping(self) -> WsRpcMessage:
         request = self.format_request("ping", {})
         response = await self._get(request)
@@ -147,3 +154,24 @@ async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -
             print("Daemon not started yet")
         return None
     return None
+
+
+@asynccontextmanager
+async def acquire_connection_to_daemon(root_path: Path, quiet: bool = False):
+    """
+    Asynchronous context manager which attempts to create a connection to the daemon.
+    The connection object (DaemonProxy) is yielded to the caller. After the caller's
+    block exits scope, execution resumes in this function, wherein the connection is
+    closed.
+    """
+    from chia.daemon.client import connect_to_daemon_and_validate
+
+    daemon: Optional[DaemonProxy] = None
+    try:
+        daemon = await connect_to_daemon_and_validate(root_path, quiet=quiet)
+        yield daemon  # <----
+    except Exception as e:
+        print(f"Exception occurred while communicating with the daemon: {e}")
+
+    if daemon is not None:
+        await daemon.close()
