@@ -64,7 +64,7 @@ class TestCostCalculation:
         )
         coinbase = None
         for coin in blocks[2].get_included_reward_coins():
-            if coin.puzzle_hash == ph:
+            if coin.puzzle_hash == ph and coin.amount == 250000000000:
                 coinbase = coin
                 break
         assert coinbase is not None
@@ -87,11 +87,15 @@ class TestCostCalculation:
         cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
 
         assert npc_result.error is None
+        assert len(bytes(program.program)) == 433
+
         coin_name = npc_result.npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             program, coin_name, test_constants.MAX_BLOCK_COST_CLVM
         )
         assert error is None
+
+        assert npc_result.clvm_cost == 404560
 
         # Create condition + agg_sig_condition + length + cpu_cost
         assert (
@@ -99,7 +103,7 @@ class TestCostCalculation:
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE
-            + npc_result.clvm_cost
+            + 404560  # clvm_cost
         )
 
     @pytest.mark.asyncio
