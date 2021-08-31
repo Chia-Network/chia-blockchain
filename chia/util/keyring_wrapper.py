@@ -46,7 +46,8 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError):
 
     if "-25308" in str(error):
         print(
-            "WARNING: Unable to access the macOS Keychain (-25308 errSecInteractionNotAllowed). Are you logged-in remotely?"
+            "WARNING: Unable to access the macOS Keychain (-25308 errSecInteractionNotAllowed). "
+            "Are you logged-in remotely?"
         )
 
 
@@ -147,7 +148,7 @@ class KeyringWrapper:
     def _get_initial_cached_passphrase(self) -> str:
         from chia.util.keychain import supports_os_passphrase_storage
 
-        passphrase: Optional[str]
+        passphrase: Optional[str] = None
 
         if supports_os_passphrase_storage():
             passphrase = self.get_master_passphrase_from_credential_store()
