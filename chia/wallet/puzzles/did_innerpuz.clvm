@@ -123,12 +123,12 @@
   ; type 2 is puzzle announcement
   (defun create_messages (messages)
     (if messages
-      (if (f (f messages))
-        (if (= (f (f messages))) 1
-          (c (list CREATE_COIN_ANNOUNCEMENT (r (f messages)) 0) (create_messages (r messages)))
-          (c (list CREATE_PUZZLE_ANNOUNCEMENT (r (f messages)) 0) (create_messages (r messages)))
+      (c
+        (if (f (f messages))
+           (list (if (= (f (f messages)) 1) CREATE_COIN_ANNOUNCEMENT CREATE_PUZZLE_ANNOUNCEMENT) (r (f messages)))
+           (list CREATE_COIN (r (f messages)) 0)
         )
-        (c (list CREATE_COIN (r (f messages)) 0) (create_messages (r messages)))
+        (create_messages (r messages))
       )
       ()
     )
