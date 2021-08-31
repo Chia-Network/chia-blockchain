@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
-
+from typing import TYPE_CHECKING, ClassVar, Optional, cast, List, Tuple
 from chia_rs.sized_ints import uint64
 
 from chia.protocols import timelord_protocol
@@ -160,7 +159,16 @@ class TimelordAPI:
             if not self.timelord.bluebox_mode:
                 return None
             now = time.time()
+            save_items: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
             # work older than 5s can safely be assumed to be from the previous batch, and needs to be cleared
             while self.timelord.pending_bluebox_info and (now - self.timelord.pending_bluebox_info[0][0] > 5):
+                if self.timelord.pending_bluebox_info[0][1].height in self.timelord.working_heights:
+                    log.info(
+                        f"Saving item for compaction in future. "
+                        f"Height {self.timelord.pending_bluebox_info[0][1].height}"
+                    )
+                    save_items.append(self.timelord.pending_bluebox_info[0])
                 del self.timelord.pending_bluebox_info[0]
+            for item in save_items:
+                self.timelord.pending_bluebox_info.append(item)
             self.timelord.pending_bluebox_info.append((now, vdf_info))
