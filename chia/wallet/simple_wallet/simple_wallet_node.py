@@ -2,12 +2,21 @@ import asyncio
 import json
 import logging
 import socket
+import time
+import traceback
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
+from chia.daemon.keychain_proxy import (
+    KeychainProxyConnectionFailure,
+    connect_to_keychain_and_validate,
+    wrap_local_keychain,
+    KeychainProxy,
+    KeyringIsEmpty,
+)
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
@@ -32,7 +41,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.lru_cache import LRUCache
 from chia.util.path import mkdir, path_from_root
 
@@ -72,10 +81,10 @@ class SimpleWalletNode:
     def __init__(
         self,
         config: Dict,
-        keychain: Keychain,
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = None,
+        local_keychain=None,
     ):
         self.config = config
         self.constants = consensus_constants
@@ -84,7 +93,6 @@ class SimpleWalletNode:
         # Normal operation data
         self.cached_blocks: Dict = {}
         self.future_block_hashes: Dict = {}
-        self.keychain = keychain
 
         # Sync data
         self._shut_down = False
@@ -105,22 +113,37 @@ class SimpleWalletNode:
         self.logged_in = False
         self.wallet_peers_initialized = False
         self.last_new_peak_messages = LRUCache(5)
+        self.keychain_proxy = None
+        self.local_keychain = local_keychain
+        self.height_to_time = {}
+        self.synced_peers = set()
 
-    def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
-        private_keys = self.keychain.get_all_private_keys()
-        if len(private_keys) == 0:
+    async def ensure_keychain_proxy(self) -> KeychainProxy:
+        if not self.keychain_proxy:
+            if self.local_keychain:
+                self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
+            else:
+                self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+                if not self.keychain_proxy:
+                    raise KeychainProxyConnectionFailure("Failed to connect to keychain service")
+        return self.keychain_proxy
+
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        key: PrivateKey = None
+        try:
+            keychain_proxy = await self.ensure_keychain_proxy()
+            key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+        except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
-
-        private_key: Optional[PrivateKey] = None
-        if fingerprint is not None:
-            for sk, _ in private_keys:
-                if sk.get_g1().get_fingerprint() == fingerprint:
-                    private_key = sk
-                    break
-        else:
-            private_key = private_keys[0][0]  # If no fingerprint, take the first private key
-        return private_key
+        except KeyringIsLocked:
+            self.log.warning("Keyring is locked")
+            return None
+        except KeychainProxyConnectionFailure as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Missing keychain_proxy: {e} {tb}")
+            raise e  # Re-raise so that the caller can decide whether to continue or abort
+        return key
 
     async def _start(
         self,
@@ -129,7 +152,7 @@ class SimpleWalletNode:
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
     ) -> bool:
-        private_key = self.get_key_for_fingerprint(fingerprint)
+        private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             self.logged_in = False
             return False
@@ -157,6 +180,7 @@ class SimpleWalletNode:
             self.new_puzzle_hash_created,
             self.get_coin_state,
             self.subscribe_to_coin_updates,
+            self,
         )
 
         self.wsm_close_task = None
@@ -356,17 +380,29 @@ class SimpleWalletNode:
         await self.update_coin_state(peer)
 
     async def update_coin_state(self, full_node: WSChiaConnection):
-        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-        current_height = self.wallet_state_manager.blockchain.get_peak_height()
-        request_height = uint32(max(0, current_height - 100))
-        await self.subscribe_to_phs(all_puzzle_hashes, full_node, request_height)
-
-        all_coins = await self.wallet_state_manager.coin_store.get_all_coins()
-        all_coin_names = [coin_record.name() for coin_record in all_coins]
-        removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-        all_coin_names.extend(removed_dict.keys())
-        all_coin_names.extend(added_dict.keys())
-        await self.subscribe_to_coin_updates(all_coin_names, full_node, request_height)
+        self.wallet_state_manager.set_sync_mode(True)
+        start_time = time.time()
+        async with self.wallet_state_manager.lock:
+            all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            current_height = self.wallet_state_manager.blockchain.get_peak_height()
+            request_height = uint32(0)
+            request_height = uint32(max(0, current_height - 100))
+            await self.subscribe_to_phs(all_puzzle_hashes, full_node, request_height)
+            all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
+            all_coin_names = [coin_record.name() for coin_record in all_coins]
+            removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+            all_coin_names.extend(removed_dict.keys())
+            all_coin_names.extend(added_dict.keys())
+            await self.subscribe_to_coin_updates(all_coin_names, full_node, request_height)
+        self.wallet_state_manager.set_sync_mode(False)
+        end_time = time.time()
+        duration = end_time - start_time
+        self.log.info(f"Duration was: {duration}")
+        # Refresh wallets
+        for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+            self.wallet_state_manager.state_changed("coin_removed", wallet_id)
+            self.wallet_state_manager.state_changed("coin_added", wallet_id)
+        self.synced_peers.add(full_node.peer_node_id)
 
     async def subscribe_to_phs(self, puzzle_hashes, full_node=None, height=uint32(0)):
         if full_node is None:
@@ -407,6 +443,12 @@ class SimpleWalletNode:
 
     async def handle_coin_state_change(self, state_updates: List[CoinState], fork_height=None, height=None):
         added, removed = await self.wallet_state_manager.new_coin_state(state_updates, fork_height, height)
+        if len(removed) > 0:
+            for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+                self.wallet_state_manager.state_changed("coin_removed", wallet_id)
+        if len(added) > 0:
+            for wallet_id, wallet in self.wallet_state_manager.wallets.items():
+                self.wallet_state_manager.state_changed("coin_added", wallet_id)
         additional_coin_spends = await self.process_removals(removed)
         if len(additional_coin_spends) > 0:
             created_pool_wallet_ids: List[int] = []
@@ -454,13 +496,11 @@ class SimpleWalletNode:
         assert peer is not None
         additional_coin_spends = []
         for state in removed_coins:
-            sanity = await self.get_coin_state([state.coin.name()])
-            cs: CoinSpend = await self.fetch_puzzle_solution(peer, state.spent_height, state.coin)
-            additions = cs.additions()
-            for coin in additions:
+            children: List[CoinState] = await self.fetch_children(peer, state.coin.name())
+            for coin_state in children:
                 # This searches specifically for a launcher being created, and adds the solution of the launcher
-                if coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
-                    cs: CoinSpend = await self.fetch_puzzle_solution(peer, state.spent_height, coin)
+                if coin_state.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                    cs: CoinSpend = await self.fetch_puzzle_solution(peer, state.spent_height, coin_state.coin)
                     additional_coin_spends.append((cs, state.spent_height))
                     # Apply this coin solution, which might add things to interested list
                     await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
@@ -544,9 +584,31 @@ class SimpleWalletNode:
                 break
             request_height -= 1
 
+    async def fetch_block(self, height):
+        peer = self.get_full_node_peer()
+        assert peer is not None
+        request = wallet_protocol.RequestBlockHeader(height)
+        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        if response is not None and isinstance(response, RespondBlockHeader):
+            return response.header_block
+
+    async def get_timestamp_for_height(self, height):
+        if height in self.height_to_time:
+            return self.height_to_time[height]
+
+        header_block = await self.fetch_block(height)
+        time = header_block.foliage_transaction_block.timestamp
+        self.height_to_time[height] = time
+        return time
+
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
-        await self.wallet_state_manager.new_peak(peak)
-        await self.fetch_last_tx_block(peak.height, peer)
+        if peer.peer_node_id not in self.synced_peers:
+            return
+        async with self.wallet_state_manager.lock:
+            await self.wallet_state_manager.new_peak(peak)
+            await self.fetch_last_tx_block(peak.height, peer)
+            self.wallet_state_manager.state_changed("new_block")
+            self.wallet_state_manager.set_sync_mode(False)
 
     async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
         solution_response = await peer.request_puzzle_solution(
@@ -555,3 +617,9 @@ class SimpleWalletNode:
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise ValueError(f"Was not able to obtain solution {solution_response}")
         return CoinSpend(coin, solution_response.response.puzzle, solution_response.response.solution)
+
+    async def fetch_children(self, peer, coin_name) -> List[CoinState]:
+        response = await peer.request_children(wallet_protocol.RequestChildren(coin_name))
+        if response is None or not isinstance(response, wallet_protocol.RespondChildren):
+            raise ValueError(f"Was not able to obtain children {response}")
+        return response.coin_states

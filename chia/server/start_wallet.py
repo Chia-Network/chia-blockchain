@@ -43,14 +43,13 @@ def service_kwargs_for_wallet(
     if simple:
         node = SimpleWalletNode(
             config,
-            keychain,
             root_path,
             consensus_constants=updated_constants,
+            local_keychain=keychain,
         )
     else:
         node = WalletNode(
             config,
-            keychain,
             root_path,
             consensus_constants=updated_constants,
             local_keychain=keychain,

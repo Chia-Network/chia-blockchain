@@ -147,3 +147,7 @@ class WalletNodeAPI:
     @api_request
     async def respond_to_coin_update(self, request: wallet_protocol.RespondToCoinUpdates):
         pass
+
+    @api_request
+    async def respond_children(self, request: wallet_protocol.RespondChildren):
+        pass
