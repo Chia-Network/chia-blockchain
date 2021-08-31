@@ -58,6 +58,8 @@ class CoinStore:
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
+        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
+
         await self.coin_record_db.commit()
         self.coin_record_cache = LRUCache(cache_size)
         return self
