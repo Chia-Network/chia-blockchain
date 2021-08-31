@@ -123,7 +123,7 @@ class FileKeyring(FileSystemEventHandler):
     The salt is updated each time the master passphrase is changed.
     """
 
-    keyring_path: Optional[Path] = None
+    keyring_path: Path
     keyring_lock_path: Path
     keyring_observer: Observer = None
     load_keyring_lock: threading.RLock  # Guards access to needs_load_keyring
