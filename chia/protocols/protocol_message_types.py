@@ -93,3 +93,5 @@ class ProtocolMessageTypes(Enum):
     respond_to_ph_update = 71
     register_interest_in_coin = 72
     respond_to_coin_update = 73
+    request_children = 74
+    respond_children = 75

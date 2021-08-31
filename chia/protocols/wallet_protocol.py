@@ -200,3 +200,15 @@ class CoinStateUpdate(Streamable):
     fork_height: uint32
     peak_hash: bytes32
     items: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestChildren(Streamable):
+    coin_name: bytes32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondChildren(Streamable):
+    coin_states: List[CoinState]
