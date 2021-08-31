@@ -119,7 +119,6 @@ class MempoolManager:
                 f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
             )
             agg = SpendBundle.aggregate(spend_bundles)
-            assert set(agg.additions()) == set(additions)
             assert set(agg.removals()) == set(removals)
             return agg, additions, removals
         else:
@@ -436,7 +435,7 @@ class MempoolManager:
                 self.mempool.remove_from_pool(mempool_item)
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
-        self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
+        self.mempool.add_to_pool(new_item)
         log.info(
             f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
             f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"
