@@ -345,15 +345,19 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_first_not_compactified(self) -> Optional[int]:
+    async def get_random_not_compactified(self, number: int) -> List[int]:
         # Since orphan blocks do not get compactified, we need to check whether all blocks with a
         # certain height are not compact. And if we do have compact orphan blocks, then all that
         # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            "SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 ORDER BY height LIMIT 1"
+            f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
+            f"ORDER BY RANDOM() LIMIT {number}"
         )
-        row = await cursor.fetchone()
+        rows = await cursor.fetchall()
         await cursor.close()
-        if row is None:
-            return None
-        return int(row[0])
+
+        heights = []
+        for row in rows:
+            heights.append(int(row[0]))
+
+        return heights
