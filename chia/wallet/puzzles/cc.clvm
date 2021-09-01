@@ -104,6 +104,7 @@
       this_coin_bundle        ;; verified with ASSERT_MY_COIN_ID
       next_coin_bundle        ;; used to generate ASSERT_COIN_ANNOUNCEMENT
       prev_subtotal           ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+      extra_delta             ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
     )
 
      ;;;;; start library code
@@ -144,11 +145,14 @@
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
      ;; prohibit CREATE_COIN_ANNOUNCEMENT
+
+     ; TODO: stop truncating!
+
      (defun-inline morph_condition (condition cc_mod_struct)
        (if (= (f condition) CREATE_COIN)
-         (list CREATE_COIN
-               (cc_puzzle_hash cc_mod_struct (f (r condition)))
-               (f (r (r condition)))
+         (c CREATE_COIN
+               (c (cc_puzzle_hash cc_mod_struct (f (r condition)))
+                    (r (r condition)))
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
            (list CREATE_COIN_ANNOUNCEMENT (concat 0xca (f (r condition))))
@@ -282,7 +286,7 @@
          (f lineage_proof)
          (is_parent_cc cc_mod_struct coin_info (r lineage_proof))
          (a (genesis_coin_checker_for_lpp cc_mod_struct)
-             (list cc_mod_struct coin_info (r lineage_proof)))
+             (list cc_mod_struct coin_info (r lineage_proof)))  ; TODO delta number pass in to check if ok
        )
      )
 
@@ -315,6 +319,10 @@
          next_coin_bundle
          prev_subtotal
       )
+
+      ; TODO: WE DON'T WANT TO CHECK THE OTHERS ARE "VALID" JUST THAT THEY ARE COLOURED!!!!!
+      ; ONLY NEED TO CHECK THAT I MYSELF AM VALID
+
       (if_is_list_merge
         ; ensure prev is a cc (is this really necessary?)
         (is_bundle_valid prev_coin_bundle cc_mod_struct)
@@ -328,7 +336,7 @@
             (generate_final_output_conditions
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-              (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)))
+              (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)))  ; TODO delta figeting
               (morph_conditions inner_conditions cc_mod_struct)
               (coin_info_for_coin_bundle prev_coin_bundle)
               (coin_info_for_coin_bundle this_coin_bundle)
