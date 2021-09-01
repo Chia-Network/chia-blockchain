@@ -1,18 +1,20 @@
 ; This is a "genesis checker" for use with cc.clvm.
 ;
-; This checker allows new ccs to be created if they have a particular
-; coin id as parent; or created by anyone if their value is 0.
+; This checker allows new CATs to be created if they have a signature from a specific pubkey on their eve spend
 
-; The pubkey is curried in, making this lineage_check program unique and giving the coloured coin it's unique colour
+; The pubkey is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
 
 (mod (
       PUBKEY
-      cc_mod_struct
-      my_coin_info
-      opaque_proof
+      Truths
+      delta
+      _
     )
     (include condition_codes.clvm)
 
     ; main
-    (list (list AGG_SIG_ME PUBKEY opaque_proof))
+    (if delta
+      (x)
+      (list (list AGG_SIG_ME PUBKEY '$'))
+    )
 )
