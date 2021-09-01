@@ -162,9 +162,10 @@ class PlotManager:
             if file_path.exists():
                 if (
                     file_path in self.failed_to_open_filenames
-                    and (time.time() - self.failed_to_open_filenames[file_path]) > 1200
+                    and (time.time() - self.failed_to_open_filenames[file_path])
+                    < self.refresh_parameter.retry_invalid_seconds
                 ):
-                    # Try once every 20 minutes to open the file
+                    # Try once every `refresh_parameter.retry_invalid_seconds` seconds to open the file
                     return new_provers
                 if file_path in self.plots:
                     try:
@@ -267,6 +268,9 @@ class PlotManager:
                     with counter_lock:
                         result.loaded_plots += 1
                         result.loaded_size += stat_info.st_size
+
+                    if file_path in self.failed_to_open_filenames:
+                        del self.failed_to_open_filenames[file_path]
 
                 except Exception as e:
                     tb = traceback.format_exc()
