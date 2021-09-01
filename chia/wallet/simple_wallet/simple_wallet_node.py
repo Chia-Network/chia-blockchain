@@ -65,10 +65,6 @@ class SimpleWalletNode:
     wallet_peers: WalletPeers
     # Maintains the state of the wallet (blockchain and transactions), handles DB connections
     wallet_state_manager: Optional[SimpleWalletStateManager]
-
-    # How far away from LCA we must be to perform a full sync. Before then, do a short sync,
-    # which is consecutive requests for the previous block
-    short_sync_threshold: int
     _shut_down: bool
     root_path: Path
     state_changed_callback: Optional[Callable]
@@ -97,11 +93,6 @@ class SimpleWalletNode:
         # Sync data
         self._shut_down = False
         self.proof_hashes: List = []
-        self.header_hashes: List = []
-        self.header_hashes_error = False
-        self.short_sync_threshold = 15  # Change the test when changing this
-        self.potential_blocks_received: Dict = {}
-        self.potential_header_hashes: Dict = {}
         self.state_changed_callback = None
         self.wallet_state_manager = None
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
@@ -112,7 +103,6 @@ class SimpleWalletNode:
         self.peer_task = None
         self.logged_in = False
         self.wallet_peers_initialized = False
-        self.last_new_peak_messages = LRUCache(5)
         self.keychain_proxy = None
         self.local_keychain = local_keychain
         self.height_to_time = {}
@@ -166,7 +156,7 @@ class SimpleWalletNode:
             .replace("CHALLENGE", self.config["selected_network"])
             .replace("KEY", db_path_key_suffix)
         )
-        path = path_from_root(self.root_path, db_path_replaced)
+        path = path_from_root(self.root_path, f"{db_path_replaced}_new")
         mkdir(path.parent)
         self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
@@ -253,12 +243,6 @@ class SimpleWalletNode:
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
             self.wallet_state_manager = None
-        if self.sync_task is not None:
-            self.sync_task.cancel()
-            self.sync_task = None
-        if self.peer_task is not None:
-            self.peer_task.cancel()
-            self.peer_task = None
         self.logged_in = False
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -385,8 +369,7 @@ class SimpleWalletNode:
         async with self.wallet_state_manager.lock:
             all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
             current_height = self.wallet_state_manager.blockchain.get_peak_height()
-            request_height = uint32(0)
-            request_height = uint32(max(0, current_height - 100))
+            request_height = uint32(max(0, current_height - 1000))
             await self.subscribe_to_phs(all_puzzle_hashes, full_node, request_height)
             all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
             all_coin_names = [coin_record.name() for coin_record in all_coins]
