@@ -1,6 +1,8 @@
 # flake8: noqa: E501
 import logging
+from pathlib import Path
 from secrets import token_bytes
+from shutil import copy, move
 
 import pytest
 from blspy import AugSchemeMPL
@@ -198,6 +200,7 @@ class TestRpc:
                 await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
                 result = await client_2.get_plots()
                 assert len(result["plots"]) == expect_total_plots
+                assert len(harvester.plot_manager.failed_to_open_filenames) == 0
 
             # Add plot_dir with two new plots
             await test_case(
@@ -290,6 +293,39 @@ class TestRpc:
                 expected_directories=1,
                 expect_total_plots=0,
             )
+
+            # Test re-trying if processing a plot failed
+            # First save the plot
+            retry_test_plot = Path(plot_dir_sub / filename_2).resolve()
+            retry_test_plot_save = Path(plot_dir_sub / "save").resolve()
+            copy(retry_test_plot, retry_test_plot_save)
+            # Invalidate the plot
+            with open(plot_dir_sub / filename_2, "r+b") as file:
+                file.write(bytes(100))
+            # Add it and validate it fails to load
+            await harvester.add_plot_directory(str(plot_dir_sub))
+            expected_result.loaded_plots = 0
+            expected_result.removed_plots = 0
+            expected_result.processed_files = 1
+            expected_result.remaining_files = 0
+            harvester.plot_manager.start_refreshing()
+            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            assert retry_test_plot in harvester.plot_manager.failed_to_open_filenames
+            # Make sure the file stays in `failed_to_open_filenames` and doesn't get loaded or processed in the next
+            # update round
+            expected_result.loaded_plots = 0
+            expected_result.processed_files = 0
+            harvester.plot_manager.trigger_refresh()
+            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            assert retry_test_plot in harvester.plot_manager.failed_to_open_filenames
+            # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
+            harvester.plot_manager.refresh_parameter.retry_invalid_seconds = 0
+            move(retry_test_plot_save, retry_test_plot)
+            expected_result.loaded_plots = 1
+            expected_result.processed_files = 1
+            harvester.plot_manager.trigger_refresh()
+            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            assert retry_test_plot not in harvester.plot_manager.failed_to_open_filenames
 
             targets_1 = await client.get_reward_targets(False)
             assert "have_pool_sk" not in targets_1
