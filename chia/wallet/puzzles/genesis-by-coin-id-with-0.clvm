@@ -1,44 +1,25 @@
 ; This is a "genesis checker" for use with cc.clvm.
 ;
-; This checker allows new ccs to be created if they have a particular
-; coin id as parent; or created by anyone if their value is 0.
-
-; The genesis_id is curried in, making this lineage_check program unique and giving the coloured coin it's unique colour
+; This checker allows new CATs to be created if they have a particular coin id as parent
+;
+; The genesis_id is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
 
 (mod (
       GENESIS_ID
-      cc_mod_struct
-      my_coin_info
-      (parent_coin zero_parent_inner_puzzle_hash)  ; lineage_proof
+      Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
+      delta
+      _
     )
 
-    ;; boolean or macro
-    ;; This lets you write something like (if (or COND1 COND2 COND3) (do_something) (do_something_else))
-    (defmacro or ARGS
-        (if ARGS
-            (qq (if (unquote (f ARGS))
-                1
-                (unquote (c or (r ARGS)))
-            ))
-        0)
-    )
+    (defun-inline access_parent_id_from_truths (Truths) Truths) ; Wrap this in (f ) and (r ) and whatnot
 
-    (defun-inline main (
-      GENESIS_ID
-      my_coin_info
-    )
-      (if (or
-            (= (f (r (r my_coin_info))) 0)
-            (= (f my_coin_info) GENESIS_ID)
-          )
-        1
+    ; Returns nil since we don't need to add any conditions
+    (if delta
         (x)
-      )
-
+        (if (= (access_parent_id_from_truths Truths) GENESIS_ID)
+            ()
+            (x)
+        )
     )
 
-    (main
-      GENESIS_ID
-      my_coin_info
-    )
 )
