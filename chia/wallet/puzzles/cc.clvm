@@ -126,27 +126,25 @@
                (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
                (sha256 1 TREE)))
 
-    ; lineage_proof = (MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash)
+    ; cc_mod_struct = (MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash)
 
-    (defun-inline mod_hash_from_lineage_proof (lineage_proof) (f lineage_proof))
-    (defun-inline mod_hash_hash_from_lineage_proof (lineage_proof) (f (r lineage_proof)))
-    (defun-inline genesis_coin_checker_hash_from_lineage_proof (lineage_proof) (f (r (r (r lineage_proof)))))
+    (defun-inline mod_hash_from_cc_mod_struct (cc_mod_struct) (f cc_mod_struct))
+    (defun-inline mod_hash_hash_from_cc_mod_struct (cc_mod_struct) (f (r cc_mod_struct)))
+    (defun-inline genesis_coin_checker_hash_from_cc_mod_struct (cc_mod_struct) (f (r (r (r cc_mod_struct)))))
 
      ;;;;; end library code
 
      ;; return the puzzle hash for a cc with the given `GENESIS_COIN_CHECKER_hash` & `INNER_PUZZLE`
-     (defun-inline cc_puzzle_hash (lineage_proof inner_puzzle_hash)
-       (puzzle-hash-of-curried-function (mod_hash_from_lineage_proof lineage_proof)
+     (defun-inline cc_puzzle_hash (cc_mod_struct inner_puzzle_hash)
+       (puzzle-hash-of-curried-function (mod_hash_from_cc_mod_struct cc_mod_struct)
                                         inner_puzzle_hash
-                                        (genesis_coin_checker_hash_from_lineage_proof lineage_proof)
-                                        (mod_hash_hash_from_lineage_proof lineage_proof)
+                                        (genesis_coin_checker_hash_from_cc_mod_struct cc_mod_struct)
+                                        (mod_hash_hash_from_cc_mod_struct cc_mod_struct)
        )
      )
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
      ;; prohibit CREATE_COIN_ANNOUNCEMENT
-
-     ; TODO: stop truncating!
 
      (defun-inline morph_condition (condition cc_mod_struct)
        (if (= (f condition) CREATE_COIN)
@@ -308,6 +306,13 @@
         )
      )
 
+     (defun-inline is_coloured_check (coin_bundle cc_struct)
+        (=
+          (cc_puzzle_hash cc_struct (f (r (r (r (f coin_bundle))))))
+          (f (r (f coin_bundle)))
+        )
+     )
+
 
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -323,15 +328,11 @@
       ; TODO: WE DON'T WANT TO CHECK THE OTHERS ARE "VALID" JUST THAT THEY ARE COLOURED!!!!!
       ; ONLY NEED TO CHECK THAT I MYSELF AM VALID
 
-      (if_is_list_merge
-        ; ensure prev is a cc (is this really necessary?)
-        (is_bundle_valid prev_coin_bundle cc_mod_struct)
-        (if_is_list_merge
-          ; ensure this is a cc (to ensure parent wasn't counterfeit)
-          (is_bundle_valid this_coin_bundle cc_mod_struct)
+      (if (is_coloured_check prev_coin_bundle cc_mod_struct)
+        (if (is_coloured_check next_coin_bundle cc_mod_struct)
           (if_is_list_merge
             ; ensure next is a cc (to ensure its announcements can be trusted)
-            (is_bundle_valid next_coin_bundle cc_mod_struct)
+            (is_bundle_valid this_coin_bundle cc_mod_struct)
 
             (generate_final_output_conditions
               prev_subtotal
@@ -343,7 +344,9 @@
               (coin_info_for_coin_bundle next_coin_bundle)
             )
           )
+          (x)
         )
+        (x)
       )
     )
 
