@@ -7,53 +7,19 @@
 
 (mod (
       GENESIS_PUZZLE_HASH
-      cc_mod_struct
-      my_coin_info
-      (parent_coin zero_parent_inner_puzzle_hash)
+      Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
+      delta
+      (parent_parent_id parent_amount)
     )
 
-    ;; boolean and macro
-    ;; This lets you write something like (if (and COND1 COND2 COND3) (do_something) (do_something_else))
-    (defmacro and ARGS
-        (if ARGS
-            (qq (if (unquote (f ARGS))
-                (unquote (c and (r ARGS)))
-                ()
-                ))
-            1)
-    )
+    (defun-inline access_parent_id_from_truths (Truths) Truths) ; Wrap this in (f ) and (r ) and whatnot
 
-    ;; boolean or macro
-    ;; This lets you write something like (if (or COND1 COND2 COND3) (do_something) (do_something_else))
-    (defmacro or ARGS
-        (if ARGS
-            (qq (if (unquote (f ARGS))
-                1
-                (unquote (c or (r ARGS)))
-            ))
-        0)
-    )
-
-    (defun-inline main (
-      GENESIS_PUZZLE_HASH
-      my_coin_info
-      parent_coin
-    )
-      (if (or
-            (= (f (r (r my_coin_info))) 0)
-            (and
-              (= (sha256 (f parent_coin) (f (r parent_coin)) (f (r (r parent_coin)))) (f my_coin_info))
-              (= (f (r parent_coin)) GENESIS_PUZZLE_HASH)
-            )
-          )
-          1
-          (x)
-      )
-    )
-
-    (main
-      GENESIS_PUZZLE_HASH
-      my_coin_info
-      parent_coin
+    ; Returns nil since we don't need to add any conditions
+    (if delta
+        (x)
+        (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) parent_id)
+            ()
+            (x)
+        )
     )
 )
