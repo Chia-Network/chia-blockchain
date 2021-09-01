@@ -93,7 +93,8 @@ def coin_spend_for_lock_coin(
 
 
 def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
-    pair = (spendable_cc.coin.as_list(), spendable_cc.lineage_proof)
+    c = spendable_cc.coin
+    pair = ([c.parent_coin_info, c.puzzle_hash, c.amount, spendable_cc.inner_puzzle.get_tree_hash()], spendable_cc.lineage_proof)
     return Program.to(pair)
 
 
