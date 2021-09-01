@@ -130,6 +130,10 @@ class TempKeyring:
         mock_configure_backend = mock_configure_backend_patch.start()
         setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
+        mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
+        mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
+        mock_configure_legacy_backend.return_value = None
+
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()
 
@@ -147,6 +151,7 @@ class TempKeyring:
         keychain._mock_supports_keyring_passphrase_patch = mock_supports_keyring_passphrase_patch  # type: ignore
         keychain._mock_supports_os_passphrase_storage_patch = mock_supports_os_passphrase_storage_patch  # type: ignore
         keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore
+        keychain._mock_configure_legacy_backend_patch = mock_configure_legacy_backend_patch  # type: ignore
         keychain._mock_data_root_patch = mock_data_root_patch  # type: ignore
 
         return keychain
@@ -172,6 +177,7 @@ class TempKeyring:
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_supports_os_passphrase_storage_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()
+        self.keychain._mock_configure_legacy_backend_patch.stop()
         self.keychain._mock_data_root_patch.stop()
 
         self.cleaned_up = True
