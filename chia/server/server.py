@@ -608,14 +608,14 @@ class ChiaServer:
                     await connection.send_message(message)
 
     async def send_to_all(self, messages: List[Message], node_type: NodeType):
-        for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type:
-                for message in messages:
-                    await connection.send_message(message)
+        await self.send_to_all_except_set(messages, node_type, set())
 
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
+    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude_node_id: bytes32):
+        await self.send_to_all_except_set(messages, node_type, set(exclude_node_id))
+
+    async def send_to_all_except_set(self, messages: List[Message], node_type: NodeType, exclude: Set[bytes32]):
         for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type and connection.peer_node_id != exclude:
+            if connection.connection_type is node_type and connection.peer_node_id not in exclude:
                 for message in messages:
                     await connection.send_message(message)
 
