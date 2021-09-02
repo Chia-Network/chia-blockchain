@@ -4,10 +4,12 @@ from secrets import token_bytes
 
 from blspy import AugSchemeMPL, PrivateKey
 
+from tests.util.keyring import using_temp_file_keyring
 from chia.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 
 
 class TestKeychain(unittest.TestCase):
+    @using_temp_file_keyring()
     def test_basic_add_delete(self):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
@@ -77,6 +79,7 @@ class TestKeychain(unittest.TestCase):
         kc.add_private_key(bytes_to_mnemonic(token_bytes(32)), "my passphrase")
         assert kc.get_first_public_key() is not None
 
+    @using_temp_file_keyring()
     def test_bip39_eip2333_test_vector(self):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
