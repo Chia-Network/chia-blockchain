@@ -37,9 +37,8 @@ class DaemonProxy:
                 id = decoded["request_id"]
 
                 if id in self._request_dict:
-                    if id in self.response_dict:
-                        self.response_dict[id] = decoded
-                        self._request_dict[id].set()
+                    self.response_dict[id] = decoded
+                    self._request_dict[id].set()
 
         asyncio.create_task(listener())
         await asyncio.sleep(1)
