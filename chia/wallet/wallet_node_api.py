@@ -6,12 +6,11 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, execute_task
 from chia.util.errors import Err
-from chia.wallet.simple_wallet.simple_wallet_node import SimpleWalletNode
 from chia.wallet.wallet_node import WalletNode
 
 
 class WalletNodeAPI:
-    wallet_node: Union[SimpleWalletNode, WalletNode]
+    wallet_node: WalletNode
 
     def __init__(self, wallet_node) -> None:
         self.wallet_node = wallet_node
@@ -99,23 +98,12 @@ class WalletNodeAPI:
     async def respond_peers_introducer(
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ):
-        if not self.wallet_node.has_full_node():
-            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
-        else:
-            await self.wallet_node.wallet_peers.ensure_is_closed()
-
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
 
     @peer_required
     @api_request
     async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection):
-        if not self.wallet_node.has_full_node():
-            self.log.info(f"Wallet received {len(request.peer_list)} peers.")
-            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
-        else:
-            self.log.info(f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
-            await self.wallet_node.wallet_peers.ensure_is_closed()
         return None
 
     @api_request

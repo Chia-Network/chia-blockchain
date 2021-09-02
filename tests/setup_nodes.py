@@ -130,7 +130,6 @@ async def setup_wallet_node(
     introducer_port=None,
     key_seed=None,
     starting_height=None,
-    simple_wallet=True,
 ):
     with TempKeyring() as keychain:
         config = bt.config["wallet"]
@@ -170,7 +169,7 @@ async def setup_wallet_node(
         else:
             del config["full_node_peer"]
 
-        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain, simple_wallet)
+        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
         kwargs.update(
             parse_cli_args=False,
             connect_to_daemon=False,
@@ -449,7 +448,6 @@ async def setup_simulators_and_wallets(
                 None,
                 key_seed=seed,
                 starting_height=starting_height,
-                simple_wallet=simple_wallet,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
