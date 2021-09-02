@@ -5,9 +5,10 @@ import logging
 import random
 import time
 import traceback
+import os
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
-from chiavdf import create_discriminant
+from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -103,7 +104,11 @@ class Timelord:
         if not self.sanitizer_mode:
             self.main_loop = asyncio.create_task(self._manage_chains())
         else:
-            self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
+            if os.name == 'nt':
+                # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
+                self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow())
+            else:
+                self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info("Started timelord.")
 
     def _close(self):
@@ -1030,6 +1035,64 @@ class Timelord:
                         )
                         self.pending_bluebox_info.remove(info)
                         self.free_clients = self.free_clients[1:]
+                except Exception as e:
+                    log.error(f"Exception manage discriminant queue: {e}")
+            await asyncio.sleep(0.1)
+
+    async def _manage_discriminant_queue_sanitizer_slow(self):
+        while not self._shut_down:
+            picked_info = None
+            async with self.lock:
+                try:
+                    if len(self.pending_bluebox_info) > 0:
+                        # Select randomly the field_vdf we're creating a compact vdf for.
+                        # This is done because CC_SP and CC_IP are more frequent than
+                        # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
+                        target_field_vdf = random.randint(1, 4)
+                        info = next(
+                            (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
+                            None,
+                        )
+                        if info is None:
+                            # Nothing found with target_field_vdf, just pick the first VDFInfo.
+                            info = self.pending_bluebox_info[0]
+                        self.pending_bluebox_info.remove(info)
+                        picked_info = info[1]
+                except Exception as e:
+                    log.error(f"Exception manage discriminant queue: {e}")
+            if picked_info is not None:
+                try:
+                    initial_el = b"\x08" + (b"\x00" * 99)
+                    t1 = time.time()
+                    proof = prove(
+                        picked_info.new_proof_of_time.challenge,
+                        initial_el,
+                        self.constants.DISCRIMINANT_SIZE_BITS,
+                        picked_info.new_proof_of_time.number_of_iterations,
+                    )
+                    t2 = time.time()
+                    delta = t2 - t1
+                    if delta > 0:
+                        ips = picked_info.new_proof_of_time.number_of_iterations / delta
+                    else:
+                        ips = 0
+                    log.info(f"Finished compact proof: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
+                    output = proof[:100]
+                    proof_part = proof[100:200]
+                    if ClassgroupElement.from_bytes(output) != picked_info.new_proof_of_time.output:
+                        log.error("Expected vdf output different than produced one. Stopping.")
+                        return
+                    vdf_proof = VDFProof(0, proof_part, True)
+                    response = timelord_protocol.RespondCompactProofOfTime(
+                        picked_info.new_proof_of_time,
+                        vdf_proof,
+                        picked_info.header_hash,
+                        picked_info.height,
+                        picked_info.field_vdf,
+                    )
+                    if self.server is not None:
+                        message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
+                        await self.server.send_to_all([message], NodeType.FULL_NODE)
                 except Exception as e:
                     log.error(f"Exception manage discriminant queue: {e}")
             await asyncio.sleep(0.1)
