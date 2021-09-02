@@ -62,7 +62,6 @@ class SimpleWalletNode:
     constants: ConsensusConstants
     server: Optional[ChiaServer]
     log: logging.Logger
-    wallet_peers: WalletPeers
     # Maintains the state of the wallet (blockchain and transactions), handles DB connections
     wallet_state_manager: Optional[SimpleWalletStateManager]
     _shut_down: bool
@@ -102,7 +101,6 @@ class SimpleWalletNode:
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
         self.logged_in = False
-        self.wallet_peers_initialized = False
         self.keychain_proxy = None
         self.local_keychain = local_keychain
         self.height_to_time = {}
@@ -195,14 +193,6 @@ class SimpleWalletNode:
 
         self.backup_initialized = True
 
-        # Start peers here after the backup initialization has finished
-        # We only want to do this once per instantiation
-        # However, doing it earlier before backup initialization causes
-        # the wallet to spam the introducer
-        if self.wallet_peers_initialized is False:
-            asyncio.create_task(self.wallet_peers.start())
-            self.wallet_peers_initialized = True
-
         if backup_file is not None:
             json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
             if "start_height" in json_dict["data"]:
@@ -239,7 +229,6 @@ class SimpleWalletNode:
     async def _await_closed(self):
         self.log.info("self._await_closed")
         await self.server.close_all_connections()
-        asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
             self.wallet_state_manager = None
@@ -333,20 +322,6 @@ class SimpleWalletNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
-        DNS_SERVERS_EMPTY: list = []
-        # TODO: Perhaps use a different set of DNS seeders for wallets, to split the traffic.
-        self.wallet_peers = WalletPeers(
-            self.server,
-            self.root_path,
-            self.config["target_peer_count"],
-            self.config["wallet_peers_path"],
-            self.config["introducer_peer"],
-            DNS_SERVERS_EMPTY,
-            self.config["peer_connect_interval"],
-            self.config["selected_network"],
-            None,
-            self.log,
-        )
         server.on_connect = self.on_connect
 
     async def on_connect(self, peer: WSChiaConnection):
@@ -358,8 +333,6 @@ class SimpleWalletNode:
             if peer.peer_node_id in peer_ids:
                 continue
             await peer.send_message(msg)
-        if not self.has_full_node() and self.wallet_peers is not None:
-            asyncio.create_task(self.wallet_peers.on_connect(peer))
 
     async def update_coin_state(self, full_node: WSChiaConnection):
         self.wallet_state_manager.set_sync_mode(True)
@@ -511,7 +484,6 @@ class SimpleWalletNode:
         tries = 0
         while not self._shut_down and tries < 5:
             if self.has_full_node():
-                await self.wallet_peers.ensure_is_closed()
                 if self.wallet_state_manager is not None:
                     self.wallet_state_manager.state_changed("add_connection")
                 break
