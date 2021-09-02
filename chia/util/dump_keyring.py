@@ -18,12 +18,12 @@ from typing import Any, Dict, Optional
 DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 
 
-class DumpKeyring(FileKeyring):
+class DumpKeyring(FileKeyring):  # lgtm [py/missing-call-to-init]
     def __init__(self, keyring_file: Path):
         self.keyring_path = keyring_file
         self.payload_cache = {}
         self.load_keyring_lock = threading.RLock()
-
+        # We don't call super().__init__() to avoid side-effects
 
 def get_passphrase_prompt(keyring_file: str) -> str:
     prompt = (

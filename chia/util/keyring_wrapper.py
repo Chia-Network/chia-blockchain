@@ -7,7 +7,6 @@ from chia.util.file_keyring import FileKeyring
 from chia.util.misc import prompt_yes_no
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from keyring.backends.macOS import Keyring as MacKeyring
-from keyring.backends.Windows import WinVaultKeyring as Win32Keyring
 from keyring.errors import KeyringError
 from pathlib import Path
 from sys import exit, platform
@@ -111,8 +110,6 @@ class KeyringWrapper:
             # else:
             #     keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
         elif platform == "darwin":
-            import keyring.backends.macOS
-
             if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
             else:
@@ -449,8 +446,9 @@ class KeyringWrapper:
             keyring_name = str(migration_results.legacy_keyring.file_path)
         elif legacy_keyring_type is MacKeyring:
             keyring_name = "macOS Keychain"
-        elif legacy_keyring_type is Win32Keyring:
-            keyring_name = "Windows Credential Manager"
+        # leaving this here for when Windows migration is supported
+        # elif legacy_keyring_type is Win32Keyring:
+        #     keyring_name = "Windows Credential Manager"
 
         prompt = "Remove keys from old keyring"
         if len(keyring_name) > 0:
