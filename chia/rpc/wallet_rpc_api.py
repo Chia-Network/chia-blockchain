@@ -1279,7 +1279,7 @@ class WalletRpcApi:
         launcher_hash = bytes32(hexstr_to_bytes(request["launcher_hash"]))
         contract_hash = bytes32(hexstr_to_bytes(request["contract_hash"]))
         delay = uint64(604800)
-        for puzzle_hash_b32 in self.wallet_node.wallet_state_manager.puzzle_store.get_all_puzzle_hashes():
+        for puzzle_hash_b32 in self.service.wallet_state_manager.puzzle_store.get_all_puzzle_hashes():
             puzzle = create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_hash, delay, puzzle_hash_b32)
 
             if contract_hash == puzzle.get_tree_hash():
