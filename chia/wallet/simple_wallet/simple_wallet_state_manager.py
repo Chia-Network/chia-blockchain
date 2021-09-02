@@ -140,8 +140,6 @@ class SimpleWalletStateManager:
         self.log = logging.getLogger(name if name else __name__)
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
-        if db_path.exists():
-            db_path.unlink()
         self.db_connection = await aiosqlite.connect(db_path)
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)

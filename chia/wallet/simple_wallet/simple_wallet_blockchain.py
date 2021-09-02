@@ -19,13 +19,6 @@ class SimpleWalletBlockchain:
     constants_json: Dict
     # peak of the blockchain
     _peak_height: Optional[uint32]
-    # Stores
-    coin_store: WalletCoinStore
-    tx_store: WalletTransactionStore
-    pool_store: WalletPoolStore
-    block_store: WalletBlockStore
-    # Used to verify blocks in parallel
-    pool: ProcessPoolExecutor
     wallet_state_manager_lock: asyncio.Lock
     # Whether blockchain is shut down or not
     _shut_down: bool

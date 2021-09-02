@@ -279,11 +279,6 @@ class PoolWallet:
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_height = tip[0]
         tip_spend = tip[1]
-        # for cs, height in block_spends:
-        #     if height < tip_height:
-        #         if cs.coin.name() in coin_name_to_spend:
-        #             coin_name_to_spend.pop(cs.coin.name())
-        # assert block_height >= tip_height  # We should not have a spend with a lesser block height
 
         while True:
             tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
