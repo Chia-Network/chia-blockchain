@@ -361,22 +361,19 @@ class SimpleWalletNode:
         if not self.has_full_node() and self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.on_connect(peer))
 
-        await self.update_coin_state(peer)
-
     async def update_coin_state(self, full_node: WSChiaConnection):
         self.wallet_state_manager.set_sync_mode(True)
         start_time = time.time()
-        async with self.wallet_state_manager.lock:
-            all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-            current_height = self.wallet_state_manager.blockchain.get_peak_height()
-            request_height = uint32(max(0, current_height - 1000))
-            await self.subscribe_to_phs(all_puzzle_hashes, full_node, request_height)
-            all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
-            all_coin_names = [coin_record.name() for coin_record in all_coins]
-            removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-            all_coin_names.extend(removed_dict.keys())
-            all_coin_names.extend(added_dict.keys())
-            await self.subscribe_to_coin_updates(all_coin_names, full_node, request_height)
+        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        current_height = await self.wallet_state_manager.blockchain.get_synced_height()
+        request_height = uint32(max(0, current_height - 1000))
+        await self.subscribe_to_phs(all_puzzle_hashes, full_node, request_height)
+        all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(request_height)
+        all_coin_names = [coin_record.name() for coin_record in all_coins]
+        removed_dict, added_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        all_coin_names.extend(removed_dict.keys())
+        all_coin_names.extend(added_dict.keys())
+        await self.subscribe_to_coin_updates(all_coin_names, full_node, request_height)
         self.wallet_state_manager.set_sync_mode(False)
         end_time = time.time()
         duration = end_time - start_time
@@ -585,9 +582,11 @@ class SimpleWalletNode:
         return time
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
-        if peer.peer_node_id not in self.synced_peers:
-            return
         async with self.wallet_state_manager.lock:
+            if peer.peer_node_id not in self.synced_peers:
+                await self.update_coin_state(peer)
+                await self.wallet_state_manager.blockchain.set_synced_height(peak.height)
+
             await self.wallet_state_manager.new_peak(peak)
             await self.fetch_last_tx_block(peak.height, peer)
             self.wallet_state_manager.state_changed("new_block")

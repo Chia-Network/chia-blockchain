@@ -61,6 +61,15 @@ class SimpleWalletBlockchain:
         self._peak_height = height
         await self.basic_store.set_str("STORED_HEIGHT", f"{height}")
 
+    async def set_synced_height(self, height):
+        await self.basic_store.set_str("SYNCED_HEIGHT", f"{height}")
+
+    async def get_synced_height(self) -> int:
+        synced_height = await self.basic_store.get_str("SYNCED_HEIGHT")
+        if synced_height is not None:
+            return int(synced_height)
+        return 0
+
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height
 
