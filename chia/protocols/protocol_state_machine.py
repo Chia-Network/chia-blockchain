@@ -36,7 +36,7 @@ VAILD_REPLY_MESSAGE_MAP = {
 
 
 def static_check_sent_message_response() -> None:
-    """Check that allowed message data structures VAILD_REPLY_MESSAGE_MAP and NO_REPLY_EXPECTED are consistent."""
+    """Check that allowed message data structures VALID_REPLY_MESSAGE_MAP and NO_REPLY_EXPECTED are consistent."""
     # Reply and non-reply sets should not overlap: This check should be static
     overlap = set(NO_REPLY_EXPECTED).intersection(set(VAILD_REPLY_MESSAGE_MAP.keys()))
     if len(overlap) != 0:
@@ -58,3 +58,8 @@ def sent_message_response_ok(sent: ProtocolMessageTypes, received: Optional[Prot
             return False
 
     return True
+
+
+def main():
+    # Check this static invariant at import time
+    static_check_sent_message_response()

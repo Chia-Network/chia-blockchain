@@ -20,7 +20,6 @@ from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
-from chia.protocols.protocol_state_machine import static_check_sent_message_response
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
@@ -149,7 +148,6 @@ class WebSocketServer:
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
 
     async def start(self):
-        static_check_sent_message_response()
         self.log.info("Starting Daemon Server")
 
         def master_close_cb():

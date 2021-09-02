@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import sent_message_response_ok
+from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS, API_EXCEPTION_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
@@ -160,8 +161,8 @@ class ChiaServer:
 
         self.tasks_from_peer: Dict[bytes32, Set[bytes32]] = {}
         self.banned_peers: Dict[str, float] = {}
-        self.invalid_protocol_ban_seconds = 10
-        self.api_exception_ban_seconds = 10
+        self.invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
+        self.api_exception_ban_seconds = API_EXCEPTION_BAN_SECONDS
         self.exempt_peer_networks: List[Union[IPv4Network, IPv6Network]] = [
             ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])
         ]
@@ -615,7 +616,14 @@ class ChiaServer:
                     if sent_message_response_ok(ProtocolMessageTypes(message.type), None):
                         await connection.send_message(message)
                     else:
-                        self.log.error(f"send_to_all not sending message expecting a response: {message.type}")
+                        # Internal peer protocol logic error
+                        # If we raise ProtocolError here exiting the loop will affect other peers
+                        self.log.error(f"send_to_all called with message expecting a response: {message.type}")
+                        await connection.close(
+                            self.invalid_protocol_ban_seconds,
+                            WSCloseCode.INTERNAL_ERROR,
+                            Err.INTERNAL_PROTOCOL_ERROR,
+                        )
 
     async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
         for _, connection in self.all_connections.items():
@@ -624,7 +632,14 @@ class ChiaServer:
                     if sent_message_response_ok(ProtocolMessageTypes(message.type), None):
                         await connection.send_message(message)
                     else:
-                        self.log.error(f"send_to_all_except not sending message expecting a response: {message.type}")
+                        # Internal peer protocol logic error
+                        # If we raise ProtocolError here exiting the loop will affect other peers
+                        self.log.error(f"send_to_all_except called with message expecting a response: {message.type}")
+                        await connection.close(
+                            self.invalid_protocol_ban_seconds,
+                            WSCloseCode.INTERNAL_ERROR,
+                            Err.INTERNAL_PROTOCOL_ERROR,
+                        )
 
     async def send_to_specific(self, messages: List[Message], node_id: bytes32):
         if node_id in self.all_connections:

@@ -189,10 +189,6 @@ class FullNodeAPI:
             return None
         return None
 
-    # pmt.request_signage_point_or_end_of_sub_slot: [pmt.respond_signage_point, pmt.respond_end_of_sub_slot],
-    # pmt.request_compact_vdf: [pmt.respond_compact_vdf],
-    # pmt.request_peers: [pmt.respond_peers],
-    #
     @api_request
     @reply_type([ProtocolMessageTypes.respond_transaction])
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
