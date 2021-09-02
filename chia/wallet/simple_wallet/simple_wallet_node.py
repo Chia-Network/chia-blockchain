@@ -325,6 +325,14 @@ class SimpleWalletNode:
         server.on_connect = self.on_connect
 
     async def on_connect(self, peer: WSChiaConnection):
+        trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        if trusted is False:
+            await peer.close()
+            self.log.error(
+                f"Wallet connected to the untrusted node. Check your config.yaml for the list of trusted nodes."
+            )
+            return
+
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return None
         messages_peer_ids = await self._messages_to_resend()
