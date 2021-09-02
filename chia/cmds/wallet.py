@@ -1,7 +1,15 @@
 import sys
+import time
 from typing import Optional
 
 import click
+
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint16
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -24,6 +32,7 @@ def wallet_cmd() -> None:
 def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int) -> None:
     extra_params = {"id": id, "tx_id": tx_id, "verbose": verbose}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, get_transaction
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
@@ -64,6 +73,7 @@ def get_transactions_cmd(
 ) -> None:
     extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, get_transactions
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
@@ -106,6 +116,7 @@ def send_cmd(
 ) -> None:
     extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, send
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
@@ -122,6 +133,7 @@ def send_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, print_balances
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
@@ -140,6 +152,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
 def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
     extra_params = {"id": id}
     import asyncio
+
     from .wallet_funcs import execute_with_wallet, get_address
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
@@ -160,6 +173,54 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> Non
 def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
     extra_params = {"id": id}
     import asyncio
-    from .wallet_funcs import execute_with_wallet, delete_unconfirmed_transactions
+
+    from .wallet_funcs import delete_unconfirmed_transactions, execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
+
+
+async def do_recover_pool_nft(contract_hash: str, launcher_hash: str, fingerprint: int):
+    from .wallet_funcs import get_wallet
+
+    contract_hash_bytes32 = hexstr_to_bytes(contract_hash)
+    delay = 604800
+
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    rpc_port = config["full_node"]["rpc_port"]
+    wallet_rpc_port = config["wallet"]["rpc_port"]
+    node_client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
+    wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
+
+    coin_records = await node_client.get_coin_records_by_puzzle_hash(contract_hash_bytes32, False)
+
+    # expired coins
+    coins = [coin_record.coin for coin_record in coin_records if coin_record.timestamp <= int(time.time()) - delay]
+    if not coins:
+        print("no expired coins")
+        return
+    print("found", len(coins), "expired coins, total amount:", sum(coin.amount for coin in coins))
+    wallet_client_f = await get_wallet(wallet_client, fingerprint=fingerprint)
+    tx = await wallet_client_f.recover_pool_nft(launcher_hash, contract_hash, coins)
+    await node_client.push_tx(tx)
+    print("tx pushed")
+
+
+@wallet_cmd.command("recover_pool_nft", short_help="Recover coins in pool nft contract")
+@click.option(
+    "--contract-hash",
+    help="Set the nft contract hash",
+    type=str,
+    default=None,
+)
+@click.option(
+    "--launcher-hash",
+    help="Set the launcher hash, you should get it from chia wallet",
+    type=str,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def recover_pool_nft(contract_hash: str, launcher_hash: str, fingerprint: int):
+    import asyncio
+
+    asyncio.run(do_recover_pool_nft(contract_hash, launcher_hash, fingerprint))
