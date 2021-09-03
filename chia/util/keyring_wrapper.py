@@ -113,7 +113,7 @@ class KeyringWrapper:
             if supports_keyring_passphrase():
                 keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
             else:
-                keyring = MacKeyring()
+                keyring = MacKeyring()  # type: ignore
                 keyring_main.set_keyring(keyring)
         elif platform == "linux":
             if supports_keyring_passphrase():

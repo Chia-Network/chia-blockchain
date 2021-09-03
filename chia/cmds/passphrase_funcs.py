@@ -56,10 +56,12 @@ def prompt_to_save_passphrase() -> bool:
 
     try:
         if supports_os_passphrase_storage():
+            location: Optional[str] = None
+
             if sys.platform == "darwin":
                 location = "macOS Keychain"
 
-            if not location:
+            if location is None:
                 raise ValueError("OS-specific credential store not specified")
 
             print(
