@@ -304,6 +304,10 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  # this is a debug and profiling facility that logs all SQLite commands to a
+  # separate log file (under logging/sql.log).
+  log_sqlite_cmds: False
+
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
