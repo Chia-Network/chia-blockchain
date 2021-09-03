@@ -25,6 +25,7 @@ class DumpKeyring(FileKeyring):  # lgtm [py/missing-call-to-init]
         self.load_keyring_lock = threading.RLock()
         # We don't call super().__init__() to avoid side-effects
 
+
 def get_passphrase_prompt(keyring_file: str) -> str:
     prompt = (
         colorama.Fore.YELLOW
