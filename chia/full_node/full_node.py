@@ -181,7 +181,7 @@ class FullNode:
         dns_servers = []
         capabilities = []
         capabilities.append((uint16(Capability.BASE.value), "1"))
-        capabilities.append((uint16(Capability.NONERESPONSE.value), "1"))
+        capabilities.append((uint16(Capability.NONE_RESPONSE.value), "1"))
         server.set_capabilities(capabilities)
         try:
             network_name = self.config["selected_network"]

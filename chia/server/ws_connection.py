@@ -287,7 +287,7 @@ class WSChiaConnection:
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
                 f"None? {result is None}"
             )
-            if result is not None and result.data != b"":
+            if result is not None:
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
 
                 req_annotations = ret_attr.__annotations__
@@ -298,7 +298,8 @@ class WSChiaConnection:
                     else:
                         req = req_annotations[key]
                 assert req is not None
-                result = req.from_bytes(result.data)
+                if result.data != b"":
+                    result = req.from_bytes(result.data)
             return result
 
         return invoke

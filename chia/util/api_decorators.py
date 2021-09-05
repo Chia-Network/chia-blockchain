@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 BYTES_REQUIRED = "bytes_required"
 PEER_REQUIRED = "peer_required"
 EXECUTE_TASK = "execute_task"
-REPLY_TYPE = "reply_type"
+MSG_REPLY_TYPE = "msg_reply_type"
 API_FUNCTION = "api_function"
 
 
@@ -71,10 +71,10 @@ def execute_task(func):
     return inner()
 
 
-def reply_type(type):
+def msg_reply_type(type):
     def wrap(func):
         def inner():
-            setattr(func, REPLY_TYPE, type)
+            setattr(func, MSG_REPLY_TYPE, type)
             return func
 
         return inner()

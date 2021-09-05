@@ -23,7 +23,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.api_decorators import REPLY_TYPE, API_FUNCTION, EXECUTE_TASK
+from chia.util.api_decorators import MSG_REPLY_TYPE, API_FUNCTION, EXECUTE_TASK
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
@@ -566,9 +566,9 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
-                    elif hasattr(f, REPLY_TYPE):
+                    elif hasattr(f, MSG_REPLY_TYPE):
                         capabilities = connection.capabilities
-                        if capabilities is not None and (uint16(Capability.NONERESPONSE.value), "1") in capabilities:
+                        if capabilities is not None and (uint16(Capability.NONE_RESPONSE.value), "1") in capabilities:
                             # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
                             response_message = Message(full_message.type, full_message.id, b"")
                             await connection.reply_to_request(response_message)
