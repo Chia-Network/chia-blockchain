@@ -562,7 +562,7 @@ class WebSocketServer:
             # notify GUI about new plot queue item
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
 
-            # only first item can start when user selected serial plotting
+            # only the first item can start when user selected serial plotting
             can_start_serial_plotting = k == 0 and self._is_serial_plotting_running(queue) is False
 
             if parallel is True or can_start_serial_plotting:
