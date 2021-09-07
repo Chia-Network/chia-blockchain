@@ -67,7 +67,7 @@ async def setup_daemon(btools):
 
     yield ws_server
 
-    await ws_server.stop()
+    await ws_server.stop(wait_close=True)
 
 
 async def setup_full_node(

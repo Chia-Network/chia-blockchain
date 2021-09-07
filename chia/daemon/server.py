@@ -179,14 +179,17 @@ class WebSocketServer:
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
-    async def stop(self) -> Dict[str, Any]:
+    async def stop(self, wait_close: bool = False) -> Dict[str, Any]:
         self.shut_down = True
         self.cancel_task_safe(self.ping_job)
         self.cancel_task_safe(self.watch_log_file_job)
         await self.exit()
         if self.websocket_server is not None:
             self.websocket_server.close()
-            await self.websocket_server.wait_closed()
+            # This is primarily used by the test code
+            # which calls this function explicitly during test teardown
+            if wait_close:
+                await self.websocket_server.wait_closed()
         return {"success": True}
 
     async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
@@ -927,17 +930,20 @@ class WebSocketServer:
 
             fp = open(file_path, "r")
             log_contents = fp.read(25 * 1024 * 1024)  # read in up to 25MiB
+            # return the file data in the ack response as one big string
+            response = {"success": True, "service_name": service_name, "log": log_contents}
 
             # Only need one such task running to support N sockets
             if self.watch_log_file_job is None:
                 loop = asyncio.get_event_loop()
                 # create a task for reading in periodic updates
                 self.watch_log_file_job = loop.create_task(self._watch_log_file(fp, loop))
+            else:
+                fp.close()
 
-            # return the file data in the ack response as one big string
-            response = {"success": True, "service_name": service_name, "log": log_contents}
         except Exception as e:
             self.log.error(f"Unable to read log file {file_path}: {e}")
+            fp.close
 
         return response
 
