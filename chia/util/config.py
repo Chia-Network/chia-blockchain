@@ -23,7 +23,7 @@ def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> No
         mkdir(path.parent)
         with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
-        shutil.move(tmp_path, path)
+        shutil.move(str(tmp_path), str(path))
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
