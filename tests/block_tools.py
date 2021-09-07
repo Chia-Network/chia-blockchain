@@ -248,7 +248,7 @@ class BlockTools:
             sys.exit(1)
 
         refresh_done = False
-        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(120, 2, 10)
+        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
 
         def test_callback(update_result: PlotRefreshResult):
             if update_result.remaining_files == 0:
