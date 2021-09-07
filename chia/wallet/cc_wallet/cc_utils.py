@@ -171,6 +171,7 @@ def spend_bundle_for_spendable_ccs(
             my_bundle,
             next_bundle,
             subtotals[index],
+            0
         ]
         coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
