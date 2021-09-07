@@ -15,7 +15,7 @@ export default function WalletCardPendingBalance(props: Props) {
   const { wallet, loading } = useWallet(wallet_id);
   const currencyCode = useCurrencyCode();
 
-  const value = wallet?.wallet_balance?.pending_balance;
+  const value = wallet?.wallet_balance?.balance_pending;
 
   return (
     <FarmCard

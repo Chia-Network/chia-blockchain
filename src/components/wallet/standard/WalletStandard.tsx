@@ -259,8 +259,8 @@ function BalanceCard(props: BalanceCardProps) {
 
   const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
   const balance_spendable = wallet?.wallet_balance?.spendable_balance;
-  const balance_pending = wallet?.wallet_balance?.pending_balance;
-  const pending_change = wallet?.wallet_balance?.pending_change;
+  const balance_pending = wallet?.wallet_balance?.balance_pending;
+  const pending_change = wallet?.wallet_balance?.balance_pending;
 
   const balance_ptotal = balance + balance_pending;
 

@@ -16,7 +16,7 @@ export default function WalletCardPendingTotalBalance(props: Props) {
   const currencyCode = useCurrencyCode();
 
   const balance = wallet?.wallet_balance?.confirmed_wallet_balance;
-  const balance_pending = wallet?.wallet_balance?.pending_balance;
+  const balance_pending = wallet?.wallet_balance?.balance_pending;
 
   const value = balance + balance_pending;
 

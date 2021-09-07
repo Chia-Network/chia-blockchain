@@ -7,7 +7,7 @@ type WalletBalance = {
   spendable_balance: number;
   unconfirmed_wallet_balance: number;
   unspent_coin_count: number;
-  pending_balance: number;
+  balance_pending: number;
 };
 
 export default WalletBalance;

@@ -14,7 +14,8 @@ interface Wallet {
   didcoin: string;
   backup_dids: string[];
   dids_num_req: number;
-  did_attest: string;
+  did_rec_puzhash: string;
+  did_rec_pubkey: string;
   sending_transaction: boolean;
   send_transaction_result?: string | null;
   wallet_balance?: WalletBalance;

@@ -13,6 +13,7 @@ import { Trans } from '@lingui/macro';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import {
+  Back,
   Card,
   FormatLargeNumber,
   Link,
@@ -332,11 +333,11 @@ export default function Block() {
     <LayoutMain title={<Trans>Block</Trans>}>
       <Card
         title={
-          <BlockTitle>
+          <Back variant="h5">
             <Trans>
               Block at height {blockRecord.height} in the Chia blockchain
             </Trans>
-          </BlockTitle>
+          </Back>
         }
         action={
           <Flex gap={1}>

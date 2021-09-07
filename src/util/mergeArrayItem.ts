@@ -1,5 +1,5 @@
 export default function mergeArrayItem<T>(
-  array: T[],
+  array: T[] | undefined,
   identity: (item: T) => boolean,
   object: Partial<T>,
 ): T[] {

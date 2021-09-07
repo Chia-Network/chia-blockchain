@@ -5,6 +5,7 @@ export { default as AlertDialog } from './AlertDialog';
 export { default as Amount } from './Amount';
 export { default as AspectRatio } from './AspectRatio';
 export { default as Autocomplete } from './Autocomplete';
+export { default as Back } from './Back';
 export { default as Button, ButtonProps } from './Button';
 export { default as ButtonLoading } from './ButtonLoading';
 export { default as ButtonSelected } from './ButtonSelected';

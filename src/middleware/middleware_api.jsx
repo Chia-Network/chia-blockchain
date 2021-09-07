@@ -17,7 +17,6 @@ import {
   did_get_recovery_list,
   did_get_did,
   pingWallet,
-  get_farmed_amount,
   getNetworkInfo,
 } from '../modules/message';
 
@@ -111,53 +110,16 @@ async function ping_harvester(store) {
   }
 }
 
-let can_call = true;
-const can_call_get_wallet_transactions = {};
-const can_call_get_wallet_balance = {};
-
-const timeout_tx = null;
-let timeout_balance = null;
-let timeout_height = null;
-
 async function get_height(store) {
-  if (can_call === true) {
-    store.dispatch(get_height_info());
-    can_call = false;
-    timeout_height = setTimeout(() => {
-      can_call = true;
-    }, 2000);
-  }
+  store.dispatch(get_height_info());
 }
 
 async function get_wallet_transactions(store, id) {
-  if (
-    can_call_get_wallet_transactions[id] === true ||
-    !(id in can_call_get_wallet_transactions)
-  ) {
-    can_call_get_wallet_transactions[id] = false;
-    store.dispatch(get_transactions(id));
-    can_call_get_wallet_transactions[id] = false;
-    timeout_balance = setTimeout(() => {
-      store.dispatch(get_transactions(id));
-      can_call_get_wallet_transactions[id] = true;
-    }, 10000);
-  }
+  store.dispatch(get_transactions(id));
 }
 
 async function get_wallet_balance(store, id) {
-  if (
-    can_call_get_wallet_balance[id] === true ||
-    !(id in can_call_get_wallet_balance)
-  ) {
-    can_call_get_wallet_balance[id] = false;
-    store.dispatch(get_balance_for_wallet(id));
-    store.dispatch(get_farmed_amount());
-    timeout_balance = setTimeout(() => {
-      store.dispatch(get_balance_for_wallet(id));
-      store.dispatch(get_farmed_amount());
-      can_call_get_wallet_balance[id] = true;
-    }, 10000);
-  }
+  store.dispatch(get_balance_for_wallet(id));
 }
 
 export function refreshAllState() {
@@ -371,11 +333,25 @@ export const handle_message = async (store, payload, errorProcessed) => {
       wallet_id = payload.data.wallet_id;
       get_wallet_balance(store, wallet_id);
       get_wallet_transactions(store, wallet_id);
+    } else if (state === 'did_coin_added') {
+      store.dispatch(format_message('get_wallets', {}));
     }
   } else if (payload.command === 'cc_set_name') {
     if (payload.data.success) {
       const { wallet_id } = payload.data;
       store.dispatch(get_colour_name(wallet_id));
+    }
+  } else if (payload.command === 'did_create_backup_file') {
+    if (payload.data.success) {
+      store.dispatch(
+        openDialog(<AlertDialog title="Success!">Your backup file has been created</AlertDialog>),
+      );
+    }
+  } else if (payload.command === 'did_create_attest') {
+    if (payload.data.success) {
+      store.dispatch(
+        openDialog(<AlertDialog title="Success!">Your attestation packet has been created</AlertDialog>),
+      );
     }
   } else if (payload.command === 'respond_to_offer') {
     if (payload.data.success) {

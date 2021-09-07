@@ -297,7 +297,7 @@ function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
     </Grid>
   );
 }
-
+// comment
 function get_cc_unit(name: string): string {
   let cc_unit = name;
   if (cc_unit.length > 10) {

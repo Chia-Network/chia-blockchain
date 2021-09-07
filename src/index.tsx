@@ -1,4 +1,5 @@
 import './polyfill';
+import './config/env';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './config/env';
