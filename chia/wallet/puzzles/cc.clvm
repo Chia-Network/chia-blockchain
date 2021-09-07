@@ -120,6 +120,10 @@
          )
      )
 
+     (defun-inline not (arg)
+      (i arg 0 1)
+     )
+
      ; takes a lisp tree and returns the hash of it
      (defun sha256tree1 (TREE)
            (if (l TREE)
@@ -225,11 +229,6 @@
        )
      )
 
-     ;; ensure `this_coin_info` is correct by creating the `ASSERT_MY_COIN_ID` condition
-     (defun-inline create_assert_my_id (this_coin_info)
-       (list ASSERT_MY_COIN_ID (coin_id_for_coin this_coin_info))
-     )
-
      ;; add three conditions to the list of morphed conditions:
      ;; ASSERT_MY_COIN_ID for `this_coin_info`
      ;; CREATE_COIN_ANNOUNCEMENT for my announcement
@@ -261,11 +260,15 @@
        this_coin_info
        (parent_parent_coin_id parent_inner_puzzle_hash parent_amount)
      )
-       (= (f this_coin_info)
-          (sha256 parent_parent_coin_id
-                  (cc_puzzle_hash cc_mod_struct parent_inner_puzzle_hash)
-                  parent_amount
-          )
+        ;(x this_coin_info)
+       (if (= (f this_coin_info)
+              (sha256 parent_parent_coin_id
+                      (cc_puzzle_hash cc_mod_struct parent_inner_puzzle_hash)
+                      parent_amount
+              )
+           )
+           ()
+           (x)
        )
      )
 
@@ -279,17 +282,17 @@
        (f (r (r cc_mod_struct)))
      )
 
-     (defun-inline is_lineage_proof_valid (cc_mod_struct coin_info lineage_proof)
-       (if
-         (f lineage_proof)
-         (is_parent_cc cc_mod_struct coin_info (r lineage_proof))
-         (a (genesis_coin_checker_for_lpp cc_mod_struct)
-             (list cc_mod_struct coin_info (r lineage_proof)))  ; TODO delta number pass in to check if ok
+     (defun-inline is_lineage_proof_valid (Truths coin_info lineage_proof extra_delta)
+       (if (any (not (f lineage_proof)) extra_delta)
+            ;(x "lineage proof" lineage_proof "flag" (f lineage_proof) "parent_or_opaque" (r lineage_proof) "extra delta" extra_delta)
+           (a (genesis_coin_checker_for_lpp (singleton_struct_truth Truths))
+              (list Truths extra_delta (r lineage_proof)))
+           (is_parent_cc (singleton_struct_truth Truths) coin_info (r lineage_proof))
        )
      )
 
-     (defun is_bundle_valid ((coin . lineage_proof) cc_mod_struct)
-       (is_lineage_proof_valid cc_mod_struct coin lineage_proof)
+     (defun is_bundle_valid ((coin_info . lineage_proof) Truths extra_delta)
+       (is_lineage_proof_valid Truths coin_info lineage_proof extra_delta)
      )
 
      (defun merge_list (one two)
@@ -306,7 +309,7 @@
         )
      )
 
-     (defun-inline is_coloured_check (coin_bundle cc_struct)
+     (defun is_coloured_check (coin_bundle cc_struct)
         (=
           (cc_puzzle_hash cc_struct (f (r (r (r (f coin_bundle))))))
           (f (r (f coin_bundle)))
@@ -316,29 +319,26 @@
 
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-     (defun stager_two (
-         cc_mod_struct
+     (defun stager_three (
+         Truths
          inner_conditions
          prev_coin_bundle
          this_coin_bundle
          next_coin_bundle
          prev_subtotal
+         extra_delta
       )
-
-      ; TODO: WE DON'T WANT TO CHECK THE OTHERS ARE "VALID" JUST THAT THEY ARE COLOURED!!!!!
-      ; ONLY NEED TO CHECK THAT I MYSELF AM VALID
-
-      (if (is_coloured_check prev_coin_bundle cc_mod_struct)
-        (if (is_coloured_check next_coin_bundle cc_mod_struct)
+      (if (is_coloured_check prev_coin_bundle (singleton_struct_truth Truths))
+        (if (is_coloured_check next_coin_bundle (singleton_struct_truth Truths))
           (if_is_list_merge
             ; ensure next is a cc (to ensure its announcements can be trusted)
-            (is_bundle_valid this_coin_bundle cc_mod_struct)
+            (is_bundle_valid this_coin_bundle Truths extra_delta)
 
             (generate_final_output_conditions
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-              (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)))  ; TODO delta figeting
-              (morph_conditions inner_conditions cc_mod_struct)
+              (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
+              (morph_conditions inner_conditions (singleton_struct_truth Truths))
               (coin_info_for_coin_bundle prev_coin_bundle)
               (coin_info_for_coin_bundle this_coin_bundle)
               (coin_info_for_coin_bundle next_coin_bundle)
@@ -350,8 +350,34 @@
       )
     )
 
-    ; COLOURED_COIN TRUTHS ARE: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
+    (defun stager_two (
+        Truths
+        INNER_PUZZLE
+        inner_solution
+        prev_coin_bundle
+        this_coin_bundle
+        next_coin_bundle
+        prev_subtotal
+        extra_delta
+     )
+      (c (list ASSERT_MY_COIN_ID (my_id_truth Truths))
+         (stager_three Truths
+                       (a INNER_PUZZLE (c Truths inner_solution))
+                       prev_coin_bundle
+                       this_coin_bundle
+                       next_coin_bundle
+                       prev_subtotal
+                       extra_delta
+         )
 
+      )
+   )
+
+
+
+    ; COLOURED_COIN TRUTHS ARE: my_id full_puzzle_hash inner_puzzle_hash my_amount my_parent CC_STRUCT
+
+    ; create truths - this_coin_bundle verified true because we calculated my ID from it!
     (defun stager (
         cc_mod_struct
         INNER_PUZZLE
@@ -362,18 +388,21 @@
         this_coin_bundle
         next_coin_bundle
         prev_subtotal
+        extra_delta
      )
-      (stager_two cc_mod_struct
-             (c (list ASSERT_MY_COIN_ID my_id) (a INNER_PUZZLE (c (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (r this_coin_bundle) cc_mod_struct) inner_solution)))
+      (stager_two (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (f (f this_coin_bundle)) cc_mod_struct)
+             INNER_PUZZLE
+             inner_solution
              prev_coin_bundle
              this_coin_bundle
              next_coin_bundle
              prev_subtotal
+             extra_delta
        )
     )
 
     (stager
-        ;; caclculate stuff: cc_mod_struct, inner_puzzle_hash, coin_id
+        ;; caclculate cc_mod_struct, inner_puzzle_hash, coin_id
         (list MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
         INNER_PUZZLE
         inner_puzzle_solution
@@ -383,5 +412,8 @@
         this_coin_bundle
         next_coin_bundle
         prev_subtotal
+        extra_delta
     )
+
+
 )
