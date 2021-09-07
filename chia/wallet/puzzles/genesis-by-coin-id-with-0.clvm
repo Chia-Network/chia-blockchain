@@ -10,15 +10,15 @@
       delta
       _
     )
-    ; COLOURED_COIN TRUTHS ARE: my_id full_puzzle_hash inner_puzzle_hash my_amount my_parent CC_STRUCT
-    (defun-inline access_parent_id_from_truths (Truths) (f (r (r (r (r Truths))))))
+
+    (include cat_truths.clib)
 
     ; Returns nil since we don't need to add any conditions
     (if delta
         (x)
-        (if (= (access_parent_id_from_truths Truths) GENESIS_ID)
+        (if (= (my_parent_cat_truth Truths) GENESIS_ID)
             ()
-            (x "parent_info" (access_parent_id_from_truths Truths))
+            (x "parent_info" (my_parent_cat_truth Truths))
         )
     )
 
