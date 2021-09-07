@@ -259,140 +259,136 @@ class PlotManager:
             filename_str = str(file_path)
             if self.match_str is not None and self.match_str not in filename_str:
                 return new_provers
-            if file_path.exists():
-                if (
-                    file_path in self.failed_to_open_filenames
-                    and (time.time() - self.failed_to_open_filenames[file_path])
-                    < self.refresh_parameter.retry_invalid_seconds
-                ):
-                    # Try once every `refresh_parameter.retry_invalid_seconds` seconds to open the file
-                    return new_provers
-                if file_path in self.plots:
-                    try:
-                        stat_info = file_path.stat()
-                    except Exception as e:
-                        log.error(f"Failed to open file {file_path}. {e}")
-                        return new_provers
-                    if stat_info.st_mtime == self.plots[file_path].time_modified:
-                        new_provers[file_path] = self.plots[file_path]
-                        return new_provers
-                entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
-                if entry is not None:
-                    loaded_parent, duplicates = entry
-                    if str(file_path.parent) in duplicates:
-                        log.debug(f"Skip duplicated plot {str(file_path)}")
-                        return new_provers
+            if not file_path.exists():
+                return new_provers
+            if (
+                file_path in self.failed_to_open_filenames
+                and (time.time() - self.failed_to_open_filenames[file_path])
+                < self.refresh_parameter.retry_invalid_seconds
+            ):
+                # Try once every `refresh_parameter.retry_invalid_seconds` seconds to open the file
+                return new_provers
+            if file_path in self.plots:
                 try:
-                    with counter_lock:
-                        if result.processed_files >= self.refresh_parameter.batch_size:
-                            result.remaining_files += 1
-                            return new_provers
-                        result.processed_files += 1
-
-                    prover = DiskProver(str(file_path))
-
-                    log.debug(f"process_file {str(file_path)}")
-
-                    expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                     stat_info = file_path.stat()
-
-                    # TODO: consider checking if the file was just written to (which would mean that the file is still
-                    # being copied). A segfault might happen in this edge case.
-
-                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                        log.warning(
-                            f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
-                            f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
-                        )
+                except Exception as e:
+                    log.error(f"Failed to open file {file_path}. {e}")
+                    return new_provers
+                if stat_info.st_mtime == self.plots[file_path].time_modified:
+                    new_provers[file_path] = self.plots[file_path]
+                    return new_provers
+            entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
+            if entry is not None:
+                loaded_parent, duplicates = entry
+                if str(file_path.parent) in duplicates:
+                    log.debug(f"Skip duplicated plot {str(file_path)}")
+                    return new_provers
+            try:
+                with counter_lock:
+                    if result.processed_files >= self.refresh_parameter.batch_size:
+                        result.remaining_files += 1
                         return new_provers
+                    result.processed_files += 1
 
-                    cache_entry = self.cache.get(prover.get_id())
-                    if cache_entry is None:
-                        (
-                            pool_public_key_or_puzzle_hash,
-                            farmer_public_key,
-                            local_master_sk,
-                        ) = parse_plot_info(prover.get_memo())
+                prover = DiskProver(str(file_path))
 
-                        # Only use plots that correct keys associated with them
-                        if farmer_public_key not in self.farmer_public_keys:
-                            log.warning(
-                                f"Plot {file_path} has a farmer public key that is not in the farmer's pk list."
-                            )
-                            self.no_key_filenames.add(file_path)
-                            if not self.open_no_key_filenames:
-                                return new_provers
+                log.debug(f"process_file {str(file_path)}")
 
-                        pool_public_key: Optional[G1Element] = None
-                        pool_contract_puzzle_hash: Optional[bytes32] = None
-                        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
-                            pool_public_key = pool_public_key_or_puzzle_hash
-                        else:
-                            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
-                            pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
+                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                stat_info = file_path.stat()
 
-                        if pool_public_key is not None and pool_public_key not in self.pool_public_keys:
-                            log.warning(
-                                f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list."
-                            )
-                            self.no_key_filenames.add(file_path)
-                            if not self.open_no_key_filenames:
-                                return new_provers
+                # TODO: consider checking if the file was just written to (which would mean that the file is still
+                # being copied). A segfault might happen in this edge case.
 
-                        local_sk = master_sk_to_local_sk(local_master_sk)
+                if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                    log.warning(
+                        f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
+                        f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                    )
+                    return new_provers
 
-                        plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
-                            local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
-                        )
+                cache_entry = self.cache.get(prover.get_id())
+                if cache_entry is None:
+                    (
+                        pool_public_key_or_puzzle_hash,
+                        farmer_public_key,
+                        local_master_sk,
+                    ) = parse_plot_info(prover.get_memo())
 
-                        cache_entry = CacheEntry(pool_public_key, pool_contract_puzzle_hash, plot_public_key)
-                        self.cache.update(prover.get_id(), cache_entry)
-
-                    with self.plot_filename_paths_lock:
-                        if file_path.name not in self.plot_filename_paths:
-                            self.plot_filename_paths[file_path.name] = (str(Path(prover.get_filename()).parent), set())
-                        else:
-                            self.plot_filename_paths[file_path.name][1].add(str(Path(prover.get_filename()).parent))
-                        if len(self.plot_filename_paths[file_path.name][1]) > 0:
-                            log.warning(
-                                f"Have multiple copies of the plot {file_path} in "
-                                f"{self.plot_filename_paths[file_path.name][1]}."
-                            )
+                    # Only use plots that correct keys associated with them
+                    if farmer_public_key not in self.farmer_public_keys:
+                        log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
+                        self.no_key_filenames.add(file_path)
+                        if not self.open_no_key_filenames:
                             return new_provers
 
-                    new_provers[file_path] = PlotInfo(
-                        prover,
-                        cache_entry.pool_public_key,
-                        cache_entry.pool_contract_puzzle_hash,
-                        cache_entry.plot_public_key,
-                        stat_info.st_size,
-                        stat_info.st_mtime,
+                    pool_public_key: Optional[G1Element] = None
+                    pool_contract_puzzle_hash: Optional[bytes32] = None
+                    if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+                        pool_public_key = pool_public_key_or_puzzle_hash
+                    else:
+                        assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+                        pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
+
+                    if pool_public_key is not None and pool_public_key not in self.pool_public_keys:
+                        log.warning(f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list.")
+                        self.no_key_filenames.add(file_path)
+                        if not self.open_no_key_filenames:
+                            return new_provers
+
+                    local_sk = master_sk_to_local_sk(local_master_sk)
+
+                    plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+                        local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
                     )
 
-                    with counter_lock:
-                        result.loaded_plots += 1
-                        result.loaded_size += stat_info.st_size
+                    cache_entry = CacheEntry(pool_public_key, pool_contract_puzzle_hash, plot_public_key)
+                    self.cache.update(prover.get_id(), cache_entry)
 
-                    if file_path in self.failed_to_open_filenames:
-                        del self.failed_to_open_filenames[file_path]
-
-                except Exception as e:
-                    tb = traceback.format_exc()
-                    log.error(f"Failed to open file {file_path}. {e} {tb}")
-                    self.failed_to_open_filenames[file_path] = int(time.time())
-                    return new_provers
-                log.info(f"Found plot {file_path} of size {new_provers[file_path].prover.get_size()}")
-
-                if self.show_memo:
-                    plot_memo: bytes32
-                    if pool_contract_puzzle_hash is None:
-                        plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
+                with self.plot_filename_paths_lock:
+                    if file_path.name not in self.plot_filename_paths:
+                        self.plot_filename_paths[file_path.name] = (str(Path(prover.get_filename()).parent), set())
                     else:
-                        plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
-                    plot_memo_str: str = plot_memo.hex()
-                    log.info(f"Memo: {plot_memo_str}")
+                        self.plot_filename_paths[file_path.name][1].add(str(Path(prover.get_filename()).parent))
+                    if len(self.plot_filename_paths[file_path.name][1]) > 0:
+                        log.warning(
+                            f"Have multiple copies of the plot {file_path} in "
+                            f"{self.plot_filename_paths[file_path.name][1]}."
+                        )
+                        return new_provers
 
+                new_provers[file_path] = PlotInfo(
+                    prover,
+                    cache_entry.pool_public_key,
+                    cache_entry.pool_contract_puzzle_hash,
+                    cache_entry.plot_public_key,
+                    stat_info.st_size,
+                    stat_info.st_mtime,
+                )
+
+                with counter_lock:
+                    result.loaded_plots += 1
+                    result.loaded_size += stat_info.st_size
+
+                if file_path in self.failed_to_open_filenames:
+                    del self.failed_to_open_filenames[file_path]
+
+            except Exception as e:
+                tb = traceback.format_exc()
+                log.error(f"Failed to open file {file_path}. {e} {tb}")
+                self.failed_to_open_filenames[file_path] = int(time.time())
                 return new_provers
+            log.info(f"Found plot {file_path} of size {new_provers[file_path].prover.get_size()}")
+
+            if self.show_memo:
+                plot_memo: bytes32
+                if pool_contract_puzzle_hash is None:
+                    plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
+                else:
+                    plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
+                plot_memo_str: str = plot_memo.hex()
+                log.info(f"Memo: {plot_memo_str}")
+
             return new_provers
 
         def reduce_function(x: Dict, y: Dict) -> Dict:
