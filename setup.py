@@ -12,7 +12,7 @@ dependencies = [
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.4",  # Colorizes terminal output
-    "colorlog==5.0.1",  # Adds color to logs
+    "colorlog==6.4.1",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.4.7",  # Python cryptography library for TLS - keyring conflict
     "fasteners==0.16.3",  # For interprocess file locking
@@ -22,7 +22,7 @@ dependencies = [
     #  See https://github.com/frispete/keyrings.cryptfile/issues/15
     "PyYAML==5.4.1",  # Used for config file format
     "setproctitle==1.2.2",  # Gives the chia processes readable names
-    "sortedcontainers==2.3.0",  # For maintaining sorted mempools
+    "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "click==7.1.2",  # For the CLI
     "dnspython==2.1.0",  # Query DNS seeds
