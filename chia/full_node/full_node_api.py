@@ -1273,13 +1273,30 @@ class FullNodeAPI:
     @execute_task
     @peer_required
     @api_request
-    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+    @bytes_required
+    async def new_compact_vdf(
+        self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection, request_bytes: bytes = b""
+    ):
         if self.full_node.sync_store.get_sync_mode():
             return None
+
+        if len(self.full_node.compact_vdf_sem._waiters) > 20:
+            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
+            return
+
+        name = std_hash(request_bytes)
+        if name in self.full_node.compact_vdf_requests:
+            self.log.debug(f"Ignoring NewCompactVDF: {request}, already requested")
+            return
+        self.full_node.compact_vdf_requests.add(name)
+
         # this semaphore will only allow a limited number of tasks call
         # new_compact_vdf() at a time, since it can be expensive
         async with self.full_node.compact_vdf_sem:
-            await self.full_node.new_compact_vdf(request, peer)
+            try:
+                await self.full_node.new_compact_vdf(request, peer)
+            finally:
+                self.full_node.compact_vdf_requests.remove(name)
 
     @peer_required
     @api_request
