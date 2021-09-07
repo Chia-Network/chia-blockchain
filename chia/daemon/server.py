@@ -147,6 +147,7 @@ class WebSocketServer:
         self.shut_down = False
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
+        self.watch_log_file_job: Optional[asyncio.Task] = None
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -181,6 +182,7 @@ class WebSocketServer:
     async def stop(self) -> Dict[str, Any]:
         self.shut_down = True
         self.cancel_task_safe(self.ping_job)
+        self.cancel_task_safe(self.watch_log_file_job)
         await self.exit()
         if self.websocket_server is not None:
             self.websocket_server.close()
@@ -614,16 +616,17 @@ class WebSocketServer:
         Stops when there are no more websockets open for this service
         """
         await asyncio.sleep(5)
-        while True:
+        while not self.shut_down:
 
             # Get all websockets opened for this particular service
             websockets = self.connections.get(service_logs)
             if websockets is None or not websockets:
                 fp.close()
+                self.watch_log_file_job = None
                 return None
 
             new_data: List[str] = await loop.run_in_executor(
-                io_pool_exc, fp.readlines, 1048576
+                io_pool_exc, fp.readlines, 10 * 1024 * 1024
             )  # sends lines in 10MiB chunks
 
             if new_data:
@@ -923,10 +926,13 @@ class WebSocketServer:
             file_path = path_from_root(self.root_path, self.net_config.get("log_filename", "log/debug.log"))
 
             fp = open(file_path, "r")
-            log_contents = fp.read(26214400)  # read in up to 25MiB
-            loop = asyncio.get_event_loop()
-            # create a task for reading in periodic updates
-            loop.create_task(self._watch_log_file(fp, loop))
+            log_contents = fp.read(25 * 1024 * 1024)  # read in up to 25MiB
+
+            # Only need one such task running to support N sockets
+            if self.watch_log_file_job is None:
+                loop = asyncio.get_event_loop()
+                # create a task for reading in periodic updates
+                self.watch_log_file_job = loop.create_task(self._watch_log_file(fp, loop))
 
             # return the file data in the ack response as one big string
             response = {"success": True, "service_name": service_name, "log": log_contents}
