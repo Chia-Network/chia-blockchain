@@ -367,7 +367,7 @@ def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
         return None
 
 
-def solution_to_extra_data(full_spend: CoinSpend) -> Optional[PoolState]:
+def solution_to_pool_state(full_spend: CoinSpend) -> Optional[PoolState]:
     full_solution_ser: SerializedProgram = full_spend.solution
     full_solution: Program = Program.from_bytes(bytes(full_solution_ser))
 

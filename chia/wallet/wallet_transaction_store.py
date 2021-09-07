@@ -151,6 +151,8 @@ class WalletTransactionStore:
         current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
         if current is None:
             return None
+        if current.confirmed_at_height == height:
+            return
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_height=height,
             created_at_time=current.created_at_time,

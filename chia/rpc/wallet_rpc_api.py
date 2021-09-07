@@ -95,7 +95,6 @@ class WalletRpcApi:
             "/cancel_trade": self.cancel_trade,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
-            "/did_spend": self.did_spend,
             "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_did": self.did_get_did,
             "/did_recovery_spend": self.did_recovery_spend,
@@ -453,7 +452,7 @@ class WalletRpcApi:
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet: CCWallet = await CCWallet.create_new_cc(
-                        wallet_state_manager, main_wallet, request["amount"]
+                        wallet_state_manager, main_wallet, uint64(request["amount"])
                     )
                     colour = cc_wallet.get_colour()
                     asyncio.create_task(self._create_backup_and_upload(host))
@@ -523,7 +522,7 @@ class WalletRpcApi:
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
                         main_wallet,
-                        int(request["amount"]),
+                        uint64(request["amount"]),
                         backup_dids,
                         uint64(num_needed),
                     )
@@ -965,19 +964,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
-            updated_puz = await wallet.get_new_puzzle()
-            spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
+            spend_bundle = await wallet.create_update_spend()
 
         success = spend_bundle is not None and update_success
-        return {"success": success}
-
-    async def did_spend(self, request):
-        wallet_id = int(request["wallet_id"])
-        async with self.service.wallet_state_manager.lock:
-            wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            spend_bundle = await wallet.create_spend(request["puzzlehash"])
-
-        success = spend_bundle is not None
         return {"success": success}
 
     async def did_get_did(self, request):
