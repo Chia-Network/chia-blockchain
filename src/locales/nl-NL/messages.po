@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl_NL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-08-30 02:52\n"
+"PO-Revision-Date: 2021-09-07 17:56\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -30,7 +30,7 @@ msgstr "Wil je Chia verder verkennen? Kijk dan zeker even naar <0>Chia Explorer<
 msgid "+ Add New Plot NFT"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:122
+#: src/components/wallet/Wallets.tsx:132
 msgid "+ Add Wallet"
 msgstr ""
 
@@ -75,6 +75,11 @@ msgstr "Acties"
 #: src/components/trading/CreateOffer.jsx:201
 msgid "Add"
 msgstr "Toevoegen"
+
+#: src/components/wallet/did/WalletDID.tsx:874
+#: src/components/wallet/did/WalletDIDCreate.tsx:205
+msgid "Add Backup ID"
+msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:91
 msgid "Add Plot Directory"
@@ -124,7 +129,7 @@ msgstr "Adres"
 msgid "Address / Puzzle hash"
 msgstr "Adres / Puzzel hash"
 
-#: src/components/core/components/Amount/Amount.tsx:96
+#: src/components/core/components/Amount/Amount.tsx:99
 #: src/components/trading/CreateOffer.jsx:196
 #: src/components/trading/TradesTable.tsx:20
 #: src/components/wallet/WalletHistory.tsx:62
@@ -141,6 +146,10 @@ msgstr "Hoeveelheid ({cc_unit})"
 #: src/components/wallet/create/createRLAdmin.jsx:239
 msgid "Amount For Initial Coin"
 msgstr "Bedrag Voor Initiële Munt"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:62
+msgid "Amount must be an even amount."
+msgstr ""
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -178,16 +187,17 @@ msgstr ""
 msgid "Back"
 msgstr "Terug"
 
-#: src/components/backup/BackupCreate.tsx:66
+#: src/components/backup/BackupCreate.tsx:45
 msgid "Backup file is used to restore smart wallets."
 msgstr "Reserver kopie wordt gebruikt om smart wallets terug te zetten."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/did/WalletDID.tsx:647
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
 msgid "Balance"
 msgstr "Saldo"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:318
 msgid "Base Farmer Reward Amount"
 msgstr "Basis Farmer Bonus Bedrag"
 
@@ -204,22 +214,22 @@ msgstr "Beste schatting van de afgelopen 24 uur"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
-#: src/components/block/Block.jsx:153
-#: src/components/block/Block.jsx:157
-#: src/components/block/Block.jsx:332
+#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:154
+#: src/components/block/Block.jsx:158
+#: src/components/block/Block.jsx:333
 msgid "Block"
 msgstr "Blok"
 
-#: src/components/block/Block.jsx:137
+#: src/components/block/Block.jsx:138
 msgid "Block Test"
 msgstr "Block Test"
 
-#: src/components/block/Block.jsx:235
+#: src/components/block/Block.jsx:236
 msgid "Block VDF Iterations"
 msgstr "Blok VDF iteraties"
 
-#: src/components/block/Block.jsx:336
+#: src/components/block/Block.jsx:337
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Block op hoogte {0} in de Chia blockchain"
 
@@ -227,11 +237,11 @@ msgstr "Block op hoogte {0} in de Chia blockchain"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:141
+#: src/components/block/Block.jsx:142
 msgid "Block with hash {headerHash}"
 msgstr "Block met hash {headerHash}"
 
-#: src/components/block/Block.jsx:162
+#: src/components/block/Block.jsx:163
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok met hash {headerHash} bestaat niet."
 
@@ -271,6 +281,7 @@ msgstr "Koop"
 msgid "Can be backed up to mnemonic seed"
 msgstr "Kan opgeslagen worden als mnemonic seed"
 
+#: src/components/backup/BackupCreate.tsx:50
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
 #: src/components/farm/FarmManageFarmingRewards.tsx:196
 #: src/components/fullNode/FullNodeAddConnection.tsx:89
@@ -347,6 +358,10 @@ msgstr "Sluit"
 msgid "Closing down node and server"
 msgstr "Node en server worden afgesloten"
 
+#: src/components/wallet/did/WalletDID.tsx:984
+msgid "Coin Name"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
 msgstr "Munten:"
@@ -368,11 +383,11 @@ msgstr "Omschrijving gekleurde munt"
 msgid "Colour:"
 msgstr "Kleur:"
 
-#: src/components/wallet/create/WalletCreate.jsx:118
+#: src/components/wallet/create/WalletCreateList.tsx:34
 msgid "Coloured Coin"
 msgstr "Gekleurde Munt"
 
-#: src/components/wallet/create/WalletCreate.jsx:160
+#: src/components/wallet/create/WalletCreate.jsx:122
 msgid "Coloured Coin Options"
 msgstr "Opties gekleurde munt"
 
@@ -457,19 +472,32 @@ msgstr "Kopieer"
 msgid "Copy to Clipboard"
 msgstr "Kopieer naar klembord"
 
-#: src/components/backup/BackupCreate.tsx:78
+#: src/components/backup/BackupCreate.tsx:58
 #: src/components/plot/add/PlotAdd.tsx:177
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:175
 #: src/components/wallet/create/createExistingColouredCoin.jsx:133
 #: src/components/wallet/create/createNewColouredCoin.jsx:142
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/create/createRLUser.jsx:99
+#: src/components/wallet/did/WalletDIDCreate.tsx:218
 msgid "Create"
 msgstr "Creëer"
 
-#: src/components/wallet/create/WalletCreate.jsx:276
-msgid "Create DID wallet"
-msgstr "Maak DID portemonnee"
+#: src/components/wallet/did/WalletDID.tsx:967
+msgid "Create An Attestation Packet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:290
+#~ msgid "Create DID wallet"
+#~ msgstr "Create DID wallet"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:110
+msgid "Create Distributed Identity Wallet"
+msgstr ""
+
+#: src/components/wallet/did/WalletDIDSelect.tsx:32
+msgid "Create New Wallet"
+msgstr ""
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -501,7 +529,7 @@ msgstr "Maak handelsaanbod"
 msgid "Create Transaction"
 msgstr "Maak een transactie"
 
-#: src/components/backup/BackupCreate.tsx:63
+#: src/components/backup/BackupCreate.tsx:41
 msgid "Create a Backup"
 msgstr "Maak een reserve kopie"
 
@@ -513,15 +541,15 @@ msgstr ""
 msgid "Create a new private key"
 msgstr "Maak een nieuwe privé sleutel"
 
-#: src/components/wallet/create/WalletCreate.jsx:224
+#: src/components/wallet/create/WalletCreate.jsx:186
 msgid "Create admin wallet"
 msgstr "Maak beheerders portemonnee"
 
-#: src/components/wallet/create/WalletCreate.jsx:170
+#: src/components/wallet/create/WalletCreate.jsx:132
 msgid "Create new coloured coin"
 msgstr "Maak een nieuwe gekleurde munt"
 
-#: src/components/wallet/create/WalletCreate.jsx:230
+#: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create user wallet"
 msgstr "Maak gebruikers portemonnee"
 
@@ -529,7 +557,7 @@ msgstr "Maak gebruikers portemonnee"
 msgid "Create wallet for colour"
 msgstr "Maak nieuwe portemonnee voor kleur"
 
-#: src/components/wallet/create/WalletCreate.jsx:177
+#: src/components/wallet/create/WalletCreate.jsx:139
 msgid "Create wallet for existing colour"
 msgstr "Maak portemonnee voor bestaande kleur"
 
@@ -600,6 +628,10 @@ msgstr "Vertraging"
 #: src/components/plotNFT/PlotNFTCard.tsx:122
 #: src/components/selectKey/SelectKey.tsx:67
 #: src/components/selectKey/SelectKey.tsx:109
+#: src/components/wallet/did/WalletDID.tsx:449
+#: src/components/wallet/did/WalletDID.tsx:862
+#: src/components/wallet/did/WalletDIDCreate.tsx:194
+#: src/components/wallet/did/WalletDIDRecovery.tsx:101
 #: src/components/wallet/standard/WalletStandard.tsx:630
 msgid "Delete"
 msgstr "Verwijder"
@@ -643,7 +675,7 @@ msgstr "Ontwikkelaar"
 msgid "Developer Tools"
 msgstr "Ontwikkelaarstools"
 
-#: src/components/block/Block.jsx:221
+#: src/components/block/Block.jsx:222
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
 msgid "Difficulty"
 msgstr "Moeilijkheid"
@@ -664,13 +696,14 @@ msgstr ""
 msgid "Disconnect"
 msgstr "Verbinding verbreken"
 
-#: src/components/wallet/create/WalletCreate.jsx:144
-#~ msgid "Distributed Identity"
-#~ msgstr ""
+#: src/components/wallet/create/WalletCreateList.tsx:28
+#: src/components/wallet/did/WalletDIDSelect.tsx:25
+msgid "Distributed Identity"
+msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:266
-msgid "Distributed Identity Options"
-msgstr "Gedistribueerde Identiteitsopties"
+#: src/components/wallet/create/WalletCreate.jsx:280
+#~ msgid "Distributed Identity Options"
+#~ msgstr "Distributed Identity Options"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:52
 #: src/components/plot/overview/PlotOverviewHero.tsx:69
@@ -681,14 +714,21 @@ msgstr "Heb je bestaande plots op deze machine? <0>Voeg Plot folder toe</0>"
 msgid "Does your machine support parallel plotting?"
 msgstr "Ondersteunt jouw toestel parallel plotten?"
 
+#: src/components/wallet/did/WalletDID.tsx:428
+msgid "Drag and drop attestation packet(s)"
+msgstr ""
+
 #: src/components/trading/ViewOffer.jsx:39
-#: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
 msgstr "Drag en drop aanbiedings bestand"
 
 #: src/components/backup/BackupRestore.tsx:173
 msgid "Drag and drop your backup file"
 msgstr "Drag en drop van je back-up bestand"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:109
+msgid "Drag and drop your recovery backup file"
+msgstr ""
 
 #: src/electron/main.tsx:263
 msgid "Edit"
@@ -758,7 +798,7 @@ msgstr "Farm"
 msgid "Farmer Public Key"
 msgstr "Farmer Publieke Sleutel"
 
-#: src/components/block/Block.jsx:267
+#: src/components/block/Block.jsx:268
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer puzzel hash"
 
@@ -788,7 +828,7 @@ msgstr "Farmer is niet verbonden"
 msgid "Farmer is not running"
 msgstr "Farmer is niet gestart"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:237
 msgid "Farmer public key:"
 msgstr ""
 
@@ -837,7 +877,7 @@ msgstr "Vergoeding"
 msgid "Fee ({currencyCode})"
 msgstr "Vergoeding ({currencyCode})"
 
-#: src/components/block/Block.jsx:321
+#: src/components/block/Block.jsx:322
 msgid "Fees Amount"
 msgstr "Bedrag vergoeding"
 
@@ -853,6 +893,7 @@ msgstr "Bestand"
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:106
+#: src/components/wallet/did/WalletDID.tsx:975
 msgid "Filename"
 msgstr "Bestandsnaam"
 
@@ -918,11 +959,11 @@ msgstr ""
 msgid "Header Hash"
 msgstr "Koptekst Hash"
 
-#: src/components/block/Block.jsx:185
+#: src/components/block/Block.jsx:186
 msgid "Header hash"
 msgstr "Koptekst Hash"
 
-#: src/components/block/Block.jsx:201
+#: src/components/block/Block.jsx:202
 #: src/components/fullNode/FullNode.jsx:81
 #: src/components/fullNode/FullNodeConnections.tsx:79
 msgid "Height"
@@ -1088,7 +1129,7 @@ msgstr ""
 msgid "Loading Plot NFTs"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:111
+#: src/components/wallet/Wallets.tsx:117
 msgid "Loading list of wallets"
 msgstr ""
 
@@ -1148,6 +1189,10 @@ msgstr "Aan het aanmelden"
 msgid "Manage Farming Rewards"
 msgstr "Beheer Farming vergoedingen"
 
+#: src/components/wallet/did/WalletDID.tsx:806
+msgid "Manage Recovery DIDs"
+msgstr ""
+
 #: src/components/farm/FarmManageFarmingRewards.tsx:119
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Beheer jouw address waar je Farming vergoeding naartoe gestuurd moet worden"
@@ -1167,6 +1212,10 @@ msgstr "Minuten"
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:116
 msgid "More memory slightly increases speed"
 msgstr "Meer geheugen kan de snelheid een beetje verhogen"
+
+#: src/components/wallet/did/WalletDID.tsx:537
+msgid "My DID Wallet"
+msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 msgid "My Pubkey"
@@ -1193,7 +1242,7 @@ msgstr "Nieuw adres"
 msgid "New Wallet"
 msgstr "Voeg een wallet toe"
 
-#: src/components/block/Block.jsx:350
+#: src/components/block/Block.jsx:351
 #: src/components/wallet/WalletAdd.tsx:95
 #: src/components/wallet/WalletImport.tsx:163
 msgid "Next"
@@ -1208,7 +1257,7 @@ msgstr "Bijnaam"
 msgid "No"
 msgstr "Geen"
 
-#: src/middleware/middleware_api.jsx:301
+#: src/middleware/middleware_api.jsx:263
 msgid "No 24 word seed, since this key is imported."
 msgstr "Geen 24 woorden seed, omdat deze sleutel geïmporteerd is."
 
@@ -1306,6 +1355,14 @@ msgstr "Gemaakte voorstellen"
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr "Gemiddeld is er één minuut tussen elk transactie blok. Tenzij er congestie is, kunt u verwachten dat uw transactie in minder dan een minuut wordt opgenomen."
 
+#: src/components/wallet/did/WalletDIDRecovery.tsx:34
+msgid "Only one backup file is allowed."
+msgstr ""
+
+#: src/components/wallet/create/recoverDIDWallet.js:156
+#~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+#~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+
 #: src/components/wallet/WalletHistory.tsx:23
 msgid "Outgoing"
 msgstr "Uitgaand"
@@ -1359,15 +1416,41 @@ msgstr "Voeg een handelpaar toe"
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
 msgstr "Voer 0 toeslag in. Positieve kosten nog niet ondersteund voor RL."
 
+#: src/components/wallet/did/WalletDID.tsx:924
+msgid "Please enter a coin"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:526
+#: src/components/wallet/did/WalletDID.tsx:914
+msgid "Please enter a filename"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:934
+msgid "Please enter a pubkey"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:944
+msgid "Please enter a puzzlehash"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
 msgstr "Vul een geldige aantal initiële coins in"
+
+#: src/components/wallet/did/WalletDID.tsx:777
+#: src/components/wallet/did/WalletDIDCreate.tsx:76
+msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
+msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "Please enter a valid numeric amount"
 msgstr "Vul een geldig numeriek getal in"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:50
+msgid "Please enter a valid numeric amount."
+msgstr ""
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:79
@@ -1398,6 +1481,10 @@ msgstr "Synchroniseren voordat u een transactie uitvoert"
 msgid "Please select amount"
 msgstr "Selecteer een hoeveelheid, aub"
 
+#: src/components/wallet/did/WalletDIDRecovery.tsx:55
+msgid "Please select backup file first"
+msgstr ""
+
 #: src/components/trading/CreateOffer.jsx:76
 msgid "Please select buy or sell"
 msgstr "Selecteer koop of verkoop"
@@ -1424,6 +1511,7 @@ msgstr "Selecteer tijdelijke folder"
 msgid "Please wait for synchronization"
 msgstr ""
 
+#: src/components/wallet/did/WalletDIDRecovery.tsx:64
 #: src/hooks/useJoinPool.tsx:27
 msgid "Please wait for wallet synchronization"
 msgstr ""
@@ -1437,7 +1525,7 @@ msgstr "Plot"
 msgid "Plot Count"
 msgstr "Aantal plot bestanden"
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:300
 msgid "Plot Id"
 msgstr "Plot ID"
 
@@ -1458,7 +1546,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:259
+#: src/components/block/Block.jsx:260
 msgid "Plot Public Key"
 msgstr "Plot publieke sleutel"
 
@@ -1550,12 +1638,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:264
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
 msgid "Pool Public Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:284
 msgid "Pool Puzzle Hash"
 msgstr ""
 
@@ -1575,7 +1663,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:314
 msgid "Pool Reward Amount"
 msgstr ""
 
@@ -1587,7 +1675,7 @@ msgstr ""
 msgid "Pool does not provide target_puzzle_hash."
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:245
 msgid "Pool public key:"
 msgstr ""
 
@@ -1618,7 +1706,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:347
+#: src/components/block/Block.jsx:348
 msgid "Previous"
 msgstr "Vorige"
 
@@ -1626,7 +1714,7 @@ msgstr "Vorige"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:216
 msgid "Previous Header Hash"
 msgstr ""
 
@@ -1638,15 +1726,15 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:249
+#: src/middleware/middleware_api.jsx:211
 msgid "Private key {0}"
 msgstr "Private sleutel {0}"
 
-#: src/middleware/middleware_api.jsx:259
+#: src/middleware/middleware_api.jsx:221
 msgid "Private key:"
 msgstr "Private sleutel:"
 
-#: src/components/block/Block.jsx:251
+#: src/components/block/Block.jsx:252
 msgid "Proof of Space Size"
 msgstr "Grootte Proof of Space"
 
@@ -1659,12 +1747,17 @@ msgid "Protocol Version"
 msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:297
+#: src/components/wallet/did/WalletDID.tsx:993
 msgid "Pubkey"
 msgstr "Pubkey"
 
-#: src/middleware/middleware_api.jsx:267
+#: src/middleware/middleware_api.jsx:229
 msgid "Public key:"
 msgstr "Publieke sleutel:"
+
+#: src/components/wallet/did/WalletDID.tsx:1002
+msgid "Puzzlehash"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
 msgid "Queue Name"
@@ -1694,7 +1787,7 @@ msgstr "Maximaal geheugen gebruik"
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:124
+#: src/components/wallet/create/WalletCreateList.tsx:42
 msgid "Rate Limited"
 msgstr ""
 
@@ -1703,7 +1796,7 @@ msgstr ""
 msgid "Rate Limited Info"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:214
+#: src/components/wallet/create/WalletCreate.jsx:176
 msgid "Rate Limited Options"
 msgstr ""
 
@@ -1716,8 +1809,26 @@ msgstr ""
 msgid "Receive Address"
 msgstr "Ontvangst adres"
 
-#: src/components/wallet/create/WalletCreate.jsx:282
-msgid "Recover DID wallet"
+#: src/components/wallet/did/WalletDID.tsx:464
+#: src/components/wallet/did/WalletDIDRecovery.tsx:124
+msgid "Recover"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:340
+#: src/components/wallet/did/WalletDID.tsx:480
+msgid "Recover DID Wallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:296
+#~ msgid "Recover DID wallet"
+#~ msgstr "Recover DID wallet"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:84
+msgid "Recover Distributed Identity Wallet"
+msgstr ""
+
+#: src/components/wallet/did/WalletDIDSelect.tsx:39
+msgid "Recover Wallet"
 msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:78
@@ -1784,7 +1895,7 @@ msgstr "Locatie tweede tijdelijke map"
 msgid "See private key"
 msgstr "Bekijk private sleutel"
 
-#: src/middleware/middleware_api.jsx:293
+#: src/middleware/middleware_api.jsx:255
 msgid "Seed:"
 msgstr ""
 
@@ -1808,7 +1919,7 @@ msgstr "Selecteer voorstel"
 msgid "Select Temporary Directory"
 msgstr "Selecteer tijdelijke map"
 
-#: src/components/wallet/create/WalletCreate.jsx:108
+#: src/components/wallet/create/WalletCreateList.tsx:21
 msgid "Select Wallet Type"
 msgstr "Selecteer wallet type"
 
@@ -1837,6 +1948,10 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:108
 msgid "Selected"
 msgstr "Geselecteerd"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:91
+msgid "Selected recovery file:"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -1949,7 +2064,7 @@ msgstr "Toestand"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
 #: src/components/wallet/WalletStatusCard.tsx:22
-#: src/components/wallet/Wallets.tsx:52
+#: src/components/wallet/Wallets.tsx:50
 msgid "Status"
 msgstr "Status"
 
@@ -1985,6 +2100,7 @@ msgstr "Status:"
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
+#: src/components/wallet/did/WalletDID.tsx:886
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:347
 msgid "Submit"
 msgstr "Verzend"
@@ -2062,6 +2178,11 @@ msgstr "De node is niet gesynchroniseerd"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "De node is aan het synchroniseren, wat betekent dat hij blokken van andere nodes downloadt, om het laatste blok in de keten te bereiken"
 
+#: src/components/wallet/did/WalletDID.tsx:790
+#: src/components/wallet/did/WalletDIDCreate.tsx:89
+msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
+msgstr ""
+
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
 msgstr ""
@@ -2086,19 +2207,19 @@ msgstr ""
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
 msgstr ""
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:303
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr ""
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:229
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr ""
 
-#: src/components/block/Block.jsx:244
+#: src/components/block/Block.jsx:245
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr ""
 
-#: src/components/block/Block.jsx:324
+#: src/components/block/Block.jsx:325
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr ""
 
@@ -2141,7 +2262,7 @@ msgstr ""
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:195
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr ""
 
@@ -2203,7 +2324,7 @@ msgstr "Tijd gecreëerd"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:189
+#: src/components/block/Block.jsx:190
 msgid "Timestamp"
 msgstr "Tijdstempel"
 
@@ -2237,7 +2358,7 @@ msgstr "Totale grootte Plot:"
 msgid "Total Size of Plots"
 msgstr "Totale grootte van jou plot bestanden"
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:226
 msgid "Total VDF Iterations"
 msgstr "Totale VDF Iteraties"
 
@@ -2277,7 +2398,7 @@ msgstr "Handel"
 msgid "Trading History"
 msgstr "Handels geschiedenis"
 
-#: src/components/block/Block.jsx:309
+#: src/components/block/Block.jsx:310
 msgid "Transactions Filter Hash"
 msgstr "Transacties filter hash"
 
@@ -2385,6 +2506,10 @@ msgstr ""
 msgid "Wallet Status:"
 msgstr ""
 
+#: src/components/wallet/did/WalletDID.tsx:1118
+msgid "Wallet does not exists"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
 #~ msgstr ""
@@ -2414,7 +2539,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:45
-#: src/components/wallet/Wallets.tsx:112
+#: src/components/wallet/Wallets.tsx:118
 msgid "Wallets"
 msgstr "Portemonnees"
 
@@ -2446,11 +2571,11 @@ msgstr ""
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:206
 msgid "Weight"
 msgstr "Hoogte"
 
-#: src/components/block/Block.jsx:208
+#: src/components/block/Block.jsx:209
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr ""
 
@@ -2541,6 +2666,10 @@ msgstr ""
 msgid "You will recieve <0/> to {address}"
 msgstr ""
 
+#: src/components/wallet/did/WalletDID.tsx:328
+msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
+msgstr ""
+
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
 msgstr "Jouw Farm overzicht"
@@ -2566,16 +2695,16 @@ msgid "[Error 22] File not found. Most likely one of the plot folders in your co
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:41
-#: src/components/wallet/Wallets.tsx:77
+#: src/components/wallet/Wallets.tsx:75
 msgid "connections:"
 msgstr "verbindingen:"
 
 #: src/components/wallet/WalletStatusCard.tsx:33
-#: src/components/wallet/Wallets.tsx:69
+#: src/components/wallet/Wallets.tsx:67
 msgid "height:"
 msgstr "hoogte:"
 
-#: src/components/wallet/Wallets.tsx:63
+#: src/components/wallet/Wallets.tsx:61
 msgid "not synced"
 msgstr "niet gesynchroniseerd"
 
@@ -2584,17 +2713,17 @@ msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:27
-#: src/components/wallet/Wallets.tsx:57
+#: src/components/wallet/Wallets.tsx:55
 msgid "status:"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:62
+#: src/components/wallet/Wallets.tsx:60
 msgid "synced"
 msgstr "gesynchroniseerd"
 
 #: src/components/wallet/WalletStatusCard.tsx:29
-#: src/components/wallet/Wallets.tsx:61
+#: src/components/wallet/Wallets.tsx:59
 msgid "syncing"
 msgstr "aan het synchroniseren"
 
@@ -2622,7 +2751,7 @@ msgstr "{currencyCode} Totaal Chia gefarmed"
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Gebruikers Transactie Vergoeding"
 
-#: src/components/core/components/Amount/Amount.tsx:80
+#: src/components/core/components/Amount/Amount.tsx:82
 msgid "{mojo, plural, one {mojo} other {mojos}}"
 msgstr ""
 
