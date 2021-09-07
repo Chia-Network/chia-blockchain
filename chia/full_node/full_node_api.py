@@ -1295,8 +1295,6 @@ class FullNodeAPI:
         async with self.full_node.compact_vdf_sem:
             try:
                 await self.full_node.new_compact_vdf(request, peer)
-            except BaseException as e:
-                raise e
             finally:
                 self.full_node.compact_vdf_requests.remove(name)
 
