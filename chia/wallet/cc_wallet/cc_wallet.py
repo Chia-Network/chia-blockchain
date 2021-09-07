@@ -662,7 +662,6 @@ class CCWallet:
             innersol_list,
             sigs,
         )
-        breakpoint()
         # TODO add support for array in stored records
         return TransactionRecord(
             confirmed_at_height=uint32(0),

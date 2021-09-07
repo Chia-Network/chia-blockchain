@@ -111,7 +111,7 @@
 
      (include condition_codes.clvm)
      (include curry-and-treehash.clinc)
-     (include singleton_truths.clib)
+     (include cat_truths.clib)
 
      (defmacro assert items
          (if (r items)
@@ -285,9 +285,9 @@
      (defun-inline is_lineage_proof_valid (Truths coin_info lineage_proof extra_delta)
        (if (any (not (f lineage_proof)) extra_delta)
             ;(x "lineage proof" lineage_proof "flag" (f lineage_proof) "parent_or_opaque" (r lineage_proof) "extra delta" extra_delta)
-           (a (genesis_coin_checker_for_lpp (singleton_struct_truth Truths))
+           (a (genesis_coin_checker_for_lpp (cat_struct_truth Truths))
               (list Truths extra_delta (r lineage_proof)))
-           (is_parent_cc (singleton_struct_truth Truths) coin_info (r lineage_proof))
+           (is_parent_cc (cat_struct_truth Truths) coin_info (r lineage_proof))
        )
      )
 
@@ -328,8 +328,8 @@
          prev_subtotal
          extra_delta
       )
-      (if (is_coloured_check prev_coin_bundle (singleton_struct_truth Truths))
-        (if (is_coloured_check next_coin_bundle (singleton_struct_truth Truths))
+      (if (is_coloured_check prev_coin_bundle (cat_struct_truth Truths))
+        (if (is_coloured_check next_coin_bundle (cat_struct_truth Truths))
           (if_is_list_merge
             ; ensure next is a cc (to ensure its announcements can be trusted)
             (is_bundle_valid this_coin_bundle Truths extra_delta)
@@ -338,7 +338,7 @@
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
               (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
-              (morph_conditions inner_conditions (singleton_struct_truth Truths))
+              (morph_conditions inner_conditions (cat_struct_truth Truths))
               (coin_info_for_coin_bundle prev_coin_bundle)
               (coin_info_for_coin_bundle this_coin_bundle)
               (coin_info_for_coin_bundle next_coin_bundle)
@@ -360,7 +360,7 @@
         prev_subtotal
         extra_delta
      )
-      (c (list ASSERT_MY_COIN_ID (my_id_truth Truths))
+      (c (list ASSERT_MY_COIN_ID (my_id_cat_truth Truths))
          (stager_three Truths
                        (a INNER_PUZZLE (c Truths inner_solution))
                        prev_coin_bundle
@@ -390,7 +390,7 @@
         prev_subtotal
         extra_delta
      )
-      (stager_two (truth_data_to_truth_struct my_id (f (r (f this_coin_bundle))) inner_puzzle_hash (f (r (r (f this_coin_bundle)))) (f (f this_coin_bundle)) cc_mod_struct)
+      (stager_two (cat_truth_data_to_truth_struct my_id (f (f this_coin_bundle)) (f (r (f this_coin_bundle))) (f (r (r (f this_coin_bundle)))) inner_puzzle_hash (r this_coin_bundle) cc_mod_struct)
              INNER_PUZZLE
              inner_solution
              prev_coin_bundle
