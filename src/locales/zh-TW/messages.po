@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:55\n"
+"PO-Revision-Date: 2021-09-07 23:57\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -79,7 +79,7 @@ msgstr "新增"
 #: src/components/wallet/did/WalletDID.tsx:874
 #: src/components/wallet/did/WalletDIDCreate.tsx:205
 msgid "Add Backup ID"
-msgstr ""
+msgstr "增加備份 ID"
 
 #: src/components/plot/PlotHeader.tsx:91
 msgid "Add Plot Directory"
@@ -360,7 +360,7 @@ msgstr "關閉節點和伺服器"
 
 #: src/components/wallet/did/WalletDID.tsx:984
 msgid "Coin Name"
-msgstr ""
+msgstr "幣種名稱"
 
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
@@ -497,7 +497,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
-msgstr ""
+msgstr "建立新錢包"
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -1418,16 +1418,16 @@ msgstr "請輸入 0 費用。 RL 尚未支援正向費用。"
 
 #: src/components/wallet/did/WalletDID.tsx:924
 msgid "Please enter a coin"
-msgstr ""
+msgstr "請輸入幣種"
 
 #: src/components/wallet/did/WalletDID.tsx:526
 #: src/components/wallet/did/WalletDID.tsx:914
 msgid "Please enter a filename"
-msgstr ""
+msgstr "請輸入檔案名稱"
 
 #: src/components/wallet/did/WalletDID.tsx:934
 msgid "Please enter a pubkey"
-msgstr ""
+msgstr "請輸入公鑰"
 
 #: src/components/wallet/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
@@ -1812,12 +1812,12 @@ msgstr "接收位址"
 #: src/components/wallet/did/WalletDID.tsx:464
 #: src/components/wallet/did/WalletDIDRecovery.tsx:124
 msgid "Recover"
-msgstr ""
+msgstr "恢復"
 
 #: src/components/wallet/did/WalletDID.tsx:340
 #: src/components/wallet/did/WalletDID.tsx:480
 msgid "Recover DID Wallet"
-msgstr ""
+msgstr "恢復 DID 錢包"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 #~ msgid "Recover DID wallet"
@@ -1829,7 +1829,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
-msgstr ""
+msgstr "恢復錢包"
 
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
@@ -2508,7 +2508,7 @@ msgstr "錢包狀態："
 
 #: src/components/wallet/did/WalletDID.tsx:1118
 msgid "Wallet does not exists"
-msgstr ""
+msgstr "錢包不存在"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
