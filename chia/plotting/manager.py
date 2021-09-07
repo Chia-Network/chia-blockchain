@@ -16,7 +16,6 @@ from chia.plotting.util import (
     PlotInfo,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    get_plot_directories,
     get_plot_filenames,
     parse_plot_info,
     stream_plot_info_pk,
@@ -210,9 +209,15 @@ class PlotManager:
             while not self.needs_refresh() and self._refreshing_enabled:
                 time.sleep(1)
 
+            plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
+            plot_directories: Set[Path] = set(plot_filenames.keys())
+            plot_paths: List[Path] = []
+            for paths in plot_filenames.values():
+                plot_paths += paths
+
             total_result: PlotRefreshResult = PlotRefreshResult()
             while self.needs_refresh() and self._refreshing_enabled:
-                batch_result: PlotRefreshResult = self.refresh_batch()
+                batch_result: PlotRefreshResult = self.refresh_batch(plot_paths, plot_directories)
                 total_result += batch_result
                 self._refresh_callback(batch_result)
                 if batch_result.remaining_files == 0:
@@ -239,17 +244,12 @@ class PlotManager:
                 f"total_duration {total_result.duration:.2f} seconds"
             )
 
-    def refresh_batch(self) -> PlotRefreshResult:
+    def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
         start_time: float = time.time()
-        plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
-        all_filenames: List[Path] = []
-        for paths in plot_filenames.values():
-            all_filenames += paths
-
         result: PlotRefreshResult = PlotRefreshResult()
         counter_lock = threading.Lock()
 
-        log.debug(f"refresh_batch: {len(all_filenames)} files in directories {get_plot_directories(self.root_path)}")
+        log.debug(f"refresh_batch: {len(plot_paths)} files in directories {plot_directories}")
 
         if self.match_str is not None:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
@@ -407,7 +407,7 @@ class PlotManager:
 
             # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
             def plot_removed(test_path: Path):
-                return not test_path.exists() or test_path.parent not in plot_filenames
+                return not test_path.exists() or test_path.parent not in plot_directories
 
             with self.plot_filename_paths_lock:
                 filenames_to_remove: List[str] = []
@@ -431,7 +431,7 @@ class PlotManager:
                     del self.plot_filename_paths[filename]
 
             initial_value: Dict[Path, PlotInfo] = {}
-            self.plots = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
+            self.plots = reduce(reduce_function, executor.map(process_file, plot_paths), initial_value)
 
         result.duration = time.time() - start_time
 
