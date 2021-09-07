@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 import traceback
-from functools import reduce
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -391,9 +390,6 @@ class PlotManager:
 
             return new_provers
 
-        def reduce_function(x: Dict, y: Dict) -> Dict:
-            return {**x, **y}
-
         with self, ThreadPoolExecutor() as executor:
 
             # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
@@ -421,8 +417,11 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-            initial_value: Dict[Path, PlotInfo] = {}
-            self.plots = reduce(reduce_function, executor.map(process_file, plot_paths), initial_value)
+            plots_refreshed: Dict[Path, PlotInfo] = {}
+            for new_plot in executor.map(process_file, plot_paths):
+                if len(new_plot) > 0:
+                    plots_refreshed.update(new_plot)
+            self.plots = plots_refreshed
 
         result.duration = time.time() - start_time
 
