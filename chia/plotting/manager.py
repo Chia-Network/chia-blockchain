@@ -315,7 +315,7 @@ class PlotManager:
                         ) = parse_plot_info(prover.get_memo())
 
                         # Only use plots that correct keys associated with them
-                        if self.farmer_public_keys is not None and farmer_public_key not in self.farmer_public_keys:
+                        if farmer_public_key not in self.farmer_public_keys:
                             log.warning(
                                 f"Plot {file_path} has a farmer public key that is not in the farmer's pk list."
                             )
@@ -331,11 +331,7 @@ class PlotManager:
                             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
                             pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
 
-                        if (
-                            self.pool_public_keys is not None
-                            and pool_public_key is not None
-                            and pool_public_key not in self.pool_public_keys
-                        ):
+                        if pool_public_key is not None and pool_public_key not in self.pool_public_keys:
                             log.warning(
                                 f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list."
                             )
@@ -343,7 +339,6 @@ class PlotManager:
                             if not self.open_no_key_filenames:
                                 return new_provers
 
-                        stat_info = file_path.stat()
                         local_sk = master_sk_to_local_sk(local_master_sk)
 
                         plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
