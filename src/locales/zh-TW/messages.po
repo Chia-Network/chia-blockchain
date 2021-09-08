@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 23:57\n"
+"PO-Revision-Date: 2021-09-08 11:54\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -485,7 +485,7 @@ msgstr "建立"
 
 #: src/components/wallet/did/WalletDID.tsx:967
 msgid "Create An Attestation Packet"
-msgstr ""
+msgstr "建立一個證明封包"
 
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
@@ -493,7 +493,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:110
 msgid "Create Distributed Identity Wallet"
-msgstr ""
+msgstr "建立分散式識別的錢包"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
@@ -699,7 +699,7 @@ msgstr "斷線"
 #: src/components/wallet/create/WalletCreateList.tsx:28
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
-msgstr ""
+msgstr "分散式識別"
 
 #: src/components/wallet/create/WalletCreate.jsx:280
 #~ msgid "Distributed Identity Options"
@@ -716,7 +716,7 @@ msgstr "你的機器支援平行耕地嗎？"
 
 #: src/components/wallet/did/WalletDID.tsx:428
 msgid "Drag and drop attestation packet(s)"
-msgstr ""
+msgstr "拖放證明封包"
 
 #: src/components/trading/ViewOffer.jsx:39
 msgid "Drag and drop offer file"
@@ -728,7 +728,7 @@ msgstr "拖放你的備份檔案"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:109
 msgid "Drag and drop your recovery backup file"
-msgstr ""
+msgstr "拖放您的備份檔案"
 
 #: src/electron/main.tsx:263
 msgid "Edit"
@@ -1191,7 +1191,7 @@ msgstr "管理耕種獎勵"
 
 #: src/components/wallet/did/WalletDID.tsx:806
 msgid "Manage Recovery DIDs"
-msgstr ""
+msgstr "管理還原的 DID"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:119
 msgid "Manage Your Farming Rewards Target Addresses"
@@ -1215,7 +1215,7 @@ msgstr "更多記憶體可略微提高速度"
 
 #: src/components/wallet/did/WalletDID.tsx:537
 msgid "My DID Wallet"
-msgstr ""
+msgstr "我的 DID 錢包"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 msgid "My Pubkey"
@@ -1357,7 +1357,7 @@ msgstr "平均每個交易區塊之間有 1 分鐘的時間。除非出現擁塞
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:34
 msgid "Only one backup file is allowed."
-msgstr ""
+msgstr "只允許一個備份檔案。"
 
 #: src/components/wallet/create/recoverDIDWallet.js:156
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
@@ -1431,7 +1431,7 @@ msgstr "請輸入公鑰"
 
 #: src/components/wallet/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
-msgstr ""
+msgstr "請輸入一個 PuzzleHash"
 
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
@@ -1483,7 +1483,7 @@ msgstr "請選擇數量"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:55
 msgid "Please select backup file first"
-msgstr ""
+msgstr "請先選擇一個備份檔"
 
 #: src/components/trading/CreateOffer.jsx:76
 msgid "Please select buy or sell"
@@ -1757,7 +1757,7 @@ msgstr "公鑰："
 
 #: src/components/wallet/did/WalletDID.tsx:1002
 msgid "Puzzlehash"
-msgstr ""
+msgstr "拼圖哈希值"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
 msgid "Queue Name"
@@ -1825,7 +1825,7 @@ msgstr "恢復 DID 錢包"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:84
 msgid "Recover Distributed Identity Wallet"
-msgstr ""
+msgstr "還原分散式識別的錢包"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
@@ -1951,7 +1951,7 @@ msgstr "已選擇"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:91
 msgid "Selected recovery file:"
-msgstr ""
+msgstr "選擇的還原檔案："
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
