@@ -280,4 +280,5 @@ class SerializedProgram:
         return cost, Program.to(ret)
 
 
-NIL = Program.from_bytes(b"\x80")
+NIL_PROGRAM = Program.from_bytes(b"\x80")
+NIL_SERIALIZED_PROGRAM = SerializedProgram.from_program(NIL_PROGRAM)

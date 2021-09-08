@@ -8,7 +8,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL
+from chia.types.blockchain_format.program import NIL_PROGRAM
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs
@@ -416,7 +416,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes
     try:
         block_program = generator.program
         if not generator.generator_args:
-            block_program_args = [NIL]
+            block_program_args = [NIL_PROGRAM]
         else:
             block_program_args = create_generator_args(generator.generator_refs())
 
