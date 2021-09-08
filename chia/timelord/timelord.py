@@ -6,6 +6,7 @@ import random
 import time
 import traceback
 import os
+import dill
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from chiavdf import create_discriminant, prove
@@ -32,8 +33,14 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
+from concurrent.futures import ProcessPoolExecutor
 
 log = logging.getLogger(__name__)
+
+# https://stackoverflow.com/questions/8804830/python-multiprocessing-picklingerror-cant-pickle-type-function
+def prove_with_dill(payload):
+    args = dill.loads(payload)
+    return prove(*args)
 
 
 class Timelord:
@@ -92,6 +99,7 @@ class Timelord:
         self.sanitizer_mode = self.config["sanitizer_mode"]
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
+        self.bluebox_pool: Optional[ProcessPoolExecutor] = None
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -101,12 +109,18 @@ class Timelord:
             self.config["vdf_server"]["port"],
         )
         self.last_state: LastState = LastState(self.constants)
-        if not self.sanitizer_mode:
+        slow_bluebox = self.config.get("slow_bluebox", False)
+        if not self.sanitizer_mode and not slow_bluebox:
             self.main_loop = asyncio.create_task(self._manage_chains())
         else:
-            if os.name == 'nt':
+            self.sanitizer_mode = True
+            if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
-                self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow())
+                workers = self.config.get("slow_bluebox_process_count", 1)
+                self.bluebox_pool = ProcessPoolExecutor(max_workers=workers)
+                self.main_loop = asyncio.create_task(
+                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
+                )
             else:
                 self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info("Started timelord.")
@@ -117,6 +131,8 @@ class Timelord:
             task.cancel()
         if self.main_loop is not None:
             self.main_loop.cancel()
+        if self.bluebox_pool is not None:
+            self.bluebox_pool.shutdown()
 
     async def _await_closed(self):
         pass
@@ -1039,7 +1055,15 @@ class Timelord:
                     log.error(f"Exception manage discriminant queue: {e}")
             await asyncio.sleep(0.1)
 
-    async def _manage_discriminant_queue_sanitizer_slow(self):
+    async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor, counter: int):
+        tasks = []
+        for _ in range(counter):
+            tasks.append(asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow(pool)))
+        for task in tasks:
+            await task
+
+    async def _manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor):
+        log.info("Started task for managing bluebox queue.")
         while not self._shut_down:
             picked_info = None
             async with self.lock:
@@ -1064,11 +1088,21 @@ class Timelord:
                 try:
                     initial_el = b"\x08" + (b"\x00" * 99)
                     t1 = time.time()
-                    proof = prove(
-                        picked_info.new_proof_of_time.challenge,
+                    log.info(
+                        f"Working on compact proof for height: {picked_info.height}. "
+                        f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
+                    )
+                    args = (
+                        picked_info.new_proof_of_time.challenge.__bytes__(),
                         initial_el,
                         self.constants.DISCRIMINANT_SIZE_BITS,
                         picked_info.new_proof_of_time.number_of_iterations,
+                    )
+                    payload = dill.dumps(args)
+                    proof = await asyncio.get_running_loop().run_in_executor(
+                        pool,
+                        prove_with_dill,
+                        payload,
                     )
                     t2 = time.time()
                     delta = t2 - t1
@@ -1095,4 +1129,6 @@ class Timelord:
                         await self.server.send_to_all([message], NodeType.FULL_NODE)
                 except Exception as e:
                     log.error(f"Exception manage discriminant queue: {e}")
+                    tb = traceback.format_exc()
+                    log.error(f"Error while handling message: {tb}")
             await asyncio.sleep(0.1)
