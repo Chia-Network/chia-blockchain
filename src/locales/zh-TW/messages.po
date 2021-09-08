@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-08 11:54\n"
+"PO-Revision-Date: 2021-09-08 17:57\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1450,7 +1450,7 @@ msgstr "請輸入有效的數字值"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:50
 msgid "Please enter a valid numeric amount."
-msgstr ""
+msgstr "請輸入有效的數值。"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:79
