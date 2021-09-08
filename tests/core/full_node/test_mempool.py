@@ -2068,7 +2068,6 @@ class TestGeneratorConditions:
         # NIL atom. This is allowed, and all arguments beyond the ones we look
         # at are ignored, including the termination of the list
         npc_result = generator_condition_tester("(80 50 . 1)", rust_checker=rust_checker)
-        print(npc_result)
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode(bytes([80]))
@@ -2084,7 +2083,6 @@ class TestGeneratorConditions:
         # note how the list of conditions isn't correctly terminated with a
         # NIL atom. This is a failure
         npc_result = generator_condition_tester("(80 50) . 3", rust_checker=rust_checker)
-        print(npc_result)
         assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
 
     @pytest.mark.parametrize("rust_checker", [True, False])
