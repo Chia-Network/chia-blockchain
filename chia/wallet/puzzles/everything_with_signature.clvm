@@ -1,0 +1,13 @@
+; This is a "genesis checker" for use with cc.clvm.
+(mod (
+      PUBKEY
+      Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
+      delta
+      _
+    )
+
+    (include condition_codes.clvm)
+
+    ; Careful with a delta of zero, the bytecode is 80 not 00
+    (list (list AGG_SIG_ME PUBKEY delta))
+)
