@@ -97,7 +97,10 @@ class Timelord:
         self.total_unfinished: int = 0
         self.total_infused: int = 0
         self.state_changed_callback: Optional[Callable] = None
-        self.sanitizer_mode = self.config["sanitizer_mode"]
+        self.bluebox_mode = self.config.get("bluebox_mode", False)
+        # Support backwards compatibility for the old `config.yaml` that has field `sanitizer_mode`.
+        if not self.bluebox_mode:
+            self.bluebox_mode = self.config.get("sanitizer_mode", False)
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.bluebox_pool: Optional[ProcessPoolExecutor] = None
@@ -111,10 +114,10 @@ class Timelord:
         )
         self.last_state: LastState = LastState(self.constants)
         slow_bluebox = self.config.get("slow_bluebox", False)
-        if not self.sanitizer_mode and not slow_bluebox:
+        if not self.bluebox_mode and not slow_bluebox:
             self.main_loop = asyncio.create_task(self._manage_chains())
         else:
-            self.sanitizer_mode = True
+            self.bluebox_mode = True
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
@@ -866,10 +869,10 @@ class Timelord:
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
         try:
-            # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
+            # Depending on the flags 'fast_algorithm' and 'bluebox_mode',
             # the timelord tells the vdf_client what to execute.
             async with self.lock:
-                if self.sanitizer_mode:
+                if self.bluebox_mode:
                     writer.write(b"S")
                 else:
                     if self.config["fast_algorithm"]:
@@ -906,7 +909,7 @@ class Timelord:
                 return None
 
             log.debug("Got handshake with VDF client.")
-            if not self.sanitizer_mode:
+            if not self.bluebox_mode:
                 async with self.lock:
                     self.allows_iters.append(chain)
             else:
@@ -975,7 +978,7 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
-                    if not self.sanitizer_mode:
+                    if not self.bluebox_mode:
                         time_taken = time.time() - self.chain_start_time[chain]
                         ips = int(iterations_needed / time_taken * 10) / 10
                         log.info(
@@ -992,12 +995,12 @@ class Timelord:
                     vdf_proof: VDFProof = VDFProof(
                         witness_type,
                         proof_bytes,
-                        self.sanitizer_mode,
+                        self.bluebox_mode,
                     )
 
                     if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
                         log.error("Invalid proof of time!")
-                    if not self.sanitizer_mode:
+                    if not self.bluebox_mode:
                         async with self.lock:
                             assert proof_label is not None
                             self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))

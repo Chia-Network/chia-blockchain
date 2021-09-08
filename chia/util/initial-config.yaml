@@ -238,10 +238,10 @@ timelord:
   # Bluebox (sanatizing Timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
-  # is running in sanitizer_mode.
+  # is running in bluebox_mode.
   # You must set 'send_uncompact_interval' in 'full_node' > 0 in the full_node
   # section below to have full_node send existing time proofs to be sanitized.
-  sanitizer_mode: False
+  bluebox_mode: False
   # This runs a less CPU intensive bluebox. Runs for windows. Settings apply as for `sanizer_mode`.
   slow_bluebox: False
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
