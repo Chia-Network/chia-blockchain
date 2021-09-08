@@ -94,7 +94,10 @@ def coin_spend_for_lock_coin(
 
 def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
     c = spendable_cc.coin
-    pair = ([c.parent_coin_info, c.puzzle_hash, c.amount, spendable_cc.inner_puzzle.get_tree_hash()], spendable_cc.lineage_proof)
+    pair = (
+        [c.parent_coin_info, c.puzzle_hash, c.amount, spendable_cc.inner_puzzle.get_tree_hash()],
+        spendable_cc.lineage_proof,
+    )
     return Program.to(pair)
 
 
@@ -104,6 +107,7 @@ def spend_bundle_for_spendable_ccs(
     spendable_cc_list: List[SpendableCC],
     inner_solutions: List[Program],
     sigs: Optional[List[G2Element]] = [],
+    extra_deltas: Optional[List[int]] = None,
 ) -> SpendBundle:
     """
     Given a list of `SpendableCC` objects and inner solutions for those objects, create a `SpendBundle`
@@ -116,13 +120,16 @@ def spend_bundle_for_spendable_ccs(
     if len(inner_solutions) != N:
         raise ValueError("spendable_cc_list and inner_solutions are different lengths")
 
+    if extra_deltas is None:
+        extra_deltas = [0] * len(spendable_cc_list)
+
     input_coins = [_.coin for _ in spendable_cc_list]
     # figure out what the output amounts are by running the inner puzzles & solutions
     output_amounts = []
     mod_hash = mod_code.get_tree_hash()
     mod_hash_hash = Program.to(mod_hash).get_tree_hash()
     cc_struct = Program.to([mod_hash, mod_hash_hash, genesis_coin_checker, genesis_coin_checker.get_tree_hash()])
-    for cc_spend_info, inner_solution in zip(spendable_cc_list, inner_solutions):
+    for cc_spend_info, inner_solution, extra_delta in zip(spendable_cc_list, inner_solutions, extra_deltas):
         # TRUTHS are: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
         # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER)
         truths = Program.to(
@@ -138,7 +145,7 @@ def spend_bundle_for_spendable_ccs(
         error, conditions, cost = conditions_dict_for_solution(
             cc_spend_info.inner_puzzle, truths.cons(inner_solution), INFINITE_COST
         )
-        total = 0
+        total = extra_delta * -1
         if conditions:
             for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
                 total += Program.to(_.vars[1]).as_int()
@@ -165,14 +172,7 @@ def spend_bundle_for_spendable_ccs(
         my_bundle = bundles[index]
         next_bundle = bundles[next_index]
 
-        solution = [
-            inner_solutions[index],
-            prev_bundle,
-            my_bundle,
-            next_bundle,
-            subtotals[index],
-            0
-        ]
+        solution = [inner_solutions[index], prev_bundle, my_bundle, next_bundle, subtotals[index], extra_deltas[index]]
         coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
