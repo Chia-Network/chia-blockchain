@@ -12,12 +12,12 @@
       (parent_parent_id parent_amount)
     )
 
-    (defun-inline access_parent_id_from_truths (Truths) Truths) ; Wrap this in (f ) and (r ) and whatnot
+    (include cat_truths.clib)
 
     ; Returns nil since we don't need to add any conditions
     (if delta
         (x)
-        (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) parent_id)
+        (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths))
             ()
             (x)
         )
