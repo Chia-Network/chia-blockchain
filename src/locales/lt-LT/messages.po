@@ -8,7 +8,7 @@ msgstr ""
 "Language: lt_LT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:56\n"
+"PO-Revision-Date: 2021-09-08 17:57\n"
 "Last-Translator: \n"
 "Language-Team: Lithuanian\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && (n%100>19 || n%100<11) ? 0 : (n%10>=2 && n%10<=9) && (n%100>19 || n%100<11) ? 1 : n%1!=0 ? 2: 3);\n"
@@ -199,7 +199,7 @@ msgstr "Balansas"
 
 #: src/components/block/Block.jsx:318
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Basine Fermerio Apdovanojimo Suma"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 #: src/components/farm/FarmLatestBlockChallenges.tsx:49
