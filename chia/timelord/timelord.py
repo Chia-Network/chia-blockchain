@@ -1117,7 +1117,7 @@ class Timelord:
                     if ClassgroupElement.from_bytes(output) != picked_info.new_proof_of_time.output:
                         log.error("Expected vdf output different than produced one. Stopping.")
                         return
-                    vdf_proof = VDFProof(0, proof_part, True)
+                    vdf_proof = VDFProof(uint8(0), proof_part, True)
                     response = timelord_protocol.RespondCompactProofOfTime(
                         picked_info.new_proof_of_time,
                         vdf_proof,
