@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:56\n"
+"PO-Revision-Date: 2021-09-08 17:57\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -32,7 +32,7 @@ msgstr "+ הוסף פלוט NFT חדש"
 
 #: src/components/wallet/Wallets.tsx:132
 msgid "+ Add Wallet"
-msgstr ""
+msgstr "הוספ/י ארנק"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -79,7 +79,7 @@ msgstr "הוסף"
 #: src/components/wallet/did/WalletDID.tsx:874
 #: src/components/wallet/did/WalletDIDCreate.tsx:205
 msgid "Add Backup ID"
-msgstr ""
+msgstr "הוספ/י מזהה גיבוי"
 
 #: src/components/plot/PlotHeader.tsx:91
 msgid "Add Plot Directory"
@@ -149,7 +149,7 @@ msgstr "סכום למטבע ראשוני"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:62
 msgid "Amount must be an even amount."
-msgstr ""
+msgstr "סכום צריך להיות סכום שווה."
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -360,7 +360,7 @@ msgstr "סוגר צומת ושרת"
 
 #: src/components/wallet/did/WalletDID.tsx:984
 msgid "Coin Name"
-msgstr ""
+msgstr "שם מטבע"
 
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
@@ -485,7 +485,7 @@ msgstr "צור"
 
 #: src/components/wallet/did/WalletDID.tsx:967
 msgid "Create An Attestation Packet"
-msgstr ""
+msgstr "צור/י חבילת אישור"
 
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
@@ -493,11 +493,11 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:110
 msgid "Create Distributed Identity Wallet"
-msgstr ""
+msgstr "צור/י ארנק זהות מבוזר"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
-msgstr ""
+msgstr "צור/י ארנק חדש"
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -699,7 +699,7 @@ msgstr "היתנתק"
 #: src/components/wallet/create/WalletCreateList.tsx:28
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
-msgstr ""
+msgstr "זהות מבוזרת"
 
 #: src/components/wallet/create/WalletCreate.jsx:280
 #~ msgid "Distributed Identity Options"
@@ -716,7 +716,7 @@ msgstr "האם המערכת שלך תומכת ביצירת פלוטים במקב
 
 #: src/components/wallet/did/WalletDID.tsx:428
 msgid "Drag and drop attestation packet(s)"
-msgstr ""
+msgstr "גרור והנח מנה/ות אישור"
 
 #: src/components/trading/ViewOffer.jsx:39
 msgid "Drag and drop offer file"
@@ -728,7 +728,7 @@ msgstr "גרור ושחרר את קובץ הגיבוי שלך"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:109
 msgid "Drag and drop your recovery backup file"
-msgstr ""
+msgstr "גרור ושחרר את קובץ הגיבוי שלך"
 
 #: src/electron/main.tsx:263
 msgid "Edit"
@@ -1191,7 +1191,7 @@ msgstr "ניהול תגמולי חווה"
 
 #: src/components/wallet/did/WalletDID.tsx:806
 msgid "Manage Recovery DIDs"
-msgstr ""
+msgstr "נהל/י שחזור DIDs"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:119
 msgid "Manage Your Farming Rewards Target Addresses"
@@ -1215,7 +1215,7 @@ msgstr "תוספת זיכרון תגביר מעט את המהירות"
 
 #: src/components/wallet/did/WalletDID.tsx:537
 msgid "My DID Wallet"
-msgstr ""
+msgstr "ארנק ה-DID שלי"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 msgid "My Pubkey"
@@ -1357,7 +1357,7 @@ msgstr "בממוצע יש דקה בין עסקת Block. אלא אם יש עומ�
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:34
 msgid "Only one backup file is allowed."
-msgstr ""
+msgstr "ניתן להשתמש רק בקובץ גיבוי אחד."
 
 #: src/components/wallet/create/recoverDIDWallet.js:156
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
@@ -1418,20 +1418,20 @@ msgstr "אנא הכנס 0 עמלות. עמלות חיוביות עדיין לא 
 
 #: src/components/wallet/did/WalletDID.tsx:924
 msgid "Please enter a coin"
-msgstr ""
+msgstr "נא להזין מטבע"
 
 #: src/components/wallet/did/WalletDID.tsx:526
 #: src/components/wallet/did/WalletDID.tsx:914
 msgid "Please enter a filename"
-msgstr ""
+msgstr "אנא הזן/י שם קובץ"
 
 #: src/components/wallet/did/WalletDID.tsx:934
 msgid "Please enter a pubkey"
-msgstr ""
+msgstr "אנא הזן/י pubkey"
 
 #: src/components/wallet/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
-msgstr ""
+msgstr "אנא הזן/י puzzlehash"
 
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
@@ -1440,7 +1440,7 @@ msgstr "אנא הזן סכום מטבע ראשוני תקף"
 #: src/components/wallet/did/WalletDID.tsx:777
 #: src/components/wallet/did/WalletDIDCreate.tsx:76
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
-msgstr ""
+msgstr "הזן מספר שלם חוקי של 0 ומעלה עבור מספר מזהי הגיבוי הדרושים לשחזור."
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
@@ -1450,7 +1450,7 @@ msgstr "אנא הזן סכום מספרי תקף"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:50
 msgid "Please enter a valid numeric amount."
-msgstr ""
+msgstr "אנא הזן/י כמות מספרית."
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:79
@@ -1483,7 +1483,7 @@ msgstr "אנא בחר סכום"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:55
 msgid "Please select backup file first"
-msgstr ""
+msgstr "אנא בחר/י קובץ גיבוי ראשון"
 
 #: src/components/trading/CreateOffer.jsx:76
 msgid "Please select buy or sell"
@@ -1758,7 +1758,7 @@ msgstr "מפתח ציבורי:"
 
 #: src/components/wallet/did/WalletDID.tsx:1002
 msgid "Puzzlehash"
-msgstr ""
+msgstr "Puzzlehash"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
 msgid "Queue Name"
@@ -1813,12 +1813,12 @@ msgstr "כותבת לקבלה"
 #: src/components/wallet/did/WalletDID.tsx:464
 #: src/components/wallet/did/WalletDIDRecovery.tsx:124
 msgid "Recover"
-msgstr ""
+msgstr "שחזור"
 
 #: src/components/wallet/did/WalletDID.tsx:340
 #: src/components/wallet/did/WalletDID.tsx:480
 msgid "Recover DID Wallet"
-msgstr ""
+msgstr "שחזור ארנק DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 #~ msgid "Recover DID wallet"
@@ -1826,11 +1826,11 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:84
 msgid "Recover Distributed Identity Wallet"
-msgstr ""
+msgstr "שחזור ארנק זהות מבוזרת"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
-msgstr ""
+msgstr "שחזור ארנק"
 
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
@@ -1952,7 +1952,7 @@ msgstr "נבחר"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:91
 msgid "Selected recovery file:"
-msgstr ""
+msgstr "קובץ שחזור שנבחר:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2182,7 +2182,7 @@ msgstr "ה-node מסתנכרן, מה שאומר שהוא מוריד בלוקים
 #: src/components/wallet/did/WalletDID.tsx:790
 #: src/components/wallet/did/WalletDIDCreate.tsx:89
 msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
-msgstr ""
+msgstr "מספר מזהי הגיבוי הדרושים לשחזור אינו יכול לחרוג ממספר מזהי הגיבוי שנוספו."
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2509,7 +2509,7 @@ msgstr "מצב הארנק:"
 
 #: src/components/wallet/did/WalletDID.tsx:1118
 msgid "Wallet does not exists"
-msgstr ""
+msgstr "ארנק לא נמצא"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2669,7 +2669,7 @@ msgstr "את/ה תקבל/י <0/> ל {address}"
 
 #: src/components/wallet/did/WalletDID.tsx:328
 msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-msgstr ""
+msgstr "ה-DID שלך מצריך לפחות {dids_num_req} קובץ אישור{0} לשחזור. אנא העלה/י מסמכים נוספים."
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
