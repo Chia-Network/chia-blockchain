@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:56\n"
+"PO-Revision-Date: 2021-09-08 17:57\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -497,7 +497,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
-msgstr ""
+msgstr "Új tárca létrehozása"
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -699,7 +699,7 @@ msgstr "Kapcsolat bontása"
 #: src/components/wallet/create/WalletCreateList.tsx:28
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
-msgstr ""
+msgstr "Elosztott identitás"
 
 #: src/components/wallet/create/WalletCreate.jsx:280
 #~ msgid "Distributed Identity Options"
@@ -728,7 +728,7 @@ msgstr "Húzza ide a mentett fájlt"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:109
 msgid "Drag and drop your recovery backup file"
-msgstr ""
+msgstr "Húzza ide a biztonsági mentés fájlt"
 
 #: src/electron/main.tsx:263
 msgid "Edit"
@@ -1423,11 +1423,11 @@ msgstr ""
 #: src/components/wallet/did/WalletDID.tsx:526
 #: src/components/wallet/did/WalletDID.tsx:914
 msgid "Please enter a filename"
-msgstr ""
+msgstr "Adjon meg egy fájlnevet"
 
 #: src/components/wallet/did/WalletDID.tsx:934
 msgid "Please enter a pubkey"
-msgstr ""
+msgstr "Adjon meg egy publikus kulcsot"
 
 #: src/components/wallet/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
@@ -1812,12 +1812,12 @@ msgstr "Fogadó cím"
 #: src/components/wallet/did/WalletDID.tsx:464
 #: src/components/wallet/did/WalletDIDRecovery.tsx:124
 msgid "Recover"
-msgstr ""
+msgstr "Visszaállítás"
 
 #: src/components/wallet/did/WalletDID.tsx:340
 #: src/components/wallet/did/WalletDID.tsx:480
 msgid "Recover DID Wallet"
-msgstr ""
+msgstr "DID pénztárca visszaállítása"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 #~ msgid "Recover DID wallet"
@@ -1829,7 +1829,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
-msgstr ""
+msgstr "Pénztárca visszaállítása"
 
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
@@ -1951,7 +1951,7 @@ msgstr "Kiválasztva"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:91
 msgid "Selected recovery file:"
-msgstr ""
+msgstr "Válassza ki a visszaállítási fájlt:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2509,7 +2509,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDID.tsx:1118
 msgid "Wallet does not exists"
-msgstr ""
+msgstr "A tárca nem létezik"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
