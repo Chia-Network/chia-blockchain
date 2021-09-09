@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 import aiosqlite
 
@@ -69,6 +69,8 @@ class CoinStore:
             return None
         assert block.foliage_transaction_block is not None
 
+        to_add: List[CoinRecord] = []
+
         for coin in tx_additions:
             record: CoinRecord = CoinRecord(
                 coin,
@@ -78,7 +80,7 @@ class CoinStore:
                 False,
                 block.foliage_transaction_block.timestamp,
             )
-            await self._add_coin_record(record, False)
+            to_add.append(record)
 
         included_reward_coins = block.get_included_reward_coins()
         if block.height == 0:
@@ -95,7 +97,9 @@ class CoinStore:
                 True,
                 block.foliage_transaction_block.timestamp,
             )
-            await self._add_coin_record(reward_coin_r, False)
+            to_add.append(reward_coin_r)
+
+        await self._add_coin_records(to_add, False)
 
         total_amount_spent: int = 0
         for coin_name in tx_removals:
@@ -306,13 +310,19 @@ class CoinStore:
         await c2.close()
 
     # Store CoinRecord in DB and ram cache
-    async def _add_coin_record(self, record: CoinRecord, allow_replace: bool) -> None:
-        if self.coin_record_cache.get(record.coin.name()) is not None:
-            self.coin_record_cache.remove(record.coin.name())
+    async def _add_coin_records(self, records: List[CoinRecord], allow_replace: bool) -> None:
+        if records == []:
+            return
 
-        cursor = await self.coin_record_db.execute(
-            f"INSERT {'OR REPLACE ' if allow_replace else ''}INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
+        for r in records:
+            if self.coin_record_cache.get(r.coin.name()) is not None:
+                self.coin_record_cache.remove(r.coin.name())
+
+        fmt = f"INSERT {'OR REPLACE ' if allow_replace else ''}INTO coin_record VALUES {'(?, ?, ?, ?, ?, ?, ?, ?, ?),' * (len(records) - 1)}(?, ?, ?, ?, ?, ?, ?, ?, ?)"  # noqa
+
+        args: Any = ()
+        for record in records:
+            args += (
                 record.coin.name().hex(),
                 record.confirmed_block_index,
                 record.spent_block_index,
@@ -322,8 +332,8 @@ class CoinStore:
                 str(record.coin.parent_coin_info.hex()),
                 bytes(record.coin.amount),
                 record.timestamp,
-            ),
-        )
+            )
+        cursor = await self.coin_record_db.execute(fmt, args)
         await cursor.close()
 
     # Update coin_record to be spent in DB
@@ -341,5 +351,5 @@ class CoinStore:
             current.coinbase,
             current.timestamp,
         )  # type: ignore # noqa
-        await self._add_coin_record(spent, True)
+        await self._add_coin_records([spent], True)
         return current.coin.amount
