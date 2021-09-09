@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-09 05:40\n"
+"PO-Revision-Date: 2021-09-09 11:38\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -149,7 +149,7 @@ msgstr "Alkumäärä"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:62
 msgid "Amount must be an even amount."
-msgstr "Anna tasaraha."
+msgstr "Anna tasamäärä."
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -1191,7 +1191,7 @@ msgstr "Hallitse Farmaripalkkioita"
 
 #: src/components/wallet/did/WalletDID.tsx:806
 msgid "Manage Recovery DIDs"
-msgstr "Hallitse Palautus-DID:iä"
+msgstr "Hallitse Palautus-DID:jä"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:119
 msgid "Manage Your Farming Rewards Target Addresses"
@@ -1825,11 +1825,11 @@ msgstr "Palauta hajautettu DID-lompakko"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:84
 msgid "Recover Distributed Identity Wallet"
-msgstr ""
+msgstr "Palauta Hajautettu DID-Identiteettilompakko"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
-msgstr ""
+msgstr "Palauta Lompakko"
 
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
@@ -1951,7 +1951,7 @@ msgstr "Valittu"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:91
 msgid "Selected recovery file:"
-msgstr ""
+msgstr "Valittu palautustiedosto:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2181,7 +2181,7 @@ msgstr "Noodi synkronoi. Se lataa lohkoketjua muilta solmuilta"
 #: src/components/wallet/did/WalletDID.tsx:790
 #: src/components/wallet/did/WalletDIDCreate.tsx:89
 msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
-msgstr ""
+msgstr "Varmuuskopiotunnusten määrä ei voi ylittää lisättyjen varmuuskopioitunnusten määrää."
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2508,7 +2508,7 @@ msgstr "Lompakon Tila:"
 
 #: src/components/wallet/did/WalletDID.tsx:1118
 msgid "Wallet does not exists"
-msgstr ""
+msgstr "Lompakkoa ei löydy"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2668,7 +2668,7 @@ msgstr "Saat <0/> osoitteeseen {address}"
 
 #: src/components/wallet/did/WalletDID.tsx:328
 msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-msgstr ""
+msgstr "DID vaatii vähintään {dids_num_req} todistustiedosto{0} palautusta varten. Lataa lisää tiedostoja."
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
