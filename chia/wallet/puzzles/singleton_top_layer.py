@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.coin_spend import CoinSpend
@@ -18,7 +18,6 @@ SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
-SHATREE_ESCAPE = load_clvm("shatree_escape.clvm")
 
 
 # Given the parent and amount of the launcher coin, return the launcher coin
@@ -33,9 +32,8 @@ def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
 
 
 def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
-    puzzle = adapt_inner_to_singleton(Program.to([1997, inner_puzzle_hash]))
-    result = SHATREE_ESCAPE.run_with_cost(INFINITE_COST, puzzle)
-    return bytes32(result[1].as_atom())
+    puzzle = adapt_inner_to_singleton(Program.to(inner_puzzle_hash))
+    return puzzle.get_tree_hash(inner_puzzle_hash)
 
 
 def remove_singleton_truth_wrapper(puzzle: Program) -> Program:
