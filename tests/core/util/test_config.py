@@ -1,5 +1,4 @@
 import asyncio
-from asyncio.events import get_event_loop
 import copy
 import pytest
 import random
@@ -163,11 +162,11 @@ class TestConfig:
         # When: exit_on_error is True
         # Expect: load_config will exit
         with pytest.raises(SystemExit):
-            config: Dict = load_config(root_path=root_path, filename=config_file_path, exit_on_error=True)
+            _ = load_config(root_path=root_path, filename=config_file_path, exit_on_error=True)
         # When: exit_on_error is False
         # Expect: load_config will raise an exception
         with pytest.raises(ValueError):
-            config: Dict = load_config(root_path=root_path, filename=config_file_path, exit_on_error=False)
+            _ = load_config(root_path=root_path, filename=config_file_path, exit_on_error=False)
 
     def test_save_config(self, root_path_populated_with_config, default_config_dict):
         """
