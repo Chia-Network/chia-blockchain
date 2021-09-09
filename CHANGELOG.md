@@ -8,6 +8,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ## 1.2.6 Chia blockchain 2021-09-09
 
+Today we’re releasing version 1.2.6 to address a resource bug with nodes, and we want to stress the importance of updating to it at the earliest convenience. The fix prevents a node from consuming excessive memory when many Bluebox Timelords are active on the chain.
+
 ### Changed
 
 - Updated to BLS 1.0.6.
@@ -16,7 +18,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
-- Fixed memory leak in versions 1.2.4 and 1.2.5 related to how the node handles compact VDFs generated from blueboxes.
+- Fixed memory utilization issue related to how the node handles compact VDFs generated from blueboxes. We recommend everyone update to this version to avoid memory issues that can impact farming and harvesting.
+- Fixed issues with reloading plot files detected as bad (this can happen during plot copying).
 
 ## 1.2.5 Chia blockchain 2021-08-27
 
