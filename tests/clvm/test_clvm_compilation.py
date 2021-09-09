@@ -8,12 +8,13 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 wallet_program_files = set(
     [
         "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cc.clvm",
+        "chia/wallet/puzzles/cat.clvm",
         "chia/wallet/puzzles/chialisp_deserialisation.clvm",
         "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
         "chia/wallet/puzzles/generator_for_single_coin.clvm",
         "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
         "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
+        "chia/wallet/puzzles/everything_with_signature.clvm",
         "chia/wallet/puzzles/lock.inner.puzzle.clvm",
         "chia/wallet/puzzles/p2_conditions.clvm",
         "chia/wallet/puzzles/p2_delegated_conditions.clvm",
