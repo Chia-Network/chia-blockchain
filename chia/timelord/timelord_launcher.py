@@ -82,6 +82,9 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
     await asyncio.sleep(5)
     port = config["port"]
     process_count = config["process_count"]
+    if process_count == 0:
+        log.info("Process_count set to 0, stopping TLauncher.")
+        return
     awaitables = [spawn_process(net_config["self_hostname"], port, i) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 

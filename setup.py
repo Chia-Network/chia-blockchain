@@ -27,7 +27,6 @@ dependencies = [
     "click==7.1.2",  # For the CLI
     "dnspython==2.1.0",  # Query DNS seeds
     "watchdog==2.1.3",  # Filesystem event watching - watches keyring.yaml
-    "dill==0.3.4",  # Serialize objects for `ProcessPoolExecutor` when `pickle` doesn't know how.
 ]
 
 upnp_dependencies = [

@@ -6,9 +6,9 @@ import random
 import time
 import traceback
 import os
-import dill
 from typing import Callable, Dict, List, Optional, Tuple, Set
-
+from dataclasses import dataclass
+from chia.util.streamable import Streamable, streamable
 from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
@@ -32,16 +32,29 @@ from chia.types.blockchain_format.slots import (
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from concurrent.futures import ProcessPoolExecutor
 
 log = logging.getLogger(__name__)
 
 
-# https://stackoverflow.com/questions/8804830/python-multiprocessing-picklingerror-cant-pickle-type-function
-def prove_with_dill(payload):
-    args = dill.loads(payload)
-    return prove(*args)
+@dataclass(frozen=True)
+@streamable
+class BlueboxProcessData(Streamable):
+    challenge: bytes32
+    size_bits: uint16
+    iters: uint64
+
+
+def prove_bluebox_slow(payload):
+    bluebox_process_data = BlueboxProcessData.from_bytes(payload)
+    initial_el = b"\x08" + (b"\x00" * 99)
+    return prove(
+        bluebox_process_data.challenge,
+        initial_el,
+        bluebox_process_data.size_bits,
+        bluebox_process_data.iters,
+    )
 
 
 class Timelord:
@@ -1090,23 +1103,20 @@ class Timelord:
                     log.error(f"Exception manage discriminant queue: {e}")
             if picked_info is not None:
                 try:
-                    initial_el = b"\x08" + (b"\x00" * 99)
                     t1 = time.time()
                     log.info(
                         f"Working on compact proof for height: {picked_info.height}. "
                         f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
                     )
-                    args = (
-                        picked_info.new_proof_of_time.challenge.__bytes__(),
-                        initial_el,
-                        self.constants.DISCRIMINANT_SIZE_BITS,
+                    bluebox_process_data = BlueboxProcessData(
+                        picked_info.new_proof_of_time.challenge,
+                        uint16(self.constants.DISCRIMINANT_SIZE_BITS),
                         picked_info.new_proof_of_time.number_of_iterations,
                     )
-                    payload = dill.dumps(args)
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
-                        prove_with_dill,
-                        payload,
+                        prove_bluebox_slow,
+                        bluebox_process_data.__bytes__(),
                     )
                     t2 = time.time()
                     delta = t2 - t1
