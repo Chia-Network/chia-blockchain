@@ -44,7 +44,7 @@ class TestRlLifecycle:
         adapted_puzzle: Program = adapt_inner_to_singleton(Program.to(1))
         adapted_ph: bytes32 = adapted_puzzle.get_tree_hash()
         rl_puzzle: Program = create_rl_puzzle(  # 500 mojos per block, cap of 10000, no initial credit, anyone can spend
-            500, 1, 10000, 0, adapted_puzzle
+            500, 1, 10000, 0, sim.block_height + 1, adapted_puzzle
         )
         rl_ph: bytes32 = rl_puzzle.get_tree_hash()
         await sim.farm_block(adapted_ph)
@@ -67,7 +67,7 @@ class TestRlLifecycle:
         for _ in range(0, blocks):
             await sim.farm_block()
         inner_solution = Program.to([[51, adapted_ph, uint64(starting_amount - amount)]])
-        rl_solution = create_rl_solution(blocks, inner_solution)
+        rl_solution = create_rl_solution(sim.block_height, inner_solution)
         fake_truths = Program.to(([], (([], starting_amount), [])))
         rl_solution = Program.to((fake_truths, rl_solution))  # Slight modification to account for Truths
         spend_bundle = SpendBundle(
@@ -126,6 +126,7 @@ class TestRlLifecycle:
         try:
             rl_info = uncurry_rl_puzzle(rl_puzzle)
             results = await self.spend_rl_coins(rl_info["amount_per"], rl_info["interval_time"] * 2, setup)
+            assert results[0] == MempoolInclusionStatus.SUCCESS
 
             await sim.farm_block()
 
@@ -134,6 +135,7 @@ class TestRlLifecycle:
                 rl_info["interval_time"],
                 rl_info["earnings_cap"],
                 rl_info["credit"] + rl_info["amount_per"],
+                (sim.block_height - 1),
                 adapted_puzzle,
             )
             inner_solution = Program.to([[51, adapted_ph, uint64(starting_amount - (rl_info["amount_per"] * 2))]])
@@ -160,12 +162,21 @@ class TestRlLifecycle:
             assert results[0] == MempoolInclusionStatus.SUCCESS
 
             await sim.farm_block()
+
             # We should check that the credit amount is back to what it used to be
+            old_credit_puzzle: Program = create_rl_puzzle(
+                rl_info["amount_per"],
+                rl_info["interval_time"],
+                rl_info["earnings_cap"],
+                rl_info["credit"],
+                uint32(sim.block_height - 2),
+                adapted_puzzle,
+            )
             assert (
                 len(
                     (
                         await sim_client.get_coin_records_by_puzzle_hash(
-                            rl_puzzle.get_tree_hash(),
+                            old_credit_puzzle.get_tree_hash(),
                             include_spent_coins=False,
                         )
                     )

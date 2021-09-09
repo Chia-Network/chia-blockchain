@@ -5,9 +5,10 @@
     INTERVAL_TIME
     EARNINGS_CAP
     CREDIT
+    LAST_HEIGHT
     INNER_PUZZLE
     Truths
-    time_passed
+    current_height
     inner_solution
   )
 
@@ -48,6 +49,7 @@
       RATE_AMOUNT
       INTERVAL_TIME
       EARNINGS_CAP
+      current_height
       new_credit
     )
 
@@ -56,6 +58,7 @@
       (c
         (puzzle_hash_of_curried_function MOD_HASH
           (puzzle_hash singleton_condition)
+          (sha256 1 current_height)
           (sha256 1 new_credit)
           (sha256 1 EARNINGS_CAP)
           (sha256 1 INTERVAL_TIME)
@@ -68,16 +71,16 @@
   )
 
 
-  (defun-inline assert_rate (EARNINGS_CAP possible_withdrawal_amount withdrawal_amount time_passed)
+  (defun-inline assert_rate (EARNINGS_CAP possible_withdrawal_amount withdrawal_amount current_height)
     (assert
       (>= EARNINGS_CAP withdrawal_amount)
       (>= possible_withdrawal_amount withdrawal_amount)
-      (list ASSERT_HEIGHT_RELATIVE time_passed)
+      (list ASSERT_HEIGHT_ABSOLUTE current_height)
     )
   )
 
-  (defun-inline calculate_possible_withdrawal (RATE_AMOUNT INTERVAL_TIME CREDIT time_passed)
-    (+ (* (max 0 time_passed) (/ RATE_AMOUNT INTERVAL_TIME)) CREDIT)
+  (defun-inline calculate_possible_withdrawal (RATE_AMOUNT INTERVAL_TIME CREDIT LAST_HEIGHT current_height)
+    (+ (* (max 0 (- current_height LAST_HEIGHT)) (/ RATE_AMOUNT INTERVAL_TIME)) CREDIT)
   )
 
   (defun generate_final_conditions
@@ -90,11 +93,11 @@
       RATE_AMOUNT
       INTERVAL_TIME
       EARNINGS_CAP
-      time_passed
+      current_height
     )
 
     (c
-      (assert_rate EARNINGS_CAP possible_withdrawal_amount withdrawal_amount time_passed)
+      (assert_rate EARNINGS_CAP possible_withdrawal_amount withdrawal_amount current_height)
       (c
         (morph_singleton_condition
           singleton_condition
@@ -102,6 +105,7 @@
           RATE_AMOUNT
           INTERVAL_TIME
           EARNINGS_CAP
+          current_height
           (- (min possible_withdrawal_amount EARNINGS_CAP) withdrawal_amount)
         )
         remaining_conditions
@@ -119,7 +123,8 @@
         INTERVAL_TIME
         EARNINGS_CAP
         CREDIT
-        time_passed
+        LAST_HEIGHT
+        current_height
         my_amount
       )
     )
@@ -128,12 +133,12 @@
       singleton_condition
       remaining_conditions
       (max (- my_amount (coin_amount singleton_condition)) 0)
-      (calculate_possible_withdrawal RATE_AMOUNT INTERVAL_TIME CREDIT time_passed)
+      (calculate_possible_withdrawal RATE_AMOUNT INTERVAL_TIME CREDIT LAST_HEIGHT current_height)
       MOD_HASH
       RATE_AMOUNT
       INTERVAL_TIME
       EARNINGS_CAP
-      time_passed
+      (max current_height LAST_HEIGHT)
     )
   )
 
@@ -147,7 +152,8 @@
       INTERVAL_TIME
       EARNINGS_CAP
       CREDIT
-      time_passed
+      LAST_HEIGHT
+      current_height
       (my_amount_truth Truths)
     )
   )

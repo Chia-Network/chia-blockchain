@@ -60,7 +60,7 @@ class RLWalletState:
     user_rate: Tuple[uint64, uint32]
     user_earnings_cap: uint64
     user_credit: uint64
-    last_block_height: uint32
+    user_last_height: uint32
 
     """
     Things that will not be visible in the singleton creation:
@@ -79,7 +79,7 @@ class RLWalletState:
         self.user_rate = None
         self.user_earnings_cap = None
         self.user_credit = None
-        self.last_block_height = None
+        self.user_last_height = None
 
     def set_initial_withdrawal_settings(
         self,
@@ -87,16 +87,12 @@ class RLWalletState:
         block_interval: uint32,
         earnings_cap: uint64,
         initial_credit: uint64,
+        start_height: uint32,
     ):
         self.user_rate = (amount_per, block_interval)
         self.user_earnings_cap = earnings_cap
         self.user_credit = initial_credit
-
-    def set_last_confirmed_height(
-        self,
-        last_block_height: uint32,
-    ):
-        self.last_block_height = last_block_height
+        self.user_last_height = start_height
 
     def set_initial_custody_settings(
         self,
@@ -133,6 +129,7 @@ class RLWalletState:
             self.user_rate[1],
             self.user_earnings_cap,
             self.user_credit,
+            self.user_last_height,
             self.user_inner_puzzle,
         )
 
@@ -173,7 +170,7 @@ class RLWalletState:
                 Program.to(
                     [  # Extra "parens" because of the no melt puzzle
                         create_rl_solution(
-                            uint32(current_block_height - self.last_block_height - 1),
+                            uint32(current_block_height),
                             self.user_solution_generator(*args),
                         )
                     ]
@@ -235,10 +232,10 @@ class RLWalletState:
                     raise NewAdminPuzHash(singleton_condition[1])
                 raise BadRLState()
         elif revealed_inner_puzzle == self.create_full_user_innerpuz():
-            # inner_solution.inner_solution.[time_passed, inner_solution]
+            # inner_solution.inner_solution.[current_height, inner_solution]
             rl_solution_extractor = Program.to(assemble("(f (f (r (r (f (r (r 1)))))))"))
             rl_solution: Program = rl_solution_extractor.run(coin_spend.solution.to_program())
-            time_passed = int.from_bytes(Program.to(assemble("(f 1)")).run(rl_solution).as_python(), "big")
+            current_height = int.from_bytes(Program.to(assemble("(f 1)")).run(rl_solution).as_python(), "big")
             innermost_solution = Program.to(assemble("(f (r 1))")).run(rl_solution)
             truths_appended = Program.to((singleton_truths_for_coin_spend(coin_spend), innermost_solution))
             conditions = self.user_inner_puzzle.run(truths_appended).as_python()
@@ -249,18 +246,21 @@ class RLWalletState:
             )
 
             cache_credit: uint64 = self.user_credit
+            cache_last_height: uint32 = self.user_last_height
             # Calculate just like the Chialisp
             potential_withdrawal: int = min(
                 self.user_earnings_cap,
-                (math.floor(self.user_rate[0] / self.user_rate[1]) * max(0, time_passed) + self.user_credit),
+                (math.floor(self.user_rate[0] / self.user_rate[1]) * max(0, (current_height - self.user_last_height)) + self.user_credit),
             )
             actual_withdrawal: int = max(0, coin_spend.coin.amount - int.from_bytes(singleton_condition[2], "big"))
             self.user_credit = uint64(potential_withdrawal - actual_withdrawal)
+            self.user_last_height = current_height
 
             try:
                 assert self.create_full_puzzle().get_tree_hash() == final_singleton_condition[1]
             except AssertionError:
                 self.user_credit = cache_credit
+                self.user_last_height = user_last_height
                 try:
                     assert self.user_inner_puzzle.get_tree_hash() == singleton_condition[1]
                 except AssertionError:

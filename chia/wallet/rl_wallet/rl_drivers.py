@@ -12,6 +12,7 @@ def create_rl_puzzle(
     interval_time: uint32,
     earnings_cap: uint64,
     initial_credit: uint64,
+    start_height: uint32,
     inner_puzzle: Program,
 ) -> Program:
     return RL_MOD.curry(
@@ -20,27 +21,29 @@ def create_rl_puzzle(
         interval_time,
         earnings_cap,
         initial_credit,
+        start_height,
         inner_puzzle,
     )
 
 
 def create_rl_solution(
-    blocks_since_last: uint32,
+    current_height: uint32,
     inner_solution: Program,
 ) -> Program:
-    return Program.to([blocks_since_last, inner_solution])
+    return Program.to([current_height, inner_solution])
 
 
 def uncurry_rl_puzzle(
     rl_puzzle: Program,
 ) -> Dict:
     mod, args = rl_puzzle.uncurry()
-    mod_hash, amount_per, interval_time, earnings_cap, credit, inner_puzzle = args.as_python()
+    mod_hash, amount_per, interval_time, earnings_cap, credit, last_height, inner_puzzle = args.as_python()
     return {
         "mod_hash": mod_hash,
         "amount_per": int.from_bytes(amount_per, "big"),
         "interval_time": int.from_bytes(interval_time, "big"),
         "earnings_cap": int.from_bytes(earnings_cap, "big"),
         "credit": int.from_bytes(credit, "big"),
+        "last_height": int.from_bytes(last_height, "big"),
         "inner_puzzle": Program.to(inner_puzzle),
     }

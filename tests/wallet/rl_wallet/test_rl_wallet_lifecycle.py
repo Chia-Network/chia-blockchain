@@ -57,6 +57,7 @@ class TestRlWalletLifecycle:
             1,
             10000,
             0,
+            sim.block_height,
         )
         wallet_drivers.set_standard_custody_settings(user_sk.get_g1(), admin_sk.get_g1())
         starting_amount: uint64 = 10000005
@@ -117,7 +118,6 @@ class TestRlWalletLifecycle:
             confirmation_block,
         ) = setup
         try:
-            wallet_drivers.set_last_confirmed_height(confirmation_block)
 
             await sim.farm_block()
             await sim.farm_block()
@@ -142,7 +142,6 @@ class TestRlWalletLifecycle:
             # Gotta do it twice to make sure the state change works
             wallet_drivers.update_state_for_coin_spend(user_spend)
 
-            wallet_drivers.set_last_confirmed_height(sim.block_height)
             await sim.farm_block()
             await sim.farm_block()
 
@@ -186,7 +185,6 @@ class TestRlWalletLifecycle:
         try:
             # This test is very similar to the one above.
             # The differences were in annoying ways so it made some sense to do a bit of code duplication.
-            wallet_drivers.set_last_confirmed_height(confirmation_block)
 
             await sim.farm_block()
 
@@ -208,7 +206,6 @@ class TestRlWalletLifecycle:
             # Gotta do it twice to make sure the state change works
             wallet_drivers.update_state_for_coin_spend(admin_spend)
 
-            wallet_drivers.set_last_confirmed_height(sim.block_height)
             await sim.farm_block()
 
             next_coin: Coin = (
@@ -249,7 +246,6 @@ class TestRlWalletLifecycle:
             confirmation_block,
         ) = setup
         try:
-            wallet_drivers.set_last_confirmed_height(confirmation_block)
 
             await sim.farm_block(Program.to(1).get_tree_hash())
             contribution_coin: Coin = (
@@ -263,7 +259,7 @@ class TestRlWalletLifecycle:
                 (1, [[51, wallet_drivers.user_inner_puzzle.get_tree_hash(), starting_amount + 10]])
             )
             user_spend: CoinSpend = wallet_drivers.create_user_spend(
-                starting_coin, sim.block_height, delegated_puzzle, []
+                starting_coin, 0, delegated_puzzle, [] # Using a block height of zero so that no curried args change
             )
             contribution_spend = CoinSpend(
                 contribution_coin,
@@ -326,7 +322,6 @@ class TestRlWalletLifecycle:
         try:
             # This test is very similar to the one above.
             # The differences were in annoying ways so it made some sense to do a bit of code duplication.
-            wallet_drivers.set_last_confirmed_height(confirmation_block)
 
             await sim.farm_block(Program.to(1).get_tree_hash())
             contribution_coin: Coin = (
@@ -399,7 +394,6 @@ class TestRlWalletLifecycle:
             confirmation_block,
         ) = setup
         try:
-            wallet_drivers.set_last_confirmed_height(confirmation_block)
 
             await sim.farm_block()
             await sim.farm_block()
