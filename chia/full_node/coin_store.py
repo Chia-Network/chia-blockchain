@@ -99,14 +99,8 @@ class CoinStore:
             )
             to_add.append(reward_coin_r)
 
-        await self._add_coin_records(to_add, False)
-
-        total_amount_spent: int = 0
-        for coin_name in tx_removals:
-            total_amount_spent += await self._set_spent(coin_name, block.height)
-
-        # Sanity check, already checked in block_body_validation
-        assert sum([a.amount for a in tx_additions]) <= total_amount_spent
+        await self._add_coin_records(to_add)
+        await self._set_spent(tx_removals, block.height)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
@@ -310,7 +304,7 @@ class CoinStore:
         await c2.close()
 
     # Store CoinRecord in DB and ram cache
-    async def _add_coin_records(self, records: List[CoinRecord], allow_replace: bool) -> None:
+    async def _add_coin_records(self, records: List[CoinRecord]) -> None:
         if records == []:
             return
 
@@ -318,7 +312,7 @@ class CoinStore:
             if self.coin_record_cache.get(r.coin.name()) is not None:
                 self.coin_record_cache.remove(r.coin.name())
 
-        fmt = f"INSERT {'OR REPLACE ' if allow_replace else ''}INTO coin_record VALUES {'(?, ?, ?, ?, ?, ?, ?, ?, ?),' * (len(records) - 1)}(?, ?, ?, ?, ?, ?, ?, ?, ?)"  # noqa
+        fmt = f"INSERT INTO coin_record VALUES {'(?, ?, ?, ?, ?, ?, ?, ?, ?),' * (len(records) - 1)}(?, ?, ?, ?, ?, ?, ?, ?, ?)"  # noqa
 
         args: Any = ()
         for record in records:
@@ -337,19 +331,20 @@ class CoinStore:
         await cursor.close()
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_name: bytes32, index: uint32) -> uint64:
-        current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
-        if current is None:
-            raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
+    async def _set_spent(self, coin_names: List[bytes32], index: uint32) -> None:
 
-        assert not current.spent  # Redundant sanity check, already checked in block_body_validation
-        spent: CoinRecord = CoinRecord(
-            current.coin,
-            current.confirmed_block_index,
-            index,
-            True,
-            current.coinbase,
-            current.timestamp,
-        )  # type: ignore # noqa
-        await self._add_coin_records([spent], True)
-        return current.coin.amount
+        if coin_names == []:
+            return
+
+        for n in coin_names:
+            r = self.coin_record_cache.get(n)
+            if r is not None:
+                self.coin_record_cache.put(
+                    r.name, CoinRecord(r.coin, r.confirmed_block_index, index, True, r.coinbase, r.timestamp)
+                )
+
+        fmt = (
+            f"UPDATE coin_record SET spent=1,spent_index=? WHERE coin_name in ({'?,' * (len(coin_names) - 1)}?)"  # noqa
+        )
+        args = (index,) + tuple([n.hex() for n in coin_names])
+        await self.coin_record_db.execute(fmt, args)

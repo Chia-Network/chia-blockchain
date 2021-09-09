@@ -167,10 +167,7 @@ class TestCoinStore:
                     coins = block.get_included_reward_coins()
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                    for record in records:
-                        await coin_store._set_spent(record.coin.name(), block.height)
-                        with pytest.raises(AssertionError):
-                            await coin_store._set_spent(record.coin.name(), block.height)
+                    await coin_store._set_spent([r.coin.name() for r in records], block.height)
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
@@ -201,8 +198,7 @@ class TestCoinStore:
                         await coin_store.get_coin_record(coin.name()) for coin in coins
                     ]
 
-                    for record in records:
-                        await coin_store._set_spent(record.coin.name(), block.height)
+                    await coin_store._set_spent([r.coin.name() for r in records], block.height)
 
                     records: List[Optional[CoinRecord]] = [
                         await coin_store.get_coin_record(coin.name()) for coin in coins
