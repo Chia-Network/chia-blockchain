@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:55\n"
+"PO-Revision-Date: 2021-09-09 17:39\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -79,7 +79,7 @@ msgstr "Tambah"
 #: src/components/wallet/did/WalletDID.tsx:874
 #: src/components/wallet/did/WalletDIDCreate.tsx:205
 msgid "Add Backup ID"
-msgstr ""
+msgstr "Tambah ID sampingan"
 
 #: src/components/plot/PlotHeader.tsx:91
 msgid "Add Plot Directory"
@@ -149,7 +149,7 @@ msgstr "Jumlah Untuk Koin Inisial"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:62
 msgid "Amount must be an even amount."
-msgstr ""
+msgstr "Jumlah mesti genap, bukan ganjil."
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -360,7 +360,7 @@ msgstr "Menutup node dan server"
 
 #: src/components/wallet/did/WalletDID.tsx:984
 msgid "Coin Name"
-msgstr ""
+msgstr "Nama Wang"
 
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
@@ -485,7 +485,7 @@ msgstr "Buat"
 
 #: src/components/wallet/did/WalletDID.tsx:967
 msgid "Create An Attestation Packet"
-msgstr ""
+msgstr "Buat Paket Pengesahan"
 
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
@@ -493,11 +493,11 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:110
 msgid "Create Distributed Identity Wallet"
-msgstr ""
+msgstr "Buat Dompet Distribusi Identiti"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
-msgstr ""
+msgstr "Buat Dompet Baru"
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -699,7 +699,7 @@ msgstr "Putuskan Sambungan"
 #: src/components/wallet/create/WalletCreateList.tsx:28
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
-msgstr ""
+msgstr "Pilihan Identitas Terdistribusi"
 
 #: src/components/wallet/create/WalletCreate.jsx:280
 #~ msgid "Distributed Identity Options"
@@ -716,7 +716,7 @@ msgstr "Apakah mesin anda mendukung plotting pararel?"
 
 #: src/components/wallet/did/WalletDID.tsx:428
 msgid "Drag and drop attestation packet(s)"
-msgstr ""
+msgstr "Seret dan letak paket(paket-paket) pengesahan"
 
 #: src/components/trading/ViewOffer.jsx:39
 msgid "Drag and drop offer file"
@@ -728,7 +728,7 @@ msgstr "Seret dan lepas berkas cadangan anda"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:109
 msgid "Drag and drop your recovery backup file"
-msgstr ""
+msgstr "Seret dan lepas berkas cadangan anda"
 
 #: src/electron/main.tsx:263
 msgid "Edit"
@@ -1191,7 +1191,7 @@ msgstr "Kelola Upah Farming"
 
 #: src/components/wallet/did/WalletDID.tsx:806
 msgid "Manage Recovery DIDs"
-msgstr ""
+msgstr "Mengelola Pemulihan DIDs"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:119
 msgid "Manage Your Farming Rewards Target Addresses"
@@ -1215,7 +1215,7 @@ msgstr "Lebih banyak memori sedikit meningkatkan kecepatan"
 
 #: src/components/wallet/did/WalletDID.tsx:537
 msgid "My DID Wallet"
-msgstr ""
+msgstr "Wallet DID"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 msgid "My Pubkey"
@@ -1357,7 +1357,7 @@ msgstr "Rata rata ada jarak 1 menit antara masing masing blok transaksi. Kecuali
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:34
 msgid "Only one backup file is allowed."
-msgstr ""
+msgstr "Hanya satu fail backup dibenarkan."
 
 #: src/components/wallet/create/recoverDIDWallet.js:156
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
@@ -1418,20 +1418,20 @@ msgstr "Silahkan memasukkan 0 untuk biaya. Biaya tambahan belum didukung sementa
 
 #: src/components/wallet/did/WalletDID.tsx:924
 msgid "Please enter a coin"
-msgstr ""
+msgstr "Sila masukkan wang"
 
 #: src/components/wallet/did/WalletDID.tsx:526
 #: src/components/wallet/did/WalletDID.tsx:914
 msgid "Please enter a filename"
-msgstr ""
+msgstr "Silakan masukkan nama fail"
 
 #: src/components/wallet/did/WalletDID.tsx:934
 msgid "Please enter a pubkey"
-msgstr ""
+msgstr "Silakan masukkan public key yang sah"
 
 #: src/components/wallet/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
-msgstr ""
+msgstr "Silakan masukkan kata hash yang sah"
 
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
@@ -1440,7 +1440,7 @@ msgstr "Silakan masukkan jumlah Sebelum pajak yang valid"
 #: src/components/wallet/did/WalletDID.tsx:777
 #: src/components/wallet/did/WalletDIDCreate.tsx:76
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
-msgstr ""
+msgstr "Silakan masukkan integer valid 0 atau lebih besar untuk jumlah ID Backup yang diperlukan untuk pemulihan."
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
@@ -1450,7 +1450,7 @@ msgstr "Sila masukkan nombor yang valid"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:50
 msgid "Please enter a valid numeric amount."
-msgstr ""
+msgstr "Silahkan memasukkan angka biaya yang sah."
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:79
@@ -1483,7 +1483,7 @@ msgstr "Harap pilih jumlah"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:55
 msgid "Please select backup file first"
-msgstr ""
+msgstr "Pilih berkas dahulu"
 
 #: src/components/trading/CreateOffer.jsx:76
 msgid "Please select buy or sell"
@@ -1758,7 +1758,7 @@ msgstr "Kunci publik:"
 
 #: src/components/wallet/did/WalletDID.tsx:1002
 msgid "Puzzlehash"
-msgstr ""
+msgstr "Kata hash"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
 msgid "Queue Name"
@@ -1813,12 +1813,12 @@ msgstr "Alamat Penerima"
 #: src/components/wallet/did/WalletDID.tsx:464
 #: src/components/wallet/did/WalletDIDRecovery.tsx:124
 msgid "Recover"
-msgstr ""
+msgstr "Pulihkan"
 
 #: src/components/wallet/did/WalletDID.tsx:340
 #: src/components/wallet/did/WalletDID.tsx:480
 msgid "Recover DID Wallet"
-msgstr ""
+msgstr "Mendapatkan kembali dompet DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 #~ msgid "Recover DID wallet"
@@ -1826,11 +1826,11 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:84
 msgid "Recover Distributed Identity Wallet"
-msgstr ""
+msgstr "Pulih Kembali Dompet Distribusi Identiti"
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
-msgstr ""
+msgstr "Dapatkan kembali dompet"
 
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
@@ -1952,7 +1952,7 @@ msgstr "Dipilih"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:91
 msgid "Selected recovery file:"
-msgstr ""
+msgstr "Pilih fail pulihan:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2182,7 +2182,7 @@ msgstr "Node sedang melakukan sinkronisasi, yang berarti node sedang meng unduh 
 #: src/components/wallet/did/WalletDID.tsx:790
 #: src/components/wallet/did/WalletDIDCreate.tsx:89
 msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
-msgstr ""
+msgstr "Jumlah nombor Backup ID yang diperlukan tidak boleh lebih dari Backup ID yang sedia ada."
 
 #: src/hooks/usePoolInfo.ts:57
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2509,7 +2509,7 @@ msgstr "Status Dompet:"
 
 #: src/components/wallet/did/WalletDID.tsx:1118
 msgid "Wallet does not exists"
-msgstr ""
+msgstr "Berkas tidak ada"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2669,7 +2669,7 @@ msgstr "Kamu akan menerima <0/> sampai {address}"
 
 #: src/components/wallet/did/WalletDID.tsx:328
 msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-msgstr ""
+msgstr "DID anda perlu {dids_num_req} berkas pengesahan untuk pemulihan fail{0}. Silakan masuk file tambahan."
 
 #: src/components/farm/overview/FarmOverview.tsx:37
 msgid "Your Farm Overview"
