@@ -66,14 +66,13 @@ class CoinStore:
 
     async def new_block(
         self, block: FullBlock, tx_additions: List[Coin], tx_removals: List[bytes32]
-    ) -> Optional[Tuple[List[CoinRecord], List[CoinRecord]]]:
+    ) -> Tuple[List[CoinRecord], List[CoinRecord]]:
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
         added_coin_records = []
         removed_coin_records = []
-        if block.is_transaction_block() is False:
-            return None
+
         assert block.foliage_transaction_block is not None
 
         for coin in tx_additions:
@@ -367,7 +366,7 @@ class CoinStore:
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             record = CoinRecord(coin, row[1], uint32(0), False, row[4], row[8])
-            if not record.name in coin_changes:
+            if record.name not in coin_changes:
                 coin_changes[record.name] = record
         await cursor_unspent.close()
 

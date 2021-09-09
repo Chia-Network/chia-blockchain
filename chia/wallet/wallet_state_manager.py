@@ -10,15 +10,11 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 from blspy import AugSchemeMPL, G1Element, PrivateKey
-from chiabip158 import PyBIP158
 from cryptography.fernet import Fernet
 
 from chia import __version__
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution, CoinState
@@ -27,14 +23,12 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
@@ -64,6 +58,13 @@ from chia.server.server import ChiaServer
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 
 
+def get_balance_from_coin_records(coin_records: Set[WalletCoinRecord]) -> uint128:
+    amount: uint128 = uint128(0)
+    for record in coin_records:
+        amount = uint128(amount + record.coin.amount)
+    return uint128(amount)
+
+
 class WalletStateManager:
     constants: ConsensusConstants
     config: Dict
@@ -88,8 +89,9 @@ class WalletStateManager:
 
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
-    subscribe_to_new_puzzle_hash: Optional[Callable]
-    subscribe_to_coin_ids_update: Optional[Callable]
+    subscribe_to_new_puzzle_hash: Any
+    subscribe_to_coin_ids_update: Any
+    get_coin_state: Any
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     new_peak_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
@@ -581,7 +583,7 @@ class WalletStateManager:
             if coin_st.created_height is None:
                 coin_states.remove(coin_st)
                 created_h_none.append(coin_st)
-        coin_states.sort(key=lambda x: x.created_height, reverse=False)
+        coin_states.sort(key=lambda x: x.created_height, reverse=False)  # type: ignore
         coin_states.extend(created_h_none)
         all_outgoing_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals, trade_additions = await self.trade_manager.get_coins_of_interest()
@@ -615,7 +617,7 @@ class WalletStateManager:
                 if info is not None:
                     wallet_id, wallet_type = info
                 elif interested_wallet_id is not None:
-                    wallet_id = interested_wallet_id
+                    wallet_id = uint32(interested_wallet_id)
                     wallet_type = self.wallets[uint32(wallet_id)].type()
                 else:
                     continue
@@ -712,10 +714,10 @@ class WalletStateManager:
                             # Find coin that doesn't belong to us
                             amount = 0
                             for coin in additions:
-                                record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                                derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
                                     coin.puzzle_hash.hex()
                                 )
-                                if record is None:
+                                if derivation_record is None:
                                     to_puzzle_hash = coin.puzzle_hash
                                     amount += coin.amount
 
@@ -863,16 +865,16 @@ class WalletStateManager:
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record, True)
 
-        coin_record: WalletCoinRecord = WalletCoinRecord(
+        coin_record_1: WalletCoinRecord = WalletCoinRecord(
             coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
         )
-        await self.coin_store.add_coin_record(coin_record)
+        await self.coin_store.add_coin_record(coin_record_1)
 
         if wallet_type == WalletType.COLOURED_COIN or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
-        self.state_changed("coin_added", coin_record.wallet_id)
-        return coin_record
+        self.state_changed("coin_added", coin_record_1.wallet_id)
+        return coin_record_1
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
         """

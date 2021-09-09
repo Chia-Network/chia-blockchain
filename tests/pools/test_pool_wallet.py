@@ -48,7 +48,6 @@ class TestPoolWallet2:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         all_blocks: List[FullBlock] = await full_node_api.get_all_full_blocks()
-        h: uint32 = all_blocks[-1].height
 
         await asyncio.sleep(3)
         owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(wsm.private_key, 3)
@@ -59,7 +58,7 @@ class TestPoolWallet2:
 
         async with wsm.db_wrapper.lock:
             pw = await PoolWallet.create(
-                wsm, wallet_0, launcher_spend.coin.name(), tx_record.spend_bundle.coin_spends, h, True
+                wsm, wallet_0, launcher_spend.coin.name(), tx_record.spend_bundle.coin_spends, True
             )
 
         log.warning(await pw.get_current_state())

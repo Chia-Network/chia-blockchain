@@ -13,7 +13,7 @@ class WalletBlockchain:
     constants: ConsensusConstants
     constants_json: Dict
     # peak of the blockchain
-    _peak_height: Optional[uint32]
+    _peak_height: uint32
     wallet_state_manager_lock: asyncio.Lock
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -40,9 +40,9 @@ class WalletBlockchain:
         self.peak = None
         self.peak = await self.get_peak_block()
         if stored_height is None:
-            self._peak_height = 0
+            self._peak_height = uint32(0)
         else:
-            self._peak_height = int(stored_height)
+            self._peak_height = uint32(int(stored_height))
         return self
 
     async def set_peak_height(self, height):

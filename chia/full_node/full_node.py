@@ -1249,7 +1249,7 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
-        coin_changes = []
+        coin_changes: List[CoinRecord] = []
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):

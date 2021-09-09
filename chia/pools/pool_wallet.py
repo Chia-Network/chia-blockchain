@@ -4,7 +4,6 @@ from typing import Any, Optional, Set, Tuple, List, Dict
 
 from blspy import PrivateKey, G2Element, G1Element
 
-from chia.consensus.block_record import BlockRecord
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import (
     PoolWalletInfo,
@@ -337,7 +336,6 @@ class PoolWallet:
         wallet: Wallet,
         launcher_coin_id: bytes32,
         block_spends: List[Tuple[CoinSpend, uint32]],
-        block_height: uint32,
         in_transaction: bool,
         name: str = None,
     ):

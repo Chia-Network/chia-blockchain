@@ -182,7 +182,7 @@ class RespondToPhUpdates(Streamable):
 @streamable
 class RegisterForCoinUpdates(Streamable):
     coin_ids: List[bytes32]
-    min_height: Optional[uint32]
+    min_height: uint32
 
 
 @dataclass(frozen=True)

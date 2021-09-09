@@ -17,7 +17,7 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeyringIsEmpty,
 )
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_extra_data
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -36,7 +36,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
 
@@ -65,6 +65,7 @@ class WalletNode:
     peer_task: Optional[asyncio.Task]
     logged_in: bool
     wallet_peers_initialized: bool
+    keychain_proxy: Optional[KeychainProxy]
 
     def __init__(
         self,
@@ -96,8 +97,8 @@ class WalletNode:
         self.logged_in = False
         self.keychain_proxy = None
         self.local_keychain = local_keychain
-        self.height_to_time = {}
-        self.synced_peers = set()
+        self.height_to_time: Dict[uint32, uint64] = {}
+        self.synced_peers: Set[bytes32] = set()
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
@@ -318,11 +319,12 @@ class WalletNode:
         server.on_connect = self.on_connect
 
     async def on_connect(self, peer: WSChiaConnection):
+        assert self.server is not None
         trusted = self.server.is_trusted_peer(peer, self.config["trusted_peers"])
         if trusted is False and self.config["testing"] is False:
             await peer.close()
             self.log.error(
-                f"Wallet connected to the untrusted node. Check your config.yaml for the list of trusted nodes."
+                "Wallet connected to the untrusted node. Check your config.yaml for the list of trusted nodes."
             )
             return
 
@@ -336,6 +338,7 @@ class WalletNode:
             await peer.send_message(msg)
 
     async def update_coin_state(self, full_node: WSChiaConnection):
+        assert self.wallet_state_manager is not None
         self.wallet_state_manager.set_sync_mode(True)
         start_time = time.time()
         all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
@@ -378,17 +381,30 @@ class WalletNode:
         if peer is None:
             return
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
-        all_coins_state: Union[Optional, RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
         if all_coins_state is not None and full_node is not None:
             await self.handle_coin_state_change(all_coins_state.coin_states)
 
-    async def get_coin_state(self, coin_names) -> Optional[List[CoinState]]:
+    async def get_coin_state(self, coin_names) -> List[CoinState]:
+        assert self.server is not None
         all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
         if len(all_nodes.keys()) == 0:
-            return None
+            raise ValueError("Not connected to the full node")
         first_node = list(all_nodes.values())[0]
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Union[Optional, RespondToCoinUpdates] = await first_node.register_interest_in_coin(msg)
+        coin_state: Optional[RespondToCoinUpdates] = await first_node.register_interest_in_coin(msg)
+        assert coin_state is not None
+        return coin_state.coin_states
+
+    async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
+        assert self.wallet_state_manager is not None
+        assert self.server is not None
+        all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
+        if len(all_nodes.keys()) == 0:
+            raise ValueError("Not connected to the full node")
+        first_node = list(all_nodes.values())[0]
+        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
+        coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
         assert coin_state is not None
         return coin_state.coin_states
 
@@ -396,6 +412,7 @@ class WalletNode:
         await self.handle_coin_state_change(request.items, request.fork_height, request.height)
 
     async def handle_coin_state_change(self, state_updates: List[CoinState], fork_height=None, height=None):
+        assert self.wallet_state_manager is not None
         added, removed = await self.wallet_state_manager.new_coin_state(state_updates, fork_height, height)
         if len(removed) > 0:
             for wallet_id, wallet in self.wallet_state_manager.wallets.items():
@@ -418,9 +435,12 @@ class WalletNode:
                             already_have = True
                     if not already_have:
                         try:
-                            solution_to_extra_data(cs)
+                            pool_state = solution_to_pool_state(cs)
                         except Exception as e:
                             self.log.debug(f"Not a pool wallet launcher {e}")
+                            continue
+                        if pool_state is None:
+                            self.log.debug("Not a pool wallet launcher")
                             continue
                         self.log.info("Found created launcher. Creating pool wallet")
                         pool_wallet = await PoolWallet.create(
@@ -428,7 +448,6 @@ class WalletNode:
                             self.wallet_state_manager.main_wallet,
                             cs.coin.name(),
                             additional_coin_spends,
-                            22,
                             True,
                             "pool_wallet",
                         )
@@ -446,6 +465,8 @@ class WalletNode:
             return None
 
     async def process_removals(self, removed_coins: List[CoinState]):
+        assert self.wallet_state_manager is not None
+
         peer = self.get_full_node_peer()
         assert peer is not None
         additional_coin_spends = []
@@ -453,7 +474,7 @@ class WalletNode:
             children: List[CoinState] = await self.fetch_children(peer, state.coin.name())
             for coin_state in children:
                 # This searches specifically for a launcher being created, and adds the solution of the launcher
-                if coin_state.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
+                if coin_state.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH and state.spent_height is not None:
                     cs: CoinSpend = await self.fetch_puzzle_solution(peer, state.spent_height, coin_state.coin)
                     additional_coin_spends.append((cs, state.spent_height))
                     # Apply this coin solution, which might add things to interested list
@@ -471,7 +492,7 @@ class WalletNode:
                         continue
                     coin_states = await self.get_coin_state([coin_id])
                     coin_state = coin_states[0]
-                    if coin_state.spent_height == state.spent_height:
+                    if coin_state.spent_height == state.spent_height and state.spent_height is not None:
                         cs = await self.fetch_puzzle_solution(peer, state.spent_height, coin_state.coin)
                         await self.wallet_state_manager.get_next_interesting_coin_ids(cs, False)
                         additional_coin_spends.append((cs, state.spent_height))
@@ -555,6 +576,7 @@ class WalletNode:
         return time
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
+        assert self.wallet_state_manager is not None
         async with self.wallet_state_manager.lock:
             if peer.peer_node_id not in self.synced_peers:
                 await self.update_coin_state(peer)

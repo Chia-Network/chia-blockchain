@@ -22,7 +22,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
-from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_info import CCInfo
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
@@ -330,7 +329,6 @@ class CCWallet:
 
     async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
         coin_name = response.coin_name
-        height = response.height
         puzzle: Program = response.puzzle
         r = uncurry_cc(puzzle)
         if r is not None:

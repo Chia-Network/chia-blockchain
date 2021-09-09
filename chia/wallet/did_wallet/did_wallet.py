@@ -2,13 +2,11 @@ import logging
 import time
 import json
 
-from typing import Dict, Optional, List, Any, Set, Tuple, Union
-
+from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
 from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
-from chia.server.outbound_message import NodeType
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -345,82 +343,61 @@ class DIDWallet:
             await self.save_info(did_info, False)
             await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
 
-            full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, origin.name())
-            full_puzzle_hash = full_puz.get_tree_hash()
-            (
-                sub_height,
-                header_hash,
-            ) = await self.wallet_state_manager.search_blockrecords_for_puzzlehash(full_puzzle_hash)
-            assert sub_height is not None
-            assert header_hash is not None
-            full_nodes = self.wallet_state_manager.server.connection_by_type[NodeType.FULL_NODE]
-            additions: Union[RespondAdditions, RejectAdditionsRequest, None] = None
-            for id, node in full_nodes.items():
-                request = wallet_protocol.RequestAdditions(sub_height, header_hash, None)
-                additions = await node.request_additions(request)
-                if additions is not None:
-                    break
-                if isinstance(additions, RejectAdditionsRequest):
-                    continue
-
-            assert additions is not None
-            assert isinstance(additions, RespondAdditions)
+            # full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, origin.name())
             # All additions in this block here:
             new_puzhash = await self.get_new_inner_hash()
             new_pubkey = bytes(
                 (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
             )
-
-            all_parents: bytes32 = set()
-            for puzzle_list_coin in additions.coins:
-                puzzle_hash, coins = puzzle_list_coin
-                for coin in coins:
-                    all_parents.add(coin.parent_coin_info)
             parent_info = None
-            for puzzle_list_coin in additions.coins:
-                puzzle_hash, coins = puzzle_list_coin
-                if puzzle_hash == full_puzzle_hash:
-                    # our coin
-                    for coin in coins:
-                        future_parent = LineageProof(
-                            coin.parent_coin_info,
-                            innerpuz.get_tree_hash(),
-                            coin.amount,
-                        )
-                        await self.add_parent(coin.name(), future_parent, False)
-                        if coin.name() not in all_parents:
-                            did_info = DIDInfo(
-                                origin,
-                                backup_ids,
-                                num_of_backup_ids_needed,
-                                self.did_info.parent_info,
-                                innerpuz,
-                                coin,
-                                new_puzhash,
-                                new_pubkey,
-                                False,
-                            )
-                            await self.save_info(did_info, False)
-                            removal_request = wallet_protocol.RequestRemovals(sub_height, header_hash, None)
-                            removals_response = await node.request_removals(removal_request)
-                            for coin_tuple in removals_response.coins:
-                                if coin_tuple[0] == coin.parent_coin_info:
-                                    puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                                        coin.parent_coin_info, sub_height
-                                    )
-                                    response = await node.request_puzzle_solution(puzzle_solution_request)
-                                    req_puz_sol = response.response
-                                    assert req_puz_sol.puzzle is not None
-                                    parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
-                                    assert parent_innerpuz is not None
-                                    parent_info = LineageProof(
-                                        coin_tuple[1].parent_coin_info,
-                                        parent_innerpuz.get_tree_hash(),
-                                        coin_tuple[1].amount,
-                                    )
-                                    await self.add_parent(coin.parent_coin_info, parent_info, False)
-                                    break
 
+            node = self.wallet_state_manager.wallet_node.get_full_node_peer()
+            children = await self.wallet_state_manager.wallet_node.fetch_children(node, origin.name())
+            while True:
+                if len(children) == 0:
+                    break
+
+                children_state: CoinState = children[0]
+                coin = children_state.coin
+                name = coin.name()
+                children = await self.wallet_state_manager.wallet_node.fetch_children(node, name)
+                future_parent = LineageProof(
+                    coin.parent_coin_info,
+                    innerpuz.get_tree_hash(),
+                    coin.amount,
+                )
+                await self.add_parent(coin.name(), future_parent, False)
+                if children_state.spent_height != children_state.created_height:
+                    did_info = DIDInfo(
+                        origin,
+                        backup_ids,
+                        num_of_backup_ids_needed,
+                        self.did_info.parent_info,
+                        innerpuz,
+                        coin,
+                        new_puzhash,
+                        new_pubkey,
+                        False,
+                    )
+                    await self.save_info(did_info, False)
+                    assert children_state.created_height
+                    puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
+                        coin.parent_coin_info, children_state.created_height
+                    )
+                    parent_state: CoinState = (
+                        await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                    )[0]
+                    response = await node.request_puzzle_solution(puzzle_solution_request)
+                    req_puz_sol = response.response
+                    assert req_puz_sol.puzzle is not None
+                    parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
+                    assert parent_innerpuz is not None
+                    parent_info = LineageProof(
+                        parent_state.coin.parent_coin_info,
+                        parent_innerpuz.get_tree_hash(),
+                        parent_state.coin.amount,
+                    )
+                    await self.add_parent(coin.parent_coin_info, parent_info, False)
             assert parent_info is not None
             return None
         except Exception as e:

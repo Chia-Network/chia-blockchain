@@ -27,7 +27,7 @@ def additions_for_solution(
 def fee_for_solution(puzzle_reveal: SerializedProgram, solution: SerializedProgram, max_cost: int) -> int:
     err, dic, cost = conditions_dict_for_solution(puzzle_reveal, solution, max_cost)
     if err or dic is None:
-        return []
+        return 0
 
     total = 0
     for cvp in dic.get(ConditionOpcode.RESERVE_FEE, []):
