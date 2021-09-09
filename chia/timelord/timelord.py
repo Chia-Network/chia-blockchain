@@ -7,7 +7,6 @@ import time
 import traceback
 import os
 from typing import Callable, Dict, List, Optional, Tuple, Set
-from dataclasses import dataclass
 from chia.util.streamable import Streamable, streamable
 from chiavdf import create_discriminant, prove
 
@@ -38,7 +37,7 @@ from concurrent.futures import ProcessPoolExecutor
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 @streamable
 class BlueboxProcessData(Streamable):
     challenge: bytes32
