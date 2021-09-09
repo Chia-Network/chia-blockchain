@@ -292,11 +292,11 @@ class MempoolManager:
         if spend_name in self.mempool.spends:
             return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
-        removal_record_dict: Dict[bytes32, CoinRecord] = {}
+        removal_record_dict: Dict[bytes32, CoinRecord] = await self.coin_store.get_coin_records(removal_names)
         removal_coin_dict: Dict[bytes32, Coin] = {}
         removal_amount = uint64(0)
         for name in removal_names:
-            removal_record = await self.coin_store.get_coin_record(name)
+            removal_record = removal_record_dict.get(name)
             if removal_record is None and name not in additions_dict:
                 return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
             elif name in additions_dict:
@@ -311,10 +311,10 @@ class MempoolManager:
                     False,
                     uint64(self.peak.timestamp + 1),
                 )
+                removal_record_dict[name] = removal_record
 
             assert removal_record is not None
             removal_amount = uint64(removal_amount + removal_record.coin.amount)
-            removal_record_dict[name] = removal_record
             removal_coin_dict[name] = removal_record.coin
 
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]

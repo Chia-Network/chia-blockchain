@@ -353,7 +353,8 @@ async def validate_block_body(
             curr = reorg_blocks[curr.height - 1]
             assert curr is not None
 
-    removal_coin_records: Dict[bytes32, CoinRecord] = {}
+    removal_coin_records: Dict[bytes32, CoinRecord] = await coin_store.get_coin_records(removals)
+
     for rem in removals:
         if rem in additions_dic:
             # Ephemeral coin
@@ -368,14 +369,13 @@ async def validate_block_body(
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
-            unspent = await coin_store.get_coin_record(rem)
+            unspent = removal_coin_records.get(rem)
             if unspent is not None and unspent.confirmed_block_index <= fork_h:
                 # Spending something in the current chain, confirmed before fork
                 # (We ignore all coins confirmed after fork)
                 if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                     # Check for coins spent in an ancestor block
                     return Err.DOUBLE_SPEND, None
-                removal_coin_records[unspent.name] = unspent
             else:
                 # This coin is not in the current heaviest chain, so it must be in the fork
                 if rem not in additions_since_fork:

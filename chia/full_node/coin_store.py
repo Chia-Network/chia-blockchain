@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import aiosqlite
 
@@ -118,6 +118,31 @@ class CoinStore:
             self.coin_record_cache.put(record.coin.name(), record)
             return record
         return None
+
+    async def get_coin_records(self, coin_names: List[bytes32]) -> Dict[bytes32, CoinRecord]:
+
+        ret: Dict[bytes32, CoinRecord] = {}
+        left_to_look_up: List[bytes32] = []
+        for c in coin_names:
+            cached = self.coin_record_cache.get(c)
+            if cached is None:
+                left_to_look_up.append(c)
+            else:
+                ret[c] = cached
+
+        if left_to_look_up == []:
+            return ret
+
+        fmt = f"SELECT * from coin_record WHERE coin_name in ({'?,' * (len(left_to_look_up)-1)}?)"
+        cursor = await self.coin_record_db.execute(fmt, tuple([a.hex() for a in left_to_look_up]))
+        for row in await cursor.fetchall():
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            record = CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
+            name = record.coin.name()
+            self.coin_record_cache.put(name, record)
+            ret[name] = record
+        await cursor.close()
+        return ret
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
         cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE confirmed_index=?", (height,))
