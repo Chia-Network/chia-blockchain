@@ -1,15 +1,18 @@
 (
-
-  (include utility_functions.clib)
-  (include condition_codes.clib)
-
-  (defun-inline coin_amount (condition) (f (r (r condition))))
+  (defmacro _singleton_finder_and ARGS
+      (if ARGS
+          (qq (if (unquote (f ARGS))
+              (unquote (c and (r ARGS)))
+              ()
+              ))
+          1)
+  )
 
   (defun search_for_singleton (conditions found_function args)
     (if conditions
-        (if (and
+        (if (_singleton_finder_and
               (= (f (f conditions)) CREATE_COIN)      ; this is a CREATE_COIN
-              (logand (coin_amount (f conditions)) 1) ; the amount is odd
+              (logand (f (r (r (f conditions)))) 1) ; the amount is odd
             )
             (found_function (f conditions) (r conditions) args)
             (c

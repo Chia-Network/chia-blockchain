@@ -12,8 +12,8 @@
   (include sha256tree.clib)
   (include utility_functions.clib)
   (include curry_and_treehash.clib)
+  (include singleton_finder.clib)
 
-  (defun-inline coin_amount (condition) (f (r (r condition))))
   (defun-inline puzzle_hash (condition) (f (r condition)))
 
   (defun calculate_merkle_root (path starting_point additional_steps)
@@ -37,7 +37,7 @@
   )
 
   ; This could maybe be curried in for flexibility
-  (defun-inline do_merkle_proof (inner_puzzle_hash proof_of_inclusion)
+  (defun do_merkle_proof (inner_puzzle_hash proof_of_inclusion)
     (calculate_merkle_root
       (f proof_of_inclusion)
       (tree_node_hash inner_puzzle_hash)
@@ -70,22 +70,6 @@
     )
   )
 
-  (defun search_for_singleton (conditions args)
-    (if conditions
-        (if (and
-              (= (f (f conditions)) CREATE_COIN)      ; this is a CREATE_COIN
-              (logand (coin_amount (f conditions)) 1) ; the amount is odd
-            )
-            (found_singleton (f conditions) (r conditions) args)
-            (c
-              (f conditions)
-              (search_for_singleton (r conditions) args)
-            )
-        )
-        (x)
-    )
-  )
-
   (defun-inline main
     (
       MERKLE_ROOT
@@ -97,7 +81,7 @@
     )
     (assert
       (= calculated_root MERKLE_ROOT)
-      (search_for_singleton (a inner_puzzle (c Truths inner_solution)) args)
+      (search_for_singleton (a inner_puzzle (c Truths inner_solution)) found_singleton args)
     )
   )
 

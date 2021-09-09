@@ -17,11 +17,9 @@
   ; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
   ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
-  (include condition_codes.clib)
   (include curry_and_treehash.clib)
   (include singleton_truths.clib)
   (include sha256tree.clib)
-  (include utility_functions.clib)
 
   (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
   (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
@@ -42,73 +40,6 @@
             full_puzzle_hash
             my_amount)
   )
-
-  ;; take a boolean and a non-empty list of conditions
-  ;; strip off the first condition if a boolean is set
-  ;; this is used to remove `(CREATE_COIN xxx -113)`
-  ;; pretty sneaky, eh?
-  (defun strip_first_condition_if (boolean condition_list)
-    (if boolean
-      (r condition_list)
-      condition_list
-    )
-  )
-
-  (defun-inline morph_condition (condition SINGLETON_STRUCT)
-    (list (f condition) (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r condition))) (f (r (r condition))))
-  )
-
-  ;; return the value of the coin created if this is a `CREATE_COIN` condition, or 0 otherwise
-  (defun-inline created_coin_value_or_0 (condition)
-    (if (= (f condition) CREATE_COIN)
-        (f (r (r condition)))
-        0
-    )
-  )
-
-  ;; Returns a (bool . bool)
-  (defun odd_cons_m113 (output_amount)
-    (c
-      (= (logand output_amount 1) 1) ;; is it odd?
-      (= output_amount -113) ;; is it the escape value?
-    )
-  )
-
-  ; Assert exactly one output with odd value exists - ignore it if value is -113
-
-  ;; this function iterates over the output conditions from the inner puzzle & solution
-  ;; and both checks that exactly one unique singleton child is created (with odd valued output),
-  ;; and wraps the inner puzzle with this same singleton wrapper puzzle
-  ;;
-  ;; The special case where the output value is -113 means a child singleton is intentionally
-  ;; *NOT* being created, thus forever ending this singleton's existence
-
-  (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions has_odd_output_been_found)
-    (if conditions
-        (morph_next_condition SINGLETON_STRUCT conditions has_odd_output_been_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
-          (if has_odd_output_been_found
-              0
-              (x)  ;; no odd output found
-          )
-        )
-   )
-
-   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `is_output_m113`
-   ;; precalculated
-   (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . is_output_m113))
-       (assert
-          (not (all is_output_odd has_odd_output_been_found))
-          (strip_first_condition_if
-             is_output_m113
-             (c (if is_output_odd
-                    (morph_condition (f conditions) SINGLETON_STRUCT)
-                    (f conditions)
-                )
-                (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) (any is_output_odd has_odd_output_been_found))
-             )
-          )
-      )
-   )
 
   ; this final stager asserts our ID
   ; it also runs the innerpuz with the innersolution with the "truths" added
@@ -159,8 +90,5 @@
 
   ; if our value is not an odd amount then we are invalid
   ; this calculates my_innerpuzhash and passes all values to stager_one
-  (if (logand my_amount 1)
-    (stager_one SINGLETON_STRUCT lineage_proof (sha256tree INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
-    (x)
-  )
+  (stager_one SINGLETON_STRUCT lineage_proof (sha256tree INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
 )

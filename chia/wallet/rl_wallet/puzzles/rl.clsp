@@ -15,6 +15,7 @@
   (include curry_and_treehash.clib)
   (include sha256tree.clib)
   (include singleton_truths.clib)
+  (include singleton_finder.clib)
   (include utility_functions.clib) ; or, assert, and
 
   (defun-inline coin_amount (condition) (f (r (r condition))))
@@ -136,26 +137,10 @@
     )
   )
 
-
-  (defun search_for_singleton (conditions args)
-    (if conditions
-        (if (and
-              (= (f (f conditions)) CREATE_COIN)      ; this is a CREATE_COIN
-              (logand (coin_amount (f conditions)) 1) ; the amount is odd
-            )
-            (found_singleton (f conditions) (r conditions) args)
-            (c
-              (f conditions)
-              (search_for_singleton (r conditions) args)
-            )
-        )
-        (x)
-    )
-  )
-
   ; main
   (search_for_singleton
     (a INNER_PUZZLE (c Truths inner_solution))
+    found_singleton
     (list
       MOD_HASH
       RATE_AMOUNT
