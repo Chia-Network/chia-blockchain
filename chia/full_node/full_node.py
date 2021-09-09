@@ -58,6 +58,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
+from datetime import datetime
 
 
 class FullNode:
@@ -103,7 +104,7 @@ class FullNode:
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
         self.uncompact_task = None
-
+        self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
 
         self._ui_tasks = set()
@@ -121,6 +122,17 @@ class FullNode:
         self.new_peak_sem = asyncio.Semaphore(8)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
+
+            def sql_trace_callback(req: str):
+                timestamp = datetime.now().strftime("%H:%M:%S.%f")
+                log = open(sql_log_path, "a")
+                log.write(timestamp + " " + req + "\n")
+                log.close()
+
+            await self.connection.set_trace_callback(sql_trace_callback)
         self.db_wrapper = DBWrapper(self.connection)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
@@ -1819,6 +1831,7 @@ class FullNode:
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
+        self.log.info(f"Replaced compact proof at height {request.height}")
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
@@ -1919,29 +1932,17 @@ class FullNode:
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
-                max_height = self.blockchain.get_peak_height()
-                if max_height is None:
-                    await asyncio.sleep(30)
-                    continue
-                assert max_height is not None
-                self.log.info("Getting minimum bluebox work height")
-                min_height = await self.block_store.get_first_not_compactified()
-                if min_height is None or min_height > max(0, max_height - 1000):
-                    min_height = max(0, max_height - 1000)
-                assert min_height is not None
-                max_height = uint32(min(max_height, min_height + 2000))
-                batches_finished = 0
-                self.log.info(f"Scanning the blockchain for uncompact blocks. Range: {min_height}..{max_height}")
-                for h in range(min_height, max_height, 100):
-                    # Got 10 times the target header count, sampling the target headers should contain
-                    # enough randomness to split the work between blueboxes.
-                    if len(broadcast_list) > target_uncompact_proofs * 10:
-                        break
-                    stop_height = min(h + 99, max_height)
-                    headers = await self.blockchain.get_header_blocks_in_range(h, stop_height, tx_filter=False)
+
+                self.log.info("Getting random heights for bluebox to compact")
+                heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
+                self.log.info("Heights found for bluebox to compact: [%s]" % ", ".join(map(str, heights)))
+
+                for h in heights:
+
+                    headers = await self.blockchain.get_header_blocks_in_range(h, h, tx_filter=False)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
-                        records = await self.blockchain.get_block_records_in_range(h, stop_height)
+                        records = await self.blockchain.get_block_records_in_range(h, h)
                     for header in headers.values():
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
@@ -2007,21 +2008,17 @@ class FullNode:
                                 )
                             )
 
-                    # Small sleep between batches.
-                    batches_finished += 1
-                    if batches_finished % 10 == 0:
-                        await asyncio.sleep(1)
-
-                # sample work randomly from the uncompact blocks we found
                 if len(broadcast_list) > target_uncompact_proofs:
-                    random.shuffle(broadcast_list)
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
                 if self.sync_store.get_sync_mode():
                     continue
                 if self.server is not None:
+                    self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
+                    msgs = []
                     for new_pot in broadcast_list:
                         msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
-                        await self.server.send_to_all([msg], NodeType.TIMELORD)
+                        msgs.append(msg)
+                    await self.server.send_to_all(msgs, NodeType.TIMELORD)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:
             error_stack = traceback.format_exc()

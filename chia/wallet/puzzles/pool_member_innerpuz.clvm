@@ -19,7 +19,7 @@
   ; Escaping if pool_reward_height is ()
 
   ; p1 is pool_reward_amount if absorbing money
-  ; p1 is key_value_list if escaping
+  ; p1 is extra_data key_value_list if escaping
 
   ; pool_reward_amount is the value of the coin reward - this is passed in so that this puzzle will still work after halvenings
   ; pool_reward_height is the block height that the reward was generated at. This is used to calculate the coin ID.

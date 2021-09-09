@@ -12,7 +12,7 @@ from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from time import sleep
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 DEFAULT_PASSPHRASE_PROMPT = (
@@ -21,6 +21,7 @@ DEFAULT_PASSPHRASE_PROMPT = (
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
+MIN_PASSPHRASE_LEN = 8
 
 
 class KeyringIsLocked(Exception):
@@ -45,6 +46,16 @@ def supports_keyring_passphrase() -> bool:
     # from sys import platform
 
     # return platform == "linux"
+
+
+def passphrase_requirements() -> Dict[str, Any]:
+    """
+    Returns a dictionary specifying current passphrase requirements
+    """
+    if not supports_keyring_passphrase:
+        return {}
+
+    return {"is_optional": True, "min_length": MIN_PASSPHRASE_LEN}  # lgtm [py/clear-text-logging-sensitive-data]
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:
@@ -451,6 +462,56 @@ class Keychain:
         format for passphrase support.
         """
         return KeyringWrapper.get_shared_instance().using_legacy_keyring()
+
+    @staticmethod
+    def handle_migration_completed():
+        """
+        When migration completes outside of the current process, we rely on a notification to inform
+        the current process that it needs to reset/refresh its keyring. This allows us to stop using
+        the legacy keyring in an already-running daemon if migration is completed using the CLI.
+        """
+        KeyringWrapper.get_shared_instance().refresh_keyrings()
+
+    @staticmethod
+    def migrate_legacy_keyring(passphrase: Optional[str] = None, cleanup_legacy_keyring: bool = False) -> None:
+        """
+        Begins legacy keyring migration in a non-interactive manner
+        """
+        if passphrase is not None and passphrase != "":
+            KeyringWrapper.get_shared_instance().set_master_passphrase(
+                current_passphrase=None, new_passphrase=passphrase, write_to_keyring=False, allow_migration=False
+            )
+
+        KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
+
+    @staticmethod
+    def passphrase_is_optional() -> bool:
+        """
+        Returns whether a user-supplied passphrase is optional, as specified by the passphrase requirements.
+        """
+        return passphrase_requirements().get("is_optional", False)
+
+    @staticmethod
+    def minimum_passphrase_length() -> int:
+        """
+        Returns the minimum passphrase length, as specified by the passphrase requirements.
+        """
+        return passphrase_requirements().get("min_length", 0)
+
+    @staticmethod
+    def passphrase_meets_requirements(passphrase: Optional[str]) -> bool:
+        """
+        Returns whether the provided passphrase satisfies the passphrase requirements.
+        """
+        # Passphrase is not required and None was provided
+        if (passphrase is None or passphrase == "") and Keychain.passphrase_is_optional():
+            return True
+
+        # Passphrase meets the minimum length requirement
+        if passphrase is not None and len(passphrase) >= Keychain.minimum_passphrase_length():
+            return True
+
+        return False
 
     @staticmethod
     def has_master_passphrase() -> bool:
