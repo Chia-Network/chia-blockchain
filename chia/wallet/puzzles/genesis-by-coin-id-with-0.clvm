@@ -16,9 +16,10 @@
     ; Returns nil since we don't need to add any conditions
     (if delta
         (x)
+        ;(x "my_parent_cat_truth inside genesis checker" (my_parent_cat_truth Truths) "GENESSIS_ID" GENESIS_ID)
         (if (= (my_parent_cat_truth Truths) GENESIS_ID)
             ()
-            (x "parent_info" (my_parent_cat_truth Truths))
+            (x)
         )
     )
 
