@@ -9,6 +9,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 GENESIS_BY_ID_MOD = load_clvm("genesis-by-coin-id-with-0.clvm")
 GENESIS_BY_PUZHASH_MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
+DELEGATED_GENESIS_CHECKER_MOD = load_clvm("delegated_genesis_checker.clvm")
 
 
 class GenesisById:
@@ -82,3 +83,25 @@ class EverythingWithSig:
     @staticmethod
     def proof() -> Program:
         return Program.to((0, []))
+
+
+class DelegatedGenesis:
+    @staticmethod
+    def create(pubkey: G1Element) -> Program:
+        return DELEGATED_GENESIS_CHECKER_MOD.curry(pubkey)
+
+    @staticmethod
+    def uncurry(
+        genesis_coin_checker: Program,
+    ) -> Optional[G1Element]:
+        r = genesis_coin_checker.uncurry()
+        if r is None:
+            return r
+        f, args = r
+        if f != DELEGATED_GENESIS_CHECKER_MOD:
+            return None
+        return args.first().as_atom()
+
+    @staticmethod
+    def proof(signed_program: Program, inner_proof: Program) -> Program:
+        return Program.to((0, [signed_program, inner_proof]))
