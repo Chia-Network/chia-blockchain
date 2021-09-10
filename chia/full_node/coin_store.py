@@ -9,6 +9,10 @@ from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
+from time import time
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class CoinStore:
@@ -69,6 +73,7 @@ class CoinStore:
             return None
         assert block.foliage_transaction_block is not None
 
+        start = time()
         to_add: List[CoinRecord] = []
 
         for coin in tx_additions:
@@ -101,6 +106,7 @@ class CoinStore:
 
         await self._add_coin_records(to_add)
         await self._set_spent(tx_removals, block.height)
+        log.info(f"new_block() took {time() - start:0.6}s additions: {len(tx_additions)} removals: {len(tx_removals)}")
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
