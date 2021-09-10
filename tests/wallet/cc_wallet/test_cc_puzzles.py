@@ -16,7 +16,10 @@ def test_signature_genesis():
     # lineage proof is  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
     lineage_proof = (0, 0)
 
-    my_coin_bundle = ([puzzle.get_tree_hash(), puzzle.get_tree_hash(), uint64(200), innerpuz.get_tree_hash()], lineage_proof)
+    my_coin_bundle = (
+        [puzzle.get_tree_hash(), puzzle.get_tree_hash(), uint64(200), innerpuz.get_tree_hash()],
+        lineage_proof,
+    )
     solution = Program.to([0, my_coin_bundle, my_coin_bundle, my_coin_bundle, 0, 0])
     result = puzzle.run_with_cost(INFINITE_COST, solution)
 
