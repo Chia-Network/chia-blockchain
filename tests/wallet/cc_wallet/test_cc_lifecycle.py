@@ -25,6 +25,7 @@ from chia.wallet.puzzles.genesis_checkers import (
     GenesisById,
     GenesisByPuzhash,
     EverythingWithSig,
+    DelegatedGenesis,
 )
 
 from tests.clvm.test_puzzles import secret_exponent_for_index
@@ -351,6 +352,47 @@ class TestCCLifecycle:
                 extra_deltas=[1],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
+            )
+
+        finally:
+            await sim.close()
+
+    @pytest.mark.asyncio()
+    async def test_delegated_genesis(self, setup_sim):
+        sim, sim_client = setup_sim
+
+        try:
+            standard_acs = Program.to(1)
+            standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
+            await sim.farm_block(standard_acs_ph)
+
+            starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
+            sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
+            genesis_checker: Program = DelegatedGenesis.create(sk.get_g1())
+            cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
+            cc_ph: bytes32 = cc_puzzle.get_tree_hash()
+
+            await sim_client.push_tx(
+                SpendBundle(
+                    [CoinSpend(starting_coin, standard_acs, Program.to([[51, cc_ph, starting_coin.amount]]))],
+                    G2Element(),
+                )
+            )
+            await sim.farm_block()
+
+            # We're signing a different genesis checker to use here
+            new_genesis_checker: Program = GenesisById.create(starting_coin.name())
+            signature: G2Element = AugSchemeMPL.sign(sk, new_genesis_checker.get_tree_hash())
+
+            await self.do_spend(
+                sim,
+                sim_client,
+                genesis_checker,
+                [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
+                [DelegatedGenesis.proof(new_genesis_checker, GenesisById.proof().rest())],
+                [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
+                (MempoolInclusionStatus.SUCCESS, None),
+                signatures=[signature]
             )
 
         finally:
