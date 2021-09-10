@@ -4,7 +4,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-MOD = load_clvm("genesis_with_signature.clvm", package_or_requirement=__name__)
+MOD = load_clvm("everything_with_signature.clvm", package_or_requirement=__name__)
 
 
 def create_genesis_sig_checker(pubkey: bytes32) -> Program:
