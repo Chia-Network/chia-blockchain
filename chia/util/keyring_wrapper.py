@@ -144,7 +144,8 @@ class KeyringWrapper:
         return keyring
 
     def _configure_legacy_backend(self) -> LegacyKeyring:
-        # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring, Mac Keychain, or Windows Credential Manager
+        # If keyring.yaml isn't found or is empty, check if we're using
+        # CryptFileKeyring, Mac Keychain, or Windows Credential Manager
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
         if filekeyring and not filekeyring.has_content():
             keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
