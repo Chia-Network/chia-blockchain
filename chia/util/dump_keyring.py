@@ -2,15 +2,26 @@
 
 import click
 import colorama
+import os
+import sys
 import threading
 import yaml
 
-from chia.cmds.passphrase_funcs import read_passphrase_from_file
+# Fix module resolution issue between chia/util/ssl.py and `import ssl`
+# aiohttp imports ssl, which incorrectly finds chia/util/ssl.py. As a
+# workaround, we'll place chia/util at the end of sys.path
+search_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+try:
+    index = sys.path.index(search_path)
+    sys.path.append(sys.path.pop(index))
+except Exception:
+    pass
+
+from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyring
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from cryptography.exceptions import InvalidTag
-from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -51,7 +62,8 @@ def get_passphrase_prompt(keyring_file: str) -> str:
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
 @click.option("--pretty-print", is_flag=True, default=False)
 def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapper], pretty_print: bool):
-    passphrase: str = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+    saved_passphrase: Optional[str] = KeyringWrapper.get_shared_instance().get_master_passphrase_from_credential_store()
+    passphrase: str = saved_passphrase or DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
     prompt: str = get_passphrase_prompt(str(keyring_file))
     data: Dict[str, Any] = {}
 
@@ -80,7 +92,7 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
                 print(data)
             break
         except (ValueError, InvalidTag):
-            passphrase = getpass(prompt)
+            passphrase = prompt_for_passphrase(prompt)
         except Exception as e:
             print(f"Unhandled exception: {e}")
             break
