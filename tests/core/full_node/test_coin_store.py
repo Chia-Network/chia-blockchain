@@ -167,7 +167,9 @@ class TestCoinStore:
                     coins = block.get_included_reward_coins()
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                    await coin_store._set_spent([r.coin.name() for r in records], block.height)
+                    fut = coin_store._set_spent([r.coin.name() for r in records], block.height)
+                    if fut:
+                        await fut
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
@@ -198,7 +200,9 @@ class TestCoinStore:
                         await coin_store.get_coin_record(coin.name()) for coin in coins
                     ]
 
-                    await coin_store._set_spent([r.coin.name() for r in records], block.height)
+                    fut = coin_store._set_spent([r.coin.name() for r in records], block.height)
+                    if fut:
+                        await fut
 
                     records: List[Optional[CoinRecord]] = [
                         await coin_store.get_coin_record(coin.name()) for coin in coins

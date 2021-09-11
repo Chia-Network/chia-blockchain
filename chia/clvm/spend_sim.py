@@ -129,8 +129,9 @@ class SpendSim:
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
             self.defaults.GENESIS_CHALLENGE,
         )
-        await self.mempool_manager.coin_store._add_coin_records([self.new_coin_record(pool_coin, True)])
-        await self.mempool_manager.coin_store._add_coin_records([self.new_coin_record(farmer_coin, True)])
+        futs = []
+        futs.append(self.mempool_manager.coin_store._add_coin_records([self.new_coin_record(pool_coin, True)]))
+        futs.append(self.mempool_manager.coin_store._add_coin_records([self.new_coin_record(farmer_coin, True)]))
 
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
@@ -148,10 +149,16 @@ class SpendSim:
                     return_removals = removals
 
                 for addition in additions:
-                    await self.mempool_manager.coin_store._add_coin_records([self.new_coin_record(addition)])
-                await self.mempool_manager.coin_store._set_spent(
-                    [r.name() for r in removals], uint32(self.block_height + 1)
+                    futs.append(self.mempool_manager.coin_store._add_coin_records([self.new_coin_record(addition)]))
+                futs.append(
+                    self.mempool_manager.coin_store._set_spent(
+                        [r.name() for r in removals], uint32(self.block_height + 1)
+                    )
                 )
+
+        for f in futs:
+            if f:
+                await f
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)

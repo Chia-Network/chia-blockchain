@@ -104,8 +104,15 @@ class CoinStore:
             )
             to_add.append(reward_coin_r)
 
-        await self._add_coin_records(to_add)
-        await self._set_spent(tx_removals, block.height)
+        add_cursor = self._add_coin_records(to_add)
+        set_cursor = self._set_spent(tx_removals, block.height)
+        if add_cursor is not None:
+            await add_cursor
+            add_cursor.close()
+        if set_cursor is not None:
+            await set_cursor
+            set_cursor.close()
+
         log.info(f"new_block() took {time() - start:0.6}s additions: {len(tx_additions)} removals: {len(tx_removals)}")
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
@@ -310,9 +317,9 @@ class CoinStore:
         await c2.close()
 
     # Store CoinRecord in DB and ram cache
-    async def _add_coin_records(self, records: List[CoinRecord]) -> None:
+    def _add_coin_records(self, records: List[CoinRecord]) -> Optional[aiosqlite.cursor.Cursor]:
         if records == []:
-            return
+            return None
 
         for r in records:
             if self.coin_record_cache.get(r.coin.name()) is not None:
@@ -333,14 +340,13 @@ class CoinStore:
                 bytes(record.coin.amount),
                 record.timestamp,
             )
-        cursor = await self.coin_record_db.execute(fmt, args)
-        await cursor.close()
+        return self.coin_record_db.execute(fmt, args)
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_names: List[bytes32], index: uint32) -> None:
+    def _set_spent(self, coin_names: List[bytes32], index: uint32) -> Optional[aiosqlite.cursor.Cursor]:
 
         if coin_names == []:
-            return
+            return None
 
         for n in coin_names:
             r = self.coin_record_cache.get(n)
@@ -353,4 +359,4 @@ class CoinStore:
             f"UPDATE coin_record SET spent=1,spent_index=? WHERE coin_name in ({'?,' * (len(coin_names) - 1)}?)"  # noqa
         )
         args = (index,) + tuple([n.hex() for n in coin_names])
-        await self.coin_record_db.execute(fmt, args)
+        return self.coin_record_db.execute(fmt, args)
