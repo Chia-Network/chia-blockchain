@@ -74,7 +74,7 @@ export default function WalletAdd() {
             <Grid container spacing={2}>
               {words.map((word: string, index: number) => (
                 <MnemonicField
-                  key={word}
+                  key={index}
                   word={word}
                   id={`id_${index + 1}`}
                   index={index + 1}
