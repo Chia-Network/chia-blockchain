@@ -175,6 +175,47 @@ class WalletRpcClient(RpcClient):
             response = await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
         return TransactionRecord.from_json_dict(response["signed_tx"])
 
+    async def create_new_did_wallet(self, amount):
+        request: Dict[str, Any] = {
+            "wallet_type": "did_wallet",
+            "did_type": "new",
+            "backup_dids": [],
+            "num_of_backup_ids_needed": 0,
+            "amount": amount,
+            "host": f"{self.hostname}:{self.port}",
+        }
+        response = await self.fetch("create_new_wallet", request)
+        return response
+
+    async def create_new_did_wallet_from_recovery(self, filename):
+        request: Dict[str, Any] = {
+            "wallet_type": "did_wallet",
+            "did_type": "recovery",
+            "filename": filename,
+            "host": f"{self.hostname}:{self.port}",
+        }
+        response = await self.fetch("create_new_wallet", request)
+        return response
+
+    async def did_create_attest(self, wallet_id, coin_name, pubkey, puzhash, file_name):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "coin_name": coin_name,
+            "pubkey": pubkey,
+            "puzhash": puzhash,
+            "filename": file_name,
+        }
+        response = await self.fetch("did_create_attest", request)
+        return response
+
+    async def did_recovery_spend(self, wallet_id, attest_filenames):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "attest_filenames": attest_filenames,
+        }
+        response = await self.fetch("did_recovery_spend", request)
+        return response
+
     async def create_new_pool_wallet(
         self,
         target_puzzlehash: Optional[bytes32],
