@@ -161,7 +161,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
         if not good_perms:
             valid = False
             print(
-                f"Attempting to set permissions {octal_mode_string(mode)} on "
+                f"Attempting to set permissions {octal_mode_string(updated_mode)} on "
                 f"{file}"  # lgtm [py/clear-text-logging-sensitive-data]
             )
             os.chmod(str(file), updated_mode)
