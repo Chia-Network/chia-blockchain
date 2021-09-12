@@ -50,7 +50,7 @@ export default function Card(props: Props) {
   }
 
   return (
-    <StyledCardMaterial onClick={handleClick} clickable={!!onSelect} disabled={disabled}>
+    <StyledCardMaterial onClick={handleClick} $clickable={!!onSelect} disabled={disabled}>
       {title && (
         <StyledCardTitle>
           <Flex gap={2} alignItems="center" flexWrap="wrap">
