@@ -64,7 +64,7 @@ export default function PoolInfo(props: Props) {
           {poolInfo.description}
         </Typography>
       </Flex>
-      <CardKeyValue rows={rows} $hideDivider />
+      <CardKeyValue rows={rows} hideDivider />
     </Flex>
   );
 }

@@ -337,7 +337,7 @@ export default function PlotNFTCard(props: Props) {
 
           <Flex flexDirection="column" gap={2} flexGrow={1}>
             <Flex flexDirection="column" flexGrow={1}>
-              <CardKeyValue rows={rows} $hideDivider />
+              <CardKeyValue rows={rows} hideDivider />
             </Flex>
 
             {!isSelfPooling && !!totalPointsFound24 && (
