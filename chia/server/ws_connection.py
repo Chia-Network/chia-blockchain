@@ -91,7 +91,7 @@ class WSChiaConnection:
         self.request_results: Dict[bytes32, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
-        self.capabilities: Optional[List[Tuple[uint16, str]]] = None
+        self.capabilities: List[Tuple[uint16, str]] = []
         if is_outbound:
             self.request_nonce: uint16 = uint16(0)
         else:
