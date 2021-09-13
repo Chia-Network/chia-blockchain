@@ -326,7 +326,7 @@ export default function PlotNFTCard(props: Props) {
                     <Typography variant="body2" color="textSecondary">
                       <Trans>Pool:</Trans>
                     </Typography>
-                    <Link target="_blank" href={pool_url} to='/'>
+                    <Link target="_blank" href={pool_url}>
                       {pool_url}
                     </Link>
                   </Flex>

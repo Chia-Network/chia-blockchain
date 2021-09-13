@@ -20,8 +20,8 @@ type Props = BaseLinkProps &
     | RouterLinkProps
   );
 
-const StyledBaseLink = styled(({ fullWidth, noWrap, ...rest }) => (
-  <BaseLink {...rest} />
+const StyledBaseLink = styled(({ fullWidth, noWrap,to, ...rest }) => (
+  <BaseLink to={to ?? "/"} {...rest} />
 ))`
   width: ${({ fullWidth }) => (fullWidth ? '100%' : 'inherit')};
   ${({ noWrap }) => `white-space: nowrap;`}

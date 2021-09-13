@@ -67,7 +67,6 @@ export default function PlotAddChooseSize() {
           <Link
             target="_blank"
             href="https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes"
-            to='/'
           >
             Learn more
           </Link>
