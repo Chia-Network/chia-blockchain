@@ -25,7 +25,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 
 
 class DIDWallet:
@@ -461,7 +461,7 @@ class DIDWallet:
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
@@ -529,7 +529,7 @@ class DIDWallet:
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
@@ -595,7 +595,7 @@ class DIDWallet:
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
@@ -666,7 +666,7 @@ class DIDWallet:
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         spend_bundle = SpendBundle(list_of_solutions, signature)
@@ -798,7 +798,7 @@ class DIDWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
             raise ValueError("Unknown pubkey.")
-        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         message = bytes(puzhash)
         sigs = [AugSchemeMPL.sign(private, message)]
         for _ in spend_bundle.coin_spends:
@@ -968,8 +968,9 @@ class DIDWallet:
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
+        record: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_pubkey(pubkey)
+        assert record is not None
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, record.index)
         signature = AugSchemeMPL.sign(private, message)
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)

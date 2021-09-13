@@ -31,7 +31,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
+from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -211,10 +211,16 @@ class WalletStateManager:
             derived = self.get_public_key(uint32(i))
             if derived == pubkey:
                 return i
+            derived = self.get_public_key_unhardened(uint32(i))
+            if derived == pubkey:
+                return i
         return -1
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
+
+    def get_public_key_unhardened(self, index: uint32) -> G1Element:
+        return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
 
     async def load_wallets(self):
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -242,10 +248,14 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
     async def get_keys(self, puzzle_hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
-        index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(puzzle_hash)
-        if index_for_puzzlehash is None:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
             raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
-        private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
+        if record.hardened:
+            private = master_sk_to_wallet_sk(self.private_key, record.index)
+            pubkey = private.get_g1()
+            return pubkey, private
+        private = master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
         pubkey = private.get_g1()
         return pubkey, private
 
@@ -287,46 +297,63 @@ class WalletStateManager:
             for index in range(start_index, unused + to_generate):
                 if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
                     continue
-                if WalletType(target_wallet.type()) == WalletType.RATE_LIMITED:
-                    if target_wallet.rl_info.initialized is False:
-                        break
-                    wallet_type = target_wallet.rl_info.type
-                    if wallet_type == "user":
-                        rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
-                    else:
-                        rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.admin_pubkey)
-                    rl_puzzle: Program = target_wallet.puzzle_for_pk(rl_pubkey)
-                    puzzle_hash: bytes32 = rl_puzzle.get_tree_hash()
+                # if WalletType(target_wallet.type()) == WalletType.RATE_LIMITED:
+                #     if target_wallet.rl_info.initialized is False:
+                #         break
+                #     wallet_type = target_wallet.rl_info.type
+                #     if wallet_type == "user":
+                #         rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
+                #     else:
+                #         rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.admin_pubkey)
+                #     rl_puzzle: Program = target_wallet.puzzle_for_pk(rl_pubkey)
+                #     puzzle_hash: bytes32 = rl_puzzle.get_tree_hash()
+                #
+                #     rl_index = self.get_derivation_index(rl_pubkey)
+                #     if rl_index == -1:
+                #         break
+                #
+                #     derivation_paths.append(
+                #         DerivationRecord(
+                #             uint32(rl_index),
+                #             puzzle_hash,
+                #             rl_pubkey,
+                #             target_wallet.type(),
+                #             uint32(target_wallet.id()),
+                #         )
+                #     )
+                #     break
 
-                    rl_index = self.get_derivation_index(rl_pubkey)
-                    if rl_index == -1:
-                        break
-
-                    derivation_paths.append(
-                        DerivationRecord(
-                            uint32(rl_index),
-                            puzzle_hash,
-                            rl_pubkey,
-                            target_wallet.type(),
-                            uint32(target_wallet.id()),
-                        )
-                    )
-                    break
-
+                # Hardened
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 if puzzle is None:
-                    self.log.warning(f"Unable to create puzzles with wallet {target_wallet}")
+                    self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                     break
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
                 derivation_paths.append(
                     DerivationRecord(
+                        uint32(index), puzzlehash, pubkey, target_wallet.type(), uint32(target_wallet.id()), True
+                    )
+                )
+                # Unhardened
+                pubkey_unhardened: G1Element = self.get_public_key_unhardened(uint32(index))
+                puzzle_unhardened: Program = target_wallet.puzzle_for_pk(bytes(pubkey_unhardened))
+                if puzzle is None:
+                    self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
+                    break
+                puzzlehash_unhardened: bytes32 = puzzle_unhardened.get_tree_hash()
+                self.log.info(
+                    f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
+                )
+                derivation_paths.append(
+                    DerivationRecord(
                         uint32(index),
-                        puzzlehash,
-                        pubkey,
+                        puzzlehash_unhardened,
+                        pubkey_unhardened,
                         target_wallet.type(),
                         uint32(target_wallet.id()),
+                        False,
                     )
                 )
             puzzle_hashes = [record.puzzle_hash for record in derivation_paths]
@@ -347,7 +374,8 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
         for index in range(unused, last):
-            pubkey: G1Element = self.get_public_key(uint32(index))
+            # Since DID are not released yet we can assume they are only using unhardened keys derivation
+            pubkey: G1Element = self.get_public_key_unhardened(uint32(index))
             puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
             puzzlehash: bytes32 = puzzle.get_tree_hash()
             self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
@@ -358,6 +386,7 @@ class WalletStateManager:
                     pubkey,
                     target_wallet.wallet_info.type,
                     uint32(target_wallet.wallet_info.id),
+                    False,
                 )
             )
         await self.puzzle_store.add_derivation_paths(derivation_paths)
@@ -377,7 +406,7 @@ class WalletStateManager:
             # Now we must have unused public keys
             unused = await self.puzzle_store.get_unused_derivation_path()
             assert unused is not None
-            record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(unused, wallet_id)
+            record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(unused, wallet_id, False)
             assert record is not None
 
             # Set this key to used so we never use it again
