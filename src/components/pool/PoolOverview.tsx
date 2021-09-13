@@ -72,7 +72,7 @@ const groupsCols = [
         nft.pool_wallet_status.current.state === PlotNFTStateEnum.SELF_POOLING;
 
       return (
-        <More open>
+        <More>
           {({ onClose }) => (
             <Box>
               {isSelfPooling && (

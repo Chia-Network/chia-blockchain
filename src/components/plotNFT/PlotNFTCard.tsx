@@ -256,7 +256,7 @@ export default function PlotNFTCard(props: Props) {
               <Box flexGrow={1}>
                 <PlotNFTName nft={nft} variant="h6" />
               </Box>
-              <More open>
+              <More>
                 {({ onClose }) => (
                   <Box>
                     <MenuItem
