@@ -310,6 +310,8 @@ class WebSocketServer:
             response = await self.keyring_status()
         elif command == "unlock_keyring":
             response = await self.unlock_keyring(cast(Dict[str, Any], data))
+        elif command == "validate_keyring_passphrase":
+            response = await self.validate_keyring_passphrase(cast(Dict[str, Any], data))
         elif command == "migrate_keyring":
             response = await self.migrate_keyring(cast(Dict[str, Any], data))
         elif command == "set_keyring_passphrase":
@@ -380,6 +382,23 @@ class WebSocketServer:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
+
+        response: Dict[str, Any] = {"success": success, "error": error}
+        return response
+
+    async def validate_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        success: bool = False
+        error: Optional[str] = None
+        key: Optional[str] = request.get("key", None)
+        if type(key) is not str:
+            return {"success": False, "error": "missing key"}
+
+        try:
+            success = Keychain.master_passphrase_is_valid(key, force_reload=True)
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
+            error = "validation exception"
 
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
