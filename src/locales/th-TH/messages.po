@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:56\n"
+"PO-Revision-Date: 2021-09-13 19:38\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -79,7 +79,7 @@ msgstr "เพิ่ม"
 #: src/components/wallet/did/WalletDID.tsx:874
 #: src/components/wallet/did/WalletDIDCreate.tsx:205
 msgid "Add Backup ID"
-msgstr ""
+msgstr "เพิ่มไอดีสำรอง"
 
 #: src/components/plot/PlotHeader.tsx:91
 msgid "Add Plot Directory"
@@ -149,7 +149,7 @@ msgstr "จำนวนเหรียญเริ่มต้น"
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:62
 msgid "Amount must be an even amount."
-msgstr ""
+msgstr "จำนวนต้องเป็นจำนวนคู่"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:46
@@ -360,7 +360,7 @@ msgstr "กำลังปิด Node และเซิร์ฟเวอร์
 
 #: src/components/wallet/did/WalletDID.tsx:984
 msgid "Coin Name"
-msgstr ""
+msgstr "ชื่อเหรียญ"
 
 #: src/components/trading/TradingOverview.jsx:366
 msgid "Coins:"
@@ -497,7 +497,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
-msgstr ""
+msgstr "สร้างวอลเล็ตใหม่"
 
 #: src/components/trading/TradeManager.tsx:45
 msgid "Create Offer"
@@ -1357,7 +1357,7 @@ msgstr "โดยเฉลี่ยแล้วจะมีเวลาหนึ
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:34
 msgid "Only one backup file is allowed."
-msgstr ""
+msgstr "อนุญาตให้ใช้ไฟล์สำรองได้เพียงไฟล์เดียวเท่านั้น"
 
 #: src/components/wallet/create/recoverDIDWallet.js:156
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
@@ -1418,20 +1418,20 @@ msgstr "กรุณากรอกค่าธรรมเนียมเป็
 
 #: src/components/wallet/did/WalletDID.tsx:924
 msgid "Please enter a coin"
-msgstr ""
+msgstr "โปรดระบุเหรียญ"
 
 #: src/components/wallet/did/WalletDID.tsx:526
 #: src/components/wallet/did/WalletDID.tsx:914
 msgid "Please enter a filename"
-msgstr ""
+msgstr "โปรดระบุชื่อไฟล์"
 
 #: src/components/wallet/did/WalletDID.tsx:934
 msgid "Please enter a pubkey"
-msgstr ""
+msgstr "โปรดระบุคีย์สาธารณะ"
 
 #: src/components/wallet/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
-msgstr ""
+msgstr "โปรดระบุพัซเซิลแฮช"
 
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
@@ -1440,7 +1440,7 @@ msgstr "กรุณากรอกจำนวนเหรียญเริ่
 #: src/components/wallet/did/WalletDID.tsx:777
 #: src/components/wallet/did/WalletDIDCreate.tsx:76
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
-msgstr ""
+msgstr "โปรดระบุจำนวนเต็มที่ถูกต้องตั้งแต่ 0 ขึ้นไป สำหรับจำนวนไอดีสำรองที่จำเป็นสำหรับการกู้คืน"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
@@ -1450,7 +1450,7 @@ msgstr "กรุณาป้อนจำนวนที่ถูกต้อง
 
 #: src/components/wallet/did/WalletDIDCreate.tsx:50
 msgid "Please enter a valid numeric amount."
-msgstr ""
+msgstr "โปรดระบุจำนวนตัวเลขที่ถูกต้อง"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:79
@@ -1483,7 +1483,7 @@ msgstr "กรุณาเลือกจำนวนที่ต้องกา
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:55
 msgid "Please select backup file first"
-msgstr ""
+msgstr "โปรดเลือกไฟล์สำรองข้อมูลก่อน"
 
 #: src/components/trading/CreateOffer.jsx:76
 msgid "Please select buy or sell"
@@ -1757,7 +1757,7 @@ msgstr "คีย์สาธารณะ:"
 
 #: src/components/wallet/did/WalletDID.tsx:1002
 msgid "Puzzlehash"
-msgstr ""
+msgstr "พัซเซิลแฮช"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
 msgid "Queue Name"
@@ -1812,7 +1812,7 @@ msgstr "ที่อยู่ผู้รับ"
 #: src/components/wallet/did/WalletDID.tsx:464
 #: src/components/wallet/did/WalletDIDRecovery.tsx:124
 msgid "Recover"
-msgstr ""
+msgstr "กู้คืน"
 
 #: src/components/wallet/did/WalletDID.tsx:340
 #: src/components/wallet/did/WalletDID.tsx:480
@@ -1829,7 +1829,7 @@ msgstr ""
 
 #: src/components/wallet/did/WalletDIDSelect.tsx:39
 msgid "Recover Wallet"
-msgstr ""
+msgstr "กู้คืนวอลเล็ต"
 
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
@@ -1951,7 +1951,7 @@ msgstr "เลือกแล้ว"
 
 #: src/components/wallet/did/WalletDIDRecovery.tsx:91
 msgid "Selected recovery file:"
-msgstr ""
+msgstr "ไฟล์กู้คืนที่ถูกเลือก:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2508,7 +2508,7 @@ msgstr "สถานะกระเป๋าเงิน"
 
 #: src/components/wallet/did/WalletDID.tsx:1118
 msgid "Wallet does not exists"
-msgstr ""
+msgstr "ไม่มีวอลเล็ตนี้"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
