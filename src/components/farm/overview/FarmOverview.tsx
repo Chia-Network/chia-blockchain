@@ -37,7 +37,7 @@ export default function FarmOverview() {
             <Trans>Your Farm Overview</Trans>
           </Typography>
         </Flex>
-        <More open>
+        <More>
           {({ onClose }) => (
             <Box>
               <MenuItem

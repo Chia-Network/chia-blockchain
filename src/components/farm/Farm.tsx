@@ -39,7 +39,7 @@ export default function Farm() {
           <>
             <FarmLatestBlockChallenges />
             {hasHarvesterConnections && (
-              <AdvancedOptions expanded>
+              <AdvancedOptions>
                 <Flex flexDirection="column" gap={3}>
                   <FarmYourHarvesterNetwork />
                 </Flex>

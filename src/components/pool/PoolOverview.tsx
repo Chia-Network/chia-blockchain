@@ -189,7 +189,6 @@ export default function PoolOverview() {
         </Flex>
         {showTable ? (
           <Table
-            component='div'
             uniqueField="p2_singleton_puzzle_hash"
             rows={nfts}
             cols={groupsCols}
