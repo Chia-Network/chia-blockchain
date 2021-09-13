@@ -82,6 +82,7 @@ from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from tests.time_out_assert import time_out_assert
 from tests.wallet_tools import WalletTool
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -249,17 +250,12 @@ class BlockTools:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
 
-        refresh_done = False
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
 
         def test_callback(update_result: PlotRefreshResult):
-            if update_result.remaining_files == 0:
-                nonlocal refresh_done
-                refresh_done = True
-            else:
+            if update_result.remaining_files > 0:
                 assert 0 < update_result.loaded_plots <= refresh_parameter.batch_size
                 assert update_result.loaded_plots == update_result.processed_files
-                assert update_result.remaining_files > 0
                 assert update_result.loaded_size > 0
                 assert 0 < update_result.duration < 5
 
@@ -268,12 +264,7 @@ class BlockTools:
         )
         plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
         plot_manager.start_refreshing()
-
-        retry = 5
-        while not refresh_done and retry > 0:
-            time.sleep(1)
-            retry -= 1
-        assert refresh_done
+        await time_out_assert(10, plot_manager.needs_refresh, value=False)
         plot_manager.stop_refreshing()
         self.plots: Dict[Path, PlotInfo] = plot_manager.plots
         # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
