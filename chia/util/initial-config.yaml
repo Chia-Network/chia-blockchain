@@ -9,6 +9,16 @@ outbound_rate_limit_percent: 30
 
 network_overrides: &network_overrides
   constants:
+    metrics-test:
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: 539e5abc3e719341183682043def9a3f39cd937245246f0b136a1035ae1279d5
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
     mainnet:
       NETWORK_TYPE: 0
       GENESIS_CHALLENGE: ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb
@@ -67,6 +77,9 @@ network_overrides: &network_overrides
       DIFFICULTY_STARTING: 30
       RUST_CONDITION_CHECKER: 0
   config:
+    metrics-test:
+      address_prefix: "txch"
+      default_full_node_port: 58445
     mainnet:
       address_prefix: "xch"
       default_full_node_port: 8444
@@ -84,7 +97,7 @@ network_overrides: &network_overrides
       address_prefix: "txch"
       default_full_node_port: 58444
 
-selected_network: &selected_network "mainnet"
+selected_network: &selected_network "metrics-test"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
@@ -168,7 +181,7 @@ farmer:
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 58445
   harvester_peer:
     host: *self_hostname
     port: 8448
@@ -218,7 +231,7 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 8444
+      port: 58445
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -253,7 +266,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 8444
+  port: 58445
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -312,7 +325,7 @@ full_node:
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer-metrics-test-metrics-test.chia.net"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -320,8 +333,8 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
-      port: 8444
+      host: metrics-test-metrics-test-introducer-0.chia.net  # Chia AWS introducer IPv4/IPv6
+      port: 58445
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -387,7 +400,7 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 58445
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
@@ -404,8 +417,8 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    host: metrics-test-metrics-test-introducer-0.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 58445
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
