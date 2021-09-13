@@ -14,9 +14,12 @@ const StyledCardTitle = styled(Box)`
   padding: ${({ theme }) => `${theme.spacing(2)}px ${theme.spacing(2)}px`};
 `;
 
-const StyledCardMaterial = styled(CardMaterial)`
+const StyledCardMaterial = styled(({ cursor, opacity, clickable, ...rest }) => (
+  <CardMaterial {...rest}/>
+))`
   cursor: ${({ clickable }) => clickable ? 'pointer' : 'default'};
   opacity: ${({ disabled }) => disabled ? '0.5': '1'};
+
 `;
 
 type Props = {
@@ -50,7 +53,7 @@ export default function Card(props: Props) {
   }
 
   return (
-    <StyledCardMaterial onClick={handleClick} $clickable={!!onSelect} disabled={disabled}>
+    <StyledCardMaterial onClick={handleClick} clickable={!!onSelect} disabled={disabled}>
       {title && (
         <StyledCardTitle>
           <Flex gap={2} alignItems="center" flexWrap="wrap">
