@@ -137,7 +137,8 @@
 #         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
 #         address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash(), "xch")
 #         assert await receiving_wallet.get_spendable_balance() == 0
-#         val = await api_user.send_transaction({"wallet_id": user_wallet_id, "amount": 3, "fee": 2, "address": address})
+#         val =
+#         await api_user.send_transaction({"wallet_id": user_wallet_id, "amount": 3, "fee": 2, "address": address})
 #         assert "transaction_id" in val
 #         await time_out_assert(15, is_transaction_in_mempool, True, user_wallet_id, api_user, val["transaction_id"])
 #         for i in range(0, num_blocks):

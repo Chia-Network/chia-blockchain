@@ -1,15 +1,11 @@
 import asyncio
 import logging
-from typing import List
-
 import pytest
 from blspy import PrivateKey
-
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import PoolState, FARMING_TO_POOL
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.coin_spend import CoinSpend
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
@@ -46,8 +42,6 @@ class TestPoolWallet2:
 
         for i in range(3):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
-        all_blocks: List[FullBlock] = await full_node_api.get_all_full_blocks()
 
         await asyncio.sleep(3)
         owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(wsm.private_key, 3)

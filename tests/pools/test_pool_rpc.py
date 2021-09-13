@@ -233,11 +233,9 @@ class TestPoolWalletRpc:
             == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
-        assert pool_config["launcher_id"] in {
-            "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
-            "0x2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
-            "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
-        }
+        all_coin_records = await wallet_node_0.wallet_state_manager.coin_store.get_all_coins()
+        all_coin_name = [record.coin.name().hex() for record in all_coin_records]
+        assert pool_config["launcher_id"] in all_coin_name
         assert pool_config["pool_url"] == ""
 
     @pytest.mark.asyncio
@@ -291,11 +289,9 @@ class TestPoolWalletRpc:
             == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
-        assert pool_config["launcher_id"] in {
-            "0x78a1eadf583a2f27a129d7aeba076ec6a5200e1ec8225a72c9d4180342bf91a7",
-            "0x2bcab0310e78a7ab04e251ac6bdd5dfc80ce6895132e64f97265029db3d8309a",
-            "0x09edf686c318c138cd3461c38e9b4e10e7f21fc476a0929b4480e126b6efcb81",
-        }
+        all_coin_records = await wallet_node_0.wallet_state_manager.coin_store.get_all_coins()
+        all_coin_name = [record.coin.name().hex() for record in all_coin_records]
+        assert pool_config["launcher_id"] in all_coin_name
         assert pool_config["pool_url"] == "http://pool.example.com"
 
     @pytest.mark.asyncio
