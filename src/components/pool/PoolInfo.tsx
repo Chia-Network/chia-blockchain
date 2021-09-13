@@ -41,7 +41,7 @@ export default function PoolInfo(props: Props) {
 
   return (
     <Flex flexDirection="column" gap={2}>
-      {/* 
+      {/*
       <Box>
         <StyledLogo src={poolInfo.logo_url} alt={t`Pool logo`} />
       </Box>
@@ -64,7 +64,7 @@ export default function PoolInfo(props: Props) {
           {poolInfo.description}
         </Typography>
       </Flex>
-      <CardKeyValue rows={rows} hideDivider />
+      <CardKeyValue rows={rows} $hideDivider />
     </Flex>
   );
 }

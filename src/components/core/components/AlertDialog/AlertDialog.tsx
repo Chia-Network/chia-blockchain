@@ -39,10 +39,8 @@ export default function AlertDialog(props: Props) {
     >
       {title && <DialogTitle id="alert-dialog-title">{title}</DialogTitle>}
       {children && (
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
+        <DialogContent id="alert-dialog-description">
             {children}
-          </DialogContentText>
         </DialogContent>
       )}
 

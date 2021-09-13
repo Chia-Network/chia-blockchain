@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, createRef } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { t, Trans } from '@lingui/macro';
@@ -36,7 +36,7 @@ export default function PlotAdd() {
   const fingerprint = useSelector(
     (state: RootState) => state.wallet_state.selected_fingerprint,
   );
-  const addNFTref = useRef();
+  const addNFTref = createRef();
   const unconfirmedNFTs = useUnconfirmedPlotNFTs();
   const openDialog = useOpenDialog();
   const state = useSelector((state: RootState) => state.router.location.state);

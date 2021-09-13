@@ -28,7 +28,7 @@ export default function Farm() {
           <>
             <FarmLastAttemptedProof />
             <FarmLatestBlockChallenges />
-            <AdvancedOptions>
+            <AdvancedOptions expanded>
               <Flex flexDirection="column" gap={3}>
                 <FarmFullNodeConnections />
                 <FarmYourHarvesterNetwork />
@@ -39,7 +39,7 @@ export default function Farm() {
           <>
             <FarmLatestBlockChallenges />
             {hasHarvesterConnections && (
-              <AdvancedOptions>
+              <AdvancedOptions expanded>
                 <Flex flexDirection="column" gap={3}>
                   <FarmYourHarvesterNetwork />
                 </Flex>

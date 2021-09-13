@@ -46,9 +46,9 @@ export default function SelectKey() {
   const hasFingerprints =
     publicKeyFingerprints && !!publicKeyFingerprints.length;
 
-  async function handleClick(fingerprint: Fingerprint) {
-    await dispatch(resetMnemonic());
-    await dispatch(login_action(fingerprint));
+  function handleClick(fingerprint: Fingerprint) {
+    dispatch(resetMnemonic());
+    dispatch(login_action(fingerprint));
   }
 
   function handleShowKey(fingerprint: Fingerprint) {
@@ -70,21 +70,21 @@ export default function SelectKey() {
       >
         {response.used_for_farmer_rewards && (<Alert severity="warning">
           <Trans>
-            Warning: This key is used for your farming rewards address. 
+            Warning: This key is used for your farming rewards address.
             By deleting this key you may lose access to any future farming rewards
             </Trans>
         </Alert>)}
 
         {response.used_for_pool_rewards && (<Alert severity="warning">
           <Trans>
-            Warning: This key is used for your pool rewards address. 
+            Warning: This key is used for your pool rewards address.
             By deleting this key you may lose access to any future pool rewards
           </Trans>
         </Alert>)}
 
         {response.wallet_balance && (<Alert severity="warning">
           <Trans>
-            Warning: This key is used for a wallet that may have a non-zero balance. 
+            Warning: This key is used for a wallet that may have a non-zero balance.
             By deleting this key you may lose access to this wallet
           </Trans>
         </Alert>)}

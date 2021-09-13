@@ -104,7 +104,7 @@ export default function PlotAddNumberOfPlots() {
         )}
       </Grid>
 
-      <AdvancedOptions>
+      <AdvancedOptions expanded>
         <Grid spacing={1} container>
           <Grid xs={12} sm={6} item>
             <FormControl fullWidth>

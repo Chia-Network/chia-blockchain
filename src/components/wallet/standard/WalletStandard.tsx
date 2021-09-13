@@ -658,7 +658,7 @@ export default function StandardWallet(props: StandardWalletProps) {
             &nbsp;
             <WalletStatus height />
           </Flex>
-          <More>
+          <More open>
             {({ onClose }) => (
               <Box>
                 <MenuItem

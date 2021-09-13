@@ -39,14 +39,14 @@ export default function CardKeyValue(props: Props) {
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.key}>
-            <StyledTableCell hideDivider={hideDivider}>
-              <Typography variant="body1" color="textSecondary" noWrap>
+            <StyledTableCell $hideDivider={hideDivider}>
+              <Typography component='div' variant="body1" color="textSecondary" noWrap>
                 {row.label}
               </Typography>
             </StyledTableCell>
-            <StyledTableCell align="right" hideDivider={hideDivider}>
+            <StyledTableCell align="right" $hideDivider={hideDivider}>
               <Box maxWidth="100%">
-                <Typography variant="body2" noWrap>
+                <Typography component='div' variant="body2" noWrap>
                   {row.value}
                 </Typography>
               </Box>
@@ -60,6 +60,6 @@ export default function CardKeyValue(props: Props) {
 
 CardKeyValue.defaultProps = {
   label: undefined,
-  hideDivider: false,
+  hideDivider: 0,
   size: 'small',
 };

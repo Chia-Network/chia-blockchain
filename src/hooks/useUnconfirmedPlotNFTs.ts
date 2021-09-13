@@ -8,7 +8,7 @@ export default function useUnconfirmedPlotNFTs(): {
   add: (item: UnconfirmedPlotNFT) => void;
   remove: (transactionId: string) => void;
 } {
-  let [unconfirmed] = useLocalStorage<UnconfirmedPlotNFT[]>(
+  const [unconfirmed] = useLocalStorage<UnconfirmedPlotNFT[]>(
     LOCAL_STORAGE_KEY,
     [],
   );

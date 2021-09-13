@@ -13,11 +13,11 @@ import {
   Typography,
 } from '@material-ui/core';
 import { useDispatch } from 'react-redux';
+import { bech32m } from 'bech32';
 import {
   getRewardTargets,
   setRewardTargets,
 } from '../../modules/farmerMessages';
-import { bech32m } from 'bech32';
 
 const StyledTextField = styled(TextField)`
   min-width: 640px;
@@ -56,12 +56,17 @@ export default function FarmManageFarmingRewards(props: Props) {
   function handleClose() {
     onClose();
   }
+  function handleDialogClose(event: any, reason: any) {
+      if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
+      onClose();
+      }}
 
-  function checkAddress(stringToCheck: string): boolean {
+      function checkAddress(stringToCheck: string): boolean {
     try {
       bech32m.decode(stringToCheck);
       return true;
-    } catch (err) {
+    }
+    catch {
       return false;
     }
   }
@@ -108,8 +113,7 @@ export default function FarmManageFarmingRewards(props: Props) {
 
   return (
     <Dialog
-      disableBackdropClick
-      disableEscapeKeyDown
+      onClose={handleDialogClose}
       maxWidth="lg"
       aria-labelledby="manage-farming-rewards-title"
       open={open}

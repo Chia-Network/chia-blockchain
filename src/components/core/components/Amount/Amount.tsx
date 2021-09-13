@@ -71,8 +71,8 @@ export default function Amount(props: AmountProps) {
         }}
         {...rest}
       />
-      
-        <FormHelperText>
+
+        <FormHelperText component='div' >
           <Flex alignItems="center" gap={2}>
             <Flex flexGrow={1} gap={1}>
               {!!mojo && (

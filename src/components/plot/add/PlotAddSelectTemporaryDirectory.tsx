@@ -71,7 +71,7 @@ export default function PlotAddSelectTemporaryDirectory() {
           size="large"
           variant="outlined"
           selected={hasWorkspaceLocation}
-          nowrap
+          nowrap={1}
         >
           {hasWorkspaceLocation ? (
             <Trans>Selected</Trans>
@@ -102,7 +102,7 @@ export default function PlotAddSelectTemporaryDirectory() {
               size="large"
               variant="outlined"
               selected={hasWorkspaceLocation2}
-              nowrap
+              nowrap={1}
             >
               {hasWorkspaceLocation2 ? (
                 <Trans>Selected</Trans>

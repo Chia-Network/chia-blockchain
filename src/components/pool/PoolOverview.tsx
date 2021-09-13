@@ -72,7 +72,7 @@ const groupsCols = [
         nft.pool_wallet_status.current.state === PlotNFTStateEnum.SELF_POOLING;
 
       return (
-        <More>
+        <More open>
           {({ onClose }) => (
             <Box>
               {isSelfPooling && (
@@ -189,6 +189,7 @@ export default function PoolOverview() {
         </Flex>
         {showTable ? (
           <Table
+            component='div'
             uniqueField="p2_singleton_puzzle_hash"
             rows={nfts}
             cols={groupsCols}

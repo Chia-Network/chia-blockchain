@@ -230,7 +230,7 @@ export default function PlotNFTCard(props: Props) {
       value: <FormatLargeNumber value={totalPointsFound24} />,
     },
     !isSelfPooling && {
-      key: 'points_found_24',
+      key: 'points_successful_24',
       label: (
         <Typography>
           <Trans>Points Successful in Last 24 Hours</Trans>
@@ -256,7 +256,7 @@ export default function PlotNFTCard(props: Props) {
               <Box flexGrow={1}>
                 <PlotNFTName nft={nft} variant="h6" />
               </Box>
-              <More>
+              <More open>
                 {({ onClose }) => (
                   <Box>
                     <MenuItem
@@ -320,13 +320,13 @@ export default function PlotNFTCard(props: Props) {
               </More>
             </Flex>
             <StyledInvisibleContainer>
-              <Typography variant="body2" noWrap>
+              <Typography component='div' variant="body2" noWrap>
                 {!!pool_url && (
                   <Flex alignItems="center" gap={1}>
                     <Typography variant="body2" color="textSecondary">
                       <Trans>Pool:</Trans>
                     </Typography>
-                    <Link target="_blank" href={pool_url}>
+                    <Link target="_blank" href={pool_url} to='/'>
                       {pool_url}
                     </Link>
                   </Flex>
@@ -337,7 +337,7 @@ export default function PlotNFTCard(props: Props) {
 
           <Flex flexDirection="column" gap={2} flexGrow={1}>
             <Flex flexDirection="column" flexGrow={1}>
-              <CardKeyValue rows={rows} hideDivider />
+              <CardKeyValue rows={rows} $hideDivider />
             </Flex>
 
             {!isSelfPooling && !!totalPointsFound24 && (

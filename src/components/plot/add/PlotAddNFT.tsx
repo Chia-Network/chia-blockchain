@@ -81,7 +81,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
                   <Trans>Select your Plot NFT</Trans>
                 </InputLabel>
                 <Select name="p2_singleton_puzzle_hash">
-                  <MenuItem value={''}>
+                  <MenuItem value="">
                     <em>
                       <Trans>None</Trans>
                     </em>
@@ -119,7 +119,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
             </Grid>
 
             <Grid xs={12} md={8} lg={6} item>
-              <Button onClick={handleJoinPool} variant="filled">
+              <Button onClick={handleJoinPool} variant="outlined">
                 <Trans>+ Add New Plot NFT</Trans>
               </Button>
             </Grid>

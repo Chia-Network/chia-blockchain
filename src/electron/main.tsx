@@ -1,4 +1,4 @@
-import { app, dialog, shell, ipcMain, BrowserWindow, Menu } from 'electron';
+import { app, dialog, shell, ipcMain, BrowserWindow, Menu, session } from 'electron';
 import path from 'path';
 import React from 'react';
 import url from 'url';
@@ -140,15 +140,17 @@ if (!handleSquirrelEvent()) {
       });
 
       if (dev_config.redux_tool) {
-        BrowserWindow.addDevToolsExtension(
-          path.join(os.homedir(), dev_config.redux_tool),
-        );
+        const reduxDevToolsPath = path.join(os.homedir(), dev_config.react_tool)
+        app.whenReady().then(async () => {
+          await session.defaultSession.loadExtension(reduxDevToolsPath)
+        })
       }
 
       if (dev_config.react_tool) {
-        BrowserWindow.addDevToolsExtension(
-          path.join(os.homedir(), dev_config.react_tool),
-        );
+        const reactDevToolsPath = path.join(os.homedir(), dev_config.redux_tool);
+        app.whenReady().then(async () => {
+          await session.defaultSession.loadExtension(reactDevToolsPath)
+        })
       }
 
       const startUrl =
