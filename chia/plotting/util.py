@@ -16,8 +16,9 @@ log = logging.getLogger(__name__)
 @dataclass
 class PlotsRefreshParameter:
     interval_seconds: int = 120
-    batch_size: int = 30
-    batch_sleep_milliseconds: int = 10
+    retry_invalid_seconds: int = 1200
+    batch_size: int = 300
+    batch_sleep_milliseconds: int = 1
 
 
 @dataclass
