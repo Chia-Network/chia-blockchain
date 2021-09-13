@@ -56,7 +56,7 @@ export default function PlotAddSelectFinalDirectory() {
           size="large"
           variant="outlined"
           selected={hasFinalLocation}
-          nowrap={1}
+          nowrap
         >
           {hasFinalLocation ? <Trans>Selected</Trans> : <Trans>Browse</Trans>}
         </ButtonSelected>
