@@ -3,7 +3,6 @@ import logging
 import os
 import pytest
 import random
-import unittest
 
 from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -70,7 +69,7 @@ def child_writer_dispatch(func, lock_path: Path, timeout: int, max_iters: int):
         raise e
 
 
-class TestFileKeyringSynchronization(unittest.TestCase):
+class TestFileKeyringSynchronization:
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
