@@ -24,7 +24,7 @@ function getData(sync) {
           </Trans>
         </StyledWarning>
       ),
-      color: 'orange',
+      color: 'error',
       tooltip: (
         <Trans>
           The node is syncing, which means it is downloading blocks from other

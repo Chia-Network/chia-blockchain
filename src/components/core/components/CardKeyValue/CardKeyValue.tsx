@@ -63,6 +63,6 @@ export default function CardKeyValue(props: Props) {
 
 CardKeyValue.defaultProps = {
   label: undefined,
-  hideDivider: 0,
+  hideDivider: false,
   size: 'small',
 };
