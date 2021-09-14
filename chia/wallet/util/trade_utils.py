@@ -70,11 +70,11 @@ def get_discrepancies_for_spend_bundle(
             r = cc_utils.uncurry_cc(puzzle)
             if r:
                 # Calculate output amounts
-                mod_hash, genesis_checker, inner_puzzle = r
+                mod_hash, genesis_checker_hash, inner_puzzle = r
                 innersol = solution.first()
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
-                colour = bytes(genesis_checker).hex()
+                colour = bytes(genesis_checker_hash).hex()
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total
                 else:
