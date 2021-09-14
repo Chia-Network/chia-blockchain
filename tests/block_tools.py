@@ -47,7 +47,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.util import PlotInfo, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
+from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
 from chia.plotting.manager import PlotManager
 from chia.server.server import ssl_context_for_server
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -1043,11 +1043,8 @@ class BlockTools:
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-        plots: List[PlotInfo] = [
-            plot_info for _, plot_info in sorted(list(self.plot_manager.plots.items()), key=lambda x: str(x[0]))
-        ]
         random.seed(seed)
-        for plot_info in plots:
+        for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
