@@ -72,7 +72,7 @@ class DBConnection:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    async def test_basic_coin_store(self, rust_checker: bool, cache_size: uint32):
+    async def test_basic_coin_store(self, cache_size: uint32):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
