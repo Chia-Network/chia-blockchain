@@ -83,6 +83,13 @@ network_overrides: &network_overrides
     testnet7:
       address_prefix: "txch"
       default_full_node_port: 58444
+      
+# Limit the number of start_full_node worker processes to reduce ram and cpu usage
+# This reduces memory overhead on systems with many cpu cores and 
+# allows users to co-farm more forks without running out of ram
+# Setting this too low reduces sync speed, but a synced node can stay synced with a multiprocessing_limit of 2
+# A value higher than 61 takes no effect, as chia limits the workers to 61 (windows server related python bug)
+# multiprocessing_limit: 4
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
