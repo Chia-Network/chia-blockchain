@@ -77,9 +77,7 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
     def outer(method):
         @wraps(method)
         def inner(self, *args, **kwargs):
-            with TempKeyring(populate=populate):
-                # Create an empty legacy keyring
-                create_empty_cryptfilekeyring()
+            with TempKeyring(populate=populate, setup_cryptfilekeyring=True):
                 return method(self, *args, **kwargs)
 
         return inner
@@ -93,12 +91,13 @@ class TempKeyring:
         user: str = "testing-1.8.0",
         service: str = "testing-chia-1.8.0",
         populate: bool = False,
+        setup_cryptfilekeyring: bool = False,
         existing_keyring_path: str = None,
         delete_on_cleanup: bool = True,
         use_os_credential_store: bool = False,
     ):
         self.keychain = self._patch_and_create_keychain(
-            user, service, populate, existing_keyring_path, use_os_credential_store
+            user, service, populate, existing_keyring_path, use_os_credential_store, setup_cryptfilekeyring
         )
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
@@ -110,6 +109,7 @@ class TempKeyring:
         populate: bool,
         existing_keyring_path: Optional[str],
         use_os_credential_store: bool,
+        setup_cryptfilekeyring: bool,
     ):
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
@@ -140,6 +140,10 @@ class TempKeyring:
         # Mock CryptFileKeyring's file_path indirectly by changing keyring.util.platform_.data_root
         # We don't want CryptFileKeyring finding the real legacy keyring
         mock_data_root.return_value = temp_dir
+
+        if setup_cryptfilekeyring:
+            # Create an empty legacy keyring
+            create_empty_cryptfilekeyring()
 
         keychain = Keychain(user=user, service=service)
         keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
