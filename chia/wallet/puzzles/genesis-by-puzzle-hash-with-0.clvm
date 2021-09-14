@@ -9,6 +9,8 @@
       GENESIS_PUZZLE_HASH
       Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
       delta
+      lineage_check_result
+      inner_conditions
       (parent_parent_id parent_amount)
     )
 
@@ -17,8 +19,8 @@
     ; Returns nil since we don't need to add any conditions
     (if delta
         (x)
-        (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths))
-            ()
+        (if (any lineage_check_result (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths)))
+            inner_conditions
             (x)
         )
     )

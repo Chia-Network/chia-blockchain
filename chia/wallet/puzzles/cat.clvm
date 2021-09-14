@@ -257,17 +257,17 @@
      ;; return true iff parent of `this_coin_info` is provably a cat
      (defun is_parent_cat (
        cat_mod_struct
-       this_coin_info
+       parent_id
        (parent_parent_coin_id parent_inner_puzzle_hash parent_amount)
      )
 
-       (if (= (f this_coin_info)
+       (if (= parent_id
               (sha256 parent_parent_coin_id
                       (cat_puzzle_hash cat_mod_struct parent_inner_puzzle_hash)
                       parent_amount
               )
            )
-           ()
+           1
            (x)
        )
      )
@@ -282,17 +282,20 @@
        (f (r (r cat_mod_struct)))
      )
 
-     (defun-inline is_lineage_proof_valid (Truths coin_info lineage_proof extra_delta)
-       (if (any (not (f lineage_proof)) extra_delta)
-           (a (genesis_coin_checker_from_cat_struct (cat_struct_truth Truths))
-              (list Truths extra_delta (r lineage_proof)))
-           (is_parent_cat (cat_struct_truth Truths) coin_info (r lineage_proof))
-       )
-     )
-
-     (defun is_bundle_valid ((coin_info . lineage_proof) Truths extra_delta)
-       (is_lineage_proof_valid Truths coin_info lineage_proof extra_delta)
-     )
+    (defun is_bundle_valid ((coin_info . lineage_proof) Truths extra_delta inner_conditions)
+      (a (genesis_coin_checker_from_cat_struct (cat_struct_truth Truths))
+          (list
+            Truths
+            extra_delta
+            (if (f lineage_proof)
+                (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) (r lineage_proof))
+                ()
+            )
+            inner_conditions
+            (r lineage_proof)
+          )
+      )
+    )
 
      (defun merge_list (one two)
       (if one
@@ -329,21 +332,21 @@
       )
       (if (is_coloured_check prev_coin_bundle (cat_struct_truth Truths))
         (if (is_coloured_check next_coin_bundle (cat_struct_truth Truths))
-          (if_is_list_merge
-            ; ensure next is a cat (to ensure its announcements can be trusted)
-            (is_bundle_valid this_coin_bundle Truths extra_delta)
-
-            (generate_final_output_conditions
-              prev_subtotal
-              ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-              (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
-              (morph_conditions inner_conditions (cat_struct_truth Truths))
-              (coin_info_for_coin_bundle prev_coin_bundle)
-              (coin_info_for_coin_bundle this_coin_bundle)
-              (coin_info_for_coin_bundle next_coin_bundle)
+            (is_bundle_valid
+              this_coin_bundle
+              Truths
+              extra_delta
+              (generate_final_output_conditions
+                prev_subtotal
+                ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
+                (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
+                (morph_conditions inner_conditions (cat_struct_truth Truths))
+                (coin_info_for_coin_bundle prev_coin_bundle)
+                (coin_info_for_coin_bundle this_coin_bundle)
+                (coin_info_for_coin_bundle next_coin_bundle)
+              )
             )
-          )
-          (x)
+            (x)
         )
         (x)
       )
