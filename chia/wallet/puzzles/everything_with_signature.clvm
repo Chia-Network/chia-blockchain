@@ -3,11 +3,15 @@
       PUBKEY
       Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
       delta
+      lineage_check_result
+      inner_conditions
       _
     )
 
     (include condition_codes.clvm)
 
-    ; Careful with a delta of zero, the bytecode is 80 not 00
-    (list (list AGG_SIG_ME PUBKEY delta))
+    (if lineage_check_result
+      inner_conditions
+      (c (list AGG_SIG_ME PUBKEY delta) inner_conditions) ; Careful with a delta of zero, the bytecode is 80 not 00
+    )
 )
