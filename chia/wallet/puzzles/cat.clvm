@@ -96,15 +96,16 @@
 ;; and automatically hashed in to the announcement generated with CREATE_COIN_ANNOUNCEMENT.
 ;;
 
-(mod (MOD_HASH                ;; curried into puzzle
-      GENESIS_COIN_CHECKER    ;; curried into puzzle
-      INNER_PUZZLE            ;; curried into puzzle
-      inner_puzzle_solution   ;; if invalid, INNER_PUZZLE will fail
-      prev_coin_bundle        ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
-      this_coin_bundle        ;; verified with ASSERT_MY_COIN_ID
-      next_coin_bundle        ;; used to generate ASSERT_COIN_ANNOUNCEMENT
-      prev_subtotal           ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
-      extra_delta             ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
+(mod (MOD_HASH                 ;; curried into puzzle
+      LIMITATIONS_PROGRAM_HASH ;; curried into puzzle
+      INNER_PUZZLE             ;; curried into puzzle
+      inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
+      limitations_program      ;; The reveal of the hash curried above.  Can be () for default lineage checking.
+      prev_coin_bundle         ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+      this_coin_bundle         ;; verified with ASSERT_MY_COIN_ID
+      next_coin_bundle         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
+      prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+      extra_delta              ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
     )
 
      ;;;;; start library code
@@ -142,7 +143,7 @@
      (defun-inline cat_puzzle_hash (cat_mod_struct inner_puzzle_hash)
        (puzzle-hash-of-curried-function (mod_hash_from_cat_mod_struct cat_mod_struct)
                                         inner_puzzle_hash
-                                        (genesis_coin_checker_hash_from_cat_mod_struct cat_mod_struct)
+                                        (sha256 ONE (genesis_coin_checker_hash_from_cat_mod_struct cat_mod_struct))
                                         (mod_hash_hash_from_cat_mod_struct cat_mod_struct)
        )
      )
@@ -268,7 +269,7 @@
               )
            )
            1
-           (x)
+           (x "here")
        )
      )
 
@@ -278,21 +279,32 @@
      ;;  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
      ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
 
-     (defun-inline genesis_coin_checker_from_cat_struct (cat_mod_struct)
+     (defun-inline limitations_program_from_cat_struct (cat_mod_struct)
        (f (r (r cat_mod_struct)))
      )
 
-    (defun is_bundle_valid ((coin_info . lineage_proof) Truths extra_delta inner_conditions)
-      (a (genesis_coin_checker_from_cat_struct (cat_struct_truth Truths))
-          (list
-            Truths
-            extra_delta
-            (if (f lineage_proof)
-                (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) (r lineage_proof))
-                ()
+     (defun-inline limitations_program_hash_from_cat_struct (cat_mod_struct)
+       (f (r (r (r cat_mod_struct))))
+     )
+
+    (defun is_bundle_valid ((coin_info . lineage_proof) limitations_program Truths extra_delta inner_conditions)
+      (if limitations_program
+          (assert (= (sha256tree1 limitations_program) (limitations_program_hash_from_cat_struct (cat_struct_truth Truths)))
+            (a limitations_program
+                (list
+                  Truths
+                  extra_delta
+                  (if (f lineage_proof)
+                      (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) (r lineage_proof))
+                      ()
+                  )
+                  inner_conditions
+                  (r lineage_proof)
+                )
             )
+          )
+          (assert (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) lineage_proof)
             inner_conditions
-            (r lineage_proof)
           )
       )
     )
@@ -334,6 +346,7 @@
         (if (is_coloured_check next_coin_bundle (cat_struct_truth Truths))
             (is_bundle_valid
               this_coin_bundle
+              (limitations_program_from_cat_struct (cat_struct_truth Truths))
               Truths
               extra_delta
               (generate_final_output_conditions
@@ -346,9 +359,9 @@
                 (coin_info_for_coin_bundle next_coin_bundle)
               )
             )
-            (x)
+            (x "there")
         )
-        (x)
+        (x "everywhere")
       )
     )
 
@@ -408,7 +421,7 @@
 
     (stager
         ;; caclculate cat_mod_struct, inner_puzzle_hash, coin_id
-        (list MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER))
+        (list MOD_HASH (sha256 1 MOD_HASH) limitations_program LIMITATIONS_PROGRAM_HASH)
         INNER_PUZZLE
         inner_puzzle_solution
         (sha256tree1 INNER_PUZZLE)
