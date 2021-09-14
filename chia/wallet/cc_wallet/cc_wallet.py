@@ -346,7 +346,7 @@ class CCWallet:
         removals = block.removals
 
         if r is not None:
-            mod_hash, genesis_coin_checker, inner_puzzle = r
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = r
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
             parent_coin = None
             for coin in removals:
