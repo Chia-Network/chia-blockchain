@@ -49,11 +49,10 @@ class TestPoolWallet2:
         tx_record, _, _ = await PoolWallet.create_new_pool_wallet_transaction(wsm, wallet_0, initial_state)
 
         launcher_spend: CoinSpend = tx_record.spend_bundle.coin_spends[1]
-
+        height = wallet_node_0.wallet_state_manager.blockchain.get_peak_height()
+        spend_height_tuple = [(spend, height) for spend in tx_record.spend_bundle.coin_spends]
         async with wsm.db_wrapper.lock:
-            pw = await PoolWallet.create(
-                wsm, wallet_0, launcher_spend.coin.name(), tx_record.spend_bundle.coin_spends, True
-            )
+            pw = await PoolWallet.create(wsm, wallet_0, launcher_spend.coin.name(), spend_height_tuple, True)
 
         log.warning(await pw.get_current_state())
 
