@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from shutil import rmtree
 from typing import Optional, List, Dict
 
 import pytest
@@ -54,6 +55,7 @@ class TestPoolWalletRpc:
 
     @pytest.fixture(scope="function")
     async def one_wallet_node_and_rpc(self):
+        rmtree(get_pool_plot_dir(), ignore_errors=True)
         async for nodes in setup_simulators_and_wallets(1, 1, {}):
             full_nodes, wallets = nodes
             full_node_api = full_nodes[0]
@@ -93,6 +95,7 @@ class TestPoolWalletRpc:
 
     @pytest.fixture(scope="function")
     async def setup(self, two_wallet_nodes):
+        rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
