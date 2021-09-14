@@ -611,8 +611,7 @@ class TestPoolWalletRpc:
             summaries_response = await client.get_wallets()
             wallet_id: Optional[int] = None
             wallet_id_2: Optional[int] = None
-            breakpoint()
-
+            await asyncio.sleep(3)
             for summary in summaries_response:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     if wallet_id is not None:
@@ -628,7 +627,6 @@ class TestPoolWalletRpc:
             assert status_2.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
             assert status_2.target is None
-            breakpoint()
 
             join_pool_tx: TransactionRecord = await client.pw_join_pool(
                 wallet_id,
@@ -706,7 +704,7 @@ class TestPoolWalletRpc:
 
             await self.farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
-
+            await asyncio.sleep(3)
             summaries_response = await client.get_wallets()
             wallet_id: Optional[int] = None
             for summary in summaries_response:
@@ -729,12 +727,13 @@ class TestPoolWalletRpc:
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
+
             assert status.current.to_json_dict() == {
                 "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
                 "pool_url": None,
                 "relative_lock_height": 0,
                 "state": 1,
-                "target_puzzle_hash": "0x738127e26cb61ffe5530ce0cef02b5eeadb1264aa423e82204a6d6bf9f31c2b7",
+                "target_puzzle_hash": "0xe25b0ff7a50e4afae386cdab538c70983db7f04fa835b45855114f9d790c414a",
                 "version": 1,
             }
             assert status.target.to_json_dict() == {
@@ -742,7 +741,7 @@ class TestPoolWalletRpc:
                 "pool_url": "https://pool.example.com",
                 "relative_lock_height": 5,
                 "state": 3,
-                "target_puzzle_hash": "0x9ba327777484b8300d60427e4f3b776ac81948dfedd069a8d3f55834e101696e",
+                "target_puzzle_hash": "0xbe0a40552c563b41601c145653140f97d23dd8cc5219b9c8495d2030732d930b",
                 "version": 1,
             }
 

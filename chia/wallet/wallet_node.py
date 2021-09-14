@@ -409,6 +409,7 @@ class WalletNode:
         return coin_state.coin_states
 
     async def state_update_received(self, request: wallet_protocol.CoinStateUpdate):
+        assert self.wallet_state_manager is not None
         async with self.wallet_state_manager.lock:
             await self.handle_coin_state_change(request.items, request.fork_height, request.height)
 
@@ -454,7 +455,6 @@ class WalletNode:
                         )
                         created_pool_wallet_ids.append(pool_wallet.wallet_id)
                         self.log.info(f"wallet ids: {created_pool_wallet_ids}")
-
 
             for wallet_id, wallet in self.wallet_state_manager.wallets.items():
                 if wallet.type() == WalletType.POOLING_WALLET:

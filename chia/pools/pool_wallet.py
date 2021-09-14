@@ -285,7 +285,6 @@ class PoolWallet:
             spent_coin_name: bytes32 = tip_coin.name()
             await self.wallet_state_manager.subscribe_to_coin_ids_update([spent_coin_name])
             if spent_coin_name not in coin_name_to_spend:
-                self.log.error(f"spent_coin_name {spent_coin_name}")
                 break
             spend, height = coin_name_to_spend[spent_coin_name]
             assert height >= tip_height
