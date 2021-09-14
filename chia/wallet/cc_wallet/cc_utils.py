@@ -2,6 +2,7 @@ import dataclasses
 from typing import List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G2Element
+from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, INFINITE_COST
@@ -10,6 +11,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint64
+from chia.util.hash import std_hash
 from chia.wallet.puzzles.cc_loader import CC_MOD, LOCK_INNER_PUZZLE
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import (
     genesis_coin_id_for_genesis_coin_checker,
@@ -39,7 +41,7 @@ def cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, inner_puzzle) -> 
     """
     Given an inner puzzle, generate a puzzle program for a specific cc.
     """
-    return mod_code.curry(mod_code.get_tree_hash(), genesis_coin_checker, inner_puzzle)
+    return mod_code.curry(mod_code.get_tree_hash(), genesis_coin_checker.get_tree_hash(), inner_puzzle)
     # return mod_code.curry([mod_code.get_tree_hash(), genesis_coin_checker, inner_puzzle])
 
 
@@ -47,19 +49,14 @@ def cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, inner_p
     """
     Given an inner puzzle hash, calculate a puzzle program hash for a specific cc.
     """
-    gcc_hash = genesis_coin_checker.get_tree_hash()
+    gcc_hash = std_hash(int_to_bytes(1) + genesis_coin_checker.get_tree_hash())
     return mod_code.curry(mod_code.get_tree_hash(), gcc_hash, inner_puzzle_hash).get_tree_hash(
         gcc_hash, inner_puzzle_hash
     )
 
 
 def lineage_proof_for_cc_parent(parent_coin: Coin, parent_inner_puzzle_hash: bytes32) -> Program:
-    return Program.to(
-        (
-            1,
-            [parent_coin.parent_coin_info, parent_inner_puzzle_hash, parent_coin.amount],
-        )
-    )
+    return Program.to([parent_coin.parent_coin_info, parent_inner_puzzle_hash, parent_coin.amount])
 
 
 def subtotals_for_deltas(deltas) -> List[int]:
@@ -172,7 +169,10 @@ def spend_bundle_for_spendable_ccs(
         my_bundle = bundles[index]
         next_bundle = bundles[next_index]
 
-        solution = [inner_solutions[index], prev_bundle, my_bundle, next_bundle, subtotals[index], extra_deltas[index]]
+        # We check whether or not to reveal the limiter based on whether the first value in our LP is 1 (or 0) bytes
+        limiter_reveal = genesis_coin_checker if len(my_bundle.rest().first().as_python()) <= 1 else Program.to([])
+
+        solution = [inner_solutions[index], limiter_reveal, prev_bundle, my_bundle, next_bundle, subtotals[index], extra_deltas[index]]
         coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
@@ -197,7 +197,7 @@ def check_is_cc_puzzle(puzzle: Program):
     return is_cc_mod(inner_f)
 
 
-def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
+def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, bytes32, Program]]:
     """
     Take a puzzle and return `None` if it's not a `CC_MOD` cc, or
     a triple of `mod_hash, genesis_coin_checker, inner_puzzle` if it is.
@@ -209,14 +209,14 @@ def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
     if not is_cc_mod(inner_f):
         return None
 
-    mod_hash, genesis_coin_checker, inner_puzzle = list(args.as_iter())
-    return mod_hash, genesis_coin_checker, inner_puzzle
+    mod_hash, genesis_coin_checker_hash, inner_puzzle = list(args.as_iter())
+    return mod_hash, genesis_coin_checker_hash, inner_puzzle
 
 
 def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
     r = uncurry_cc(parent_puzzle)
     if r:
-        mod_hash, genesis_checker, inner_puzzle = r
+        mod_hash, genesis_checker_hash, inner_puzzle = r
         lineage_proof = lineage_proof_for_cc_parent(parent_coin, inner_puzzle.get_tree_hash())
     else:
         if parent_coin.amount == 0:
@@ -243,7 +243,7 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
     puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
     r = uncurry_cc(puzzle)
     if r:
-        mod_hash, genesis_coin_checker, inner_puzzle = r
+        mod_hash, genesis_coin_checker_hash, inner_puzzle = r
         lineage_proof = lineage_proof_for_cc_parent(coin, inner_puzzle.get_tree_hash())
     else:
         lineage_proof = lineage_proof_for_coin(coin)
@@ -258,8 +258,9 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
             # this isn't a cc puzzle
             continue
 
-        mod_hash, genesis_coin_checker, inner_puzzle = r
+        mod_hash, genesis_coin_checker_hash, inner_puzzle = r
 
+        genesis_coin_checker = coin_spend.solution.rest().first()
         genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker)
 
         cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof)

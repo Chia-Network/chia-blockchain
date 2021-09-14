@@ -375,8 +375,8 @@ class TradeManager:
             r = cc_utils.uncurry_cc(puzzle)
             if r:
                 # Calculate output amounts
-                mod_hash, genesis_checker, inner_puzzle = r
-                colour = bytes(genesis_checker).hex()
+                mod_hash, genesis_checker_hash, inner_puzzle = r
+                colour = bytes(genesis_checker_hash).hex()
                 if colour not in wallets:
                     wallets[colour] = await self.wallet_state_manager.get_wallet_for_colour(colour)
                 unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[colour].id())
@@ -477,7 +477,7 @@ class TradeManager:
 
                 r = uncurry_cc(puzzle)
                 if r:
-                    mod_hash, genesis_coin_checker, inner_puzzle = r
+                    mod_hash, genesis_coin_checker_hash, inner_puzzle = r
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
                     spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
