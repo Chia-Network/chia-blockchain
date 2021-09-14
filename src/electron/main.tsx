@@ -123,7 +123,7 @@ if (!handleSquirrelEvent()) {
     let decidedToClose = false;
     let isClosing = false;
 
-    const createWindow = () => {
+    const createWindow = async () => {
       decidedToClose = false;
       mainWindow = new BrowserWindow({
         width: 1200,
@@ -141,26 +141,24 @@ if (!handleSquirrelEvent()) {
 
       if (dev_config.redux_tool) {
         const reduxDevToolsPath = path.join(os.homedir(), dev_config.react_tool)
-        app.whenReady().then(async () => {
-          await session.defaultSession.loadExtension(reduxDevToolsPath)
-        })
+        await app.whenReady();
+        await session.defaultSession.loadExtension(reduxDevToolsPath)
       }
 
       if (dev_config.react_tool) {
         const reactDevToolsPath = path.join(os.homedir(), dev_config.redux_tool);
-        app.whenReady().then(async () => {
-          await session.defaultSession.loadExtension(reactDevToolsPath)
-        })
+        await app.whenReady();
+        await session.defaultSession.loadExtension(reactDevToolsPath)
       }
 
       const startUrl =
         process.env.NODE_ENV === 'development'
           ? 'http://localhost:3000'
           : url.format({
-              pathname: path.join(__dirname, '/../renderer/index.html'),
-              protocol: 'file:',
-              slashes: true,
-            });
+            pathname: path.join(__dirname, '/../renderer/index.html'),
+            protocol: 'file:',
+            slashes: true,
+          });
 
       console.log('startUrl', startUrl);
 
@@ -191,10 +189,10 @@ if (!handleSquirrelEvent()) {
           const choice = dialog.showMessageBoxSync({
             type: 'question',
             buttons: [
-              i18n._(/* i18n */ { id: 'No' }),
-              i18n._(/* i18n */ { id: 'Yes' }),
+              i18n._(/* i18n */ {id: 'No'}),
+              i18n._(/* i18n */ {id: 'Yes'}),
             ],
-            title: i18n._(/* i18n */ { id: 'Confirm' }),
+            title: i18n._(/* i18n */ {id: 'Confirm'}),
             message: i18n._(
               /* i18n */ {
                 id: 'Are you sure you want to quit? GUI Plotting and farming will stop.',
@@ -208,7 +206,7 @@ if (!handleSquirrelEvent()) {
           isClosing = false;
           decidedToClose = true;
           mainWindow.webContents.send('exit-daemon');
-          mainWindow.setBounds({ height: 500, width: 500 });
+          mainWindow.setBounds({height: 500, width: 500});
           ipcMain.on('daemon-exited', (event, args) => {
             mainWindow.close();
 
