@@ -647,7 +647,7 @@ class WalletStateManager:
                     wallet_id, wallet_type = info
                 elif interested_wallet_id is not None:
                     wallet_id = uint32(interested_wallet_id)
-                    wallet_type = self.wallets[uint32(wallet_id)].type()
+                    wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
                 else:
                     continue
 

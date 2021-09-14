@@ -22,6 +22,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from tests.block_tools import get_plot_dir, get_plot_tmp_dir
 from chia.util.config import load_config
 from chia.util.hash import std_hash
@@ -233,9 +234,8 @@ class TestPoolWalletRpc:
             == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
-        all_coin_records = await wallet_node_0.wallet_state_manager.coin_store.get_all_coins()
-        all_coin_name = [record.coin.name().hex() for record in all_coin_records]
-        assert pool_config["launcher_id"] in all_coin_name
+        current_state = await wallet_node_0.wallet_state_manager.wallets[2].get_current_state()
+        assert bytes32(hexstr_to_bytes(pool_config["launcher_id"])) == current_state.launcher_id
         assert pool_config["pool_url"] == ""
 
     @pytest.mark.asyncio
@@ -289,9 +289,8 @@ class TestPoolWalletRpc:
             == "0xb3c4b513600729c6b2cf776d8786d620b6acc88f86f9d6f489fa0a0aff81d634262d5348fb7ba304db55185bb4c5c8a4"
         )
         # It can be one of multiple launcher IDs, due to selecting a different coin
-        all_coin_records = await wallet_node_0.wallet_state_manager.coin_store.get_all_coins()
-        all_coin_name = [record.coin.name().hex() for record in all_coin_records]
-        assert pool_config["launcher_id"] in all_coin_name
+        current_state = await wallet_node_0.wallet_state_manager.wallets[2].get_current_state()
+        assert bytes32(hexstr_to_bytes(pool_config["launcher_id"])) == current_state.launcher_id
         assert pool_config["pool_url"] == "http://pool.example.com"
 
     @pytest.mark.asyncio
@@ -607,10 +606,13 @@ class TestPoolWalletRpc:
 
             await self.farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
+            assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx_2.name) is None
 
             summaries_response = await client.get_wallets()
             wallet_id: Optional[int] = None
             wallet_id_2: Optional[int] = None
+            breakpoint()
+
             for summary in summaries_response:
                 if WalletType(int(summary["type"])) == WalletType.POOLING_WALLET:
                     if wallet_id is not None:
@@ -620,12 +622,13 @@ class TestPoolWalletRpc:
             assert wallet_id is not None
             assert wallet_id_2 is not None
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-            status_2: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
+            status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status_2.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
             assert status_2.target is None
+            breakpoint()
 
             join_pool_tx: TransactionRecord = await client.pw_join_pool(
                 wallet_id,
