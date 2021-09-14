@@ -1,4 +1,3 @@
-# flake8: noqa: E501
 import asyncio
 import logging
 import os
@@ -698,7 +697,7 @@ class TestPoolWalletRpc:
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.current.to_json_dict() == {
-                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
+                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",  # noqa: E501
                 "pool_url": None,
                 "relative_lock_height": 0,
                 "state": 1,
@@ -706,7 +705,7 @@ class TestPoolWalletRpc:
                 "version": 1,
             }
             assert status.target.to_json_dict() == {
-                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",
+                "owner_pubkey": "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304",  # noqa: E501
                 "pool_url": "https://pool.example.com",
                 "relative_lock_height": 5,
                 "state": 3,
@@ -733,7 +732,6 @@ class TestPoolWalletRpc:
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving)
-            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
             async def status_is_self_pooling():
                 # Farm enough blocks to wait for relative_lock_height
@@ -742,7 +740,6 @@ class TestPoolWalletRpc:
                 return pw_status.current.state == PoolSingletonState.SELF_POOLING.value
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_self_pooling)
-            pw_info: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
         finally:
