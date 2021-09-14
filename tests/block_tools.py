@@ -158,6 +158,19 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
+        self.refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
+
+        def test_callback(update_result: PlotRefreshResult):
+            if update_result.remaining_files > 0:
+                assert 0 < update_result.loaded_plots <= self.refresh_parameter.batch_size
+                assert update_result.loaded_plots == update_result.processed_files
+                assert update_result.loaded_size > 0
+                assert 0 < update_result.duration < 5
+
+        self.plot_manager: PlotManager = PlotManager(
+            self.root_path, refresh_parameter=self.refresh_parameter, refresh_callback=test_callback
+        )
+
     async def setup_keys(self):
         if self.local_keychain:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
@@ -189,6 +202,8 @@ class BlockTools:
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
+
+        self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
 
     def change_config(self, new_config: Dict):
         self._config = new_config
@@ -250,27 +265,20 @@ class BlockTools:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
 
-        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
+        await self.refresh_plots()
 
-        def test_callback(update_result: PlotRefreshResult):
-            if update_result.remaining_files > 0:
-                assert 0 < update_result.loaded_plots <= refresh_parameter.batch_size
-                assert update_result.loaded_plots == update_result.processed_files
-                assert update_result.loaded_size > 0
-                assert 0 < update_result.duration < 5
-
-        plot_manager: PlotManager = PlotManager(
-            self.root_path, refresh_parameter=refresh_parameter, refresh_callback=test_callback
-        )
-        plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
-        plot_manager.start_refreshing()
-        await time_out_assert(10, plot_manager.needs_refresh, value=False)
-        plot_manager.stop_refreshing()
-        self.plots: Dict[Path, PlotInfo] = plot_manager.plots
         # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
         self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
             "plot_directories"
         ]
+
+    async def refresh_plots(self):
+        self.plot_manager.trigger_refresh()
+        assert self.plot_manager.needs_refresh()
+        self.plot_manager.start_refreshing()
+        await time_out_assert(10, self.plot_manager.needs_refresh, value=False)
+        self.plot_manager.stop_refreshing()
+        assert not self.plot_manager.needs_refresh()
 
     @property
     def config(self) -> Dict:
@@ -288,7 +296,7 @@ class BlockTools:
         Returns the plot signature of the header data.
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
-        for _, plot_info in self.plots.items():
+        for _, plot_info in self.plot_manager.plots.items():
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
                 if plot_info.prover.get_id() in self.local_sk_cache:
@@ -1036,7 +1044,7 @@ class BlockTools:
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
         plots: List[PlotInfo] = [
-            plot_info for _, plot_info in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
+            plot_info for _, plot_info in sorted(list(self.plot_manager.plots.items()), key=lambda x: str(x[0]))
         ]
         random.seed(seed)
         for plot_info in plots:
