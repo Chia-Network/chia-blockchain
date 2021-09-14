@@ -8,7 +8,7 @@ msgstr ""
 "Language: lv_LV\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:55\n"
+"PO-Revision-Date: 2021-09-14 18:47\n"
 "Last-Translator: \n"
 "Language-Team: Latvian\n"
 "Plural-Forms: nplurals=3; plural=(n==0 ? 0 : n%10==1 && n%100!=11 ? 1 : 2);\n"
@@ -28,7 +28,7 @@ msgstr "Vēlaties izpētīt Chia blokus? Iepazīstieties ar <0>Chia Explorer</0>
 
 #: src/components/plot/add/PlotAddNFT.tsx:123
 msgid "+ Add New Plot NFT"
-msgstr ""
+msgstr "+ Pievienot NFT plotu"
 
 #: src/components/wallet/Wallets.tsx:132
 msgid "+ Add Wallet"
