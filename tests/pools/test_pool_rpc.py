@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from pathlib import Path
 from typing import Optional, List, Dict
 
@@ -142,11 +141,6 @@ class TestPoolWalletRpc:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         return num_blocks
         # TODO also return calculated block rewards
-
-    def delete_plot(self, plot_id: bytes32):
-        for child in get_pool_plot_dir().iterdir():
-            if not child.is_dir() and plot_id.hex() in child.name:
-                os.remove(child)
 
     @pytest.mark.asyncio
     async def test_create_new_pool_wallet_self_farm(self, one_wallet_node_and_rpc):
@@ -443,7 +437,7 @@ class TestPoolWalletRpc:
         with pytest.raises(ValueError):
             await client.pw_absorb_rewards(2)
 
-        self.delete_plot(plot_id)
+        await bt.delete_plot(plot_id)
 
     @pytest.mark.asyncio
     async def test_absorb_pooling(self, one_wallet_node_and_rpc):
@@ -523,7 +517,7 @@ class TestPoolWalletRpc:
         bal = await client.get_wallet_balance(2)
         assert bal["confirmed_wallet_balance"] == 0
         log.warning(f"{await wallet_0.get_confirmed_balance()}")
-        self.delete_plot(plot_id)
+        await bt.delete_plot(plot_id)
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert (
             wallet_node_0.wallet_state_manager.get_peak().height == full_node_api.full_node.blockchain.get_peak().height

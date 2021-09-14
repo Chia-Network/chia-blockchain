@@ -303,6 +303,12 @@ class BlockTools:
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 
+    async def delete_plot(self, plot_id: bytes32):
+        assert plot_id in self.expected_plots
+        self.expected_plots[plot_id].unlink()
+        del self.expected_plots[plot_id]
+        await self.refresh_plots()
+
     @property
     def config(self) -> Dict:
         return copy.deepcopy(self._config)
