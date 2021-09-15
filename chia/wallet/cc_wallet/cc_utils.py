@@ -89,13 +89,10 @@ def coin_spend_for_lock_coin(
     return coin_spend
 
 
-def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
+def next_bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
     c = spendable_cc.coin
-    pair = (
-        [c.parent_coin_info, c.puzzle_hash, c.amount, spendable_cc.inner_puzzle.get_tree_hash()],
-        spendable_cc.lineage_proof,
-    )
-    return Program.to(pair)
+    list = [c.parent_coin_info, spendable_cc.inner_puzzle.get_tree_hash(), c.amount]
+    return Program.to(list)
 
 
 def spend_bundle_for_spendable_ccs(
@@ -156,7 +153,13 @@ def spend_bundle_for_spendable_ccs(
     if sum(deltas) != 0:
         raise ValueError("input and output amounts don't match")
 
-    bundles = [bundle_for_spendable_cc_list(_) for _ in spendable_cc_list]
+    bundles_for_next = []
+    bundles_for_me = []
+    ids = []
+    for _ in spendable_cc_list:
+        bundles_for_next.append(next_bundle_for_spendable_cc_list(_))
+        bundles_for_me.append(Program.to((_.coin.as_list(), _.lineage_proof)))
+        ids.append(_.coin.name())
 
     for index in range(N):
         cc_spend_info = spendable_cc_list[index]
@@ -165,14 +168,14 @@ def spend_bundle_for_spendable_ccs(
 
         prev_index = (index - 1) % N
         next_index = (index + 1) % N
-        prev_bundle = bundles[prev_index]
-        my_bundle = bundles[index]
-        next_bundle = bundles[next_index]
+        prev_id = ids[prev_index]
+        my_bundle = bundles_for_me[index]
+        next_bundle = bundles_for_next[next_index]
 
         # We check whether or not to reveal the limiter based on whether the first value in our LP is 1 (or 0) bytes
         limiter_reveal = genesis_coin_checker if len(my_bundle.rest().first().as_python()) <= 1 else Program.to([])
 
-        solution = [inner_solutions[index], limiter_reveal, prev_bundle, my_bundle, next_bundle, subtotals[index], extra_deltas[index]]
+        solution = [inner_solutions[index], limiter_reveal, prev_id, my_bundle, next_bundle, subtotals[index], extra_deltas[index]]
         coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
