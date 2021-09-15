@@ -73,10 +73,6 @@
 ;   By induction, we see that S_{m+1} = sum(i, 1, m) [O_i - A_i] = sum(i, 1, m) O_i - sum(i, 1, m) A_i
 ;   So S_{n+1} = sum(i, 1, n) O_i - sum(i, 1, n) A_i. But S_{n+1} is actually S_1 = 0,
 ;   so thus sum(i, 1, n) O_i = sum (i, 1, n) A_i, ie. output total equals input total.
-;
-; QUESTION: do we want a secondary puzzle that allows for coins to be spent? This could be good for
-;  bleaching coins (sendable to any address), or reclaiming them by a central authority.
-;
 
 ;; GLOSSARY:
 ;;  MOD_HASH: this code's sha256 tree hash
@@ -85,9 +81,9 @@
 ;;              generate `AGG_SIG` conditions and possibly `CREATE_COIN` conditions.
 ;; ---- items above are curried into the puzzle hash ----
 ;;  inner_puzzle_solution: the solution to the inner puzzle
-;;  prev_coin_bundle: the bundle for previous coin
-;;  this_coin_bundle: the bundle for this coin
-;;  next_coin_bundle: the bundle for next coin
+;;  prev_coin_id: the id for the previous coin
+;;  this_coin_bundle: ((parent_id puzzle_hash amount) . lineage_proof)
+;;  next_coin_bundle: (parent_id inner_puzzle_hash amount)
 ;;  prev_subtotal: the subtotal between prev-coin and this-coin
 ;;
 ;; coin_info: `(parent_id puzzle_hash amount)`. This defines the coin id used with ASSERT_MY_COIN_ID
@@ -101,7 +97,7 @@
       INNER_PUZZLE             ;; curried into puzzle
       inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
       limitations_program      ;; The reveal of the hash curried above.  Can be () for default lineage checking.
-      prev_coin_bundle         ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+      prev_coin_id             ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       this_coin_bundle         ;; verified with ASSERT_MY_COIN_ID
       next_coin_bundle         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
       prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
@@ -176,8 +172,8 @@
      )
 
      ;; given a coin triplet, return the id of the coin
-     (defun-inline coin_id_for_coin (coin)
-       (sha256 (f coin) (f (r coin)) (f (r (r coin))))
+     (defun-inline coin_id_for_coin (coin cat_mod_struct)
+       (sha256 (f coin) (cat_puzzle_hash cat_mod_struct (f (r coin))) (f (r (r coin))))
      )
 
      ;; utility to fetch coin amount from coin
@@ -186,25 +182,26 @@
      )
 
      ;; calculate the hash of an announcement
-     (defun-inline calculate_annoucement_id (this_coin_info this_subtotal next_coin_info)
+     (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_info cat_mod_struct)
        ; NOTE: the next line containts a bug, as sha256tree1 ignores `this_subtotal`
-       (sha256 (coin_id_for_coin next_coin_info) (concat 0xcb (sha256tree1 (list this_coin_info this_subtotal))))
+       (sha256 (coin_id_for_coin next_coin_info cat_mod_struct) (concat 0xcb (concat this_coin_id this_subtotal)))
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
-     (defun-inline create_assert_next_announcement_condition (this_coin_info this_subtotal next_coin_info)
+     (defun-inline create_assert_next_announcement_condition (this_coin_id this_subtotal next_coin_info cat_mod_struct)
        (list ASSERT_COIN_ANNOUNCEMENT
-             (calculate_annoucement_id this_coin_info
+             (calculate_annoucement_id this_coin_id
                                             this_subtotal
                                             next_coin_info
+                                            cat_mod_struct
              )
        )
      )
 
      ;; here we commit to I_{k-1} and S_k
-     (defun-inline create_announcement_condition (prev_coin_info prev_subtotal)
+     (defun-inline create_announcement_condition (prev_coin_id prev_subtotal)
        (list CREATE_COIN_ANNOUNCEMENT
-             (concat 0xcb (sha256tree1 (list prev_coin_info prev_subtotal)))
+             (concat 0xcb (concat prev_coin_id prev_subtotal))
        )
       )
 
@@ -239,12 +236,13 @@
          prev_subtotal
          this_subtotal
          morphed_conditions
-         prev_coin_info
-         this_coin_info
+         prev_coin_id
+         this_coin_id
          next_coin_info
+         cat_mod_struct
        )
-         (c (create_announcement_condition prev_coin_info prev_subtotal)
-           (c (create_assert_next_announcement_condition this_coin_info this_subtotal next_coin_info)
+         (c (create_announcement_condition prev_coin_id prev_subtotal)
+           (c (create_assert_next_announcement_condition this_coin_id this_subtotal next_coin_info cat_mod_struct)
              morphed_conditions)
          )
       )
@@ -269,7 +267,7 @@
               )
            )
            1
-           (x "here")
+           (x)
        )
      )
 
@@ -309,77 +307,49 @@
       )
     )
 
-     (defun merge_list (one two)
-      (if one
-        (c (f one) (merge_list (r one) two))
-        two
-      )
-     )
-
-     (defun if_is_list_merge (inspected_item output)
-       (if (l inspected_item)
-           (merge_list inspected_item output)
-           output
-        )
-     )
-
-     (defun is_coloured_check (coin_bundle cat_struct)
-        (=
-          (cat_puzzle_hash cat_struct (f (r (r (r (f coin_bundle))))))
-          (f (r (f coin_bundle)))
-        )
-     )
-
-
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
      (defun stager_three (
          Truths
          inner_conditions
-         prev_coin_bundle
+         prev_coin_id
          this_coin_bundle
          next_coin_bundle
          prev_subtotal
          extra_delta
       )
-      (if (is_coloured_check prev_coin_bundle (cat_struct_truth Truths))
-        (if (is_coloured_check next_coin_bundle (cat_struct_truth Truths))
-            (is_bundle_valid
-              this_coin_bundle
-              (limitations_program_from_cat_struct (cat_struct_truth Truths))
-              Truths
-              extra_delta
-              (generate_final_output_conditions
-                prev_subtotal
-                ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-                (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
-                (morph_conditions inner_conditions (cat_struct_truth Truths))
-                (coin_info_for_coin_bundle prev_coin_bundle)
-                (coin_info_for_coin_bundle this_coin_bundle)
-                (coin_info_for_coin_bundle next_coin_bundle)
-              )
+      (is_bundle_valid
+            this_coin_bundle
+            (limitations_program_from_cat_struct (cat_struct_truth Truths))
+            Truths
+            extra_delta
+            (generate_final_output_conditions
+              prev_subtotal
+              ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
+              (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
+              (morph_conditions inner_conditions (cat_struct_truth Truths))
+              prev_coin_id
+              (my_id_cat_truth Truths)
+              next_coin_bundle
+              (cat_struct_truth Truths)
             )
-            (x "there")
         )
-        (x "everywhere")
-      )
     )
 
     (defun stager_two (
         Truths
         INNER_PUZZLE
         inner_solution
-        prev_coin_bundle
+        prev_coin_id
         this_coin_bundle
         next_coin_bundle
         prev_subtotal
         extra_delta
      )
-;     (x "my_parent" (my_parent_cat_truth Truths) )
       (c (list ASSERT_MY_COIN_ID (my_id_cat_truth Truths))
          (stager_three Truths
                        (a INNER_PUZZLE (c Truths inner_solution))
-                       prev_coin_bundle
+                       prev_coin_id
                        this_coin_bundle
                        next_coin_bundle
                        prev_subtotal
@@ -401,7 +371,7 @@
         inner_solution
         inner_puzzle_hash
         my_id
-        prev_coin_bundle
+        prev_coin_id
         this_coin_bundle
         next_coin_bundle
         prev_subtotal
@@ -411,12 +381,13 @@
       (stager_two (cat_truth_data_to_truth_struct my_id (f (f this_coin_bundle)) (f (r (f this_coin_bundle))) (f (r (r (f this_coin_bundle)))) inner_puzzle_hash (r this_coin_bundle) cat_mod_struct)
              INNER_PUZZLE
              inner_solution
-             prev_coin_bundle
+             prev_coin_id
              this_coin_bundle
              next_coin_bundle
              prev_subtotal
              extra_delta
        )
+       ;(x "my id" my_id "next coin bundle" next_coin_bundle)
     )
 
     (stager
@@ -425,13 +396,15 @@
         INNER_PUZZLE
         inner_puzzle_solution
         (sha256tree1 INNER_PUZZLE)
-        (coin_id_for_coin (f this_coin_bundle))
-        prev_coin_bundle
-        this_coin_bundle
-        next_coin_bundle
+        (sha256 (f (f this_coin_bundle)) (f (r (f this_coin_bundle))) (f (r (r (f this_coin_bundle)))))
+        prev_coin_id  ; ID
+        this_coin_bundle  ; ((parent_id puzzle_hash amount) . (lineage_proof))
+        next_coin_bundle ; (parent_id innerpuzhash amount)
         prev_subtotal
         extra_delta
     )
 
 
 )
+
+; (coin_id_for_coin next_coin_info cat_mod_struct)
