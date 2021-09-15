@@ -611,7 +611,7 @@ class ChiaServer:
 
     async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType):
         for message in messages:
-            if message_requires_reply(ProtocolMessageTypes(message)):
+            if message_requires_reply(ProtocolMessageTypes(message.type)):
                 # Internal protocol logic error - we will raise, blocking messages to all peers
                 self.log.error(f"Attempt to broadcast message requiring protocol response: {message.type}")
                 for _, connection in self.all_connections.items():
