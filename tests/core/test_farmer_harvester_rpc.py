@@ -179,8 +179,10 @@ class TestRpc:
             async def test_get_harvesters():
                 farmer_res = await client.get_harvesters()
                 if len(list(farmer_res["harvesters"])) != 1:
+                    log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
                     return False
                 if len(list(farmer_res["harvesters"][0]["plots"])) != num_plots:
+                    log.error(f"test_get_harvesters: invalid plots {list(farmer_res['harvesters'])}")
                     return False
                 return True
 
