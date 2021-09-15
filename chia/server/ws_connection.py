@@ -8,7 +8,7 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import sent_message_response_ok
+from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -287,7 +287,7 @@ class WSChiaConnection:
             if result is not None:
                 sent_message_type = ProtocolMessageTypes(msg.type)
                 recv_message_type = ProtocolMessageTypes(result.type)
-                if not sent_message_response_ok(sent_message_type, recv_message_type):
+                if not message_response_ok(sent_message_type, recv_message_type):
                     # peer protocol violation
                     error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
                     f"but received {recv_message_type.name}"

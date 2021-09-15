@@ -16,7 +16,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import sent_message_response_ok
+from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS, API_EXCEPTION_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
@@ -613,7 +613,7 @@ class ChiaServer:
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type:
                 for message in messages:
-                    if sent_message_response_ok(ProtocolMessageTypes(message.type), None):
+                    if message_response_ok(ProtocolMessageTypes(message.type), None):
                         await connection.send_message(message)
                     else:
                         # Internal peer protocol logic error
@@ -629,7 +629,7 @@ class ChiaServer:
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:
-                    if sent_message_response_ok(ProtocolMessageTypes(message.type), None):
+                    if message_response_ok(ProtocolMessageTypes(message.type), None):
                         await connection.send_message(message)
                     else:
                         # Internal peer protocol logic error
