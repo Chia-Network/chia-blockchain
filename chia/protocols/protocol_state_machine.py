@@ -43,7 +43,7 @@ def static_check_sent_message_response() -> None:
         raise AssertionError("Overlapping NO_REPLY_EXPECTED and VAILD_REPLY_MESSAGE_MAP values: {}")
 
 
-def sent_message_response_ok(sent: ProtocolMessageTypes, received: Optional[ProtocolMessageTypes]) -> bool:
+def message_response_ok(sent: ProtocolMessageTypes, received: Optional[ProtocolMessageTypes]) -> bool:
     """
     Check to see that peers respect protocol message types in reply.
     Call with received == None to indicate that we do not expect a specific reply message type.
@@ -60,6 +60,5 @@ def sent_message_response_ok(sent: ProtocolMessageTypes, received: Optional[Prot
     return True
 
 
-def main():
-    # Check this static invariant at import time
-    static_check_sent_message_response()
+# Run `static_check_sent_message_response` to check this static invariant at import time
+static_check_sent_message_response()
