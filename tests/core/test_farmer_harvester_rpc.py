@@ -177,6 +177,8 @@ class TestRpc:
 
             # Test farmer get_harvesters
             async def test_get_harvesters():
+                harvester.plot_manager.trigger_refresh()
+                await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
                 farmer_res = await client.get_harvesters()
                 if len(list(farmer_res["harvesters"])) != 1:
                     log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
