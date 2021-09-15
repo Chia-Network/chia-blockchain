@@ -22,7 +22,7 @@ class WalletPoolStore:
         self.db_connection = wrapper.db
         self.db_wrapper = wrapper
         await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
+        await self.db_connection.execute("pragma synchronous=FULL")
 
         await self.db_connection.execute(
             "CREATE TABLE IF NOT EXISTS pool_state_transitions(transition_index integer, wallet_id integer, "
