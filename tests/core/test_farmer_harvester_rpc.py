@@ -28,7 +28,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pooling_authentication_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
-from tests.time_out_assert import time_out_assert
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 log = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class TestRpc:
                     return False
                 return True
 
-            await time_out_assert(30, test_get_harvesters)
+            await time_out_assert_custom_interval(30, 1, test_get_harvesters)
 
             # Reset cache and reset update interval to avoid hitting the rate limit
             farmer_api.farmer.update_harvester_cache_interval = update_interval_before
