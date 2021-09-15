@@ -1,6 +1,7 @@
 from setuptools import setup
 
 dependencies = [
+    "block-compression@git+https://github.com/richardkiss/block-compression.git@cc16960a152de2a938b628d30c3b987dca5d61f2",  # Generator program compression plugins for farmed blocks
     "blspy==1.0.5",  # Signature library
     "chiavdf==1.0.3",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
