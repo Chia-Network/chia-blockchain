@@ -16,7 +16,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_response_ok
+from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS, API_EXCEPTION_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
@@ -609,37 +609,33 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
+    async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType):
+        for message in messages:
+            if message_requires_reply(ProtocolMessageTypes(message)):
+                # Internal protocol logic error - we will raise, blocking messages to all peers
+                self.log.error(f"Attempt to broadcast message requiring protocol response: {message.type}")
+                for _, connection in self.all_connections.items():
+                    if connection.connection_type is node_type:
+                        await connection.close(
+                            self.invalid_protocol_ban_seconds,
+                            WSCloseCode.INTERNAL_ERROR,
+                            Err.INTERNAL_PROTOCOL_ERROR,
+                        )
+                raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
+
     async def send_to_all(self, messages: List[Message], node_type: NodeType):
+        await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type:
                 for message in messages:
-                    if message_response_ok(ProtocolMessageTypes(message.type), None):
-                        await connection.send_message(message)
-                    else:
-                        # Internal peer protocol logic error
-                        # If we raise ProtocolError here exiting the loop will affect other peers
-                        self.log.error(f"send_to_all called with message expecting a response: {message.type}")
-                        await connection.close(
-                            self.invalid_protocol_ban_seconds,
-                            WSCloseCode.INTERNAL_ERROR,
-                            Err.INTERNAL_PROTOCOL_ERROR,
-                        )
+                    await connection.send_message(message)
 
     async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
+        await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:
-                    if message_response_ok(ProtocolMessageTypes(message.type), None):
-                        await connection.send_message(message)
-                    else:
-                        # Internal peer protocol logic error
-                        # If we raise ProtocolError here exiting the loop will affect other peers
-                        self.log.error(f"send_to_all_except called with message expecting a response: {message.type}")
-                        await connection.close(
-                            self.invalid_protocol_ban_seconds,
-                            WSCloseCode.INTERNAL_ERROR,
-                            Err.INTERNAL_PROTOCOL_ERROR,
-                        )
+                    await connection.send_message(message)
 
     async def send_to_specific(self, messages: List[Message], node_id: bytes32):
         if node_id in self.all_connections:

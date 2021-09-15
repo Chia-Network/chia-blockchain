@@ -1,5 +1,3 @@
-from typing import Optional
-
 from chia.protocols.protocol_message_types import ProtocolMessageTypes as pmt, ProtocolMessageTypes
 
 NO_REPLY_EXPECTED = [
@@ -43,16 +41,18 @@ def static_check_sent_message_response() -> None:
         raise AssertionError("Overlapping NO_REPLY_EXPECTED and VAILD_REPLY_MESSAGE_MAP values: {}")
 
 
-def message_response_ok(sent: ProtocolMessageTypes, received: Optional[ProtocolMessageTypes]) -> bool:
+def message_requires_reply(sent: ProtocolMessageTypes) -> bool:
+    """Return True if message has an entry in the full node P2P message map"""
+    # If we knew the peer NodeType is FULL_NODE, we could also check `sent not in NO_REPLY_EXPECTED`
+    return sent in VAILD_REPLY_MESSAGE_MAP
+
+
+def message_response_ok(sent: ProtocolMessageTypes, received: ProtocolMessageTypes) -> bool:
     """
     Check to see that peers respect protocol message types in reply.
     Call with received == None to indicate that we do not expect a specific reply message type.
     """
     # Errors below are runtime protocol message mismatches from peers
-    if received is None:
-        # If we knew the peer NodeType is FULL_NODE, we could also check `sent not in NO_REPLY_EXPECTED`
-        if sent in VAILD_REPLY_MESSAGE_MAP:
-            return False
     if sent in VAILD_REPLY_MESSAGE_MAP:
         if received not in VAILD_REPLY_MESSAGE_MAP[sent]:
             return False
