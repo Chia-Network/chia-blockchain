@@ -5,6 +5,7 @@ from enum import Enum
 from chia.plotters.chiapos import plot_chia
 from chia.plotters.madmax import plot_madmax
 from chia.plotters.bladebit import plot_bladebit
+from chia.plotters.install_plotter import install_plotter
 
 
 class Options(Enum):
@@ -288,12 +289,17 @@ def call_plotters(root_path, args):
             os.mkdir(root_path)
         except Exception as e:
             print(f"Cannot create plotters root path {root_path} {type(e)} {e}.")
-    plotters = argparse.ArgumentParser(description="Available plotters.")
-    subparsers = plotters.add_subparsers(help="Available plotters", dest="plotter")
+    plotters = argparse.ArgumentParser(description="Available options.")
+    subparsers = plotters.add_subparsers(help="Available options", dest="plotter")
     build_parser(subparsers, root_path, chia_plotter, "chiapos", "Chiapos Plotter")
     build_parser(subparsers, root_path, madmax_plotter, "madmax", "Madmax Plotter")
     build_parser(subparsers, root_path, bladebit_plotter, "bladebit", "Bladebit Plotter")
-
+    install_parser = subparsers.add_parser("install", description="Install custom plotters.")
+    install_parser.add_argument(
+        "install_plotter",
+        type=str,
+        help="The plotters available for installing. Choose from madmax or bladebit."
+    )
     args = plotters.parse_args(args)
     if args.plotter == "chiapos":
         plot_chia(args)
@@ -301,3 +307,5 @@ def call_plotters(root_path, args):
         plot_madmax(args, root_path)
     if args.plotter == "bladebit":
         plot_bladebit(args, root_path)
+    if args.plotter == "install":
+        install_plotter(args.install_plotter, root_path)
