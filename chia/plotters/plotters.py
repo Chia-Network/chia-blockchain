@@ -1,7 +1,5 @@
 import argparse
 import binascii
-import os
-from pathlib import Path
 from enum import Enum
 from chia.plotters.chiapos import plot_chia
 from chia.plotters.madmax import plot_madmax
