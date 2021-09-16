@@ -29,9 +29,6 @@ class WalletCoinStore:
 
         self.db_connection = wrapper.db
         self.db_wrapper = wrapper
-        await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
-
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("

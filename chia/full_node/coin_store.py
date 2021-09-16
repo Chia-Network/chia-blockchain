@@ -29,8 +29,8 @@ class CoinStore:
         self.cache_size = cache_size
         self.db_wrapper = db_wrapper
         self.coin_record_db = db_wrapper.db
-        await self.coin_record_db.execute("pragma journal_mode=wal")
-        await self.coin_record_db.execute("pragma synchronous=2")
+        # the coin_name is unique in this table because the CoinStore always
+        # only represent a single peak
         await self.coin_record_db.execute(
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("
@@ -130,6 +130,9 @@ class CoinStore:
         return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
+        # Special case to avoid querying all unspent coins (spent_index=0)
+        if height == 0:
+            return []
         cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE spent_index=?", (height,))
         rows = await cursor.fetchall()
         await cursor.close()
