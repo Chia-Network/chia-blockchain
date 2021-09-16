@@ -22,7 +22,7 @@ def install_plotter(plotter, root_path):
             try:
                 install_bladebit(root_path)
             except Exception as e:
-                print(f"Exception while installing madmax plotter: {e}")
+                print(f"Exception while installing bladebit plotter: {e}")
                 return
         else:
             print("Bladebit plotter already installed.")
