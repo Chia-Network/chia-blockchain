@@ -103,12 +103,12 @@ def install_bladebit(root_path):
                     "--recursive",
                     "https://github.com/harold-b/bladebit.git",
                 ],
-                cwd=str(root_path),
+                cwd=os.fspath(root_path),
             )
         except Exception:
             raise ValueError("Could not clone bladebit repository.")
 
-        bladebit_path = str(root_path) + "/bladebit"
+        bladebit_path = os.fspath(root_path.joinpath("bladebit"))
         print("Building BLS library.")
         # Build bls library. Only needs to be done once.
         try:
@@ -157,7 +157,7 @@ def plot_bladebit(args, root_path):
         call_args.append("-v")
     if args.nonuma:
         call_args.append("-m")
-    call_args.append(args.outdir)
+    call_args.append(args.finaldir)
     try:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(run_bladebit(call_args))
