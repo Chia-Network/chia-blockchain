@@ -233,7 +233,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for block in blocks_reorg:
-            res, _, fork_height, _ = await blockchain.receive_block(block)
+            res, _, fork_height, _, _ = await blockchain.receive_block(block)
 
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != block.height - 1:
@@ -286,7 +286,7 @@ class TestFullNodeStore:
                 normalized_to_identity_cc_ip=normalized_to_identity,
                 normalized_to_identity_cc_sp=normalized_to_identity,
             )
-            res, _, fork_height, _ = await blockchain.receive_block(blocks[-1])
+            res, _, fork_height, _, _ = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
                 if fork_height is not None and fork_height != blocks[-1].height - 1:
                     fork_block = blockchain.block_record(blockchain.height_to_hash(fork_height))

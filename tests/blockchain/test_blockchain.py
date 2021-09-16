@@ -2556,7 +2556,7 @@ class TestReorgs:
 
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
-            result, error_code, fork_height = await b.receive_block(reorg_block)
+            result, error_code, fork_height, _ = await b.receive_block(reorg_block)
             if reorg_block.height < 10:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 14:
@@ -2634,7 +2634,7 @@ class TestReorgs:
         found_orphan = False
         blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
         for reorg_block in blocks_reorg_chain:
-            result, error_code, fork_height = await b.receive_block(reorg_block)
+            result, error_code, fork_height, _ = await b.receive_block(reorg_block)
             if reorg_block.height < 14:
                 if result == ReceiveBlockResult.ADDED_AS_ORPHAN:
                     found_orphan = True
