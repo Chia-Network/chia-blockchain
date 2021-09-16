@@ -301,6 +301,7 @@ class DIDWallet:
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
             )[0]
             node = self.wallet_state_manager.wallet_node.get_full_node_peer()
+            assert parent_state.spent_height is not None
             puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
                 coin.parent_coin_info, parent_state.spent_height
             )
