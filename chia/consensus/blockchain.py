@@ -310,7 +310,15 @@ class Blockchain(BlockchainInterface):
                     tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
                     tx_removals, tx_additions = [], []
-                await self.coin_store.new_block(block, tx_additions, tx_removals)
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    await self.coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        tx_additions,
+                        tx_removals,
+                    )
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record]
             return None, None, []
@@ -362,7 +370,16 @@ class Blockchain(BlockchainInterface):
                         )
                     else:
                         tx_removals, tx_additions = await self.get_tx_removals_and_additions(fetched_full_block, None)
-                    await self.coin_store.new_block(fetched_full_block, tx_additions, tx_removals)
+
+                    if fetched_full_block.is_transaction_block():
+                        assert fetched_full_block.foliage_transaction_block is not None
+                        await self.coin_store.new_block(
+                            fetched_full_block.height,
+                            fetched_full_block.foliage_transaction_block.timestamp,
+                            fetched_full_block.get_included_reward_coins(),
+                            tx_additions,
+                            tx_removals,
+                        )
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
