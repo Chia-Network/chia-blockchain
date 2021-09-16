@@ -132,7 +132,7 @@ def plot_bladebit(args, root_path):
         try:
             install_bladebit(root_path)
         except Exception as e:
-            print(f"Exception while installing madmax plotter: {e}")
+            print(f"Exception while installing bladebit plotter: {e}")
             return
     call_args = []
     call_args.append(str(root_path) + "/bladebit/.bin/release/bladebit")
