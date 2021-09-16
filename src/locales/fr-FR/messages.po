@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 23:57\n"
+"PO-Revision-Date: 2021-09-16 05:44\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -686,7 +686,7 @@ msgstr "Difficulté"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 msgid "Disable bitfield plotting"
-msgstr "Désactiver bitfield plotting"
+msgstr "Désactiver le traçage bitfield"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:26
 msgid "Discard"
@@ -712,7 +712,7 @@ msgstr "Avez-vous des parcelles existantes sur cette machine ? <0>Ajouter réper
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:55
 msgid "Does your machine support parallel plotting?"
-msgstr "Est-ce que votre machine supporte le plotting en parallèle ?"
+msgstr "Est-ce que votre machine supporte le traçage en parallèle ?"
 
 #: src/components/wallet/did/WalletDID.tsx:428
 msgid "Drag and drop attestation packet(s)"
@@ -1328,7 +1328,7 @@ msgstr "Notez que ceci ne change pas vos adresses de paiement de pool. Seules vo
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:118
 #: src/components/plotNFT/PlotNFTCard.tsx:160
 msgid "Number of Plots"
-msgstr "Nombre de plots"
+msgstr "Nombre de parcelles"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
 msgid "Number of buckets"
@@ -1523,7 +1523,7 @@ msgstr "Plot"
 #: src/components/farm/card/FarmCardPlotCount.tsx:12
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:41
 msgid "Plot Count"
-msgstr "Nombre de Plot"
+msgstr "Nombre de parcelles"
 
 #: src/components/block/Block.jsx:300
 msgid "Plot Id"
@@ -1531,7 +1531,7 @@ msgstr "Id de la parcelle"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "Plot Key"
-msgstr "Clé du plot"
+msgstr "Clé de la parcelle"
 
 #: src/components/pool/PoolOverview.tsx:40
 msgid "Plot NFT"
@@ -1560,11 +1560,11 @@ msgstr "Taille du plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
 msgid "Plot in Parallel"
-msgstr "Plots en parallèle"
+msgstr "Tracer en parallèle"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:46
 msgid "Plot is duplicate of {0}"
-msgstr "Le plot est un doublon de {0}"
+msgstr "La parcelle est un doublon de {0}"
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
 #~ msgid "PlotNFT is transitioning to (target state)"
@@ -1576,7 +1576,7 @@ msgstr "Le NFT de parcelle est en cours de transition vers (target state). Cela 
 
 #: src/components/dashboard/DashboardSideBar.tsx:50
 msgid "Plots"
-msgstr "Plots"
+msgstr "Parcelles"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:22
 msgid "Plots Passed Filter"
@@ -1588,7 +1588,7 @@ msgstr "Les parcelles constituent l'espace alloué sur votre disque dur pour cul
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:34
 msgid "Plotting"
-msgstr "Plotting"
+msgstr "Traçage"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
@@ -1834,7 +1834,7 @@ msgstr "Récupérer le portefeuille"
 #: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
 msgid "Refresh Plots"
-msgstr "Actualiser les plots"
+msgstr "Actualiser les parcelles"
 
 #: src/components/pool/PoolInfo.tsx:32
 msgid "Relative Lock Height"
@@ -2229,11 +2229,11 @@ msgstr "Ce sont les instructions du paiement du fermier. Par défaut, il s'agira
 
 #: src/components/plot/PlotsFailed.tsx:40
 msgid "These plots are invalid, you might want to delete them."
-msgstr "Ces plots sont invalides, vous devriez les supprimer."
+msgstr "Ces parcelles sont invalides, vous devriez les supprimer."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:72
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr "Cela vous permet d’ajouter un répertoire contenant des plots. Si vous n'avez pas créé de plots, allez sur l'écran de plotting."
+msgstr "Cela vous permet d’ajouter un répertoire contenant des parcelles. Si vous n'avez pas créé de parcelles, allez sur l'écran de traçage."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:130
 #: src/components/plotNFT/PlotNFTCard.tsx:172
@@ -2557,7 +2557,7 @@ msgstr "Vous voulez gagner plus de Chia ? Ajoutez plus de parcelles à votre fer
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:86
 msgid "Want to have a delay before the next plot starts?"
-msgstr "Voulez-vous un délai d'attente avant que le prochain plot démarre ?"
+msgstr "Voulez-vous un délai d'attente avant que la prochaine parcelle démarre ?"
 
 #: src/components/selectKey/SelectKey.tsx:86
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
@@ -2624,7 +2624,7 @@ msgstr "Vous pouvez toujours ajouter des parcelles à ce NFT de parcelle, mais v
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Vous n'avez pas besoin d'être synchronisé ou connecté au plot. Les fichiers temporaires sont créés durant le processus de plotting sans excéder la taille des fichiers du plot final. Soyez sûr que vous avez suffisamment d'espace <0>En savoir plus</0>"
+msgstr "Vous n'avez pas besoin d'être synchronisé ou connecté pour créer des parcelles. Les fichiers temporaires sont créés durant le processus de traçage sans excéder la taille des fichiers de la parcelle finale. Soyez sûr que vous avez suffisamment d'espace <0>En savoir plus</0>"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
 msgid "You have made changes. Do you want to discard them?"
