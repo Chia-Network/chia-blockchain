@@ -170,6 +170,11 @@ class TestRpc:
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots
 
+            # Reset cache and force updates cache every second to make sure the farmer gets the most recent data
+            update_interval_before = farmer_api.farmer.update_harvester_cache_interval
+            farmer_api.farmer.update_harvester_cache_interval = 1
+            farmer_api.farmer.harvester_cache = {}
+
             # Test farmer get_harvesters
             async def test_get_harvesters():
                 farmer_res = await client.get_harvesters()
@@ -180,6 +185,10 @@ class TestRpc:
                 return True
 
             await time_out_assert(30, test_get_harvesters)
+
+            # Reset cache and reset update interval to avoid hitting the rate limit
+            farmer_api.farmer.update_harvester_cache_interval = update_interval_before
+            farmer_api.farmer.harvester_cache = {}
 
             expected_result: PlotRefreshResult = PlotRefreshResult()
 
