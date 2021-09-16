@@ -5,6 +5,7 @@ from typing import List, Optional, Set, Tuple
 
 import aiosqlite
 import pytest
+import tempfile
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
@@ -57,7 +58,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class DBConnection:
     async def __aenter__(self) -> DBWrapper:
-        self.db_path = Path("fndb_test.db")
+        self.db_path = Path(tempfile.NamedTemporaryFile().name)
         if self.db_path.exists():
             self.db_path.unlink()
         self.connection = await aiosqlite.connect(self.db_path)
