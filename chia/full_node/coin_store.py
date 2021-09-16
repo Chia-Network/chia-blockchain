@@ -9,6 +9,10 @@ from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
+from time import time
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class CoinStore:
@@ -69,6 +73,8 @@ class CoinStore:
             return None
         assert block.foliage_transaction_block is not None
 
+        start = time()
+
         for coin in tx_additions:
             record: CoinRecord = CoinRecord(
                 coin,
@@ -103,6 +109,13 @@ class CoinStore:
 
         # Sanity check, already checked in block_body_validation
         assert sum([a.amount for a in tx_additions]) <= total_amount_spent
+        end = time()
+        if end - start > 10:
+            log.warning(
+                f"It took {end - start:0.2}s to apply {len(tx_additions)} additions and "
+                + f"{len(tx_removals)} removals to the coin store. Make sure "
+                + "blockchain database is on a fast drive"
+            )
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
