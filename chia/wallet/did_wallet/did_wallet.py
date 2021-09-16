@@ -192,7 +192,7 @@ class DIDWallet:
 
         amount: uint64 = uint64(0)
         for record in record_list:
-            parent = await self.get_parent_for_coin(record.coin)
+            parent = self.get_parent_for_coin(record.coin)
             if parent is not None:
                 amount = uint64(amount + record.coin.amount)
 
@@ -271,7 +271,7 @@ class DIDWallet:
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, _: uint32):
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info("DID wallet has been notified that coin was added")
+        self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
@@ -295,6 +295,26 @@ class DIDWallet:
         )
 
         await self.add_parent(coin.name(), future_parent, True)
+        parent = self.get_parent_for_coin(coin)
+        if parent is None:
+            parent_state: CoinState = (
+                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+            )[0]
+            node = self.wallet_state_manager.wallet_node.get_full_node_peer()
+            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
+                coin.parent_coin_info, parent_state.spent_height
+            )
+            response = await node.request_puzzle_solution(puzzle_solution_request)
+            req_puz_sol = response.response
+            assert req_puz_sol.puzzle is not None
+            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
+            assert parent_innerpuz is not None
+            parent_info = LineageProof(
+                parent_state.coin.parent_coin_info,
+                parent_innerpuz.get_tree_hash(),
+                parent_state.coin.amount,
+            )
+            await self.add_parent(coin.parent_coin_info, parent_info, False)
 
     def create_backup(self, filename: str):
         assert self.did_info.current_inner is not None
@@ -439,7 +459,7 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
-        parent_info = await self.get_parent_for_coin(coin)
+        parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
             [
@@ -506,7 +526,7 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
-        parent_info = await self.get_parent_for_coin(coin)
+        parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
             [
@@ -573,7 +593,7 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
-        parent_info = await self.get_parent_for_coin(coin)
+        parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
             [
@@ -644,7 +664,7 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
-        parent_info = await self.get_parent_for_coin(coin)
+        parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
 
         fullsol = Program.to(
@@ -780,7 +800,7 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
-        parent_info = await self.get_parent_for_coin(coin)
+        parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
             [
@@ -876,7 +896,7 @@ class DIDWallet:
         )
         return inner_puzzle
 
-    async def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
+    def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
         parent_info = None
         for name, ccparent in self.did_info.parent_info:
             if name == coin.parent_coin_info:
