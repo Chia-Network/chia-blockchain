@@ -168,7 +168,7 @@ def plot_madmax(args, root_path):
     call_args.append("-t")
     call_args.append(args.tmpdir)
     call_args.append("-2")
-    call_args.append(args.tmpdir)
+    call_args.append(args.tmpdir2)
     call_args.append("-d")
     call_args.append(args.finaldir)
     if args.contract != "":

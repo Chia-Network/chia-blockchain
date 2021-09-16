@@ -6,7 +6,7 @@ def plot_chia(args):
         plotter = DiskPlotter()
         plotter.create_plot_disk(
             args.tmpdir,
-            args.tmpdir,
+            args.tmpdir2,
             args.finaldir,
             args.filename,
             args.size,
