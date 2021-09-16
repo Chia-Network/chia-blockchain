@@ -318,7 +318,7 @@ class TestCoinStore:
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
             for block in blocks:
-                res, err, _ = await b.receive_block(block)
+                res, err, _, _ = await b.receive_block(block)
                 assert err is None
                 assert res == ReceiveBlockResult.NEW_PEAK
             assert b.get_peak().height == num_blocks - 1
