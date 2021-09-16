@@ -182,17 +182,17 @@
      )
 
      ;; calculate the hash of an announcement
-     (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_info cat_mod_struct)
+     (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_id cat_mod_struct)
        ; NOTE: the next line containts a bug, as sha256tree1 ignores `this_subtotal`
-       (sha256 (coin_id_for_coin next_coin_info cat_mod_struct) (concat 0xcb (concat this_coin_id this_subtotal)))
+       (sha256 next_coin_id 0xcb this_coin_id this_subtotal)
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
-     (defun-inline create_assert_next_announcement_condition (this_coin_id this_subtotal next_coin_info cat_mod_struct)
+     (defun-inline create_assert_next_announcement_condition (this_coin_id this_subtotal next_coin_id cat_mod_struct)
        (list ASSERT_COIN_ANNOUNCEMENT
              (calculate_annoucement_id this_coin_id
                                             this_subtotal
-                                            next_coin_info
+                                            next_coin_id
                                             cat_mod_struct
              )
        )
@@ -238,11 +238,11 @@
          morphed_conditions
          prev_coin_id
          this_coin_id
-         next_coin_info
+         next_coin_id
          cat_mod_struct
        )
          (c (create_announcement_condition prev_coin_id prev_subtotal)
-           (c (create_assert_next_announcement_condition this_coin_id this_subtotal next_coin_info cat_mod_struct)
+           (c (create_assert_next_announcement_condition this_coin_id this_subtotal next_coin_id cat_mod_struct)
              morphed_conditions)
          )
       )
@@ -314,7 +314,7 @@
          inner_conditions
          prev_coin_id
          this_coin_bundle
-         next_coin_bundle
+         next_coin_id
          prev_subtotal
          extra_delta
       )
@@ -330,7 +330,7 @@
               (morph_conditions inner_conditions (cat_struct_truth Truths))
               prev_coin_id
               (my_id_cat_truth Truths)
-              next_coin_bundle
+              next_coin_id
               (cat_struct_truth Truths)
             )
         )
@@ -342,7 +342,7 @@
         inner_solution
         prev_coin_id
         this_coin_bundle
-        next_coin_bundle
+        next_coin_id
         prev_subtotal
         extra_delta
      )
@@ -351,7 +351,7 @@
                        (a INNER_PUZZLE (c Truths inner_solution))
                        prev_coin_id
                        this_coin_bundle
-                       next_coin_bundle
+                       next_coin_id
                        prev_subtotal
                        extra_delta
          )
@@ -383,11 +383,10 @@
              inner_solution
              prev_coin_id
              this_coin_bundle
-             next_coin_bundle
+             (coin_id_for_coin next_coin_bundle cat_mod_struct)
              prev_subtotal
              extra_delta
        )
-       ;(x "my id" my_id "next coin bundle" next_coin_bundle)
     )
 
     (stager
