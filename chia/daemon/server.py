@@ -141,6 +141,7 @@ class WebSocketServer:
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
+        self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.shut_down = False
@@ -163,7 +164,7 @@ class WebSocketServer:
             self.safe_handle,
             self.self_hostname,
             self.daemon_port,
-            max_size=50 * 1000 * 1000,
+            max_size=self.daemon_max_message_size,
             ping_interval=500,
             ping_timeout=300,
             ssl=self.ssl_context,
