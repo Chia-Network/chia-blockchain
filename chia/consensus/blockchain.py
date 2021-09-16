@@ -316,7 +316,7 @@ class Blockchain(BlockchainInterface):
                     tx_removals, tx_additions = [], []
                 if block.is_transaction_block():
                     assert block.foliage_transaction_block is not None
-                    added, _ = await self.coin_store.new_block(
+                    added = await self.coin_store.new_block(
                         block.height,
                         block.foliage_transaction_block.timestamp,
                         block.get_included_reward_coins(),
@@ -381,19 +381,25 @@ class Blockchain(BlockchainInterface):
                         tx_removals, tx_additions = await self.get_tx_removals_and_additions(fetched_full_block, None)
                     if fetched_full_block.is_transaction_block():
                         assert fetched_full_block.foliage_transaction_block is not None
-                        removed_rec, added_rec = await self.coin_store.new_block(
+                        added_rec = await self.coin_store.new_block(
                             fetched_full_block.height,
                             fetched_full_block.foliage_transaction_block.timestamp,
                             fetched_full_block.get_included_reward_coins(),
                             tx_additions,
                             tx_removals,
                         )
+                        removed_rec: List[Optional[CoinRecord]] = [
+                            await self.coin_store.get_coin_record(name) for name in tx_removals
+                        ]
 
                         # Set additions first, than removals in order to handle ephemeral coin state
                         # Add in height order is also required
+                        record: Optional[CoinRecord]
                         for record in added_rec:
+                            assert record
                             lastest_coin_state[record.name] = record
                         for record in removed_rec:
+                            assert record
                             lastest_coin_state[record.name] = record
 
             # Changes the peak to be the new peak

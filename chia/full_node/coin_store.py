@@ -1,4 +1,4 @@
-from typing import List, Optional, Set, Tuple, Dict
+from typing import List, Optional, Set, Dict
 import aiosqlite
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -72,15 +72,15 @@ class CoinStore:
         included_reward_coins: Set[Coin],
         tx_additions: List[Coin],
         tx_removals: List[bytes32],
-    ) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+    ) -> List[CoinRecord]:
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
+        Returns a list of the CoinRecords that were added by this block
         """
 
         start = time()
 
         added_coin_records = []
-        removed_coin_records = []
 
         for coin in tx_additions:
             record: CoinRecord = CoinRecord(
@@ -111,13 +111,9 @@ class CoinStore:
             added_coin_records.append(reward_coin_r)
             await self._add_coin_record(reward_coin_r, False)
 
-        total_amount_spent: int = 0
         for coin_name in tx_removals:
-            removed_coin_record = await self._set_spent(coin_name, height)
-            total_amount_spent += removed_coin_record.coin.amount
-            removed_coin_records.append(removed_coin_record)
-        # Sanity check, already checked in block_body_validation
-        assert sum([a.amount for a in tx_additions]) <= total_amount_spent
+            await self._set_spent(coin_name, height)
+
         end = time()
         if end - start > 10:
             log.warning(
@@ -126,7 +122,7 @@ class CoinStore:
                 + "blockchain database is on a fast drive"
             )
 
-        return removed_coin_records, added_coin_records
+        return added_coin_records
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
