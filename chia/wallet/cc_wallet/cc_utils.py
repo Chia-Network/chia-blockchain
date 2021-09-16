@@ -175,7 +175,15 @@ def spend_bundle_for_spendable_ccs(
         # We check whether or not to reveal the limiter based on whether the first value in our LP is 1 (or 0) bytes
         limiter_reveal = genesis_coin_checker if len(my_bundle.rest().first().as_python()) <= 1 else Program.to([])
 
-        solution = [inner_solutions[index], limiter_reveal, prev_id, my_bundle, next_bundle, subtotals[index], extra_deltas[index]]
+        solution = [
+            inner_solutions[index],
+            limiter_reveal,
+            prev_id,
+            my_bundle,
+            next_bundle,
+            subtotals[index],
+            extra_deltas[index],
+        ]
         coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
@@ -263,7 +271,7 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
 
         mod_hash, genesis_coin_checker_hash, inner_puzzle = r
 
-        genesis_coin_checker = coin_spend.solution.rest().first()
+        genesis_coin_checker = Program.from_bytes(bytes(coin_spend.solution)).rest().first()
         genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker)
 
         cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof)
