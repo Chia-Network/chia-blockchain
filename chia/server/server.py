@@ -102,6 +102,7 @@ class ChiaServer:
 
         self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
             NodeType.FULL_NODE: {},
+            NodeType.DATA_LAYER: {},
             NodeType.WALLET: {},
             NodeType.HARVESTER: {},
             NodeType.FARMER: {},

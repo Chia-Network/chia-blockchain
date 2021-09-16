@@ -14,6 +14,7 @@ class NodeType(IntEnum):
     TIMELORD = 4
     INTRODUCER = 5
     WALLET = 6
+    DATA_LAYER = 7
 
 
 class Delivery(IntEnum):
