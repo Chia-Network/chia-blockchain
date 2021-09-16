@@ -395,7 +395,7 @@ class TestCCLifecycle:
                 [DelegatedGenesis.proof(new_genesis_checker, GenesisById.proof().rest())],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
-                signatures=[signature]
+                signatures=[signature],
             )
 
         finally:
