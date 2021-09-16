@@ -964,7 +964,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1], "finished_sub_slots", [new_finished_ss] + blocks[-1].finished_sub_slots[1:]
                 )
-                result, err, _ = await empty_blockchain.receive_block(block_bad)
+                result, err, _, _ = await empty_blockchain.receive_block(block_bad)
                 assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
                 return None
             await empty_blockchain.receive_block(blocks[-1])
@@ -2437,7 +2437,7 @@ class TestBodyValidation:
             farmer_reward_puzzle_hash=rewards_ph,
         )
         for block in blocks_reorg[-10:]:
-            r, e, _ = await b.receive_block(block)
+            r, e, _, _ = await b.receive_block(block)
             assert e is None
 
         # ephemeral coin is spent
