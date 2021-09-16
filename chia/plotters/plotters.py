@@ -1,5 +1,6 @@
 import argparse
 import binascii
+import os
 from enum import Enum
 from chia.plotters.chiapos import plot_chia
 from chia.plotters.madmax import plot_madmax
@@ -31,7 +32,6 @@ class Options(Enum):
     BLADEBIT_NONUMA = 22
     VERBOSE = 23
     BLADEBIT_ID = 24
-    BLADEBIT_OUTDIR = 25
 
 
 chia_plotter = [
@@ -75,7 +75,7 @@ bladebit_plotter = [
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_ID,
     Options.BLADEBIT_NONUMA,
-    Options.BLADEBIT_OUTDIR,
+    Options.FINAL_DIR,
     Options.VERBOSE,
 ]
 
@@ -111,7 +111,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
         if option is Options.TMP_DIR:
             parser.add_argument(
                 "-t",
-                "--tempdir",
+                "--tmpdir",
                 type=str,
                 help="Temporary directory 1.",
                 default=str(root_path) + "/",
@@ -119,7 +119,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
         if option is Options.TMP_DIR2:
             parser.add_argument(
                 "-2",
-                "--tempdir2",
+                "--tmpdir2",
                 type=str,
                 help="Temporary directory 2.",
                 default=str(root_path) + "/",
@@ -270,17 +270,24 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="Plot id (used for debug)",
                 default="",
             )
-        if option is Options.BLADEBIT_OUTDIR:
-            parser.add_argument(
-                "-o",
-                "--outdir",
-                type=str,
-                help="Output directory in which to output the plots. This directory must exist",
-                default=str(root_path) + "/",
-            )
 
 
 def call_plotters(root_path, args):
+    # Add `plotters` section in CHIA_ROOT.
+    root_path = root_path / "plotters"
+    if not root_path.is_dir():
+        if os.path.exists(root_path):
+            try:
+                os.remove(root_path)
+            except Exception as e:
+                print(f"Exception deleting old root path: {type(e)} {e}.")
+
+    if not os.path.exists(root_path):
+        print(f"Creating plotters folder within CHIA_ROOT: {root_path}")
+        try:
+            os.mkdir(root_path)
+        except Exception as e:
+            print(f"Cannot create plotters root path {root_path} {type(e)} {e}.")
     plotters = argparse.ArgumentParser(description="Available plotters.")
     subparsers = plotters.add_subparsers(help="Available plotters", dest="plotter")
     build_parser(subparsers, root_path, chia_plotter, "chiapos", "Chiapos Plotter")

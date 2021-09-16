@@ -23,8 +23,8 @@ def install_madmax(root_path):
                         "build-essential",
                     ]
                 )
-            except Exception:
-                raise ValueError("Could not install dependencies.")
+            except Exception as e:
+                raise ValueError(f"Could not install dependencies. {e}")
         if sys.platform.startswith("darwin"):
             try:
                 subprocess.run(
@@ -46,7 +46,7 @@ def install_madmax(root_path):
 
         try:
             subprocess.run(["git", "--version"])
-        except Exception as e:
+        except FileNotFoundError as e:
             raise ValueError(f"Git not installed. Aborting madmax install. {e}")
 
         print("Cloning git repository.")
@@ -58,13 +58,13 @@ def install_madmax(root_path):
                     "https://github.com/Chia-Network/chia-plotter-madmax.git",
                     "madmax-plotter",
                 ],
-                cwd=str(root_path),
+                cwd=os.fspath(root_path),
             )
         except Exception as e:
-            raise ValueError(f"Could not install git submodules. {e}")
+            raise ValueError(f"Could not clone madmax repository. {e}")
 
         print("Installing git submodules.")
-        madmax_path = str(root_path) + "/madmax-plotter"
+        madmax_path = os.fspath(root_path.joinpath("madmax-plotter"))
         try:
             subprocess.run(["git", "submodule", "update", "--init", "--recursive"], cwd=madmax_path)
         except Exception as e:
@@ -76,7 +76,7 @@ def install_madmax(root_path):
         except Exception as e:
             raise ValueError(f"Install script failed. {e}")
     else:
-        raise ValueError("Platform not supported yet for mad max plotter.")
+        raise ValueError("Platform not supported yet for madmax plotter.")
 
 
 progress = {
@@ -166,9 +166,9 @@ def plot_madmax(args, root_path):
         call_args.append("-p")
         call_args.append(args.pool_key.hex())
     call_args.append("-t")
-    call_args.append(args.tempdir)
+    call_args.append(args.tmpdir)
     call_args.append("-2")
-    call_args.append(args.tempdir2)
+    call_args.append(args.tmpdir)
     call_args.append("-d")
     call_args.append(args.finaldir)
     if args.contract != "":

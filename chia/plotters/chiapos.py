@@ -5,8 +5,8 @@ def plot_chia(args):
     try:
         plotter = DiskPlotter()
         plotter.create_plot_disk(
-            args.tempdir,
-            args.tempdir2,
+            args.tmpdir,
+            args.tmpdir,
             args.finaldir,
             args.filename,
             args.size,
