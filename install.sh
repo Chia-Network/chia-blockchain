@@ -121,7 +121,7 @@ python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
 
 echo ""
 echo "Chia blockchain install.sh complete."
-echo "For assistance join us on Keybase in the #testnet chat channel:"
+echo "For assistance join us on Keybase in the #support chat channel:"
 echo "https://keybase.io/team/chia_network.public"
 echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
