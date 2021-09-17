@@ -1,6 +1,7 @@
 # import asyncio
 import logging
 from pathlib import Path
+
 # import random
 # import sqlite3
 from typing import Dict, List
@@ -10,9 +11,11 @@ import pytest
 
 # from chia.consensus.blockchain import Blockchain
 from chia.data_layer.data_store import DataStore
+
 # from chia.full_node.block_store import BlockStore
 # from chia.full_node.coin_store import CoinStore
 from chia.util.db_wrapper import DBWrapper
+
 # from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
@@ -61,7 +64,9 @@ table_columns: Dict[str, List[str]] = {
 
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.asyncio
-async def test_create_creates_tables_and_columns(db_wrapper: DBWrapper, table_name: str, expected_columns: List[str]) -> None:
+async def test_create_creates_tables_and_columns(
+    db_wrapper: DBWrapper, table_name: str, expected_columns: List[str]
+) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
     query = f"pragma table_info({table_name});"

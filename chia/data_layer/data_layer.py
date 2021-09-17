@@ -1,6 +1,7 @@
 # import asyncio
 # import dataclasses
 import logging
+
 # import random
 # import time
 # import traceback
@@ -22,6 +23,7 @@ from typing import Any
 # from chia.consensus.multiprocess_validation import PreValidationResult
 # from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.data_layer.data_store import DataStore
+
 # from chia.full_node.block_store import BlockStore
 # from chia.full_node.bundle_tools import detect_potential_template_generator
 # from chia.full_node.coin_store import CoinStore
@@ -65,79 +67,81 @@ from chia.data_layer.data_store import DataStore
 
 class DataLayer:
     data_store: DataStore
-#     block_store: BlockStore
-#     full_node_store: FullNodeStore
-#     full_node_peers: Optional[FullNodePeers]
-#     sync_store: Any
-#     coin_store: CoinStore
-#     mempool_manager: MempoolManager
-#     connection: aiosqlite.Connection
-#     _sync_task: Optional[asyncio.Task]
-#     _init_weight_proof: Optional[asyncio.Task] = None
-#     blockchain: Blockchain
-#     config: Dict
+    # block_store: BlockStore
+    # full_node_store: FullNodeStore
+    # full_node_peers: Optional[FullNodePeers]
+    # sync_store: Any
+    # coin_store: CoinStore
+    # mempool_manager: MempoolManager
+    # connection: aiosqlite.Connection
+    # _sync_task: Optional[asyncio.Task]
+    # _init_weight_proof: Optional[asyncio.Task] = None
+    # blockchain: Blockchain
+    # config: Dict
     server: Any
     log: logging.Logger
-#     constants: ConsensusConstants
-#     _shut_down: bool
-#     root_path: Path
-#     state_changed_callback: Optional[Callable]
-#     timelord_lock: asyncio.Lock
+    # constants: ConsensusConstants
+    # _shut_down: bool
+    # root_path: Path
+    # state_changed_callback: Optional[Callable]
+    # timelord_lock: asyncio.Lock
     initialized: bool
-#     weight_proof_handler: Optional[WeightProofHandler]
-#     _ui_tasks: Set[asyncio.Task]
-#
+    # weight_proof_handler: Optional[WeightProofHandler]
+    # _ui_tasks: Set[asyncio.Task]
+
     def __init__(
         self,
-#         config: Dict,
-#         root_path: Path,
-#         consensus_constants: ConsensusConstants,
+        # config: Dict,
+        # root_path: Path,
+        # consensus_constants: ConsensusConstants,
         name: str = None,
     ):
         self.initialized = False
-#         self.root_path = root_path
-#         self.config = config
+        # self.root_path = root_path
+        # self.config = config
         self.server = None
-#         self._shut_down = False  # Set to true to close all infinite loops
-#         self.constants = consensus_constants
-#         self.pow_creation: Dict[uint32, asyncio.Event] = {}
-#         self.state_changed_callback: Optional[Callable] = None
-#         self.full_node_peers = None
-#         self.sync_store = None
-#         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
-#         self.full_node_store = FullNodeStore(self.constants)
-#         self.uncompact_task = None
-#         self.compact_vdf_requests: Set[bytes32] = set()
+        # self._shut_down = False  # Set to true to close all infinite loops
+        # self.constants = consensus_constants
+        # self.pow_creation: Dict[uint32, asyncio.Event] = {}
+        # self.state_changed_callback: Optional[Callable] = None
+        # self.full_node_peers = None
+        # self.sync_store = None
+        # self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
+        # self.full_node_store = FullNodeStore(self.constants)
+        # self.uncompact_task = None
+        # self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
-#
-#         self._ui_tasks = set()
-#
-#         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-#         self.db_path = path_from_root(root_path, db_path_replaced)
-#         mkdir(self.db_path.parent)
-#
-#     def _set_state_changed_callback(self, callback: Callable):
-#         self.state_changed_callback = callback
-#
+
+        # self._ui_tasks = set()
+        #
+        # db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        # self.db_path = path_from_root(root_path, db_path_replaced)
+        # mkdir(self.db_path.parent)
+
+    # def _set_state_changed_callback(self, callback: Callable):
+    #     self.state_changed_callback = callback
+
     async def _start(self):
-#         self.timelord_lock = asyncio.Lock()
-#         self.compact_vdf_sem = asyncio.Semaphore(4)
-#         self.new_peak_sem = asyncio.Semaphore(8)
-#         # create the store (db) and full node instance
-#         self.connection = await aiosqlite.connect(self.db_path)
-#         if self.config.get("log_sqlite_cmds", False):
-#             sql_log_path = path_from_root(self.root_path, "log/sql.log")
-#             self.log.info(f"logging SQL commands to {sql_log_path}")
-#
-#             def sql_trace_callback(req: str):
-#                 timestamp = datetime.now().strftime("%H:%M:%S.%f")
-#                 log = open(sql_log_path, "a")
-#                 log.write(timestamp + " " + req + "\n")
-#                 log.close()
-#
-#             await self.connection.set_trace_callback(sql_trace_callback)
-#         self.db_wrapper = DBWrapper(self.connection)
+        # self.timelord_lock = asyncio.Lock()
+        # self.compact_vdf_sem = asyncio.Semaphore(4)
+        # self.new_peak_sem = asyncio.Semaphore(8)
+        # # create the store (db) and full node instance
+        # self.connection = await aiosqlite.connect(self.db_path)
+        # if self.config.get("log_sqlite_cmds", False):
+        #     sql_log_path = path_from_root(self.root_path, "log/sql.log")
+        #     self.log.info(f"logging SQL commands to {sql_log_path}")
+        #
+        #     def sql_trace_callback(req: str):
+        #         timestamp = datetime.now().strftime("%H:%M:%S.%f")
+        #         log = open(sql_log_path, "a")
+        #         log.write(timestamp + " " + req + "\n")
+        #         log.close()
+        #
+        #     await self.connection.set_trace_callback(sql_trace_callback)
+        # self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
+
+
 #         self.sync_store = await SyncStore.create()
 #         self.coin_store = await CoinStore.create(self.db_wrapper)
 #         self.log.info("Initializing blockchain from disk")

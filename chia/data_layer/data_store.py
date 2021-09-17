@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from enum import IntEnum
 import logging
+
 # from typing import Dict, List, Optional, Tuple
 from typing import Iterable, Tuple
 
@@ -10,11 +11,14 @@ from clvm import CLVMObject
 
 # from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
+
 # from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.tree_hash import sha256_treehash
+
 # from chia.types.full_block import FullBlock
 # from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper
+
 # from chia.util.ints import uint32
 # from chia.util.lru_cache import LRUCache
 
@@ -54,9 +58,9 @@ class Commit:
 
 class DataStore:
     db: aiosqlite.Connection
-#     block_cache: LRUCache
+    # block_cache: LRUCache
     db_wrapper: DBWrapper
-#     ses_challenge_cache: LRUCache
+    # ses_challenge_cache: LRUCache
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper):
@@ -67,36 +71,26 @@ class DataStore:
         self.db = db_wrapper.db
 
         # TODO: what pragmas do we want?
-#         await self.db.execute("pragma journal_mode=wal")
-#         await self.db.execute("pragma synchronous=2")
+        # await self.db.execute("pragma journal_mode=wal")
+        # await self.db.execute("pragma synchronous=2")
 
         # TODO: make this handle multiple data layer tables
         # TODO: do we need to handle multiple equal rows
 
         # Just a raw collection of all ChiaLisp lists that are used
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY, clvm_object BLOB)"
-        )
+        await self.db.execute("CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY, clvm_object BLOB)")
         # The present properly ordered collection of rows.
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS data_rows(row_hash TEXT PRIMARY KEY)"
-        )
+        await self.db.execute("CREATE TABLE IF NOT EXISTS data_rows(row_hash TEXT PRIMARY KEY)")
         # TODO: needs a key
         # TODO: As operations are reverted do they get deleted?  Or perhaps we track
         #       a reference into the table and only remove when a non-matching forward
         #       step is taken?  Or reverts are just further actions?
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS actions("
-            "data_row_index INTEGER, row_hash TEXT, operation INTEGER"
-            ")"
+            "CREATE TABLE IF NOT EXISTS actions(" "data_row_index INTEGER, row_hash TEXT, operation INTEGER" ")"
         )
         # TODO: Could also be structured such that the action table has a reference from
         #       each action to the commit it is part of.
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS commits("
-            "changelist_hash TEXT, actions_index INTEGER"
-            ")"
-        )
+        await self.db.execute("CREATE TABLE IF NOT EXISTS commits(" "changelist_hash TEXT, actions_index INTEGER" ")")
 
         await self.db.commit()
 

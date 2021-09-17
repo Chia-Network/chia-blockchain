@@ -13,6 +13,7 @@
 # from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 # from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.data_layer.data_layer import DataLayer
+
 # from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 # from chia.full_node.signage_point import SignagePoint
 # from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
@@ -45,8 +46,8 @@ class DataLayerAPI:
     def __init__(self, data_layer) -> None:
         self.data_layer = data_layer
 
-#     def _set_state_changed_callback(self, callback: Callable):
-#         self.full_node.state_changed_callback = callback
+    # def _set_state_changed_callback(self, callback: Callable):
+    #     self.full_node.state_changed_callback = callback
 
     @property
     def server(self):
@@ -59,6 +60,7 @@ class DataLayerAPI:
     @property
     def api_ready(self):
         return self.data_layer.initialized
+
 
 #     @peer_required
 #     @api_request
