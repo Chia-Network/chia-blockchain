@@ -37,7 +37,7 @@
         "@material-ui/styles": "^4.11.4",
         "@nivo/core": "^0.73.0",
         "@nivo/line": "^0.73.0",
-        "@rehooks/local-storage": "^2.4.3",
+        "@rehooks/local-storage": "2.4.0",
         "bech32": "^2.0.0",
         "big.js": "^6.1.1",
         "byte-size": "^7.0.1",
@@ -153,6 +153,7 @@
         "url-loader": "^4.1.1",
         "webpack": "^5.52.1",
         "webpack-cli": "^4.8.0",
+        "webpack-dev-server": "^3.11.2",
         "xmldom": "github:xmldom/xmldom#0.7.0"
     },
     "browserslist": {
