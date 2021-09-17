@@ -1,5 +1,6 @@
 # flake8: noqa: E501
 import logging
+import traceback
 from os import unlink
 from pathlib import Path
 from secrets import token_bytes
@@ -195,25 +196,41 @@ class TestRpc:
             farmer_api.farmer.harvester_cache = {}
 
             expected_result: PlotRefreshResult = PlotRefreshResult()
+            expected_result_matched = True
 
             def test_refresh_callback(refresh_result: PlotRefreshResult):
-                assert refresh_result.loaded_plots == expected_result.loaded_plots
-                assert refresh_result.removed_plots == expected_result.removed_plots
-                assert refresh_result.processed_files == expected_result.processed_files
-                assert refresh_result.remaining_files == expected_result.remaining_files
+                def test_value(name: str, actual: PlotRefreshResult, expected: PlotRefreshResult):
+                    nonlocal expected_result_matched
+                    try:
+                        actual_value = actual.__getattribute__(name)
+                        expected_value = expected.__getattribute__(name)
+                        if actual_value != expected_value:
+                            log.error(f"{name} invalid: actual {actual_value} expected {expected_value}")
+                            expected_result_matched = False
+                    except AttributeError as error:
+                        log.error(f"{error}")
+                        expected_result_matched = False
+
+                test_value("loaded_plots", refresh_result, expected_result)
+                test_value("removed_plots", refresh_result, expected_result)
+                test_value("processed_files", refresh_result, expected_result)
+                test_value("remaining_files", refresh_result, expected_result)
 
             harvester.plot_manager.set_refresh_callback(test_refresh_callback)
 
             async def test_case(
                 trigger, expect_loaded, expect_removed, expect_processed, expected_directories, expect_total_plots
             ):
+                nonlocal expected_result_matched
                 expected_result.loaded_plots = expect_loaded
                 expected_result.removed_plots = expect_removed
                 expected_result.processed_files = expect_processed
                 await trigger
+                expected_result_matched = True
                 harvester.plot_manager.trigger_refresh()
                 assert len(await client_2.get_plot_directories()) == expected_directories
                 await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+                assert expected_result_matched
                 result = await client_2.get_plots()
                 assert len(result["plots"]) == expect_total_plots
                 assert len(harvester.plot_manager.cache) == expect_total_plots
