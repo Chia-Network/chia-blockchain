@@ -54,7 +54,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
     return pool_coin, farmer_coin
 
 
-class TestCoinStore:
+class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("rust_checker", [True, False])
     async def test_basic_coin_store(self, rust_checker: bool):
@@ -119,11 +119,25 @@ class TestCoinStore:
 
                     assert block.get_included_reward_coins() == should_be_included_prev
 
-                    await coin_store.new_block(block, tx_additions, tx_removals)
+                    if block.is_transaction_block():
+                        assert block.foliage_transaction_block is not None
+                        await coin_store.new_block(
+                            block.height,
+                            block.foliage_transaction_block.timestamp,
+                            block.get_included_reward_coins(),
+                            tx_additions,
+                            tx_removals,
+                        )
 
-                    if block.height != 0:
-                        with pytest.raises(Exception):
-                            await coin_store.new_block(block, tx_additions, tx_removals)
+                        if block.height != 0:
+                            with pytest.raises(Exception):
+                                await coin_store.new_block(
+                                    block.height,
+                                    block.foliage_transaction_block.timestamp,
+                                    block.get_included_reward_coins(),
+                                    tx_additions,
+                                    tx_removals,
+                                )
 
                     for expected_coin in should_be_included_prev:
                         # Check that the coinbase rewards are added
@@ -163,7 +177,17 @@ class TestCoinStore:
             for block in blocks:
                 if block.is_transaction_block():
                     removals, additions = [], []
-                    await coin_store.new_block(block, additions, removals)
+
+                    if block.is_transaction_block():
+                        assert block.foliage_transaction_block is not None
+                        await coin_store.new_block(
+                            block.height,
+                            block.foliage_transaction_block.timestamp,
+                            block.get_included_reward_coins(),
+                            additions,
+                            removals,
+                        )
+
                     coins = block.get_included_reward_coins()
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
@@ -195,7 +219,17 @@ class TestCoinStore:
             for block in blocks:
                 if block.is_transaction_block():
                     removals, additions = [], []
-                    await coin_store.new_block(block, additions, removals)
+
+                    if block.is_transaction_block():
+                        assert block.foliage_transaction_block is not None
+                        await coin_store.new_block(
+                            block.height,
+                            block.foliage_transaction_block.timestamp,
+                            block.get_included_reward_coins(),
+                            additions,
+                            removals,
+                        )
+
                     coins = block.get_included_reward_coins()
                     records: List[Optional[CoinRecord]] = [
                         await coin_store.get_coin_record(coin.name()) for coin in coins

@@ -1,11 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import aiosqlite
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
@@ -61,27 +60,30 @@ class CoinStore:
         self.coin_record_cache = LRUCache(cache_size)
         return self
 
-    async def new_block(self, block: FullBlock, tx_additions: List[Coin], tx_removals: List[bytes32]):
+    async def new_block(
+        self,
+        height: uint32,
+        timestamp: uint64,
+        included_reward_coins: Set[Coin],
+        tx_additions: List[Coin],
+        tx_removals: List[bytes32],
+    ):
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
-        if block.is_transaction_block() is False:
-            return None
-        assert block.foliage_transaction_block is not None
 
         for coin in tx_additions:
             record: CoinRecord = CoinRecord(
                 coin,
-                block.height,
+                height,
                 uint32(0),
                 False,
                 False,
-                block.foliage_transaction_block.timestamp,
+                timestamp,
             )
             await self._add_coin_record(record, False)
 
-        included_reward_coins = block.get_included_reward_coins()
-        if block.height == 0:
+        if height == 0:
             assert len(included_reward_coins) == 0
         else:
             assert len(included_reward_coins) >= 2
@@ -89,17 +91,17 @@ class CoinStore:
         for coin in included_reward_coins:
             reward_coin_r: CoinRecord = CoinRecord(
                 coin,
-                block.height,
+                height,
                 uint32(0),
                 False,
                 True,
-                block.foliage_transaction_block.timestamp,
+                timestamp,
             )
             await self._add_coin_record(reward_coin_r, False)
 
         total_amount_spent: int = 0
         for coin_name in tx_removals:
-            total_amount_spent += await self._set_spent(coin_name, block.height)
+            total_amount_spent += await self._set_spent(coin_name, height)
 
         # Sanity check, already checked in block_body_validation
         assert sum([a.amount for a in tx_additions]) <= total_amount_spent
