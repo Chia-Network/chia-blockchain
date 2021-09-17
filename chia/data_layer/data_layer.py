@@ -1,12 +1,15 @@
 import logging
+from pathlib import Path
+from typing import Any, Dict
 
-from typing import Any
-
+from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_store import DataStore
+from chia.util.db_wrapper import DBWrapper
 
 
 class DataLayer:
     data_store: DataStore
+    db_wrapper: DBWrapper
     # block_store: BlockStore
     # full_node_store: FullNodeStore
     # full_node_peers: Optional[FullNodePeers]
@@ -31,9 +34,9 @@ class DataLayer:
 
     def __init__(
         self,
-        # config: Dict,
-        # root_path: Path,
-        # consensus_constants: ConsensusConstants,
+        config: Dict,
+        root_path: Path,
+        consensus_constants: ConsensusConstants,
         name: str = None,
     ):
         self.initialized = False
@@ -78,7 +81,7 @@ class DataLayer:
         #         log.close()
         #
         #     await self.connection.set_trace_callback(sql_trace_callback)
-        # self.db_wrapper = DBWrapper(self.connection)
+        self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
 
         # self.sync_store = await SyncStore.create()
