@@ -1658,7 +1658,7 @@ class TestBodyValidation:
             transaction_data=bundles,
             time_per_block=10,
         )
-        assert (await b.receive_block(blocks[-1])) == expected
+        assert (await b.receive_block(blocks[-1]))[0:-1] == expected
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
