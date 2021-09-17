@@ -129,8 +129,8 @@ class SpendSim:
             uint64(calculate_base_farmer_reward(next_block_height) + fees),
             self.defaults.GENESIS_CHALLENGE,
         )
-        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(pool_coin, True), False)
-        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(farmer_coin, True), False)
+        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(pool_coin, True))
+        await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(farmer_coin, True))
 
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
@@ -148,7 +148,7 @@ class SpendSim:
                     return_removals = removals
 
                 for addition in additions:
-                    await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(addition), False)
+                    await self.mempool_manager.coin_store._add_coin_record(self.new_coin_record(addition))
                 for removal in removals:
                     await self.mempool_manager.coin_store._set_spent(removal.name(), uint32(self.block_height + 1))
 

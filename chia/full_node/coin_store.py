@@ -92,7 +92,7 @@ class CoinStore:
                 timestamp,
             )
             added_coin_records.append(record)
-            await self._add_coin_record(record, False)
+            await self._add_coin_record(record)
 
         if height == 0:
             assert len(included_reward_coins) == 0
@@ -109,7 +109,7 @@ class CoinStore:
                 timestamp,
             )
             added_coin_records.append(reward_coin_r)
-            await self._add_coin_record(reward_coin_r, False)
+            await self._add_coin_record(reward_coin_r)
 
         for coin_name in tx_removals:
             await self._set_spent(coin_name, height)
@@ -390,12 +390,12 @@ class CoinStore:
         return list(coin_changes.values())
 
     # Store CoinRecord in DB and ram cache
-    async def _add_coin_record(self, record: CoinRecord, allow_replace: bool) -> None:
+    async def _add_coin_record(self, record: CoinRecord) -> None:
         if self.coin_record_cache.get(record.coin.name()) is not None:
             self.coin_record_cache.remove(record.coin.name())
 
         cursor = await self.coin_record_db.execute(
-            f"INSERT {'OR REPLACE ' if allow_replace else ''}INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.coin.name().hex(),
                 record.confirmed_block_index,
@@ -421,5 +421,5 @@ class CoinStore:
             )
 
         await self.coin_record_db.execute(
-            f"UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", (index, coin_name.hex())
+            "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", (index, coin_name.hex())
         )
