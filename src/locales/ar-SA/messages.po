@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-07 17:56\n"
+"PO-Revision-Date: 2021-09-17 17:40\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -59,9 +59,9 @@ msgstr "موافقة"
 msgid "Accepted at time:"
 msgstr "تم القبول في الوقت:"
 
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
 #: src/components/plot/PlotsFailed.tsx:19
 #: src/components/plot/PlotsNotFound.tsx:19
-#: src/components/plot/overview/PlotOverviewPlots.tsx:114
 msgid "Action"
 msgstr "إجراء"
 
@@ -94,9 +94,9 @@ msgstr "إضافة إلى قائمة الانتظار"
 #~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:46
-#: src/components/plot/PlotHeader.tsx:63
 #: src/components/plot/add/PlotAdd.tsx:160
 #: src/components/plot/overview/PlotOverviewHero.tsx:54
+#: src/components/plot/PlotHeader.tsx:63
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:230
 #: src/components/plotNFT/PlotNFTCard.tsx:272
 msgid "Add a Plot"
@@ -132,10 +132,10 @@ msgstr "العنوان / العنوان المشفر"
 #: src/components/core/components/Amount/Amount.tsx:99
 #: src/components/trading/CreateOffer.jsx:196
 #: src/components/trading/TradesTable.tsx:20
-#: src/components/wallet/WalletHistory.tsx:62
 #: src/components/wallet/create/createNewColouredCoin.jsx:119
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 #: src/components/wallet/standard/WalletStandard.tsx:513
+#: src/components/wallet/WalletHistory.tsx:62
 msgid "Amount"
 msgstr "المبلغ"
 
@@ -744,10 +744,10 @@ msgstr ""
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "أدخل الـ 24 كلمة التي قمت بحفظها من أجل استعادة محفظة Chia الخاصة بك."
 
-#: src/components/farm/FarmerStatus.tsx:21
-#: src/components/farm/FarmerStatus.tsx:22
 #: src/components/farm/card/FarmCardStatus.tsx:35
 #: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:20
 #: src/components/plot/PlotStatus.tsx:21
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
@@ -836,9 +836,9 @@ msgstr ""
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "يحصل المزارعون على مكافآت مربعات ورسوم معاملة من خلال تخصيص مساحة احتياطية للشبكة للمساعدة في تأمين المعاملات. هذا هو المكان الذي ستكون فيه مزرعتك بمجرد إضافة قطعة. <0>عرض المزيد</0>"
 
+#: src/components/farm/card/FarmCardStatus.tsx:62
 #: src/components/farm/Farm.tsx:23
 #: src/components/farm/FarmerStatus.tsx:18
-#: src/components/farm/card/FarmCardStatus.tsx:62
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr "المزرعة"
@@ -855,13 +855,13 @@ msgstr "حالة المزرعة"
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:154
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
 #: src/components/pool/PoolInfo.tsx:17
-#: src/components/wallet/WalletHistory.tsx:66
 #: src/components/wallet/create/createExistingColouredCoin.jsx:123
 #: src/components/wallet/create/createNewColouredCoin.jsx:132
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
 #: src/components/wallet/standard/WalletStandard.tsx:524
+#: src/components/wallet/WalletHistory.tsx:66
 msgid "Fee"
 msgstr "الرسوم"
 
@@ -890,9 +890,9 @@ msgstr "قيمة الرسوم"
 msgid "File"
 msgstr "الملف"
 
+#: src/components/plot/overview/PlotOverviewPlots.tsx:106
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:106
 #: src/components/wallet/did/WalletDID.tsx:975
 msgid "Filename"
 msgstr "اسم الملف"
@@ -1291,9 +1291,9 @@ msgstr ""
 msgid "None of your plots have passed the plot filter yet."
 msgstr "لم تمر أي من قطعة خاصة بك بمرشح القطع حتى الآن."
 
-#: src/components/farm/FarmerStatus.tsx:20
 #: src/components/farm/card/FarmCardNotAvailable.tsx:20
 #: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/farm/FarmerStatus.tsx:20
 #: src/components/plot/PlotStatus.tsx:19
 #: src/components/plotNFT/PlotNFTCard.tsx:365
 msgid "Not Available"
@@ -1831,8 +1831,8 @@ msgstr ""
 msgid "Recover Wallet"
 msgstr ""
 
-#: src/components/plot/PlotHeader.tsx:78
 #: src/components/plot/overview/PlotOverviewHero.tsx:62
+#: src/components/plot/PlotHeader.tsx:78
 msgid "Refresh Plots"
 msgstr "تحديث القطع"
 
@@ -2063,8 +2063,8 @@ msgstr "الحالة"
 #: src/components/pool/PoolOverview.tsx:44
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:55
-#: src/components/wallet/WalletStatusCard.tsx:22
 #: src/components/wallet/Wallets.tsx:50
+#: src/components/wallet/WalletStatusCard.tsx:22
 msgid "Status"
 msgstr "الحالة"
 
@@ -2110,8 +2110,8 @@ msgstr "إرسال"
 msgid "Synced"
 msgstr "تمت المزامنة"
 
-#: src/components/farm/FarmerStatus.tsx:19
 #: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/farm/FarmerStatus.tsx:19
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/wallet/WalletStatus.tsx:38
 msgid "Syncing"
@@ -2694,13 +2694,13 @@ msgstr "[خطأ 13] تم رفض الإذن. أنت تحاول الوصول إل�
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr "[خطأ 22] لم يتم العثور على الملف. على الأرجح أن أحد مجلدات المخطط في config.yaml لديه مشكلة."
 
-#: src/components/wallet/WalletStatusCard.tsx:41
 #: src/components/wallet/Wallets.tsx:75
+#: src/components/wallet/WalletStatusCard.tsx:41
 msgid "connections:"
 msgstr "الإتصالات:"
 
-#: src/components/wallet/WalletStatusCard.tsx:33
 #: src/components/wallet/Wallets.tsx:67
+#: src/components/wallet/WalletStatusCard.tsx:33
 msgid "height:"
 msgstr "ارتفاع:"
 
@@ -2712,18 +2712,18 @@ msgstr "لم تتم المزامنة"
 msgid "p2_singleton_puzzle_hash is not defined"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:27
 #: src/components/wallet/Wallets.tsx:55
+#: src/components/wallet/WalletStatusCard.tsx:27
 msgid "status:"
 msgstr "الحالة"
 
-#: src/components/wallet/WalletStatusCard.tsx:29
 #: src/components/wallet/Wallets.tsx:60
+#: src/components/wallet/WalletStatusCard.tsx:29
 msgid "synced"
 msgstr "تمت المزامنة"
 
-#: src/components/wallet/WalletStatusCard.tsx:29
 #: src/components/wallet/Wallets.tsx:59
+#: src/components/wallet/WalletStatusCard.tsx:29
 msgid "syncing"
 msgstr "جاري المزامنة"
 
