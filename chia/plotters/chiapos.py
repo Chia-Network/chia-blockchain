@@ -40,7 +40,7 @@ def plot_chia(args, root_path):
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
             args.alt_fingerprint,
-            args.pool_key.hex(),
+            None if args.pool_key == b"" else args.pool_key.hex(),
             None if args.contract == "" else args.contract,
             root_path,
             log,
