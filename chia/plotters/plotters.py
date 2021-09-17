@@ -32,7 +32,10 @@ class Options(Enum):
     BLADEBIT_WARMSTART = 21
     BLADEBIT_NONUMA = 22
     VERBOSE = 23
-    BLADEBIT_ID = 24
+    OVERRIDE_K = 25
+    ALT_FINGERPRINT = 26
+    CONNECT_TO_DAEMON = 27
+    EXCLUDE_FINAL_DIR = 28
 
 
 chia_plotter = [
@@ -48,6 +51,14 @@ chia_plotter = [
     Options.STRIPE_SIZE,
     Options.NUM_THREADS,
     Options.NOBITFIELD,
+    Options.OVERRIDE_K,
+    Options.ALT_FINGERPRINT,
+    Options.POOLCONTRACT,
+    Options.FARMERKEY,
+    Options.POOLKEY,
+    Options.CONNECT_TO_DAEMON,
+    Options.PLOT_COUNT,
+    Options.EXCLUDE_FINAL_DIR,
 ]
 
 madmax_plotter = [
@@ -74,7 +85,6 @@ bladebit_plotter = [
     Options.POOLKEY,
     Options.POOLCONTRACT,
     Options.BLADEBIT_WARMSTART,
-    Options.BLADEBIT_ID,
     Options.BLADEBIT_NONUMA,
     Options.FINAL_DIR,
     Options.VERBOSE,
@@ -168,13 +178,15 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.MEMO:
             parser.add_argument(
-                "memo",
+                "-m",
+                "--memo",
                 type=binascii.unhexlify,
                 help="Memo variable.",
             )
         if option is Options.ID:
             parser.add_argument(
-                "id",
+                "-i",
+                "--id",
                 type=binascii.unhexlify,
                 help="Plot id",
             )
@@ -263,18 +275,40 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="Set verbose",
                 default=False,
             )
-        if option is Options.BLADEBIT_ID:
+        if option is Options.OVERRIDE_K:
             parser.add_argument(
-                "-i",
-                "--id",
-                type=binascii.unhexlify,
-                help="Plot id (used for debug)",
-                default="",
+                "--override",
+                type=bool,
+                help="Force size smaller than 32",
+                default=False,
+            )
+        if option is Options.ALT_FINGERPRINT:
+            parser.add_argument(
+                "-a",
+                "--alt_fingerprint",
+                type=int,
+                default=None,
+                help="Enter the alternative fingerprint of the key you want to use",
+            )
+        if option is Options.CONNECT_TO_DAEMON:
+            parser.add_argument(
+                "-D",
+                "--connect_to_daemon",
+                help="Connects to the daemon for keychain operations",
+                default=False,
+            )
+        if option is Options.EXCLUDE_FINAL_DIR:
+            parser.add_argument(
+                "-x",
+                "--exclude_final_dir",
+                help="Skips adding [final dir] to harvester for farming",
+                default=False,
             )
 
 
 def call_plotters(root_path, args):
     # Add `plotters` section in CHIA_ROOT.
+    chiapos_root_path = root_path
     root_path = root_path / "plotters"
     if not root_path.is_dir():
         if os.path.exists(root_path):
@@ -302,7 +336,7 @@ def call_plotters(root_path, args):
     )
     args = plotters.parse_args(args)
     if args.plotter == "chiapos":
-        plot_chia(args)
+        plot_chia(args, chiapos_root_path)
     if args.plotter == "madmax":
         plot_madmax(args, root_path)
     if args.plotter == "bladebit":
