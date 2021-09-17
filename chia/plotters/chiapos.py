@@ -38,7 +38,7 @@ def plot_chia(args, root_path):
 
     plot_keys = asyncio.get_event_loop().run_until_complete(
         resolve_plot_keys(
-            args.farmerkey.hex(),
+            None if args.farmerkey == b"" else args.farmerkey.hex(),
             args.alt_fingerprint,
             args.pool_key.hex(),
             None if args.contract == "" else args.contract,

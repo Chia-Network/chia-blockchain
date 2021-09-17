@@ -145,7 +145,6 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.FILENAME:
             parser.add_argument(
-                "-f",
                 "--filename",
                 type=str,
                 help="Plot filename.",
@@ -247,9 +246,11 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.FARMERKEY:
             parser.add_argument(
-                "farmerkey",
+                "-f",
+                "--farmerkey",
                 type=binascii.unhexlify,
                 help="Farmer Public Key (48 bytes)",
+                default="",
             )
         if option is Options.BLADEBIT_WARMSTART:
             parser.add_argument(
