@@ -196,8 +196,6 @@ class TestCoinStoreWithBlocks:
 
                     for record in records:
                         await coin_store._set_spent(record.coin.name(), block.height)
-                        with pytest.raises(AssertionError):
-                            await coin_store._set_spent(record.coin.name(), block.height)
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
