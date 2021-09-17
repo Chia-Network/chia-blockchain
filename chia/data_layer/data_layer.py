@@ -2,21 +2,25 @@ import logging
 from pathlib import Path
 from typing import Any, Dict
 
+import aiosqlite
+
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_store import DataStore
 from chia.util.db_wrapper import DBWrapper
+from chia.util.path import mkdir, path_from_root
 
 
 class DataLayer:
     data_store: DataStore
     db_wrapper: DBWrapper
+    db_path: Path
     # block_store: BlockStore
     # full_node_store: FullNodeStore
     # full_node_peers: Optional[FullNodePeers]
     # sync_store: Any
     # coin_store: CoinStore
     # mempool_manager: MempoolManager
-    # connection: aiosqlite.Connection
+    connection: aiosqlite.Connection
     # _sync_task: Optional[asyncio.Task]
     # _init_weight_proof: Optional[asyncio.Task] = None
     # blockchain: Blockchain
@@ -56,10 +60,11 @@ class DataLayer:
         self.log = logging.getLogger(name if name else __name__)
 
         # self._ui_tasks = set()
-        #
-        # db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        # self.db_path = path_from_root(root_path, db_path_replaced)
-        # mkdir(self.db_path.parent)
+
+        # TODO: use the data layer database
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        self.db_path = path_from_root(root_path, db_path_replaced)
+        mkdir(self.db_path.parent)
 
     # def _set_state_changed_callback(self, callback: Callable):
     #     self.state_changed_callback = callback
@@ -69,7 +74,7 @@ class DataLayer:
         # self.compact_vdf_sem = asyncio.Semaphore(4)
         # self.new_peak_sem = asyncio.Semaphore(8)
         # # create the store (db) and full node instance
-        # self.connection = await aiosqlite.connect(self.db_path)
+        self.connection = await aiosqlite.connect(self.db_path)
         # if self.config.get("log_sqlite_cmds", False):
         #     sql_log_path = path_from_root(self.root_path, "log/sql.log")
         #     self.log.info(f"logging SQL commands to {sql_log_path}")
