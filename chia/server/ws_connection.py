@@ -103,6 +103,9 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
+        # Used by crawler/dns introducer
+        self.version = None
+
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
             outbound_handshake = make_msg(
@@ -122,6 +125,8 @@ class WSChiaConnection:
             if inbound_handshake_msg is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
+
+            self.version = inbound_handshake.software_version
 
             # Handle case of invalid ProtocolMessageType
             try:
@@ -460,6 +465,10 @@ class WSChiaConnection:
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         return None
+
+    # Used by crawler/dns introducer
+    def get_version(self):
+        return self.version
 
     def get_peer_info(self) -> Optional[PeerInfo]:
         result = self.ws._writer.transport.get_extra_info("peername")
