@@ -126,8 +126,6 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
-            self.version = inbound_handshake.software_version
-
             # Handle case of invalid ProtocolMessageType
             try:
                 message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
@@ -139,6 +137,8 @@ class WSChiaConnection:
 
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            self.version = inbound_handshake.software_version
 
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
