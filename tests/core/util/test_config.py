@@ -8,6 +8,7 @@ from chia.util.config import create_default_chia_config, initial_config_file, lo
 from chia.util.path import mkdir
 from multiprocessing import Pool
 from pathlib import Path
+from threading import Thread
 from time import sleep
 from typing import Dict
 
@@ -52,10 +53,14 @@ async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     """
     Spin-off reader and writer threads and wait for completion
     """
-    await asyncio.gather(
-        asyncio.to_thread(write_config, root_path, default_config),
-        asyncio.to_thread(read_and_compare_config, root_path, default_config),
-    )
+    thread1 = Thread(target=write_config, kwargs={"root_path": root_path, "config": default_config})
+    thread2 = Thread(target=read_and_compare_config, kwargs={"root_path": root_path, "default_config": default_config})
+
+    thread1.start()
+    thread2.start()
+
+    thread1.join()
+    thread2.join()
 
 
 def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
