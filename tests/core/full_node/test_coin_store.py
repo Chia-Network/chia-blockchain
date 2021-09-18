@@ -294,7 +294,7 @@ class TestCoinStoreWithBlocks:
                 )
 
                 for reorg_block in blocks_reorg_chain:
-                    result, error_code, _ = await b.receive_block(reorg_block)
+                    result, error_code, _, _ = await b.receive_block(reorg_block)
                     print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
                     if reorg_block.height < initial_block_count - 10:
                         assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
@@ -334,7 +334,7 @@ class TestCoinStoreWithBlocks:
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
             for block in blocks:
-                res, err, _ = await b.receive_block(block)
+                res, err, _, _ = await b.receive_block(block)
                 assert err is None
                 assert res == ReceiveBlockResult.NEW_PEAK
             peak = b.get_peak()
