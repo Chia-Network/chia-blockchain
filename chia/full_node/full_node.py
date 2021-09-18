@@ -588,7 +588,8 @@ class FullNode:
                     if node_id in self.coin_subscriptions[coin_id]:
                         self.coin_subscriptions[coin_id].remove(node_id)
 
-        self.peer_sub_counter.pop(peer.peer_node_id)
+        if peer.peer_node_id in self.peer_sub_counter:
+            self.peer_sub_counter.pop(peer.peer_node_id)
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
