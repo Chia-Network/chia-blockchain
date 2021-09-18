@@ -164,7 +164,7 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: Optional[PreValidationResult] = None,
         fork_point_with_peak: Optional[uint32] = None,
-    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
+    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32], List[CoinRecord]]:
         """
         This method must be called under the blockchain lock
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -174,17 +174,18 @@ class Blockchain(BlockchainInterface):
         """
         genesis: bool = block.height == 0
         if self.contains_block(block.header_hash):
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None, []
 
         if not self.contains_block(block.prev_header_hash) and not genesis:
             return (
                 ReceiveBlockResult.DISCONNECTED_BLOCK,
                 Err.INVALID_PREV_BLOCK_HASH,
                 None,
+                [],
             )
 
         if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
-            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None, []
 
         npc_result: Optional[NPCResult] = None
         if pre_validation_result is None:
@@ -201,14 +202,13 @@ class Blockchain(BlockchainInterface):
                     try:
                         block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
                     except ValueError:
-                        return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None
+                        return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None, []
                     assert block_generator is not None and block.transactions_info is not None
                     npc_result = get_name_puzzle_conditions(
                         block_generator,
                         min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=self.constants.COST_PER_BYTE,
                         safe_mode=False,
-                        rust_checker=block.height > self.constants.RUST_CONDITION_CHECKER,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
@@ -228,7 +228,7 @@ class Blockchain(BlockchainInterface):
             )
 
             if error is not None:
-                return ReceiveBlockResult.INVALID_BLOCK, error.code, None
+                return ReceiveBlockResult.INVALID_BLOCK, error.code, None, []
         else:
             npc_result = pre_validation_result.npc_result
             required_iters = pre_validation_result.required_iters
@@ -247,7 +247,7 @@ class Blockchain(BlockchainInterface):
             self.get_block_generator,
         )
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code, None
+            return ReceiveBlockResult.INVALID_BLOCK, error_code, None, []
 
         block_record = block_to_block_record(
             self.constants,
@@ -263,7 +263,7 @@ class Blockchain(BlockchainInterface):
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(header_hash, block, block_record)
-                fork_height, peak_height, records = await self._reconsider_peak(
+                fork_height, peak_height, records, coin_record_change = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
                 await self.block_store.db_wrapper.commit_transaction()
@@ -282,10 +282,13 @@ class Blockchain(BlockchainInterface):
                 self.block_store.rollback_cache_block(header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
+
         if fork_height is not None:
-            return ReceiveBlockResult.NEW_PEAK, None, fork_height
+            # new coin records added
+            assert coin_record_change is not None
+            return ReceiveBlockResult.NEW_PEAK, None, fork_height, coin_record_change
         else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, []
 
     async def _reconsider_peak(
         self,
@@ -293,7 +296,7 @@ class Blockchain(BlockchainInterface):
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
         npc_result: Optional[NPCResult],
-    ) -> Tuple[Optional[uint32], Optional[uint32], List[BlockRecord]]:
+    ) -> Tuple[Optional[uint32], Optional[uint32], List[BlockRecord], List[CoinRecord]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -301,6 +304,7 @@ class Blockchain(BlockchainInterface):
         None if there was no update to the heaviest chain.
         """
         peak = self.get_peak()
+        lastest_coin_state: Dict[bytes32, CoinRecord] = {}
         if genesis:
             if peak is None:
                 block: Optional[FullBlock] = await self.block_store.get_full_block(block_record.header_hash)
@@ -310,10 +314,20 @@ class Blockchain(BlockchainInterface):
                     tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
                     tx_removals, tx_additions = [], []
-                await self.coin_store.new_block(block, tx_additions, tx_removals)
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    added, _ = await self.coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        tx_additions,
+                        tx_removals,
+                    )
+                else:
+                    added, _ = [], []
                 await self.block_store.set_peak(block_record.header_hash)
-                return uint32(0), uint32(0), [block_record]
-            return None, None, []
+                return uint32(0), uint32(0), [block_record], added
+            return None, None, [], []
 
         assert peak is not None
         if block_record.weight > peak.weight:
@@ -327,7 +341,10 @@ class Blockchain(BlockchainInterface):
                 fork_height = find_fork_point_in_chain(self, block_record, peak)
 
             if block_record.prev_hash != peak.header_hash:
-                await self.coin_store.rollback_to_block(fork_height)
+                roll_changes: List[CoinRecord] = await self.coin_store.rollback_to_block(fork_height)
+                for coin_record in roll_changes:
+                    lastest_coin_state[coin_record.name] = coin_record
+
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.__sub_epoch_summaries.keys():
@@ -362,14 +379,29 @@ class Blockchain(BlockchainInterface):
                         )
                     else:
                         tx_removals, tx_additions = await self.get_tx_removals_and_additions(fetched_full_block, None)
-                    await self.coin_store.new_block(fetched_full_block, tx_additions, tx_removals)
+                    if fetched_full_block.is_transaction_block():
+                        assert fetched_full_block.foliage_transaction_block is not None
+                        removed_rec, added_rec = await self.coin_store.new_block(
+                            fetched_full_block.height,
+                            fetched_full_block.foliage_transaction_block.timestamp,
+                            fetched_full_block.get_included_reward_coins(),
+                            tx_additions,
+                            tx_removals,
+                        )
+
+                        # Set additions first, than removals in order to handle ephemeral coin state
+                        # Add in height order is also required
+                        for record in added_rec:
+                            lastest_coin_state[record.name] = record
+                        for record in removed_rec:
+                            lastest_coin_state[record.name] = record
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
-            return uint32(max(fork_height, 0)), block_record.height, records_to_add
+            return uint32(max(fork_height, 0)), block_record.height, records_to_add, list(lastest_coin_state.values())
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-        return None, None, []
+        return None, None, [], list(lastest_coin_state.values())
 
     async def get_tx_removals_and_additions(
         self, block: FullBlock, npc_result: Optional[NPCResult] = None
@@ -384,7 +416,6 @@ class Blockchain(BlockchainInterface):
                         self.constants.MAX_BLOCK_COST_CLVM,
                         cost_per_byte=self.constants.COST_PER_BYTE,
                         safe_mode=False,
-                        rust_checker=block.height > self.constants.RUST_CONDITION_CHECKER,
                     )
                 tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 return tx_removals, tx_additions
@@ -537,7 +568,6 @@ class Blockchain(BlockchainInterface):
                 min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                 cost_per_byte=self.constants.COST_PER_BYTE,
                 safe_mode=False,
-                rust_checker=uint32(prev_height + 1) > self.constants.RUST_CONDITION_CHECKER,
             )
         error_code, cost_result = await validate_block_body(
             self.constants,
