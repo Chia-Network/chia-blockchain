@@ -20,6 +20,7 @@ from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
+from chia.plotters.plotters import get_available_plotters
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
@@ -326,6 +327,8 @@ class WebSocketServer:
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
+        elif command == "get_plotters":
+            response = await self.get_plotters()
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
@@ -535,6 +538,12 @@ class WebSocketServer:
 
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
+        return response
+
+    async def get_plotters(self) -> Dict[str, Any]:
+        plotters: List = get_available_plotters(self.root_path)
+
+        response: Dict[str, Any] = {"success": True, "plotters": plotters}
         return response
 
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):

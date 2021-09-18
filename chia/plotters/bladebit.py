@@ -4,6 +4,70 @@ import subprocess
 import os
 import sys
 
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+BLADEBIT_PLOTTER_DIR = "bladebit"
+BLADEBIT_MIN_RAM_GIBS = 416
+
+
+def is_bladebit_supported() -> bool:
+    return sys.platform.startswith("linux")
+
+
+def meets_memory_requirement() -> bool:
+    have_enough_memory: bool = False
+    try:
+        total_bytes: int = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+        total_gibs: int = total_bytes / (1024 * 1024 * 1024)
+        required_gibs = BLADEBIT_MIN_RAM_GIBS
+        have_enough_memory = total_gibs >= required_gibs
+    except Exception as e:
+        print(f"Unable to determine total amount of memory: {e}")
+
+    return have_enough_memory
+
+
+def get_bladebit_install_path(plotters_root_path: Path) -> Path:
+    return plotters_root_path / BLADEBIT_PLOTTER_DIR
+
+
+def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
+    return get_bladebit_install_path(plotters_root_path) / ".bin/release/bladebit"
+
+
+def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
+    info: Dict[str, Any] = {"display_name": "BladeBit Plotter"}
+    installed: bool = False
+    supported: bool = is_bladebit_supported()
+
+    if get_bladebit_executable_path(plotters_root_path).exists():
+        version: Optional[str] = None
+        try:
+            proc = subprocess.run(
+                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--version"],
+                capture_output=True,
+                text=True,
+            )
+            version = proc.stdout.strip()
+        except Exception as e:
+            print(f"Failed to determine bladebit version: {e}")
+
+        if version is not None:
+            installed = True
+            info["version"] = version
+        else:
+            installed = False
+
+    info["installed"] = installed
+    if installed is False:
+        info["can_install"] = supported
+
+    if supported and meets_memory_requirement() is False:
+        info["bladebit_memory_warning"] = f"BladeBit requires at least {BLADEBIT_MIN_RAM_GIBS} GiB of RAM to operate"
+
+    return info
+
 
 progress = {
     "Finished F1 sort": 0.01,
@@ -76,7 +140,7 @@ async def run_bladebit(args):
 
 
 def install_bladebit(root_path):
-    if sys.platform.startswith("linux"):
+    if is_bladebit_supported():
         print("Installing dependencies.")
         try:
             subprocess.run(
