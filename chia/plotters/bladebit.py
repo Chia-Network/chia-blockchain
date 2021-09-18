@@ -19,7 +19,7 @@ def meets_memory_requirement() -> bool:
     have_enough_memory: bool = False
     try:
         total_bytes: int = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
-        total_gibs: int = total_bytes / (1024 * 1024 * 1024)
+        total_gibs: int = int(total_bytes / (1024 * 1024 * 1024))
         required_gibs = BLADEBIT_MIN_RAM_GIBS
         have_enough_memory = total_gibs >= required_gibs
     except Exception as e:
