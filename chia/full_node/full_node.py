@@ -588,6 +588,8 @@ class FullNode:
                     if node_id in self.coin_subscriptions[coin_id]:
                         self.coin_subscriptions[coin_id].remove(node_id)
 
+        self.peer_sub_counter.remove(peer.peer_node_id)
+
     def _num_needed_peers(self) -> int:
         assert self.server is not None
         assert self.server.all_connections is not None
