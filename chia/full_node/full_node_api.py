@@ -1320,12 +1320,20 @@ class FullNodeAPI:
         if peer.peer_node_id not in self.full_node.peer_puzzle_hash:
             self.full_node.peer_puzzle_hash[peer.peer_node_id] = set()
 
+        if peer.peer_node_id not in self.full_node.peer_sub_counter:
+            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
+
         # Add peer to the "Subscribed" dictionary
         for puzzle_hash in request.puzzle_hashes:
             if puzzle_hash not in self.full_node.ph_subscriptions:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
-            self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
-            self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
+            if (
+                peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+            ):
+                self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
+                self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
+                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
@@ -1344,11 +1352,19 @@ class FullNodeAPI:
         if peer.peer_node_id not in self.full_node.peer_coin_ids:
             self.full_node.peer_coin_ids[peer.peer_node_id] = set()
 
+        if peer.peer_node_id not in self.full_node.peer_sub_counter:
+            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
+
         for coin_id in request.coin_ids:
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
-            self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
-            self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
+            if (
+                peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+            ):
+                self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
+                self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
+                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
             include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
