@@ -34,7 +34,7 @@ class OperationType(IntEnum):
 class Action:
     op: OperationType
     row_index: int
-    row: CLVMObject
+    row: CLVMObject.CLVMObject
 
 
 @dataclass(frozen=True)
