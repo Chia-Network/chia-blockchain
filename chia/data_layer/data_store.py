@@ -7,7 +7,7 @@ import logging
 from typing import Iterable, Tuple
 
 import aiosqlite
-from clvm import CLVMObject
+from clvm.CLVMObject import CLVMObject
 
 # from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -34,12 +34,12 @@ class OperationType(IntEnum):
 class Action:
     op: OperationType
     row_index: int
-    row: CLVMObject.CLVMObject
+    row: CLVMObject
 
 
 @dataclass(frozen=True)
 class Commit:
-    # actions: OrderedDict[bytes32, CLVMObject.CLVMObject]
+    # actions: OrderedDict[bytes32, CLVMObject]
     actions: Tuple[Action, ...]
     changelist_hash: bytes32
     # TODO: bytes32 may be totally wrong here for the merkle root hash of the overall
