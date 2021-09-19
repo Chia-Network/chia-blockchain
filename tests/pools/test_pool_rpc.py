@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import os
+import shutil
 from argparse import Namespace
 from typing import Optional, List, Dict
 
@@ -138,7 +139,7 @@ class TestPoolWalletRpc:
         return num_blocks
         # TODO also return calculated block rewards
 
-    async def create_pool_plot(self, p2_singleton_puzzle_hash: bytes32, shuil=None) -> bytes32:
+    async def create_pool_plot(self, p2_singleton_puzzle_hash: bytes32) -> bytes32:
         plot_dir = get_plot_dir()
         temp_dir = get_plot_tmp_dir()
         args = Namespace()
@@ -172,7 +173,7 @@ class TestPoolWalletRpc:
                 test_private_keys=test_private_keys,
             )
         except KeyboardInterrupt:
-            shuil.rmtree(plot_dir, ignore_errors=True)
+            shutil.rmtree(plot_dir, ignore_errors=True)
             raise
         await bt.setup_plots()
         return plot_id

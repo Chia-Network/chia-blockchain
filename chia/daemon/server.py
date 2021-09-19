@@ -142,6 +142,7 @@ class WebSocketServer:
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
+        self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.shut_down = False
@@ -164,7 +165,7 @@ class WebSocketServer:
             self.safe_handle,
             self.self_hostname,
             self.daemon_port,
-            max_size=50 * 1000 * 1000,
+            max_size=self.daemon_max_message_size,
             ping_interval=500,
             ping_timeout=300,
             ssl=self.ssl_context,
@@ -311,6 +312,8 @@ class WebSocketServer:
             response = await self.keyring_status()
         elif command == "unlock_keyring":
             response = await self.unlock_keyring(cast(Dict[str, Any], data))
+        elif command == "validate_keyring_passphrase":
+            response = await self.validate_keyring_passphrase(cast(Dict[str, Any], data))
         elif command == "migrate_keyring":
             response = await self.migrate_keyring(cast(Dict[str, Any], data))
         elif command == "set_keyring_passphrase":
@@ -383,6 +386,23 @@ class WebSocketServer:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
+
+        response: Dict[str, Any] = {"success": success, "error": error}
+        return response
+
+    async def validate_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        success: bool = False
+        error: Optional[str] = None
+        key: Optional[str] = request.get("key", None)
+        if type(key) is not str:
+            return {"success": False, "error": "missing key"}
+
+        try:
+            success = Keychain.master_passphrase_is_valid(key, force_reload=True)
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
+            error = "validation exception"
 
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
@@ -792,8 +812,10 @@ class WebSocketServer:
             }
             return response
 
+        ids: List[str] = []
         for k in range(count):
             id = str(uuid.uuid4())
+            ids.append(id)
             config = {
                 "id": id,
                 "size": size,
@@ -814,7 +836,7 @@ class WebSocketServer:
             # notify GUI about new plot queue item
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
 
-            # only first item can start when user selected serial plotting
+            # only the first item can start when user selected serial plotting
             can_start_serial_plotting = k == 0 and self._is_serial_plotting_running(queue) is False
 
             if parallel is True or can_start_serial_plotting:
@@ -826,6 +848,7 @@ class WebSocketServer:
 
         response = {
             "success": True,
+            "ids": ids,
             "service_name": service_name,
         }
 
