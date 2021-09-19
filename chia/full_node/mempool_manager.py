@@ -29,8 +29,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
-    coin_announcements_names_for_npc,
-    puzzle_announcements_names_for_npc,
 )
 from chia.util.errors import Err
 from chia.util.generator_tools import additions_for_npc
@@ -43,9 +41,7 @@ log = logging.getLogger(__name__)
 def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int) -> bytes:
     program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(
-        get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True, rust_checker=True)
-    )
+    return bytes(get_name_puzzle_conditions(program, max_cost, cost_per_byte=cost_per_byte, safe_mode=True))
 
 
 class MempoolManager:
@@ -119,7 +115,6 @@ class MempoolManager:
                 f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
             )
             agg = SpendBundle.aggregate(spend_bundles)
-            assert set(agg.additions()) == set(additions)
             assert set(agg.removals()) == set(removals)
             return agg, additions, removals
         else:
@@ -383,8 +378,6 @@ class MempoolManager:
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
         error: Optional[Err] = None
-        coin_announcements_in_spend: Set[bytes32] = coin_announcements_names_for_npc(npc_list)
-        puzzle_announcements_in_spend: Set[bytes32] = puzzle_announcements_names_for_npc(npc_list)
         for npc in npc_list:
             coin_record: CoinRecord = removal_record_dict[npc.coin_name]
             # Check that the revealed removal puzzles actually match the puzzle hash
@@ -399,8 +392,6 @@ class MempoolManager:
             assert self.peak.timestamp is not None
             error = mempool_check_conditions_dict(
                 coin_record,
-                coin_announcements_in_spend,
-                puzzle_announcements_in_spend,
                 npc.condition_dict,
                 uint32(chialisp_height),
                 self.peak.timestamp,
@@ -436,7 +427,7 @@ class MempoolManager:
                 self.mempool.remove_from_pool(mempool_item)
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
-        self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
+        self.mempool.add_to_pool(new_item)
         log.info(
             f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
             f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"

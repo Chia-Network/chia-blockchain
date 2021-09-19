@@ -38,8 +38,6 @@ class AddressManagerStore:
         self = cls()
         self.db = connection
         await self.db.commit()
-        await self.db.execute("pragma journal_mode=wal")
-        await self.db.execute("pragma synchronous=2")
         await self.db.execute("CREATE TABLE IF NOT EXISTS peer_metadata(key text,value text)")
         await self.db.commit()
 

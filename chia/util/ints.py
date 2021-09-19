@@ -39,7 +39,7 @@ class uint128(int):
     def __new__(cls: Any, value: int):
         value = int(value)
         if value > (2 ** 128) - 1 or value < 0:
-            raise ValueError(f"Value {value} of does not fit into uin128")
+            raise ValueError(f"Value {value} of does not fit into uint128")
         return int.__new__(cls, value)  # type: ignore
 
     @classmethod

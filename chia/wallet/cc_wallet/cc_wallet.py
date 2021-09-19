@@ -74,7 +74,10 @@ class CCWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
-
+        std_wallet_id = self.standard_wallet.wallet_id
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id, None)
+        if amount > bal:
+            raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
 
         self.cc_info = CCInfo(None, [])
@@ -90,6 +93,9 @@ class CCWallet:
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
+        if spend_bundle is None:
+            await wallet_state_manager.user_store.delete_wallet(self.id())
+            raise ValueError("Failed to create spend.")
 
         await self.wallet_state_manager.add_new_wallet(self, self.id())
 
@@ -250,7 +256,6 @@ class CCWallet:
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 safe_mode=True,
-                rust_checker=True,
             )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE

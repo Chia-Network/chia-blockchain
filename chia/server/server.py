@@ -40,7 +40,7 @@ def ssl_context_for_server(
     log: Optional[logging.Logger] = None,
 ) -> Optional[ssl.SSLContext]:
     if check_permissions:
-        verify_ssl_certs_and_keys([(ca_cert, ca_key), (private_cert_path, private_key_path)], log)
+        verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
@@ -53,7 +53,7 @@ def ssl_context_for_root(
     ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
 ) -> Optional[ssl.SSLContext]:
     if check_permissions:
-        verify_ssl_certs_and_keys([(Path(ca_cert_file), None)], log)
+        verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
 
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
@@ -69,7 +69,7 @@ def ssl_context_for_client(
     log: Optional[logging.Logger] = None,
 ) -> Optional[ssl.SSLContext]:
     if check_permissions:
-        verify_ssl_certs_and_keys([(ca_cert, ca_key), (private_cert_path, private_key_path)], log)
+        verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
@@ -373,7 +373,11 @@ class ChiaServer:
         session = None
         connection: Optional[WSChiaConnection] = None
         try:
-            timeout = ClientTimeout(total=30)
+            # Crawler/DNS introducer usually uses a lower timeout than the default
+            timeout_value = (
+                30 if "peer_connect_timeout" not in self.config else float(self.config["peer_connect_timeout"])
+            )
+            timeout = ClientTimeout(total=timeout_value)
             session = ClientSession(timeout=timeout)
 
             try:

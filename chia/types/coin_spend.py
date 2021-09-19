@@ -3,7 +3,7 @@ from typing import List
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram, INFINITE_COST
-from chia.util.chain_utils import additions_for_solution
+from chia.util.chain_utils import additions_for_solution, fee_for_solution
 from chia.util.streamable import Streamable, streamable
 
 
@@ -22,3 +22,6 @@ class CoinSpend(Streamable):
 
     def additions(self) -> List[Coin]:
         return additions_for_solution(self.coin.name(), self.puzzle_reveal, self.solution, INFINITE_COST)
+
+    def reserved_fee(self) -> int:
+        return fee_for_solution(self.puzzle_reveal, self.solution, INFINITE_COST)
