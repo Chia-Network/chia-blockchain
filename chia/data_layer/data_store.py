@@ -32,9 +32,9 @@ class OperationType(IntEnum):
 
 @dataclass(frozen=True)
 class Action:
-    type: OperationType
+    op: OperationType
     row_index: int
-    row: CLVMObject.CLVMObject
+    row: CLVMObject
 
 
 @dataclass(frozen=True)
@@ -78,7 +78,9 @@ class DataStore:
         # TODO: do we need to handle multiple equal rows
 
         # Just a raw collection of all ChiaLisp lists that are used
-        await self.db.execute("CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY, clvm_object BLOB)")
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY,table_id TEXT, clvm_object BLOB)"
+        )
         # The present properly ordered collection of rows.
         await self.db.execute("CREATE TABLE IF NOT EXISTS data_rows(row_hash TEXT PRIMARY KEY)")
         # TODO: needs a key
@@ -99,31 +101,38 @@ class DataStore:
     # TODO: Add some handling for multiple tables.  Could be another layer of class
     #       for each table or another parameter to select the table.
 
-    async def get_row_by_index(self, index: int) -> CLVMObject.CLVMObject:
+    async def get_row_by_index(self, index: int) -> CLVMObject:
         pass
 
     # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
-    async def get_row_by_hash(self, row_hash: bytes32) -> CLVMObject.CLVMObject:
+    async def get_row_by_hash(self, row_hash: bytes32) -> CLVMObject:
         pass
 
-    async def insert_row(self, index: int, clvm_object: CLVMObject.CLVMObject) -> None:
+    async def insert_row(self, table_id: bytes32, clvm_object: CLVMObject) -> None:
         row_hash = sha256_treehash(sexp=clvm_object)
         cursor = await self.db.execute(
             "SELECT * FROM raw_rows WHERE row_hash=:row_hash",
             parameters={"row_hash": row_hash},
         )
         if await cursor.fetchone() is None:
-            await self.db.execute("INSERT INTO raw_rows (row_hash, clvm_object) VALUES(?, ?)", (row_hash, clvm_object))
+            await self.db.execute(
+                "INSERT INTO raw_rows (row_hash,table_id,clvm_object) VALUES(?,?,?)",
+                (row_hash, table_id, clvm_object),
+            )
 
         await self.db.execute("INSERT INTO ")
         await self.db.commit()
 
     # "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
 
-    async def delete_row_by_index(self, index: int) -> None:
+    async def delete_row_by_index(self, table: bytes32, index: int) -> CLVMObject:
+        # todo this
         pass
 
-    async def delete_row_by_hash(self, row_hash: bytes32) -> None:
+    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> Tuple[CLVMObject, int]:
+        pass
+
+    async def get_table_state(self, table: bytes32) -> bytes32:
         pass
 
     # TODO: I'm not sure about the name here.  I'm thinking that this will

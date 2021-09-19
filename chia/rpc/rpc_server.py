@@ -101,14 +101,14 @@ class RpcServer:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
-        if self.rpc_api.service.server is None:
+        if self.rpc_api.data_layer_service.server is None:
             raise ValueError("Global connections is not set")
-        if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
+        if self.rpc_api.data_layer_service.server._local_type is NodeType.FULL_NODE:
             # TODO add peaks for peers
-            connections = self.rpc_api.service.server.get_connections(request_node_type)
+            connections = self.rpc_api.data_layer_service.server.get_connections(request_node_type)
             con_info = []
-            if self.rpc_api.service.sync_store is not None:
-                peak_store = self.rpc_api.service.sync_store.peer_to_peak
+            if self.rpc_api.data_layer_service.sync_store is not None:
+                peak_store = self.rpc_api.data_layer_service.sync_store.peer_to_peak
             else:
                 peak_store = None
             for con in connections:
@@ -135,7 +135,7 @@ class RpcServer:
                 }
                 con_info.append(con_dict)
         else:
-            connections = self.rpc_api.service.server.get_connections(request_node_type)
+            connections = self.rpc_api.data_layer_service.server.get_connections(request_node_type)
             con_info = [
                 {
                     "type": con.connection_type,
@@ -158,19 +158,21 @@ class RpcServer:
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
         on_connect = None
-        if hasattr(self.rpc_api.service, "on_connect"):
-            on_connect = self.rpc_api.service.on_connect
-        if getattr(self.rpc_api.service, "server", None) is None or not (
-            await self.rpc_api.service.server.start_client(target_node, on_connect)
+        if hasattr(self.rpc_api.data_layer_service, "on_connect"):
+            on_connect = self.rpc_api.data_layer_service.on_connect
+        if getattr(self.rpc_api.data_layer_service, "server", None) is None or not (
+            await self.rpc_api.data_layer_service.server.start_client(target_node, on_connect)
         ):
             raise ValueError("Start client failed, or server is not set")
         return {}
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
-        if self.rpc_api.service.server is None:
+        if self.rpc_api.data_layer_service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
-        connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
+        connections_to_close = [
+            c for c in self.rpc_api.data_layer_service.server.get_connections() if c.peer_node_id == node_id
+        ]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
@@ -304,7 +306,7 @@ async def start_rpc_server(
     """
     app = aiohttp.web.Application()
     rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-    rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+    rpc_server.rpc_api.data_layer_service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
     routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
