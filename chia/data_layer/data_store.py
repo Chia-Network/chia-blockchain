@@ -130,7 +130,9 @@ class DataStore:
         if await cursor.fetchone() is None:
             # not present in raw_rows so add it
             clvm_bytes = SExp.to(clvm_object).as_bin()
-            await self.db.execute("INSERT INTO raw_rows (row_hash, table_id, clvm_object) VALUES(?, ?, ?)", (row_hash, table, clvm_bytes))
+            await self.db.execute(
+                "INSERT INTO raw_rows (row_hash, table_id, clvm_object) VALUES(?, ?, ?)", (row_hash, table, clvm_bytes)
+            )
 
         largest_index = await self._get_largest_index()
 
@@ -138,11 +140,19 @@ class DataStore:
             index = largest_index + 1
         elif index > largest_index + 1:
             # Inserting this index would result in a gap in the indices.
-            raise ValueError(f"Index must be no more than 1 larger than the largest index ({largest_index!r}), received: {index!r}")
+            raise ValueError(
+                f"Index must be no more than 1 larger than the largest index ({largest_index!r}), received: {index!r}"
+            )
         else:
             await self.db.execute("UPDATE data_rows SET row_index = row_index + 1 WHERE row_index >= ?", (index,))
 
-        await self.db.execute("INSERT INTO data_rows (row_index, row_hash) VALUES(?, ?)", (index, row_hash,))
+        await self.db.execute(
+            "INSERT INTO data_rows (row_index, row_hash) VALUES(?, ?)",
+            (
+                index,
+                row_hash,
+            ),
+        )
         # TODO: Review reentrancy on .commit() since it isn't clearly tied to this
         #       particular task's activity.
         await self.db.commit()

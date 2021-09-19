@@ -113,7 +113,7 @@ async def test_create_creates_tables_and_columns(
 
 @pytest.mark.asyncio
 async def test_insert_adds_to_raw_rows(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM raw_rows")
     raw_rows = await cursor.fetchall()
@@ -126,8 +126,8 @@ async def test_insert_adds_to_raw_rows(data_store: DataStore) -> None:
 
 @pytest.mark.asyncio
 async def test_repeat_insert_does_not_duplicate_in_raw_rows(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM raw_rows")
     raw_rows = await cursor.fetchall()
@@ -144,8 +144,8 @@ def expected_data_rows(clvm_objects: List[CLVMObject]) -> List[Tuple[int, bytes]
 
 @pytest.mark.asyncio
 async def test_inserts_at_index(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b'', index=0, clvm_object=another_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
     data_rows = await cursor.fetchall()
@@ -156,8 +156,8 @@ async def test_inserts_at_index(data_store: DataStore) -> None:
 
 @pytest.mark.asyncio
 async def test_appends_for_none_index(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b'', clvm_object=another_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
     data_rows = await cursor.fetchall()
@@ -168,8 +168,8 @@ async def test_appends_for_none_index(data_store: DataStore) -> None:
 
 @pytest.mark.asyncio
 async def test_inserts_for_index_at_end(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b'', index=1, clvm_object=another_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", index=1, clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
     data_rows = await cursor.fetchall()
@@ -180,19 +180,19 @@ async def test_inserts_for_index_at_end(data_store: DataStore) -> None:
 
 @pytest.mark.asyncio
 async def test_raises_for_index_past_end(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', index=0, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
 
     message_regex = re.escape("Index must be no more than 1 larger than the largest index (0), received: 2")
 
     with pytest.raises(ValueError, match=message_regex):
-        await data_store.insert_row(table=b'', index=2, clvm_object=another_clvm_object)
+        await data_store.insert_row(table=b"", index=2, clvm_object=another_clvm_object)
 
 
 @pytest.mark.asyncio
 async def test_deletes_row_by_index(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b'', clvm_object=another_clvm_object)
-    await data_store.delete_row_by_index(table=b'', index=0)
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
+    await data_store.delete_row_by_index(table=b"", index=0)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
     data_rows = await cursor.fetchall()
@@ -203,9 +203,9 @@ async def test_deletes_row_by_index(data_store: DataStore) -> None:
 
 @pytest.mark.asyncio
 async def test_deletes_row_by_hash(data_store: DataStore) -> None:
-    await data_store.insert_row(table=b'', clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b'', clvm_object=another_clvm_object)
-    await data_store.delete_row_by_hash(table=b'', row_hash=sha256_treehash(SExp.to(a_clvm_object)))
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
+    await data_store.delete_row_by_hash(table=b"", row_hash=sha256_treehash(SExp.to(a_clvm_object)))
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
     data_rows = await cursor.fetchall()
