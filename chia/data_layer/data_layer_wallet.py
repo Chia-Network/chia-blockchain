@@ -1,24 +1,5 @@
 import logging
-import time
-from typing import Any, Optional, Set, Tuple, List, Dict
-
-from blspy import PrivateKey, G2Element, G1Element
-
-from chia.consensus.block_record import BlockRecord
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
-from chia.pools.pool_wallet_info import (
-    PoolWalletInfo,
-    PoolSingletonState,
-    PoolState,
-    FARMING_TO_POOL,
-    SELF_POOLING,
-    LEAVING_POOL,
-    create_pool_state,
-)
-from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
-
-
-from chia.types.blockchain_format.coin import Coin
+from typing import Any
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8
 from chia.wallet.util.wallet_types import WalletType
@@ -30,10 +11,8 @@ class DataLayerWallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
-    target_state: Optional[PoolState]
     standard_wallet: Wallet
     wallet_id: int
-    singleton_list: List[Coin]
     """
     interface to be used by datalayer for interacting with the chain
     """

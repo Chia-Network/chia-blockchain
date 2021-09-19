@@ -1,7 +1,5 @@
 from typing import Callable, Dict, List
 from chia.data_layer.data_layer import DataLayer
-from clvm import CLVMObject
-
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import Action, OperationType
 from chia.types.blockchain_format.sized_bytes import bytes32
