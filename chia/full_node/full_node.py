@@ -37,6 +37,7 @@ from chia.protocols.full_node_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
+from chia.protocols.shared_protocol import Capability
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -56,7 +57,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -199,6 +200,10 @@ class FullNode:
     def set_server(self, server: ChiaServer):
         self.server = server
         dns_servers = []
+        capabilities = []
+        capabilities.append((uint16(Capability.BASE.value), "1"))
+        capabilities.append((uint16(Capability.NONE_RESPONSE.value), "1"))
+        server.set_capabilities(capabilities)
         try:
             network_name = self.config["selected_network"]
             default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]

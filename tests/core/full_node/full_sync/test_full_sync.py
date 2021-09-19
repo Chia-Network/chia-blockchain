@@ -8,6 +8,7 @@ import pytest
 
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -207,6 +208,46 @@ class TestFullSync:
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_2._port)), full_node_3.full_node.on_connect)
         await time_out_assert(180, node_height_exactly, True, full_node_1, 999)
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
+
+    @pytest.mark.asyncio
+    async def test_sync_none_wp_response_backward_comp(self, three_nodes, default_1000_blocks):
+        num_blocks_initial = len(default_1000_blocks) - 50
+        blocks_950 = default_1000_blocks[:num_blocks_initial]
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        server_3.set_capabilities([(uint16(Capability.BASE.value), "1")])
+
+        for block in blocks_950:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
+
+        # Also test request proof of weight
+        # Have the request header hash
+        peers: List = [c for c in full_node_2.full_node.server.all_connections.values()]
+        request = full_node_protocol.RequestProofOfWeight(
+            blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
+        )
+        start = time.time()
+        res = await peers[0].request_proof_of_weight(request, timeout=5)
+        assert res.data == b""
+        duration = time.time() - start
+        log.info(f"result was {res}")
+        assert duration < 1
+
+        peers: List = [c for c in full_node_3.full_node.server.all_connections.values()]
+        request = full_node_protocol.RequestProofOfWeight(
+            blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
+        )
+        start = time.time()
+        res = await peers[0].request_proof_of_weight(request, timeout=5)
+        assert res is None
+        duration = time.time() - start
+        assert duration > 4
+        log.info(f"result was {res}")
 
     @pytest.mark.asyncio
     async def test_batch_sync(self, two_nodes):

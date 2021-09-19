@@ -16,13 +16,14 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import protocol_version, Capability
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.api_decorators import MSG_REPLY_TYPE, API_FUNCTION, EXECUTE_TASK
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
@@ -130,7 +131,7 @@ class ChiaServer:
         self.on_connect: Optional[Callable] = None
         self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
-
+        self.capabilities: List[Tuple[uint16, str]] = [(uint16(Capability.BASE.value), "1")]
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
@@ -177,6 +178,9 @@ class ChiaServer:
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
+
+    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]):
+        self.capabilities = capabilities
 
     async def garbage_collect_connections_task(self) -> None:
         """
@@ -268,10 +272,7 @@ class ChiaServer:
                 close_event,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
 
             assert handshake is True
@@ -424,10 +425,7 @@ class ChiaServer:
                 session=session,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
             )
             assert handshake is True
             await self.connection_added(connection, on_connect)
@@ -532,7 +530,7 @@ class ChiaServer:
                         self.log.error(f"Non existing function: {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
-                    if not hasattr(f, "api_function"):
+                    if not hasattr(f, API_FUNCTION):
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
@@ -542,7 +540,7 @@ class ChiaServer:
                             return None
 
                     timeout: Optional[int] = 600
-                    if hasattr(f, "execute_task"):
+                    if hasattr(f, EXECUTE_TASK):
                         # Don't timeout on methods with execute_task decorator, these need to run fully
                         self.execute_tasks.add(task_id)
                         timeout = None
@@ -569,10 +567,15 @@ class ChiaServer:
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
                     )
-
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
+                    elif hasattr(f, MSG_REPLY_TYPE):
+                        capabilities = connection.capabilities
+                        if (uint16(Capability.NONE_RESPONSE.value), "1") in capabilities:
+                            # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
+                            response_message = Message(full_message.type, full_message.id, b"")
+                            await connection.reply_to_request(response_message)
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()
