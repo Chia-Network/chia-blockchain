@@ -43,14 +43,6 @@ def verify_passphrase_meets_requirements(
         raise Exception("Unexpected passphrase verification case")
 
 
-def tidy_passphrase(passphrase: str) -> str:
-    """
-    Perform any string processing we want to apply to the entered passphrase.
-    Currently we strip leading/trailing whitespace.
-    """
-    return passphrase.strip()
-
-
 def prompt_to_save_passphrase() -> bool:
     save: bool = False
 
@@ -84,8 +76,8 @@ def prompt_for_new_passphrase() -> Tuple[str, bool]:
         n = min_length
         print(f"\nPassphrases must be {n} or more characters in length")  # lgtm [py/clear-text-logging-sensitive-data]
     while True:
-        passphrase: str = tidy_passphrase(getpass("New Passphrase: "))
-        confirmation: str = tidy_passphrase(getpass("Confirm Passphrase: "))
+        passphrase: str = getpass("New Passphrase: ")
+        confirmation: str = getpass("Confirm Passphrase: ")
         save_passphrase: bool = False
 
         valid_passphrase, error_msg = verify_passphrase_meets_requirements(passphrase, confirmation)
@@ -100,7 +92,7 @@ def prompt_for_new_passphrase() -> Tuple[str, bool]:
 
 
 def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
-    passphrase = tidy_passphrase(passphrase_file.read())
+    passphrase = passphrase_file.read()
     passphrase_file.close()
     return passphrase
 
