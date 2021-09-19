@@ -4,10 +4,11 @@ from enum import IntEnum
 import logging
 
 # from typing import Dict, List, Optional, Tuple
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
+from clvm.SExp import SExp
 
 # from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -82,7 +83,7 @@ class DataStore:
             "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY,table_id TEXT, clvm_object BLOB)"
         )
         # The present properly ordered collection of rows.
-        await self.db.execute("CREATE TABLE IF NOT EXISTS data_rows(row_hash TEXT PRIMARY KEY)")
+        await self.db.execute("CREATE TABLE IF NOT EXISTS data_rows(row_index INTEGER PRIMARY KEY, row_hash TEXT)")
         # TODO: needs a key
         # TODO: As operations are reverted do they get deleted?  Or perhaps we track
         #       a reference into the table and only remove when a non-matching forward
@@ -108,29 +109,68 @@ class DataStore:
     async def get_row_by_hash(self, row_hash: bytes32) -> CLVMObject:
         pass
 
-    async def insert_row(self, table_id: bytes32, clvm_object: CLVMObject) -> None:
+    async def insert_row(self, table: bytes32, clvm_object: CLVMObject, index: Optional[int] = None) -> None:
+        """
+        Args:
+            clvm_object: The CLVM object to insert.
+            index: The index at which to insert the CLVM object.  If ``None``, such as
+                when unspecified, the object will be appended with the now-highest
+                index.
+        """
+        # TODO: Should we be using CLVMObject or SExp?
+
         row_hash = sha256_treehash(sexp=clvm_object)
+
+        # check if this is already present in the raw_rows
         cursor = await self.db.execute(
             "SELECT * FROM raw_rows WHERE row_hash=:row_hash",
             parameters={"row_hash": row_hash},
         )
-        if await cursor.fetchone() is None:
-            await self.db.execute(
-                "INSERT INTO raw_rows (row_hash,table_id,clvm_object) VALUES(?,?,?)",
-                (row_hash, table_id, clvm_object),
-            )
 
-        await self.db.execute("INSERT INTO ")
+        if await cursor.fetchone() is None:
+            # not present in raw_rows so add it
+            clvm_bytes = SExp.to(clvm_object).as_bin()
+            await self.db.execute("INSERT INTO raw_rows (row_hash, table_id, clvm_object) VALUES(?, ?, ?)", (row_hash, table, clvm_bytes))
+
+        largest_index = await self._get_largest_index()
+
+        if index is None:
+            index = largest_index + 1
+        elif index > largest_index + 1:
+            # Inserting this index would result in a gap in the indices.
+            raise ValueError(f"Index must be no more than 1 larger than the largest index ({largest_index!r}), received: {index!r}")
+        else:
+            await self.db.execute("UPDATE data_rows SET row_index = row_index + 1 WHERE row_index >= ?", (index,))
+
+        await self.db.execute("INSERT INTO data_rows (row_index, row_hash) VALUES(?, ?)", (index, row_hash,))
+        # TODO: Review reentrancy on .commit() since it isn't clearly tied to this
+        #       particular task's activity.
         await self.db.commit()
 
-    # "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
+    async def _get_largest_index(self):
+        cursor = await self.db.execute("SELECT MAX(row_index) FROM data_rows")
+        [[maybe_largest_index]] = await cursor.fetchall()
+        if maybe_largest_index is None:
+            largest_index = -1
+        else:
+            largest_index = maybe_largest_index
+        return largest_index
 
     async def delete_row_by_index(self, table: bytes32, index: int) -> CLVMObject:
         # todo this
-        pass
+        await self.db.execute("DELETE FROM data_rows WHERE row_index == ?", (index,))
+        await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
 
-    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> Tuple[CLVMObject, int]:
-        pass
+    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> None:
+        # TODO: A hash could match multiple rows.
+        cursor = await self.db.execute("SELECT row_index FROM data_rows WHERE row_hash == ?", (row_hash,))
+        [[index]] = await cursor.fetchall()
+        await self.delete_row_by_index(table=table, index=index)
+
+        # # TODO: This is doubly careful to make sure it matches but it seems like maybe
+        # #       we should be able to delete by hash and get the index in one step?
+        # await self.db.execute("DELETE FROM data_rows WHERE row_hash == ? AND row_index == ?", (row_hash, index,))
+        # await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
 
     async def get_table_state(self, table: bytes32) -> bytes32:
         pass
