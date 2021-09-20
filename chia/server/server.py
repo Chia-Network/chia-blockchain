@@ -356,6 +356,9 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        if on_connect is None:
+            on_connect = self.on_connect
+
         if self.is_duplicate_or_self_connection(target_node):
             return False
 
