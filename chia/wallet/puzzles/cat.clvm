@@ -363,7 +363,7 @@
 
     ; CAT TRUTHS struct is: ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
     ; create truths - this_coin_bundle verified true because we calculated my ID from it!
-    ; lineaege proof is verified later by cat parent check or genesis_checker_program
+    ; lineage proof is verified later by cat parent check or genesis_checker_program
 
     (defun stager (
         cat_mod_struct
