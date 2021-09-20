@@ -170,7 +170,7 @@ def install_bladebit(root_path):
                     "git",
                     "clone",
                     "--recursive",
-                    "https://github.com/harold-b/bladebit.git",
+                    "https://github.com/Chia-Network/bladebit.git",
                 ],
                 cwd=os.fspath(root_path),
             )
