@@ -109,6 +109,80 @@ async def test_create_creates_tables_and_columns(
 
 
 @pytest.mark.asyncio
+async def test_get_row_by_hash_single_match(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    row_hash = sha256_treehash(SExp.to(a_clvm_object))
+    row = await data_store.get_row_by_hash(table=b"", row_hash=row_hash)
+
+    sexp = SExp.to(a_clvm_object)
+
+    assert row == sexp
+
+
+@pytest.mark.asyncio
+async def test_get_row_by_hash_no_match(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    other_row_hash = sha256_treehash(SExp.to(another_clvm_object))
+
+    # TODO: If this API is retained then it should have a specific exception.
+    with pytest.raises(Exception):
+        await data_store.get_row_by_hash(table=b"", row_hash=other_row_hash)
+
+
+@pytest.mark.asyncio
+async def test_get_row_by_hash_multiple_matches(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    other_row_hash = sha256_treehash(SExp.to(another_clvm_object))
+
+    # TODO: If this API is retained then it should have a specific exception.
+    with pytest.raises(Exception):
+        await data_store.get_row_by_hash(table=b"", row_hash=other_row_hash)
+
+
+@pytest.mark.asyncio
+async def test_get_rows_by_hash_no_match(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    other_row_hash = sha256_treehash(SExp.to(another_clvm_object))
+    rows = await data_store.get_rows_by_hash(table=b"", row_hash=other_row_hash)
+
+    assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_get_single_row_by_hash(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    sexp = SExp.to(a_clvm_object)
+    row_hash = sha256_treehash(sexp)
+
+    rows = await data_store.get_rows_by_hash(table=b"", row_hash=row_hash)
+
+    assert rows == [sexp]
+
+
+@pytest.mark.asyncio
+async def test_get_multiple_rows_by_hash(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    sexp = SExp.to(a_clvm_object)
+    row_hash = sha256_treehash(sexp)
+
+    rows = await data_store.get_rows_by_hash(table=b"", row_hash=row_hash)
+
+    # We actually get CLVMObjects but they won't compare equal to each other
+    # so SExp it is.
+    # TODO: maybe switch up the interface to use SExp in general isntead of CLVMObject
+    assert rows == [sexp, sexp]
+
+
+@pytest.mark.asyncio
 async def test_insert_adds_to_raw_rows(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
 

@@ -1,14 +1,16 @@
 # from collections import OrderedDict
 from dataclasses import dataclass
 from enum import IntEnum
+import io
 import logging
 
 # from typing import Dict, List, Optional, Tuple
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
 from clvm.SExp import SExp
+from clvm.serialize import sexp_from_stream
 
 # from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -105,9 +107,29 @@ class DataStore:
     async def get_row_by_index(self, index: int) -> CLVMObject:
         pass
 
+    # TODO: added as the core was adjusted to be `get_rows` (plural).  API can be
+    #       discussed  more.
+    async def get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> CLVMObject:
+        [row] = await self.get_rows_by_hash(table=table, row_hash=row_hash)
+
+        return row
+
     # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
-    async def get_row_by_hash(self, row_hash: bytes32) -> CLVMObject:
-        pass
+    # TODO: This returns an SExp but our interface is otherwise CLVMObjects.  We should
+    #       pick one or the other.  If CLVMObject then we need to figure out how to go
+    #       from bytes to a CLVMObject.  SExp just seems better to work with.
+    async def get_rows_by_hash(self, table: bytes32, row_hash: bytes32) -> List[CLVMObject]:
+        cursor = await self.db.execute(
+            (
+                "SELECT raw_rows.clvm_object"
+                " FROM raw_rows INNER JOIN data_rows"
+                " WHERE raw_rows.row_hash == data_rows.row_hash AND data_rows.row_hash == ?"
+            ),
+            (row_hash,),
+        )
+        rows = await cursor.fetchall()
+
+        return [sexp_from_stream(io.BytesIO(row[0]), to_sexp=CLVMObject) for row in rows]
 
     async def insert_row(self, table: bytes32, clvm_object: CLVMObject, index: Optional[int] = None) -> None:
         """
