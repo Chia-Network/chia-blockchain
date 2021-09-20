@@ -76,27 +76,32 @@
 
 ;; GLOSSARY:
 ;;  MOD_HASH: this code's sha256 tree hash
-;;  LIMITATIONS_PROGRAM_HASH: the function that determines if a coin can mint new cats
+;;  GENESIS_COIN_CHECKER: the function that determines if a coin can mint new cats
 ;;  INNER_PUZZLE: an independent puzzle protecting the coins. Solutions to this puzzle are expected to
 ;;              generate `AGG_SIG` conditions and possibly `CREATE_COIN` conditions.
 ;; ---- items above are curried into the puzzle hash ----
 ;;  inner_puzzle_solution: the solution to the inner puzzle
 ;;  prev_coin_id: the id for the previous coin
 ;;  this_coin_bundle: ((parent_id puzzle_hash amount) . lineage_proof)
-;;  next_coin_info: (parent_id inner_puzzle_hash amount)
+;;  next_coin_bundle: (parent_id inner_puzzle_hash amount)
 ;;  prev_subtotal: the subtotal between prev-coin and this-coin
-;;  extra_delta: a relative amount that is checked by the LIMITATIONS PROGRAM, allows for minting and burning
+;;
+;; coin_info: `(parent_id puzzle_hash amount)`. This defines the coin id used with ASSERT_MY_COIN_ID
+;; coin-bundle: the cons box `(coin_info . lineage_proof)`
+;;
+;; and automatically hashed in to the announcement generated with CREATE_COIN_ANNOUNCEMENT.
+;;
 
 (mod (MOD_HASH                 ;; curried into puzzle
       LIMITATIONS_PROGRAM_HASH ;; curried into puzzle
       INNER_PUZZLE             ;; curried into puzzle
       inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
-      limitations_program_reveal  ;; The reveal of the hash curried above.  Can be () for default lineage checking.
+      limitations_program      ;; The reveal of the hash curried above.  Can be () for default lineage checking.
       prev_coin_id             ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       this_coin_bundle         ;; verified with ASSERT_MY_COIN_ID
-      next_coin_info         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
+      next_coin_bundle         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
       prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
-      extra_delta              ;; this is the "legal discrepancy" between your real delta and what you're announcing your delta is
+      extra_delta              ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
     )
 
      ;;;;; start library code
@@ -110,6 +115,10 @@
              (list if (f items) (c assert (r items)) (q . (x)))
              (f items)
          )
+     )
+
+     (defun-inline not (arg)
+      (i arg 0 1)
      )
 
      ; takes a lisp tree and returns the hash of it
@@ -258,7 +267,7 @@
               )
            )
            1
-           ()
+           (x)
        )
      )
 
@@ -276,10 +285,10 @@
        (f (r (r (r cat_mod_struct))))
      )
 
-    (defun is_bundle_valid ((coin_info . lineage_proof) limitations_program_reveal Truths extra_delta inner_conditions)
-      (if limitations_program_reveal
-        (assert (= (sha256tree1 limitations_program_reveal) (limitations_program_hash_from_cat_struct (cat_struct_truth Truths)))
-            (a limitations_program_reveal
+    (defun is_bundle_valid ((coin_info . lineage_proof) limitations_program Truths extra_delta inner_conditions)
+      (if limitations_program
+          (assert (= (sha256tree1 limitations_program) (limitations_program_hash_from_cat_struct (cat_struct_truth Truths)))
+            (a limitations_program
                 (list
                   Truths
                   extra_delta
@@ -292,7 +301,9 @@
                 )
             )
           )
-          (assert (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) lineage_proof)
+          (assert
+            (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) lineage_proof)
+            (not extra_delta)
             inner_conditions
           )
       )
@@ -317,7 +328,7 @@
             (generate_final_output_conditions
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-              (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions)) extra_delta)
+              (+ (+ prev_subtotal (- (input_amount_for_coin (coin_info_for_coin_bundle this_coin_bundle)) (output_totals inner_conditions))) extra_delta)
               (morph_conditions inner_conditions (cat_struct_truth Truths))
               prev_coin_id
               (my_id_cat_truth Truths)
@@ -354,7 +365,7 @@
 
     ; CAT TRUTHS struct is: ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
     ; create truths - this_coin_bundle verified true because we calculated my ID from it!
-    ; lineage proof is verified later by cat parent check or genesis_checker_program
+    ; lineaege proof is verified later by cat parent check or genesis_checker_program
 
     (defun stager (
         cat_mod_struct
@@ -364,7 +375,7 @@
         my_id
         prev_coin_id
         this_coin_bundle
-        next_coin_info
+        next_coin_bundle
         prev_subtotal
         extra_delta
      )
@@ -374,7 +385,7 @@
              inner_solution
              prev_coin_id
              this_coin_bundle
-             (coin_id_for_coin next_coin_info cat_mod_struct)
+             (coin_id_for_coin next_coin_bundle cat_mod_struct)
              prev_subtotal
              extra_delta
        )
@@ -382,19 +393,14 @@
 
     (stager
         ;; caclculate cat_mod_struct, inner_puzzle_hash, coin_id
-        (list
-            MOD_HASH
-            (sha256 1 MOD_HASH)
-            limitations_program_reveal
-            LIMITATIONS_PROGRAM_HASH
-        )
+        (list MOD_HASH (sha256 1 MOD_HASH) limitations_program LIMITATIONS_PROGRAM_HASH)
         INNER_PUZZLE
         inner_puzzle_solution
         (sha256tree1 INNER_PUZZLE)
         (sha256 (f (f this_coin_bundle)) (f (r (f this_coin_bundle))) (f (r (r (f this_coin_bundle)))))
         prev_coin_id  ; ID
         this_coin_bundle  ; ((parent_id puzzle_hash amount) . (lineage_proof))
-        next_coin_info ; (parent_id innerpuzhash amount)
+        next_coin_bundle ; (parent_id innerpuzhash amount)
         prev_subtotal
         extra_delta
     )
