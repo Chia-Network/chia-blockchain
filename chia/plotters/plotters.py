@@ -36,8 +36,7 @@ class Options(Enum):
     VERBOSE = 23
     OVERRIDE_K = 25
     ALT_FINGERPRINT = 26
-    CONNECT_TO_DAEMON = 27
-    EXCLUDE_FINAL_DIR = 28
+    EXCLUDE_FINAL_DIR = 27
 
 
 chia_plotter = [
@@ -58,7 +57,6 @@ chia_plotter = [
     Options.POOLCONTRACT,
     Options.FARMERKEY,
     Options.POOLKEY,
-    Options.CONNECT_TO_DAEMON,
     Options.PLOT_COUNT,
     Options.EXCLUDE_FINAL_DIR,
 ]
@@ -94,6 +92,7 @@ bladebit_plotter = [
 
 
 def get_plotters_root_path(root_path: Path) -> Path:
+    root_path = root_path.parent
     return root_path / "plotters"
 
 
@@ -296,13 +295,6 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 type=int,
                 default=None,
                 help="Enter the alternative fingerprint of the key you want to use",
-            )
-        if option is Options.CONNECT_TO_DAEMON:
-            parser.add_argument(
-                "-D",
-                "--connect_to_daemon",
-                help="Connects to the daemon for keychain operations",
-                default=False,
             )
         if option is Options.EXCLUDE_FINAL_DIR:
             parser.add_argument(
