@@ -3,9 +3,14 @@ import traceback
 import subprocess
 import os
 import sys
+import logging
 
 from pathlib import Path
 from typing import Any, Dict, Optional
+from chia.plotting.create_plots import resolve_plot_keys
+
+log = logging.getLogger(__name__)
+
 
 BLADEBIT_PLOTTER_DIR = "bladebit"
 BLADEBIT_MIN_RAM_GIBS = 416
@@ -190,7 +195,7 @@ def install_bladebit(root_path):
         raise ValueError("Platform not supported yet for bladebit plotter.")
 
 
-def plot_bladebit(args, root_path):
+def plot_bladebit(args, chia_root_path, root_path):
     if not os.path.exists(root_path / "bladebit/.bin/release/bladebit"):
         print("Installing bladebit plotter.")
         try:
@@ -198,6 +203,17 @@ def plot_bladebit(args, root_path):
         except Exception as e:
             print(f"Exception while installing bladebit plotter: {e}")
             return
+    plot_keys = asyncio.get_event_loop().run_until_complete(
+        resolve_plot_keys(
+            None if args.farmerkey == b"" else args.farmerkey.hex(),
+            None,
+            None if args.pool_key == b"" else args.pool_key.hex(),
+            None if args.contract == "" else args.contract,
+            chia_root_path,
+            log,
+            False,  # args.connect_to_daemon,
+        )
+    )
     call_args = []
     call_args.append(str(root_path) + "/bladebit/.bin/release/bladebit")
     call_args.append("-t")
@@ -205,13 +221,13 @@ def plot_bladebit(args, root_path):
     call_args.append("-n")
     call_args.append(str(args.count))
     call_args.append("-f")
-    call_args.append(args.farmerkey.hex())
-    if args.pool_key != b"":
+    call_args.append(bytes(plot_keys.farmer_public_key).hex())
+    if plot_keys.pool_public_key is not None:
         call_args.append("-p")
-        call_args.append(args.pool_key.hex())
-    if args.contract != "":
+        call_args.append(bytes(plot_keys.pool_public_key).hex())
+    if plot_keys.pool_contract_puzzle_hash is not None:
         call_args.append("-c")
-        call_args.append(args.contract)
+        call_args.append(plot_keys.pool_contract_puzzle_hash)
     if args.warmstart:
         call_args.append("-w")
     if args.id != b"":
