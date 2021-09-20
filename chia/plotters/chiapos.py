@@ -4,10 +4,17 @@ After `chia plots create` becomes obsolete, consider removing it from there.
 """
 import asyncio
 import logging
+import pkg_resources
 from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 log = logging.getLogger(__name__)
+
+
+def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
+    chiapos_version: str = pkg_resources.get_distribution("chiapos").version
+    return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 
 class Params:

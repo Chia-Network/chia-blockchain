@@ -2,10 +2,12 @@ import argparse
 import binascii
 import os
 from enum import Enum
-from chia.plotters.chiapos import plot_chia
-from chia.plotters.madmax import plot_madmax
-from chia.plotters.bladebit import plot_bladebit
+from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
+from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
+from chia.plotters.madmax import get_madmax_install_info, plot_madmax
 from chia.plotters.install_plotter import install_plotter
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class Options(Enum):
@@ -89,6 +91,10 @@ bladebit_plotter = [
     Options.FINAL_DIR,
     Options.VERBOSE,
 ]
+
+
+def get_plotters_root_path(root_path: Path) -> Path:
+    return root_path / "plotters"
 
 
 def build_parser(subparsers, root_path, option_list, name, plotter_desc):
@@ -307,10 +313,10 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
 
 
-def call_plotters(root_path, args):
+def call_plotters(root_path: Path, args):
     # Add `plotters` section in CHIA_ROOT.
     chiapos_root_path = root_path
-    root_path = root_path / "plotters"
+    root_path = get_plotters_root_path(root_path)
     if not root_path.is_dir():
         if os.path.exists(root_path):
             try:
@@ -331,9 +337,7 @@ def call_plotters(root_path, args):
     build_parser(subparsers, root_path, bladebit_plotter, "bladebit", "Bladebit Plotter")
     install_parser = subparsers.add_parser("install", description="Install custom plotters.")
     install_parser.add_argument(
-        "install_plotter",
-        type=str,
-        help="The plotters available for installing. Choose from madmax or bladebit."
+        "install_plotter", type=str, help="The plotters available for installing. Choose from madmax or bladebit."
     )
     args = plotters.parse_args(args)
     if args.plotter == "chiapos":
@@ -344,3 +348,20 @@ def call_plotters(root_path, args):
         plot_bladebit(args, root_path)
     if args.plotter == "install":
         install_plotter(args.install_plotter, root_path)
+
+
+def get_available_plotters(root_path) -> Dict[str, Any]:
+    plotters_root_path: Path = get_plotters_root_path(root_path)
+    plotters: Dict[str, Any] = {}
+    chiapos: Optional[Dict[str, Any]] = get_chiapos_install_info()
+    bladebit: Optional[Dict[str, Any]] = get_bladebit_install_info(plotters_root_path)
+    madmax: Optional[Dict[str, Any]] = get_madmax_install_info(plotters_root_path)
+
+    if chiapos is not None:
+        plotters["chiapos"] = chiapos
+    if bladebit is not None:
+        plotters["bladebit"] = bladebit
+    if madmax is not None:
+        plotters["madmax"] = madmax
+
+    return plotters
