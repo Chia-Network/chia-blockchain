@@ -307,7 +307,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
 
 def call_plotters(root_path: Path, args):
     # Add `plotters` section in CHIA_ROOT.
-    chiapos_root_path = root_path
+    chia_root_path = root_path
     root_path = get_plotters_root_path(root_path)
     if not root_path.is_dir():
         if os.path.exists(root_path):
@@ -333,11 +333,11 @@ def call_plotters(root_path: Path, args):
     )
     args = plotters.parse_args(args)
     if args.plotter == "chiapos":
-        plot_chia(args, chiapos_root_path)
+        plot_chia(args, chia_root_path)
     if args.plotter == "madmax":
-        plot_madmax(args, root_path)
+        plot_madmax(args, chia_root_path, root_path)
     if args.plotter == "bladebit":
-        plot_bladebit(args, root_path)
+        plot_bladebit(args, chia_root_path, root_path)
     if args.plotter == "install":
         install_plotter(args.install_plotter, root_path)
 

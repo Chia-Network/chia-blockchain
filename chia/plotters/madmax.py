@@ -2,10 +2,14 @@ import asyncio
 import traceback
 import subprocess
 import os
+import logging
 import sys
 
 from pathlib import Path
 from typing import Any, Dict, Optional
+from chia.plotting.create_plots import resolve_plot_keys
+
+log = logging.getLogger(__name__)
 
 
 MADMAX_PLOTTER_DIR = "madmax-plotter"
@@ -184,7 +188,7 @@ async def run_madmax(args):
     await run(cmd[:-1])
 
 
-def plot_madmax(args, plotters_root_path: Path):
+def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     if not os.path.exists(get_madmax_executable_path(plotters_root_path)):
         print("Installing madmax plotter.")
         try:
@@ -192,22 +196,33 @@ def plot_madmax(args, plotters_root_path: Path):
         except Exception as e:
             print(f"Exception while installing madmax plotter: {e}")
             return
+    plot_keys = asyncio.get_event_loop().run_until_complete(
+        resolve_plot_keys(
+            None if args.farmerkey == b"" else args.farmerkey.hex(),
+            None,
+            None if args.pool_key == b"" else args.pool_key.hex(),
+            None if args.contract == "" else args.contract,
+            chia_root_path,
+            log,
+            False,  # args.connect_to_daemon,
+        )
+    )
     call_args = []
     call_args.append(os.fspath(get_madmax_executable_path(plotters_root_path)))
     call_args.append("-f")
-    call_args.append(args.farmerkey.hex())
-    if args.pool_key != b"":
+    call_args.append(bytes(plot_keys.farmer_public_key).hex())
+    if plot_keys.pool_public_key is not None:
         call_args.append("-p")
-        call_args.append(args.pool_key.hex())
+        call_args.append(bytes(plot_keys.pool_public_key).hex())
     call_args.append("-t")
     call_args.append(args.tmpdir)
     call_args.append("-2")
     call_args.append(args.tmpdir2)
     call_args.append("-d")
     call_args.append(args.finaldir)
-    if args.contract != "":
+    if plot_keys.pool_contract_puzzle_hash is not None:
         call_args.append("-c")
-        call_args.append(args.contract)
+        call_args.append(plot_keys.pool_contract_puzzle_hash)
     call_args.append("-n")
     call_args.append(str(args.count))
     call_args.append("-r")
