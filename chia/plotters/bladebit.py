@@ -196,7 +196,7 @@ def install_bladebit(root_path):
 
 
 def plot_bladebit(args, chia_root_path, root_path):
-    if not os.path.exists(root_path / "bladebit/.bin/release/bladebit"):
+    if not os.path.exists(get_bladebit_executable_path(root_path)):
         print("Installing bladebit plotter.")
         try:
             install_bladebit(root_path)
