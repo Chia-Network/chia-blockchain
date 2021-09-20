@@ -1,5 +1,6 @@
 import math
 
+from dataclasses import dataclass
 from typing import Tuple, Callable, List, Any
 
 from blspy import G1Element
@@ -23,13 +24,16 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint64, uint32, uint8
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_delegated_puzzle
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.rl_wallet.rl_drivers import (
     create_rl_puzzle,
     create_rl_solution,
 )
+
+from chia.wallet.rl_wallet.puzzle_representation import PuzzleIdentifier, PuzzleRepresentation, KnownPuzzles
 
 
 class NewUserPuzHash(Exception):
@@ -49,24 +53,38 @@ class NewAdminPuzHash(Exception):
 class BadRLState(Exception):
     pass
 
+@dataclass(frozen=True)
+@streamable
+class RLInfo(Streamable):
+    """
+    Things that will not be visible in the singleton creation:
+        - user and admin inner puzzles (and technically their solution generators I suppose)
+        - user RL settings
+    """
+    singleton_launcher_id: bytes32
+    current_lineage_proof: LineageProof
+    admin_inner_puzzle: PuzzleRepresentation
+    user_inner_puzzle: PuzzleRepresentation
+    amount_per: uint64
+    block_interval: uint32
+    user_earnings_cap: uint64
+    user_credit: uint64
+    user_last_height: uint32
+
 
 class RLWalletState:
+    rl_info: RLInfo
     singleton_launcher_id: bytes32
     current_lineage_proof: LineageProof
     admin_inner_puzzle: Program
     admin_solution_generator: Any
     user_inner_puzzle: Program
     user_solution_generator: Any
-    user_rate: Tuple[uint64, uint32]
+    amount_per: uint64
+    block_interval: uint32
     user_earnings_cap: uint64
     user_credit: uint64
     user_last_height: uint32
-
-    """
-    Things that will not be visible in the singleton creation:
-        - user and admin inner puzzles (and technically their solution generators I suppose)
-        - user RL settings
-    """
 
     # Just a standard init, manually set everything
     def __init__(self):
@@ -76,10 +94,26 @@ class RLWalletState:
         self.admin_solution_generator = None
         self.user_inner_puzzle = None
         self.user_solution_generator = None
-        self.user_rate = None
+        self.amount_per = None
+        self.block_interval = None
         self.user_earnings_cap = None
         self.user_credit = None
         self.user_last_height = None
+
+    def save_info(self):
+        matched, admin_puzzle_rep = KnownPuzzles.match_puzzle(self.admin_inner_puzzle)
+        matched, user_puzzle_rep = KnownPuzzles.match_puzzle(self.user_inner_puzzle)
+        self.rl_info = RLInfo(
+            self.singleton_launcher_id,
+            self.current_lineage_proof,
+            admin_puzzle_rep,
+            user_puzzle_rep,
+            self.amount_per,
+            self.block_interval,
+            self.user_earnings_cap,
+            self.user_credit,
+            self.user_last_height,
+        )
 
     def set_initial_withdrawal_settings(
         self,
@@ -89,7 +123,8 @@ class RLWalletState:
         initial_credit: uint64,
         start_height: uint32,
     ):
-        self.user_rate = (amount_per, block_interval)
+        self.amount_per = amount_per
+        self.block_interval = block_interval
         self.user_earnings_cap = earnings_cap
         self.user_credit = initial_credit
         self.user_last_height = start_height
@@ -125,8 +160,8 @@ class RLWalletState:
 
     def create_user_rl_puzzle(self) -> Program:
         return create_rl_puzzle(
-            self.user_rate[0],
-            self.user_rate[1],
+            self.amount_per,
+            self.block_interval,
             self.user_earnings_cap,
             self.user_credit,
             self.user_last_height,
@@ -245,12 +280,10 @@ class RLWalletState:
                 if ((int.from_bytes(condition[0], "big") == 51) and (int.from_bytes(condition[2], "big") % 2 == 1))
             )
 
-            cache_credit: uint64 = self.user_credit
-            cache_last_height: uint32 = self.user_last_height
             # Calculate just like the Chialisp
             potential_withdrawal: int = min(
                 self.user_earnings_cap,
-                (math.floor(self.user_rate[0] / self.user_rate[1]) * max(0, (current_height - self.user_last_height)) + self.user_credit),
+                (math.floor(self.amount_per / self.block_interval) * max(0, (current_height - self.user_last_height)) + self.user_credit),
             )
             actual_withdrawal: int = max(0, coin_spend.coin.amount - int.from_bytes(singleton_condition[2], "big"))
             self.user_credit = uint64(potential_withdrawal - actual_withdrawal)
@@ -258,9 +291,10 @@ class RLWalletState:
 
             try:
                 assert self.create_full_puzzle().get_tree_hash() == final_singleton_condition[1]
+                self.save_info()
             except AssertionError:
-                self.user_credit = cache_credit
-                self.user_last_height = user_last_height
+                self.user_credit = self.rl_info.user_credit
+                self.user_last_height = self.rl_info.user_last_height
                 try:
                     assert self.user_inner_puzzle.get_tree_hash() == singleton_condition[1]
                 except AssertionError:
