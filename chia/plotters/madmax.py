@@ -4,9 +4,43 @@ import subprocess
 import os
 import sys
 
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-def install_madmax(root_path):
-    if sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+
+MADMAX_PLOTTER_DIR = "madmax-plotter"
+
+
+def is_madmax_supported() -> bool:
+    return sys.platform.startswith("linux") or sys.platform.startswith("darwin")
+
+
+def get_madmax_install_path(plotters_root_path: Path) -> Path:
+    return plotters_root_path / MADMAX_PLOTTER_DIR
+
+
+def get_madmax_executable_path(plotters_root_path: Path) -> Path:
+    return get_madmax_install_path(plotters_root_path) / "build/chia_plot"
+
+
+def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
+    info: Dict[str, Any] = {"display_name": "madMAx Plotter"}
+    installed: bool = False
+    supported: bool = is_madmax_supported()
+
+    if get_madmax_executable_path(plotters_root_path).exists():
+        installed = True
+        # TODO: Figure out how to get madmax version
+
+    info["installed"] = installed
+    if installed is False:
+        info["can_install"] = supported
+
+    return info
+
+
+def install_madmax(plotters_root_path: Path):
+    if is_madmax_supported():
         print("Installing dependencies.")
         if sys.platform.startswith("linux"):
             try:
@@ -56,15 +90,15 @@ def install_madmax(root_path):
                     "git",
                     "clone",
                     "https://github.com/Chia-Network/chia-plotter-madmax.git",
-                    "madmax-plotter",
+                    MADMAX_PLOTTER_DIR,
                 ],
-                cwd=os.fspath(root_path),
+                cwd=os.fspath(plotters_root_path),
             )
         except Exception as e:
             raise ValueError(f"Could not clone madmax repository. {e}")
 
         print("Installing git submodules.")
-        madmax_path = os.fspath(root_path.joinpath("madmax-plotter"))
+        madmax_path: str = os.fspath(get_madmax_install_path(plotters_root_path))
         try:
             subprocess.run(["git", "submodule", "update", "--init", "--recursive"], cwd=madmax_path)
         except Exception as e:
@@ -150,16 +184,16 @@ async def run_madmax(args):
     await run(cmd[:-1])
 
 
-def plot_madmax(args, root_path):
-    if not os.path.exists(root_path / "madmax-plotter/build/chia_plot"):
+def plot_madmax(args, plotters_root_path: Path):
+    if not os.path.exists(get_madmax_executable_path(plotters_root_path)):
         print("Installing madmax plotter.")
         try:
-            install_madmax(root_path)
+            install_madmax(plotters_root_path)
         except Exception as e:
             print(f"Exception while installing madmax plotter: {e}")
             return
     call_args = []
-    call_args.append(str(root_path) + "/madmax-plotter/build/chia_plot")
+    call_args.append(os.fspath(get_madmax_executable_path(plotters_root_path)))
     call_args.append("-f")
     call_args.append(args.farmerkey.hex())
     if args.pool_key != b"":
