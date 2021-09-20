@@ -390,7 +390,7 @@
     )
 
     (stager
-        ;; caclculate cat_mod_struct, inner_puzzle_hash, coin_id
+        ;; calculate cat_mod_struct, inner_puzzle_hash, coin_id
         (list MOD_HASH (sha256 1 MOD_HASH) limitations_program LIMITATIONS_PROGRAM_HASH)
         INNER_PUZZLE
         inner_puzzle_solution
