@@ -101,7 +101,7 @@
       this_coin_bundle         ;; verified with ASSERT_MY_COIN_ID
       next_coin_bundle         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
       prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
-      extra_delta              ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
+      extra_delta              ;; this is the "legal discrepancy" between your real delta and what you're announcing your delta is
     )
 
      ;;;;; start library code
