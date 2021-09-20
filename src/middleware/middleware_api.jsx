@@ -18,6 +18,7 @@ import {
   did_get_did,
   pingWallet,
   getNetworkInfo,
+  get_farmed_amount,
 } from '../modules/message';
 
 import { offerParsed, resetTrades } from '../modules/trade';
@@ -119,6 +120,7 @@ async function get_wallet_transactions(store, id) {
 }
 
 async function get_wallet_balance(store, id) {
+  store.dispatch(get_farmed_amount());
   store.dispatch(get_balance_for_wallet(id));
 }
 
