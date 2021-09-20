@@ -215,7 +215,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         )
     )
     call_args = []
-    call_args.append(str(root_path) + "/bladebit/.bin/release/bladebit")
+    call_args.append(os.fspath(get_bladebit_executable_path(root_path)))
     call_args.append("-t")
     call_args.append(str(args.threads))
     call_args.append("-n")
