@@ -321,7 +321,6 @@ class Wallet:
         if coins is None:
             coins = await self.select_coins(total_amount)
         assert len(coins) > 0
-
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
         change = spend_value - total_amount
@@ -337,9 +336,8 @@ class Wallet:
                 raise ValueError("Cannot create two identical coins")
 
         for coin in coins:
-            self.log.info(f"coin from coins {coin}")
+            self.log.info(f"coin from coins: {coin.name()} {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:

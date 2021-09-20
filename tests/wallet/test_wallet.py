@@ -25,22 +25,22 @@ def event_loop():
 class TestWalletSimulator:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, True):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, True):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, True):
             yield _
 
     @pytest.fixture(scope="function")
     async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
+        async for _ in setup_simulators_and_wallets(3, 2, {}, True):
             yield _
 
     @pytest.mark.asyncio
@@ -214,12 +214,12 @@ class TestWalletSimulator:
         # wallet0 <-> sever1
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_2._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
