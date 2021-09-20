@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Callable, Optional, List, Any, Dict, Sequence, Tuple
+from typing import Callable, Optional, List, Any, Dict, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
