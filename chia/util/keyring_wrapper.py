@@ -33,8 +33,8 @@ class KeyringWrapper:
     # Instance members
     keys_root_path: Path
     keyring: Union[Any, FileKeyring] = None
-    cached_passphase: Optional[str] = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-    cached_passphase_is_validated: bool = False
+    cached_passphrase: Optional[str] = DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+    cached_passphrase_is_validated: bool = False
     legacy_keyring = None
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
@@ -135,15 +135,15 @@ class KeyringWrapper:
         Returns a tuple including the currently cached passphrase and a bool
         indicating whether the passphrase has been previously validated.
         """
-        return self.cached_passphase, self.cached_passphase_is_validated
+        return self.cached_passphrase, self.cached_passphrase_is_validated
 
     def set_cached_master_passphrase(self, passphrase: Optional[str], validated=False) -> None:
         """
         Cache the provided passphrase and optionally indicate whether the passphrase
         has been validated.
         """
-        self.cached_passphase = passphrase
-        self.cached_passphase_is_validated = validated
+        self.cached_passphrase = passphrase
+        self.cached_passphrase_is_validated = validated
 
     def has_cached_master_passphrase(self) -> bool:
         passphrase = self.get_cached_master_passphrase()
@@ -170,7 +170,7 @@ class KeyringWrapper:
         Sets a new master passphrase for the keyring
         """
 
-        from chia.util.keychain import KeyringCurrentPassphaseIsInvalid, KeyringRequiresMigration
+        from chia.util.keychain import KeyringCurrentPassphraseIsInvalid, KeyringRequiresMigration
 
         # Require a valid current_passphrase
         if (
@@ -178,7 +178,7 @@ class KeyringWrapper:
             and current_passphrase is not None
             and not self.master_passphrase_is_valid(current_passphrase)
         ):
-            raise KeyringCurrentPassphaseIsInvalid("invalid current passphrase")
+            raise KeyringCurrentPassphraseIsInvalid("invalid current passphrase")
 
         self.set_cached_master_passphrase(new_passphrase, validated=True)
 

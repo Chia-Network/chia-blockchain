@@ -6,10 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## UNRELEASED
+## 1.2.7 Chia blockchain 2021-09-16
 
-### Changed
-- Temporary peer ban for certain protocol violations
+### Fixed
+
+- Thanks to @jack60612 for fixing a bug that displayed 25 words instead of 24 words in some instances in the GUI.
 
 ## 1.2.6 Chia blockchain 2021-09-09
 
@@ -30,7 +31,7 @@ Today we’re releasing version 1.2.6 to address a resource bug with nodes, and 
 
 ### Fixed
 
-- Fixed errors in the Linux GUI install script, which impacted only Linux users.  
+- Fixed errors in the Linux GUI install script, which impacted only Linux users.
 
 ## 1.2.4 Chia blockchain 2021-08-26
 
