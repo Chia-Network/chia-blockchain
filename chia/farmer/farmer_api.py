@@ -27,7 +27,7 @@ from chia.util.api_decorators import api_request, peer_required
 from chia.util.ints import uint32, uint64
 
 
-def strip_old_entries(pairs: Sequence[Tuple[float, Any]], before: float):
+def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tuple[float, Any]]:
     for index, [timestamp, points] in enumerate(pairs):
         if timestamp >= before:
             if index == 0:
