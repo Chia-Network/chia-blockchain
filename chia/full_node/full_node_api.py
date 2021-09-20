@@ -1387,7 +1387,7 @@ class FullNodeAPI:
         coin_records: List[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
             True, [request.coin_name]
         )
-        states = [record.coin_state for record in coin_records]
+        states = [record.coin_state() for record in coin_records]
         response = wallet_protocol.RespondChildren(states)
         msg = make_msg(ProtocolMessageTypes.respond_children, response)
         return msg

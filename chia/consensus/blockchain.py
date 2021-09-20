@@ -316,7 +316,7 @@ class Blockchain(BlockchainInterface):
                     tx_removals, tx_additions = [], []
                 if block.is_transaction_block():
                     assert block.foliage_transaction_block is not None
-                    added, _ = await self.coin_store.new_block(
+                    _, added = await self.coin_store.new_block(
                         block.height,
                         block.foliage_transaction_block.timestamp,
                         block.get_included_reward_coins(),
@@ -324,7 +324,7 @@ class Blockchain(BlockchainInterface):
                         tx_removals,
                     )
                 else:
-                    added, _ = [], []
+                    added = []
                 await self.block_store.set_peak(block_record.header_hash)
                 return uint32(0), uint32(0), [block_record], added
             return None, None, [], []

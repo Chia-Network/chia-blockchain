@@ -27,7 +27,6 @@ class CoinRecord(Streamable):
     def name(self) -> bytes32:
         return self.coin.name()
 
-    @property
     def coin_state(self) -> CoinState:
         spent_h = None
         if self.spent:
