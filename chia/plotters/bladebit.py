@@ -225,9 +225,9 @@ def plot_bladebit(args, chia_root_path, root_path):
     if plot_keys.pool_public_key is not None:
         call_args.append("-p")
         call_args.append(bytes(plot_keys.pool_public_key).hex())
-    if plot_keys.pool_contract_puzzle_hash is not None:
+    if plot_keys.pool_contract_address is not None:
         call_args.append("-c")
-        call_args.append(plot_keys.pool_contract_puzzle_hash)
+        call_args.append(plot_keys.pool_contract_address)
     if args.warmstart:
         call_args.append("-w")
     if args.id != b"":

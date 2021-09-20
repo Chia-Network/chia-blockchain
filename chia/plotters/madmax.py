@@ -220,9 +220,9 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     call_args.append(args.tmpdir2)
     call_args.append("-d")
     call_args.append(args.finaldir)
-    if plot_keys.pool_contract_puzzle_hash is not None:
+    if plot_keys.pool_contract_address is not None:
         call_args.append("-c")
-        call_args.append(plot_keys.pool_contract_puzzle_hash)
+        call_args.append(plot_keys.pool_contract_address)
     call_args.append("-n")
     call_args.append(str(args.count))
     call_args.append("-r")
