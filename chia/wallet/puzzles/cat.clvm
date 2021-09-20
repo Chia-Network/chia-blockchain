@@ -91,7 +91,7 @@
       LIMITATIONS_PROGRAM_HASH ;; curried into puzzle
       INNER_PUZZLE             ;; curried into puzzle
       inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
-      limitations_program      ;; The reveal of the hash curried above.  Can be () for default lineage checking.
+      limitations_program_reveal  ;; The reveal of the hash curried above.  Can be () for default lineage checking.
       prev_coin_id             ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       this_coin_bundle         ;; verified with ASSERT_MY_COIN_ID
       next_coin_info         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
@@ -278,17 +278,19 @@
 
     (defun is_bundle_valid ((coin_info . lineage_proof) limitations_program_reveal Truths extra_delta inner_conditions)
       (if limitations_program_reveal
-          (a limitations_program_reveal
-              (list
-                Truths
-                extra_delta
-                (if (f lineage_proof)
-                    (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) (r lineage_proof))
-                    ()
+        (assert (= (sha256tree1 limitations_program_reveal) (limitations_program_hash_from_cat_struct (cat_struct_truth Truths)))
+            (a limitations_program_reveal
+                (list
+                  Truths
+                  extra_delta
+                  (if (f lineage_proof)
+                      (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) (r lineage_proof))
+                      ()
+                  )
+                  inner_conditions
+                  (r lineage_proof)
                 )
-                inner_conditions
-                (r lineage_proof)
-              )
+            )
           )
           (assert (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) lineage_proof)
             inner_conditions
@@ -379,8 +381,13 @@
     )
 
     (stager
-        ;; calculate cat_mod_struct, inner_puzzle_hash, coin_id
-        (list MOD_HASH (sha256 1 MOD_HASH) limitations_program LIMITATIONS_PROGRAM_HASH)
+        ;; caclculate cat_mod_struct, inner_puzzle_hash, coin_id
+        (list
+            MOD_HASH
+            (sha256 1 MOD_HASH)
+            limitations_program_reveal
+            LIMITATIONS_PROGRAM_HASH
+        )
         INNER_PUZZLE
         inner_puzzle_solution
         (sha256tree1 INNER_PUZZLE)
