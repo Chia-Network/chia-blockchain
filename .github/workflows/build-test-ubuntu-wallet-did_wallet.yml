@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu wallet-rl_wallet Test
+name: Ubuntu wallet-did_wallet Test
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu wallet-rl_wallet Test
+    name: Ubuntu wallet-did_wallet Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -28,7 +28,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
+      uses: styfle/cancel-workflow-action@0.9.0
       with:
         access_token: ${{ github.token }}
 
@@ -102,10 +102,10 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
-    - name: Test wallet-rl_wallet code with pytest
+    - name: Test wallet-did_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py -s -v --durations 0
+        ./venv/bin/py.test tests/wallet/did_wallet/test_did.py tests/wallet/did_wallet/test_did_rpc.py -s -v --durations 0
 
 
 #

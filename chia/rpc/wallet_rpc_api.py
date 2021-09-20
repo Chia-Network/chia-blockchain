@@ -390,11 +390,8 @@ class WalletRpcApi:
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-        peak = self.service.wallet_state_manager.peak
-        if peak is None:
-            return {"height": 0}
-        else:
-            return {"height": peak.height}
+        height = self.service.wallet_state_manager.blockchain.get_peak_height()
+        return {"height": height}
 
     async def get_network_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
@@ -665,7 +662,7 @@ class WalletRpcApi:
         if "end" in request:
             end = request["end"]
         else:
-            end = 50
+            end = 1000
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
         return {
