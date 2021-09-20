@@ -89,11 +89,11 @@ class DataStore:
         #       a reference into the table and only remove when a non-matching forward
         #       step is taken?  Or reverts are just further actions?
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS actions(" "data_row_index INTEGER, row_hash TEXT, operation INTEGER" ")"
+            "CREATE TABLE IF NOT EXISTS actions(data_row_index INTEGER, row_hash TEXT, operation INTEGER)"
         )
         # TODO: Could also be structured such that the action table has a reference from
         #       each action to the commit it is part of.
-        await self.db.execute("CREATE TABLE IF NOT EXISTS commits(" "changelist_hash TEXT, actions_index INTEGER" ")")
+        await self.db.execute("CREATE TABLE IF NOT EXISTS commits(changelist_hash TEXT, actions_index INTEGER)")
 
         await self.db.commit()
 
