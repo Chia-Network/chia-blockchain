@@ -200,6 +200,20 @@ class WalletCoinStore:
 
         return set(self.coin_record_from_row(row) for row in rows)
 
+    async def get_coins_to_check(self, check_height) -> Set[WalletCoinRecord]:
+        """Returns set of all CoinRecords."""
+        cursor = await self.db_connection.execute(
+            "SELECT * from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
+            (
+                check_height,
+                check_height,
+            ),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+        return set(self.coin_record_from_row(row) for row in rows)
+
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""

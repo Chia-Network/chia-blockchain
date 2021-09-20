@@ -85,6 +85,7 @@ class RLWallet:
                     pubkey,
                     WalletType.RATE_LIMITED,
                     wallet_info.id,
+                    False,
                 )
             ]
         )
@@ -121,11 +122,7 @@ class RLWallet:
             await wallet_state_manager.puzzle_store.add_derivation_paths(
                 [
                     DerivationRecord(
-                        unused,
-                        bytes32(token_bytes(32)),
-                        pubkey,
-                        WalletType.RATE_LIMITED,
-                        wallet_info.id,
+                        unused, bytes32(token_bytes(32)), pubkey, WalletType.RATE_LIMITED, wallet_info.id, False
                     )
                 ]
             )
@@ -193,6 +190,7 @@ class RLWallet:
             G1Element.from_bytes(self.rl_info.admin_pubkey),
             WalletType.RATE_LIMITED,
             self.id(),
+            False,
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
@@ -274,6 +272,7 @@ class RLWallet:
             user_pubkey,
             WalletType.RATE_LIMITED,
             self.id(),
+            False,
         )
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(new_rl_info.rl_puzzle_hash)
@@ -283,6 +282,7 @@ class RLWallet:
             user_pubkey,
             WalletType.RATE_LIMITED,
             self.id(),
+            False,
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record, record2])
         self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
