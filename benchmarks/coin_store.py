@@ -27,7 +27,7 @@ async def setup_db() -> DBWrapper:
         pass
     connection = await aiosqlite.connect(db_filename)
     await connection.execute("pragma journal_mode=wal")
-    await connection.execute("pragma synchronous=NORMAL")
+    await connection.execute("pragma synchronous=OFF")
     return DBWrapper(connection)
 
 

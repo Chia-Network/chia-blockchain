@@ -93,7 +93,7 @@ class FullNodeDiscovery:
         mkdir(self.peer_db_path.parent)
         self.connection = await aiosqlite.connect(self.peer_db_path)
         await self.connection.execute("pragma journal_mode=wal")
-        await self.connection.execute("pragma synchronous=NORMAL")
+        await self.connection.execute("pragma synchronous=OFF")
         self.address_manager_store = await AddressManagerStore.create(self.connection)
         if not await self.address_manager_store.is_empty():
             self.address_manager = await self.address_manager_store.deserialize()
