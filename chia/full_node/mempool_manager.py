@@ -216,7 +216,7 @@ class MempoolManager:
             self.constants.COST_PER_BYTE,
         )
         end_time = time.time()
-        log.info(f"It took {end_time - start_time} to pre validate transaction")
+        log.info(f"It took {end_time - start_time:0.4f} to pre validate transaction")
         return NPCResult.from_bytes(cached_result_bytes)
 
     async def add_spendbundle(
@@ -428,10 +428,13 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item)
-        log.info(
-            f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
-            f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"
+        now = time.time()
+        log.log(
+            logging.WARNING if now - start_time > 1 else logging.DEBUG,
+            f"add_spendbundle {spend_name} took {now - start_time:0.2f} seconds. "
+            f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
+
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
