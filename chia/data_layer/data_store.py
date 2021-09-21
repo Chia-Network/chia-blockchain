@@ -265,6 +265,7 @@ class DataStore:
 
         await self.db.execute("DELETE FROM data_rows WHERE row_index == ?", (index,))
         await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
+        await self.db.commit()
 
         return table_row
 
@@ -272,6 +273,8 @@ class DataStore:
         # TODO: A hash could match multiple rows.
 
         table_row = await self.get_row_by_hash(table=table, row_hash=row_hash)
+
+        # TODO: race condition hazard
 
         # cursor = await self.db.execute("SELECT row_index FROM data_rows WHERE row_hash == ?", (row_hash,))
         # [[index]] = await cursor.fetchall()
