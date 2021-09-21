@@ -32,6 +32,7 @@ from tests.clvm.test_puzzles import secret_exponent_for_index
 
 acs = adapt_inner_to_singleton(Program.to(1))
 acs_ph = acs.get_tree_hash()
+NO_LINEAGE_PROOF = Program.to([])
 
 
 class TestCCLifecycle:
@@ -56,6 +57,7 @@ class TestCCLifecycle:
         signatures: Optional[List[G2Element]] = None,
         extra_deltas: Optional[List[int]] = None,
         additional_spends: List[SpendBundle] = [],
+        limitations_solutions: Optional[List[Program]] = None,
     ):
         spendable_cc_list: List[SpendableCC] = []
         for coin, proof in zip(coins, lineage_proofs):
@@ -75,6 +77,7 @@ class TestCCLifecycle:
             inner_solutions,
             sigs=signatures,
             extra_deltas=extra_deltas,
+            limitations_solutions=limitations_solutions,
         )
         result = await sim_client.push_tx(SpendBundle.aggregate([*additional_spends, spend_bundle]))
         assert result == expected_result
@@ -88,8 +91,8 @@ class TestCCLifecycle:
             FIRST = 5
             REST = 6
             # This program always returns the 4th argument to the limiter (inner_conditions)
-            genesis_checker = Program.to([FIRST, [REST, [REST, [REST, 1]]]])
-            checker_solution = Program.to((0, []))
+            genesis_checker = Program.to([FIRST, [REST, [REST, [REST, [REST, 1]]]]])
+            checker_solution = Program.to([])
             cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
@@ -101,7 +104,7 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [starting_coin],
-                [checker_solution],
+                [NO_LINEAGE_PROOF],
                 [
                     Program.to(
                         [
@@ -112,6 +115,7 @@ class TestCCLifecycle:
                     )
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[checker_solution],
             )
 
             # There's 4 total coins at this point. A farming reward and the three children of the spend above.
@@ -127,9 +131,10 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 coins,
-                [checker_solution] * 2,
+                [NO_LINEAGE_PROOF] * 2,
                 [Program.to([[51, acs.get_tree_hash(), coins[0].amount + coins[1].amount]]), Program.to([])],
                 (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[checker_solution] * 2,
             )
 
             # Testing a combination of three
@@ -143,12 +148,13 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 coins,
-                [checker_solution] * 3,
+                [NO_LINEAGE_PROOF] * 3,
                 [Program.to([[51, acs.get_tree_hash(), total_amount]]), Program.to([]), Program.to([])],
                 (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[checker_solution] * 3,
             )
 
-            # Spend with a standard lineage proof
+            # Spend with a standard lineage proof (THIS CURRENTLY DOES NOT ACTUALLY TEST THIS)
             parent_coin: Coin = coins[0]  # The first one is the one we didn't light on fire
             lineage_proof: Program = get_lineage_proof_from_coin_and_puz(parent_coin, cc_puzzle)
             await self.do_spend(
@@ -167,10 +173,11 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [checker_solution],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), total_amount - 1]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
+                limitations_solutions=[checker_solution],
             )
 
             # Mint some value
@@ -195,11 +202,12 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [checker_solution],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],  # We subtracted 1 last time so it's normal now
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
                 additional_spends=[acs_bundle],
+                limitations_solutions=[checker_solution],
             )
 
         finally:
@@ -267,9 +275,10 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [GenesisByPuzhash.proof(starting_coin)],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[GenesisByPuzhash.proof(starting_coin)],
             )
 
         finally:
@@ -392,10 +401,11 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [DelegatedGenesis.proof(new_genesis_checker, GenesisById.proof().rest())],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 signatures=[signature],
+                limitations_solutions=[DelegatedGenesis.proof(new_genesis_checker, GenesisById.proof())],
             )
 
         finally:

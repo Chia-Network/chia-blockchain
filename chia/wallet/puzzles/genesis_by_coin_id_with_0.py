@@ -33,11 +33,11 @@ def genesis_coin_id_for_genesis_coin_checker(
 
 
 def lineage_proof_for_genesis(parent_coin: Coin) -> Program:
-    return Program.to((0, [parent_coin.as_list(), 0]))
+    return Program.to(parent_coin.as_list())
 
 
 def lineage_proof_for_zero(parent_coin: Coin) -> Program:
-    return Program.to((0, [parent_coin.as_list(), 1]))
+    return Program.to(parent_coin.as_list())
 
 
 def lineage_proof_for_coin(parent_coin: Coin) -> Program:

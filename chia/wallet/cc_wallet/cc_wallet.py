@@ -300,7 +300,7 @@ class CCWallet:
         search_for_parent: bool = True
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
-        lineage_proof = Program.to((1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount]))
+        lineage_proof = Program.to([coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount])
         await self.add_lineage(coin.name(), lineage_proof, True)
 
         for name, lineage_proofs in self.cc_info.lineage_proofs:
@@ -411,14 +411,9 @@ class CCWallet:
 
         await self.add_lineage(
             eve_coin.name(),
-            Program.to(
-                (
-                    1,
-                    [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],
-                )
-            ),
+            Program.to([eve_coin.parent_coin_info, cc_inner, eve_coin.amount]),
         )
-        await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
+        await self.add_lineage(eve_coin.parent_coin_info, Program.to(origin.as_list()))
 
         if send:
             regular_record = TransactionRecord(
@@ -703,7 +698,7 @@ class CCWallet:
         origin_id = origin.name()
 
         cc_inner_hash: bytes32 = await self.get_new_inner_hash()
-        await self.add_lineage(origin_id, Program.to((0, [origin.as_list(), 0])))
+        await self.add_lineage(origin_id, Program.to(origin.as_list()))
         genesis_coin_checker: Program = create_genesis_or_zero_coin_checker(origin_id)
 
         minted_cc_puzzle_hash: bytes32 = cc_puzzle_hash_for_inner_puzzle_hash(
