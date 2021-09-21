@@ -908,7 +908,11 @@ class FullNode:
         pre_validation_results: Optional[
             List[PreValidationResult]
         ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
-        self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
+        pre_validate_end = time.time()
+        if pre_validate_end - pre_validate_start > 1:
+            self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
+        else:
+            self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         if pre_validation_results is None:
             return False, False, None, []
         for i, block in enumerate(blocks_to_validate):
@@ -1328,10 +1332,11 @@ class FullNode:
             if block.transactions_info is not None
             else ""
         )
-        self.log.info(
-            f"Block validation time: {validation_time}, "
+        self.log.log(
+            logging.WARNING if validation_time > 2 else logging.DEBUG,
+            f"Block validation time: {validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str}"
+            f"{percent_full_str}",
         )
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
@@ -1446,7 +1451,7 @@ class FullNode:
         if farmed_block is True:
             self.log.info(
                 f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}, "
-                f"validation time: {validation_time}, "
+                f"validation time: {validation_time:0.4f} seconds, "
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
             )
         else:
@@ -1462,9 +1467,9 @@ class FullNode:
             self.log.info(
                 f"Added unfinished_block {block_hash}, not farmed by us,"
                 f" SP: {block.reward_chain_block.signage_point_index} farmer response time: "
-                f"{time.time() - self.signage_point_times[block.reward_chain_block.signage_point_index]}, "
+                f"{time.time() - self.signage_point_times[block.reward_chain_block.signage_point_index]:0.4f}, "
                 f"Pool pk {encode_puzzle_hash(block.foliage.foliage_block_data.pool_target.puzzle_hash, 'xch')}, "
-                f"validation time: {validation_time}, "
+                f"validation time: {validation_time:0.4f} seconds, "
                 f"cost: {block.transactions_info.cost if block.transactions_info else 'None'}"
                 f"{percent_full_str}"
             )
@@ -1721,7 +1726,7 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction)
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e
