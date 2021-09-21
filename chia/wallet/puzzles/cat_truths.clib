@@ -1,5 +1,5 @@
 (
-  (defun-inline cat_truth_data_to_truth_struct (my_id my_parent full_puzhash my_amount innerpuzhash lineage_proof cat_struct)
+  (defun-inline cat_truth_data_to_truth_struct (my_id my_parent full_puzhash my_amount innerpuzhash lineage_proof limitations_solution cat_struct)
     (c
       (c
         (c innerpuzhash my_amount)
@@ -7,7 +7,7 @@
       )
       (c
         (c my_id full_puzhash)
-        (c my_parent ())
+        (c my_parent limitations_solution)
       )
     )
   )
@@ -21,6 +21,7 @@
   (defun-inline my_id_cat_truth (Truths) (f (f (r Truths))))
   (defun-inline my_full_puzzle_hash_cat_truth (Truths) (r (f (r Truths))))
   (defun-inline my_parent_cat_truth (Truths) (f (r (r Truths))))
+  (defun-inline my_limitations_solution_cat_truth (Truths) (r (r (r Truths))))
 
 
   ; CAT mod_struct is: (MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash)

@@ -89,7 +89,7 @@ def coin_spend_for_lock_coin(
     return coin_spend
 
 
-def next_bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
+def next_info_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
     c = spendable_cc.coin
     list = [c.parent_coin_info, spendable_cc.inner_puzzle.get_tree_hash(), c.amount]
     return Program.to(list)
@@ -102,6 +102,7 @@ def spend_bundle_for_spendable_ccs(
     inner_solutions: List[Program],
     sigs: Optional[List[G2Element]] = [],
     extra_deltas: Optional[List[int]] = None,
+    limitations_solutions: Optional[List[Program]] = None,
 ) -> SpendBundle:
     """
     Given a list of `SpendableCC` objects and inner solutions for those objects, create a `SpendBundle`
@@ -117,24 +118,31 @@ def spend_bundle_for_spendable_ccs(
     if extra_deltas is None:
         extra_deltas = [0] * len(spendable_cc_list)
 
+    if limitations_solutions is None:
+        limitations_solutions = [Program.to(0)] * len(spendable_cc_list)
+
     input_coins = [_.coin for _ in spendable_cc_list]
     # figure out what the output amounts are by running the inner puzzles & solutions
     output_amounts = []
     mod_hash = mod_code.get_tree_hash()
     mod_hash_hash = Program.to(mod_hash).get_tree_hash()
     cc_struct = Program.to([mod_hash, mod_hash_hash, genesis_coin_checker, genesis_coin_checker.get_tree_hash()])
-    for cc_spend_info, inner_solution, extra_delta in zip(spendable_cc_list, inner_solutions, extra_deltas):
-        # TRUTHS are: my_id full_puzzle_hash inner_puzzle_hash my_amount lineage_proof CC_STRUCT
-        # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) GENESIS_COIN_CHECKER (sha256tree1 GENESIS_COIN_CHECKER)
+    for cc_spend_info, inner_solution, limitations_solution, extra_delta in zip(
+        spendable_cc_list, inner_solutions, limitations_solutions, extra_deltas
+    ):
+        # TRUTHS are: innerpuzhash my_amount lineage_proof CC_STRUCT my_id fullpuzhash parent_id limitations_solutions
+        # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) limitations_program (sha256tree1 LIMITATIONS_PROGRAM_HASH)
         truths = Program.to(
-            [
-                cc_spend_info.coin.name(),
-                cc_spend_info.coin.puzzle_hash,
-                cc_spend_info.inner_puzzle.get_tree_hash(),
-                cc_spend_info.coin.amount,
-                cc_spend_info.lineage_proof,
-                cc_struct,
-            ]
+            (
+                (
+                    (cc_spend_info.inner_puzzle.get_tree_hash(), cc_spend_info.coin.amount),
+                    (cc_spend_info.lineage_proof, cc_struct),
+                ),
+                (
+                    (cc_spend_info.coin.name(), cc_spend_info.coin.puzzle_hash),
+                    (cc_spend_info.coin.parent_coin_info, limitations_solution),
+                ),
+            )
         )
         error, conditions, cost = conditions_dict_for_solution(
             cc_spend_info.inner_puzzle, truths.cons(inner_solution), INFINITE_COST
@@ -153,12 +161,12 @@ def spend_bundle_for_spendable_ccs(
     if sum(deltas) != 0:
         raise ValueError("input and output amounts don't match")
 
-    bundles_for_next = []
-    bundles_for_me = []
+    infos_for_next = []
+    infos_for_me = []
     ids = []
     for _ in spendable_cc_list:
-        bundles_for_next.append(next_bundle_for_spendable_cc_list(_))
-        bundles_for_me.append(Program.to((_.coin.as_list(), _.lineage_proof)))
+        infos_for_next.append(next_info_for_spendable_cc_list(_))
+        infos_for_me.append(Program.to(_.coin.as_list()))
         ids.append(_.coin.name())
 
     for index in range(N):
@@ -169,18 +177,17 @@ def spend_bundle_for_spendable_ccs(
         prev_index = (index - 1) % N
         next_index = (index + 1) % N
         prev_id = ids[prev_index]
-        my_bundle = bundles_for_me[index]
-        next_bundle = bundles_for_next[next_index]
-
-        # We check whether or not to reveal the limiter based on whether the first value in our LP is 1 (or 0) bytes
-        limiter_reveal = genesis_coin_checker if len(my_bundle.rest().first().as_python()) <= 1 else Program.to([])
+        my_info = infos_for_me[index]
+        next_info = infos_for_next[next_index]
 
         solution = [
             inner_solutions[index],
-            limiter_reveal,
+            genesis_coin_checker,  # This is a temporary hack, we are revealing the genesis checker every time!
+            limitations_solutions[index],
+            cc_spend_info.lineage_proof,
             prev_id,
-            my_bundle,
-            next_bundle,
+            my_info,
+            next_info,
             subtotals[index],
             extra_deltas[index],
         ]
