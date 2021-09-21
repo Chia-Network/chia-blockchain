@@ -18,7 +18,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest
+from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest, CoinState
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -32,7 +32,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task
+from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -62,6 +62,7 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_peers])
     async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
         if peer.peer_server_port is None:
             return None
@@ -189,6 +190,7 @@ class FullNodeAPI:
         return None
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_transaction])
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
@@ -227,6 +229,7 @@ class FullNodeAPI:
         return None
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_proof_of_weight])
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
@@ -272,6 +275,7 @@ class FullNodeAPI:
         return None
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_height(request.height):
             reject = RejectBlock(request.height)
@@ -288,6 +292,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             reject = RejectBlocks(request.start_height, request.end_height)
@@ -399,6 +404,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
     ) -> Optional[Message]:
@@ -509,6 +515,7 @@ class FullNodeAPI:
         return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
 
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_signage_point, ProtocolMessageTypes.respond_end_of_sub_slot])
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
@@ -1300,6 +1307,7 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
+    @reply_type([ProtocolMessageTypes.respond_compact_vdf])
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1311,3 +1319,75 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.respond_compact_vdf(request, peer)
+
+    @peer_required
+    @api_request
+    async def register_interest_in_puzzle_hash(
+        self, request: wallet_protocol.RegisterForPhUpdates, peer: ws.WSChiaConnection
+    ):
+        if peer.peer_node_id not in self.full_node.peer_puzzle_hash:
+            self.full_node.peer_puzzle_hash[peer.peer_node_id] = set()
+
+        if peer.peer_node_id not in self.full_node.peer_sub_counter:
+            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
+
+        # Add peer to the "Subscribed" dictionary
+        for puzzle_hash in request.puzzle_hashes:
+            if puzzle_hash not in self.full_node.ph_subscriptions:
+                self.full_node.ph_subscriptions[puzzle_hash] = set()
+            if (
+                peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+            ):
+                self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
+                self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
+                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+
+        # Send all coins with requested puzzle hash that have been created after the specified height
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
+            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
+        )
+
+        response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, states)
+        msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+        return msg
+
+    @peer_required
+    @api_request
+    async def register_interest_in_coin(
+        self, request: wallet_protocol.RegisterForCoinUpdates, peer: ws.WSChiaConnection
+    ):
+        if peer.peer_node_id not in self.full_node.peer_coin_ids:
+            self.full_node.peer_coin_ids[peer.peer_node_id] = set()
+
+        if peer.peer_node_id not in self.full_node.peer_sub_counter:
+            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
+
+        for coin_id in request.coin_ids:
+            if coin_id not in self.full_node.coin_subscriptions:
+                self.full_node.coin_subscriptions[coin_id] = set()
+            if (
+                peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+            ):
+                self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
+                self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
+                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
+            include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
+        )
+
+        response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
+        msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
+        return msg
+
+    @api_request
+    async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
+        coin_records: List[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
+            True, [request.coin_name]
+        )
+        states = [record.coin_state for record in coin_records]
+        response = wallet_protocol.RespondChildren(states)
+        msg = make_msg(ProtocolMessageTypes.respond_children, response)
+        return msg

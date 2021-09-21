@@ -137,6 +137,9 @@ class WalletStateManager:
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
+        await self.db_connection.execute("pragma journal_mode=wal")
+        await self.db_connection.execute("pragma synchronous=NORMAL")
+
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)

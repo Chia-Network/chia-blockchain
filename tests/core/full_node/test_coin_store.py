@@ -5,6 +5,7 @@ from typing import List, Optional, Set, Tuple
 
 import aiosqlite
 import pytest
+import tempfile
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
@@ -21,6 +22,7 @@ from chia.util.ints import uint64, uint32
 from tests.wallet_tools import WalletTool
 from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 @pytest.fixture(scope="module")
@@ -54,39 +56,47 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
     return pool_coin, farmer_coin
 
 
-class TestCoinStore:
+class DBConnection:
+    async def __aenter__(self) -> DBWrapper:
+        self.db_path = Path(tempfile.NamedTemporaryFile().name)
+        if self.db_path.exists():
+            self.db_path.unlink()
+        self.connection = await aiosqlite.connect(self.db_path)
+        return DBWrapper(self.connection)
+
+    async def __aexit__(self, exc_t, exc_v, exc_tb):
+        await self.connection.close()
+        self.db_path.unlink()
+
+
+class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("rust_checker", [True, False])
-    async def test_basic_coin_store(self, rust_checker: bool):
+    @pytest.mark.parametrize("cache_size", [0])
+    async def test_basic_coin_store(self, cache_size: uint32):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
-        for cache_size in [0]:
-            # Generate some coins
-            blocks = bt.get_consecutive_blocks(
-                10,
-                [],
-                farmer_reward_puzzle_hash=reward_ph,
-                pool_reward_puzzle_hash=reward_ph,
-            )
+        # Generate some coins
+        blocks = bt.get_consecutive_blocks(
+            10,
+            [],
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
 
-            coins_to_spend: List[Coin] = []
-            for block in blocks:
-                if block.is_transaction_block():
-                    for coin in block.get_included_reward_coins():
-                        if coin.puzzle_hash == reward_ph:
-                            coins_to_spend.append(coin)
+        coins_to_spend: List[Coin] = []
+        for block in blocks:
+            if block.is_transaction_block():
+                for coin in block.get_included_reward_coins():
+                    if coin.puzzle_hash == reward_ph:
+                        coins_to_spend.append(coin)
 
-            spend_bundle = wallet_a.generate_signed_transaction(
-                uint64(1000), wallet_a.get_new_puzzlehash(), coins_to_spend[0]
-            )
+        spend_bundle = wallet_a.generate_signed_transaction(
+            uint64(1000), wallet_a.get_new_puzzlehash(), coins_to_spend[0]
+        )
 
-            db_path = Path("fndb_test.db")
-            if db_path.exists():
-                db_path.unlink()
-            connection = await aiosqlite.connect(db_path)
-            db_wrapper = DBWrapper(connection)
-            coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
+        async with DBConnection() as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper, cache_size=cache_size)
 
             blocks = bt.get_consecutive_blocks(
                 10,
@@ -111,7 +121,6 @@ class TestCoinStore:
                             bt.constants.MAX_BLOCK_COST_CLVM,
                             cost_per_byte=bt.constants.COST_PER_BYTE,
                             safe_mode=False,
-                            rust_checker=rust_checker,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                     else:
@@ -119,11 +128,25 @@ class TestCoinStore:
 
                     assert block.get_included_reward_coins() == should_be_included_prev
 
-                    await coin_store.new_block(block, tx_additions, tx_removals)
+                    if block.is_transaction_block():
+                        assert block.foliage_transaction_block is not None
+                        await coin_store.new_block(
+                            block.height,
+                            block.foliage_transaction_block.timestamp,
+                            block.get_included_reward_coins(),
+                            tx_additions,
+                            tx_removals,
+                        )
 
-                    if block.height != 0:
-                        with pytest.raises(Exception):
-                            await coin_store.new_block(block, tx_additions, tx_removals)
+                        if block.height != 0:
+                            with pytest.raises(Exception):
+                                await coin_store.new_block(
+                                    block.height,
+                                    block.foliage_transaction_block.timestamp,
+                                    block.get_included_reward_coins(),
+                                    tx_additions,
+                                    tx_removals,
+                                )
 
                     for expected_coin in should_be_included_prev:
                         # Check that the coinbase rewards are added
@@ -144,26 +167,30 @@ class TestCoinStore:
                     should_be_included_prev = should_be_included.copy()
                     should_be_included = set()
 
-            await connection.close()
-            Path("fndb_test.db").unlink()
-
     @pytest.mark.asyncio
-    async def test_set_spent(self):
+    @pytest.mark.parametrize("cache_size", [0, 10, 100000])
+    async def test_set_spent(self, cache_size: uint32):
         blocks = bt.get_consecutive_blocks(9, [])
 
-        for cache_size in [0, 10, 100000]:
-            db_path = Path("fndb_test.db")
-            if db_path.exists():
-                db_path.unlink()
-            connection = await aiosqlite.connect(db_path)
-            db_wrapper = DBWrapper(connection)
-            coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
+        async with DBConnection() as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper, cache_size=cache_size)
 
             # Save/get block
             for block in blocks:
                 if block.is_transaction_block():
-                    removals, additions = [], []
-                    await coin_store.new_block(block, additions, removals)
+                    removals: List[bytes32] = []
+                    additions: List[Coin] = []
+
+                    if block.is_transaction_block():
+                        assert block.foliage_transaction_block is not None
+                        await coin_store.new_block(
+                            block.height,
+                            block.foliage_transaction_block.timestamp,
+                            block.get_included_reward_coins(),
+                            additions,
+                            removals,
+                        )
+
                     coins = block.get_included_reward_coins()
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
@@ -177,37 +204,41 @@ class TestCoinStore:
                         assert record.spent
                         assert record.spent_block_index == block.height
 
-            await connection.close()
-            Path("fndb_test.db").unlink()
-
     @pytest.mark.asyncio
-    async def test_rollback(self):
+    @pytest.mark.parametrize("cache_size", [0, 10, 100000])
+    async def test_rollback(self, cache_size: uint32):
         blocks = bt.get_consecutive_blocks(20)
 
-        for cache_size in [0, 10, 100000]:
-            db_path = Path("fndb_test.db")
-            if db_path.exists():
-                db_path.unlink()
-            connection = await aiosqlite.connect(db_path)
-            db_wrapper = DBWrapper(connection)
+        async with DBConnection() as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
+
+            records: List[Optional[CoinRecord]] = []
 
             for block in blocks:
                 if block.is_transaction_block():
-                    removals, additions = [], []
-                    await coin_store.new_block(block, additions, removals)
+                    removals: List[bytes32] = []
+                    additions: List[Coin] = []
+
+                    if block.is_transaction_block():
+                        assert block.foliage_transaction_block is not None
+                        await coin_store.new_block(
+                            block.height,
+                            block.foliage_transaction_block.timestamp,
+                            block.get_included_reward_coins(),
+                            additions,
+                            removals,
+                        )
+
                     coins = block.get_included_reward_coins()
-                    records: List[Optional[CoinRecord]] = [
-                        await coin_store.get_coin_record(coin.name()) for coin in coins
-                    ]
+                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                     for record in records:
+                        assert record is not None
                         await coin_store._set_spent(record.coin.name(), block.height)
 
-                    records: List[Optional[CoinRecord]] = [
-                        await coin_store.get_coin_record(coin.name()) for coin in coins
-                    ]
+                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
+                        assert record is not None
                         assert record.spent
                         assert record.spent_block_index == block.height
 
@@ -217,9 +248,7 @@ class TestCoinStore:
             for block in blocks:
                 if block.is_transaction_block():
                     coins = block.get_included_reward_coins()
-                    records: List[Optional[CoinRecord]] = [
-                        await coin_store.get_coin_record(coin.name()) for coin in coins
-                    ]
+                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                     if block.height <= reorg_index:
                         for record in records:
@@ -229,36 +258,33 @@ class TestCoinStore:
                         for record in records:
                             assert record is None
 
-            await connection.close()
-            Path("fndb_test.db").unlink()
-
     @pytest.mark.asyncio
-    async def test_basic_reorg(self):
-        for cache_size in [0, 10, 100000]:
+    @pytest.mark.parametrize("cache_size", [0, 10, 100000])
+    async def test_basic_reorg(self, cache_size: uint32):
+
+        async with DBConnection() as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
             blocks = bt.get_consecutive_blocks(initial_block_count)
-            db_path = Path("blockchain_test.db")
-            if db_path.exists():
-                db_path.unlink()
-            connection = await aiosqlite.connect(db_path)
-            db_wrapper = DBWrapper(connection)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
             try:
 
+                records: List[Optional[CoinRecord]] = []
+
                 for block in blocks:
                     await b.receive_block(block)
-                assert b.get_peak().height == initial_block_count - 1
+                peak = b.get_peak()
+                assert peak is not None
+                assert peak.height == initial_block_count - 1
 
                 for c, block in enumerate(blocks):
                     if block.is_transaction_block():
                         coins = block.get_included_reward_coins()
-                        records: List[Optional[CoinRecord]] = [
-                            await coin_store.get_coin_record(coin.name()) for coin in coins
-                        ]
+                        records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                         for record in records:
+                            assert record is not None
                             assert not record.spent
                             assert record.confirmed_block_index == block.height
                             assert record.spent_block_index == 0
@@ -268,7 +294,7 @@ class TestCoinStore:
                 )
 
                 for reorg_block in blocks_reorg_chain:
-                    result, error_code, _ = await b.receive_block(reorg_block)
+                    result, error_code, _, _ = await b.receive_block(reorg_block)
                     print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
                     if reorg_block.height < initial_block_count - 10:
                         assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
@@ -278,28 +304,23 @@ class TestCoinStore:
                         assert result == ReceiveBlockResult.NEW_PEAK
                         if reorg_block.is_transaction_block():
                             coins = reorg_block.get_included_reward_coins()
-                            records: List[Optional[CoinRecord]] = [
-                                await coin_store.get_coin_record(coin.name()) for coin in coins
-                            ]
+                            records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                             for record in records:
+                                assert record is not None
                                 assert not record.spent
                                 assert record.confirmed_block_index == reorg_block.height
                                 assert record.spent_block_index == 0
                     assert error_code is None
-                assert b.get_peak().height == initial_block_count - 10 + reorg_length - 1
-            except Exception as e:
-                await connection.close()
-                Path("blockchain_test.db").unlink()
+                peak = b.get_peak()
+                assert peak is not None
+                assert peak.height == initial_block_count - 10 + reorg_length - 1
+            finally:
                 b.shut_down()
-                raise e
-
-            await connection.close()
-            Path("blockchain_test.db").unlink()
-            b.shut_down()
 
     @pytest.mark.asyncio
-    async def test_get_puzzle_hash(self):
-        for cache_size in [0, 10, 100000]:
+    @pytest.mark.parametrize("cache_size", [0, 10, 100000])
+    async def test_get_puzzle_hash(self, cache_size: uint32):
+        async with DBConnection() as db_wrapper:
             num_blocks = 20
             farmer_ph = 32 * b"0"
             pool_ph = 32 * b"1"
@@ -309,19 +330,16 @@ class TestCoinStore:
                 pool_reward_puzzle_hash=pool_ph,
                 guarantee_transaction_block=True,
             )
-            db_path = Path("blockchain_test.db")
-            if db_path.exists():
-                db_path.unlink()
-            connection = await aiosqlite.connect(db_path)
-            db_wrapper = DBWrapper(connection)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
             for block in blocks:
-                res, err, _ = await b.receive_block(block)
+                res, err, _, _ = await b.receive_block(block)
                 assert err is None
                 assert res == ReceiveBlockResult.NEW_PEAK
-            assert b.get_peak().height == num_blocks - 1
+            peak = b.get_peak()
+            assert peak is not None
+            assert peak.height == num_blocks - 1
 
             coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(True, pool_ph)
             coins_pool = await coin_store.get_coin_records_by_puzzle_hash(True, farmer_ph)
@@ -329,6 +347,4 @@ class TestCoinStore:
             assert len(coins_farmer) == num_blocks - 2
             assert len(coins_pool) == num_blocks - 2
 
-            await connection.close()
-            Path("blockchain_test.db").unlink()
             b.shut_down()

@@ -1385,7 +1385,7 @@ class TestFullNodeProtocol:
         invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
         invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
 
-        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(invalid_block)
+        result, error, fork_h, _ = await full_node_1.full_node.blockchain.receive_block(invalid_block)
         assert error is not None
         assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
 
