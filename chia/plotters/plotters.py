@@ -284,8 +284,9 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.OVERRIDE_K:
             parser.add_argument(
-                "--override",
-                type=bool,
+                "--override-k",
+                dest="override",
+                action="store_true",
                 help="Force size smaller than 32",
                 default=False,
             )
