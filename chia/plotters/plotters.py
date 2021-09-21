@@ -37,6 +37,7 @@ class Options(Enum):
     OVERRIDE_K = 25
     ALT_FINGERPRINT = 26
     EXCLUDE_FINAL_DIR = 27
+    CONNECT_TO_DAEMON = 28
 
 
 chia_plotter = [
@@ -59,6 +60,7 @@ chia_plotter = [
     Options.POOLKEY,
     Options.PLOT_COUNT,
     Options.EXCLUDE_FINAL_DIR,
+    Options.CONNECT_TO_DAEMON,
 ]
 
 madmax_plotter = [
@@ -304,6 +306,14 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 "--exclude_final_dir",
                 action="store_true",
                 help="Skips adding [final dir] to harvester for farming",
+                default=False,
+            )
+        if option is Options.CONNECT_TO_DAEMON:
+            parser.add_argument(
+                "-D",
+                "--connect-to-daemon",
+                action="store_true",
+                help=argparse.SUPPRESS,
                 default=False,
             )
 

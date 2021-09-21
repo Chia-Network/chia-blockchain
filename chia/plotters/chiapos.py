@@ -51,7 +51,7 @@ def plot_chia(args, root_path):
             None if args.contract == "" else args.contract,
             root_path,
             log,
-            False,  # args.connect_to_daemon,
+            args.connect_to_daemon,
         )
     )
     asyncio.get_event_loop().run_until_complete(create_plots(Params(args), plot_keys, root_path))
