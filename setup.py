@@ -66,6 +66,7 @@ kwargs = dict(
         "chia.clvm",
         "chia.consensus",
         "chia.daemon",
+        "chia.data_layer",
         "chia.full_node",
         "chia.timelord",
         "chia.farmer",
