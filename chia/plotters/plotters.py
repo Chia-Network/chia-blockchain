@@ -214,9 +214,9 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             parser.add_argument(
                 "-w",
                 "--waitforcopy",
-                type=bool,
+                action="store_true",
                 help="Wait for copy to start next plot",
-                default=True,
+                default=False,
             )
         if option is Options.MADMAX_TMPTOGGLE:
             parser.add_argument(
