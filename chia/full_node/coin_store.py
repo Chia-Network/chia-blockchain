@@ -1,4 +1,4 @@
-from typing import List, Optional, Set, Tuple, Dict
+from typing import List, Optional, Set, Dict
 import aiosqlite
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -72,15 +72,15 @@ class CoinStore:
         included_reward_coins: Set[Coin],
         tx_additions: List[Coin],
         tx_removals: List[bytes32],
-    ) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+    ) -> List[CoinRecord]:
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
+        Returns a list of the CoinRecords that were added by this block
         """
 
         start = time()
 
-        added_coin_records = []
-        removed_coin_records = []
+        additions = []
 
         for coin in tx_additions:
             record: CoinRecord = CoinRecord(
@@ -91,8 +91,7 @@ class CoinStore:
                 False,
                 timestamp,
             )
-            added_coin_records.append(record)
-            await self._add_coin_record(record, False)
+            additions.append(record)
 
         if height == 0:
             assert len(included_reward_coins) == 0
@@ -108,16 +107,11 @@ class CoinStore:
                 True,
                 timestamp,
             )
-            added_coin_records.append(reward_coin_r)
-            await self._add_coin_record(reward_coin_r, False)
+            additions.append(reward_coin_r)
 
-        total_amount_spent: int = 0
-        for coin_name in tx_removals:
-            removed_coin_record = await self._set_spent(coin_name, height)
-            total_amount_spent += removed_coin_record.coin.amount
-            removed_coin_records.append(removed_coin_record)
-        # Sanity check, already checked in block_body_validation
-        assert sum([a.amount for a in tx_additions]) <= total_amount_spent
+        await self._add_coin_records(additions)
+        await self._set_spent(tx_removals, height)
+
         end = time()
         if end - start > 10:
             log.warning(
@@ -126,7 +120,7 @@ class CoinStore:
                 + "blockchain database is on a fast drive"
             )
 
-        return removed_coin_records, added_coin_records
+        return additions
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
@@ -394,40 +388,44 @@ class CoinStore:
         return list(coin_changes.values())
 
     # Store CoinRecord in DB and ram cache
-    async def _add_coin_record(self, record: CoinRecord, allow_replace: bool) -> None:
-        if self.coin_record_cache.get(record.coin.name()) is not None:
-            self.coin_record_cache.remove(record.coin.name())
+    async def _add_coin_records(self, records: List[CoinRecord]) -> None:
 
-        cursor = await self.coin_record_db.execute(
-            f"INSERT {'OR REPLACE ' if allow_replace else ''}INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                record.coin.name().hex(),
-                record.confirmed_block_index,
-                record.spent_block_index,
-                int(record.spent),
-                int(record.coinbase),
-                str(record.coin.puzzle_hash.hex()),
-                str(record.coin.parent_coin_info.hex()),
-                bytes(record.coin.amount),
-                record.timestamp,
-            ),
+        values = []
+        for record in records:
+            self.coin_record_cache.put(record.coin.name(), record)
+            values.append(
+                (
+                    record.coin.name().hex(),
+                    record.confirmed_block_index,
+                    record.spent_block_index,
+                    int(record.spent),
+                    int(record.coinbase),
+                    str(record.coin.puzzle_hash.hex()),
+                    str(record.coin.parent_coin_info.hex()),
+                    bytes(record.coin.amount),
+                    record.timestamp,
+                )
+            )
+
+        cursor = await self.coin_record_db.executemany(
+            "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            values,
         )
         await cursor.close()
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_name: bytes32, index: uint32) -> CoinRecord:
-        current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
-        if current is None:
-            raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
+    async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
-        assert not current.spent  # Redundant sanity check, already checked in block_body_validation
-        spent: CoinRecord = CoinRecord(
-            current.coin,
-            current.confirmed_block_index,
-            index,
-            True,
-            current.coinbase,
-            current.timestamp,
-        )  # type: ignore # noqa
-        await self._add_coin_record(spent, True)
-        return spent
+        # if this coin is in the cache, mark it as spent in there
+        updates = []
+        for coin_name in coin_names:
+            r = self.coin_record_cache.get(coin_name)
+            if r is not None:
+                self.coin_record_cache.put(
+                    r.name, CoinRecord(r.coin, r.confirmed_block_index, index, True, r.coinbase, r.timestamp)
+                )
+            updates.append((index, coin_name.hex()))
+
+        await self.coin_record_db.executemany(
+            "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", updates
+        )

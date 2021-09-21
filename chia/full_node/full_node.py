@@ -130,7 +130,7 @@ class FullNode:
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
-        await self.connection.execute("pragma synchronous=NORMAL")
+        await self.connection.execute("pragma synchronous=OFF")
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
