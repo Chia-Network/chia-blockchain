@@ -2062,6 +2062,30 @@ def generator_condition_tester(
 
 class TestGeneratorConditions:
     @pytest.mark.parametrize("rust_checker", [True, False])
+    def test_invalid_condition_args_terminator(self, rust_checker: bool):
+
+        # note how the condition argument list isn't correctly terminated with a
+        # NIL atom. This is allowed, and all arguments beyond the ones we look
+        # at are ignored, including the termination of the list
+        npc_result = generator_condition_tester("(80 50 . 1)", rust_checker=rust_checker)
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode(bytes([80]))
+        assert len(npc_result.npc_list[0].conditions) == 1
+        assert npc_result.npc_list[0].conditions[0][0] == opcode
+        assert len(npc_result.npc_list[0].conditions[0][1]) == 1
+        c = npc_result.npc_list[0].conditions[0][1][0]
+        assert c == ConditionWithArgs(opcode=ConditionOpcode.ASSERT_SECONDS_RELATIVE, vars=[bytes([50])])
+
+    @pytest.mark.parametrize("rust_checker", [True, False])
+    def test_invalid_condition_list_terminator(self, rust_checker: bool):
+
+        # note how the list of conditions isn't correctly terminated with a
+        # NIL atom. This is a failure
+        npc_result = generator_condition_tester("(80 50) . 3", rust_checker=rust_checker)
+        assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
+
+    @pytest.mark.parametrize("rust_checker", [True, False])
     def test_duplicate_height_time_conditions(self, rust_checker: bool):
         # ASSERT_SECONDS_RELATIVE
         # ASSERT_SECONDS_ABSOLUTE

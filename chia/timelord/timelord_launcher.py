@@ -79,9 +79,10 @@ async def spawn_process(host: str, port: int, counter: int):
 
 async def spawn_all_processes(config: Dict, net_config: Dict):
     await asyncio.sleep(5)
+    hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process(net_config["self_hostname"], port, i) for i in range(process_count)]
+    awaitables = [spawn_process(hostname, port, i) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 
