@@ -118,7 +118,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     if updated_target:
         print(
             f"To change the XCH destination addresses, edit the `xch_target_address` entries in"
-            f" {(new_root / 'config.yaml').absolute()}."
+            f" {(new_root / 'config' / 'config.yaml').absolute()}."
         )
 
     # Set the pool pks in the farmer
