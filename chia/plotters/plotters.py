@@ -129,24 +129,27 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
         if option is Options.TMP_DIR:
             parser.add_argument(
                 "-t",
-                "--tmpdir",
+                "--tmp_dir",
                 type=str,
+                dest="tmpdir",
                 help="Temporary directory 1.",
                 default=str(root_path) + "/",
             )
         if option is Options.TMP_DIR2:
             parser.add_argument(
                 "-2",
-                "--tmpdir2",
+                "--tmp_dir2",
                 type=str,
+                dest="tmpdir2",
                 help="Temporary directory 2.",
                 default=str(root_path) + "/",
             )
         if option is Options.FINAL_DIR:
             parser.add_argument(
                 "-d",
-                "--finaldir",
+                "--final_dir",
                 type=str,
+                dest="finaldir",
                 help="Final directory.",
                 default=str(root_path) + "/",
             )
