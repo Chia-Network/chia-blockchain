@@ -38,7 +38,7 @@ class GenesisById:
 
     @staticmethod
     def proof() -> Program:
-        return Program.to((0, []))
+        return Program.to([])
 
 
 class GenesisByPuzhash:
@@ -60,7 +60,7 @@ class GenesisByPuzhash:
 
     @staticmethod
     def proof(parent_coin: Coin) -> Program:
-        return Program.to((0, [parent_coin.parent_coin_info, parent_coin.amount]))
+        return Program.to([parent_coin.parent_coin_info, parent_coin.amount])
 
 
 class EverythingWithSig:
@@ -82,7 +82,7 @@ class EverythingWithSig:
 
     @staticmethod
     def proof() -> Program:
-        return Program.to((0, []))
+        return Program.to([])
 
 
 class DelegatedGenesis:
@@ -104,4 +104,4 @@ class DelegatedGenesis:
 
     @staticmethod
     def proof(signed_program: Program, inner_proof: Program) -> Program:
-        return Program.to((0, [signed_program, inner_proof]))
+        return Program.to([signed_program, inner_proof])

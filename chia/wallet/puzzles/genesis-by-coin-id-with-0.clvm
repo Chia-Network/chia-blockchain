@@ -3,22 +3,21 @@
 ; This checker allows new CATs to be created if they have a particular coin id as parent
 ;
 ; The genesis_id is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
-
 (mod (
       GENESIS_ID
-      Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
+      Truths ; These should be the same CAT truths
+      parent_is_cat
+      lineage_proof
       delta
-      lineage_check_result
       inner_conditions
       _
     )
 
     (include cat_truths.clib)
 
-    ; Returns nil since we don't need to add any conditions
     (if delta
         (x)
-        (if (any lineage_check_result (= (my_parent_cat_truth Truths) GENESIS_ID))
+        (if (any parent_is_cat (= (my_parent_cat_truth Truths) GENESIS_ID))
           inner_conditions
           (x)
         )
