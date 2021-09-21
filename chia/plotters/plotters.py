@@ -222,6 +222,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             parser.add_argument(
                 "-G",
                 "--tmptoggle",
+                action="store_true",
                 help="Alternate tmpdir/tmpdir2 (default = false)",
                 default=False,
             )
