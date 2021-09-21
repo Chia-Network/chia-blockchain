@@ -6,4 +6,4 @@ python3 -m venv venv
 pip3 install ".[dev]"
 mypy --install-types
 
-py.test ./tests -s -vtop
+py.test ./tests -s -v
