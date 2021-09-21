@@ -1,15 +1,12 @@
-; This is a "genesis checker" for use with cc.clvm.
+; This is a "limitations_program" for use with cat.clvm.
 ;
-; This checker allows new ccs to be created if their parent has a particular
-; puzzle hash; or created by anyone if their value is 0.
-
-; The genesis_puzzle_hash is curried in, making this lineage_check program unique and giving the coloured coin it's unique colour
-
+; This checker allows new CATs to be created if their parent has a particular puzzle hash
 (mod (
       GENESIS_PUZZLE_HASH
-      Truths ; These should be the same CAT truths, but minus the opaque solution which gets passed below
+      Truths ; These should be the same CAT truths
+      parent_is_cat
+      lineage_proof
       delta
-      lineage_check_result
       inner_conditions
       (parent_parent_id parent_amount)
     )
@@ -19,7 +16,7 @@
     ; Returns nil since we don't need to add any conditions
     (if delta
         (x)
-        (if (any lineage_check_result (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths)))
+        (if (any parent_is_cat (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths)))
             inner_conditions
             (x)
         )
