@@ -211,7 +211,7 @@ def plot_bladebit(args, chia_root_path, root_path):
             None if args.contract == "" else args.contract,
             chia_root_path,
             log,
-            False,  # args.connect_to_daemon,
+            args.connect_to_daemon,
         )
     )
     call_args = []
