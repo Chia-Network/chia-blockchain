@@ -121,7 +121,7 @@ class CoinStore:
         end = time()
         if end - start > 10:
             log.warning(
-                f"It took {end - start:0.2}s to apply {len(tx_additions)} additions and "
+                f"It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
                 + f"{len(tx_removals)} removals to the coin store. Make sure "
                 + "blockchain database is on a fast drive"
             )
