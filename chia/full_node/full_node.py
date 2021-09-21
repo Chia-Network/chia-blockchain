@@ -1721,7 +1721,7 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction)
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name)
             except Exception as e:
                 self.mempool_manager.remove_seen(spend_name)
                 raise e

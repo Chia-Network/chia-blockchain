@@ -202,7 +202,7 @@ class MempoolManager:
         log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
         return True
 
-    async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> NPCResult:
+    async def pre_validate_spendbundle(self, new_spend: SpendBundle, spend_name: bytes32) -> NPCResult:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
@@ -215,9 +215,13 @@ class MempoolManager:
             int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
             self.constants.COST_PER_BYTE,
         )
+        ret = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
-        log.info(f"It took {end_time - start_time:0.4f} to pre validate transaction")
-        return NPCResult.from_bytes(cached_result_bytes)
+        log.log(
+            logging.WARNING if end_time - start_time > 1 else logging.DEBUG,
+            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
+        )
+        return ret
 
     async def add_spendbundle(
         self,
