@@ -176,7 +176,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             parser.add_argument(
                 "-e",
                 "--nobitfield",
-                type=bool,
+                action="store_true",
                 help="Disable bitfield.",
                 default=False,
             )
