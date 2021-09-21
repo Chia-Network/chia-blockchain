@@ -204,7 +204,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
             None if args.contract == "" else args.contract,
             chia_root_path,
             log,
-            False,  # args.connect_to_daemon,
+            args.connect_to_daemon,
         )
     )
     call_args = []
