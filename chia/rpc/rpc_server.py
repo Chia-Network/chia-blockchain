@@ -170,9 +170,7 @@ class RpcServer:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
-        connections_to_close = [
-            c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id
-        ]
+        connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
