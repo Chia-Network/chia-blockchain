@@ -119,12 +119,12 @@ class CoinStore:
         # Sanity check, already checked in block_body_validation
         assert sum([a.amount for a in tx_additions]) <= total_amount_spent
         end = time()
-        if end - start > 10:
-            log.warning(
-                f"It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
-                + f"{len(tx_removals)} removals to the coin store. Make sure "
-                + "blockchain database is on a fast drive"
-            )
+        log.log(
+            logging.WARNING if end - start > 10 else logging.DEBUG,
+            f"It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
+            + f"{len(tx_removals)} removals to the coin store. Make sure "
+            + "blockchain database is on a fast drive",
+        )
 
         return removed_coin_records, added_coin_records
 
