@@ -262,8 +262,8 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             parser.add_argument(
                 "-w",
                 "--warmstart",
-                type=bool,
-                help="Warm start (bool)",
+                action="store_true",
+                help="Warm start",
                 default=False,
             )
         if option is Options.BLADEBIT_NONUMA:
