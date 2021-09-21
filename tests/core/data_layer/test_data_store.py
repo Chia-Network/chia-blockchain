@@ -3,7 +3,7 @@ import re
 
 # import random
 # import sqlite3
-from typing import Dict, List, Tuple
+from typing import Dict, AsyncIterable, List, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -11,7 +11,7 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, TableRow
 from chia.types.blockchain_format.tree_hash import sha256_treehash
 
 # from chia.full_node.block_store import BlockStore
@@ -33,23 +33,24 @@ log = logging.getLogger(__name__)
 # async def db_connection_fixture(db_path: Path):
 #     async with aiosqlite.connect(db_path) as connection:
 #         yield connection
-async def db_connection_fixture():
+async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
         yield connection
 
 
 @pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection):
+def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
     return DBWrapper(db_connection)
 
 
+# TODO: Isn't this effectively a silly repeat of the `db_connection` fixture?
 @pytest.fixture(name="db", scope="function")
-def db_fixture(db_wrapper: DBWrapper):
+def db_fixture(db_wrapper: DBWrapper) -> aiosqlite.Connection:
     return db_wrapper.db
 
 
 @pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(db_wrapper: DBWrapper):
+async def data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
     return await DataStore.create(db_wrapper=db_wrapper)
 
 
@@ -79,6 +80,10 @@ table_columns: Dict[str, List[str]] = {
 }
 
 
+# TODO: Someday add tests for malformed DB data to make sure we handle it gracefully
+#       and with good error messages.
+
+
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.asyncio
 async def test_create_creates_tables_and_columns(
@@ -99,15 +104,31 @@ async def test_create_creates_tables_and_columns(
 
 
 @pytest.mark.asyncio
+async def test_get_row_by_index(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    table_row = await data_store.get_row_by_index(table=b"", index=0)
+
+    assert table_row == TableRow.from_clvm_object(index=0, clvm_object=a_clvm_object)
+
+
+@pytest.mark.asyncio
+async def test_get_row_by_index_no_match(data_store: DataStore) -> None:
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    # TODO: If this API is retained then it should have a specific exception.
+    with pytest.raises(Exception):
+        await data_store.get_row_by_index(table=b"", index=1)
+
+
+@pytest.mark.asyncio
 async def test_get_row_by_hash_single_match(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
 
     row_hash = sha256_treehash(SExp.to(a_clvm_object))
-    row = await data_store.get_row_by_hash(table=b"", row_hash=row_hash)
+    table_row = await data_store.get_row_by_hash(table=b"", row_hash=row_hash)
 
-    sexp = SExp.to(a_clvm_object)
-
-    assert row == sexp
+    assert table_row == TableRow.from_clvm_object(index=0, clvm_object=a_clvm_object)
 
 
 @pytest.mark.asyncio
@@ -152,7 +173,7 @@ async def test_get_single_row_by_hash(data_store: DataStore) -> None:
 
     rows = await data_store.get_rows_by_hash(table=b"", row_hash=row_hash)
 
-    assert rows == [sexp]
+    assert rows == [TableRow(index=0, clvm_object=a_clvm_object, hash=row_hash, bytes=sexp.as_bin())]
 
 
 @pytest.mark.asyncio
@@ -168,8 +189,12 @@ async def test_get_multiple_rows_by_hash(data_store: DataStore) -> None:
 
     # We actually get CLVMObjects but they won't compare equal to each other
     # so SExp it is.
-    # TODO: maybe switch up the interface to use SExp in general isntead of CLVMObject
-    assert rows == [sexp, sexp]
+    # TODO: maybe switch up the interface to use SExp in general instead of CLVMObject
+    expected = [
+        TableRow(index=0, clvm_object=a_clvm_object, hash=row_hash, bytes=sexp.as_bin()),
+        TableRow(index=2, clvm_object=a_clvm_object, hash=row_hash, bytes=sexp.as_bin()),
+    ]
+    assert rows == expected
 
 
 @pytest.mark.asyncio
@@ -177,10 +202,14 @@ async def test_insert_adds_to_raw_rows(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM raw_rows")
-    raw_rows = await cursor.fetchall()
+    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
+    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
+    raw_rows: List[object] = await cursor.fetchall()  # type: ignore[assignment]
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
+    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
+    data_rows: List[object] = await cursor.fetchall()  # type: ignore[assignment]
 
     assert [len(raw_rows), len(data_rows)] == [1, 1]
 
@@ -191,10 +220,14 @@ async def test_repeat_insert_does_not_duplicate_in_raw_rows(data_store: DataStor
     await data_store.insert_row(table=b"", index=0, clvm_object=a_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM raw_rows")
-    raw_rows = await cursor.fetchall()
+    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
+    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
+    raw_rows: List[object] = await cursor.fetchall()  # type: ignore[assignment]
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
+    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
+    data_rows: List[object] = await cursor.fetchall()  # type: ignore[assignment]
 
     assert [len(raw_rows), len(data_rows)] == [1, 2]
 
@@ -209,7 +242,7 @@ async def test_inserts_at_index(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", index=0, clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    data_rows: List[Tuple[int, bytes]] = await cursor.fetchall()  # type: ignore[assignment]
 
     expected = expected_data_rows([another_clvm_object, a_clvm_object])
     assert data_rows == expected
@@ -221,7 +254,7 @@ async def test_appends_for_none_index(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    data_rows: List[Tuple[int, bytes]] = await cursor.fetchall()  # type: ignore[assignment]
 
     expected = expected_data_rows([a_clvm_object, another_clvm_object])
     assert data_rows == expected
@@ -233,7 +266,7 @@ async def test_inserts_for_index_at_end(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", index=1, clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    data_rows: List[Tuple[int, bytes]] = await cursor.fetchall()  # type: ignore[assignment]
 
     expected = expected_data_rows([a_clvm_object, another_clvm_object])
     assert data_rows == expected
@@ -256,7 +289,7 @@ async def test_deletes_row_by_index(data_store: DataStore) -> None:
     await data_store.delete_row_by_index(table=b"", index=0)
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    data_rows: List[Tuple[int, bytes]] = await cursor.fetchall()  # type: ignore[assignment]
 
     expected = expected_data_rows([another_clvm_object])
     assert data_rows == expected
@@ -269,7 +302,7 @@ async def test_deletes_row_by_hash(data_store: DataStore) -> None:
     await data_store.delete_row_by_hash(table=b"", row_hash=sha256_treehash(SExp.to(a_clvm_object)))
 
     cursor = await data_store.db.execute("SELECT * FROM data_rows")
-    data_rows = await cursor.fetchall()
+    data_rows: List[Tuple[int, bytes]] = await cursor.fetchall()  # type: ignore[assignment]
 
     expected = expected_data_rows([another_clvm_object])
     assert data_rows == expected

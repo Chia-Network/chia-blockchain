@@ -1,4 +1,5 @@
 # from collections import OrderedDict
+import dataclasses
 from dataclasses import dataclass
 from enum import IntEnum
 import io
@@ -41,6 +42,48 @@ class Action:
 
 
 @dataclass(frozen=True)
+class TableRow:
+    index: int
+    clvm_object: CLVMObject
+    hash: bytes32
+    bytes: bytes
+
+    @classmethod
+    def from_clvm_object(cls, index: int, clvm_object: CLVMObject) -> "TableRow":
+        sexp = SExp.to(clvm_object)
+
+        return cls(
+            index=index,
+            clvm_object=clvm_object,
+            hash=sha256_treehash(sexp),
+            bytes=sexp.as_bin(),
+        )
+
+    def __eq__(self, other: object) -> bool:
+        # TODO: I think this would not be needed if we switched from CLVMObject to SExp.
+        #       CLVMObjects have not defined a `.__eq__()` so they inherit usage of `is`
+        #       for equality checks.
+
+        if not isinstance(other, TableRow):
+            # Intentionally excluding subclasses, feel free to express other preferences
+            return False
+
+        if isinstance(self.clvm_object, SExp):
+            # This would be the simple way but CLVMObject.__new__ trips it up
+            # return dataclasses.asdict(self) == dataclasses.asdict(other)
+            return (
+                self.index == other.index
+                and self.clvm_object == other.clvm_object
+                and self.hash == other.hash
+                and self.bytes == other.bytes
+            )
+
+        sexp_self = dataclasses.replace(self, clvm_object=SExp.to(self.clvm_object))
+
+        return sexp_self == other
+
+
+@dataclass(frozen=True)
 class Commit:
     # actions: OrderedDict[bytes32, CLVMObject]
     actions: Tuple[Action, ...]
@@ -66,7 +109,7 @@ class DataStore:
     # ses_challenge_cache: LRUCache
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper):
+    async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
         self = cls()
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
@@ -104,24 +147,39 @@ class DataStore:
     # TODO: Add some handling for multiple tables.  Could be another layer of class
     #       for each table or another parameter to select the table.
 
-    async def get_row_by_index(self, index: int) -> CLVMObject:
-        pass
+    async def get_row_by_index(self, table: bytes32, index: int) -> TableRow:
+        cursor = await self.db.execute(
+            (
+                "SELECT raw_rows.row_hash, raw_rows.clvm_object"
+                " FROM raw_rows INNER JOIN data_rows"
+                " WHERE raw_rows.row_hash == data_rows.row_hash AND data_rows.row_index == ?"
+            ),
+            (index,),
+        )
+        [[row_hash, clvm_object_bytes]] = await cursor.fetchall()
+
+        return TableRow(
+            index=index,
+            clvm_object=sexp_from_stream(io.BytesIO(clvm_object_bytes), to_sexp=CLVMObject),
+            hash=row_hash,
+            bytes=clvm_object_bytes,
+        )
 
     # TODO: added as the core was adjusted to be `get_rows` (plural).  API can be
     #       discussed  more.
-    async def get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> CLVMObject:
-        [row] = await self.get_rows_by_hash(table=table, row_hash=row_hash)
+    async def get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
+        [table_row] = await self.get_rows_by_hash(table=table, row_hash=row_hash)
 
-        return row
+        return table_row
 
     # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
     # TODO: This returns an SExp but our interface is otherwise CLVMObjects.  We should
     #       pick one or the other.  If CLVMObject then we need to figure out how to go
     #       from bytes to a CLVMObject.  SExp just seems better to work with.
-    async def get_rows_by_hash(self, table: bytes32, row_hash: bytes32) -> List[CLVMObject]:
+    async def get_rows_by_hash(self, table: bytes32, row_hash: bytes32) -> List[TableRow]:
         cursor = await self.db.execute(
             (
-                "SELECT raw_rows.clvm_object"
+                "SELECT raw_rows.row_hash, raw_rows.clvm_object, data_rows.row_index"
                 " FROM raw_rows INNER JOIN data_rows"
                 " WHERE raw_rows.row_hash == data_rows.row_hash AND data_rows.row_hash == ?"
             ),
@@ -129,9 +187,17 @@ class DataStore:
         )
         rows = await cursor.fetchall()
 
-        return [sexp_from_stream(io.BytesIO(row[0]), to_sexp=CLVMObject) for row in rows]
+        return [
+            TableRow(
+                index=index,
+                clvm_object=sexp_from_stream(io.BytesIO(clvm_object_bytes), to_sexp=CLVMObject),
+                hash=row_hash,
+                bytes=clvm_object_bytes,
+            )
+            for row_hash, clvm_object_bytes, index in rows
+        ]
 
-    async def insert_row(self, table: bytes32, clvm_object: CLVMObject, index: Optional[int] = None) -> None:
+    async def insert_row(self, table: bytes32, clvm_object: CLVMObject, index: Optional[int] = None) -> TableRow:
         """
         Args:
             clvm_object: The CLVM object to insert.
@@ -149,9 +215,9 @@ class DataStore:
             parameters={"row_hash": row_hash},
         )
 
+        clvm_bytes = SExp.to(clvm_object).as_bin()
         if await cursor.fetchone() is None:
             # not present in raw_rows so add it
-            clvm_bytes = SExp.to(clvm_object).as_bin()
             await self.db.execute(
                 "INSERT INTO raw_rows (row_hash, table_id, clvm_object) VALUES(?, ?, ?)", (row_hash, table, clvm_bytes)
             )
@@ -179,30 +245,44 @@ class DataStore:
         #       particular task's activity.
         await self.db.commit()
 
-    async def _get_largest_index(self):
+        return TableRow(index=index, clvm_object=clvm_object, hash=row_hash, bytes=clvm_bytes)
+
+    async def _get_largest_index(self) -> int:
         cursor = await self.db.execute("SELECT MAX(row_index) FROM data_rows")
         [[maybe_largest_index]] = await cursor.fetchall()
         if maybe_largest_index is None:
+            # TODO: This seems icky, -1 is not a valid index.
             largest_index = -1
         else:
             largest_index = maybe_largest_index
         return largest_index
 
-    async def delete_row_by_index(self, table: bytes32, index: int) -> CLVMObject:
-        # todo this
+    async def delete_row_by_index(self, table: bytes32, index: int) -> TableRow:
+        table_row = await self.get_row_by_index(table=table, index=index)
+
+        # TODO: How do we generally handle multiple incoming requests to avoid them
+        #       trompling over each other via race conditions such as here?
+
         await self.db.execute("DELETE FROM data_rows WHERE row_index == ?", (index,))
         await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
 
-    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> None:
+        return table_row
+
+    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
         # TODO: A hash could match multiple rows.
-        cursor = await self.db.execute("SELECT row_index FROM data_rows WHERE row_hash == ?", (row_hash,))
-        [[index]] = await cursor.fetchall()
-        await self.delete_row_by_index(table=table, index=index)
+
+        table_row = await self.get_row_by_hash(table=table, row_hash=row_hash)
+
+        # cursor = await self.db.execute("SELECT row_index FROM data_rows WHERE row_hash == ?", (row_hash,))
+        # [[index]] = await cursor.fetchall()
+        await self.delete_row_by_index(table=table, index=table_row.index)
 
         # # TODO: This is doubly careful to make sure it matches but it seems like maybe
         # #       we should be able to delete by hash and get the index in one step?
         # await self.db.execute("DELETE FROM data_rows WHERE row_hash == ? AND row_index == ?", (row_hash, index,))
         # await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
+
+        return table_row
 
     async def get_table_state(self, table: bytes32) -> bytes32:
         pass

@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint32
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
@@ -21,7 +21,7 @@ class DataLayerWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.POOLING_WALLET)
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_info.id
 
     async def create_table(self, id: bytes32) -> bool:

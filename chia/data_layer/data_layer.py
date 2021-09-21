@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import aiosqlite
 
@@ -38,11 +38,17 @@ class DataLayer:
 
     def __init__(
         self,
-        config: Dict,
+        # TODO: Is this at least `Dict[str, Any]`?
+        config: Dict[Any, Any],
         root_path: Path,
         consensus_constants: ConsensusConstants,
-        name: str = None,
+        name: Optional[str] = None,
     ):
+        if name == "":
+            # TODO: If no code depends on "" counting as 'unspecified' then we do not
+            #       need this.
+            name = None
+
         self.initialized = False
         # self.root_path = root_path
         # self.config = config
@@ -57,7 +63,7 @@ class DataLayer:
         # self.full_node_store = FullNodeStore(self.constants)
         # self.uncompact_task = None
         # self.compact_vdf_requests: Set[bytes32] = set()
-        self.log = logging.getLogger(name if name else __name__)
+        self.log = logging.getLogger(name if name is None else __name__)
 
         # self._ui_tasks = set()
 
@@ -69,7 +75,7 @@ class DataLayer:
     # def _set_state_changed_callback(self, callback: Callable):
     #     self.state_changed_callback = callback
 
-    async def _start(self):
+    async def _start(self) -> None:
         # self.timelord_lock = asyncio.Lock()
         # self.compact_vdf_sem = asyncio.Semaphore(4)
         # self.new_peak_sem = asyncio.Semaphore(8)
