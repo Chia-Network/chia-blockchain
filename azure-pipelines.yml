@@ -93,11 +93,6 @@ steps:
     displayName: "Upload MacOS DMG"
 
   - bash: |
-      ls $(System.DefaultWorkingDirectory)/build_scripts/
-      cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-    displayName: "list files in dir"
-
-  - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       cd $(System.DefaultWorkingDirectory)/build_scripts/
       export CHIA_VERSION="Chia-"$(<version.txt)
@@ -121,6 +116,17 @@ steps:
       ls
     displayName: "Create torrent file"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
+
+  - bash: |
+      export AWS_ACCESS_KEY_ID=$(AccessKey)
+      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+      export AWS_DEFAULT_REGION=us-west-2
+      cd $(System.DefaultWorkingDirectory)/build_scripts/
+      export CHIA_VERSION="Chia-"$(<version.txt)
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/beta/Chia-intel_latest_beta.dmg
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/beta/Chia-intel_latest_beta.dmg.sha256
+    displayName: "Upload Beta Files"
+    condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/heads/main'))
 
   - bash: |
       export AWS_ACCESS_KEY_ID=$(AccessKey)
