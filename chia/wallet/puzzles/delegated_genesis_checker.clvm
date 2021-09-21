@@ -1,9 +1,10 @@
-; This is a "genesis checker" for use with cc.clvm.
+; This is a "limitations_program" for use with cat.clvm.
 (mod (
       PUBKEY
-      Truths
+      Truths ; These should be the same CAT truths
+      parent_is_cat
+      lineage_proof
       delta
-      lineage_check_result
       inner_conditions
       (
         genesis_puzzle
@@ -18,10 +19,10 @@
               (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
               (sha256 1 TREE)))
 
-    (if lineage_check_result
+    (if parent_is_cat
       inner_conditions
       (c (list AGG_SIG_UNSAFE PUBKEY (sha256tree1 genesis_puzzle))
-        (a genesis_puzzle (c Truths (c delta (c lineage_check_result (c inner_conditions genesis_solution)))))
+        (a genesis_puzzle (c Truths (c parent_is_cat (c lineage_proof (c delta (c inner_conditions genesis_solution))))))
       )
     )
 )
