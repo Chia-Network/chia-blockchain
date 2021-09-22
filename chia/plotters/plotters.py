@@ -157,6 +157,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.FILENAME:
             parser.add_argument(
+                "-z",
                 "--filename",
                 type=str,
                 help="Plot filename.",
