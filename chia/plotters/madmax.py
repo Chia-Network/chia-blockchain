@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.util import run_plotter, run_command
+from chia.plotters.plotters_util import run_plotter, run_command
 
 log = logging.getLogger(__name__)
 
