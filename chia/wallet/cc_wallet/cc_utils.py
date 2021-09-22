@@ -135,7 +135,13 @@ def spend_bundle_for_spendable_ccs(
         truths = Program.to(
             (
                 (
-                    (cc_spend_info.inner_puzzle.get_tree_hash(), cc_spend_info.coin.amount),
+                    (
+                        (
+                            cc_spend_info.inner_puzzle.get_tree_hash(),
+                            [],
+                        ),
+                        cc_spend_info.coin.amount,
+                    ),
                     (cc_spend_info.lineage_proof, cc_struct),
                 ),
                 (
