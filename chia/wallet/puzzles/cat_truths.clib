@@ -2,7 +2,13 @@
   (defun-inline cat_truth_data_to_truth_struct (my_id my_parent full_puzhash my_amount innerpuzhash lineage_proof limitations_solution cat_struct)
     (c
       (c
-        (c innerpuzhash my_amount)
+        (c
+          (c
+            innerpuzhash
+            ()
+          )
+          my_amount
+        )
         (c lineage_proof cat_struct)
       )
       (c
@@ -14,7 +20,7 @@
 
   ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
 
-  (defun-inline my_inner_puzzle_hash_cat_truth (Truths) (f (f (f Truths))))
+  (defun-inline my_inner_puzzle_hash_cat_truth (Truths) (f (f (f (f Truths)))))
   (defun-inline my_amount_cat_truth (Truths) (r (f (f Truths))))
   (defun-inline my_lineage_proof_cat_truth (Truths) (f (r (f Truths))))
   (defun-inline cat_struct_truth (Truths) (r (r (f Truths))))
