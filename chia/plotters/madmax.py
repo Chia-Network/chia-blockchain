@@ -86,6 +86,8 @@ def install_madmax(plotters_root_path: Path):
             subprocess.run(["git", "--version"])
         except FileNotFoundError as e:
             raise ValueError(f"Git not installed. Aborting madmax install. {e}")
+        except Exception as e:
+            raise ValueError(f"Error checking Git version. {e}")
 
         print("Cloning git repository.")
         try:
