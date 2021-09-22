@@ -44,6 +44,7 @@ dev_dependencies = [
     "pylint",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
+    "types-setuptools",
 ]
 
 kwargs = dict(

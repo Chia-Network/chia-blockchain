@@ -4,6 +4,7 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 daemon_port: 55400
+daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -65,7 +66,6 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
-      RUST_CONDITION_CHECKER: 0
   config:
     mainnet:
       address_prefix: "xch"
@@ -276,6 +276,8 @@ full_node:
 
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
+  # How long to wait for a peer connection
+  peer_connect_timeout: 30
   # Accept peers until this number of connections
   target_peer_count: 80
   # Initiate outbound connections until this number is hit.

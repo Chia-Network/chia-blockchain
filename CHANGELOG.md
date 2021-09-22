@@ -31,7 +31,7 @@ Today we’re releasing version 1.2.6 to address a resource bug with nodes, and 
 
 ### Fixed
 
-- Fixed errors in the Linux GUI install script, which impacted only Linux users.  
+- Fixed errors in the Linux GUI install script, which impacted only Linux users.
 
 ## 1.2.4 Chia blockchain 2021-08-26
 

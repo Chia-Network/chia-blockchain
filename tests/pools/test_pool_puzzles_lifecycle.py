@@ -163,6 +163,7 @@ class TestPoolPuzzles(TestCase):
             spend_bundle,
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
         # Test that we can retrieve the extra data
         assert get_delayed_puz_info_from_launcher_spend(launcher_coinsol) == (DELAY_TIME, DELAY_PH)
@@ -185,6 +186,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle([post_launch_coinsol], G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # HONEST ABSORB
@@ -220,6 +222,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle(coin_sols, G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # ABSORB A NON EXISTENT REWARD (Negative test)
@@ -251,6 +254,7 @@ class TestPoolPuzzles(TestCase):
                 SpendBundle([singleton_coinsol], G2Element()),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
@@ -280,6 +284,7 @@ class TestPoolPuzzles(TestCase):
                 SpendBundle([singleton_coinsol, bad_coinsol], G2Element()),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
@@ -310,6 +315,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle([travel_coinsol], sig),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # ESCAPE TOO FAST (Negative test)
@@ -336,6 +342,7 @@ class TestPoolPuzzles(TestCase):
                 SpendBundle([return_coinsol], sig),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
         except BadSpendBundleError as e:
             assert str(e) == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
@@ -359,6 +366,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle(coin_sols, G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # LEAVE THE WAITING ROOM
@@ -394,6 +402,7 @@ class TestPoolPuzzles(TestCase):
             SpendBundle([return_coinsol], sig),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
 
         # ABSORB ONCE MORE FOR GOOD MEASURE
@@ -414,4 +423,5 @@ class TestPoolPuzzles(TestCase):
             SpendBundle(coin_sols, G2Element()),
             time,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            DEFAULT_CONSTANTS.COST_PER_BYTE,
         )
