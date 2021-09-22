@@ -14,37 +14,35 @@ class Options(Enum):
     TMP_DIR = 1
     TMP_DIR2 = 2
     FINAL_DIR = 3
-    FILENAME = 4
-    K = 5
-    MEMO = 6
-    ID = 7
-    BUFF = 8
-    NUM_BUCKETS = 9
-    STRIPE_SIZE = 10
-    NUM_THREADS = 11
-    NOBITFIELD = 12
-    PLOT_COUNT = 13
-    MADMAX_NUM_BUCKETS_PHRASE3 = 14
-    MADMAX_WAITFORCOPY = 15
-    POOLKEY = 16
-    FARMERKEY = 17
-    MADMAX_TMPTOGGLE = 18
-    POOLCONTRACT = 19
-    MADMAX_RMULTI2 = 20
-    BLADEBIT_WARMSTART = 21
-    BLADEBIT_NONUMA = 22
-    VERBOSE = 23
-    OVERRIDE_K = 25
-    ALT_FINGERPRINT = 26
-    EXCLUDE_FINAL_DIR = 27
-    CONNECT_TO_DAEMON = 28
+    K = 4
+    MEMO = 5
+    ID = 6
+    BUFF = 7
+    NUM_BUCKETS = 8
+    STRIPE_SIZE = 9
+    NUM_THREADS = 10
+    NOBITFIELD = 11
+    PLOT_COUNT = 12
+    MADMAX_NUM_BUCKETS_PHRASE3 = 13
+    MADMAX_WAITFORCOPY = 14
+    POOLKEY = 15
+    FARMERKEY = 16
+    MADMAX_TMPTOGGLE = 17
+    POOLCONTRACT = 18
+    MADMAX_RMULTI2 = 19
+    BLADEBIT_WARMSTART = 20
+    BLADEBIT_NONUMA = 21
+    VERBOSE = 22
+    OVERRIDE_K = 23
+    ALT_FINGERPRINT = 24
+    EXCLUDE_FINAL_DIR = 25
+    CONNECT_TO_DAEMON = 26
 
 
 chia_plotter = [
     Options.TMP_DIR,
     Options.TMP_DIR2,
     Options.FINAL_DIR,
-    Options.FILENAME,
     Options.K,
     Options.MEMO,
     Options.ID,
@@ -154,14 +152,6 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 dest="finaldir",
                 help="Final directory.",
                 default=str(root_path) + "/",
-            )
-        if option is Options.FILENAME:
-            parser.add_argument(
-                "-z",
-                "--filename",
-                type=str,
-                help="Plot filename.",
-                default="plot.dat",
             )
         if option is Options.BUFF:
             parser.add_argument(
