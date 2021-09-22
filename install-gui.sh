@@ -24,7 +24,17 @@ if [ "$(uname)" = "Linux" ]; then
 	if type apt-get; then
 		# Debian/Ubuntu
 		UBUNTU=true
-		sudo apt-get install -y npm nodejs libxss1
+		
+		# Check if we are running a Raspberry PI 4
+		if [ "$(uname -m)" = "aarch64" ] \
+		&& [ "$(uname -n)" = "raspberrypi" ]; then
+			# Check if NodeJS & NPM is installed
+			type npm >/dev/null 2>&1 || {
+					echo >&2 "Please install NODEJS&NPM manually"
+			}
+		else
+			sudo apt-get install -y npm nodejs libxss1
+		fi
 	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2."
@@ -95,6 +105,7 @@ if [ ! "$CI" ]; then
 	npm install
 	npm audit fix || true
 	npm run build
+	python ../installhelper.py
 else
 	echo "Skipping node.js in install.sh on MacOS ci."
 fi

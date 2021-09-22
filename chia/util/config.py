@@ -1,6 +1,5 @@
 import argparse
 import os
-import shutil
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
@@ -17,11 +16,13 @@ def initial_config_file(filename: Union[str, Path]) -> str:
 
 def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> None:
     for filename in filenames:
-        default_config_file_data = initial_config_file(filename)
-        path = config_path_for_filename(root_path, filename)
+        default_config_file_data: str = initial_config_file(filename)
+        path: Path = config_path_for_filename(root_path, filename)
+        tmp_path: Path = path.with_suffix("." + str(os.getpid()))
         mkdir(path.parent)
-        with open(path, "w") as f:
+        with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
+        os.replace(str(tmp_path), str(path))
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
@@ -32,10 +33,11 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
-    path = config_path_for_filename(root_path, filename)
-    with open(path.with_suffix("." + str(os.getpid())), "w") as f:
+    path: Path = config_path_for_filename(root_path, filename)
+    tmp_path: Path = path.with_suffix("." + str(os.getpid()))
+    with open(tmp_path, "w") as f:
         yaml.safe_dump(config_data, f)
-    shutil.move(str(path.with_suffix("." + str(os.getpid()))), path)
+    os.replace(str(tmp_path), path)
 
 
 def load_config(
@@ -124,3 +126,29 @@ def str2bool(v: Union[str, bool]) -> bool:
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
+
+
+def traverse_dict(d: Dict, key_path: str) -> Any:
+    """
+    Traverse nested dictionaries to find the element pointed-to by key_path.
+    Key path components are separated by a ':' e.g.
+      "root:child:a"
+    """
+    if type(d) is not dict:
+        raise TypeError(f"unable to traverse into non-dict value with key path: {key_path}")
+
+    # Extract one path component at a time
+    components = key_path.split(":", maxsplit=1)
+    if components is None or len(components) == 0:
+        raise KeyError(f"invalid config key path: {key_path}")
+
+    key = components[0]
+    remaining_key_path = components[1] if len(components) > 1 else None
+
+    val: Any = d.get(key, None)
+    if val is not None:
+        if remaining_key_path is not None:
+            return traverse_dict(val, remaining_key_path)
+        return val
+    else:
+        raise KeyError(f"value not found for key: {key}")

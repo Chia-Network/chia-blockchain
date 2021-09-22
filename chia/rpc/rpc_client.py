@@ -16,7 +16,7 @@ class RpcClient:
     Client to Chia RPC, connects to a local service. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
     Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
-    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
+    protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
     to the full node.
     """
 
@@ -24,10 +24,14 @@ class RpcClient:
     session: aiohttp.ClientSession
     closing_task: Optional[asyncio.Task]
     ssl_context: Optional[SSLContext]
+    hostname: str
+    port: uint16
 
     @classmethod
     async def create(cls, self_hostname: str, port: uint16, root_path, net_config):
         self = cls()
+        self.hostname = self_hostname
+        self.port = port
         self.url = f"https://{self_hostname}:{str(port)}/"
         self.session = aiohttp.ClientSession()
         ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)

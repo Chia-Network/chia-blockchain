@@ -20,9 +20,6 @@ class KeyValStore:
         self = cls()
         self.db_wrapper = db_wrapper
         self.db_connection = db_wrapper.db
-        await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
-
         await self.db_connection.execute(
             ("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value text)")
         )

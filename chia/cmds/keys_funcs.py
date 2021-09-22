@@ -72,7 +72,7 @@ def show_all_keys(show_mnemonic: bool):
     if len(private_keys) == 0:
         print("There are no saved private keys")
         return None
-    msg = "Showing all public keys derived from your private keys:"
+    msg = "Showing all public keys derived from your master seed and private key:"
     if show_mnemonic:
         msg = "Showing all public and private keys"
     print(msg)

@@ -772,7 +772,9 @@ class TestFullNodeProtocol:
                 condition_dic=conditions_dict,
             )
             assert spend_bundle is not None
-            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
+            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
+                spend_bundle, spend_bundle.name()
+            )
             log.info(f"Cost result: {cost_result.clvm_cost}")
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
@@ -1385,7 +1387,7 @@ class TestFullNodeProtocol:
         invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
         invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
 
-        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(invalid_block)
+        result, error, fork_h, _ = await full_node_1.full_node.blockchain.receive_block(invalid_block)
         assert error is not None
         assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
 

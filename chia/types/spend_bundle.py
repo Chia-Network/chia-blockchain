@@ -6,6 +6,7 @@ from typing import List
 
 from blspy import AugSchemeMPL, G2Element
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
@@ -61,7 +62,7 @@ class SpendBundle(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def debug(self, agg_sig_additional_data=bytes([3] * 32)):
+    def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
         debug_spend_bundle(self, agg_sig_additional_data)
 
     def not_ephemeral_additions(self):
