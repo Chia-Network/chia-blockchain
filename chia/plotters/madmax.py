@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from chia.plotting.create_plots import resolve_plot_keys
+from chia.plotters.util import run_plotter
 
 log = logging.getLogger(__name__)
 
@@ -142,54 +143,6 @@ progress = {
 }
 
 
-# https://kevinmccarthy.org/2016/07/25/streaming-subprocess-stdin-and-stdout-with-asyncio-in-python/
-async def _read_stream(stream, callback):
-    while True:
-        line = await stream.readline()
-        if line:
-            callback(line)
-        else:
-            break
-
-
-def parse_stdout(out):
-    out = out.rstrip()
-    print(out)
-    for k, v in progress.items():
-        if k in out:
-            print(f"Progress update: {v}")
-
-
-async def run(command):
-    process = await asyncio.create_subprocess_shell(
-        command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-
-    await asyncio.wait(
-        [
-            _read_stream(
-                process.stdout,
-                lambda x: parse_stdout(x.decode("UTF8")),
-            ),
-            _read_stream(
-                process.stderr,
-                lambda x: print("STDERR: {}".format(x.decode("UTF8"))),
-            ),
-        ]
-    )
-
-    await process.wait()
-
-
-async def run_madmax(args):
-    cmd = ""
-    for arg in args:
-        cmd += arg
-        cmd += " "
-    print(f"Running command: {cmd[:-1]}")
-    await run(cmd[:-1])
-
-
 def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     if not os.path.exists(get_madmax_executable_path(plotters_root_path)):
         print("Installing madmax plotter.")
@@ -242,7 +195,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         call_args.append(str(args.size))
     try:
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(run_madmax(call_args))
+        loop.run_until_complete(run_plotter(call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {type(e)} {e}")
         print(f"Traceback: {traceback.format_exc()}")
