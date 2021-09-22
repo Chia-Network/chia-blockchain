@@ -134,6 +134,17 @@ jobs:
           arch -arm64 py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.torrent --webseed https://download-chia-net.s3.us-west-2.amazonaws.com/install/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
 
+      - name: Upload Beta Installer
+        if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/main'
+        env:
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+          AWS_REGION: us-west-2
+        run: |
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg s3://download-chia-net/beta/Chia-arm64_latest_beta.dmg
+          arch -arm64 aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-arm64.dmg.sha256 s3://download-chia-net/beta/Chia-arm64_latest_beta.dmg.sha256
+
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
         env:

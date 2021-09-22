@@ -202,7 +202,7 @@ class MempoolManager:
         log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
         return True
 
-    async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> NPCResult:
+    async def pre_validate_spendbundle(self, new_spend: SpendBundle, spend_name: bytes32) -> NPCResult:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
@@ -215,9 +215,13 @@ class MempoolManager:
             int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
             self.constants.COST_PER_BYTE,
         )
+        ret = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
-        log.info(f"It took {end_time - start_time} to pre validate transaction")
-        return NPCResult.from_bytes(cached_result_bytes)
+        log.log(
+            logging.WARNING if end_time - start_time > 1 else logging.DEBUG,
+            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
+        )
+        return ret
 
     async def add_spendbundle(
         self,
@@ -428,10 +432,13 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item)
-        log.info(
-            f"add_spendbundle took {time.time() - start_time} seconds, cost {cost} "
-            f"({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}%)"
+        now = time.time()
+        log.log(
+            logging.WARNING if now - start_time > 1 else logging.DEBUG,
+            f"add_spendbundle {spend_name} took {now - start_time:0.2f} seconds. "
+            f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
+
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
