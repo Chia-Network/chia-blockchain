@@ -35,13 +35,6 @@ class OperationType(IntEnum):
 
 
 @dataclass(frozen=True)
-class Action:
-    op: OperationType
-    row_index: int
-    row: CLVMObject
-
-
-@dataclass(frozen=True)
 class TableRow:
     index: int
     clvm_object: CLVMObject
@@ -57,6 +50,18 @@ class TableRow:
             clvm_object=clvm_object,
             hash=sha256_treehash(sexp),
             bytes=sexp.as_bin(),
+        )
+
+    @classmethod
+    def from_clvm_bytes(cls, index: int, clvm_bytes: bytes) -> "TableRow":
+        clvm_object = sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject)
+        sexp = SExp.to(clvm_object)
+
+        return cls(
+            index=index,
+            clvm_object=clvm_object,
+            hash=sha256_treehash(sexp),
+            bytes=clvm_bytes,
         )
 
     def __eq__(self, other: object) -> bool:
@@ -81,6 +86,12 @@ class TableRow:
         sexp_self = dataclasses.replace(self, clvm_object=SExp.to(self.clvm_object))
 
         return sexp_self == other
+
+
+@dataclass(frozen=True)
+class Action:
+    op: OperationType
+    row: TableRow
 
 
 @dataclass(frozen=True)
@@ -133,6 +144,8 @@ class DataStore:
         # TODO: As operations are reverted do they get deleted?  Or perhaps we track
         #       a reference into the table and only remove when a non-matching forward
         #       step is taken?  Or reverts are just further actions?
+        # TODO: Think through row IDs and autoincrement and what happens when we delete
+        #       actions during a reorg.  Or, manually track max index?  Or...
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS actions(data_row_index INTEGER, row_hash TEXT, operation INTEGER)"
         )
@@ -234,13 +247,13 @@ class DataStore:
         else:
             await self.db.execute("UPDATE data_rows SET row_index = row_index + 1 WHERE row_index >= ?", (index,))
 
+        await self.db.execute("INSERT INTO data_rows (row_index, row_hash) VALUES(?, ?)", (index, row_hash))
+
         await self.db.execute(
-            "INSERT INTO data_rows (row_index, row_hash) VALUES(?, ?)",
-            (
-                index,
-                row_hash,
-            ),
+            "INSERT INTO actions (data_row_index, row_hash, operation) VALUES(?, ?, ?)",
+            (index, row_hash, OperationType.INSERT),
         )
+
         # TODO: Review reentrancy on .commit() since it isn't clearly tied to this
         #       particular task's activity.
         await self.db.commit()
@@ -265,6 +278,12 @@ class DataStore:
 
         await self.db.execute("DELETE FROM data_rows WHERE row_index == ?", (index,))
         await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
+
+        await self.db.execute(
+            "INSERT INTO actions (data_row_index, row_hash, operation) VALUES(?, ?, ?)",
+            (table_row.index, table_row.hash, OperationType.DELETE),
+        )
+
         await self.db.commit()
 
         return table_row
@@ -286,6 +305,19 @@ class DataStore:
         # await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
 
         return table_row
+
+    async def get_all_actions(self, table: bytes32) -> List[Action]:
+        # TODO: What needs to be done to retain proper ordering, relates to the question
+        #       at the table creation as well.
+        cursor = await self.db.execute(
+            "SELECT actions.data_row_index, actions.operation, raw_rows.clvm_object FROM actions INNER JOIN raw_rows WHERE actions.row_hash == raw_rows.row_hash"
+        )
+        actions = await cursor.fetchall()
+
+        return [
+            Action(op=OperationType(operation), row=TableRow.from_clvm_bytes(index=index, clvm_bytes=clvm_bytes))
+            for index, operation, clvm_bytes in actions
+        ]
 
     async def get_table_state(self, table: bytes32) -> bytes32:
         pass

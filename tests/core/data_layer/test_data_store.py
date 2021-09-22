@@ -11,7 +11,7 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import DataStore, TableRow
+from chia.data_layer.data_store import Action, DataStore, OperationType, TableRow
 from chia.types.blockchain_format.tree_hash import sha256_treehash
 
 # from chia.full_node.block_store import BlockStore
@@ -306,3 +306,49 @@ async def test_deletes_row_by_hash(data_store: DataStore) -> None:
 
     expected = expected_data_rows([another_clvm_object])
     assert data_rows == expected
+
+
+@pytest.mark.asyncio
+async def test_get_all_actions_just_inserts(data_store: DataStore) -> None:
+    expected = []
+
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=0, clvm_object=a_clvm_object)))
+
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=1, clvm_object=a_clvm_object)))
+
+    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=another_clvm_object)))
+
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=3, clvm_object=a_clvm_object)))
+
+    all_actions = await data_store.get_all_actions(table=b"")
+
+    assert all_actions == expected
+
+
+@pytest.mark.asyncio
+async def test_get_all_actions_with_a_delete(data_store: DataStore) -> None:
+    expected = []
+
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=0, clvm_object=a_clvm_object)))
+
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=1, clvm_object=a_clvm_object)))
+
+    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=another_clvm_object)))
+
+    # note this is a delete
+    await data_store.delete_row_by_index(table=b"", index=1)
+    expected.append(Action(op=OperationType.DELETE, row=TableRow.from_clvm_object(index=1, clvm_object=a_clvm_object)))
+
+    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=a_clvm_object)))
+
+    all_actions = await data_store.get_all_actions(table=b"")
+
+    assert all_actions == expected
