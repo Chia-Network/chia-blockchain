@@ -78,6 +78,7 @@ madmax_plotter = [
     Options.POOLCONTRACT,
     Options.MADMAX_TMPTOGGLE,
     Options.MADMAX_RMULTI2,
+    Options.CONNECT_TO_DAEMON,
 ]
 
 bladebit_plotter = [
@@ -90,6 +91,7 @@ bladebit_plotter = [
     Options.BLADEBIT_NONUMA,
     Options.FINAL_DIR,
     Options.VERBOSE,
+    Options.CONNECT_TO_DAEMON,
 ]
 
 
