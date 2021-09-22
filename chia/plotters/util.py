@@ -1,5 +1,6 @@
 import shlex
 import asyncio
+import subprocess
 
 
 # https://kevinmccarthy.org/2016/07/25/streaming-subprocess-stdin-and-stdout-with-asyncio-in-python/
@@ -42,3 +43,10 @@ async def run_plotter(args, progress_dict):
     )
 
     await process.wait()
+
+
+def run_command(args, exc_description, cwd=None):
+    try:
+        subprocess.run(args, check=True, cwd=cwd)
+    except Exception as e:
+        raise RuntimeError(f"{exc_description} {e}")
