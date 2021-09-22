@@ -632,8 +632,16 @@ class WebSocketServer:
         asyncio.create_task(self._state_changed(service, message))
 
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
-        id = config["id"]
-        final_words = ["Renamed final file"]
+        id: str = config["id"]
+        plotter: str = config["plotter"]
+        final_words: List[str] = []
+
+        if plotter == "chiapos":
+            final_words = ["Renamed final file"]
+        elif plotter == "bladebit":
+            final_words = ["Finished plotting in"]
+        elif plotter == "madmax":
+            final_words = ["Renamed final plot"]
 
         while True:
             new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
@@ -725,7 +733,7 @@ class WebSocketServer:
         c = request.get("c")
 
         v = request["v"]
-        K = request["K"]
+        K = request.get("K", 1)
         G = request.get("G", False)
 
         command_args: List[str] = ["chia", "plotters", "madmax"]
@@ -747,7 +755,6 @@ class WebSocketServer:
         if c is not None:
             command_args.append(f"-c{c}")
 
-        command_args.append(f"-v{v}")
         command_args.append(f"-K{K}")
 
         if G is True:
@@ -836,6 +843,8 @@ class WebSocketServer:
 
             await self._track_plotting_progress(config, loop)
 
+            self.log.debug("finished tracking plotting progress. setting state to FINISHED")
+
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
 
@@ -856,10 +865,11 @@ class WebSocketServer:
     async def start_plotting(self, request: Dict[str, Any]):
         service_name = request["service"]
 
-        delay = request.get("delay", 0)
+        plotter = request.get("plotter", "chiapos")
+        delay = int(request.get("delay", 0))
         parallel = request.get("parallel", False)
         size = request.get("k")
-        count = request.get("n", 1)
+        count = int(request.get("n", 1))
         queue = request.get("queue", "default")
 
         if ("p" in request) and ("c" in request):
@@ -878,6 +888,7 @@ class WebSocketServer:
                 "id": id,
                 "size": size,
                 "queue": queue,
+                "plotter": plotter,
                 "service_name": service_name,
                 "command_args": self._build_plotting_command_args(request, True),
                 "parallel": parallel,

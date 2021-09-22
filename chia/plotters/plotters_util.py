@@ -14,10 +14,10 @@ async def _read_stream(stream, callback):
 
 def parse_stdout(out, progress):
     out = out.rstrip()
-    print(out)
+    print(out, flush=True)
     for k, v in progress.items():
         if k in out:
-            print(f"Progress update: {v}")
+            print(f"Progress update: {v}", flush=True)
 
 
 async def run_plotter(args, progress_dict):
