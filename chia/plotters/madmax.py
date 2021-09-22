@@ -133,6 +133,10 @@ progress = {
 }
 
 
+def dir_with_trailing_slash(dir: str) -> str:
+    return dir if dir[-1] == os.path.sep else dir + os.path.sep
+
+
 def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     if sys.platform not in ["win32", "cygwin"]:
         import resource
@@ -166,11 +170,12 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         call_args.append("-p")
         call_args.append(bytes(plot_keys.pool_public_key).hex())
     call_args.append("-t")
-    call_args.append(args.tmpdir)
+    # s if s[-1] == os.path.sep else s + os.path.sep
+    call_args.append(dir_with_trailing_slash(args.tmpdir))
     call_args.append("-2")
-    call_args.append(args.tmpdir2)
+    call_args.append(dir_with_trailing_slash(args.tmpdir2))
     call_args.append("-d")
-    call_args.append(args.finaldir)
+    call_args.append(dir_with_trailing_slash(args.finaldir))
     if plot_keys.pool_contract_address is not None:
         call_args.append("-c")
         call_args.append(plot_keys.pool_contract_address)
