@@ -1,4 +1,3 @@
-import shlex
 import asyncio
 import subprocess
 
@@ -22,11 +21,8 @@ def parse_stdout(out, progress):
 
 
 async def run_plotter(args, progress_dict):
-    command = shlex.join(args)
-    print(f"Running command: {command}")
-
-    process = await asyncio.create_subprocess_shell(
-        command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    process = await asyncio.create_subprocess_exec(
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
 
     await asyncio.wait(
