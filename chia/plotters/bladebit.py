@@ -160,8 +160,8 @@ def install_bladebit(root_path):
                     "git",
                 ]
             )
-        except Exception:
-            raise ValueError("Could not install dependencies.")
+        except Exception as e:
+            raise ValueError(f"Could not install dependencies. {e}")
 
         print("Cloning repository and its submodules.")
         try:
