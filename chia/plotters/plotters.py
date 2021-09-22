@@ -245,7 +245,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             parser.add_argument(
                 "-K",
                 "--rmulti2",
-                type=binascii.unhexlify,
+                type=int,
                 help="Thread multiplier for P2 (default = 1)",
                 default=1,
             )
