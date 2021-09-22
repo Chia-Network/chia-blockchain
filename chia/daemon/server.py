@@ -55,7 +55,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-service_plotter = "chia plots create"
+service_plotter = "chia_plotter"
 
 
 async def fetch(url: str):
@@ -658,9 +658,7 @@ class WebSocketServer:
         with open(file_path, "r") as fp:
             await self._watch_file_changes(config, fp, loop)
 
-    def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
-        service_name = request["service"]
-
+    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         k = request["k"]
         n = 1 if ignoreCount else request["n"]
         t = request["t"]
@@ -677,8 +675,7 @@ class WebSocketServer:
         x = request["x"]
         override_k = request["overrideK"]
 
-        command_args: List[str] = []
-        command_args += service_name.split(" ")
+        command_args: List[str] = ["chia", "plotters", "chiapos"]
         command_args.append(f"-k{k}")
         command_args.append(f"-n{n}")
         command_args.append(f"-t{t}")
@@ -709,8 +706,65 @@ class WebSocketServer:
         if override_k is True:
             command_args.append("--override-k")
 
-        self.log.debug(f"command_args are {command_args}")
+        return command_args
 
+    def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        return []
+
+    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        k = request["k"]
+        n = 1 if ignoreCount else request["n"]
+        t = request["t"]
+        t2 = request["t2"]
+        d = request["d"]
+        u = request["u"]
+        v = request["v"]
+        r = request["r"]
+        f = request.get("f")
+        p = request.get("p")
+        c = request.get("c")
+
+        v = request["v"]
+        K = request["K"]
+        G = request.get("G", False)
+
+        command_args: List[str] = ["chia", "plotters", "madmax"]
+        command_args.append(f"-k{k}")
+        command_args.append(f"-n{n}")
+        command_args.append(f"-t{t}")
+        command_args.append(f"-2{t2}")
+        command_args.append(f"-d{d}")
+        command_args.append(f"-u{u}")
+        command_args.append(f"-v{v}")
+        command_args.append(f"-r{r}")
+
+        if f is not None:
+            command_args.append(f"-f{f}")
+
+        if p is not None:
+            command_args.append(f"-p{p}")
+
+        if c is not None:
+            command_args.append(f"-c{c}")
+
+        command_args.append(f"-v{v}")
+        command_args.append(f"-K{K}")
+
+        if G is True:
+            command_args.append("-G")
+
+        return command_args
+
+    def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        plotter: str = request.get("plotter", "chiapos")
+        command_args: List[str] = []
+
+        if plotter == "chiapos":
+            command_args = self._chiapos_plotting_command_args(request, ignoreCount)
+        elif plotter == "madmax":
+            command_args = self._madmax_plotting_command_args(request, ignoreCount)
+
+        self.log.debug(f"command_args are {command_args}")
         return command_args
 
     def _is_serial_plotting_running(self, queue: str = "default") -> bool:
@@ -1033,6 +1087,11 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
+
+    log.debug(f"launch_plotter: root_path: {root_path}")
+    log.debug(f"launch_plotter: service_name: {service_name}")
+    log.debug(f"launch_plotter: service_array: {service_array}")
+    log.debug(f"launch_plotter: id: {id}")
 
     # Swap service name with name of executable
     service_array[0] = service_executable
