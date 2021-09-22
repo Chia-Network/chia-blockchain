@@ -909,7 +909,7 @@ class FullNode:
             List[PreValidationResult]
         ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
         pre_validate_end = time.time()
-        if pre_validate_end - pre_validate_start > 1:
+        if pre_validate_end - pre_validate_start > 10:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
