@@ -1,6 +1,5 @@
 import asyncio
 import traceback
-import subprocess
 import os
 import logging
 import sys
@@ -8,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.util import run_plotter
+from chia.plotters.util import run_plotter, run_command
 
 log = logging.getLogger(__name__)
 
@@ -48,76 +47,67 @@ def install_madmax(plotters_root_path: Path):
     if is_madmax_supported():
         print("Installing dependencies.")
         if sys.platform.startswith("linux"):
-            try:
-                subprocess.run(
-                    [
-                        "sudo",
-                        "apt",
-                        "install",
-                        "-y",
-                        "libsodium-dev",
-                        "cmake",
-                        "g++",
-                        "git",
-                        "build-essential",
-                    ]
-                )
-            except Exception as e:
-                raise ValueError(f"Could not install dependencies. {e}")
+            run_command(
+                [
+                    "sudo",
+                    "apt",
+                    "install",
+                    "-y",
+                    "libsodium-dev",
+                    "cmake",
+                    "g++",
+                    "git",
+                    "build-essential",
+                ],
+                "Could not install dependencies",
+            )
         if sys.platform.startswith("darwin"):
-            try:
-                subprocess.run(
-                    [
-                        "brew",
-                        "install",
-                        "libsodium",
-                        "cmake",
-                        "git",
-                        "autoconf",
-                        "automake",
-                        "libtool",
-                        "wget",
-                    ]
-                )
-                subprocess.run(["brew", "link", "cmake"])
-            except Exception as e:
-                raise ValueError(f"Could not install dependencies. {e}")
-
-        try:
-            subprocess.run(["git", "--version"])
-        except FileNotFoundError as e:
-            raise ValueError(f"Git not installed. Aborting madmax install. {e}")
-        except Exception as e:
-            raise ValueError(f"Error checking Git version. {e}")
+            run_command(
+                [
+                    "brew",
+                    "install",
+                    "libsodium",
+                    "cmake",
+                    "git",
+                    "autoconf",
+                    "automake",
+                    "libtool",
+                    "wget",
+                ],
+                "Could not install dependencies",
+            )
+        run_command(["git", "--version"], "Error checking Git version.")
 
         print("Cloning git repository.")
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "clone",
-                    "https://github.com/Chia-Network/chia-plotter-madmax.git",
-                    MADMAX_PLOTTER_DIR,
-                ],
-                cwd=os.fspath(plotters_root_path),
-            )
-        except Exception as e:
-            raise ValueError(f"Could not clone madmax repository. {e}")
+        run_command(
+            [
+                "git",
+                "clone",
+                "https://github.com/Chia-Network/chia-plotter-madmax.git",
+                MADMAX_PLOTTER_DIR,
+            ],
+            "Could not clone madmax git repository",
+            os.fspath(plotters_root_path),
+        )
 
         print("Installing git submodules.")
         madmax_path: str = os.fspath(get_madmax_install_path(plotters_root_path))
-        try:
-            subprocess.run(["git", "submodule", "update", "--init", "--recursive"], cwd=madmax_path)
-        except Exception as e:
-            raise ValueError(f"Could not install git submodules. {e}")
+        run_command(
+            [
+                "git",
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+            ],
+            "Could not initialize git submodules",
+            madmax_path,
+        )
 
         print("Running install script.")
-        try:
-            subprocess.run(["./make_devel.sh"], cwd=madmax_path)
-        except Exception as e:
-            raise ValueError(f"Install script failed. {e}")
+        run_command(["./make_devel.sh"], "Error while running install script", madmax_path)
     else:
-        raise ValueError("Platform not supported yet for madmax plotter.")
+        raise RuntimeError("Platform not supported yet for madmax plotter.")
 
 
 progress = {

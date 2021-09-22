@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.util import run_plotter
+from chia.plotters.util import run_plotter, run_command
 
 log = logging.getLogger(__name__)
 
@@ -100,52 +100,42 @@ progress = {
 def install_bladebit(root_path):
     if is_bladebit_supported():
         print("Installing dependencies.")
-        try:
-            subprocess.run(
-                [
-                    "sudo",
-                    "apt",
-                    "install",
-                    "-y",
-                    "build-essential",
-                    "cmake",
-                    "libnuma-dev",
-                    "git",
-                ]
-            )
-        except Exception as e:
-            raise ValueError(f"Could not install dependencies. {e}")
+        run_command(
+            [
+                "sudo",
+                "apt",
+                "install",
+                "-y",
+                "build-essential",
+                "cmake",
+                "libnuma-dev",
+                "git",
+            ],
+            "Could not install dependencies",
+        )
 
         print("Cloning repository and its submodules.")
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "clone",
-                    "--recursive",
-                    "https://github.com/Chia-Network/bladebit.git",
-                ],
-                cwd=os.fspath(root_path),
-            )
-        except Exception:
-            raise ValueError("Could not clone bladebit repository.")
+        run_command(
+            [
+                "git",
+                "clone",
+                "--recursive",
+                "https://github.com/Chia-Network/bladebit.git",
+            ],
+            "Could not clone bladebit repository",
+            os.fspath(root_path),
+        )
 
         bladebit_path = os.fspath(root_path.joinpath("bladebit"))
         print("Building BLS library.")
         # Build bls library. Only needs to be done once.
-        try:
-            subprocess.run(["./build-bls"], cwd=bladebit_path)
-        except Exception as e:
-            raise ValueError(f"Building BLS library failed. {e}")
+        run_command(["./build-bls"], "Building BLS library failed", bladebit_path)
 
         print("Build bladebit.")
-        try:
-            subprocess.run(["make", "clean"], cwd=bladebit_path)
-            subprocess.run(["make"], cwd=bladebit_path)
-        except Exception as e:
-            raise ValueError(f"Building bladebit failed. {e}")
+        run_command(["make", "clean"], "Building bladebit failed", bladebit_path)
+        run_command(["make"], "Building bladebit failed", bladebit_path)
     else:
-        raise ValueError("Platform not supported yet for bladebit plotter.")
+        raise RuntimeError("Platform not supported yet for bladebit plotter.")
 
 
 def plot_bladebit(args, chia_root_path, root_path):
