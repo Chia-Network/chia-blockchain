@@ -2056,7 +2056,7 @@ class TestMaliciousGenerators:
                 [ConditionWithArgs(opcode, [bytes([100])])],
             )
         ]
-        assert run_time < 2
+        assert run_time < 3
         print(f"run time:{run_time}")
 
     @pytest.mark.parametrize(
