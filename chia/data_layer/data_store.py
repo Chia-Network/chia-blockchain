@@ -136,7 +136,7 @@ class DataStore:
 
         # Just a raw collection of all ChiaLisp lists that are used
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY,table_id TEXT, clvm_object BLOB)"
+            "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY, table_id TEXT, clvm_object BLOB)"
         )
         # The present properly ordered collection of rows.
         await self.db.execute("CREATE TABLE IF NOT EXISTS data_rows(row_index INTEGER PRIMARY KEY, row_hash TEXT)")
