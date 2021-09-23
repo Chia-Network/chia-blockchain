@@ -6,7 +6,7 @@ dependencies = [
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.4",  # proof of space
     "clvm==0.9.7",
-    "clvm_rs==0.1.12",
+    "clvm_rs==0.1.11",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -94,15 +94,15 @@ kwargs = dict(
     ],
     entry_points={
         "console_scripts": [
-            "chia = chia.cmds.chia:main",
-            "chia_wallet = chia.server.start_wallet:main",
-            "chia_full_node = chia.server.start_full_node:main",
-            "chia_harvester = chia.server.start_harvester:main",
-            "chia_farmer = chia.server.start_farmer:main",
-            "chia_introducer = chia.server.start_introducer:main",
-            "chia_timelord = chia.server.start_timelord:main",
-            "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
-            "chia_full_node_simulator = chia.simulator.start_simulator:main",
+            "flora = chia.cmds.chia:main",
+            "flora_wallet = chia.server.start_wallet:main",
+            "flora_full_node = chia.server.start_full_node:main",
+            "flora_harvester = chia.server.start_harvester:main",
+            "flora_farmer = chia.server.start_farmer:main",
+            "dlora_introducer = chia.server.start_introducer:main",
+            "flora_timelord = chia.server.start_timelord:main",
+            "flora_timelord_launcher = chia.timelord.timelord_launcher:main",
+            "flora_full_node_simulator = chia.simulator.start_simulator:main",
         ]
     },
     package_data={
