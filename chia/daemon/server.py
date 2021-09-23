@@ -719,7 +719,7 @@ class WebSocketServer:
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         return []
 
-    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
         k = request["k"]
         n = 1 if ignoreCount else request["n"]
         t = request["t"]
@@ -739,8 +739,16 @@ class WebSocketServer:
         command_args: List[str] = ["chia", "plotters", "madmax"]
         command_args.append(f"-k{k}")
         command_args.append(f"-n{n}")
-        command_args.append(f"-t{t}")
-        command_args.append(f"-2{t2}")
+
+        # Handle madmax's tmptoggle option ourselves when managing GUI plotting
+        if G is True and t != t2 and index % 2:
+            # Swap tmp and tmp2
+            command_args.append(f"-t{t2}")
+            command_args.append(f"-2{t}")
+        else:
+            command_args.append(f"-t{t}")
+            command_args.append(f"-2{t2}")
+
         command_args.append(f"-d{d}")
         command_args.append(f"-u{u}")
         command_args.append(f"-v{v}")
@@ -757,19 +765,18 @@ class WebSocketServer:
 
         command_args.append(f"-K{K}")
 
-        if G is True:
-            command_args.append("-G")
-
         return command_args
 
-    def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
         plotter: str = request.get("plotter", "chiapos")
         command_args: List[str] = []
 
         if plotter == "chiapos":
             command_args = self._chiapos_plotting_command_args(request, ignoreCount)
         elif plotter == "madmax":
-            command_args = self._madmax_plotting_command_args(request, ignoreCount)
+            command_args = self._madmax_plotting_command_args(request, ignoreCount, index)
+        elif plotter == "bladebit":
+            command_args = self._bladebit_plotting_command_args(request, ignoreCount)
 
         self.log.debug(f"command_args are {command_args}")
         return command_args
@@ -890,7 +897,7 @@ class WebSocketServer:
                 "queue": queue,
                 "plotter": plotter,
                 "service_name": service_name,
-                "command_args": self._build_plotting_command_args(request, True),
+                "command_args": self._build_plotting_command_args(request, True, k),
                 "parallel": parallel,
                 "delay": delay * k if parallel is True else delay,
                 "state": PlotState.SUBMITTED,
@@ -1098,11 +1105,6 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
-
-    log.debug(f"launch_plotter: root_path: {root_path}")
-    log.debug(f"launch_plotter: service_name: {service_name}")
-    log.debug(f"launch_plotter: service_array: {service_array}")
-    log.debug(f"launch_plotter: id: {id}")
 
     # Swap service name with name of executable
     service_array[0] = service_executable
