@@ -562,6 +562,37 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.finished_sub_slots == original_ss
 
     @pytest.mark.asyncio
+    async def test_respond_end_of_sub_slot_race(self, wallet_nodes):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
+
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        # First get two blocks in the same sub slot
+        blocks = await full_node_1.get_all_full_blocks()
+        saved_seed = b""
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+
+        original_ss = full_node_1.full_node.full_node_store.finished_sub_slots[:].copy()
+        # Add the block
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
+
+        # Replace with original SS in order to imitate race condition (block added but subslot not yet added)
+        full_node_1.full_node.full_node_store.finished_sub_slots = original_ss
+
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+    @pytest.mark.asyncio
     async def test_respond_unfinished(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
