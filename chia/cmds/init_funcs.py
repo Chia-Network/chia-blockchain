@@ -347,16 +347,16 @@ def chia_init(root_path: Path, *, should_check_keys: bool = True, fix_ssl_permis
     protected Keychain. When launching the daemon from the GUI, we want the GUI to
     handle unlocking the keychain.
     """
-    if os.environ.get("CHIA_ROOT", None) is not None:
+    if os.environ.get("FLORA_ROOT", None) is not None:
         print(
-            f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
+            f"warning, your FLORA_ROOT is set to {os.environ['FLORA_ROOT']}. "
             f"Please unset the environment variable and run chia init again\n"
             f"or manually migrate config.yaml"
         )
 
     print(f"Chia directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
-        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
+        # This is reached if FLORA_ROOT is set, or if user has run chia init twice
         # before a new update.
         if fix_ssl_permissions:
             fix_ssl(root_path)
