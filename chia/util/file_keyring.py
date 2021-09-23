@@ -133,6 +133,11 @@ class FileKeyring(FileSystemEventHandler):
 
     @staticmethod
     def lockfile_path_for_file_path(file_path: Path) -> Path:
+        """
+        Returns a path suitable for creating a lockfile derived from the input path.
+        Currently used to provide a lockfile path to be used by
+        fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
+        """
         return file_path.with_name(f".{file_path.name}.lock")
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):

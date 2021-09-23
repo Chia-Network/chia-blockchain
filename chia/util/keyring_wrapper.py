@@ -14,6 +14,10 @@ from typing import Any, List, Optional, Tuple, Type, Union
 
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
+#
+# WARNING: Changing the default passphrase will prevent passphrase-less users from accessing
+# their existing keys. Using a new default passphrase requires migrating existing users to
+# the new passphrase.
 DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE = "$ chia passphrase set # all the cool kids are doing it!"
 
 MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE = "Chia Passphrase"

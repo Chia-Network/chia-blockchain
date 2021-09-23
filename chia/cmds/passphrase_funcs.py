@@ -107,6 +107,8 @@ def initialize_passphrase() -> None:
     # bootstrapping the keyring encryption process
     print("Setting keyring passphrase")
     passphrase: Optional[str] = None
+    # save_passphrase indicates whether the passphrase should be saved in the
+    # macOS Keychain or Windows Credential Manager
     save_passphrase: bool = False
 
     if Keychain.has_cached_passphrase():
