@@ -44,7 +44,7 @@ class DataLayerRpcApi:
                 assert change["action"] == "delete"
                 table_row = await self.service.data_store.delete_row_by_hash(table, change["row"])
                 operation = OperationType.DELETE
-            action_list.append(Action(op=operation, row=table_row.clvm_object, row_index=table_row.index))
+            action_list.append(Action(op=operation, row=table_row))
         state = await self.service.data_store.get_table_state(table)
 
         # todo get changelist hash, order changelist before committing hash

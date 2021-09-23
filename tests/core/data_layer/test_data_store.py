@@ -319,7 +319,9 @@ async def test_get_all_actions_just_inserts(data_store: DataStore) -> None:
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=1, clvm_object=a_clvm_object)))
 
     await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=another_clvm_object)))
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=another_clvm_object))
+    )
 
     await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=3, clvm_object=a_clvm_object)))
@@ -340,7 +342,9 @@ async def test_get_all_actions_with_a_delete(data_store: DataStore) -> None:
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=1, clvm_object=a_clvm_object)))
 
     await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=another_clvm_object)))
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(index=2, clvm_object=another_clvm_object))
+    )
 
     # note this is a delete
     await data_store.delete_row_by_index(table=b"", index=1)

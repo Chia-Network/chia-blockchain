@@ -310,7 +310,9 @@ class DataStore:
         # TODO: What needs to be done to retain proper ordering, relates to the question
         #       at the table creation as well.
         cursor = await self.db.execute(
-            "SELECT actions.data_row_index, actions.operation, raw_rows.clvm_object FROM actions INNER JOIN raw_rows WHERE actions.row_hash == raw_rows.row_hash"
+            "SELECT actions.data_row_index, actions.operation, raw_rows.clvm_object"
+            " FROM actions INNER JOIN raw_rows"
+            " WHERE actions.row_hash == raw_rows.row_hash"
         )
         actions = await cursor.fetchall()
 
