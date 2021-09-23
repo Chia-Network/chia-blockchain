@@ -139,7 +139,12 @@ class DataStore:
             "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY, table_id TEXT, clvm_object BLOB)"
         )
         # The present properly ordered collection of rows.
-        await self.db.execute("CREATE TABLE IF NOT EXISTS data_rows(row_index INTEGER PRIMARY KEY, row_hash TEXT)")
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS data_rows("
+            "row_index INTEGER PRIMARY KEY,"
+            " row_hash TEXT,"
+            " FOREIGN KEY(row_hash) REFERENCES raw_rows(row_hash))"
+        )
         # TODO: needs a key
         # TODO: As operations are reverted do they get deleted?  Or perhaps we track
         #       a reference into the table and only remove when a non-matching forward
@@ -147,7 +152,11 @@ class DataStore:
         # TODO: Think through row IDs and autoincrement and what happens when we delete
         #       actions during a reorg.  Or, manually track max index?  Or...
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS actions(data_row_index INTEGER, row_hash TEXT, operation INTEGER)"
+            "CREATE TABLE IF NOT EXISTS actions("
+            "data_row_index INTEGER,"
+            " row_hash TEXT,"
+            " operation INTEGER,"
+            " FOREIGN KEY(row_hash) REFERENCES raw_rows(row_hash))"
         )
         # TODO: Could also be structured such that the action table has a reference from
         #       each action to the commit it is part of.
