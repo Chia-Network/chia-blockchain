@@ -94,3 +94,5 @@ src/locales/_build
 src/locales/**/*.js
 daemon/
 win_code_sign_cert.p12
+
+.env

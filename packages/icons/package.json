@@ -1,0 +1,65 @@
+{
+  "name": "@chia/icons",
+  "author": "Chia Network <hello@chia.net> (https://chia.net/)",
+  "description": "Chia Icons Library",
+  "productName": "Chia Blockchain",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "main": "dist/index.js",
+  "module": "dist/esm.js",
+  "scripts": {
+    "build": "npm run build:js",
+    "build:js": "rollup -c",
+    "build:watch": "rollup -c -w",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.15.4",
+    "core-js": "^3.18.0",
+    "match-sorter": "^6.3.1",
+    "use-dark-mode": "^2.3.1"
+  },
+  "peerDependencies": {
+    "@material-ui/core": "^4.12.3",
+    "@material-ui/icons": "^4.11.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router": "^5.2.1",
+    "react-router-dom": "^5.3.0",
+    "styled-components": "^5.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/plugin-proposal-export-default-from": "^7.14.5",
+    "@babel/plugin-transform-runtime": "^7.15.0",
+    "@babel/preset-env": "^7.15.6",
+    "@babel/preset-react": "^7.14.5",
+    "@babel/preset-typescript": "7.15.0",
+    "@rollup/plugin-babel": "^5.3.0",
+    "@rollup/plugin-commonjs": "^20.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.5",
+    "@svgr/rollup": "^5.5.0",
+    "@types/core-js": "^2.5.5",
+    "@types/isomorphic-fetch": "0.0.35",
+    "@types/lodash": "^4.14.173",
+    "@types/qs": "^6.9.7",
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "@types/react-router-dom": "^5.3.0",
+    "babel-plugin-macros": "^3.1.0",
+    "babel-plugin-styled-components": "^1.13.2",
+    "babel-plugin-transform-imports": "^2.0.0",
+    "cross-env": "^7.0.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router": "^5.2.1",
+    "react-router-dom": "^5.3.0",
+    "rollup": "^2.57.0",
+    "rollup-plugin-node-externals": "^2.2.0",
+    "typescript": "^4.4.3"
+  }
+}

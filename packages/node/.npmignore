@@ -1,0 +1,9 @@
+coverage
+node_modules
+.DS_Store
+package-lock.json
+tsconfig.json
+.babelrc
+rollup.config.js
+.env
+src
