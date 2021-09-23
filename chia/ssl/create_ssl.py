@@ -14,8 +14,8 @@ from cryptography.x509.oid import NameOID
 
 
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:
-    crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
-    key = pkg_resources.resource_string(__name__, "chia_ca.key")
+    crt = pkg_resources.resource_string(__name__, "flora_ca.crt")
+    key = pkg_resources.resource_string(__name__, "flora_ca.key")
     return crt, key
 
 
@@ -53,8 +53,8 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     cert_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     new_subject = x509.Name(
         [
-            x509.NameAttribute(NameOID.COMMON_NAME, "Chia"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Flora"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Flora"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
         ]
     )
@@ -68,7 +68,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
         .not_valid_before(datetime.datetime.today() - one_day)
         .not_valid_after(datetime.datetime(2100, 8, 2))
         .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName("chia.net")]),
+            x509.SubjectAlternativeName([x509.DNSName("floracoin.farm")]),
             critical=False,
         )
         .sign(root_key, hashes.SHA256(), default_backend())
@@ -88,8 +88,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     subject = issuer = x509.Name(
         [
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
-            x509.NameAttribute(NameOID.COMMON_NAME, "Chia CA"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Flora"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Flora CA"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
         ]
     )
@@ -116,7 +116,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
 
 
 def main():
-    return make_ca_cert(Path("./chia_ca.crt"), Path("./chia_ca.key"))
+    return make_ca_cert(Path("./flora_ca.crt"), Path("./flora_ca.key"))
 
 
 if __name__ == "__main__":
