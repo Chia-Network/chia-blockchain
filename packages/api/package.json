@@ -1,7 +1,7 @@
 {
-  "name": "@chia/node",
+  "name": "@chia/api",
   "author": "Chia Network <hello@chia.net> (https://chia.net/)",
-  "description": "Chia Node.js API Library",
+  "description": "Chia API Library",
   "productName": "Chia Blockchain",
   "private": true,
   "version": "1.0.0",

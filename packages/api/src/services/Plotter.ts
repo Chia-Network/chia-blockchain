@@ -1,11 +1,12 @@
 import Connection from '../Connection';
 import Service from './Service';
 import type { Options } from './Service';
+import type Message from '../Message';
 import ServiceName from '../constants/ServiceName';
 
-export default class Harvester extends Service {
+export default class Plotter extends Service {
   constructor(connection: Connection, options?: Options) {
-    super(ServiceName.HARVESTER, connection, options);
+    super(ServiceName.PLOTTER, connection, options);
   }
 
   async getPlots() {
@@ -14,5 +15,9 @@ export default class Harvester extends Service {
 
   async refreshPlots() {
     return this.command('refresh_plots');
+  }
+
+  onLogChanged(cb: (data: any, message: Message) => void) {
+    return this.onStateChanged('log_changed', cb, (data) => data.queue);
   }
 }
