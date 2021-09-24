@@ -11,8 +11,7 @@ PASSED=true
 SECTION=mypy
 echo
 echo ---- ${SECTION}
-mypy --config-file mypy.ini chia tests;
-if [ $? == 0 ]
+if mypy --config-file mypy.ini chia tests
 then
     echo ---- ${SECTION} passed
 else
@@ -23,8 +22,7 @@ fi
 SECTION=flake8
 echo
 echo ---- ${SECTION}
-flake8 --config .github/linters/.flake8 chia tests
-if [ $? == 0 ]
+if flake8 --config .github/linters/.flake8 chia tests
 then
     echo ---- ${SECTION} passed
 else
@@ -35,8 +33,7 @@ fi
 SECTION=black
 echo
 echo ---- ${SECTION}
-black --config .github/linters/.python-black --check --diff chia tests
-if [ $? == 0 ]
+if black --config .github/linters/.python-black --check --diff chia tests
 then
     echo ---- ${SECTION} passed
 else
@@ -47,8 +44,7 @@ fi
 SECTION=pylint
 echo
 echo ---- ${SECTION}
-pylint --rcfile .github/linters/.python-lint chia tests
-if [ $? == 0 ]
+if pylint --rcfile .github/linters/.python-lint chia tests
 then
     echo ---- ${SECTION} passed
 else
