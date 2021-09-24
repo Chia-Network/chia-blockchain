@@ -19,6 +19,8 @@
   "dependencies": {
     "@babel/runtime": "^7.15.4",
     "core-js": "^3.18.0",
+    "crypto-browserify": "^3.12.0",
+    "events": "^3.3.0",
     "lodash": "^4.17.21",
     "regenerator-runtime": "^0.13.9"
   },

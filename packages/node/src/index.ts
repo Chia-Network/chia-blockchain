@@ -1,1 +1,3 @@
-export { default } from './Api';
+export { default } from './Connection';
+
+export * from './services';
