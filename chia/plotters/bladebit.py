@@ -173,7 +173,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append(plot_keys.pool_contract_address)
     if args.warmstart:
         call_args.append("-w")
-    if args.id != b"":
+    if args.id is not None and args.id != b"":
         call_args.append("-i")
         call_args.append(args.id.hex())
     if args.verbose:
