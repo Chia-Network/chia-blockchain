@@ -36,22 +36,22 @@ class KeychainServer:
 
     def get_keychain_for_request(self, request: Dict[str, Any]):
         """
-        Keychain instances can have a user and testing flag associated with them.
+        Keychain instances can have user and service strings associated with them.
         The keychain backends ultimately point to the same data stores, but the user
-        and testing flags are used to partition those data stores. We attempt to
-        maintain a mapping of user/testing pairs to their corresponding Keychain.
+        and service strings are used to partition those data stores. We attempt to
+        maintain a mapping of user/service pairs to their corresponding Keychain.
         """
         keychain = None
         user = request.get("kc_user", self._default_keychain.user)
-        testing = request.get("kc_testing", self._default_keychain.testing)
-        if user == self._default_keychain.user and testing == self._default_keychain.testing:
+        service = request.get("kc_service", self._default_keychain.service)
+        if user == self._default_keychain.user and service == self._default_keychain.service:
             keychain = self._default_keychain
         else:
-            key = (user or "unnamed") + ("test" if testing else "")
+            key = (user or "unnamed") + (service or "")
             if key in self._alt_keychains:
                 keychain = self._alt_keychains[key]
             else:
-                keychain = Keychain(user=user, testing=testing)
+                keychain = Keychain(user=user, service=service)
                 self._alt_keychains[key] = keychain
         return keychain
 

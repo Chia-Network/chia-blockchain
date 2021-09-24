@@ -56,10 +56,6 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
         if lock.acquire_write_lock(timeout=timeout):
             yield  # <----
             lock.release_write_lock()
-            try:
-                os.remove(lock_path)
-            except Exception:
-                pass
             break
         else:
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
@@ -79,10 +75,6 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
         if lock.acquire_read_lock(timeout=timeout):
             yield  # <----
             lock.release_read_lock()
-            try:
-                os.remove(lock_path)
-            except Exception:
-                pass
             break
         else:
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
@@ -141,7 +133,12 @@ class FileKeyring(FileSystemEventHandler):
 
     @staticmethod
     def lockfile_path_for_file_path(file_path: Path) -> Path:
-        return file_path.with_suffix(".lock")
+        """
+        Returns a path suitable for creating a lockfile derived from the input path.
+        Currently used to provide a lockfile path to be used by
+        fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
+        """
+        return file_path.with_name(f".{file_path.name}.lock")
 
     def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
         """
@@ -172,16 +169,24 @@ class FileKeyring(FileSystemEventHandler):
 
         self.keyring_observer = Observer()
 
+    def cleanup_keyring_file_watcher(self):
+        if getattr(self, "keyring_observer"):
+            self.keyring_observer.unschedule_all()
+
     def on_modified(self, event):
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self):
         if self.keyring_path.exists():
-            last_modified = os.stat(self.keyring_path).st_mtime
-            if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
-                self.keyring_last_mod_time = last_modified
-                with self.load_keyring_lock:
-                    self.needs_load_keyring = True
+            try:
+                last_modified = os.stat(self.keyring_path).st_mtime
+                if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
+                    self.keyring_last_mod_time = last_modified
+                    with self.load_keyring_lock:
+                        self.needs_load_keyring = True
+            except FileNotFoundError:
+                # Shouldn't happen, but if the file doesn't exist there's nothing to do...
+                pass
 
     @staticmethod
     def default_outer_payload() -> dict:
