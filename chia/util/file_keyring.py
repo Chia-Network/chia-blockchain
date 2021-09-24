@@ -1,6 +1,7 @@
 import base64
 import fasteners
 import os
+import shutil
 import sys
 import threading
 import yaml
@@ -432,7 +433,10 @@ class FileKeyring(FileSystemEventHandler):
         temp_path: Path = self.keyring_path.with_suffix("." + str(os.getpid()))
         with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
             _ = yaml.safe_dump(data, f)
-        os.replace(str(temp_path), self.keyring_path)
+        try:
+            os.replace(str(temp_path), self.keyring_path)
+        except PermissionError:
+            shutil.move(str(temp_path), str(self.keyring_path))
 
     def prepare_for_migration(self):
         if not self.payload_cache:
