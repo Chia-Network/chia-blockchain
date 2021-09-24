@@ -2,7 +2,7 @@ import logging
 
 # import random
 # import sqlite3
-from typing import Dict, AsyncIterable, List, Tuple
+from typing import Dict, AsyncIterable, List, Set, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -157,8 +157,8 @@ async def test_insert_adds_to_raw_rows(data_store: DataStore) -> None:
     assert [len(raw_rows), len(data_rows)] == [1, 1]
 
 
-def expected_data_rows(clvm_objects: List[CLVMObject]) -> List[Tuple[bytes]]:
-    return [(sha256_treehash(SExp.to(clvm_object)),) for clvm_object in clvm_objects]
+def expected_data_rows(clvm_objects: List[CLVMObject]) -> Set[Tuple[bytes]]:
+    return {(sha256_treehash(SExp.to(clvm_object)),) for clvm_object in clvm_objects}
 
 
 @pytest.mark.asyncio
@@ -168,9 +168,7 @@ async def test_insert_does(data_store: DataStore) -> None:
     await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
 
     cursor = await data_store.db.execute("SELECT row_hash FROM data_rows")
-    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
-    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
-    data_rows: List[Tuple[bytes]] = await cursor.fetchall()  # type: ignore[assignment]
+    data_rows: Set[Tuple[bytes]] = set(await cursor.fetchall())  # type: ignore[arg-type]
 
     expected = expected_data_rows([a_clvm_object, another_clvm_object])
     assert data_rows == expected
@@ -184,7 +182,7 @@ async def test_deletes_row_by_hash(data_store: DataStore) -> None:
     await data_store.delete_row_by_hash(table=b"", row_hash=sha256_treehash(SExp.to(a_clvm_object)))
 
     cursor = await data_store.db.execute("SELECT row_hash FROM data_rows")
-    data_rows: List[Tuple[bytes]] = await cursor.fetchall()  # type: ignore[assignment]
+    data_rows: Set[Tuple[bytes]] = set(await cursor.fetchall())  # type: ignore[arg-type]
 
     expected = expected_data_rows([another_clvm_object])
     assert data_rows == expected
