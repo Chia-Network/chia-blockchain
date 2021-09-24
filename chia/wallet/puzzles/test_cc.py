@@ -13,8 +13,7 @@ from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
-    cc_puzzle_for_inner_puzzle,
-    cc_puzzle_hash_for_inner_puzzle_hash,
+    construct_cc_puzzle,
     spend_bundle_for_spendable_ccs,
     spendable_cc_list_from_coin_spend,
 )
@@ -59,7 +58,7 @@ def issue_cc_from_farmed_coin(
     mod_code: Program,
     coin_checker_for_farmed_coin,
     block_id: int,
-    inner_puzzle_hash: bytes32,
+    inner_puzzle: Program,
     amount: int,
 ) -> Tuple[Program, SpendBundle]:
     """
@@ -75,7 +74,7 @@ def issue_cc_from_farmed_coin(
     farmed_coin = generate_farmed_coin(block_id, farmed_puzzle_hash, amount=uint64(amount))
     genesis_coin_checker = coin_checker_for_farmed_coin(farmed_coin)
 
-    minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, inner_puzzle_hash)
+    minted_cc_puzzle_hash = construct_cc_puzzle(mod_code, genesis_coin_checker, inner_puzzle).get_tree_hash()
 
     output_conditions = [[ConditionOpcode.CREATE_COIN, minted_cc_puzzle_hash, farmed_coin.amount]]
 
@@ -116,12 +115,12 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
     total_minted = sum(output_values)
 
     genesis_coin_checker, spend_bundle = issue_cc_from_farmed_coin(
-        mod_code, coin_checker_for_farmed_coin, 1, eve_inner_puzzle_hash, total_minted
+        mod_code, coin_checker_for_farmed_coin, 1, eve_inner_puzzle, total_minted
     )
 
     # hack the wrapped puzzles into the PUZZLE_TABLE DB
 
-    puzzles_for_db = [cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)]
+    puzzles_for_db = [construct_cc_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)]
     add_puzzles_to_puzzle_preimage_db(puzzles_for_db)
     spend_bundle.debug()
 
@@ -185,10 +184,10 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     total_minted = 0x111
 
     genesis_coin_checker, spend_bundle = issue_cc_from_farmed_coin(
-        mod_code, coin_checker_for_farmed_coin, 1, eve_inner_puzzle_hash, total_minted
+        mod_code, coin_checker_for_farmed_coin, 1, eve_inner_puzzle, total_minted
     )
 
-    puzzles_for_db = [cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)]
+    puzzles_for_db = [construct_cc_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)]
     add_puzzles_to_puzzle_preimage_db(puzzles_for_db)
 
     eve_cc_list = []
@@ -203,7 +202,7 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
 
     # create a zero cc from this farmed coin
 
-    wrapped_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, eve_inner_puzzle_hash)
+    wrapped_cc_puzzle_hash = construct_cc_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)
 
     solution = solution_for_pay_to_any([(wrapped_cc_puzzle_hash, 0)])
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, solution)
