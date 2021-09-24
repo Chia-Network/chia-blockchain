@@ -745,7 +745,36 @@ class WebSocketServer:
         return command_args
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
-        return []
+        n = 1 if ignoreCount else request["n"]
+        d = request["d"]
+        r = request["r"]
+        w = request.get("w", False)
+        m = request.get("m", False)
+        f = request.get("f")
+        p = request.get("p")
+        c = request.get("c")
+
+        command_args: List[str] = ["chia", "plotters", "bladebit"]
+        command_args.append(f"-n{n}")
+        command_args.append(f"-d{d}")
+        command_args.append(f"-r{r}")
+
+        if f is not None:
+            command_args.append(f"-f{f}")
+
+        if p is not None:
+            command_args.append(f"-p{p}")
+
+        if c is not None:
+            command_args.append(f"-c{c}")
+
+        if w is True:
+            command_args.append("-w")
+
+        if m is True:
+            command_args.append("-m")
+
+        return command_args
 
     def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
         k = request["k"]
