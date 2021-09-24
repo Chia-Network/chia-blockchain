@@ -1,0 +1,2757 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2021-02-08 18:51+0100\n"
+"Mime-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: vi_VN\n"
+"Project-Id-Version: chia-blockchain\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2021-09-17 17:39\n"
+"Last-Translator: \n"
+"Language-Team: Vietnamese\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Crowdin-Project: chia-blockchain\n"
+"X-Crowdin-Project-ID: 440660\n"
+"X-Crowdin-Language: vi\n"
+"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 118\n"
+
+#: src/components/plot/add/PlotAddNFT.tsx:62
+msgid "(Optional)"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:64
+msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
+msgstr "* Bạn muốn khám phá thêm về Chia Blockchain? Xem <0> Chia Explorer </0> được xây dựng bởi các nhà phát triển nguồn mở."
+
+#: src/components/plot/add/PlotAddNFT.tsx:123
+msgid "+ Add New Plot NFT"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:132
+msgid "+ Add Wallet"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+#~ msgid "0 automatically chooses bucket count"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
+msgid "128 buckets is recommended"
+msgstr "128 Bucket được khuyến nghị"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:98
+msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+msgstr "Harvester là một dịch vụ chạy trên một máy chứa các tệp plot. Một farmer và harvester tương tác với một khối để xác định trạng thái của chuỗi. Xem các harvester được kết nối với bạn dưới đây. Tìm hiểu thêm"
+
+#: src/electron/main.tsx:422
+#: src/electron/main.tsx:509
+msgid "About Chia Blockchain"
+msgstr "Về Chia Blockchain"
+
+#: src/components/trading/ViewOffer.jsx:74
+msgid "Accept"
+msgstr "Chấp nhận"
+
+#: src/components/trading/TradingOverview.jsx:228
+msgid "Accepted at time:"
+msgstr "Đồng ý tại thời điểm:"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+#: src/components/plot/PlotsFailed.tsx:19
+#: src/components/plot/PlotsNotFound.tsx:19
+msgid "Action"
+msgstr "Hành động"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:67
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/fullNode/FullNodeConnections.tsx:82
+#: src/components/pool/PoolOverview.tsx:69
+msgid "Actions"
+msgstr "Thao tác"
+
+#: src/components/trading/CreateOffer.jsx:201
+msgid "Add"
+msgstr "Thêm"
+
+#: src/components/wallet/did/WalletDID.tsx:874
+#: src/components/wallet/did/WalletDIDCreate.tsx:205
+msgid "Add Backup ID"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:91
+msgid "Add Plot Directory"
+msgstr "Thêm Thư Mục Plot"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:70
+msgid "Add Plot to Queue"
+msgstr "Thêm Plot vào hàng đợi"
+
+#: src/components/wallet/Wallets.tsx:88
+#~ msgid "Add Wallet"
+#~ msgstr "Add Wallet"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:46
+#: src/components/plot/add/PlotAdd.tsx:160
+#: src/components/plot/overview/PlotOverviewHero.tsx:54
+#: src/components/plot/PlotHeader.tsx:63
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:230
+#: src/components/plotNFT/PlotNFTCard.tsx:272
+msgid "Add a Plot"
+msgstr "Thêm một Plot"
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:51
+msgid "Add a Plot NFT"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:68
+msgid "Add a plot"
+msgstr "Thêm một plot"
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:107
+msgid "Add plot directory"
+msgstr "Thêm thư mục plot"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:42
+msgid "Add {currencyCode} from the Faucet"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:561
+#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/standard/WalletStandard.tsx:596
+msgid "Address"
+msgstr "Địa chỉ (ví)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:701
+#: src/components/wallet/standard/WalletStandard.tsx:503
+msgid "Address / Puzzle hash"
+msgstr "Địa chỉ / Puzzle hash"
+
+#: src/components/core/components/Amount/Amount.tsx:99
+#: src/components/trading/CreateOffer.jsx:196
+#: src/components/trading/TradesTable.tsx:20
+#: src/components/wallet/create/createNewColouredCoin.jsx:119
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
+#: src/components/wallet/standard/WalletStandard.tsx:513
+#: src/components/wallet/WalletHistory.tsx:62
+msgid "Amount"
+msgstr "Số lượng"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:581
+msgid "Amount ({cc_unit})"
+msgstr "Số lượng ({cc_unit})"
+
+#: src/components/wallet/create/createRLAdmin.jsx:239
+msgid "Amount For Initial Coin"
+msgstr "Số lượng Coin Khởi Tạo"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:62
+msgid "Amount must be an even amount."
+msgstr ""
+
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:46
+msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
+msgstr "Bạn có muốn xoá plot? Plot này sẽ không thể khôi phục."
+
+#: src/components/plotNFT/PlotNFTCard.tsx:125
+#: src/components/wallet/standard/WalletStandard.tsx:633
+msgid "Are you sure you want to delete unconfirmed transactions?"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:25
+msgid "Are you sure you want to disconnect?"
+msgstr "Bạn có chắc chắn muốn ngắt kết nối?"
+
+#: src/electron/main.tsx:197
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr "Bạn có chắc chắn muốn thoát? GUI Plotting và farming sẽ dừng."
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr "Are you sure you want to use k={plotSize}"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:38
+msgid "Are you sure you want to use k={plotSize}?"
+msgstr "Bạn có chắc chắn muốn sử dụng k={plotSize}?"
+
+#: src/components/plotNFT/PlotNFTName.tsx:39
+msgid "Autogenerated name from pool contract address"
+msgstr ""
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:46
+#: src/components/selectKey/SelectKey.tsx:68
+#: src/components/selectKey/SelectKey.tsx:110
+msgid "Back"
+msgstr "Quay lại"
+
+#: src/components/backup/BackupCreate.tsx:45
+msgid "Backup file is used to restore smart wallets."
+msgstr "Tệp sao lưu được sử dụng để khôi phục ví."
+
+#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/did/WalletDID.tsx:647
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
+msgid "Balance"
+msgstr "Số dư"
+
+#: src/components/block/Block.jsx:318
+msgid "Base Farmer Reward Amount"
+msgstr "Số Phần Thưởng Gốc"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:39
+#: src/components/farm/FarmLatestBlockChallenges.tsx:49
+msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr "Dưới đây là những thách thức khối hiện tại. Bạn có thể có hoặc không có bằng chứng về không gian cho những thách thức này. Các khối này hiện không chứa bằng chứng về thời gian."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:17
+msgid "Best estimate over last 24 hours"
+msgstr "Ước tính tốt nhất trong 24 giờ qua"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:154
+#: src/components/block/Block.jsx:158
+#: src/components/block/Block.jsx:333
+msgid "Block"
+msgstr "Khối"
+
+#: src/components/block/Block.jsx:138
+msgid "Block Test"
+msgstr "Kiểm Tra Khối"
+
+#: src/components/block/Block.jsx:236
+msgid "Block VDF Iterations"
+msgstr "Khối VDF lặp lại"
+
+#: src/components/block/Block.jsx:337
+msgid "Block at height {0} in the Chia blockchain"
+msgstr "Khối tại height {0} trong Chia blockchain"
+
+#: src/components/fullNode/FullNode.jsx:331
+#~ msgid "Block hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:142
+msgid "Block with hash {headerHash}"
+msgstr "Khối  với hàm băm {headerHash}"
+
+#: src/components/block/Block.jsx:163
+msgid "Block with hash {headerHash} does not exist."
+msgstr "Khối có băm {headerHash} không tồn tại."
+
+#: src/components/fullNode/FullNode.jsx:311
+msgid "Blocks"
+msgstr "Block"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:79
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:110
+msgid "Browse"
+msgstr "Duyệt"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:73
+msgid "But you are currently farming <0/>"
+msgstr "Nhưng bạn hiện đang farm <0 />"
+
+#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Buy"
+msgstr "Mua"
+
+#: src/components/wallet/Wallets.tsx:49
+#~ msgid "CC Wallet"
+#~ msgstr "CC Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:182
+#~ msgid "CCListItems.title"
+#~ msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:170
+msgid "Can be backed up to mnemonic seed"
+msgstr "Có thể được sao lưu vào mnemonic seed"
+
+#: src/components/backup/BackupCreate.tsx:50
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:86
+#: src/components/farm/FarmManageFarmingRewards.tsx:196
+#: src/components/fullNode/FullNodeAddConnection.tsx:89
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:123
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:87
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:30
+#: src/components/trading/CreateOffer.jsx:139
+#: src/components/trading/TradingOverview.jsx:400
+#: src/components/trading/ViewOffer.jsx:71
+msgid "Cancel"
+msgstr "Hủy bỏ"
+
+#: src/components/trading/TradingOverview.jsx:389
+msgid "Cancel and Spend"
+msgstr "Huỷ và Gửi"
+
+#: src/components/plot/PlotsNotFound.tsx:39
+msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+msgstr "Chú ý, tiếp tục sẽ xoá những plot này vĩnh viễn. Kiểm tra xem các thiết bị lưu trữ đã được kết nối đúng cách chưa."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:16
+msgid "Challenge"
+msgstr "Thử thách"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:14
+msgid "Challenge Hash"
+msgstr "Challenge Hash"
+
+#: src/components/plotNFT/PlotNFTChangePool.tsx:111
+msgid "Change"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:408
+#: src/components/plotNFT/PlotNFTChangePool.tsx:110
+#: src/components/pool/PoolOverview.tsx:115
+msgid "Change Pool"
+msgstr ""
+
+#: src/electron/main.tsx:401
+msgid "Chat on KeyBase"
+msgstr "Chat trên Keybase"
+
+#: src/electron/main.tsx:419
+msgid "Chia"
+msgstr "Chia"
+
+#: src/electron/main.tsx:358
+msgid "Chia Blockchain Wiki"
+msgstr "Chia Blockchain Wiki"
+
+#: src/components/wallet/standard/WalletStandard.tsx:649
+msgid "Chia Wallet"
+msgstr "Ví Chia"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:36
+msgid "Choose Number of Plots"
+msgstr "Chọn số lượng Plot"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:61
+msgid "Choose Plot Size"
+msgstr "Chọn Kích Thước Plot"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:384
+#: src/components/pool/PoolOverview.tsx:92
+msgid "Claim Rewards"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:114
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:89
+msgid "Close"
+msgstr "Đóng"
+
+#: src/components/app/AppRouter.tsx:27
+msgid "Closing down node and server"
+msgstr "Đóng node và máy chủ"
+
+#: src/components/wallet/did/WalletDID.tsx:984
+msgid "Coin Name"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:366
+msgid "Coins:"
+msgstr "Coins:"
+
+#: src/components/trading/CreateOffer.jsx:172
+#: src/components/trading/TradesTable.tsx:24
+msgid "Colour"
+msgstr "Sắc tố"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:223
+msgid "Colour Info"
+msgstr "Thông tin sắc tố"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:110
+msgid "Colour String"
+msgstr "Chuỗi sắc tố"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:228
+msgid "Colour:"
+msgstr "Sắc tố:"
+
+#: src/components/wallet/create/WalletCreateList.tsx:34
+msgid "Coloured Coin"
+msgstr " Coin sắc tố"
+
+#: src/components/wallet/create/WalletCreate.jsx:122
+msgid "Coloured Coin Options"
+msgstr "Tuỳ chọn coin sắc tố"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:168
+#: src/electron/main.tsx:195
+#: src/hooks/useAbsorbRewards.tsx:46
+msgid "Confirm"
+msgstr "Xác Nhận"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:21
+msgid "Confirm Disconnect"
+msgstr "Xác Nhận Ngắt Kết Nối"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:121
+#: src/components/wallet/standard/WalletStandard.tsx:629
+msgid "Confirmation"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:201
+msgid "Confirmed at block:"
+msgstr "Được xác nhận ở block:"
+
+#: src/components/wallet/WalletHistory.tsx:51
+msgid "Confirmed at height {0}"
+msgstr "Được xác nhận ở height {0}"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:92
+msgid "Connect"
+msgstr "Kết Nối"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:68
+#: src/components/fullNode/FullNodeConnections.tsx:112
+msgid "Connect to other peers"
+msgstr "Kết nối ngang hàng khác"
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:116
+msgid "Connect to pool"
+msgstr ""
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Connected"
+msgstr "Đã kết nối"
+
+#: src/components/app/AppRouter.tsx:34
+msgid "Connecting to wallet"
+msgstr "Đang kết nối đến ví"
+
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:15
+msgid "Connection Status"
+msgstr "Trạng thái kết nối"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:111
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:109
+msgid "Connection Status:"
+msgstr "Trạng thái kết nối:"
+
+#: src/components/fullNode/FullNodeConnections.tsx:75
+msgid "Connection type"
+msgstr "Kiểu kết nối"
+
+#: src/components/fullNode/FullNodeConnections.tsx:109
+msgid "Connections"
+msgstr "Các kết nối"
+
+#: src/electron/main.tsx:382
+msgid "Contribute on GitHub"
+msgstr "Đóng góp trên GitHub"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
+msgid "Copied"
+msgstr "Đã sao chép"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
+msgid "Copy"
+msgstr "Sao chép"
+
+#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
+msgid "Copy to Clipboard"
+msgstr "Sao chép vào khay nhớ"
+
+#: src/components/backup/BackupCreate.tsx:58
+#: src/components/plot/add/PlotAdd.tsx:177
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:175
+#: src/components/wallet/create/createExistingColouredCoin.jsx:133
+#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/create/createRLAdmin.jsx:307
+#: src/components/wallet/create/createRLUser.jsx:99
+#: src/components/wallet/did/WalletDIDCreate.tsx:218
+msgid "Create"
+msgstr "Tạo"
+
+#: src/components/wallet/did/WalletDID.tsx:967
+msgid "Create An Attestation Packet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:290
+#~ msgid "Create DID wallet"
+#~ msgstr "Create DID wallet"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:110
+msgid "Create Distributed Identity Wallet"
+msgstr ""
+
+#: src/components/wallet/did/WalletDIDSelect.tsx:32
+msgid "Create New Wallet"
+msgstr ""
+
+#: src/components/trading/TradeManager.tsx:45
+msgid "Create Offer"
+msgstr "Tạo đề nghị"
+
+#: src/components/plot/add/PlotAdd.tsx:92
+#~ msgid "Create Plot"
+#~ msgstr "Create Plot"
+
+#: src/components/wallet/create/createRLAdmin.jsx:188
+msgid "Create Rate Limited Admin Wallet"
+msgstr "Tạo Ví Admin Giới Hạn"
+
+#: src/components/wallet/create/createRLUser.jsx:78
+msgid "Create Rate Limited User Wallet"
+msgstr "Tạo Ví Người Dùng Giới Hạn"
+
+#: src/components/trading/TradeManager.tsx:22
+#~ msgid "Create Trade"
+#~ msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:135
+msgid "Create Trade Offer"
+msgstr "Tạo giao dịch"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
+#: src/components/wallet/standard/WalletStandard.tsx:483
+msgid "Create Transaction"
+msgstr "Tạo giao dịch"
+
+#: src/components/backup/BackupCreate.tsx:41
+msgid "Create a Backup"
+msgstr "Tạo bản sao lưu"
+
+#: src/components/plot/add/PlotAddNFT.tsx:42
+msgid "Create a Plot NFT"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:211
+msgid "Create a new private key"
+msgstr "Tạo một mã khoá mới"
+
+#: src/components/wallet/create/WalletCreate.jsx:186
+msgid "Create admin wallet"
+msgstr "Tạo ví admin"
+
+#: src/components/wallet/create/WalletCreate.jsx:132
+msgid "Create new coloured coin"
+msgstr "Tạo coin sắc tố mới"
+
+#: src/components/wallet/create/WalletCreate.jsx:192
+msgid "Create user wallet"
+msgstr "Tạo ví người dùng"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:93
+msgid "Create wallet for colour"
+msgstr "Tạo ví cho sắc tố"
+
+#: src/components/wallet/create/WalletCreate.jsx:139
+msgid "Create wallet for existing colour"
+msgstr "Tạo ví cho sắc tố hiện có"
+
+#: src/components/wallet/Wallets.tsx:81
+#~ msgid "CreateWallet.addWallet"
+#~ msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:186
+msgid "Created At:"
+msgstr "Ngày tạo:"
+
+#: src/components/trading/TradingOverview.jsx:211
+msgid "Created by us:"
+msgstr "Xây dựng bởi chúng tôi:"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:51
+msgid "Creating Plot NFT and Joining the Pool"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:49
+msgid "Creating Plot NFT for Self Pooling"
+msgstr ""
+
+#: src/components/plot/add/PlotAdd.tsx:86
+msgid "Currency code is not defined"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:139
+#: src/components/plotNFT/PlotNFTCard.tsx:181
+msgid "Current Difficulty"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:156
+#: src/components/plotNFT/PlotNFTCard.tsx:198
+msgid "Current Points Balance"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:182
+msgid "Current trade status"
+msgstr "Tình trạng giao dịch hiện tại"
+
+#: src/components/selectKey/SelectKey.tsx:185
+msgid "DANGER: permanently delete private key"
+msgstr "CẢNH BÁO: xóa vĩnh viễn khóa cá nhân"
+
+#: src/components/wallet/Wallets.tsx:53
+#~ msgid "DID Wallet"
+#~ msgstr "DID Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:310
+#~ msgid "DIDListItems.title"
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
+#: src/components/trading/TradingOverview.jsx:137
+#: src/components/wallet/WalletHistory.tsx:46
+msgid "Date"
+msgstr "Ngày"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
+msgid "Delay"
+msgstr "Độ trễ"
+
+#: src/components/plot/PlotAction.tsx:27
+#: src/components/plot/PlotAction.tsx:57
+#: src/components/plot/queue/PlotQueueActions.tsx:43
+#: src/components/plot/queue/PlotQueueActions.tsx:97
+#: src/components/plotNFT/PlotNFTCard.tsx:122
+#: src/components/selectKey/SelectKey.tsx:67
+#: src/components/selectKey/SelectKey.tsx:109
+#: src/components/wallet/did/WalletDID.tsx:449
+#: src/components/wallet/did/WalletDID.tsx:862
+#: src/components/wallet/did/WalletDIDCreate.tsx:194
+#: src/components/wallet/did/WalletDIDRecovery.tsx:101
+#: src/components/wallet/standard/WalletStandard.tsx:630
+msgid "Delete"
+msgstr "Xoá"
+
+#: src/components/plot/PlotAction.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:42
+msgid "Delete Plot"
+msgstr "Xoá Plot"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:315
+#: src/components/wallet/standard/WalletStandard.tsx:674
+msgid "Delete Unconfirmed Transactions"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:108
+#: src/components/selectKey/SelectKey.tsx:229
+msgid "Delete all keys"
+msgstr "Xoá tất cả khoá"
+
+#: src/components/selectKey/SelectKey.tsx:58
+#~ msgid "Delete key"
+#~ msgstr "Delete key"
+
+#: src/components/selectKey/SelectKey.tsx:66
+msgid "Delete key {fingerprint}"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:113
+msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Xóa tất cả các khóa sẽ xóa vĩnh viễn các khóa khỏi máy tính của bạn, hãy đảm bảo rằng bạn có bản sao lưu. Bạn có chắc chắn muốn tiếp tục không?"
+
+#: src/components/selectKey/SelectKey.tsx:92
+msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Xóa khóa sẽ xóa vĩnh viễn khóa khỏi máy tính của bạn, hãy đảm bảo rằng bạn có các bản sao lưu. Bạn có chắc chắn muốn tiếp tục không?"
+
+#: src/electron/main.tsx:304
+msgid "Developer"
+msgstr "Nhà phát triển"
+
+#: src/electron/main.tsx:307
+msgid "Developer Tools"
+msgstr "Công cụ Nhà phát triển"
+
+#: src/components/block/Block.jsx:222
+#: src/components/fullNode/card/FullNodeCardDifficulty.tsx:20
+msgid "Difficulty"
+msgstr "Độ khó"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
+msgid "Disable bitfield plotting"
+msgstr "Tắt tính năng ploting bitfield"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+msgid "Discard"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr "Ngắt kết nối"
+
+#: src/components/wallet/create/WalletCreateList.tsx:28
+#: src/components/wallet/did/WalletDIDSelect.tsx:25
+msgid "Distributed Identity"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:280
+#~ msgid "Distributed Identity Options"
+#~ msgstr "Distributed Identity Options"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:52
+#: src/components/plot/overview/PlotOverviewHero.tsx:69
+msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
+msgstr "Bạn có plot hiện có trên máy này không? <0> Thêm thư mục chứa plot </0>"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:55
+msgid "Does your machine support parallel plotting?"
+msgstr "Máy của bạn có hỗ trợ vẽ song song không?"
+
+#: src/components/wallet/did/WalletDID.tsx:428
+msgid "Drag and drop attestation packet(s)"
+msgstr ""
+
+#: src/components/trading/ViewOffer.jsx:39
+msgid "Drag and drop offer file"
+msgstr "Kéo và thả tệp đề nghị"
+
+#: src/components/backup/BackupRestore.tsx:173
+msgid "Drag and drop your backup file"
+msgstr "Kéo và thả tệp sao lưu của bạn"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:109
+msgid "Drag and drop your recovery backup file"
+msgstr ""
+
+#: src/electron/main.tsx:263
+msgid "Edit"
+msgstr "Chỉnh sửa"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:259
+#: src/components/plotNFT/PlotNFTCard.tsx:301
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:76
+msgid "Edit Payout Instructions"
+msgstr ""
+
+#: src/components/wallet/WalletImport.tsx:147
+msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
+msgstr "Nhập 24 từ ghi nhớ mà bạn đã lưu để khôi phục ví Chia của bạn."
+
+#: src/components/farm/card/FarmCardStatus.tsx:35
+#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/farm/FarmerStatus.tsx:21
+#: src/components/farm/FarmerStatus.tsx:22
+#: src/components/plot/PlotStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
+msgid "Error"
+msgstr "Lỗi"
+
+#: src/components/wallet/standard/WalletStandard.tsx:456
+msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
+msgstr "Lỗi: Không thể gửi chia đến địa chỉ coloured. Vui lòng nhập địa chỉ chia."
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:20
+msgid "Estimated Network Space"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:45
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:53
+msgid "Estimated Time to Win"
+msgstr "Thời gian giành phần thưởng dự kiến"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Estimated network space"
+#~ msgstr "Estimated network space"
+
+#: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:22
+msgid "Estimated sum of all the plotted disk space of all farmers in the network"
+msgstr "Ước lượng tổng không gian đĩa của tất cả farmer trong mạng"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:193
+msgid "Exclude final directory"
+msgstr "Loại trừ thư mục cuối cùng"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:38
+msgid "Failed to open (invalid plots)"
+msgstr "Không mở được (plot không hợp lệ)"
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/standard/WalletStandard.tsx:532
+msgid "Farm"
+msgstr "Farm"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:211
+msgid "Farmer Public Key"
+msgstr ""
+
+#: src/components/block/Block.jsx:268
+msgid "Farmer Puzzle Hash"
+msgstr "Farmer Puzzle Hash"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:163
+msgid "Farmer Reward Address"
+msgstr "Địa chỉ ví nhận phần thưởng farm"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:137
+msgid "Farmer Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:133
+#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:131
+msgid "Farmer Reward Address must not be empty."
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/plot/PlotStatus.tsx:28
+msgid "Farmer is not connected"
+msgstr "Farmer không được kết nối"
+
+#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/plot/PlotStatus.tsx:29
+msgid "Farmer is not running"
+msgstr "Farmer không hoạt động"
+
+#: src/middleware/middleware_api.jsx:237
+msgid "Farmer public key:"
+msgstr ""
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:33
+msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
+msgstr "Các Farmer kiếm được phần thưởng khối và phí giao dịch bằng cách cung cấp không gian trống cho mạng để giúp giao dịch an toàn. Đây là nơi bạn farm sau khi bạn thêm một plot. <0> Tìm hiểu thêm </0>"
+
+#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/farm/Farm.tsx:23
+#: src/components/farm/FarmerStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:17
+msgid "Farming"
+msgstr "Farming"
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:26
+#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/card/FarmCardStatus.tsx:46
+#: src/components/farm/card/FarmCardStatus.tsx:59
+msgid "Farming Status"
+msgstr "Tình trạng Farm"
+
+#: src/components/core/components/Fee/Fee.tsx:48
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:154
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:147
+#: src/components/pool/PoolInfo.tsx:17
+#: src/components/wallet/create/createExistingColouredCoin.jsx:123
+#: src/components/wallet/create/createNewColouredCoin.jsx:132
+#: src/components/wallet/create/createRLAdmin.jsx:244
+#: src/components/wallet/create/createRLAdmin.jsx:272
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
+#: src/components/wallet/standard/WalletStandard.tsx:524
+#: src/components/wallet/WalletHistory.tsx:66
+msgid "Fee"
+msgstr "Phí"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee (TXCH)"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr "Fee ({0})"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:595
+msgid "Fee ({currencyCode})"
+msgstr "Phí ({currencyCode})"
+
+#: src/components/block/Block.jsx:322
+msgid "Fees Amount"
+msgstr "Số lượng phí"
+
+#: src/components/block/Block.jsx:313
+#~ msgid "Fees Puzzle Hash"
+#~ msgstr ""
+
+#: src/electron/main.tsx:255
+#: src/electron/main.tsx:456
+msgid "File"
+msgstr "Tệp"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:106
+#: src/components/plot/PlotsFailed.tsx:14
+#: src/components/plot/PlotsNotFound.tsx:14
+#: src/components/wallet/did/WalletDID.tsx:975
+msgid "Filename"
+msgstr "Tên tệp"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
+msgid "Final folder location"
+msgstr "Thư mục cuối"
+
+#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Finished"
+msgstr "Hoàn thành"
+
+#: src/electron/main.tsx:407
+msgid "Follow on Twitter"
+msgstr "Theo dõi trên Twitter"
+
+#: src/electron/main.tsx:366
+msgid "Frequently Asked Questions"
+msgstr "Câu hỏi thường gặp"
+
+#: src/components/dashboard/DashboardSideBar.tsx:39
+#: src/components/fullNode/FullNode.jsx:323
+msgid "Full Node"
+msgstr "Node hoàn thiện"
+
+#: src/components/fullNode/FullNode.jsx:326
+msgid "Full Node Overview"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:267
+#~ msgid "Full Node Status"
+#~ msgstr "Full Node Status"
+
+#: src/electron/main.tsx:332
+msgid "Full Screen"
+msgstr "Toàn màn hình"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:102
+msgid "Generate New Colour"
+msgstr "Tạo Colour mới"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:251
+#~ msgid "Get Pool Login Link"
+#~ msgstr "Get Pool Login Link"
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "Grid view"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.tsx:583
+msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
+msgstr "Khóa xác định phân cấp hoặc HD là một loại khóa công khai / lược đồ khóa riêng trong đó một khóa riêng có thể có số lượng gần như vô hạn các khóa công khai khác nhau (và ở đó đối với địa chỉ nhận ví), tất cả cuối cùng sẽ quay trở lại và có thể sử dụng được bởi một khóa riêng tư. Chìa khóa."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Harvester ID"
+#~ msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:132
+msgid "Harvester Plots"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:61
+msgid "Header Hash"
+msgstr "Băm tiêu đề"
+
+#: src/components/block/Block.jsx:186
+msgid "Header hash"
+msgstr "Băm tiêu đề"
+
+#: src/components/block/Block.jsx:202
+#: src/components/fullNode/FullNode.jsx:81
+#: src/components/fullNode/FullNodeConnections.tsx:79
+msgid "Height"
+msgstr "Chiều cao"
+
+#: src/electron/main.tsx:354
+msgid "Help"
+msgstr "Hỗ trợ"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
+msgid "Help translate"
+msgstr "Hỗ trợ dịch thuật"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
+msgid "Hide Advanced Options"
+msgstr "Ẩn tuỳ chọn nâng cao"
+
+#: src/components/wallet/WalletHistory.tsx:91
+msgid "History"
+msgstr "Lịch sử"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:36
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+msgid "Host Name"
+msgstr "Tên máy chủ"
+
+#: src/components/fullNode/FullNodeConnections.tsx:40
+msgid "IP address"
+msgstr "Địa chỉ IP"
+
+#: src/components/fullNode/FullNodeAddConnection.tsx:75
+msgid "IP address / host"
+msgstr "Địa chỉ IP/ máy chủ"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:115
+msgid "If none selected, then it will default to the temporary directory."
+msgstr "Nếu không có lựa chọn nào được chọn, thì nó sẽ mặc định là thư mục tạm thời."
+
+#: src/components/wallet/WalletImport.tsx:144
+msgid "Import Wallet from Mnemonics"
+msgstr "Nhập ví từ Mnemonics"
+
+#: src/components/selectKey/SelectKey.tsx:220
+msgid "Import from Mnemonics (24 words)"
+msgstr "Nhập ví từ Mnemonics"
+
+#: src/components/fullNode/FullNode.jsx:45
+msgid "In Progress"
+msgstr "Đang xử lý"
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Incoming"
+msgstr "Đang nhận"
+
+#: src/components/core/components/Fee/Fee.tsx:36
+msgid "Incorrect value"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:18
+msgid "Index"
+msgstr "Nhập"
+
+#: src/components/trading/TradingOverview.jsx:214
+msgid "Indicated if this offer was created by us"
+msgstr "Được cho biết nếu đề nghị này được tạo bởi chúng tôi"
+
+#: src/components/trading/TradingOverview.jsx:231
+msgid "Indicated what time this offer was accepted"
+msgstr "Cho biết thời gian đề nghị này được chấp nhận"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:333
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:472
+msgid "Info Packet"
+msgstr "Thông tin gói"
+
+#: src/components/wallet/create/createRLAdmin.jsx:260
+msgid "Initial Amount"
+msgstr "Số lượng ban đầu"
+
+#: src/components/wallet/create/createRLUser.jsx:87
+msgid "Initialize a Rate Limited User Wallet:"
+msgstr "Khởi tạo ví cá nhân giới hạn tỷ lệ:"
+
+#: src/components/wallet/create/createRLAdmin.jsx:218
+msgid "Interval"
+msgstr "Khoảng thời gian"
+
+#: src/components/plotNFT/PlotNFTState.tsx:26
+msgid "Invalid state"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:90
+msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:406
+#: src/components/pool/PoolOverview.tsx:113
+msgid "Join Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:59
+#: src/components/plot/add/PlotAddNFT.tsx:141
+#: src/components/pool/PoolHero.tsx:31
+msgid "Join a Pool"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:44
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:59
+msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:133
+msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:63
+msgid "K-Size"
+msgstr "Kích cỡ"
+
+#: src/components/dashboard/DashboardSideBar.tsx:66
+msgid "Keys"
+msgstr "Khóa"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:64
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+msgid "KiB Up/Down"
+msgstr "KiB Lên / Xuống"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:47
+msgid "Last Attempted Proof"
+msgstr "Bằng chứng cuối cùng"
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:19
+msgid "Last Height Farmed"
+msgstr "Height được farm gần nhất."
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
+msgid "Latest Block Challenges"
+msgstr "Thử thách khối mới nhất"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:295
+#: src/components/plotNFT/PlotNFTCard.tsx:350
+msgid "Launcher Id"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:100
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:114
+msgid "Learn More"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTState.tsx:58
+msgid "Leaving Pool"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:176
+msgid "List view"
+msgstr ""
+
+#: src/components/pool/Pool.tsx:21
+msgid "Loading Plot NFTs"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:117
+msgid "Loading list of wallets"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+msgid "Loading..."
+msgstr "Đang xử lý..."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:126
+#~ msgid "Local Harvester Plots"
+#~ msgstr "Local Harvester Plots"
+
+#: src/components/app/AppRouter.tsx:41
+msgid "Logging in"
+msgstr "Đăng nhập"
+
+#: src/components/wallet/create/WalletCreate.jsx:124
+#~ msgid "MainWalletList.colouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:258
+#~ msgid "MainWalletList.createAdminWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:322
+#~ msgid "MainWalletList.createDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:194
+#~ msgid "MainWalletList.createNewColouredCoin"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:270
+#~ msgid "MainWalletList.createUserWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:206
+#~ msgid "MainWalletList.createWalletForExistingColour"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+#~ msgid "MainWalletList.distributedIdentity"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:134
+#~ msgid "MainWalletList.rateLimited"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:334
+#~ msgid "MainWalletList.recoverDIDWallet"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:112
+#~ msgid "MainWalletList.title"
+#~ msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:53
+msgid "Manage Farming Rewards"
+msgstr "Quản lý phần thưởng farm"
+
+#: src/components/wallet/did/WalletDID.tsx:806
+msgid "Manage Recovery DIDs"
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:119
+msgid "Manage Your Farming Rewards Target Addresses"
+msgstr "Quản lý địa chỉ nhận phần thưởng farm của bạn"
+
+#: src/components/fullNode/FullNodeConnections.tsx:68
+msgid "MiB Up/Down"
+msgstr "MiB Up/Down"
+
+#: src/components/pool/PoolInfo.tsx:27
+msgid "Minimum Difficulty"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:97
+msgid "Minutes"
+msgstr "Phút"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:116
+msgid "More memory slightly increases speed"
+msgstr "Thêm bộ nhớ làm tăng tốc độ"
+
+#: src/components/wallet/did/WalletDID.tsx:537
+msgid "My DID Wallet"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+msgid "My Pubkey"
+msgstr "Khoá công khai của tôi"
+
+#: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
+msgid "Network Name"
+msgstr "Tên mạng"
+
+#: src/components/fullNode/FullNode.jsx:106
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr "Network not launched yet, waiting for genesis challenge!"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/standard/WalletStandard.tsx:579
+msgid "New Address"
+msgstr "Địa chỉ ví mới"
+
+#: src/components/wallet/WalletAdd.tsx:63
+msgid "New Wallet"
+msgstr "Ví mới"
+
+#: src/components/block/Block.jsx:351
+#: src/components/wallet/WalletAdd.tsx:95
+#: src/components/wallet/WalletImport.tsx:163
+msgid "Next"
+msgstr "Tiếp theo"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:249
+msgid "Nickname"
+msgstr "Biệt danh"
+
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:192
+msgid "No"
+msgstr "Không"
+
+#: src/middleware/middleware_api.jsx:263
+msgid "No 24 word seed, since this key is imported."
+msgstr "Không có chuỗi 24 từ bí mật, vì khóa này đã được nhập."
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:21
+msgid "No blocks farmed yet"
+msgstr "Chưa có khối được farm"
+
+#: src/components/wallet/WalletHistory.tsx:102
+msgid "No previous transactions"
+msgstr "Không có giao dịch trước đó"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:156
+msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+msgstr "Không có khóa riêng cho một hoặc cả hai địa chỉ. Chỉ an toàn nếu bạn đang gửi phần thưởng đến một ví khác."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/fullNode/FullNodeConnections.tsx:36
+msgid "Node ID"
+msgstr "ID Node mạng"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:87
+msgid "Node Id"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:86
+msgid "None"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:68
+msgid "None of your plots have passed the plot filter yet."
+msgstr "Không có plot nào của bạn vượt qua bộ lọc."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:20
+#: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/farm/FarmerStatus.tsx:20
+#: src/components/plot/PlotStatus.tsx:19
+#: src/components/plotNFT/PlotNFTCard.tsx:365
+msgid "Not Available"
+msgstr "Không có sẵn"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#: src/components/wallet/WalletStatus.tsx:28
+msgid "Not Synced"
+msgstr "Chưa đồng bộ"
+
+#: src/components/trading/TradingOverview.jsx:222
+msgid "Not accepted yet"
+msgstr "Chưa chấp thuận"
+
+#: src/components/trading/TradingOverview.jsx:195
+msgid "Not confirmed yet"
+msgstr "Chưa xác nhận"
+
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
+#: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:17
+msgid "Not connected"
+msgstr "Không được kết nối"
+
+#: src/components/plot/PlotsNotFound.tsx:37
+msgid "Not found Plots"
+msgstr "Plot không tồn tại"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:184
+msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:118
+#: src/components/plotNFT/PlotNFTCard.tsx:160
+msgid "Number of Plots"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:147
+msgid "Number of buckets"
+msgstr "Số lượng buckets"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:133
+msgid "Number of threads"
+msgstr "Số nhân"
+
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:87
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:111
+msgid "OK"
+msgstr "Xong"
+
+#: src/components/trading/ViewOffer.jsx:67
+msgid "Offer"
+msgstr "Đề nghị"
+
+#: src/components/trading/TradingOverview.jsx:413
+msgid "Offers Created"
+msgstr "Đề nghị được tạo"
+
+#: src/components/wallet/standard/WalletStandard.tsx:485
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr "Trung bình có một phút giữa mỗi giao dịch. Trừ khi có tắc nghẽn, bạn có thể hoàn thành giao dịch của mình trong vòng chưa đầy một phút."
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:34
+msgid "Only one backup file is allowed."
+msgstr ""
+
+#: src/components/wallet/create/recoverDIDWallet.js:156
+#~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+#~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+
+#: src/components/wallet/WalletHistory.tsx:23
+msgid "Outgoing"
+msgstr "Đầu ra"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:361
+msgid "Payout Address"
+msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardPeakHeight.tsx:20
+msgid "Peak Height"
+msgstr "Peak Height"
+
+#: src/components/fullNode/FullNode.jsx:204
+#~ msgid "Peak Sub-block Height"
+#~ msgstr "Peak Sub-block Height"
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:23
+msgid "Peak Time"
+msgstr "Thời gian chóp"
+
+#: src/components/plotNFT/PlotNFTState.tsx:43
+#: src/components/wallet/WalletHistory.tsx:53
+msgid "Pending"
+msgstr "Đang xử lý"
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:573
+msgid "Pending Balance"
+msgstr "Số dư đang xử lý"
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:24
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:578
+msgid "Pending Change"
+msgstr "Thay đổi đang xử lý"
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:27
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
+msgid "Pending Total Balance"
+msgstr "Số dư đang xử lý"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:131
+#: src/hooks/useAbsorbRewards.tsx:45
+msgid "Please Confirm"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:100
+msgid "Please add a trade pair"
+msgstr "Vui lòng thêm một cặp giao dịch"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:668
+msgid "Please enter 0 fee. Positive fees not supported yet for RL."
+msgstr "Vui lòng nhập phí bằng 0. Phí tích cực chưa được hỗ trợ cho RL."
+
+#: src/components/wallet/did/WalletDID.tsx:924
+msgid "Please enter a coin"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:526
+#: src/components/wallet/did/WalletDID.tsx:914
+msgid "Please enter a filename"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:934
+msgid "Please enter a pubkey"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:944
+msgid "Please enter a puzzlehash"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:140
+msgid "Please enter a valid initial coin amount"
+msgstr "Vui lòng nhập số tiền hợp lệ ban đầu"
+
+#: src/components/wallet/did/WalletDID.tsx:777
+#: src/components/wallet/did/WalletDIDCreate.tsx:76
+msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
+#: src/components/wallet/standard/WalletStandard.tsx:432
+msgid "Please enter a valid numeric amount"
+msgstr "Vui lòng nhập số lượng hợp lệ"
+
+#: src/components/wallet/did/WalletDIDCreate.tsx:50
+msgid "Please enter a valid numeric amount."
+msgstr ""
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:70
+#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/create/createRLAdmin.jsx:150
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
+#: src/components/wallet/standard/WalletStandard.tsx:444
+msgid "Please enter a valid numeric fee"
+msgstr "Vui lòng nhập một khoản phí số hợp lệ"
+
+#: src/components/wallet/create/createRLAdmin.jsx:100
+msgid "Please enter a valid numeric interval length"
+msgstr "Vui lòng nhập khoảng số với độ dài hợp lệ"
+
+#: src/components/wallet/create/createRLAdmin.jsx:115
+msgid "Please enter a valid numeric spendable amount"
+msgstr "Vui lòng nhập số tiền hợp lệ có thể chi tiêu được"
+
+#: src/components/wallet/create/createRLAdmin.jsx:125
+msgid "Please enter a valid pubkey"
+msgstr "Vui lòng nhập một mã  khoá công khai hợp lệ"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:623
+#: src/components/wallet/standard/WalletStandard.tsx:420
+msgid "Please finish syncing before making a transaction"
+msgstr "Vui lòng hoàn tất đồng bộ hóa trước khi thực hiện giao dịch"
+
+#: src/components/trading/CreateOffer.jsx:66
+msgid "Please select amount"
+msgstr "Vui lòng chọn số tiền"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:55
+msgid "Please select backup file first"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:76
+msgid "Please select buy or sell"
+msgstr "Vui lòng chọn mua hoặc bán"
+
+#: src/components/trading/CreateOffer.jsx:56
+msgid "Please select coin colour"
+msgstr "Vui lòng chọn sắc tố"
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:45
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:49
+msgid "Please specify final directory"
+msgstr "Vui lòng chỉ định thư mục cuối cùng"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:60
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:64
+msgid "Please specify temporary directory"
+msgstr "Vui lòng chỉ định thư mục tạm thời"
+
+#: src/hooks/useAbsorbRewards.tsx:21
+msgid "Please wait for synchronization"
+msgstr ""
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:64
+#: src/hooks/useJoinPool.tsx:27
+msgid "Please wait for wallet synchronization"
+msgstr ""
+
+#: src/components/plot/Plot.tsx:18
+msgid "Plot"
+msgstr "Plot"
+
+#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:41
+msgid "Plot Count"
+msgstr "Số lượng Plot"
+
+#: src/components/block/Block.jsx:300
+msgid "Plot Id"
+msgstr "ID Plot"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+msgid "Plot Key"
+msgstr "Khoá của Plot"
+
+#: src/components/pool/PoolOverview.tsx:40
+msgid "Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:103
+#: src/components/plotNFT/PlotNFTChangePool.tsx:81
+msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#~ msgid "Plot Name"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:260
+msgid "Plot Public Key"
+msgstr "Khoá công khai của Plot"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Plot Seed"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:80
+msgid "Plot Size"
+msgstr "Kích cỡ Plot"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:74
+msgid "Plot in Parallel"
+msgstr "Plot song song"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+msgid "Plot is duplicate of {0}"
+msgstr "Plot trùng lặp với {0}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+#~ msgid "PlotNFT is transitioning to (target state)"
+#~ msgstr "PlotNFT is transitioning to (target state)"
+
+#: src/components/plotNFT/PlotNFTState.tsx:46
+msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:50
+msgid "Plots"
+msgstr "Plots"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:22
+msgid "Plots Passed Filter"
+msgstr "Plot đã lọc"
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
+msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
+msgstr "Plot được phân bổ không gian trên ổ cứng của bạn dùng để farm và thu về Chia. <0> Tìm hiểu thêm </0>"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:34
+msgid "Plotting"
+msgstr "Plotting"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
+msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+msgstr "Plotting song song có thể tiết kiệm thời gian. Nếu không, hãy thêm plot vào hàng đợi."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:174
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr "Lập kế hoạch với trường bit được kích hoạt có tổng số lần ghi ít hơn khoảng 30% và hầu như lúc nào cũng nhanh hơn. Bạn có thể thấy yêu cầu bộ nhớ giảm khi tính năng vẽ trường bit bị tắt. Nếu thiết kế CPU của bạn là từ trước năm 2010, bạn có thể phải tắt tính năng bitfield."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:174
+#: src/components/plotNFT/PlotNFTCard.tsx:216
+msgid "Points Found Since Start"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:185
+#: src/components/plotNFT/PlotNFTCard.tsx:227
+msgid "Points Found in Last 24 Hours"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:194
+#: src/components/plotNFT/PlotNFTCard.tsx:236
+msgid "Points Successful in Last 24 Hours"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+#: src/components/pool/Pool.tsx:25
+msgid "Pool"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:100
+msgid "Pool Contract Address"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:81
+msgid "Pool Key"
+msgstr "Khoá của Pool"
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
+msgid "Pool Login Link"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:87
+msgid "Pool Payout Instructions"
+msgstr ""
+
+#: src/components/block/Block.jsx:264
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:222
+msgid "Pool Public Key"
+msgstr "Khoá công khai của Pool"
+
+#: src/components/block/Block.jsx:284
+msgid "Pool Puzzle Hash"
+msgstr "Puzzle Hash của Pool"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:173
+msgid "Pool Reward Address"
+msgstr "Địa chỉ Pool nhận phần thưởng"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:149
+msgid "Pool Reward Address is not properly formatted."
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
+#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:144
+msgid "Pool Reward Address must not be empty."
+msgstr ""
+
+#: src/components/block/Block.jsx:314
+msgid "Pool Reward Amount"
+msgstr "Số lượng phần thưởng Pool"
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+msgid "Pool does not provide relative_lock_height."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+msgid "Pool does not provide target_puzzle_hash."
+msgstr ""
+
+#: src/middleware/middleware_api.jsx:245
+msgid "Pool public key:"
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:272
+#: src/components/plotNFT/PlotNFTCard.tsx:327
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
+msgid "Pool:"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:24
+#: src/components/plotNFT/PlotNFTState.tsx:59
+msgid "Pooling"
+msgstr ""
+
+#: src/components/farm/FarmFullNodeConnections.tsx:42
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
+#: src/components/fullNode/FullNodeAddConnection.tsx:80
+#: src/components/fullNode/FullNodeConnections.tsx:46
+msgid "Port"
+msgstr "Cổng"
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:88
+#: src/components/plotNFT/PlotNFTChangePool.tsx:74
+msgid "Preparing Plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
+msgid "Preparing standard wallet"
+msgstr ""
+
+#: src/components/block/Block.jsx:348
+msgid "Previous"
+msgstr "Trở lại"
+
+#: src/components/block/Block.jsx:203
+#~ msgid "Previous Block Hash"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:216
+msgid "Previous Header Hash"
+msgstr "Header Hash trước đó"
+
+#: src/components/block/Block.jsx:217
+#~ msgid "Previous Sub Block Hash"
+#~ msgstr "Previous Sub Block Hash"
+
+#: src/components/selectKey/SelectKey.tsx:165
+msgid "Private key with public fingerprint {fingerprint}"
+msgstr "Khóa cá nhân với dấu vân tay công khai {fingerprint}"
+
+#: src/middleware/middleware_api.jsx:211
+msgid "Private key {0}"
+msgstr "Khóa cá nhân {0}"
+
+#: src/middleware/middleware_api.jsx:221
+msgid "Private key:"
+msgstr "Khoá cá nhân:"
+
+#: src/components/block/Block.jsx:252
+msgid "Proof of Space Size"
+msgstr "Bằng chứng về kích thước không gian"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:26
+msgid "Proofs Found"
+msgstr "Bằng chứng tìm thấy"
+
+#: src/components/pool/PoolInfo.tsx:22
+msgid "Protocol Version"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:297
+#: src/components/wallet/did/WalletDID.tsx:993
+msgid "Pubkey"
+msgstr "Địa chỉ công khai"
+
+#: src/middleware/middleware_api.jsx:229
+msgid "Public key:"
+msgstr " Khoá địa chỉ công khai :"
+
+#: src/components/wallet/did/WalletDID.tsx:1002
+msgid "Puzzlehash"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:162
+msgid "Queue Name"
+msgstr "Tên hàng đợi"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+msgid "Queue name"
+msgstr "Tên hàng đợi"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:35
+msgid "Queued"
+msgstr "Đã lên danh sách"
+
+#: src/electron-starter.js:80
+#~ msgid "Quit"
+#~ msgstr "Quit"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:115
+msgid "RAM max usage"
+msgstr "Ram tối đa"
+
+#: src/components/wallet/Wallets.tsx:51
+#~ msgid "RL Wallet"
+#~ msgstr "RL Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:246
+#~ msgid "RLListItems.title"
+#~ msgstr ""
+
+#: src/components/wallet/create/WalletCreateList.tsx:42
+msgid "Rate Limited"
+msgstr "Tỷ lệ được giới hạn"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:391
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:438
+msgid "Rate Limited Info"
+msgstr "Chi tiết tỷ lệ được giới hạn"
+
+#: src/components/wallet/create/WalletCreate.jsx:176
+msgid "Rate Limited Options"
+msgstr "Tuỳ chọn tỷ lệ giới hạn"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
+msgid "Rate Limited User Wallet Setup"
+msgstr " Cài đặt ví cá nhân tỷ lệ giới hạn"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/standard/WalletStandard.tsx:576
+msgid "Receive Address"
+msgstr "Địa chỉ nhận"
+
+#: src/components/wallet/did/WalletDID.tsx:464
+#: src/components/wallet/did/WalletDIDRecovery.tsx:124
+msgid "Recover"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:340
+#: src/components/wallet/did/WalletDID.tsx:480
+msgid "Recover DID Wallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:296
+#~ msgid "Recover DID wallet"
+#~ msgstr "Recover DID wallet"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:84
+msgid "Recover Distributed Identity Wallet"
+msgstr ""
+
+#: src/components/wallet/did/WalletDIDSelect.tsx:39
+msgid "Recover Wallet"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:62
+#: src/components/plot/PlotHeader.tsx:78
+msgid "Refresh Plots"
+msgstr "Làm mới plot"
+
+#: src/components/pool/PoolInfo.tsx:32
+msgid "Relative Lock Height"
+msgstr ""
+
+#: src/electron/main.tsx:374
+msgid "Release Notes"
+msgstr "Ghi chú phát hành"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:36
+msgid "Removing"
+msgstr "Xóa bỏ"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:265
+msgid "Rename"
+msgstr "Đổi tên"
+
+#: src/electron/main.tsx:393
+msgid "Report an Issue..."
+msgstr "Báo cáo vấn đề..."
+
+#: src/components/backup/BackupRestore.tsx:160
+msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
+msgstr "Khôi phục siêu dữ liệu cho  coin sắc màu và các ví thông minh khác từ bản sao lưu"
+
+#: src/components/backup/BackupRestore.tsx:107
+#~ msgid "Restore Smart Wallets From Backup"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNodeConnections.jsx:107
+#~ msgid "SB Height"
+#~ msgstr "SB Height"
+
+#: src/components/backup/BackupRestore.tsx:186
+msgid "Safe To Skip"
+msgstr "An toàn để bỏ qua"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:199
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:126
+#: src/components/trading/CreateOffer.jsx:142
+msgid "Save"
+msgstr "Lưu"
+
+#: src/components/fullNode/FullNode.jsx:338
+#~ msgid "Search"
+#~ msgstr ""
+
+#: src/components/fullNode/FullNodeBlockSearch.tsx:41
+msgid "Search block by header hash"
+msgstr "Khối tìm kiếm theo hàm hash tiêu đề"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:93
+msgid "Second temporary folder location"
+msgstr "Vị trí thư mục tạm thời thứ hai"
+
+#: src/components/selectKey/SelectKey.tsx:174
+msgid "See private key"
+msgstr "Xem khoá bí mật"
+
+#: src/middleware/middleware_api.jsx:255
+msgid "Seed:"
+msgstr "Cụm khoá:"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:87
+msgid "Select 2nd Temporary Directory"
+msgstr "Chọn thư mục tạm thời thứ 2"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:23
+msgid "Select Final Directory"
+msgstr "Chọn thư mục cuối cùng"
+
+#: src/components/selectKey/SelectKey.tsx:133
+msgid "Select Key"
+msgstr "Chọn khoá"
+
+#: src/components/trading/ViewOffer.jsx:37
+msgid "Select Offer"
+msgstr "Chọn đề nghị"
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
+msgid "Select Temporary Directory"
+msgstr "Chọn đường dẫn tạm"
+
+#: src/components/wallet/create/WalletCreateList.tsx:21
+msgid "Select Wallet Type"
+msgstr "Chọn loại ví"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:25
+msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
+msgstr "Chọn điểm đến cuối cùng cho thư mục nơi bạn muốn lưu trữ plot. Chúng tôi khuyên bạn nên sử dụng ổ cứng có dung lượng lớn (như ổ cứng HDD)."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
+msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "Chọn thư mục tạm để vẽ plot. Chúng tôi đề nghị sử dụng SSD tốc độ cao."
+
+#: src/components/plot/add/PlotAddNFT.tsx:81
+msgid "Select your Plot NFT"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNFT.tsx:72
+msgid "Select your Plot NFT from the dropdown or create a new one."
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:61
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:108
+msgid "Selected"
+msgstr "Đã chọn"
+
+#: src/components/wallet/did/WalletDIDRecovery.tsx:91
+msgid "Selected recovery file:"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTExternalState.tsx:23
+#: src/components/plotNFT/PlotNFTState.tsx:57
+msgid "Self Pooling"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:105
+msgid "Self pool. When you win a block you will earn XCH rewards."
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:164
+#: src/components/trading/TradesTable.tsx:47
+#: src/components/trading/TradingOverview.jsx:288
+msgid "Sell"
+msgstr "Bán"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
+#: src/components/wallet/standard/WalletStandard.tsx:542
+msgid "Send"
+msgstr "Gửi"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:460
+msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+msgstr "Gửi gói thông tin này cho người dùng Ví có phí giới hạn của bạn, người phải sử dụng gói này để hoàn tất thiết lập ví của họ:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:279
+msgid "Send your pubkey to your Rate Limited Wallet admin:"
+msgstr "Gửi khoá công khai của bạn cho quản trị viên ví có phí giới hạn của bạn:"
+
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
+msgid "Show Advanced Options"
+msgstr "Hiển thị tuỳ chọn nâng cao"
+
+#: src/electron-starter.js:79
+#~ msgid "Show app"
+#~ msgstr "Show app"
+
+#: src/components/trading/CreateOffer.jsx:153
+#: src/components/trading/TradesTable.tsx:16
+msgid "Side"
+msgstr "Mặt"
+
+#: src/components/selectKey/SelectKey.tsx:138
+msgid "Sign In"
+msgstr "Đăng nhập"
+
+#: src/components/backup/BackupRestore.tsx:122
+#~ msgid "Skip"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:195
+msgid "Skips adding a final directory to harvester for farming"
+msgstr "Bỏ qua việc thêm thư mục cuối cùng vào harvester để farm"
+
+#: src/components/pool/PoolHero.tsx:26
+msgid "Smooth out your XCH farming rewards by joining a pool."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
+msgid "Something went wrong"
+msgstr ""
+
+#: src/electron/main.tsx:470
+msgid "Speech"
+msgstr "Phát biểu"
+
+#: src/components/wallet/create/createRLAdmin.jsx:230
+msgid "Spendable Amount"
+msgstr "Số tiền có thể chi tiêu"
+
+#: src/components/wallet/create/createRLAdmin.jsx:202
+msgid "Spendable Amount Per Interval"
+msgstr "Số tiền có thể chi tiêu mỗi khoảng thời gian"
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
+#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
+msgid "Spendable Balance"
+msgstr "Số dư có thể chi tiêu"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:396
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:443
+msgid "Spending Interval (number of blocks): {interval}"
+msgstr "Khoảng thời gian Chi tiêu (số khối): {interval}"
+
+#: src/components/wallet/create/createRLAdmin.jsx:197
+msgid "Spending Interval Length (number of blocks)"
+msgstr "Chi tiêu thời gian khoảng (số khối): {thời gian khoảng cách}"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:448
+msgid "Spending Limit (chia per interval): {0}"
+msgstr "Giới hạn Chi tiêu (chia cho mỗi khoảng thời gian): {0}"
+
+#: src/components/fullNode/FullNode.jsx:100
+msgid "State"
+msgstr "Tình trạng"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:59
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:110
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:113
+#: src/components/plotNFT/PlotNFTCard.tsx:145
+#: src/components/pool/PoolOverview.tsx:44
+#: src/components/trading/TradingOverview.jsx:128
+#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/wallet/Wallets.tsx:50
+#: src/components/wallet/WalletStatusCard.tsx:22
+msgid "Status"
+msgstr "Tình trạng"
+
+#: src/components/trading/TradingOverview.jsx:179
+msgid "Status:"
+msgstr "Tình trạng:"
+
+#: src/components/wallet/Wallets.tsx:119
+#~ msgid "StatusCard.connections"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:113
+#~ msgid "StatusCard.height"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+#~ msgid "StatusCard.status"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:93
+#~ msgid "StatusCard.title"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
+#~ msgid "Stripe Size"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:199
+#~ msgid "Sub Block Height"
+#~ msgstr "Sub Block Height"
+
+#: src/components/block/Block.jsx:338
+#~ msgid "Sub Block at height {0} in the Chia blockchain"
+#~ msgstr "Sub Block at height {0} in the Chia blockchain"
+
+#: src/components/wallet/did/WalletDID.tsx:886
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:347
+msgid "Submit"
+msgstr "Gửi"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
+#: src/components/wallet/WalletStatus.tsx:33
+msgid "Synced"
+msgstr "Đã đồng bộ"
+
+#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/farm/FarmerStatus.tsx:19
+#: src/components/plot/PlotStatus.tsx:18
+#: src/components/wallet/WalletStatus.tsx:38
+msgid "Syncing"
+msgstr "Đang đồng bộ"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:21
+msgid "Syncing <0/>/<1/>"
+msgstr "Đang đồng bộ <0/>/<1/>"
+
+#: src/components/fullNode/FullNode.jsx:107
+#~ msgid "Syncing {progress}/{tip}"
+#~ msgstr "Syncing {progress}/{tip}"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#~ msgid "TXCH Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardFeesReward.tsx:12
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/pool/PoolInfo.tsx:37
+msgid "Target Puzzle Hash"
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
+msgid "Temporary folder location"
+msgstr "Vị trí thư mục tạm thời thứ hai"
+
+#: src/components/app/AppTimeBomb.tsx:30
+msgid "The application will stop working at block height 193536."
+msgstr "Ứng dụng sẽ ngưng hoạt động tại height 193536."
+
+#: src/components/farm/FarmFullNodeConnections.tsx:97
+msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
+msgstr "Nút đầy đủ mà farmer của bạn được kết nối ở bên dưới. <0> Tìm hiểu thêm </0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:34
+#: src/components/plot/add/PlotAddChooseSize.tsx:91
+msgid "The minimum required size for mainnet is k=32"
+msgstr "Kích thước yêu cầu tối thiểu cho mainnet là k = 32"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:39
+msgid "The node is not synced"
+msgstr "Nút không được đồng bộ hóa"
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:29
+msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+msgstr "Nút đang đồng bộ hóa, có nghĩa là nó đang tải xuống các khối từ các nút khác, để đạt được khối mới nhất trong chuỗi"
+
+#: src/components/wallet/did/WalletDID.tsx:790
+#: src/components/wallet/did/WalletDIDCreate.tsx:89
+msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:57
+msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:43
+msgid "The pool URL is not valid. {normalizedUrl}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:39
+msgid "The pool URL needs to use protocol https. {normalizedUrl}"
+msgstr ""
+
+#: src/hooks/usePoolInfo.ts:44
+#~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
+#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
+
+#: src/hooks/usePoolInfo.ts:23
+#~ msgid "The pool URL speciefied is not valid. {poolUrl}"
+#~ msgstr "The pool URL specified is not valid. {poolUrl}"
+
+#: src/components/plotNFT/PlotNFTState.tsx:29
+msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
+msgstr ""
+
+#: src/components/block/Block.jsx:303
+msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
+msgstr "Chuỗi được sử dụng để tạo ra plot. Điều này phụ thuộc vào khoá công khai của Pool và plot."
+
+#: src/components/block/Block.jsx:229
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+msgstr "Tổng số VDF (chức năng trì hoãn có thể xác minh) hoặc bằng chứng về thời gian lặp lại trên toàn bộ chuỗi cho đến khối con này."
+
+#: src/components/block/Block.jsx:245
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+msgstr "Tổng số VDF (hàm trễ có thể xác minh) hoặc bằng chứng về thời gian lặp lại trên khối này."
+
+#: src/components/block/Block.jsx:325
+msgid "The total transactions fees in this block. Rewarded to the farmer."
+msgstr "Tổng phí giao dịch trong khối này. Thưởng cho farmer."
+
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:102
+msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
+msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:40
+msgid "These plots are invalid, you might want to delete them."
+msgstr "Các lô này không hợp lệ, bạn có thể muốn xóa chúng."
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:72
+msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
+msgstr "Cho phép bạn thêm một thư mục có plot trong đó. Nếu bạn chưa tạo bất kỳ plot nào, hãy chuyển đến màn hình plotting."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:130
+#: src/components/plotNFT/PlotNFTCard.tsx:172
+msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:123
+#: src/hooks/useSelectDirectory.tsx:31
+#: src/hooks/useSelectFile.tsx:21
+msgid "This feature is available only from the GUI."
+msgstr "Tính năng này chỉ khả dụng trên GUI."
+
+#: src/components/wallet/card/WalletCardSpendableBalance.tsx:26
+msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
+msgstr "Đây là số lượng Chia mà bạn hiện có thể sử dụng để thực hiện các giao dịch. Nó không bao gồm phần thưởng farm đang chờ xử lý, các giao dịch đến đang chờ xử lý và Chia mà bạn vừa chi tiêu nhưng chưa có trong blockchain."
+
+#: src/components/wallet/card/WalletCardPendingChange.tsx:26
+msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+msgstr "Đây là thay đổi đang chờ xử lý, là những đồng tiền thay đổi mà bạn đã gửi cho chính mình, nhưng chưa được xác nhận."
+
+#: src/components/wallet/card/WalletCardPendingBalance.tsx:26
+msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+msgstr "Đây là tổng của các giao dịch đang chờ xử lý đến và đi (chưa được đưa vào blockchain). Điều này không bao gồm phần thưởng farm."
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:24
+msgid "This is the time of the latest peak sub block."
+msgstr "Đây là thời điểm khối phụ cao điểm nhất."
+
+#: src/components/block/Block.jsx:195
+msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+msgstr "Đây là thời gian khối được tạo ra bởi farmer, trước khi nó được hoàn thiện với một bằng chứng về thời gian"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:34
+msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "Đây là tổng lượng XCH trong chuỗi khối ở khối phụ cao nhất hiện tại được kiểm soát bởi các khóa riêng của bạn. Nó bao gồm phần thưởng farm bị đóng băng, nhưng không phải là các giao dịch đến và đi đang chờ xử lý."
+
+#: src/components/wallet/card/WalletCardPendingTotalBalance.tsx:29
+msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
+msgstr "Đây là tổng số dư + số dư đang chờ xử lý: nó là số dư của bạn sẽ là gì sau khi tất cả các giao dịch đang chờ xử lý được xác nhận."
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:149
+#: src/components/plotNFT/PlotNFTCard.tsx:191
+msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
+msgstr ""
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:166
+#: src/components/plotNFT/PlotNFTCard.tsx:208
+msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
+msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:46
+msgid "This node is fully caught up and validating the network"
+msgstr "Nút này được bắt kịp hoàn toàn và xác thực mạng"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:308
+msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
+msgid "This plot NFT is not connected to pool"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:49
+msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
+msgstr "Bảng này hiển thị cho bạn lần cuối cùng trang trại của bạn cố gắng giành phần thưởng trong một thử thách khối. <0> Tìm hiểu thêm </0>"
+
+#: src/components/trading/TradingOverview.jsx:189
+msgid "This trade was created at this time"
+msgstr "Giao dịch này đã được tạo vào lúc này"
+
+#: src/components/trading/TradingOverview.jsx:205
+msgid "This trade was included on blockchain at this block height"
+msgstr "Giao dịch này đã được đưa vào blockchain ở chiều cao khối này"
+
+#: src/components/app/AppTimeBombAlert.tsx:19
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "Phiên bản Chia này không còn tương thích với blockchain và không thể farm một cách an toàn."
+
+#: src/components/fullNode/FullNode.jsx:92
+msgid "Time Created"
+msgstr "Tạo vào"
+
+#: src/components/trading/TradingOverview.jsx:192
+#~ msgid "Time this trade was created at this time"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:190
+msgid "Timestamp"
+msgstr "Mốc thời gian"
+
+#: src/components/wallet/WalletHistory.tsx:42
+msgid "To"
+msgstr "Đến"
+
+#: src/components/wallet/card/WalletCardTotalBalance.tsx:32
+#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
+msgid "Total Balance"
+msgstr "Tổng số dư"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
+#~ msgid "Total Chia Farmed"
+#~ msgstr ""
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:20
+msgid "Total Iterations"
+msgstr "Tổng số lần lặp lại"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+msgid "Total Network Space"
+msgstr "Tổng không gian mạng"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:146
+msgid "Total Plot Size:"
+msgstr "Tổng kích thước Plot:"
+
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+msgid "Total Size of Plots"
+msgstr "Tổng kích thước Plot"
+
+#: src/components/block/Block.jsx:226
+msgid "Total VDF Iterations"
+msgstr "Tổng số lần lặp VDF"
+
+#: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:22
+msgid "Total iterations since the start of the blockchain"
+msgstr "Tổng số lần lặp kể từ khi bắt đầu blockchain"
+
+#: src/components/dashboard/DashboardSideBar.tsx:27
+#~ msgid "Trade"
+#~ msgstr "Trade"
+
+#: src/components/trading/TradingOverview.jsx:350
+msgid "Trade Details"
+msgstr "Thông tin giao dịch"
+
+#: src/components/trading/TradingOverview.jsx:125
+msgid "Trade ID"
+msgstr "ID giao dịch"
+
+#: src/components/trading/TradingOverview.jsx:172
+msgid "Trade ID:"
+msgstr "ID giao dịch:"
+
+#: src/components/trading/TradeManager.tsx:34
+msgid "Trade Overview"
+msgstr " Tổng quát giao dịch"
+
+#: src/components/trading/TradingOverview.jsx:153
+msgid "Trades will show up here"
+msgstr "Các giao dịch sẽ hiển thị tại đây"
+
+#: src/components/trading/TradeManager.tsx:23
+msgid "Trading"
+msgstr "Giao dịch"
+
+#: src/components/trading/TradingOverview.jsx:422
+msgid "Trading History"
+msgstr "Lịch sử giao dịch"
+
+#: src/components/block/Block.jsx:310
+msgid "Transactions Filter Hash"
+msgstr "Giao dịch lọc theo băm "
+
+#: src/components/wallet/WalletHistory.tsx:25
+msgid "Type"
+msgstr "Loại"
+
+#: src/components/plot/add/PlotAdd.tsx:101
+msgid "Unable to create plot NFT"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:150
+#: src/components/pool/PoolOverview.tsx:66
+msgid "Unclaimed Rewards"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:98
+msgid "Unfinished"
+msgstr "Chưa hoàn tất"
+
+#: src/components/trading/TradingOverview.jsx:175
+msgid "Unique identifier"
+msgstr "Định danh duy nhất"
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
+msgid "Unknown"
+msgstr "Không xác định"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+msgid "Unsaved Changes"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:281
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:293
+msgid "User Pubkey"
+msgstr "Khoá công khai"
+
+#: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:20
+msgid "VDF Sub Slot Iterations"
+msgstr "Lặp lại vùng phụ VDF"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+#~ msgid "Value is too high"
+#~ msgstr "Value is too high"
+
+#: src/components/core/components/Fee/Fee.tsx:28
+msgid "Value seems high"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
+msgid "Verify Pool Details"
+msgstr ""
+
+#: src/electron/main.tsx:295
+msgid "View"
+msgstr "Xem"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:79
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:63
+msgid "View Log"
+msgstr "Xem bản ghi"
+
+#: src/components/trading/TradeManager.tsx:54
+msgid "View Offer"
+msgstr "Hiển thị các mời chào"
+
+#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
+#: src/components/plotNFT/PlotNFTCard.tsx:298
+#~ msgid "View Payout Instructions"
+#~ msgstr "View Payout Instructions"
+
+#: src/components/plotNFT/PlotNFTCard.tsx:286
+msgid "View Pool Login Link"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+msgid "View pending balances"
+msgstr "Xem số dư đang chờ xử lý"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:393
+msgid "View pending balances..."
+msgstr "Xem số dư đang chờ xử lý..."
+
+#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/plot/PlotStatus.tsx:26
+#: src/components/plot/PlotStatus.tsx:27
+msgid "Wait for synchronization"
+msgstr "Chờ đồng bộ hóa"
+
+#: src/components/wallet/Wallets.tsx:104
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
+
+#: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:74
+msgid "Waiting for the transaction to be confirmed"
+msgstr ""
+
+#: src/components/pool/PoolOverview.tsx:185
+#: src/components/wallet/standard/WalletStandard.tsx:656
+msgid "Wallet Status:"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:1118
+msgid "Wallet does not exists"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:34
+#~ msgid "WalletItem.ccWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:30
+#~ msgid "WalletItem.chiaWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:48
+#~ msgid "WalletItem.didWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:41
+#~ msgid "WalletItem.rlWallet"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:107
+#~ msgid "WalletStatusCard.not_synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:105
+#~ msgid "WalletStatusCard.synced"
+#~ msgstr ""
+
+#: src/components/wallet/Wallets.tsx:103
+#~ msgid "WalletStatusCard.syncing"
+#~ msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:45
+#: src/components/wallet/Wallets.tsx:118
+msgid "Wallets"
+msgstr "Wallets"
+
+#: src/components/wallet/Wallets.tsx:131
+#~ msgid "Wallets.title"
+#~ msgstr ""
+
+#: src/components/plotNFT/PlotNFTAdd.tsx:57
+msgid "Want to Join a Pool? Create a Plot NFT"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:139
+msgid "Want to earn more Chia? Add more plots to your farm."
+msgstr "Muốn thêm Chia? Thêm nhiều plot vào farm của bạn."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:86
+msgid "Want to have a delay before the next plot starts?"
+msgstr "Bạn muốn có một khoảng thời gian trì hoãn trước khi phần tiếp theo bắt đầu?"
+
+#: src/components/selectKey/SelectKey.tsx:86
+msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:72
+msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:79
+msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+msgstr ""
+
+#: src/components/block/Block.jsx:206
+msgid "Weight"
+msgstr "Khối lượng"
+
+#: src/components/block/Block.jsx:209
+msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
+msgstr "Trọng lượng là tổng độ khó cộng thêm của tất cả các khối phụ lên đến và bao gồm khối này"
+
+#: src/components/selectKey/SelectKey.tsx:141
+msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
+msgstr "Chào mừng đến với Chia. Vui lòng đăng nhập bằng khóa hiện có hoặc tạo khóa mới."
+
+#: src/components/wallet/WalletAdd.tsx:66
+msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+msgstr "Chào mừng! Các từ sau được sử dụng để sao lưu ví của bạn. Nếu không có chúng, bạn sẽ mất quyền truy cập vào ví của mình, hãy giữ chúng an toàn! Viết ra từng từ cùng với số thứ tự bên cạnh chúng. (Thứ tự là quan trọng)"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:316
+msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr "Khi bạn nhận được gói thông tin thiết lập từ quản trị viên của mình, hãy nhập gói này vào bên dưới để hoàn tất quá trình thiết lập Ví giới hạn giá của bạn:"
+
+#: src/electron/main.tsx:340
+msgid "Window"
+msgstr "Cửa sổ"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:36
+msgid "Without fees"
+msgstr "Không mất phí"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:35
+#: src/components/trading/TradingOverview.jsx:209
+#: src/electron/main.tsx:193
+msgid "Yes"
+msgstr "Đồng ý"
+
+#: src/hooks/useAbsorbRewards.tsx:29
+#: src/hooks/useJoinPool.tsx:35
+msgid "You are in pending state. Please wait for confirmation"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:37
+msgid "You are not self pooling"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:424
+msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
+#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:63
+msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+msgstr "Bạn không cần phải được đồng bộ hóa hoặc kết nối với plot. Các tệp tạm thời được tạo trong quá trình ploting vượt quá kích thước của tệp plot cuối cùng. Đảm bảo rằng bạn có đủ không gian. <0> Tìm hiểu thêm </0>"
+
+#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+msgid "You have made changes. Do you want to discard them?"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:56
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgstr "Bạn chiếm {0}% dung lượng của mạng lưới, vì vậy để đào được một block dự kiến sẽ mất khoảng {expectedTimeToWin}. Kết quả thực tế có thể gấp 3 đến 4 lần dự kiến này."
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+
+#: src/components/pool/PoolJoin.tsx:37
+msgid "You need to claim your rewards first"
+msgstr ""
+
+#: src/components/app/AppTimeBomb.tsx:28
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
+
+#: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:37
+msgid "You need {currencyCode} to join a pool."
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
+msgid "You will recieve <0/> to {0}"
+msgstr ""
+
+#: src/hooks/useAbsorbRewards.tsx:49
+msgid "You will recieve <0/> to {address}"
+msgstr ""
+
+#: src/components/wallet/did/WalletDID.tsx:328
+msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
+msgstr ""
+
+#: src/components/farm/overview/FarmOverview.tsx:37
+msgid "Your Farm Overview"
+msgstr "Tổng quan về nông trại của bạn"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:95
+msgid "Your Full Node Connection"
+msgstr "Kết nối nút đầy đủ của bạn"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+msgid "Your Harvester Network"
+msgstr "Mạng lưới Harvester của bạn"
+
+#: src/components/pool/PoolOverview.tsx:160
+msgid "Your Pool Overview"
+msgstr ""
+
+#: src/util/getDescriptiveError.ts:5
+msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Lỗi 13] Quyền bị từ chối. Bạn đang cố gắng truy cập một tệp / thư mục mà không có các quyền cần thiết. Rất có thể một trong các thư mục cốt truyện trong config.yaml của bạn gặp sự cố."
+
+#: src/util/getDescriptiveError.ts:8
+msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Lỗi 22] Không tìm thấy tệp. Rất có thể một trong các thư mục cốt truyện trong config.yaml của bạn gặp sự cố."
+
+#: src/components/wallet/Wallets.tsx:75
+#: src/components/wallet/WalletStatusCard.tsx:41
+msgid "connections:"
+msgstr "các kết nối:"
+
+#: src/components/wallet/Wallets.tsx:67
+#: src/components/wallet/WalletStatusCard.tsx:33
+msgid "height:"
+msgstr "height:"
+
+#: src/components/wallet/Wallets.tsx:61
+msgid "not synced"
+msgstr "chưa được đồng bộ hóa"
+
+#: src/components/plot/add/PlotAdd.tsx:105
+msgid "p2_singleton_puzzle_hash is not defined"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:55
+#: src/components/wallet/WalletStatusCard.tsx:27
+msgid "status:"
+msgstr "tình trạng:"
+
+#: src/components/wallet/Wallets.tsx:60
+#: src/components/wallet/WalletStatusCard.tsx:29
+msgid "synced"
+msgstr "đã đồng bộ"
+
+#: src/components/wallet/Wallets.tsx:59
+#: src/components/wallet/WalletStatusCard.tsx:29
+msgid "syncing"
+msgstr "đang đồng bộ"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr "{0} Block Rewards"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr "{0} User Transaction Fees"
+
+#: src/components/plotNFT/PlotNFTGraph.tsx:111
+msgid "{0} points {1} - {2} hours ago"
+msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:35
+msgid "{currencyCode} Block Rewards"
+msgstr "{currencyCode} phần thưởng khối"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
+msgid "{currencyCode} Total Chia Farmed"
+msgstr "{currencyCode} Tổng số Chia thu được"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:28
+msgid "{currencyCode} User Transaction Fees"
+msgstr "{currencyCode} Phí giao dịch của người dùng"
+
+#: src/components/core/components/Amount/Amount.tsx:82
+msgid "{mojo, plural, one {mojo} other {mojos}}"
+msgstr ""
+
