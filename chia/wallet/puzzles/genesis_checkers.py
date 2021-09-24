@@ -1,107 +1,131 @@
-from typing import Optional
-from blspy import G1Element
+from typing import Tuple, Dict, List
 
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 GENESIS_BY_ID_MOD = load_clvm("genesis-by-coin-id-with-0.clvm")
 GENESIS_BY_PUZHASH_MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
-DELEGATED_GENESIS_CHECKER_MOD = load_clvm("delegated_genesis_checker.clvm")
+DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_genesis_checker.clvm")
 
 
-class GenesisById:
+class LimitationsProgram:
     @staticmethod
-    def create(genesis_coin_id: bytes32) -> Program:
-        """
-        Given a specific genesis coin id, create a `genesis_coin_mod` that allows
-        both that coin id to issue a cc, or anyone to create a cc with amount 0.
-        """
-        return GENESIS_BY_ID_MOD.curry(genesis_coin_id)
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+        raise NotImplementedError("Need to implement 'match' on limitations programs")
 
     @staticmethod
-    def uncurry(
-        genesis_coin_checker: Program,
-    ) -> Optional[bytes32]:
-        """
-        Given a `genesis_coin_checker` program, pull out the genesis coin id.
-        """
-        r = genesis_coin_checker.uncurry()
-        if r is None:
-            return r
-        f, args = r
-        if f != GENESIS_BY_ID_MOD:
-            return None
-        return args.first().as_atom()
+    def construct(args: List[Program]) -> Program:
+        raise NotImplementedError("Need to implement 'construct' on limitations programs")
 
     @staticmethod
-    def proof() -> Program:
+    def solve(args: List[Program], solution_dict: Dict) -> Program:
+        raise NotImplementedError("Need to implement 'solve' on limitations programs")
+
+
+class GenesisById(LimitationsProgram):
+    """
+    This TAIL allows for coins to be issued only by a specific "genesis" coin ID.
+    There can therefore only be one issuance. There is no minting or melting allowed.
+    """
+
+    @staticmethod
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+        if uncurried_mod == GENESIS_BY_ID_MOD:
+            genesis_id = curried_args.first()
+            return True, [genesis_id]
+        else:
+            return False, []
+
+    @staticmethod
+    def construct(args: List[Program]) -> Program:
+        return GENESIS_BY_ID_MOD.curry(args[0])
+
+    @staticmethod
+    def solve(args: List[Program], solution_dict: Dict) -> Program:
         return Program.to([])
 
 
-class GenesisByPuzhash:
-    @staticmethod
-    def create(genesis_puzhash: bytes32) -> Program:
-        return GENESIS_BY_PUZHASH_MOD.curry(genesis_puzhash)
+class GenesisByPuzhash(LimitationsProgram):
+    """
+    This TAIL allows for issuance of a certain coin only by a specific puzzle hash.
+    There is no minting or melting allowed.
+    """
 
     @staticmethod
-    def uncurry(
-        genesis_coin_checker: Program,
-    ) -> Optional[bytes32]:
-        r = genesis_coin_checker.uncurry()
-        if r is None:
-            return r
-        f, args = r
-        if f != GENESIS_BY_PUZHASH_MOD:
-            return None
-        return args.first().as_atom()
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+        if uncurried_mod == GENESIS_BY_PUZHASH_MOD:
+            genesis_puzhash = curried_args.first()
+            return True, [genesis_puzhash]
+        else:
+            return False, []
 
     @staticmethod
-    def proof(parent_coin: Coin) -> Program:
-        return Program.to([parent_coin.parent_coin_info, parent_coin.amount])
-
-
-class EverythingWithSig:
-    @staticmethod
-    def create(pubkey: G1Element) -> Program:
-        return EVERYTHING_WITH_SIG_MOD.curry(pubkey)
+    def construct(args: List[Program]) -> Program:
+        return GENESIS_BY_PUZHASH_MOD.curry(args[0])
 
     @staticmethod
-    def uncurry(
-        genesis_coin_checker: Program,
-    ) -> Optional[G1Element]:
-        r = genesis_coin_checker.uncurry()
-        if r is None:
-            return r
-        f, args = r
-        if f != EVERYTHING_WITH_SIG_MOD:
-            return None
-        return args.first().as_atom()
+    def solve(args: List[Program], solution_dict: Dict) -> Program:
+        pid = hexstr_to_bytes(solution_dict["parent_coin_info"])
+        return Program.to([pid, solution_dict["amount"]])
+
+
+class EverythingWithSig(LimitationsProgram):
+    """
+    This TAIL allows for issuance, minting, and melting as long as you provide a signature with the spend.
+    """
 
     @staticmethod
-    def proof() -> Program:
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+        if uncurried_mod == EVERYTHING_WITH_SIG_MOD:
+            pubkey = curried_args.first()
+            return True, [pubkey]
+        else:
+            return False, []
+
+    @staticmethod
+    def construct(args: List[Program]) -> Program:
+        return EVERYTHING_WITH_SIG_MOD.curry(args[0])
+
+    @staticmethod
+    def solve(args: List[Program], solution_dict: Dict) -> Program:
         return Program.to([])
 
 
-class DelegatedGenesis:
-    @staticmethod
-    def create(pubkey: G1Element) -> Program:
-        return DELEGATED_GENESIS_CHECKER_MOD.curry(pubkey)
+class DelegatedLimitations(LimitationsProgram):
+    """
+    This TAIL allows for another TAIL to be used, as long as a signature of that TAIL's puzzlehash is included.
+    """
 
     @staticmethod
-    def uncurry(
-        genesis_coin_checker: Program,
-    ) -> Optional[G1Element]:
-        r = genesis_coin_checker.uncurry()
-        if r is None:
-            return r
-        f, args = r
-        if f != DELEGATED_GENESIS_CHECKER_MOD:
-            return None
-        return args.first().as_atom()
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+        if uncurried_mod == DELEGATED_LIMITATIONS_MOD:
+            pubkey = curried_args.first()
+            return True, [pubkey]
+        else:
+            return False, []
 
     @staticmethod
-    def proof(signed_program: Program, inner_proof: Program) -> Program:
-        return Program.to([signed_program, inner_proof])
+    def construct(args: List[Program]) -> Program:
+        return DELEGATED_LIMITATIONS_MOD.curry(args[0])
+
+    @staticmethod
+    def solve(args: List[Program], solution_dict: Dict) -> Program:
+        signed_program = ALL_LIMITATIONS_PROGRAMS[solution_dict["signed_program"]["identifier"]]
+        inner_program_args = [Program.fromhex(item) for item in solution_dict["signed_program"]["args"]]
+        inner_solution_dict = solution_dict["program_arguments"]
+        return Program.to(
+            [
+                signed_program.construct(inner_program_args),
+                signed_program.solve(inner_program_args, inner_solution_dict),
+            ]
+        )
+
+
+ALL_LIMITATIONS_PROGRAMS = {
+    "genesis_by_id": GenesisById,
+    "genesis_by_puzhash": GenesisByPuzhash,
+    "everything_with_signature": EverythingWithSig,
+    "delegated_limitations": DelegatedLimitations,
+}
