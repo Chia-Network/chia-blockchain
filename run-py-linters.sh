@@ -1,5 +1,11 @@
 #!/bin/bash
 
+set -o errexit -o pipefail -o nounset
+
+# cd to the directory containing this script in case
+# it is run from somewhere else.
+cd "${BASH_SOURCE%/*}"
+
 # shellcheck disable=SC1091
 source ./activate
 pip3 install --extra-index-url https://pypi.chia.net/simple/ --editable ".[dev]"
