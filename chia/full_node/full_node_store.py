@@ -288,7 +288,7 @@ class FullNodeStore:
             # Note: Adding an end of subslot does not lock the blockchain, for performance reasons. Only the
             # timelord_lock is used. Therefore, it's possible that we add a new peak at the same time as seeing
             # the finished subslot, and the peak is not fully added yet, so it looks like we still need the subslot.
-            # In that case, we will exit here, and let the new_peak code add the subslot.
+            # In that case, we will exit here and let the new_peak code add the subslot.
             if total_iters < peak.total_iters:
                 return None
 
