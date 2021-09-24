@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 import io
 import logging
+import random
 
 # from typing import Dict, List, Optional, Tuple
 from typing import Iterable, List, Tuple
@@ -85,6 +86,20 @@ class TableRow:
 
         return sexp_self == other
 
+    def __hash__(self) -> int:
+        # TODO: this is dirty, consider the TODOs in .__eq__()
+        return object.__hash__(dataclasses.replace(self, clvm_object=SExp.to(self.clvm_object)))
+
+
+# # TODO: remove or formalize this
+# async def _debug_dump(db, description=""):
+#     cursor = await db.execute("SELECT name FROM sqlite_master WHERE type='table';")
+#     print("-" * 50, description, flush=True)
+#     for [name] in await cursor.fetchall():
+#         cursor = await db.execute(f"SELECT * FROM {name}")
+#         x = await cursor.fetchall()
+#         print(f"\n -- {name} ------", x, flush=True)
+
 
 @dataclass(frozen=True)
 class Action:
@@ -125,36 +140,45 @@ class DataStore:
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
 
-        # TODO: what pragmas do we want?
+        # TODO: what pragmas do we want?  maybe foreign_keys?
         # await self.db.execute("pragma journal_mode=wal")
         # await self.db.execute("pragma synchronous=2")
 
         # TODO: make this handle multiple data layer tables
         # TODO: do we need to handle multiple equal rows
 
-        # Just a raw collection of all ChiaLisp lists that are used
+        await self.db.execute("CREATE TABLE IF NOT EXISTS tables(id TEXT PRIMARY KEY, name STRING)")
+        await self.db.execute("CREATE TABLE IF NOT EXISTS keys_values(key TEXT PRIMARY KEY, value BLOB)")
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS raw_rows(row_hash TEXT PRIMARY KEY, table_id TEXT, clvm_object BLOB)"
+            "CREATE TABLE IF NOT EXISTS table_values("
+            "table_id TEXT,"
+            " key STRING,"
+            " PRIMARY KEY(table_id, key),"
+            " FOREIGN KEY(table_id) REFERENCES tables(id),"
+            " FOREIGN KEY(key) REFERENCES keys_values(key)"
+            ")"
         )
-        # The present properly ordered collection of rows.
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS data_rows("
-            "row_hash TEXT PRIMARY KEY,"
-            " FOREIGN KEY(row_hash) REFERENCES raw_rows(row_hash))"
+            "CREATE TABLE IF NOT EXISTS commits("
+            "id TEXT PRIMARY KEY,"
+            " table_id TEXT,"
+            " state INTEGER,"
+            " FOREIGN KEY(table_id) REFERENCES tables(id)"
+            ")"
         )
-        # TODO: needs a key
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS actions("
+            "commit_id TEXT,"
+            " idx INTEGER,"
+            " operation INTEGER,"
+            " key TEXT,"
+            " PRIMARY KEY(commit_id, idx)"
+            ")"
+        )
+
         # TODO: As operations are reverted do they get deleted?  Or perhaps we track
         #       a reference into the table and only remove when a non-matching forward
         #       step is taken?  Or reverts are just further actions?
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS actions("
-            "row_hash TEXT,"
-            " operation INTEGER,"
-            " FOREIGN KEY(row_hash) REFERENCES raw_rows(row_hash))"
-        )
-        # TODO: Could also be structured such that the action table has a reference from
-        #       each action to the commit it is part of.
-        await self.db.execute("CREATE TABLE IF NOT EXISTS commits(changelist_hash TEXT, actions_index INTEGER)")
 
         await self.db.commit()
 
@@ -165,29 +189,45 @@ class DataStore:
 
     # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
 
-    # TODO: added as the core was adjusted to be `get_rows` (plural).  API can be
-    #       discussed  more.
+    # TODO: should be Set[TableRow] but our stuff isn't super hashable yet...
+    async def get_rows(self, table: bytes32) -> List[TableRow]:
+        cursor = await self.db.execute(
+            "SELECT value FROM keys_values INNER JOIN table_values"
+            " WHERE"
+            " keys_values.key == table_values.key"
+            " AND table_values.table_id == :table_id",
+            {"table_id": table},
+        )
+
+        some_clvm_bytes = [value for [value] in await cursor.fetchall()]
+
+        table_rows = [TableRow.from_clvm_bytes(clvm_bytes=clvm_bytes) for clvm_bytes in some_clvm_bytes]
+
+        return table_rows
+
     async def get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
         cursor = await self.db.execute(
-            (
-                "SELECT raw_rows.row_hash, raw_rows.clvm_object"
-                " FROM raw_rows INNER JOIN data_rows"
-                " WHERE raw_rows.row_hash == data_rows.row_hash AND data_rows.row_hash == ?"
-            ),
-            (row_hash,),
+            "SELECT value FROM keys_values INNER JOIN table_values"
+            " WHERE"
+            " keys_values.key == :key"
+            " AND keys_values.key == table_values.key"
+            " AND table_values.table_id == :table_id",
+            {"key": row_hash, "table_id": table},
         )
-        rows = await cursor.fetchall()
 
-        [table_row] = [
-            TableRow(
-                clvm_object=sexp_from_stream(io.BytesIO(clvm_object_bytes), to_sexp=CLVMObject),
-                hash=row_hash,
-                bytes=clvm_object_bytes,
-            )
-            for row_hash, clvm_object_bytes in rows
-        ]
+        [clvm_bytes] = [value for [value] in await cursor.fetchall()]
+
+        table_row = TableRow(
+            clvm_object=sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject),
+            hash=row_hash,
+            bytes=clvm_bytes,
+        )
 
         return table_row
+
+    async def create_table(self, id: bytes32, name: str) -> None:
+        await self.db.execute("INSERT INTO tables(id, name) VALUES(:id, :name)", {"id": id, "name": name})
+        await self.db.commit()
 
     async def insert_row(self, table: bytes32, clvm_object: CLVMObject) -> TableRow:
         """
@@ -197,26 +237,17 @@ class DataStore:
         # TODO: Should we be using CLVMObject or SExp?
 
         row_hash = sha256_treehash(sexp=clvm_object)
-
-        # check if this is already present in the raw_rows
-        cursor = await self.db.execute(
-            "SELECT * FROM raw_rows WHERE row_hash=:row_hash",
-            parameters={"row_hash": row_hash},
-        )
-
         clvm_bytes = SExp.to(clvm_object).as_bin()
-        if await cursor.fetchone() is None:
-            # not present in raw_rows so add it
-            await self.db.execute(
-                "INSERT INTO raw_rows (row_hash, table_id, clvm_object) VALUES(?, ?, ?)", (row_hash, table, clvm_bytes)
-            )
-
-        await self.db.execute("INSERT INTO data_rows (row_hash) VALUES(?)", (row_hash,))
 
         await self.db.execute(
-            "INSERT INTO actions (row_hash, operation) VALUES(?, ?)",
-            (row_hash, OperationType.INSERT),
+            "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash, "value": clvm_bytes}
         )
+
+        await self.db.execute(
+            "INSERT INTO table_values(table_id, key) VALUES(:table_id, :key)", {"table_id": table, "key": row_hash}
+        )
+
+        await self.add_action(operation_type=OperationType.INSERT, key=row_hash, table=table)
 
         # TODO: Review reentrancy on .commit() since it isn't clearly tied to this
         #       particular task's activity.
@@ -224,18 +255,47 @@ class DataStore:
 
         return TableRow(clvm_object=clvm_object, hash=row_hash, bytes=clvm_bytes)
 
+    async def add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
+        cursor = await self.db.execute(
+            "SELECT id, table_id FROM commits WHERE table_id == :table_id AND state == :state",
+            {"table_id": table, "state": CommitState.OPEN},
+        )
+        commits_rows: List[Tuple[bytes32, bytes32]] = [(id, table_id) for id, table_id in await cursor.fetchall()]
+        if len(commits_rows) == 0:
+            # TODO: just copied from elsewhere...  reconsider
+            commit_id = random.randint(0, 100000000).to_bytes(32, "big")
+            print("table_id", repr(table))
+            await self.db.execute(
+                "INSERT INTO commits(id, table_id, state) VALUES(:id, :table_id, :state)",
+                {"id": commit_id, "table_id": table, "state": CommitState.OPEN},
+            )
+            next_actions_index = 0
+        else:
+            [commit_id] = [commit_id for commit_id, table_id in commits_rows]
+
+            cursor = await self.db.execute(
+                "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id}
+            )
+            [[max_actions_index]] = await cursor.fetchall()
+            next_actions_index = max_actions_index + 1
+        await self.db.execute(
+            "INSERT INTO actions(idx, commit_id, operation, key) VALUES(:idx, :commit_id, :operation, :key)",
+            {"idx": next_actions_index, "commit_id": commit_id, "operation": operation_type, "key": key},
+        )
+
     async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
+        # TODO: do we really want to bother getting just so we can have the value and bytes?
         table_row = await self.get_row_by_hash(table=table, row_hash=row_hash)
 
         # TODO: How do we generally handle multiple incoming requests to avoid them
         #       trompling over each other via race conditions such as here?
 
-        await self.db.execute("DELETE FROM data_rows WHERE row_hash == ?", (row_hash,))
-
         await self.db.execute(
-            "INSERT INTO actions (row_hash, operation) VALUES(?, ?)",
-            (table_row.hash, OperationType.DELETE),
+            "DELETE FROM table_values WHERE table_id == :table_id AND key == :key",
+            {"table_id": table, "key": row_hash},
         )
+
+        await self.add_action(operation_type=OperationType.DELETE, key=row_hash, table=table)
 
         await self.db.commit()
 
@@ -245,9 +305,9 @@ class DataStore:
         # TODO: What needs to be done to retain proper ordering, relates to the question
         #       at the table creation as well.
         cursor = await self.db.execute(
-            "SELECT actions.operation, raw_rows.clvm_object"
-            " FROM actions INNER JOIN raw_rows"
-            " WHERE actions.row_hash == raw_rows.row_hash"
+            "SELECT actions.operation, keys_values.value"
+            " FROM actions INNER JOIN keys_values"
+            " WHERE actions.key == keys_values.key"
         )
         actions = await cursor.fetchall()
 

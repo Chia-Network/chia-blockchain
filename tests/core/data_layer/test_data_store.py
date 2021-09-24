@@ -11,7 +11,7 @@ import pytest
 
 # from chia.consensus.blockchain import Blockchain
 from chia.data_layer.data_store import Action, DataStore, OperationType, TableRow
-from chia.types.blockchain_format.tree_hash import sha256_treehash
+from chia.types.blockchain_format.tree_hash import bytes32, sha256_treehash
 
 # from chia.full_node.block_store import BlockStore
 # from chia.full_node.coin_store import CoinStore
@@ -34,6 +34,8 @@ log = logging.getLogger(__name__)
 #         yield connection
 async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
+        # TODO: consider this...  should it be used at runtime?
+        await connection.execute("PRAGMA foreign_keys = ON")
         yield connection
 
 
@@ -48,9 +50,18 @@ def db_fixture(db_wrapper: DBWrapper) -> aiosqlite.Connection:
     return db_wrapper.db
 
 
+@pytest.fixture(name="table_id", scope="function")
+def table_id_fixture() -> bytes32:
+    base = b"a table id"
+    pad = b"." * (32 - len(base))
+    return bytes32(pad + base)
+
+
 @pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
-    return await DataStore.create(db_wrapper=db_wrapper)
+async def data_store_fixture(db_wrapper: DBWrapper, table_id: bytes32) -> DataStore:
+    data_store = await DataStore.create(db_wrapper=db_wrapper)
+    await data_store.create_table(id=table_id, name="A Table")
+    return data_store
 
 
 clvm_objects = [
@@ -86,10 +97,11 @@ clvm_objects = [
 
 
 table_columns: Dict[str, List[str]] = {
-    "raw_rows": ["row_hash", "table_id", "clvm_object"],
-    "data_rows": ["row_hash"],
-    "actions": ["row_hash", "operation"],
-    "commits": ["changelist_hash", "actions_index"],
+    "tables": ["id", "name"],
+    "keys_values": ["key", "value"],
+    "table_values": ["table_id", "key"],
+    "commits": ["id", "table_id", "state"],
+    "actions": ["commit_id", "idx", "operation", "key"],
 }
 
 
@@ -117,118 +129,109 @@ async def test_create_creates_tables_and_columns(
 
 
 @pytest.mark.asyncio
-async def test_get_row_by_hash_single_match(data_store: DataStore) -> None:
+async def test_insert_with_invalid_table_fails(data_store: DataStore) -> None:
+    # TODO: If this API is retained then it should have a specific exception.
+    with pytest.raises(Exception):
+        await data_store.insert_row(table=b"non-existant table", clvm_object=clvm_objects[0])
+
+
+@pytest.mark.asyncio
+async def test_get_row_by_hash_single_match(data_store: DataStore, table_id: bytes32) -> None:
     a_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+
+    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
 
     row_hash = sha256_treehash(SExp.to(a_clvm_object))
-    table_row = await data_store.get_row_by_hash(table=b"", row_hash=row_hash)
+    table_row = await data_store.get_row_by_hash(table=table_id, row_hash=row_hash)
 
     assert table_row == TableRow.from_clvm_object(clvm_object=a_clvm_object)
 
 
 @pytest.mark.asyncio
-async def test_get_row_by_hash_no_match(data_store: DataStore) -> None:
+async def test_get_row_by_hash_no_match(data_store: DataStore, table_id: bytes32) -> None:
     a_clvm_object, another_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
+    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
 
     other_row_hash = sha256_treehash(SExp.to(another_clvm_object))
 
     # TODO: If this API is retained then it should have a specific exception.
     with pytest.raises(Exception):
-        await data_store.get_row_by_hash(table=b"", row_hash=other_row_hash)
+        await data_store.get_row_by_hash(table=table_id, row_hash=other_row_hash)
+
+
+def expected_keys(clvm_objects: List[CLVMObject]) -> Set[Tuple[bytes]]:
+    return {sha256_treehash(SExp.to(clvm_object)) for clvm_object in clvm_objects}
 
 
 @pytest.mark.asyncio
-async def test_insert_adds_to_raw_rows(data_store: DataStore) -> None:
-    a_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
-
-    cursor = await data_store.db.execute("SELECT * FROM raw_rows")
-    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
-    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
-    raw_rows: List[object] = await cursor.fetchall()  # type: ignore[assignment]
-
-    cursor = await data_store.db.execute("SELECT row_hash FROM data_rows")
-    # TODO: The runtime type is a list, maybe ask about adjusting the hint?
-    #       https://github.com/omnilib/aiosqlite/blob/13d165656f73c3121001622253a532bdc90b2b91/aiosqlite/cursor.py#L63
-    data_rows: List[object] = await cursor.fetchall()  # type: ignore[assignment]
-
-    assert [len(raw_rows), len(data_rows)] == [1, 1]
-
-
-def expected_data_rows(clvm_objects: List[CLVMObject]) -> Set[Tuple[bytes]]:
-    return {(sha256_treehash(SExp.to(clvm_object)),) for clvm_object in clvm_objects}
-
-
-@pytest.mark.asyncio
-async def test_insert_does(data_store: DataStore) -> None:
+async def test_insert_does(data_store: DataStore, table_id: bytes32) -> None:
     a_clvm_object, another_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
+    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=table_id, clvm_object=another_clvm_object)
 
-    cursor = await data_store.db.execute("SELECT row_hash FROM data_rows")
-    data_rows: Set[Tuple[bytes]] = set(await cursor.fetchall())  # type: ignore[arg-type]
+    table_rows = await data_store.get_rows(table=table_id)
 
-    expected = expected_data_rows([a_clvm_object, another_clvm_object])
-    assert data_rows == expected
+    expected = [
+        TableRow.from_clvm_object(clvm_object=clvm_object) for clvm_object in [a_clvm_object, another_clvm_object]
+    ]
+    assert table_rows == expected
 
 
 @pytest.mark.asyncio
-async def test_deletes_row_by_hash(data_store: DataStore) -> None:
+async def test_deletes_row_by_hash(data_store: DataStore, table_id: bytes32) -> None:
     a_clvm_object, another_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=b"", clvm_object=a_clvm_object)
-    await data_store.insert_row(table=b"", clvm_object=another_clvm_object)
-    await data_store.delete_row_by_hash(table=b"", row_hash=sha256_treehash(SExp.to(a_clvm_object)))
+    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=table_id, clvm_object=another_clvm_object)
+    await data_store.delete_row_by_hash(table=table_id, row_hash=sha256_treehash(SExp.to(a_clvm_object)))
 
-    cursor = await data_store.db.execute("SELECT row_hash FROM data_rows")
-    data_rows: Set[Tuple[bytes]] = set(await cursor.fetchall())  # type: ignore[arg-type]
+    table_rows = await data_store.get_rows(table=table_id)
 
-    expected = expected_data_rows([another_clvm_object])
-    assert data_rows == expected
+    expected = [TableRow.from_clvm_object(clvm_object=clvm_object) for clvm_object in [another_clvm_object]]
+
+    assert table_rows == expected
 
 
 @pytest.mark.asyncio
-async def test_get_all_actions_just_inserts(data_store: DataStore) -> None:
+async def test_get_all_actions_just_inserts(data_store: DataStore, table_id: bytes32) -> None:
     expected = []
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[0])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[0])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[0])))
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[1])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[1])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[1])))
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[2])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[2])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[2])))
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[3])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[3])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[3])))
 
-    all_actions = await data_store.get_all_actions(table=b"")
+    all_actions = await data_store.get_all_actions(table=table_id)
 
     assert all_actions == expected
 
 
 @pytest.mark.asyncio
-async def test_get_all_actions_with_a_delete(data_store: DataStore) -> None:
+async def test_get_all_actions_with_a_delete(data_store: DataStore, table_id: bytes32) -> None:
     expected = []
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[0])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[0])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[0])))
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[1])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[1])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[1])))
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[2])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[2])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[2])))
 
     # note this is a delete
-    await data_store.delete_row_by_hash(table=b"", row_hash=sha256_treehash(sexp=clvm_objects[1]))
+    await data_store.delete_row_by_hash(table=table_id, row_hash=sha256_treehash(sexp=clvm_objects[1]))
     expected.append(Action(op=OperationType.DELETE, row=TableRow.from_clvm_object(clvm_object=clvm_objects[1])))
 
-    await data_store.insert_row(table=b"", clvm_object=clvm_objects[3])
+    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[3])
     expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[3])))
 
-    all_actions = await data_store.get_all_actions(table=b"")
+    all_actions = await data_store.get_all_actions(table=table_id)
 
     assert all_actions == expected
