@@ -85,6 +85,7 @@ bladebit_plotter = [
     Options.FARMERKEY,
     Options.POOLKEY,
     Options.POOLCONTRACT,
+    Options.ID,
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_NONUMA,
     Options.FINAL_DIR,
