@@ -22,9 +22,6 @@ class DataLayerRpcApi:
         if "hash" in request:
             table_row = await self.service.data_store.get_row_by_hash(table=b"", row_hash=request["hash"])
             row = table_row.bytes
-        elif "index" in request:
-            table_row = await self.service.data_store.get_row_by_index(table=b"", index=request["index"])
-            row = table_row.bytes
         return row
 
     async def update(self, request: Dict[str, Any]) -> None:

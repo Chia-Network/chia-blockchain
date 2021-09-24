@@ -6,7 +6,7 @@ import io
 import logging
 
 # from typing import Dict, List, Optional, Tuple
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -34,31 +34,34 @@ class OperationType(IntEnum):
     DELETE = 1
 
 
+class CommitState(IntEnum):
+    OPEN = 0
+    FINALIZED = 1
+    ROLLED_BACK = 2
+
+
 @dataclass(frozen=True)
 class TableRow:
-    index: int
     clvm_object: CLVMObject
     hash: bytes32
     bytes: bytes
 
     @classmethod
-    def from_clvm_object(cls, index: int, clvm_object: CLVMObject) -> "TableRow":
+    def from_clvm_object(cls, clvm_object: CLVMObject) -> "TableRow":
         sexp = SExp.to(clvm_object)
 
         return cls(
-            index=index,
             clvm_object=clvm_object,
             hash=sha256_treehash(sexp),
             bytes=sexp.as_bin(),
         )
 
     @classmethod
-    def from_clvm_bytes(cls, index: int, clvm_bytes: bytes) -> "TableRow":
+    def from_clvm_bytes(cls, clvm_bytes: bytes) -> "TableRow":
         clvm_object = sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject)
         sexp = SExp.to(clvm_object)
 
         return cls(
-            index=index,
             clvm_object=clvm_object,
             hash=sha256_treehash(sexp),
             bytes=clvm_bytes,
@@ -76,12 +79,7 @@ class TableRow:
         if isinstance(self.clvm_object, SExp):
             # This would be the simple way but CLVMObject.__new__ trips it up
             # return dataclasses.asdict(self) == dataclasses.asdict(other)
-            return (
-                self.index == other.index
-                and self.clvm_object == other.clvm_object
-                and self.hash == other.hash
-                and self.bytes == other.bytes
-            )
+            return self.clvm_object == other.clvm_object and self.hash == other.hash and self.bytes == other.bytes
 
         sexp_self = dataclasses.replace(self, clvm_object=SExp.to(self.clvm_object))
 
@@ -141,20 +139,16 @@ class DataStore:
         # The present properly ordered collection of rows.
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS data_rows("
-            "row_index INTEGER PRIMARY KEY,"
-            " row_hash TEXT,"
+            "row_hash TEXT PRIMARY KEY,"
             " FOREIGN KEY(row_hash) REFERENCES raw_rows(row_hash))"
         )
         # TODO: needs a key
         # TODO: As operations are reverted do they get deleted?  Or perhaps we track
         #       a reference into the table and only remove when a non-matching forward
         #       step is taken?  Or reverts are just further actions?
-        # TODO: Think through row IDs and autoincrement and what happens when we delete
-        #       actions during a reorg.  Or, manually track max index?  Or...
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS actions("
-            "data_row_index INTEGER,"
-            " row_hash TEXT,"
+            "row_hash TEXT,"
             " operation INTEGER,"
             " FOREIGN KEY(row_hash) REFERENCES raw_rows(row_hash))"
         )
@@ -169,39 +163,14 @@ class DataStore:
     # TODO: Add some handling for multiple tables.  Could be another layer of class
     #       for each table or another parameter to select the table.
 
-    async def get_row_by_index(self, table: bytes32, index: int) -> TableRow:
-        cursor = await self.db.execute(
-            (
-                "SELECT raw_rows.row_hash, raw_rows.clvm_object"
-                " FROM raw_rows INNER JOIN data_rows"
-                " WHERE raw_rows.row_hash == data_rows.row_hash AND data_rows.row_index == ?"
-            ),
-            (index,),
-        )
-        [[row_hash, clvm_object_bytes]] = await cursor.fetchall()
-
-        return TableRow(
-            index=index,
-            clvm_object=sexp_from_stream(io.BytesIO(clvm_object_bytes), to_sexp=CLVMObject),
-            hash=row_hash,
-            bytes=clvm_object_bytes,
-        )
+    # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
 
     # TODO: added as the core was adjusted to be `get_rows` (plural).  API can be
     #       discussed  more.
     async def get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
-        [table_row] = await self.get_rows_by_hash(table=table, row_hash=row_hash)
-
-        return table_row
-
-    # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
-    # TODO: This returns an SExp but our interface is otherwise CLVMObjects.  We should
-    #       pick one or the other.  If CLVMObject then we need to figure out how to go
-    #       from bytes to a CLVMObject.  SExp just seems better to work with.
-    async def get_rows_by_hash(self, table: bytes32, row_hash: bytes32) -> List[TableRow]:
         cursor = await self.db.execute(
             (
-                "SELECT raw_rows.row_hash, raw_rows.clvm_object, data_rows.row_index"
+                "SELECT raw_rows.row_hash, raw_rows.clvm_object"
                 " FROM raw_rows INNER JOIN data_rows"
                 " WHERE raw_rows.row_hash == data_rows.row_hash AND data_rows.row_hash == ?"
             ),
@@ -209,23 +178,21 @@ class DataStore:
         )
         rows = await cursor.fetchall()
 
-        return [
+        [table_row] = [
             TableRow(
-                index=index,
                 clvm_object=sexp_from_stream(io.BytesIO(clvm_object_bytes), to_sexp=CLVMObject),
                 hash=row_hash,
                 bytes=clvm_object_bytes,
             )
-            for row_hash, clvm_object_bytes, index in rows
+            for row_hash, clvm_object_bytes in rows
         ]
 
-    async def insert_row(self, table: bytes32, clvm_object: CLVMObject, index: Optional[int] = None) -> TableRow:
+        return table_row
+
+    async def insert_row(self, table: bytes32, clvm_object: CLVMObject) -> TableRow:
         """
         Args:
             clvm_object: The CLVM object to insert.
-            index: The index at which to insert the CLVM object.  If ``None``, such as
-                when unspecified, the object will be appended with the now-highest
-                index.
         """
         # TODO: Should we be using CLVMObject or SExp?
 
@@ -244,74 +211,33 @@ class DataStore:
                 "INSERT INTO raw_rows (row_hash, table_id, clvm_object) VALUES(?, ?, ?)", (row_hash, table, clvm_bytes)
             )
 
-        largest_index = await self._get_largest_index()
-
-        if index is None:
-            index = largest_index + 1
-        elif index > largest_index + 1:
-            # Inserting this index would result in a gap in the indices.
-            raise ValueError(
-                f"Index must be no more than 1 larger than the largest index ({largest_index!r}), received: {index!r}"
-            )
-        else:
-            await self.db.execute("UPDATE data_rows SET row_index = row_index + 1 WHERE row_index >= ?", (index,))
-
-        await self.db.execute("INSERT INTO data_rows (row_index, row_hash) VALUES(?, ?)", (index, row_hash))
+        await self.db.execute("INSERT INTO data_rows (row_hash) VALUES(?)", (row_hash,))
 
         await self.db.execute(
-            "INSERT INTO actions (data_row_index, row_hash, operation) VALUES(?, ?, ?)",
-            (index, row_hash, OperationType.INSERT),
+            "INSERT INTO actions (row_hash, operation) VALUES(?, ?)",
+            (row_hash, OperationType.INSERT),
         )
 
         # TODO: Review reentrancy on .commit() since it isn't clearly tied to this
         #       particular task's activity.
         await self.db.commit()
 
-        return TableRow(index=index, clvm_object=clvm_object, hash=row_hash, bytes=clvm_bytes)
+        return TableRow(clvm_object=clvm_object, hash=row_hash, bytes=clvm_bytes)
 
-    async def _get_largest_index(self) -> int:
-        cursor = await self.db.execute("SELECT MAX(row_index) FROM data_rows")
-        [[maybe_largest_index]] = await cursor.fetchall()
-        if maybe_largest_index is None:
-            # TODO: This seems icky, -1 is not a valid index.
-            largest_index = -1
-        else:
-            largest_index = maybe_largest_index
-        return largest_index
-
-    async def delete_row_by_index(self, table: bytes32, index: int) -> TableRow:
-        table_row = await self.get_row_by_index(table=table, index=index)
+    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
+        table_row = await self.get_row_by_hash(table=table, row_hash=row_hash)
 
         # TODO: How do we generally handle multiple incoming requests to avoid them
         #       trompling over each other via race conditions such as here?
 
-        await self.db.execute("DELETE FROM data_rows WHERE row_index == ?", (index,))
-        await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
+        await self.db.execute("DELETE FROM data_rows WHERE row_hash == ?", (row_hash,))
 
         await self.db.execute(
-            "INSERT INTO actions (data_row_index, row_hash, operation) VALUES(?, ?, ?)",
-            (table_row.index, table_row.hash, OperationType.DELETE),
+            "INSERT INTO actions (row_hash, operation) VALUES(?, ?)",
+            (table_row.hash, OperationType.DELETE),
         )
 
         await self.db.commit()
-
-        return table_row
-
-    async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
-        # TODO: A hash could match multiple rows.
-
-        table_row = await self.get_row_by_hash(table=table, row_hash=row_hash)
-
-        # TODO: race condition hazard
-
-        # cursor = await self.db.execute("SELECT row_index FROM data_rows WHERE row_hash == ?", (row_hash,))
-        # [[index]] = await cursor.fetchall()
-        await self.delete_row_by_index(table=table, index=table_row.index)
-
-        # # TODO: This is doubly careful to make sure it matches but it seems like maybe
-        # #       we should be able to delete by hash and get the index in one step?
-        # await self.db.execute("DELETE FROM data_rows WHERE row_hash == ? AND row_index == ?", (row_hash, index,))
-        # await self.db.execute("UPDATE data_rows SET row_index = row_index - 1 WHERE row_index > ?", (index,))
 
         return table_row
 
@@ -319,15 +245,15 @@ class DataStore:
         # TODO: What needs to be done to retain proper ordering, relates to the question
         #       at the table creation as well.
         cursor = await self.db.execute(
-            "SELECT actions.data_row_index, actions.operation, raw_rows.clvm_object"
+            "SELECT actions.operation, raw_rows.clvm_object"
             " FROM actions INNER JOIN raw_rows"
             " WHERE actions.row_hash == raw_rows.row_hash"
         )
         actions = await cursor.fetchall()
 
         return [
-            Action(op=OperationType(operation), row=TableRow.from_clvm_bytes(index=index, clvm_bytes=clvm_bytes))
-            for index, operation, clvm_bytes in actions
+            Action(op=OperationType(operation), row=TableRow.from_clvm_bytes(clvm_bytes=clvm_bytes))
+            for operation, clvm_bytes in actions
         ]
 
     async def get_table_state(self, table: bytes32) -> bytes32:
