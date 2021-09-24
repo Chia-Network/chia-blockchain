@@ -25,7 +25,7 @@ def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> No
             f.write(default_config_file_data)
         try:
             os.replace(str(tmp_path), str(path))
-        except Exception:
+        except PermissionError:
             shutil.move(str(tmp_path), str(path))
 
 
@@ -43,7 +43,7 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
         yaml.safe_dump(config_data, f)
     try:
         os.replace(str(tmp_path), path)
-    except Exception:
+    except PermissionError:
         shutil.move(str(tmp_path), str(path))
 
 

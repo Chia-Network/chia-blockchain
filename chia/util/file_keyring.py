@@ -435,7 +435,7 @@ class FileKeyring(FileSystemEventHandler):
             _ = yaml.safe_dump(data, f)
         try:
             os.replace(str(temp_path), self.keyring_path)
-        except Exception:
+        except PermissionError:
             shutil.move(str(temp_path), str(self.keyring_path))
 
     def prepare_for_migration(self):
