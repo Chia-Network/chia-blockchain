@@ -10,7 +10,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.cc_wallet.cc_utils import cc_puzzle_hash_for_inner_puzzle_hash
+from chia.wallet.cc_wallet.cc_utils import construct_cc_puzzle
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.transaction_record import TransactionRecord
@@ -474,7 +474,8 @@ class TestCCWallet:
 
         assert cc_wallet.cc_info.my_genesis_checker is not None
 
-        cc_2_hash = await cc_wallet.get_new_inner_hash()
+        cc_2 = await cc_wallet.get_new_inner_puzzle()
+        cc_2_hash = cc_2.get_tree_hash()
         amounts = []
         puzzle_hashes = []
         for i in range(1, 50):
@@ -498,7 +499,7 @@ class TestCCWallet:
             spendable_name_set = set()
             for record in spendable:
                 spendable_name_set.add(record.coin.name())
-            puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(CC_MOD, cc_wallet.cc_info.my_genesis_checker, cc_2_hash)
+            puzzle_hash = construct_cc_puzzle(CC_MOD, cc_wallet.cc_info.my_genesis_checker, cc_2).get_tree_hash()
             for i in range(1, 50):
                 coin = Coin(spent_coint.name(), puzzle_hash, i)
                 if coin.name() not in spendable_name_set:
