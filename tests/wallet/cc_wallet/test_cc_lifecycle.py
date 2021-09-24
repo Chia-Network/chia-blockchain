@@ -17,7 +17,7 @@ from chia.wallet.puzzles.singleton_top_layer import adapt_inner_to_singleton
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
-    cc_puzzle_for_inner_puzzle,
+    construct_cc_puzzle,
     spend_bundle_for_spendable_ccs,
     get_lineage_proof_from_coin_and_puz,
 )
@@ -32,7 +32,7 @@ from tests.clvm.test_puzzles import secret_exponent_for_index
 
 acs = adapt_inner_to_singleton(Program.to(1))
 acs_ph = acs.get_tree_hash()
-NO_LINEAGE_PROOF = Program.to([])
+NO_LINEAGE_PROOF = None
 
 
 class TestCCLifecycle:
@@ -93,7 +93,7 @@ class TestCCLifecycle:
             # This program always returns the 4th argument to the limiter (inner_conditions)
             genesis_checker = Program.to([FIRST, [REST, [REST, [REST, [REST, 1]]]]])
             checker_solution = Program.to([])
-            cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cc_ph))[0].coin
@@ -156,13 +156,13 @@ class TestCCLifecycle:
 
             # Spend with a standard lineage proof (THIS CURRENTLY DOES NOT ACTUALLY TEST THIS)
             parent_coin: Coin = coins[0]  # The first one is the one we didn't light on fire
-            lineage_proof: Program = get_lineage_proof_from_coin_and_puz(parent_coin, cc_puzzle)
+            lineage_proof: LineageProof = get_lineage_proof_from_coin_and_puz(parent_coin, cc_puzzle)
             await self.do_spend(
                 sim,
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [lineage_proof],
+                [lineage_proof.to_program()],
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
             )
@@ -224,7 +224,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisById.create(starting_coin.name())
-            cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
@@ -240,9 +240,10 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [GenesisById.proof()],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[GenesisById.proof()],
             )
 
         finally:
@@ -259,7 +260,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisByPuzhash.create(starting_coin.puzzle_hash)
-            cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
@@ -291,7 +292,7 @@ class TestCCLifecycle:
         try:
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = EverythingWithSig.create(sk.get_g1())
-            cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
 
@@ -307,9 +308,10 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [starting_coin],
-                [EverythingWithSig.proof()],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
+                limitations_solutions=[EverythingWithSig.proof()],
                 signatures=[signature],
             )
 
@@ -324,10 +326,11 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [coin],
-                [EverythingWithSig.proof()],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), coin.amount - 1]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
+                limitations_solutions=[EverythingWithSig.proof()],
                 signatures=[signature],
             )
 
@@ -358,10 +361,11 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [coin],
-                [EverythingWithSig.proof()],
+                [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), coin.amount + 1]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
+                limitations_solutions=[EverythingWithSig.proof()],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
             )
@@ -381,7 +385,7 @@ class TestCCLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = DelegatedGenesis.create(sk.get_g1())
-            cc_puzzle: Program = cc_puzzle_for_inner_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
             await sim_client.push_tx(

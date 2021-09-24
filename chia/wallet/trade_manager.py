@@ -17,7 +17,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cc_wallet import cc_utils
-from chia.wallet.cc_wallet.cc_utils import CC_MOD, SpendableCC, spend_bundle_for_spendable_ccs, uncurry_cc
+from chia.wallet.cc_wallet.cc_utils import CC_MOD, SpendableCC, spend_bundle_for_spendable_ccs, match_cat_puzzle
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
 from chia.wallet.trade_record import TradeRecord
@@ -372,10 +372,10 @@ class TradeManager:
             solution: Program = Program.from_bytes(bytes(coinsol.solution))
 
             # work out the deficits between coin amount and expected output for each
-            r = cc_utils.uncurry_cc(puzzle)
-            if r:
+            matched, curried_args = cc_utils.match_cat_puzzle(puzzle)
+            if matched:
                 # Calculate output amounts
-                mod_hash, genesis_checker_hash, inner_puzzle = r
+                mod_hash, genesis_checker_hash, inner_puzzle = curried_args
                 colour = bytes(genesis_checker_hash).hex()
                 if colour not in wallets:
                     wallets[colour] = await self.wallet_state_manager.get_wallet_for_colour(colour)
@@ -475,9 +475,9 @@ class TradeManager:
                 puzzle = Program.from_bytes(bytes(cc_coinsol.puzzle_reveal))
                 solution = Program.from_bytes(bytes(cc_coinsol.solution))
 
-                r = uncurry_cc(puzzle)
-                if r:
-                    mod_hash, genesis_coin_checker_hash, inner_puzzle = r
+                matched, curried_args = match_cat_puzzle(puzzle)
+                if matched:
+                    mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
                     spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))

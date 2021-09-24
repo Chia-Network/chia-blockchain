@@ -67,10 +67,10 @@ def get_discrepancies_for_spend_bundle(
             puzzle: Program = Program.from_bytes(bytes(coinsol.puzzle_reveal))
             solution: Program = Program.from_bytes(bytes(coinsol.solution))
             # work out the deficits between coin amount and expected output for each
-            r = cc_utils.uncurry_cc(puzzle)
-            if r:
+            matched, curried_args = cc_utils.match_cat_puzzle(puzzle)
+            if matched:
                 # Calculate output amounts
-                mod_hash, genesis_checker_hash, inner_puzzle = r
+                mod_hash, genesis_checker_hash, inner_puzzle = curried_args
                 innersol = solution.first()
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
