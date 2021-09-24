@@ -1,6 +1,5 @@
 # from collections import OrderedDict
-import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import IntEnum
 import io
 import logging
@@ -82,13 +81,13 @@ class TableRow:
             # return dataclasses.asdict(self) == dataclasses.asdict(other)
             return self.clvm_object == other.clvm_object and self.hash == other.hash and self.bytes == other.bytes
 
-        sexp_self = dataclasses.replace(self, clvm_object=SExp.to(self.clvm_object))
+        sexp_self = replace(self, clvm_object=SExp.to(self.clvm_object))
 
         return sexp_self == other
 
     def __hash__(self) -> int:
         # TODO: this is dirty, consider the TODOs in .__eq__()
-        return object.__hash__(dataclasses.replace(self, clvm_object=SExp.to(self.clvm_object)))
+        return object.__hash__(replace(self, clvm_object=SExp.to(self.clvm_object)))
 
 
 # # TODO: remove or formalize this
