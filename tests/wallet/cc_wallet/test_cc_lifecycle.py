@@ -13,6 +13,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint64
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.singleton_top_layer import adapt_inner_to_singleton
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
@@ -25,7 +26,7 @@ from chia.wallet.puzzles.genesis_checkers import (
     GenesisById,
     GenesisByPuzhash,
     EverythingWithSig,
-    DelegatedGenesis,
+    DelegatedLimitations,
 )
 
 from tests.clvm.test_puzzles import secret_exponent_for_index
@@ -223,7 +224,7 @@ class TestCCLifecycle:
             await sim.farm_block(standard_acs_ph)
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
-            genesis_checker: Program = GenesisById.create(starting_coin.name())
+            genesis_checker: Program = GenesisById.construct([Program.to(starting_coin.name())])
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
@@ -243,7 +244,7 @@ class TestCCLifecycle:
                 [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
-                limitations_solutions=[GenesisById.proof()],
+                limitations_solutions=[GenesisById.solve([], {})],
             )
 
         finally:
@@ -259,7 +260,7 @@ class TestCCLifecycle:
             await sim.farm_block(standard_acs_ph)
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
-            genesis_checker: Program = GenesisByPuzhash.create(starting_coin.puzzle_hash)
+            genesis_checker: Program = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
@@ -279,7 +280,7 @@ class TestCCLifecycle:
                 [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
-                limitations_solutions=[GenesisByPuzhash.proof(starting_coin)],
+                limitations_solutions=[GenesisByPuzhash.solve([], starting_coin.to_json_dict())],
             )
 
         finally:
@@ -291,7 +292,7 @@ class TestCCLifecycle:
 
         try:
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-            genesis_checker: Program = EverythingWithSig.create(sk.get_g1())
+            genesis_checker: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
@@ -311,7 +312,7 @@ class TestCCLifecycle:
                 [NO_LINEAGE_PROOF],
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
-                limitations_solutions=[EverythingWithSig.proof()],
+                limitations_solutions=[EverythingWithSig.solve([], {})],
                 signatures=[signature],
             )
 
@@ -330,7 +331,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), coin.amount - 1]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
-                limitations_solutions=[EverythingWithSig.proof()],
+                limitations_solutions=[EverythingWithSig.solve([], {})],
                 signatures=[signature],
             )
 
@@ -365,7 +366,7 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), coin.amount + 1]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[1],
-                limitations_solutions=[EverythingWithSig.proof()],
+                limitations_solutions=[EverythingWithSig.solve([], {})],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
             )
@@ -384,7 +385,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-            genesis_checker: Program = DelegatedGenesis.create(sk.get_g1())
+            genesis_checker: Program = DelegatedLimitations.construct([Program.to(sk.get_g1())])
             cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
@@ -397,7 +398,8 @@ class TestCCLifecycle:
             await sim.farm_block()
 
             # We're signing a different genesis checker to use here
-            new_genesis_checker: Program = GenesisById.create(starting_coin.name())
+            name_as_program = Program.to(starting_coin.name())
+            new_genesis_checker: Program = GenesisById.construct([name_as_program])
             signature: G2Element = AugSchemeMPL.sign(sk, new_genesis_checker.get_tree_hash())
 
             await self.do_spend(
@@ -409,7 +411,18 @@ class TestCCLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), starting_coin.amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 signatures=[signature],
-                limitations_solutions=[DelegatedGenesis.proof(new_genesis_checker, GenesisById.proof())],
+                limitations_solutions=[
+                    DelegatedLimitations.solve(
+                        [name_as_program],
+                        {
+                            "signed_program": {
+                                "identifier": "genesis_by_id",
+                                "args": [str(name_as_program)],
+                            },
+                            "program_arguments": {},
+                        },
+                    )
+                ],
             )
 
         finally:
