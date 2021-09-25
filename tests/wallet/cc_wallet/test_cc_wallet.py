@@ -433,6 +433,19 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 0)
 
+        txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
+        print(len(txs))
+        # Test with Memo
+        tx_record_3 = await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"])
+        await wallet_1.wallet_state_manager.add_pending_transaction(tx_record_3)
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record_3.spend_bundle.name()
+        )
+        txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
+        for tx in txs:
+            print(tx.get_memos())
+
+
     @pytest.mark.asyncio
     async def test_cc_max_amount_send(self, two_wallet_nodes):
         num_blocks = 3

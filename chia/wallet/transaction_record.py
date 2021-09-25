@@ -3,9 +3,12 @@ from typing import List, Optional, Tuple
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
+from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
@@ -59,3 +62,15 @@ class TransactionRecord(Streamable):
                 if farmer_parent == self.additions[0].parent_coin_info:
                     return uint32(block_index)
         return None
+
+    def get_memos(self) -> List[Tuple[bytes32, uint64, Optional[bytes]]]:
+        if self.spend_bundle is None:
+            return {}
+        for coin_spend in self.spend_bundle.coin_spends:
+            result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
+                Program.from_bytes(bytes(coin_spend.solution)))
+            error, result_human = parse_sexp_to_conditions(result)
+            assert error is None
+            for cvp in result_human:
+                print(f"{ConditionOpcode(cvp.opcode).name}: {[var.hex() for var in cvp.vars]}")
+

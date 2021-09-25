@@ -209,7 +209,11 @@ class Wallet:
         condition_list = []
         if primaries:
             for primary in primaries:
-                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"]))
+                if "memo" in primary:
+                    memo = primary["memo"]
+                else:
+                    memo = None
+                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"], memo))
         if min_time > 0:
             condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
         if me:

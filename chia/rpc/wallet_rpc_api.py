@@ -816,6 +816,12 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
 
+        memo: Optional[bytes] = None
+        if "memo" in request:
+            memo = hexstr_to_bytes(request["memo"])
+            if len(memo) > 1000:
+                raise ValueError("Memo too large, please use less than 1000 bytes")
+
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
