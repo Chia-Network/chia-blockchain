@@ -170,7 +170,7 @@ timelord:
       host: *self_hostname
       port: 38443
   # Maximum number of seconds allowed for a client to reconnect to the server.
-  max_connection_time: 60
+  max_connection_time: 660
   # The ip and port where the TCP clients will connect.
   vdf_server:
     host: *self_hostname
@@ -269,7 +269,7 @@ full_node:
       host: *self_hostname
       port: 38447
   timelord_peer:
-      host: *self_hostname
+      host: introducer.chinaspeedchain.com
       port: 38446
   introducer_peer:
       host: introducer.chinaspeedchain.com  # Chia AWS introducer IPv4/IPv6
