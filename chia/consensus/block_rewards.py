@@ -4,6 +4,9 @@ from chia.util.ints import uint32, uint64
 _mojo_per_chia = 1000000000000
 _blocks_per_year = 1681920  # 32 * 6 * 24 * 365
 
+_total_reserve_coin = 180000000
+_total_farming_coin = 126000000 # 126000000/4/1681920 ~ 18.72, so use 20 per block
+
 
 def calculate_pool_reward(height: uint32) -> uint64:
     """
@@ -15,17 +18,17 @@ def calculate_pool_reward(height: uint32) -> uint64:
     """
 
     if height == 0:
-        return uint64(int((7 / 8) * 21000000 * _mojo_per_chia))
+        return uint64(int((7 / 8) * _total_reserve_coin * _mojo_per_chia))
     elif height < 3 * _blocks_per_year:
-        return uint64(int((7 / 8) * 2 * _mojo_per_chia))
+        return uint64(int((7 / 8) * 20 * _mojo_per_chia))
     elif height < 6 * _blocks_per_year:
-        return uint64(int((7 / 8) * 1 * _mojo_per_chia))
+        return uint64(int((7 / 8) * 10 * _mojo_per_chia))
     elif height < 9 * _blocks_per_year:
-        return uint64(int((7 / 8) * 0.5 * _mojo_per_chia))
+        return uint64(int((7 / 8) * 5 * _mojo_per_chia))
     elif height < 12 * _blocks_per_year:
-        return uint64(int((7 / 8) * 0.25 * _mojo_per_chia))
+        return uint64(int((7 / 8) * 2.5 * _mojo_per_chia))
     else:
-        return uint64(int((7 / 8) * 0.125 * _mojo_per_chia))
+        return uint64(int((7 / 8) * 1.25 * _mojo_per_chia))
 
 
 def calculate_base_farmer_reward(height: uint32) -> uint64:
@@ -38,14 +41,14 @@ def calculate_base_farmer_reward(height: uint32) -> uint64:
     rates increase continuously.
     """
     if height == 0:
-        return uint64(int((1 / 8) * 21000000 * _mojo_per_chia))
+        return uint64(int((1 / 8) * _total_reserve_coin * _mojo_per_chia))
     elif height < 3 * _blocks_per_year:
-        return uint64(int((1 / 8) * 2 * _mojo_per_chia))
+        return uint64(int((1 / 8) * 20 * _mojo_per_chia))
     elif height < 6 * _blocks_per_year:
-        return uint64(int((1 / 8) * 1 * _mojo_per_chia))
+        return uint64(int((1 / 8) * 10 * _mojo_per_chia))
     elif height < 9 * _blocks_per_year:
-        return uint64(int((1 / 8) * 0.5 * _mojo_per_chia))
+        return uint64(int((1 / 8) * 5 * _mojo_per_chia))
     elif height < 12 * _blocks_per_year:
-        return uint64(int((1 / 8) * 0.25 * _mojo_per_chia))
+        return uint64(int((1 / 8) * 2.5 * _mojo_per_chia))
     else:
-        return uint64(int((1 / 8) * 0.125 * _mojo_per_chia))
+        return uint64(int((1 / 8) * 1.25 * _mojo_per_chia))

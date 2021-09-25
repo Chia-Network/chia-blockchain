@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 55400
+daemon_port: 55500
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
@@ -12,50 +12,10 @@ network_overrides: &network_overrides
   constants:
     mainnet:
       NETWORK_TYPE: 0
-      GENESIS_CHALLENGE: ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
-    testnet0:
-      MIN_PLOT_SIZE: 18
-      GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-      NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
-    testnet2:
-      MIN_PLOT_SIZE: 18
-      GENESIS_CHALLENGE: ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
-      NETWORK_TYPE: 1
-      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
-    testnet3:
-      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      GENESIS_CHALLENGE: ca7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
-      MIN_PLOT_SIZE: 18
-      NETWORK_TYPE: 1
-      MEMPOOL_BLOCK_BUFFER: 10
-    testnet4:
-      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      GENESIS_CHALLENGE: dd7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
-      MIN_PLOT_SIZE: 18
-      NETWORK_TYPE: 1
-      MEMPOOL_BLOCK_BUFFER: 10
-      EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 30
-    testnet5:
-      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
-      GENESIS_CHALLENGE: ee7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
-      MIN_PLOT_SIZE: 18
-      NETWORK_TYPE: 1
-      MEMPOOL_BLOCK_BUFFER: 10
-      EPOCH_BLOCKS: 768
-      DIFFICULTY_STARTING: 30
+      GENESIS_CHALLENGE: 34a5de60dee5c3899c7d3b9c4eb1b4d3e143948439c3b1bb6d6de35c6ba8bfb9
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "0x7901d8c10d847fa097406ef0c5c8bccb3ebc5a8fb056d8c85b6cd924e096aab6"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "0x7901d8c10d847fa097406ef0c5c8bccb3ebc5a8fb056d8c85b6cd924e096aab6"
+      DIFFICULTY_CONSTANT_FACTOR: 100527215660580
     testnet7:
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
       GENESIS_CHALLENGE: 117816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
@@ -68,21 +28,11 @@ network_overrides: &network_overrides
       DIFFICULTY_STARTING: 30
   config:
     mainnet:
-      address_prefix: "xch"
-      default_full_node_port: 8444
-    testnet0:
-      address_prefix: "txch"
-    testnet1:
-      address_prefix: "txch"
-    testnet2:
-      address_prefix: "txch"
-    testnet3:
-      address_prefix: "txch"
-    testnet4:
-      address_prefix: "txch"
+      address_prefix: "csr"
+      default_full_node_port: 38443
     testnet7:
-      address_prefix: "txch"
-      default_full_node_port: 58444
+      address_prefix: "tcsr"
+      default_full_node_port: 38333
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
@@ -108,7 +58,7 @@ daemon_ssl:
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
-  log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_level: "INFO"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
   log_syslog: False  # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
@@ -116,14 +66,14 @@ logging: &logging
 
 harvester:
   # The harvester server (if run) will run on this port
-  port: 8448
+  port: 38448
   farmer_peer:
     host: *self_hostname
     port: 8447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8560
+  rpc_port: 38560
   num_threads: 30
   plots_refresh_parameter:
     interval_seconds: 120 # The interval in seconds to refresh the plot file manager
@@ -164,14 +114,14 @@ pool:
 
 farmer:
   # The farmer server (if run) will run on this port
-  port: 8447
+  port: 38447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 38443
   harvester_peer:
     host: *self_hostname
-    port: 8448
+    port: 38448
 
   pool_public_keys: []
 
@@ -180,7 +130,7 @@ farmer:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8559
+  rpc_port: 38559
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -198,7 +148,7 @@ farmer:
 timelord_launcher:
   # The server where the VDF clients will connect to.
   host: *self_hostname
-  port: 8000
+  port: 38000
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
@@ -206,7 +156,7 @@ timelord_launcher:
 
 timelord:
   # The timelord server (if run) will run on this port
-  port: 8446
+  port: 38446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -218,13 +168,13 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 8444
+      port: 38443
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
   vdf_server:
     host: *self_hostname
-    port: 8000
+    port: 38000
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -253,7 +203,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 8444
+  port: 38443
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
@@ -263,7 +213,7 @@ full_node:
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8555
+  rpc_port: 38555
 
   # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
@@ -317,16 +267,16 @@ full_node:
     - "dns-introducer.chia.net"
   farmer_peer:
       host: *self_hostname
-      port: 8447
+      port: 38447
   timelord_peer:
       host: *self_hostname
-      port: 8446
+      port: 38446
   introducer_peer:
       host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
-      port: 8444
+      port: 38443
   wallet_peer:
     host: *self_hostname
-    port: 8449
+    port: 38449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -339,10 +289,10 @@ full_node:
 
 ui:
    # The ui node server (if run) will run on this port
-  port: 8222
+  port: 38222
 
   # Which port to use to communicate with the full node
-  rpc_port: 8555
+  rpc_port: 38555
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
@@ -353,7 +303,7 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 55400
+  daemon_port: 55500
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
@@ -374,8 +324,8 @@ introducer:
     public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 8449
-  rpc_port: 9256
+  port: 38449
+  rpc_port: 39256
 
   enable_profiler: False
 
@@ -389,7 +339,7 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 38443
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
@@ -407,7 +357,7 @@ wallet:
 
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    port: 38443
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
