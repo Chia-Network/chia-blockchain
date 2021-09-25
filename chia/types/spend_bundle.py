@@ -2,7 +2,7 @@ import dataclasses
 import warnings
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -11,8 +11,11 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
+from .blockchain_format.program import Program
 
 from .coin_spend import CoinSpend
+from .condition_opcodes import ConditionOpcode
+from ..util.condition_tools import parse_sexp_to_conditions
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,20 @@ class SpendBundle(Streamable):
             result.append(add)
 
         return result
+
+    def get_memos(self) -> Dict[bytes32, bytes]:
+        if self.spend_bundle is None:
+            return {}
+        memos: Dict[bytes32, bytes] = {}
+        for coin_spend in self.spend_bundle.coin_spends:
+            result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
+                Program.from_bytes(bytes(coin_spend.solution)))
+            error, result_human = parse_sexp_to_conditions(result)
+            assert error is None
+            for cvp in result_human:
+                if ConditionOpcode(cvp.opcode) == ConditionOpcode.CREATE_COIN and len(cvp.vars) > 2:
+                    memos[bytes32(cvp.vars[0])] = cvp.vars[2]
+        return memos
 
     # Note that `coin_spends` used to have the bad name `coin_solutions`.
     # Some API still expects this name. For now, we accept both names.
