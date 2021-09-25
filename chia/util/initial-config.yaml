@@ -319,8 +319,8 @@ introducer:
   selected_network: *selected_network
 
   ssl:
-    public_crt:  "config/ssl/introducer/public_full_node.crt"
-    public_key:  "config/ssl/introducer/public_full_node.key"
+    public_crt:  "config/ssl/introducer/public_introducer.crt"
+    public_key:  "config/ssl/introducer/public_introducer.key"
 
 wallet:
   port: 38449
