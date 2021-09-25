@@ -1857,6 +1857,18 @@ class TestGeneratorConditions:
             in npc_result.npc_list[0].conditions[0][1]
         )
 
+    def test_create_coin_with_hint(self):
+        # CREATE_COIN
+        puzzle_hash_1 = "abababababababababababababababab"
+        hint = "12341234123412341234213421341234"
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 "{hint}")')
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        opcode = ConditionOpcode.CREATE_COIN
+        assert npc_result.npc_list[0].conditions[0][1][0] == ConditionWithArgs(
+            opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), hint.encode("ascii")]
+        )
+
     def test_unknown_condition(self):
         for sm in [True, False]:
             for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
