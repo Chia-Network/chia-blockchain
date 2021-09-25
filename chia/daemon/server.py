@@ -21,6 +21,7 @@ from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphr
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
+from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
@@ -801,6 +802,23 @@ class WebSocketServer:
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
 
+    def _post_process_plotting_job(self, job: Dict[str, Any]):
+        id: str = job["id"]
+        final_dir: str = job.get("final_dir", "")
+        exclude_final_dir: bool = job.get("exclude_final_dir", False)
+
+        log.info(f"Post-processing plotter job with ID {id}")
+
+        if exclude_final_dir is False and len(final_dir) > 0:
+            resolved_final_dir: str = str(Path(final_dir).resolve())
+            config = load_config(self.root_path, "config.yaml")
+            plot_directories_list: str = config["harvester"]["plot_directories"]
+
+            if resolved_final_dir not in plot_directories_list:
+                # Adds the directory to the plot directories if it is not present
+                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
+                config = add_plot_directory(self.root_path, resolved_final_dir)
+
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
         try:
@@ -851,6 +869,8 @@ class WebSocketServer:
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
 
+            self._post_process_plotting_job(config)
+
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")
             error = Exception("Start plotting failed")
@@ -872,6 +892,8 @@ class WebSocketServer:
         delay = int(request.get("delay", 0))
         parallel = request.get("parallel", False)
         size = request.get("k")
+        final_dir = request.get("d")
+        exclude_final_dir = request.get("x", False)
         count = int(request.get("n", 1))
         queue = request.get("queue", "default")
 
@@ -901,6 +923,8 @@ class WebSocketServer:
                 "error": None,
                 "log": None,
                 "process": None,
+                "final_dir": final_dir,
+                "exclude_final_dir": exclude_final_dir,
             }
 
             self.plots_queue.append(config)
