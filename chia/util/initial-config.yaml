@@ -273,7 +273,7 @@ full_node:
       port: 38446
   introducer_peer:
       host: introducer.chinaspeedchain.com  # Chia AWS introducer IPv4/IPv6
-      port: 38443
+      port: 38445
   wallet_peer:
     host: *self_hostname
     port: 38449
