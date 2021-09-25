@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -63,14 +63,16 @@ class TransactionRecord(Streamable):
                     return uint32(block_index)
         return None
 
-    def get_memos(self) -> List[Tuple[bytes32, uint64, Optional[bytes]]]:
+    def get_memos(self) -> Dict[bytes32, bytes]:
         if self.spend_bundle is None:
             return {}
+        memos: Dict[bytes32, bytes] = {}
         for coin_spend in self.spend_bundle.coin_spends:
             result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
                 Program.from_bytes(bytes(coin_spend.solution)))
             error, result_human = parse_sexp_to_conditions(result)
             assert error is None
             for cvp in result_human:
-                print(f"{ConditionOpcode(cvp.opcode).name}: {[var.hex() for var in cvp.vars]}")
-
+                if ConditionOpcode(cvp.opcode) == ConditionOpcode.CREATE_COIN and len(cvp.vars) > 2:
+                    memos[bytes32(cvp.vars[0])] = cvp.vars[2]
+        return memos

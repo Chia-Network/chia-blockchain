@@ -436,15 +436,17 @@ class TestCCWallet:
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
         print(len(txs))
         # Test with Memo
-        tx_record_3 = await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"])
+        tx_record_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"Markus Walburg"])
         await wallet_1.wallet_state_manager.add_pending_transaction(tx_record_3)
         await time_out_assert(
             15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record_3.spend_bundle.name()
         )
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
         for tx in txs:
-            print(tx.get_memos())
-
+            if tx.amount == 30:
+                memos = tx.get_memos()
+                assert len(memos) == 1
+                assert b"Markus Walburg" in memos.values()
 
     @pytest.mark.asyncio
     async def test_cc_max_amount_send(self, two_wallet_nodes):
