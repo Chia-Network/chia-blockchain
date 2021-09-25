@@ -677,6 +677,7 @@ class WalletRpcApi:
         for tx in transactions:
             formatted = tx.to_json_dict()
             formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
+            formatted["memos"] = tx.get_memos()
             formatted_transactions.append(formatted)
 
         return {
