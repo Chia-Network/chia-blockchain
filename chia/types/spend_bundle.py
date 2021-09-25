@@ -81,10 +81,8 @@ class SpendBundle(Streamable):
         return result
 
     def get_memos(self) -> Dict[bytes32, bytes]:
-        if self.spend_bundle is None:
-            return {}
         memos: Dict[bytes32, bytes] = {}
-        for coin_spend in self.spend_bundle.coin_spends:
+        for coin_spend in self.coin_spends:
             result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(
                 Program.from_bytes(bytes(coin_spend.solution)))
             error, result_human = parse_sexp_to_conditions(result)
