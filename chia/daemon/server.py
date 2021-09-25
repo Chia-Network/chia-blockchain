@@ -694,35 +694,18 @@ class WebSocketServer:
         with open(file_path, "r") as fp:
             await self._watch_file_changes(config, fp, loop)
 
-    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
-        k = request["k"]
-        n = 1 if ignoreCount else request["n"]
-        t = request["t"]
-        t2 = request["t2"]
-        d = request["d"]
-        b = request["b"]
-        u = request["u"]
-        r = request["r"]
-        f = request.get("f")
-        p = request.get("p")
-        c = request.get("c")
-        a = request.get("a")
-        e = request["e"]
-        x = request["x"]
-        override_k = request["overrideK"]
+    def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        n = 1 if ignoreCount else request["n"]  # Plot count
+        d = request["d"]  # Final directory
+        r = request["r"]  # Threads
+        f = request.get("f")  # Farmer pubkey
+        p = request.get("p")  # Pool pubkey
+        c = request.get("c")  # Pool contract address
 
-        command_args: List[str] = ["chia", "plotters", "chiapos"]
-        command_args.append(f"-k{k}")
+        command_args: List[str] = []
         command_args.append(f"-n{n}")
-        command_args.append(f"-t{t}")
-        command_args.append(f"-2{t2}")
         command_args.append(f"-d{d}")
-        command_args.append(f"-b{b}")
-        command_args.append(f"-u{u}")
         command_args.append(f"-r{r}")
-
-        if a is not None:
-            command_args.append(f"-a{a}")
 
         if f is not None:
             command_args.append(f"-f{f}")
@@ -732,6 +715,29 @@ class WebSocketServer:
 
         if c is not None:
             command_args.append(f"-c{c}")
+
+        return command_args
+
+    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        k = request["k"]  # Plot size
+        t = request["t"]  # Temp directory
+        t2 = request["t2"]  # Temp2 directory
+        b = request["b"]  # Buffer size
+        u = request["u"]  # Buckets
+        a = request.get("a")  # Fingerprint
+        e = request["e"]  # Disable bitfield
+        x = request["x"]  # Exclude final directory
+        override_k = request["overrideK"]  # Force plot sizes < k32
+
+        command_args: List[str] = []
+        command_args.append(f"-k{k}")
+        command_args.append(f"-t{t}")
+        command_args.append(f"-2{t2}")
+        command_args.append(f"-b{b}")
+        command_args.append(f"-u{u}")
+
+        if a is not None:
+            command_args.append(f"-a{a}")
 
         if e is True:
             command_args.append("-e")
@@ -745,28 +751,10 @@ class WebSocketServer:
         return command_args
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
-        n = 1 if ignoreCount else request["n"]
-        d = request["d"]
-        r = request["r"]
-        w = request.get("w", False)
-        m = request.get("m", False)
-        f = request.get("f")
-        p = request.get("p")
-        c = request.get("c")
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
 
-        command_args: List[str] = ["chia", "plotters", "bladebit"]
-        command_args.append(f"-n{n}")
-        command_args.append(f"-d{d}")
-        command_args.append(f"-r{r}")
-
-        if f is not None:
-            command_args.append(f"-f{f}")
-
-        if p is not None:
-            command_args.append(f"-p{p}")
-
-        if c is not None:
-            command_args.append(f"-c{c}")
+        command_args: List[str] = []
 
         if w is True:
             command_args.append("-w")
@@ -777,25 +765,19 @@ class WebSocketServer:
         return command_args
 
     def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
-        k = request["k"]
-        n = 1 if ignoreCount else request["n"]
-        t = request["t"]
-        t2 = request["t2"]
-        d = request["d"]
-        u = request["u"]
-        v = request["v"]
-        r = request["r"]
-        f = request.get("f")
-        p = request.get("p")
-        c = request.get("c")
+        k = request["k"]  # Plot size
+        t = request["t"]  # Temp directory
+        t2 = request["t2"]  # Temp2 directory
+        u = request["u"]  # Buckets
+        v = request["v"]  # Buckets for phase 3 & 4
+        K = request.get("K", 1)  # Thread multiplier for phase 2
+        G = request.get("G", False)  # Alternate tmpdir/tmp2dir
 
-        v = request["v"]
-        K = request.get("K", 1)
-        G = request.get("G", False)
-
-        command_args: List[str] = ["chia", "plotters", "madmax"]
+        command_args: List[str] = []
         command_args.append(f"-k{k}")
-        command_args.append(f"-n{n}")
+        command_args.append(f"-u{u}")
+        command_args.append(f"-v{v}")
+        command_args.append(f"-K{K}")
 
         # Handle madmax's tmptoggle option ourselves when managing GUI plotting
         if G is True and t != t2 and index % 2:
@@ -806,36 +788,21 @@ class WebSocketServer:
             command_args.append(f"-t{t}")
             command_args.append(f"-2{t2}")
 
-        command_args.append(f"-d{d}")
-        command_args.append(f"-u{u}")
-        command_args.append(f"-v{v}")
-        command_args.append(f"-r{r}")
-
-        if f is not None:
-            command_args.append(f"-f{f}")
-
-        if p is not None:
-            command_args.append(f"-p{p}")
-
-        if c is not None:
-            command_args.append(f"-c{c}")
-
-        command_args.append(f"-K{K}")
-
         return command_args
 
     def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
         plotter: str = request.get("plotter", "chiapos")
-        command_args: List[str] = []
+        command_args: List[str] = ["chia", "plotters", plotter]
+
+        command_args.extend(self._common_plotting_command_args(request, ignoreCount))
 
         if plotter == "chiapos":
-            command_args = self._chiapos_plotting_command_args(request, ignoreCount)
+            command_args.extend(self._chiapos_plotting_command_args(request, ignoreCount))
         elif plotter == "madmax":
-            command_args = self._madmax_plotting_command_args(request, ignoreCount, index)
+            command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
         elif plotter == "bladebit":
-            command_args = self._bladebit_plotting_command_args(request, ignoreCount)
+            command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
 
-        self.log.debug(f"command_args are {command_args}")
         return command_args
 
     def _is_serial_plotting_running(self, queue: str = "default") -> bool:
