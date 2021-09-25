@@ -69,7 +69,7 @@ harvester:
   port: 38448
   farmer_peer:
     host: *self_hostname
-    port: 8447
+    port: 38447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -310,7 +310,7 @@ ui:
 
 introducer:
   host: *self_hostname
-  port: 8445
+  port: 38445
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
@@ -357,7 +357,7 @@ wallet:
 
   introducer_peer:
     host: introducer.chinaspeedchain.com # Chia AWS introducer IPv4/IPv6
-    port: 38443
+    port: 38445
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
