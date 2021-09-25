@@ -1,10 +1,41 @@
+import os
 import pathlib
 
 import pkg_resources
-from clvm_tools.clvmc import compile_clvm
+from clvm_tools.clvmc import compile_clvm as compile_clvm_py
+
+compile_clvm = compile_clvm_py
+
+if 'CLVM_TOOLS_RS' in os.environ:
+    try:
+        def sha256file(f):
+            import hashlib
+            m = hashlib.sha256()
+            m.update(open(f).read().encode('utf8'))
+            return m.hexdigest()
+
+        from clvm_tools_rs import compile_clvm as compile_clvm_rs
+
+        def rust_compile_clvm(full_path, output, search_paths=[]):
+            treated_include_paths = list(map(lambda x: str(x), search_paths))
+            compile_clvm_rs(str(full_path), str(output), treated_include_paths)
+
+            if os.environ['CLVM_TOOLS_RS'] == 'check':
+                orig = str(output) + '.orig'
+                compile_clvm_py(full_path, orig, search_paths=search_paths)
+                orig256 = sha256file(orig)
+                rs256 = sha256file(output)
+
+                if orig256 != rs256:
+                    print("Compiled %s: %s vs %s\n" % (full_path, orig256, rs256))
+                    print("Aborting compilation due to mismatch with rust")
+                    assert orig256 == rs256
+
+        compile_clvm = rust_compile_clvm
+    except:
+        pass
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
-
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
