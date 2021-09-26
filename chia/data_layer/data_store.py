@@ -1,4 +1,5 @@
 # from collections import OrderedDict
+import binascii
 from dataclasses import dataclass, replace
 from enum import IntEnum
 import io
@@ -196,9 +197,7 @@ class DataStore:
             {"table_id": table},
         )
 
-        some_clvm_bytes = [row["value"] for row in await cursor.fetchall()]
-
-        table_rows = [TableRow.from_clvm_bytes(clvm_bytes=clvm_bytes) for clvm_bytes in some_clvm_bytes]
+        table_rows = [TableRow.from_clvm_bytes(clvm_bytes=row["value"]) async for row in cursor]
 
         return table_rows
 
@@ -212,7 +211,9 @@ class DataStore:
             {"key": row_hash, "table_id": table},
         )
 
-        [clvm_bytes] = [row["value"] for row in await cursor.fetchall()]
+        # TODO: not using .fetchone() is an extra guardrail but...  maybe not so legible?
+        # clvm_bytes = (await cursor.fetchone())["value"]
+        [clvm_bytes] = [row["value"] async for row in cursor]
 
         table_row = TableRow(
             clvm_object=sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject),
@@ -257,7 +258,7 @@ class DataStore:
             "SELECT id, table_id FROM commits WHERE table_id == :table_id AND state == :state",
             {"table_id": table, "state": CommitState.OPEN},
         )
-        commits_rows: List[Tuple[bytes32, bytes32]] = [(row["id"], row["table_id"]) for row in await cursor.fetchall()]
+        commits_rows: List[Tuple[bytes32, bytes32]] = [(row["id"], row["table_id"]) async for row in cursor]
         if len(commits_rows) == 0:
             # TODO: just copied from elsewhere...  reconsider
             commit_id = random.randint(0, 100000000).to_bytes(32, "big")
@@ -273,7 +274,10 @@ class DataStore:
             cursor = await self.db.execute(
                 "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id}
             )
-            [max_actions_index] = (row["MAX(idx)"] for row in await cursor.fetchall())
+            # TODO: not using .fetchone() is an extra guardrail but...  maybe not so legible?
+            # max_actions_index = (await cursor.fetchone())["MAX(idx)"]
+            [max_actions_index] = [row["MAX(idx)"] async for row in cursor]
+
             next_actions_index = max_actions_index + 1
         await self.db.execute(
             "INSERT INTO actions(idx, commit_id, operation, key) VALUES(:idx, :commit_id, :operation, :key)",
@@ -306,12 +310,11 @@ class DataStore:
             " FROM actions INNER JOIN keys_values"
             " WHERE actions.key == keys_values.key"
         )
-        action_rows = await cursor.fetchall()
 
         # TODO: hmm, doesn't use the table name as part of the row key...
         return [
             Action(op=OperationType(row["operation"]), row=TableRow.from_clvm_bytes(clvm_bytes=row["value"]))
-            for row in action_rows
+            async for row in cursor
         ]
 
     async def get_table_state(self, table: bytes32) -> bytes32:
