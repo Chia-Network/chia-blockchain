@@ -135,6 +135,7 @@ class DataStore:
     @classmethod
     async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
         self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
+        self.db.row_factory = aiosqlite.Row
 
         # TODO: what pragmas do we want?  maybe foreign_keys?
         # await self.db.execute("pragma journal_mode=wal")
@@ -195,7 +196,7 @@ class DataStore:
             {"table_id": table},
         )
 
-        some_clvm_bytes = [value for [value] in await cursor.fetchall()]
+        some_clvm_bytes = [row["value"] for row in await cursor.fetchall()]
 
         table_rows = [TableRow.from_clvm_bytes(clvm_bytes=clvm_bytes) for clvm_bytes in some_clvm_bytes]
 
@@ -211,7 +212,7 @@ class DataStore:
             {"key": row_hash, "table_id": table},
         )
 
-        [clvm_bytes] = [value for [value] in await cursor.fetchall()]
+        [clvm_bytes] = [row["value"] for row in await cursor.fetchall()]
 
         table_row = TableRow(
             clvm_object=sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject),
@@ -256,7 +257,7 @@ class DataStore:
             "SELECT id, table_id FROM commits WHERE table_id == :table_id AND state == :state",
             {"table_id": table, "state": CommitState.OPEN},
         )
-        commits_rows: List[Tuple[bytes32, bytes32]] = [(id, table_id) for id, table_id in await cursor.fetchall()]
+        commits_rows: List[Tuple[bytes32, bytes32]] = [(row["id"], row["table_id"]) for row in await cursor.fetchall()]
         if len(commits_rows) == 0:
             # TODO: just copied from elsewhere...  reconsider
             commit_id = random.randint(0, 100000000).to_bytes(32, "big")
@@ -272,7 +273,7 @@ class DataStore:
             cursor = await self.db.execute(
                 "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id}
             )
-            [[max_actions_index]] = await cursor.fetchall()
+            [max_actions_index] = (row["MAX(idx)"] for row in await cursor.fetchall())
             next_actions_index = max_actions_index + 1
         await self.db.execute(
             "INSERT INTO actions(idx, commit_id, operation, key) VALUES(:idx, :commit_id, :operation, :key)",
@@ -305,11 +306,12 @@ class DataStore:
             " FROM actions INNER JOIN keys_values"
             " WHERE actions.key == keys_values.key"
         )
-        actions = await cursor.fetchall()
+        action_rows = await cursor.fetchall()
 
+        # TODO: hmm, doesn't use the table name as part of the row key...
         return [
-            Action(op=OperationType(operation), row=TableRow.from_clvm_bytes(clvm_bytes=clvm_bytes))
-            for operation, clvm_bytes in actions
+            Action(op=OperationType(row["operation"]), row=TableRow.from_clvm_bytes(clvm_bytes=row["value"]))
+            for row in action_rows
         ]
 
     async def get_table_state(self, table: bytes32) -> bytes32:
