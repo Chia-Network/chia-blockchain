@@ -16,8 +16,19 @@ if 'CLVM_TOOLS_RS' in os.environ:
 
         from clvm_tools_rs import compile_clvm as compile_clvm_rs
 
+        def translate_path(p_):
+            p = str(p_)
+            if os.path.isdir(p):
+                return p
+            else:
+                import importlib
+                import inspect
+                module_object = importlib.import_module(p)
+                return os.path.dirname(inspect.getfile(module_object))
+
         def rust_compile_clvm(full_path, output, search_paths=[]):
-            treated_include_paths = list(map(lambda x: str(x), search_paths))
+            treated_include_paths = list(map(translate_path, search_paths))
+            print('compile_clvm_rs',full_path,output,treated_include_paths)
             compile_clvm_rs(str(full_path), str(output), treated_include_paths)
 
             if os.environ['CLVM_TOOLS_RS'] == 'check':
