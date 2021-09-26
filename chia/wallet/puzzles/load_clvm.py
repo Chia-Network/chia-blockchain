@@ -1,3 +1,5 @@
+import importlib
+import inspect
 import os
 import pathlib
 
@@ -21,8 +23,6 @@ if 'CLVM_TOOLS_RS' in os.environ:
             if os.path.isdir(p):
                 return p
             else:
-                import importlib
-                import inspect
                 module_object = importlib.import_module(p)
                 return os.path.dirname(inspect.getfile(module_object))
 
@@ -42,8 +42,9 @@ if 'CLVM_TOOLS_RS' in os.environ:
                     print("Aborting compilation due to mismatch with rust")
                     assert orig256 == rs256
 
+
         compile_clvm = rust_compile_clvm
-    except:
+    except as _:
         pass
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
