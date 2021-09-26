@@ -44,7 +44,7 @@ if 'CLVM_TOOLS_RS' in os.environ:
 
 
         compile_clvm = rust_compile_clvm
-    except as _:
+    finally:
         pass
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
