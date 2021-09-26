@@ -1,20 +1,26 @@
-# chia-blockchain
+# flora-blockchain
 
-![Alt text](https://www.chia.net/img/chia_logo.svg)
+![Alt text](https://floracoin.farm/wp-content/uploads/2021/07/flora-xfl-logo.png.png)
 
 | Current Release/main | Development Branch/dev |
 |         :---:          |          :---:         |
-| [![Ubuntu Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml) [![MacOS Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml) [![Windows Installer on Windows 10 and Python 3.7](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml)  |  [![Ubuntu Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml) [![MacOS Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml) [![Windows Installer on Windows 10 and Python 3.7](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml) |
+| [![Ubuntu Core Tests (Coming soon)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml) [![MacOS Core Tests (Coming Soon)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml) [![Windows Installer on Windows 10 and Python 3.7 (Coming soon)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml)  |  [![Ubuntu Core Tests (Coming soon)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml) [![MacOS Core Tests (Coming soon)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml) [![Windows Installer on Windows 10 and Python 3.7 (Coming soon)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml) |
 
-![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
+[GitHub contributors](https://github.com/Flora-Network/flora-blockchain/graphs/contributors)
 
-Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
+## Info:
+- [Discord](https://discord.com/invite/rGBfrs2d)
+- [Website](https://floracoin.farm)
+- [Explorer (Coming soon)](https://floracoin.farm/exprlorerxfl)
+- [Faucet (Coming soon)](https://floracoin.farm/faucet)
+
+Flora is a modern project built on the Chia-Blockchain, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
 * [Proof of space and time](https://docs.google.com/document/d/1tmRIb7lgi4QfKkNaxuKOBHRmwbVlGL4f7EsBDr_5xZE/edit) based consensus which allows anyone to farm with commodity hardware
 * Very easy to use full node and farmer GUI and cli (thousands of nodes active on mainnet)
 * Simplified UTXO based transaction model, with small on-chain state
 * Lisp-style Turing-complete functional [programming language](https://chialisp.com/) for money related use cases
 * BLS keys and aggregate signatures (only one signature per block)
-* [Pooling protocol](https://github.com/Chia-Network/chia-blockchain/wiki/Pooling-User-Guide) that allows farmers to have control of making blocks
+* [Pooling protocol](https://www.chia.net/2020/11/10/pools-in-chia.html) (in development) that allows farmers to have control of making blocks
 * Support for light clients with fast, objective syncing
 * A growing community of farmers and developers around the world
 
