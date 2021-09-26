@@ -1,5 +1,4 @@
 # from collections import OrderedDict
-import binascii
 from dataclasses import dataclass, replace
 from enum import IntEnum
 import io
@@ -194,7 +193,7 @@ class DataStore:
             " WHERE"
             " keys_values.key == table_values.key"
             " AND table_values.table_id == :table_id",
-            {"table_id": table},
+            {"table_id": table.hex()},
         )
 
         table_rows = [TableRow.from_clvm_bytes(clvm_bytes=row["value"]) async for row in cursor]
@@ -208,7 +207,7 @@ class DataStore:
             " keys_values.key == :key"
             " AND keys_values.key == table_values.key"
             " AND table_values.table_id == :table_id",
-            {"key": row_hash, "table_id": table},
+            {"key": row_hash.hex(), "table_id": table.hex()},
         )
 
         # TODO: not using .fetchone() is an extra guardrail but...  maybe not so legible?
@@ -224,7 +223,7 @@ class DataStore:
         return table_row
 
     async def create_table(self, id: bytes32, name: str) -> None:
-        await self.db.execute("INSERT INTO tables(id, name) VALUES(:id, :name)", {"id": id, "name": name})
+        await self.db.execute("INSERT INTO tables(id, name) VALUES(:id, :name)", {"id": id.hex(), "name": name})
         await self.db.commit()
 
     async def insert_row(self, table: bytes32, clvm_object: CLVMObject) -> TableRow:
@@ -238,11 +237,12 @@ class DataStore:
         clvm_bytes = SExp.to(clvm_object).as_bin()
 
         await self.db.execute(
-            "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash, "value": clvm_bytes}
+            "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash.hex(), "value": clvm_bytes}
         )
 
         await self.db.execute(
-            "INSERT INTO table_values(table_id, key) VALUES(:table_id, :key)", {"table_id": table, "key": row_hash}
+            "INSERT INTO table_values(table_id, key) VALUES(:table_id, :key)",
+            {"table_id": table.hex(), "key": row_hash.hex()},
         )
 
         await self.add_action(operation_type=OperationType.INSERT, key=row_hash, table=table)
@@ -256,23 +256,25 @@ class DataStore:
     async def add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
         cursor = await self.db.execute(
             "SELECT id, table_id FROM commits WHERE table_id == :table_id AND state == :state",
-            {"table_id": table, "state": CommitState.OPEN},
+            {"table_id": table.hex(), "state": CommitState.OPEN},
         )
-        commits_rows: List[Tuple[bytes32, bytes32]] = [(row["id"], row["table_id"]) async for row in cursor]
+        commits_rows: List[Tuple[bytes32, bytes32]] = [
+            (bytes32(bytes.fromhex(row["id"])), bytes32(bytes.fromhex(row["table_id"]))) async for row in cursor
+        ]
         if len(commits_rows) == 0:
             # TODO: just copied from elsewhere...  reconsider
             commit_id = random.randint(0, 100000000).to_bytes(32, "big")
             print("table_id", repr(table))
             await self.db.execute(
                 "INSERT INTO commits(id, table_id, state) VALUES(:id, :table_id, :state)",
-                {"id": commit_id, "table_id": table, "state": CommitState.OPEN},
+                {"id": commit_id.hex(), "table_id": table.hex(), "state": CommitState.OPEN},
             )
             next_actions_index = 0
         else:
             [commit_id] = [commit_id for commit_id, table_id in commits_rows]
 
             cursor = await self.db.execute(
-                "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id}
+                "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id.hex()}
             )
             # TODO: not using .fetchone() is an extra guardrail but...  maybe not so legible?
             # max_actions_index = (await cursor.fetchone())["MAX(idx)"]
@@ -281,7 +283,7 @@ class DataStore:
             next_actions_index = max_actions_index + 1
         await self.db.execute(
             "INSERT INTO actions(idx, commit_id, operation, key) VALUES(:idx, :commit_id, :operation, :key)",
-            {"idx": next_actions_index, "commit_id": commit_id, "operation": operation_type, "key": key},
+            {"idx": next_actions_index, "commit_id": commit_id.hex(), "operation": operation_type, "key": key.hex()},
         )
 
     async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
@@ -293,7 +295,7 @@ class DataStore:
 
         await self.db.execute(
             "DELETE FROM table_values WHERE table_id == :table_id AND key == :key",
-            {"table_id": table, "key": row_hash},
+            {"table_id": table.hex(), "key": row_hash.hex()},
         )
 
         await self.add_action(operation_type=OperationType.DELETE, key=row_hash, table=table)
