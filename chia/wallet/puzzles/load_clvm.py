@@ -5,9 +5,11 @@ import pathlib
 
 import pkg_resources
 from clvm_tools.clvmc import compile_clvm as compile_clvm_py
+from chia.types.blockchain_format.program import Program, SerializedProgram
 
 compile_clvm = compile_clvm_py
 
+# Handle optional use of clvm_tools_rs if available and requested
 if 'CLVM_TOOLS_RS' in os.environ:
     try:
         def sha256file(f):
@@ -28,7 +30,7 @@ if 'CLVM_TOOLS_RS' in os.environ:
 
         def rust_compile_clvm(full_path, output, search_paths=[]):
             treated_include_paths = list(map(translate_path, search_paths))
-            print('compile_clvm_rs',full_path,output,treated_include_paths)
+            print('compile_clvm_rs',full_path, output, treated_include_paths)
             compile_clvm_rs(str(full_path), str(output), treated_include_paths)
 
             if os.environ['CLVM_TOOLS_RS'] == 'check':
@@ -42,12 +44,9 @@ if 'CLVM_TOOLS_RS' in os.environ:
                     print("Aborting compilation due to mismatch with rust")
                     assert orig256 == rs256
 
-
         compile_clvm = rust_compile_clvm
     finally:
         pass
-
-from chia.types.blockchain_format.program import Program, SerializedProgram
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
