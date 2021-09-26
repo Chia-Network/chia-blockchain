@@ -9,6 +9,7 @@ import yaml
 
 from chia.util.path import mkdir
 
+import chia.util.flora
 
 def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()

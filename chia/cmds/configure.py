@@ -119,9 +119,9 @@ def configure(
 
         elif testnet == "false" or testnet == "f":
             print("Setting Mainnet")
-            mainnet_port = "8444"
-            mainnet_introducer = "introducer.chia.net"
-            mainnet_dns_introducer = "dns-introducer.chia.net"
+            mainnet_port = "18644"
+            mainnet_introducer = "introducer.floracoin.farm"
+            mainnet_dns_introducer = "dns-introducer.floracoin.farm"
             net = "mainnet"
             config["full_node"]["port"] = int(mainnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)

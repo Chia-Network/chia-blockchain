@@ -7,5 +7,6 @@ except Exception:
 
 
 def setproctitle(ps_name: str) -> None:
+    ps_name = ps_name.replace('chia','flora')
     if no_setproctitle is False:
         pysetproctitle.setproctitle(ps_name)
