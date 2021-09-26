@@ -125,6 +125,7 @@ class Commit:
         return cls(actions=actions, changelist_hash=changelist_hash, root_hash=root_hash)
 
 
+@dataclass
 class DataStore:
     db: aiosqlite.Connection
     # block_cache: LRUCache
@@ -133,11 +134,7 @@ class DataStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
-        self = cls()
-
-        # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db_wrapper = db_wrapper
-        self.db = db_wrapper.db
+        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
 
         # TODO: what pragmas do we want?  maybe foreign_keys?
         # await self.db.execute("pragma journal_mode=wal")
