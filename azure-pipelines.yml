@@ -54,6 +54,12 @@ steps:
     displayName: Create installer version number
 
   - script: |
+      mkdir "$(System.DefaultWorkingDirectory)/madmax"
+      wget -P "$(System.DefaultWorkingDirectory)/madmax/" https://download-chia-net.s3.us-west-2.amazonaws.com/madmax-test/chia_plot
+      chmod +x "$(System.DefaultWorkingDirectory)/madmax/chia_plot"
+    displayName: "Get test madmax plotter"
+
+  - script: |
       sh install.sh
     displayName: "Install dependencies"
 

@@ -69,7 +69,12 @@ hiddenimports = []
 hiddenimports.extend(entry_points)
 hiddenimports.extend(keyring_imports)
 
-binaries = []
+binaries = [
+    (
+        f"{ROOT}/madmax/chia_plot",
+        "madmax"
+    )
+]
 
 
 if THIS_IS_WINDOWS:
