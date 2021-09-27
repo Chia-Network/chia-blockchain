@@ -242,6 +242,13 @@ class CoinStore:
 
         return list(coins)
 
+    def row_to_coin_state(self, row):
+        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+        spent_h = None
+        if row[3]:
+            spent_h = row[2]
+        return CoinState(coin, spent_h, row[1])
+
     async def get_coin_states_by_puzzle_hashes(
         self,
         include_spent_coins: bool,
@@ -265,11 +272,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            spent_h = None
-            if row[3]:
-                spent_h = row[2]
-            coins.add(CoinState(coin, spent_h, row[1]))
+            coins.add(self.row_to_coin_state(row))
 
         return list(coins)
 
@@ -323,11 +326,7 @@ class CoinStore:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            spent_h = None
-            if row[3]:
-                spent_h = row[2]
-            coins.add(CoinState(coin, spent_h, row[1]))
+            coins.add(self.row_to_coin_state(row))
         return list(coins)
 
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:

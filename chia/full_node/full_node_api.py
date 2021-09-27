@@ -1064,7 +1064,7 @@ class FullNodeAPI:
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            tx_removals, tx_additions = await self.full_node.blockchain.get_tx_removals_and_additions(block)
+            tx_removals, tx_additions, _ = await self.full_node.blockchain.get_tx_removals_and_additions(block)
             header_block = get_block_header(block, tx_additions, tx_removals)
             msg = make_msg(
                 ProtocolMessageTypes.respond_block_header,
@@ -1338,8 +1338,11 @@ class FullNodeAPI:
         if peer.peer_node_id not in self.full_node.peer_sub_counter:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
 
+        hints = []
         # Add peer to the "Subscribed" dictionary
         for puzzle_hash in request.puzzle_hashes:
+            ph_hints = await self.full_node.hint_store.get_hints(puzzle_hash)
+            hints.extend(ph_hints)
             if puzzle_hash not in self.full_node.ph_subscriptions:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
             if (
@@ -1354,6 +1357,12 @@ class FullNodeAPI:
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
             include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
         )
+
+        if len(hints) > 0:
+            hint_states = await self.full_node.coin_store.get_coin_state_by_ids(
+                include_spent_coins=True, coin_ids=hints, start_height=request.min_height
+            )
+            states.extend(hint_states)
 
         response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
