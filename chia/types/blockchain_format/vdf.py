@@ -24,7 +24,7 @@ def get_discriminant(challenge, size_bites) -> int:
     )
 
 
-@lru_cache(maxsize=1000)
+@lru_cache(maxsize=10000)
 def verify_vdf(
     disc: int,
     input_el: bytes100,

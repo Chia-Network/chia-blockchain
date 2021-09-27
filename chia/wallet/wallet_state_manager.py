@@ -15,6 +15,7 @@ from cryptography.fernet import Fernet
 from chia import __version__
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.weight_proof import WeightProofHandler
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution, CoinState
@@ -56,6 +57,7 @@ from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.server.server import ChiaServer
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 
 def get_balance_from_coin_records(coin_records: Set[WalletCoinRecord]) -> uint128:
@@ -158,8 +160,11 @@ class WalletStateManager:
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.blockchain = await WalletBlockchain.create(self.basic_store)
+        await self.coin_store._clear_database()
+        # await self.basic_store._clear_database()
         self.wallet_node = wallet_node
         self.sync_mode = False
+        self.weight_proof_handler = WalletWeightProofHandler(self.constants, self.blockchain)
 
         self.state_changed_callback = None
         self.pending_tx_callback = None

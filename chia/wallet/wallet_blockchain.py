@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Dict, Optional
 from chia.consensus.constants import ConsensusConstants
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
 from chia.wallet.key_val_store import KeyValStore
@@ -24,6 +25,7 @@ class WalletBlockchain:
     basic_store: KeyValStore
     latest_tx_block: Optional[HeaderBlock]
     peak: Optional[HeaderBlock]
+    peak_verified_by_peer: Dict[bytes32, HeaderBlock]  # Peer node id / Header block that we validated the weight for
 
     @staticmethod
     async def create(basic_store: KeyValStore):
@@ -33,6 +35,7 @@ class WalletBlockchain:
         in the consensus constants config.
         """
         self = WalletBlockchain()
+        self.peak_verified_by_peer = {}
         self.basic_store = basic_store
         stored_height = await self.basic_store.get_str("STORED_HEIGHT")
         self.latest_tx_block = None
@@ -44,6 +47,9 @@ class WalletBlockchain:
         else:
             self._peak_height = uint32(int(stored_height))
         return self
+
+    def get_last_peak_from_peer(self, peer_node_id) -> Optional[HeaderBlock]:
+        return self.peak_verified_by_peer.get(peer_node_id, None)
 
     async def set_peak_height(self, height):
         self._peak_height = height
@@ -80,3 +86,9 @@ class WalletBlockchain:
             return self.peak
         obj = await self.basic_store.get_object("PEAK_BLOCK", HeaderBlock)
         return obj
+
+    def get_ses_heights(self):
+        pass
+
+    def get_ses(self):
+        pass

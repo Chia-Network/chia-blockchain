@@ -18,12 +18,19 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest, CoinState
+from chia.protocols.wallet_protocol import (
+    PuzzleSolutionResponse,
+    RejectHeaderBlocks,
+    RejectHeaderRequest,
+    CoinState,
+    RespondSESInfo,
+)
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -1390,4 +1397,40 @@ class FullNodeAPI:
         states = [record.coin_state for record in coin_records]
         response = wallet_protocol.RespondChildren(states)
         msg = make_msg(ProtocolMessageTypes.respond_children, response)
+        return msg
+
+    @api_request
+    async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo):
+        ses_height = self.full_node.blockchain.get_ses_heights()
+        start_height = request.start_height
+        end_height = request.end_height
+        start_ses_hash = None
+        end_ses_hash = None
+        ses_hash_heights = []
+        ses_reward_hashes = []
+
+        for idx, ses_start_height in enumerate(ses_height):
+            if idx == len(ses_height) - 1:
+                break
+
+            next_ses_height = ses_height[idx + 1]
+            # start_ses_hash
+            if ses_start_height <= start_height < next_ses_height:
+                ses_hash_heights.append([ses_start_height, next_ses_height])
+                ses: SubEpochSummary = self.full_node.blockchain.get_ses(ses_start_height)
+                ses_reward_hashes.append(ses.reward_chain_hash)
+                if ses_start_height < end_height < next_ses_height:
+                    break
+                else:
+                    if idx == len(ses_height) - 2:
+                        break
+                    # else add extra ses as request start <-> end spans two ses
+                    next_next_height = ses_height[idx + 2]
+                    ses_hash_heights.append([next_ses_height, next_next_height])
+                    ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
+                    ses_reward_hashes.append(ses.reward_chain_hash)
+                    break
+
+        response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
+        msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
         return msg

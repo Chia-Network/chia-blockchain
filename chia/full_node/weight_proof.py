@@ -4,7 +4,7 @@ import logging
 import math
 import random
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -46,7 +46,7 @@ class WeightProofHandler:
 
     LAMBDA_L = 100
     C = 0.5
-    MAX_SAMPLES = 20
+    MAX_SAMPLES = 2
 
     def __init__(
         self,
@@ -252,7 +252,7 @@ class WeightProofHandler:
                 return None
             await self.__create_persist_segment(prev_ses_block, ses_block, ses_height, sub_epoch_n)
             prev_ses_block = ses_block
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.01)
         log.debug("done checking segments")
         return None
 
@@ -1173,7 +1173,9 @@ def sub_slot_data_vdf_input(
     return cc_input
 
 
-def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
+def _validate_recent_blocks(
+    constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes], return_records=False
+) -> Any:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     sub_blocks = BlockCache({})
@@ -1221,12 +1223,16 @@ def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, sum
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
+                    if return_records:
+                        return False, []
                     return False
             else:
                 required_iters = _validate_pospace_recent_chain(
                     constants, block, challenge, diff, overflow, prev_challenge
                 )
                 if required_iters is None:
+                    if return_records:
+                        return False, []
                     return False
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
@@ -1243,8 +1249,16 @@ def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, sum
         if ses:
             ses_blocks += 1
         prev_block_record = block_record
-
+    if return_records:
+        return True, block_cache_to_records_bytes(sub_blocks)
     return True
+
+
+def block_cache_to_records_bytes(block_cache: BlockCache) -> List[bytes]:
+    records = []
+    for key, val in block_cache._block_records.items():
+        records.append(bytes(val))
+    return records
 
 
 def _validate_pospace_recent_chain(
