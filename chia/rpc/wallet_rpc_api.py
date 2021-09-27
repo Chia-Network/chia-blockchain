@@ -451,8 +451,8 @@ class WalletRpcApi:
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
-                    cc_wallet: CCWallet = await CCWallet.create_new_cc(
-                        wallet_state_manager, main_wallet, uint64(request["amount"])
+                    cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                        wallet_state_manager, main_wallet, {"identifier": "genesis_by_id"}, uint64(request["amount"])
                     )
                     colour = cc_wallet.get_colour()
                     asyncio.create_task(self._create_backup_and_upload(host))

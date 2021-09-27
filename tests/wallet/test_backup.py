@@ -49,7 +49,7 @@
 #
 #         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 #
-#         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+#         cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
 #
 #         for i in range(1, num_blocks):
 #             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
