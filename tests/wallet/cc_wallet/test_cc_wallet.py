@@ -72,7 +72,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -112,7 +112,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -187,7 +187,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -221,7 +221,7 @@ class TestCCWallet:
         )
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
 
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
@@ -282,7 +282,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -362,7 +362,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
 
-        cc_wallet_0: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
+        cc_wallet_0: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100))
         tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -460,7 +460,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100000))
+        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000))
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
