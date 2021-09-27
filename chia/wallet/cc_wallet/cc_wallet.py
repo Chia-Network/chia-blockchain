@@ -34,7 +34,7 @@ from chia.wallet.cc_wallet.cc_utils import (
     match_cat_puzzle,
 )
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.puzzles.genesis_checkers import GenesisById
+from chia.wallet.puzzles.genesis_checkers import GenesisById, ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -62,9 +62,10 @@ class CCWallet:
     cost_of_single_tx: Optional[int]
 
     @staticmethod
-    async def create_new_cc(
+    async def create_new_cc_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
+        cat_tail_info: Dict,
         amount: uint64,
     ):
         self = CCWallet()
@@ -77,7 +78,7 @@ class CCWallet:
             raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
 
-        self.cc_info = CCInfo(None, [])  # Static TAIL
+        self.cc_info = CCInfo(None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CAT Wallet", WalletType.COLOURED_COIN, info_as_string
@@ -86,21 +87,25 @@ class CCWallet:
             raise ValueError("Internal Error")
 
         try:
-            spend_bundle = await self.generate_new_coloured_coin(amount)
+            spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
+                self,
+                cat_tail_info,
+                amount,
+            )
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id(), False)  # Static TAIL
+            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
             raise
         if spend_bundle is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id())  # Static TAIL
+            await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
 
-        await self.wallet_state_manager.add_new_wallet(self, self.id())  # Static TAIL
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
 
         # Change and actual coloured coin
-        non_ephemeral_spends: List[Coin] = spend_bundle.not_ephemeral_additions()
+        non_ephemeral_coins: List[Coin] = spend_bundle.not_ephemeral_additions()
         cc_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
-        for c in non_ephemeral_spends:
+        for c in non_ephemeral_coins:
             info = await puzzle_store.wallet_info_for_puzzle_hash(c.puzzle_hash)
             if info is None:
                 raise ValueError("Internal Error")
@@ -670,31 +675,6 @@ class CCWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
-
-    async def generate_new_coloured_coin(self, amount: uint64) -> SpendBundle:
-        coins = await self.standard_wallet.select_coins(amount)
-
-        origin = coins.copy().pop()
-        origin_id = origin.name()
-
-        cc_inner: Program = await self.get_new_inner_puzzle()
-        await self.add_lineage(origin_id, LineageProof())
-        genesis_coin_checker: Program = GenesisById.construct([Program.to(origin_id)])  # Static TAIL
-
-        minted_cc_puzzle_hash: bytes32 = construct_cc_puzzle(CC_MOD, genesis_coin_checker, cc_inner).get_tree_hash()
-
-        tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
-            amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
-        )
-        assert tx_record.spend_bundle is not None
-
-        # We completely override the lineage proofs we have stored here
-        # This should change when generating a new coin is not something that we only do once
-        lineage_proofs: List[Tuple[bytes32, Optional[LineageProof]]] = [(origin_id, LineageProof())]  # Static TAIL
-        cc_info: CCInfo = CCInfo(genesis_coin_checker, lineage_proofs)
-        await self.save_info(cc_info, False)
-
-        return tx_record.spend_bundle
 
     async def create_spend_bundle_relative_amount(self, cc_amount, zero_coin: Coin = None) -> Optional[SpendBundle]:
         # If we're losing value then get coloured coins with at least that much value
