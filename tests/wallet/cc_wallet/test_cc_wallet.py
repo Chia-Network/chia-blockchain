@@ -436,7 +436,12 @@ class TestCCWallet:
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
         print(len(txs))
         # Test with Memo
-        tx_record_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"Markus Walburg"])
+        tx_record_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction(
+            [uint64(30)], [cc_hash], memos=[b"Markus Walburg"]
+        )
+        with pytest.raises(ValueError):
+            await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"too", b"many", b"memos"])
+
         await wallet_1.wallet_state_manager.add_pending_transaction(tx_record_3)
         await time_out_assert(
             15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record_3.spend_bundle.name()

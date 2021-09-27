@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from blspy import PrivateKey, G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.full_node.mempool_check_conditions import MAX_MEMO_SIZE
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -820,8 +821,8 @@ class WalletRpcApi:
         memo: Optional[bytes] = None
         if "memo" in request:
             memo = hexstr_to_bytes(request["memo"])
-            if len(memo) > 1000:
-                raise ValueError("Memo too large, please use less than 1000 bytes")
+            if len(memo) > MAX_MEMO_SIZE:
+                raise ValueError(f"Memo too large, please use less than {MAX_MEMO_SIZE} bytes")
 
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")

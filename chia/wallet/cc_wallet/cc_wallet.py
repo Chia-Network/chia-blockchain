@@ -577,10 +577,13 @@ class CCWallet:
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
-        memos: Optional[List[Optional[bytes]]] = None
+        memos: Optional[List[Optional[bytes]]] = None,
     ) -> TransactionRecord:
         if memos is None:
             memos = [None for _ in range(len(puzzle_hashes))]
+
+        if not (len(memos) == len(puzzle_hashes) == len(amounts)):
+            raise ValueError("Memos, puzzle_hashes, and amounts must have the same length")
 
         # Get coins and calculate amount of change required
         outgoing_amount = uint64(sum(amounts))
