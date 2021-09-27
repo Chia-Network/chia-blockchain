@@ -35,8 +35,9 @@
 ;
 ; So S_{k+1} is correct iff S_k is correct.
 ;
-; Coins also receive proofs that their neighbors are CATs, ensuring the announcements aren't forgeries, as
-; inner puzzles are not allowed to use `CREATE_COIN_ANNOUNCEMENT`.
+; Coins also receive proofs that their neighbours are CATs, ensuring the announcements aren't forgeries.
+; Inner puzzles and the CAT layer prepend `CREATE_COIN_ANNOUNCEMENT` with different prefixes to avoid forgeries.
+; Ring announcements use 0xcb, and inner puzzles are given 0xca
 ;
 ; In summary, I_k generates a coin_announcement Y_k ("Y" for "yell") as follows:
 ;
