@@ -96,3 +96,6 @@ class CompressibleVDFField(IntEnum):
     ICC_EOS_VDF = 2
     CC_SP_VDF = 3
     CC_IP_VDF = 4
+    RC_SP_VDF = 5
+    RC_IP_VDF = 6
+    RC_EOS_VDF = 7

@@ -1808,7 +1808,34 @@ class FullNode:
                 ):
                     return False
                 return True
-        return False
+        if field_vdf == CompressibleVDFField.RC_SP_VDF:
+            if header_block.reward_chain_block.reward_chain_sp_vdf is None:
+                return False
+            if vdf_info == header_block.reward_chain_block.reward_chain_sp_vdf:
+                assert header_block.reward_chain_sp_proof is not None
+                if (
+                    header_block.reward_chain_sp_proof.witness_type == 0
+                    and header_block.reward_chain_sp_proof.normalized_to_identity
+                ):
+                    return False
+                return True
+        if field_vdf == CompressibleVDFField.RC_IP_VDF:
+            if vdf_info == header_block.reward_chain_block.reward_chain_ip_vdf:
+                if (
+                    header_block.reward_chain_ip_proof.witness_type == 0
+                    and header_block.reward_chain_ip_proof.normalized_to_identity
+                ):
+                    return False
+                return True
+        if field_vdf == CompressibleVDFField.RC_EOS_VDF:
+            for sub_slot in header_block.finished_sub_slots:
+                if sub_slot.reward_chain.end_of_slot_vdf == vdf_info:
+                    if (
+                        sub_slot.proofs.reward_chain_slot_proof.witness_type == 0
+                        and sub_slot.proofs.reward_chain_slot_proof.normalized_to_identity
+                    ):
+                        return False
+                    return True
 
     async def _can_accept_compact_proof(
         self,
@@ -1889,6 +1916,22 @@ class FullNode:
             if field_vdf == CompressibleVDFField.CC_IP_VDF:
                 if block.reward_chain_block.challenge_chain_ip_vdf == vdf_info:
                     new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
+            if field_vdf == CompressibleVDFField.RC_SP_VDF:
+                if block.reward_chain_block.reward_chain_sp_vdf == vdf_info:
+                    assert block.reward_chain_sp_proof is not None
+                    new_block = dataclass.replace(block, reward_chain_sp_proof=vdf_proof)
+            if field_vdf == CompressibleVDFField.RC_IP_VDF:
+                if block.reward_chain_block.reward_chain_ip_vdf == vdf_info:
+                    new_block = dataclass.replace(block, reward_chain_ip_proof=vdf_proof)
+            if field_vdf == CompressibleVDFField.RC_EOS_VDF:
+                for index, sub_slot in enumerate(block.finished_sub_slots):
+                    if sub_slot.reward_chain.end_of_slot_vdf == vdf_info:
+                        new_proofs = dataclasses.replace(sub_slot.proofs, reward_chain_slot_proof=vdf_proof)
+                        new_subslot = dataclasses.replace(sub_slot, proofs=new_proofs)
+                        new_finished_subslots = block.finished_sub_slots
+                        new_finished_subslots[index] = new_subslot
+                        new_block = dataclasses.replace(block, finished_sub_slots=new_finished_subslots)
+                        break
             if new_block is None:
                 continue
             async with self.db_wrapper.lock:
@@ -2053,6 +2096,18 @@ class FullNode:
                                         uint8(CompressibleVDFField.ICC_EOS_VDF),
                                     )
                                 )
+                            if (
+                                sub_slot.proofs.reward_chain_slot_proof.witness_type > 0
+                                or not sub_slot.proofs.reward_chain_slot_proof.normalized_to_identity
+                            ):
+                                broadcast_list.append(
+                                    timelord_protocol.RequestCompactProofOfTime(
+                                        sub_slot.reward_chain.end_of_slot_vdf,
+                                        header.header_hash,
+                                        header.height,
+                                        uint8(CompressibleVDFField.RC_EOS_VDF),
+                                    )
+                                )
                         # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
                         # unless this is a challenge block.
                         if sanitize_weight_proof_only:
@@ -2084,7 +2139,31 @@ class FullNode:
                                     uint8(CompressibleVDFField.CC_IP_VDF),
                                 )
                             )
-
+                        if header.reward_chain_sp_proof is not None and (
+                            header.reward_chain_sp_proof.witness_type > 0
+                            or not header.reward_chain_sp_proof.normalized_to_identity
+                        ):
+                            assert header.reward_chain_block.reward_chain_sp_vdf is not None
+                            broadcast_list.append(
+                                timelord_protocol.RequestCompactProofOfTime(
+                                    header.reward_chain_block.reward_chain_sp_vdf,
+                                    header.header_hash,
+                                    header.height,
+                                    uint8(CompressibleVDFField.RC_SP_VDF),
+                                )
+                            )
+                        if (
+                            header.reward_chain_ip_proof.witness_type > 0
+                            or not header.reward_chain_ip_proof.normalized_to_identity
+                        ):
+                            broadcast_list.append(
+                                timelord_protocol.RequestCompactProofOfTime(
+                                    header.reward_chain_block.reward_chain_ip_vdf,
+                                    header.header_hash,
+                                    header.height,
+                                    uint8(CompressibleVDFField.RC_IP_VDF),
+                                )
+                            )
                 if len(broadcast_list) > target_uncompact_proofs:
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
                 if self.sync_store.get_sync_mode():

@@ -1003,7 +1003,7 @@ class Timelord:
                         # Select randomly the field_vdf we're creating a compact vdf for.
                         # This is done because CC_SP and CC_IP are more frequent than
                         # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
-                        target_field_vdf = random.randint(1, 4)
+                        target_field_vdf = random.randint(1, 7)
                         info = next(
                             (info for info in self.pending_bluebox_info if info[1].field_vdf == target_field_vdf),
                             None,
