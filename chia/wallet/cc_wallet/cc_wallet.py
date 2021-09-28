@@ -30,8 +30,9 @@ from chia.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     get_cat_truths,
     match_cat_puzzle,
-)
+    get_lineage_proof_from_coin_and_puz)
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.genesis_checkers import GenesisById, ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -324,9 +325,9 @@ class CCWallet:
     async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
         coin_name = response.coin_name
         puzzle: Program = response.puzzle
-        r = uncurry_cc(puzzle)
-        if r is not None:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = r
+        matched, curried_args = match_cat_puzzle(puzzle)
+        if matched:
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
