@@ -171,7 +171,7 @@ class HarvesterAPI:
                     harvester_protocol.NewProofOfSpace(
                         new_challenge.challenge_hash,
                         new_challenge.sp_hash,
-                        quality_str.hex() + str(filename.resolve()),
+                        quality_str.hex() + str(filename.absolute()),
                         proof_of_space,
                         new_challenge.signage_point_index,
                     )
@@ -242,7 +242,7 @@ class HarvesterAPI:
         A signature is created on the header hash using the harvester private key. This can also
         be used for pooling.
         """
-        plot_filename = Path(request.plot_identifier[64:]).resolve()
+        plot_filename = Path(request.plot_identifier[64:]).absolute()
         with self.harvester.plot_manager:
             try:
                 plot_info = self.harvester.plot_manager.plots[plot_filename]
