@@ -1,4 +1,11 @@
 import asyncio
+from typing import Optional
+
+from blspy import G2Element
+
+from chia.types.coin_record import CoinRecord
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config, save_config
 import logging
 from pathlib import Path
@@ -31,8 +38,9 @@ class TestWalletRpc:
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_rpc(self, two_wallet_nodes):
         test_rpc_port = uint16(21529)
+        test_rpc_port_2 = uint16(21536)
         test_rpc_port_node = uint16(21530)
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
@@ -46,6 +54,7 @@ class TestWalletRpc:
         ph_2 = await wallet_2.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -61,6 +70,7 @@ class TestWalletRpc:
         )
 
         wallet_rpc_api = WalletRpcApi(wallet_node)
+        wallet_rpc_api_2 = WalletRpcApi(wallet_node_2)
 
         config = bt.config
         hostname = config["self_hostname"]
@@ -91,11 +101,22 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
+        rpc_cleanup_2 = await start_rpc_server(
+            wallet_rpc_api_2,
+            hostname,
+            daemon_port,
+            test_rpc_port_2,
+            stop_node_cb,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
 
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
@@ -107,7 +128,7 @@ class TestWalletRpc:
                 pass
 
             # Tests sending a basic transaction
-            tx = await client.send_transaction("1", tx_amount, addr)
+            tx = await client.send_transaction("1", tx_amount, addr, memo=b"this is a basic tx")
             transaction_id = tx.name
 
             async def tx_in_mempool():
@@ -125,6 +146,13 @@ class TestWalletRpc:
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
 
+            # Checks that the memo can be retrieved
+            tx_confirmed = await client.get_transaction("1", transaction_id)
+            assert tx_confirmed.confirmed
+            assert len(tx_confirmed.get_memos()) == 1
+            assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
+            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
+
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
 
             # Tests offline signing
@@ -135,7 +163,7 @@ class TestWalletRpc:
             # Test basic transaction to one output
             signed_tx_amount = 888000
             tx_res: TransactionRecord = await client.create_signed_transaction(
-                [{"amount": signed_tx_amount, "puzzle_hash": ph_3}]
+                [{"amount": signed_tx_amount, "puzzle_hash": ph_3, "memo": "My memo".encode("utf-8")}]
             )
 
             assert tx_res.fee_amount == 0
@@ -163,7 +191,7 @@ class TestWalletRpc:
             assert coin_to_spend is not None
 
             tx_res = await client.create_signed_transaction(
-                [{"amount": 444, "puzzle_hash": ph_4}, {"amount": 999, "puzzle_hash": ph_5}],
+                [{"amount": 444, "puzzle_hash": ph_4, "memo": b"hhh"}, {"amount": 999, "puzzle_hash": ph_5}],
                 coins=[coin_to_spend],
                 fee=100,
             )
@@ -180,11 +208,29 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
+            found: bool = False
+            for addition in tx_res.spend_bundle.additions():
+                if addition.amount == 444:
+                    cr: Optional[CoinRecord] = await client_node.get_coin_record_by_name(addition.name())
+                    assert cr is not None
+                    spend: CoinSpend = await client_node.get_puzzle_and_solution(
+                        addition.parent_coin_info, cr.confirmed_block_index
+                    )
+                    sb: SpendBundle = SpendBundle([spend], G2Element())
+                    assert sb.get_memos() == {addition.name(): [b"hhh"]}
+                    found = True
+            assert found
+
             new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
             await time_out_assert(5, eventual_balance, new_balance)
 
             send_tx_res: TransactionRecord = await client.send_transaction_multi(
-                "1", [{"amount": 555, "puzzle_hash": ph_4}, {"amount": 666, "puzzle_hash": ph_5}], fee=200
+                "1",
+                [
+                    {"amount": 555, "puzzle_hash": ph_4, "memo": "FiMemo".encode("utf-8")},
+                    {"amount": 666, "puzzle_hash": ph_5, "memo": "SeMemo".encode("utf-8")},
+                ],
+                fee=200,
             )
             assert send_tx_res is not None
             assert send_tx_res.fee_amount == 200
@@ -204,6 +250,80 @@ class TestWalletRpc:
 
             new_balance = new_balance - 555 - 666 - 200
             await time_out_assert(5, eventual_balance, new_balance)
+
+            # Checks that the memo can be retrieved
+            tx_confirmed = await client.get_transaction("1", send_tx_res.name)
+            assert tx_confirmed.confirmed
+            assert len(tx_confirmed.get_memos()) == 2
+            print(tx_confirmed.get_memos())
+            assert ["FiMemo".encode("utf-8")] in tx_confirmed.get_memos().values()
+            assert ["SeMemo".encode("utf-8")] in tx_confirmed.get_memos().values()
+            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+
+            ##############
+            # CATS       #
+            ##############
+
+            # Creates a wallet and a CAT with 20 mojos
+            res = await client.create_new_cat_and_wallet(20)
+            assert res["success"]
+            cat_0_id = res["wallet_id"]
+            colour = bytes.fromhex(res["colour"])
+            assert len(colour) > 0
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 0
+            assert bal_0["pending_coin_removal_count"] == 1
+            col = await client.get_cat_colour(cat_0_id)
+            assert col == colour
+            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
+            await client.set_cat_name(cat_0_id, "My cat")
+            assert (await client.get_cat_name(cat_0_id)) == "My cat"
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 20
+            assert bal_0["pending_coin_removal_count"] == 0
+            assert bal_0["unspent_coin_count"] == 1
+
+            # Creates a second wallet with the same CAT
+            res = await client_2.create_wallet_for_existing_cat(colour)
+            assert res["success"]
+            cat_1_id = res["wallet_id"]
+            colour_1 = bytes.fromhex(res["colour"])
+            assert colour_1 == colour
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+            assert bal_1["confirmed_wallet_balance"] == 0
+
+            addr_0 = await client.get_next_address(cat_0_id, False)
+            addr_1 = await client_2.get_next_address(cat_1_id, False)
+
+            assert addr_0 != addr_1
+
+            await client.cat_spend(cat_0_id, 4, addr_1, 0, b"the cat memo")
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+
+            assert bal_0["confirmed_wallet_balance"] == 16
+            assert bal_1["confirmed_wallet_balance"] == 4
+
+            # Keys and addresses
 
             address = await client.get_next_address("1", True)
             assert len(address) > 10
@@ -296,15 +416,18 @@ class TestWalletRpc:
                 raise Exception("Should not create tx if no balance")
             except ValueError:
                 pass
-
+            # Delete all keys
             await client.delete_all_keys()
-
             assert len(await client.get_public_keys()) == 0
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
+            client_2.close()
             client_node.close()
             await client.await_closed()
+            await client_2.await_closed()
             await client_node.await_closed()
             await rpc_cleanup()
+            await rpc_cleanup_2()
             await rpc_cleanup_node()
