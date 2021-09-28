@@ -16,7 +16,7 @@ MADMAX_PLOTTER_DIR = "madmax-plotter"
 
 
 def is_madmax_supported() -> bool:
-    return sys.platform.startswith("linux") or sys.platform.startswith("darwin")
+    return sys.platform.startswith("linux") or sys.platform in ["darwin", "win32", "cygwin"]
 
 
 def get_madmax_install_path(plotters_root_path: Path) -> Path:
@@ -24,7 +24,10 @@ def get_madmax_install_path(plotters_root_path: Path) -> Path:
 
 
 def get_madmax_executable_path(plotters_root_path: Path) -> Path:
-    return get_madmax_install_path(plotters_root_path) / "build/chia_plot"
+    madmax_exec: str = "chia_plot"
+    if sys.platform in ["win32", "cygwin"]:
+        madmax_exec = "chia_plot.exe"
+    return get_madmax_install_path(plotters_root_path) / "build" / madmax_exec
 
 
 def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
