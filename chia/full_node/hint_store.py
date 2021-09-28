@@ -31,7 +31,7 @@ class HintStore:
             coin_ids.append(row[0])
         return coin_ids
 
-    async def add_hints(self, coin_hint_list: List[Tuple[bytes, bytes]]) -> None:
+    async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         cursor = await self.coin_record_db.executemany(
             "INSERT INTO hints VALUES(?, ?)",
             coin_hint_list,

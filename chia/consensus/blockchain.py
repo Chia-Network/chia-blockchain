@@ -294,7 +294,7 @@ class Blockchain(BlockchainInterface):
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, ([], {})
 
-    def get_hint_list(self, npc_result: NPCResult) -> List[Tuple[bytes, bytes]]:
+    def get_hint_list(self, npc_result: NPCResult) -> List[Tuple[bytes32, bytes]]:
         h_list = []
         for npc in npc_result.npc_list:
             for opcode, conditions in npc.conditions:
@@ -431,14 +431,14 @@ class Blockchain(BlockchainInterface):
                         lastest_coin_state[record.name] = record
 
                     if npc_res is not None:
-                        hint_list = self.get_hint_list(npc_res)
+                        hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
                         await self.hint_store.add_hints(hint_list)
                         # There can be multiple coins for the same hint
-                        for coin_name, hint in hint_list:
+                        for coin_id, hint in hint_list:
                             key = hint
                             if key not in hint_coin_state:
                                 hint_coin_state[key] = {}
-                            hint_coin_state[key][coin_name] = lastest_coin_state[coin_name]
+                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
