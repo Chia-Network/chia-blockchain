@@ -73,7 +73,7 @@ class CCWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id, None)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
@@ -363,9 +363,6 @@ class CCWallet:
 
     async def get_new_inner_puzzle(self) -> Program:
         return adapt_inner_to_singleton(await self.standard_wallet.get_new_puzzle())
-
-    async def get_puzzle_hash(self, new: bool):
-        return adapt_inner_puzzle_hash_to_singleton(await self.standard_wallet.get_puzzle_hash(new))
 
     async def get_new_puzzlehash(self) -> bytes32:
         return adapt_inner_puzzle_hash_to_singleton(await self.standard_wallet.get_new_puzzlehash())

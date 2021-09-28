@@ -22,6 +22,7 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
+from chia.wallet.puzzles.singleton_top_layer import adapt_inner_puzzle_hash_to_singleton
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -448,7 +449,7 @@ class WalletRpcApi:
             fee: uint64 = request["fee"]
         else:
             fee = uint64(0)
-        if request["wallet_type"] == "cc_wallet":
+        if request["wallet_type"] == "cat_wallet":
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
                     cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
@@ -456,11 +457,7 @@ class WalletRpcApi:
                     )
                     colour = cc_wallet.get_colour()
                     asyncio.create_task(self._create_backup_and_upload(host))
-                return {
-                    "type": cc_wallet.type(),
-                    "colour": colour,
-                    "wallet_id": cc_wallet.id(),
-                }
+                return {"type": cc_wallet.type(), "colour": colour, "wallet_id": cc_wallet.id()}
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
@@ -468,7 +465,7 @@ class WalletRpcApi:
                         wallet_state_manager, main_wallet, request["colour"]
                     )
                     asyncio.create_task(self._create_backup_and_upload(host))
-                return {"type": cc_wallet.type()}
+                return {"type": cc_wallet.type(), "colour": request["colour"], "wallet_id": cc_wallet.id()}
 
             else:  # undefined mode
                 pass
@@ -700,7 +697,7 @@ class WalletRpcApi:
             raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         elif wallet.type() == WalletType.COLOURED_COIN:
-            raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
+            raw_puzzle_hash = await wallet.standard_wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
@@ -718,6 +715,9 @@ class WalletRpcApi:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        if wallet.type() == WalletType.COLOURED_COIN:
+            raise ValueError("send_transaction does not work for CAT wallets")
 
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
@@ -807,7 +807,10 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        # This inner address is a normal XCH address of the inner puzzle, not adapted
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
+        puzzle_hash_adapted: bytes32 = adapt_inner_puzzle_hash_to_singleton(puzzle_hash)
 
         memo: Optional[bytes] = None
         if "memo" in request:
@@ -821,8 +824,10 @@ class WalletRpcApi:
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee, memos=[memo])
-            await wallet.push_transaction(tx)
+            tx: TransactionRecord = await wallet.generate_signed_transaction(
+                [amount], [puzzle_hash_adapted], fee, memos=[memo]
+            )
+            await wallet.standard_wallet.push_transaction(tx)
 
         return {
             "transaction": tx.to_json_dict_convenience(self.service.config),

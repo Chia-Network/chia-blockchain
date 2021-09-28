@@ -38,8 +38,9 @@ class TestWalletRpc:
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_rpc(self, two_wallet_nodes):
         test_rpc_port = uint16(21529)
+        test_rpc_port_2 = uint16(21536)
         test_rpc_port_node = uint16(21530)
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
@@ -68,6 +69,7 @@ class TestWalletRpc:
         )
 
         wallet_rpc_api = WalletRpcApi(wallet_node)
+        wallet_rpc_api_2 = WalletRpcApi(wallet_node_2)
 
         config = bt.config
         hostname = config["self_hostname"]
@@ -98,11 +100,22 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
+        rpc_cleanup_2 = await start_rpc_server(
+            wallet_rpc_api_2,
+            hostname,
+            daemon_port,
+            test_rpc_port_2,
+            stop_node_cb,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
 
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
@@ -168,7 +181,6 @@ class TestWalletRpc:
                 await asyncio.sleep(0.5)
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
-            # TODO: Test that memo exists in full node
 
             # Test transaction to two outputs, from a specified coin, with a fee
             coin_to_spend = None
@@ -340,14 +352,80 @@ class TestWalletRpc:
             except ValueError:
                 pass
 
-            await client.delete_all_keys()
+            ##############
+            # CATS       #
+            ##############
 
+            # Creates a wallet and a CAT with 20 mojos
+            res = await client.create_new_cat_and_wallet(20)
+            assert res["success"]
+            cat_0_id = res["wallet_id"]
+            colour = bytes.fromhex(res["colour"])
+            assert len(colour) > 0
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 0
+            assert bal_0["pending_coin_removal_count"] == 1
+            col = await client.get_cat_colour(cat_0_id)
+            assert col == colour
+            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
+            await client.set_cat_name(cat_0_id, "My cat")
+            assert (await client.get_cat_name(cat_0_id)) == "My cat"
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 20
+            assert bal_0["pending_coin_removal_count"] == 0
+            assert bal_0["unspent_coin_count"] == 1
+
+            # Creates a second wallet with the same CAT
+            res = await client_2.create_wallet_for_existing_cat(colour)
+            assert res["success"]
+            cat_1_id = res["wallet_id"]
+            colour_1 = bytes.fromhex(res["colour"])
+            assert colour_1 == colour
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+            assert bal_1["confirmed_wallet_balance"] == 0
+
+            addr_0 = await client.get_next_address(cat_0_id, False)
+            addr_1 = await client_2.get_next_address(cat_1_id, False)
+
+            assert addr_0 != addr_1
+
+            await client.cat_spend(cat_0_id, 4, addr_1, 0, b"the cat memo")
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+
+            assert bal_0["confirmed_wallet_balance"] == 16
+            assert bal_1["confirmed_wallet_balance"] == 4
+
+            # Delete all keys
+            await client.delete_all_keys()
             assert len(await client.get_public_keys()) == 0
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
+            client_2.close()
             client_node.close()
             await client.await_closed()
+            await client_2.await_closed()
             await client_node.await_closed()
             await rpc_cleanup()
+            await rpc_cleanup_2()
             await rpc_cleanup_node()

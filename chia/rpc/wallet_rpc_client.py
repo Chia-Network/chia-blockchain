@@ -178,6 +178,62 @@ class WalletRpcClient(RpcClient):
 
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
 
+    # CATs
+
+    async def create_new_cat_and_wallet(self, amount: uint64) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_type": "cat_wallet",
+            "mode": "new",
+            "amount": amount,
+            "host": f"{self.hostname}:{self.port}",
+        }
+        return await self.fetch("create_new_wallet", request)
+
+    async def create_wallet_for_existing_cat(self, colour: bytes) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_type": "cat_wallet",
+            "colour": colour.hex(),
+            "mode": "existing",
+            "host": f"{self.hostname}:{self.port}",
+        }
+        return await self.fetch("create_new_wallet", request)
+
+    async def get_cat_colour(self, wallet_id: str) -> bytes:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        return bytes.fromhex((await self.fetch("cc_get_colour", request))["colour"])
+
+    async def get_cat_name(self, wallet_id: str) -> str:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        return (await self.fetch("cc_get_name", request))["name"]
+
+    async def set_cat_name(self, wallet_id: str, name: str) -> None:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "name": name,
+        }
+        await self.fetch("cc_set_name", request)
+
+    async def cat_spend(
+        self, wallet_id: str, amount: uint64, inner_address: str, fee: uint64 = uint64(0), memo: Optional[bytes] = None
+    ) -> TransactionRecord:
+        if memo is None:
+            send_dict: Dict = {"wallet_id": wallet_id, "amount": amount, "inner_address": inner_address, "fee": fee}
+        else:
+            send_dict = {
+                "wallet_id": wallet_id,
+                "amount": amount,
+                "inner_address": inner_address,
+                "fee": fee,
+                "memo": memo.hex(),
+            }
+        res = await self.fetch("cc_spend", send_dict)
+        return TransactionRecord.from_json_dict_convenience(res["transaction"])
+
+    # DID wallet
     async def create_new_did_wallet(self, amount):
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
