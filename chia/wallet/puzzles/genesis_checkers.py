@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -165,3 +165,12 @@ ALL_LIMITATIONS_PROGRAMS = {
     "everything_with_signature": EverythingWithSig,
     "delegated_limitations": DelegatedLimitations,
 }
+
+def match_limitations_program(limitations_program: Program) -> Tuple[Optional[LimitationsProgram], List[Program]]:
+    uncurried_mod, curried_args = limitations_program.uncurry()
+    for key, lp in ALL_LIMITATIONS_PROGRAMS:
+        matched, args = lp.match(uncurried_mod, curried_args)
+        if matched:
+            return lp, args
+        else:
+            return None, []

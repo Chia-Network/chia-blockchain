@@ -14,7 +14,7 @@ from chia.util.ints import uint64
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     construct_cc_puzzle,
-    spend_bundle_for_spendable_ccs,
+    unsigned_spend_bundle_for_spendable_ccs,
     spendable_cc_list_from_coin_spend,
 )
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
@@ -137,11 +137,9 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
     output_conditions = solution_for_pay_to_any([(eve_inner_puzzle_hash, _) for _ in output_values])
     inner_puzzle_solution = Program.to(output_conditions)
 
-    spend_bundle = spend_bundle_for_spendable_ccs(
+    spend_bundle = unsigned_spend_bundle_for_spendable_ccs(
         mod_code,
-        genesis_coin_checker,
         spendable_cc_list,
-        [inner_puzzle_solution],
     )
 
     spend_bundle.debug()
@@ -162,11 +160,9 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
         solution_for_pay_to_any([(eve_inner_puzzle_hash, amount)] if amount else []) for amount in output_amounts
     ]
 
-    spend_bundle = spend_bundle_for_spendable_ccs(
+    spend_bundle = unsigned_spend_bundle_for_spendable_ccs(
         mod_code,
-        genesis_coin_checker,
         spendable_cc_list,
-        inner_solutions,
     )
 
     spend_bundle.debug()
@@ -218,7 +214,7 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
         solution_for_pay_to_any([]),
         solution_for_pay_to_any([(wrapped_cc_puzzle_hash, eve_cc_spendable.coin.amount)]),
     ]
-    spend_bundle = spend_bundle_for_spendable_ccs(mod_code, genesis_coin_checker, spendable_cc_list, inner_solutions)
+    spend_bundle = unsigned_spend_bundle_for_spendable_ccs(mod_code, spendable_cc_list)
     spend_bundle.debug()
 
 

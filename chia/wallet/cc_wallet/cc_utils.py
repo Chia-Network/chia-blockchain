@@ -9,6 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
+from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
@@ -24,7 +25,11 @@ class SpendableCC:
     coin: Coin
     limitations_program: Program
     inner_puzzle: Program
-    lineage_proof: Program
+    inner_solution: Program
+    limitations_solution: Program = Program.to([])
+    lineage_proof: LineageProof = LineageProof()
+    extra_delta: uint64 = uint64(0)
+    reveal_limitations_program: bool = False
 
 
 def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
@@ -79,7 +84,7 @@ def next_info_for_spendable_cc(spendable_cc: SpendableCC) -> Program:
     return Program.to(list)
 
 
-def get_cat_truths(spendable_cc: SpendableCC, limitations_solution: Program) -> Program:
+def get_cat_truths(spendable_cc: SpendableCC) -> Program:
     mod_hash = CC_MOD.get_tree_hash()
     mod_hash_hash = Program.to(mod_hash).get_tree_hash()
     cc_struct = Program.to([mod_hash, mod_hash_hash, spendable_cc.limitations_program, spendable_cc.limitations_program.get_tree_hash()])
@@ -95,65 +100,41 @@ def get_cat_truths(spendable_cc: SpendableCC, limitations_solution: Program) -> 
                     ),
                     spendable_cc.coin.amount,
                 ),
-                (spendable_cc.lineage_proof, cc_struct),
+                (spendable_cc.lineage_proof.to_program(), cc_struct),
             ),
             (
                 (spendable_cc.coin.name(), spendable_cc.coin.puzzle_hash),
-                (spendable_cc.coin.parent_coin_info, limitations_solution),
+                (spendable_cc.coin.parent_coin_info, spendable_cc.limitations_solution),
             ),
         )
     )
 
-
-def spend_bundle_for_spendable_ccs(
-    mod_code: Program,
-    genesis_coin_checker: Program,
-    spendable_cc_list: List[SpendableCC],
-    inner_solutions: List[Program],
-    sigs: Optional[List[G2Element]] = [],
-    extra_deltas: Optional[List[int]] = None,
-    limitations_solutions: Optional[List[Program]] = None,
-) -> SpendBundle:
+# This should probably return UnsignedSpendBundle if that type ever exists
+def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list: List[SpendableCC]) -> SpendBundle:
     """
-    Given a list of `SpendableCC` objects and inner solutions for those objects, create a `SpendBundle`
-    that spends all those coins. Note that it the signature is not calculated it, so the caller is responsible
-    for fixing it.
+    Given a list of `SpendableCC` objects, create a `SpendBundle` that spends all those coins.
+    Note that no signing is done here, so it falls on the caller to sign the resultant bundle.
     """
 
     N = len(spendable_cc_list)
 
-    if len(inner_solutions) != N:
-        raise ValueError("spendable_cc_list and inner_solutions are different lengths")
-
-    if extra_deltas is None:
-        extra_deltas = [0] * len(spendable_cc_list)
-
-    if limitations_solutions is None:
-        limitations_solutions = [Program.to([])] * len(spendable_cc_list)
-
-    input_coins = [_.coin for _ in spendable_cc_list]
-    # figure out what the output amounts are by running the inner puzzles & solutions
-    output_amounts = []
-    for cc_spend_info, inner_solution, limitations_solution, extra_delta in zip(
-        spendable_cc_list, inner_solutions, limitations_solutions, extra_deltas
-    ):
-        truths = get_cat_truths(cc_spend_info, limitations_solution)
+    # figure out what the deltas are by running the inner puzzles & solutions
+    deltas = []
+    for spend_info in spendable_cc_list:
+        truths = get_cat_truths(spend_info)
         error, conditions, cost = conditions_dict_for_solution(
-            cc_spend_info.inner_puzzle, truths.cons(inner_solution), INFINITE_COST
+            spend_info.inner_puzzle, truths.cons(spend_info.inner_solution), INFINITE_COST
         )
-        total = extra_delta * -1
+        total = spend_info.extra_delta * -1
         if conditions:
             for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
                 total += Program.to(_.vars[1]).as_int()
-        output_amounts.append(total)
-
-    coin_spends = []
-
-    deltas = [input_coins[_].amount - output_amounts[_] for _ in range(N)]
-    subtotals = subtotals_for_deltas(deltas)
+        deltas.append(spend_info.coin.amount - total)
 
     if sum(deltas) != 0:
         raise ValueError("input and output amounts don't match")
+
+    subtotals = subtotals_for_deltas(deltas)
 
     infos_for_next = []
     infos_for_me = []
@@ -163,10 +144,11 @@ def spend_bundle_for_spendable_ccs(
         infos_for_me.append(Program.to(_.coin.as_list()))
         ids.append(_.coin.name())
 
+    coin_spends = []
     for index in range(N):
-        cc_spend_info = spendable_cc_list[index]
+        spend_info = spendable_cc_list[index]
 
-        puzzle_reveal = construct_cc_puzzle(mod_code, cc_spend_info.limitations_program, cc_spend_info.inner_puzzle)
+        puzzle_reveal = construct_cc_puzzle(mod_code, spend_info.limitations_program, spend_info.inner_puzzle)
 
         prev_index = (index - 1) % N
         next_index = (index + 1) % N
@@ -174,24 +156,22 @@ def spend_bundle_for_spendable_ccs(
         my_info = infos_for_me[index]
         next_info = infos_for_next[next_index]
 
+        limitations_reveal = spend_info.limitations_program if spend_info.reveal_limitations_program else Program.to([])
         solution = [
-            inner_solutions[index],
-            cc_spend_info.limitations_program,  # This is a temporary hack, we are revealing the genesis checker every time!
-            limitations_solutions[index],
-            cc_spend_info.lineage_proof,
+            spend_info.inner_solution,
+            limitations_reveal,
+            spend_info.limitations_solution,
+            spend_info.lineage_proof.to_program(),
             prev_id,
             my_info,
             next_info,
             subtotals[index],
-            extra_deltas[index],
+            spend_info.extra_delta,
         ]
-        coin_spend = CoinSpend(input_coins[index], puzzle_reveal, Program.to(solution))
+        coin_spend = CoinSpend(spend_info.coin, puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
-    if sigs is None or sigs == []:
-        return SpendBundle(coin_spends, NULL_SIGNATURE)
-    else:
-        return SpendBundle(coin_spends, AugSchemeMPL.aggregate(sigs))
+    return SpendBundle(coin_spends, NULL_SIGNATURE)
 
 
 # We don't currently use this function, maybe we should remove it?
@@ -226,7 +206,13 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
 
         genesis_coin_checker = Program.from_bytes(bytes(coin_spend.solution)).rest().first()
 
-        cc_spend_info = SpendableCC(new_coin, genesis_coin_checker, inner_puzzle, lineage_proof.to_program())
+        cc_spend_info = SpendableCC(
+            new_coin,
+            genesis_coin_checker,
+            inner_puzzle,
+            Program.to([]), # We don't know how to solve this yet, so we're using a place holder
+            lineage_proof=lineage_proof,
+        )
         spendable_cc_list.append(cc_spend_info)
 
     return spendable_cc_list
