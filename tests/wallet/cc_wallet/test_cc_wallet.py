@@ -72,7 +72,10 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -112,7 +115,10 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -187,7 +193,10 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -221,7 +230,10 @@ class TestCCWallet:
         )
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
 
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
@@ -282,7 +294,10 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100))
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -362,7 +377,10 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
 
-        cc_wallet_0: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100))
+        async with wallet_node_0.wallet_state_manager.lock:
+            cc_wallet_0: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
@@ -433,6 +451,27 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 0)
 
+        txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
+        print(len(txs))
+        # Test with Memo
+        tx_record_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction(
+            [uint64(30)], [cc_hash], memos=[b"Markus Walburg"]
+        )
+        with pytest.raises(ValueError):
+            await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"too", b"many", b"memos"])
+
+        await wallet_1.wallet_state_manager.add_pending_transaction(tx_record_3)
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record_3.spend_bundle.name()
+        )
+        txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cc_wallet_1.id(), 0, 100000)
+        for tx in txs:
+            if tx.amount == 30:
+                memos = tx.get_memos()
+                assert len(memos) == 1
+                assert [b"Markus Walburg"] in memos.values()
+                assert list(memos.keys())[0] in [a.name() for a in tx_record_3.spend_bundle.additions()]
+
     @pytest.mark.asyncio
     async def test_cc_max_amount_send(self, two_wallet_nodes):
         num_blocks = 3
@@ -460,7 +499,10 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 
-        cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000))
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000)
+            )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
         await time_out_assert(
