@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "도움말"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "번역 돕기"
+#~ msgid "Help translate"
+#~ msgstr "번역 돕기"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "고유 식별자"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "알 수 없음"
+#~ msgid "Unknown"
+#~ msgstr "알 수 없음"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

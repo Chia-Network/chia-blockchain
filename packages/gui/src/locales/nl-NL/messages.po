@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "Hulp"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "Help vertalen"
+#~ msgid "Help translate"
+#~ msgstr "Help vertalen"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "Unieke id"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "Onbekend"
+#~ msgid "Unknown"
+#~ msgstr "Onbekend"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

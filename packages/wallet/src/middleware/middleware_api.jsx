@@ -55,7 +55,7 @@ import { plotQueueInit, plotQueueUpdate } from '../modules/plotQueue';
 import { startService, startServiceTest } from '../modules/daemon_messages';
 import { get_all_trades } from '../modules/trade_messages';
 import {
-  COLOURED_COIN,
+  CAT,
   STANDARD_WALLET,
   RATE_LIMITED,
   DISTRIBUTED_ID,
@@ -290,10 +290,10 @@ export const handle_message = async (store, payload, errorProcessed) => {
           get_wallet_balance(store, wallet.id);
         }
         get_wallet_transactions(store, wallet.id);
-        if (wallet.type === COLOURED_COIN || wallet.type === STANDARD_WALLET) {
+        if (wallet.type === CAT || wallet.type === STANDARD_WALLET) {
           store.dispatch(get_address(wallet.id, false));
         }
-        if (wallet.type === COLOURED_COIN) {
+        if (wallet.type === CAT) {
           store.dispatch(get_colour_name(wallet.id));
           store.dispatch(get_colour_info(wallet.id));
         }

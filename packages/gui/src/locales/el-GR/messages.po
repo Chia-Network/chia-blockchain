@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "Βοήθεια"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "Βοηθήστε στην Μετάφραση"
+#~ msgid "Help translate"
+#~ msgstr "Βοηθήστε στην Μετάφραση"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "Μοναδικό αναγνωριστικό"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "Άγνωστο"
+#~ msgid "Unknown"
+#~ msgstr "Άγνωστο"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

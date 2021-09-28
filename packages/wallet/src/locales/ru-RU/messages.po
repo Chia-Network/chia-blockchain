@@ -118,8 +118,8 @@ msgstr "Добавить ID резервной копии"
 #~ msgid "Add {currencyCode} from the Faucet"
 #~ msgstr "Добавить {currencyCode} из крана"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:561
-#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/cat/WalletCAT.tsx:561
+#: src/components/wallet/cat/WalletCAT.tsx:657
 #: src/components/wallet/standard/WalletStandard.tsx:596
 msgid "Address"
 msgstr "Адрес"
@@ -130,13 +130,12 @@ msgid "Address / Puzzle hash"
 msgstr "Адрес / Хэш-головоломка"
 
 #: src/components/wallet/WalletHistory.tsx:62
-#: src/components/wallet/create/createNewColouredCoin.jsx:119
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 #: src/components/wallet/standard/WalletStandard.tsx:513
 msgid "Amount"
 msgstr "Количество"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:581
+#: src/components/wallet/cat/WalletCAT.tsx:581
 msgid "Amount ({cc_unit})"
 msgstr "Количество ({cc_unit})"
 
@@ -186,7 +185,7 @@ msgstr "Назад"
 msgid "Backup file is used to restore smart wallets."
 msgstr "Файл резервной копии используется для восстановления умных кошельков."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/cat/WalletCAT.tsx:377
 #: src/components/wallet/did/WalletDID.tsx:647
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
 msgid "Balance"
@@ -313,6 +312,11 @@ msgstr "Чат в KeyBase"
 #: src/electron/main.tsx:419
 msgid "Chia"
 msgstr "Чиа"
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:25
+#: src/components/wallet/create/WalletCreateList.tsx:32
+msgid "Chia Asset Token"
+msgstr ""
 
 #: src/electron/main.tsx:358
 msgid "Chia Blockchain Wiki"
@@ -529,25 +533,25 @@ msgstr "Название токена"
 #~ msgid "Colour"
 #~ msgstr "Цвет"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:223
+#: src/components/wallet/cat/WalletCAT.tsx:223
 msgid "Colour Info"
 msgstr "Информация о цвете"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:110
-msgid "Colour String"
-msgstr "Шеснадцатеричная строка цвета"
+#~ msgid "Colour String"
+#~ msgstr "Шеснадцатеричная строка цвета"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:228
+#: src/components/wallet/cat/WalletCAT.tsx:228
 msgid "Colour:"
 msgstr "Цвет:"
 
 #: src/components/wallet/create/WalletCreateList.tsx:34
-msgid "Coloured Coin"
-msgstr "Цветная Монета"
+#~ msgid "Coloured Coin"
+#~ msgstr "Цветная Монета"
 
 #: src/components/wallet/create/WalletCreate.jsx:122
-msgid "Coloured Coin Options"
-msgstr "Настройки Цветной Монеты"
+#~ msgid "Coloured Coin Options"
+#~ msgstr "Настройки Цветной Монеты"
 
 #: src/electron/main.tsx:195
 #: src/hooks/useAbsorbRewards.tsx:46
@@ -616,7 +620,7 @@ msgstr "Сотрудничать на GitHub"
 #~ msgid "Copied"
 #~ msgstr "Скопировано"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/cat/WalletCAT.tsx:670
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
@@ -628,8 +632,8 @@ msgstr "Копировать"
 #~ msgstr "Скопировать в буфер обмена"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/wallet/create/createExistingColouredCoin.jsx:133
-#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:92
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:96
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/create/createRLUser.jsx:99
 #: src/components/wallet/did/WalletDIDCreate.tsx:218
@@ -640,6 +644,10 @@ msgstr "Создать"
 msgid "Create An Attestation Packet"
 msgstr "Создать пакет аттестации"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:65
+msgid "Create Chia Asset Token Wallet"
+msgstr ""
+
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
 #~ msgstr "Create DID wallet"
@@ -648,6 +656,11 @@ msgstr "Создать пакет аттестации"
 msgid "Create Distributed Identity Wallet"
 msgstr "Создать распределенный идентификационный кошелек"
 
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:70
+msgid "Create New Chia Asset Token Wallet"
+msgstr ""
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:32
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
 msgstr ""
@@ -676,7 +689,7 @@ msgstr "Создать кошелек пользователя с огранич
 #~ msgid "Create Trade Offer"
 #~ msgstr "Создать торговое предложение"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/cat/WalletCAT.tsx:543
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
 #: src/components/wallet/standard/WalletStandard.tsx:483
 msgid "Create Transaction"
@@ -695,24 +708,28 @@ msgid "Create a new private key"
 msgstr "Создать новый приватный ключ"
 
 #: src/components/wallet/create/WalletCreate.jsx:186
-msgid "Create admin wallet"
-msgstr "Создать администрационный кошелек"
+#~ msgid "Create admin wallet"
+#~ msgstr "Создать администрационный кошелек"
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:39
+msgid "Create from Existing"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:132
-msgid "Create new coloured coin"
-msgstr "Создать новую цветную монету"
+#~ msgid "Create new coloured coin"
+#~ msgstr "Создать новую цветную монету"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
-msgid "Create user wallet"
-msgstr "Создать кошелек пользователя"
+#~ msgid "Create user wallet"
+#~ msgstr "Создать кошелек пользователя"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:93
-msgid "Create wallet for colour"
-msgstr "Создать кошелек для цвета"
+#~ msgid "Create wallet for colour"
+#~ msgstr "Создать кошелек для цвета"
 
 #: src/components/wallet/create/WalletCreate.jsx:139
-msgid "Create wallet for existing colour"
-msgstr "Создать кошелек для существующей цветной монеты"
+#~ msgid "Create wallet for existing colour"
+#~ msgstr "Создать кошелек для существующей цветной монеты"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -841,7 +858,7 @@ msgstr "Инструменты разработчика"
 #~ msgid "Disconnect"
 #~ msgstr "Отключить"
 
-#: src/components/wallet/create/WalletCreateList.tsx:28
+#: src/components/wallet/create/WalletCreateList.tsx:39
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
 msgstr ""
@@ -933,7 +950,7 @@ msgstr "Ошибка: не удается отправить чиа на цве�
 #~ msgid "Failed to open (invalid plots)"
 #~ msgstr "Неудается открыть (некоррекные участки)"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/cat/WalletCAT.tsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:532
 msgid "Farm"
 msgstr "Ферма"
@@ -996,8 +1013,6 @@ msgstr "Открытый ключ фермера:"
 #~ msgstr "Статус фарминга"
 
 #: src/components/wallet/WalletHistory.tsx:66
-#: src/components/wallet/create/createExistingColouredCoin.jsx:123
-#: src/components/wallet/create/createNewColouredCoin.jsx:132
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
@@ -1013,7 +1028,7 @@ msgstr "Комиссия"
 #~ msgid "Fee ({0})"
 #~ msgstr "Fee ({0})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:595
+#: src/components/wallet/cat/WalletCAT.tsx:595
 msgid "Fee ({currencyCode})"
 msgstr "Комиссия ({currencyCode})"
 
@@ -1069,8 +1084,8 @@ msgid "Full Screen"
 msgstr "Полный экран"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:102
-msgid "Generate New Colour"
-msgstr "Сгенерировать новый цвет"
+#~ msgid "Generate New Colour"
+#~ msgstr "Сгенерировать новый цвет"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
@@ -1278,6 +1293,10 @@ msgstr "Загрузка списка кошельков"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
+#: src/components/dashboard/Dashboard.tsx:64
+msgid "Log Out"
+msgstr ""
+
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
 msgstr "Вход в систему"
@@ -1358,6 +1377,10 @@ msgstr ""
 msgid "My Pubkey"
 msgstr "Мой публичный ключ"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:73
+msgid "Name"
+msgstr ""
+
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 #~ msgid "Network Name"
 #~ msgstr "Имя сети"
@@ -1370,7 +1393,7 @@ msgstr "Мой публичный ключ"
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/cat/WalletCAT.tsx:685
 #: src/components/wallet/standard/WalletStandard.tsx:579
 msgid "New Address"
 msgstr "Новый адрес"
@@ -1384,7 +1407,7 @@ msgstr "Новый кошелек"
 msgid "Next"
 msgstr "Далее"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:249
+#: src/components/wallet/cat/WalletCAT.tsx:249
 msgid "Nickname"
 msgstr "Псевдоним"
 
@@ -1563,6 +1586,10 @@ msgstr ""
 msgid "Please enter a puzzlehash"
 msgstr ""
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:36
+msgid "Please enter a valid CAT name"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
 msgstr "Пожалуйста, укажите корректное численное начальное значение баланса кошелька"
@@ -1572,7 +1599,7 @@ msgstr "Пожалуйста, укажите корректное численн
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
 msgstr ""
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:40
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "Please enter a valid numeric amount"
@@ -1582,8 +1609,8 @@ msgstr "Пожалуйста, укажите корректное численн
 msgid "Please enter a valid numeric amount."
 msgstr ""
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:70
-#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:46
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:50
 #: src/components/wallet/create/createRLAdmin.jsx:150
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 #: src/components/wallet/standard/WalletStandard.tsx:444
@@ -1917,7 +1944,7 @@ msgstr ""
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreateList.tsx:42
+#: src/components/wallet/create/WalletCreateList.tsx:45
 msgid "Rate Limited"
 msgstr "Ограниченной Скорости"
 
@@ -1927,14 +1954,14 @@ msgid "Rate Limited Info"
 msgstr "Информация об ограничении скорости"
 
 #: src/components/wallet/create/WalletCreate.jsx:176
-msgid "Rate Limited Options"
-msgstr "Настройки Ограниченной Скорости"
+#~ msgid "Rate Limited Options"
+#~ msgstr "Настройки Ограниченной Скорости"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
 msgid "Rate Limited User Wallet Setup"
 msgstr "Настройка кошелька пользователя с ограничением скорости"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/cat/WalletCAT.tsx:650
 #: src/components/wallet/standard/WalletStandard.tsx:576
 msgid "Receive Address"
 msgstr "Адрес для получения платежа"
@@ -1978,7 +2005,7 @@ msgstr "Примечания к релизу"
 #~ msgid "Removing"
 #~ msgstr "Удаление"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:265
+#: src/components/wallet/cat/WalletCAT.tsx:265
 msgid "Rename"
 msgstr "Переименовать"
 
@@ -2049,7 +2076,7 @@ msgstr "Выбор ключа"
 #~ msgid "Select Temporary Directory"
 #~ msgstr "Выберите временный каталог"
 
-#: src/components/wallet/create/WalletCreateList.tsx:21
+#: src/components/wallet/create/WalletCreateList.tsx:25
 msgid "Select Wallet Type"
 msgstr "Выберите Тип Кошелька"
 
@@ -2098,7 +2125,7 @@ msgstr ""
 #~ msgid "Sell"
 #~ msgstr "Продажа"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/cat/WalletCAT.tsx:620
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:542
 msgid "Send"
@@ -2162,7 +2189,7 @@ msgid "Spendable Amount Per Interval"
 msgstr "Расходуемое количество монет за интервал"
 
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
-#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/cat/WalletCAT.tsx:384
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
 msgid "Spendable Balance"
 msgstr "Расходуемый баланс"
@@ -2451,7 +2478,7 @@ msgid "To"
 msgstr "Кому"
 
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:32
-#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/cat/WalletCAT.tsx:379
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
 msgid "Total Balance"
 msgstr "Итоговый баланс"
@@ -2596,7 +2623,7 @@ msgstr "Вид"
 msgid "View pending balances"
 msgstr "Просмотр ожидаемого баланса"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:393
+#: src/components/wallet/cat/WalletCAT.tsx:393
 msgid "View pending balances..."
 msgstr "Просмотр ожидаемого баланса..."
 

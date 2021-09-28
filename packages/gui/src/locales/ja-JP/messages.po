@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "ヘルプ"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "翻訳に協力"
+#~ msgid "Help translate"
+#~ msgstr "翻訳に協力"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "一意的識別子"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "不明"
+#~ msgid "Unknown"
+#~ msgstr "不明"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

@@ -14,6 +14,10 @@ export default function WalletCreateList() {
     history.push(`${url}/did`);
   }
 
+  function handleCreateCAT() {
+    history.push(`${url}/cat`);
+  }
+
   return (
     <Flex flexDirection="column" gap={3}>
       <Flex flexGrow={1}>
@@ -24,19 +28,18 @@ export default function WalletCreateList() {
       <Grid spacing={3} alignItems="stretch" container>
         <Grid xs={12} sm={6} md={4} item>
           <WalletCreateCard
+            onSelect={handleCreateCAT}
+            title={<Trans>Chia Asset Token</Trans>}
+            icon={<HomeWorkIcon fontSize="large" color="primary" />}
+          />
+        </Grid>
+        <Grid xs={12} sm={6} md={4} item>
+          <WalletCreateCard
             onSelect={handleCreateDistributedIdentity}
             title={<Trans>Distributed Identity</Trans>}
             icon={<ShareIcon fontSize="large" color="primary" />}
           />
         </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <WalletCreateCard
-            title={<Trans>Coloured Coin</Trans>}
-            icon={<HomeWorkIcon fontSize="large" color="primary" />}
-            disabled
-          />
-        </Grid>
-
         <Grid xs={12} sm={6} md={4} item>
           <WalletCreateCard
             title={<Trans>Rate Limited</Trans>}

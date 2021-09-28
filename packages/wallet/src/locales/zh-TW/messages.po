@@ -118,8 +118,8 @@ msgstr "增加備份 ID"
 #~ msgid "Add {currencyCode} from the Faucet"
 #~ msgstr "從水龍頭新增{currencyCode}."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:561
-#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/cat/WalletCAT.tsx:561
+#: src/components/wallet/cat/WalletCAT.tsx:657
 #: src/components/wallet/standard/WalletStandard.tsx:596
 msgid "Address"
 msgstr "位址"
@@ -130,13 +130,12 @@ msgid "Address / Puzzle hash"
 msgstr "位址 / 拼圖雜湊值"
 
 #: src/components/wallet/WalletHistory.tsx:62
-#: src/components/wallet/create/createNewColouredCoin.jsx:119
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 #: src/components/wallet/standard/WalletStandard.tsx:513
 msgid "Amount"
 msgstr "數量"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:581
+#: src/components/wallet/cat/WalletCAT.tsx:581
 msgid "Amount ({cc_unit})"
 msgstr "數量 ({cc_unit})"
 
@@ -186,7 +185,7 @@ msgstr "返回"
 msgid "Backup file is used to restore smart wallets."
 msgstr "備份檔案可用於復原智慧錢包。"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/cat/WalletCAT.tsx:377
 #: src/components/wallet/did/WalletDID.tsx:647
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
 msgid "Balance"
@@ -314,6 +313,11 @@ msgstr "在 KeyBase 上閒聊"
 msgid "Chia"
 msgstr "Chia"
 
+#: src/components/wallet/cat/WalletCATSelect.tsx:25
+#: src/components/wallet/create/WalletCreateList.tsx:32
+msgid "Chia Asset Token"
+msgstr ""
+
 #: src/electron/main.tsx:358
 msgid "Chia Blockchain Wiki"
 msgstr "Chia 區塊鏈維基"
@@ -357,25 +361,25 @@ msgstr "幣種名稱"
 #~ msgid "Colour"
 #~ msgstr "顏色"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:223
+#: src/components/wallet/cat/WalletCAT.tsx:223
 msgid "Colour Info"
 msgstr "顏色資訊"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:110
-msgid "Colour String"
-msgstr "顏色字串"
+#~ msgid "Colour String"
+#~ msgstr "顏色字串"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:228
+#: src/components/wallet/cat/WalletCAT.tsx:228
 msgid "Colour:"
 msgstr "顏色："
 
 #: src/components/wallet/create/WalletCreateList.tsx:34
-msgid "Coloured Coin"
-msgstr "有色代幣"
+#~ msgid "Coloured Coin"
+#~ msgstr "有色代幣"
 
 #: src/components/wallet/create/WalletCreate.jsx:122
-msgid "Coloured Coin Options"
-msgstr "有色代幣選項"
+#~ msgid "Coloured Coin Options"
+#~ msgstr "有色代幣選項"
 
 #: src/electron/main.tsx:195
 #: src/hooks/useAbsorbRewards.tsx:46
@@ -444,7 +448,7 @@ msgstr "在 GitHub 上貢獻"
 #~ msgid "Copied"
 #~ msgstr "已複製"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/cat/WalletCAT.tsx:670
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
@@ -456,8 +460,8 @@ msgstr "複製"
 #~ msgstr "複製到剪貼板"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/wallet/create/createExistingColouredCoin.jsx:133
-#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:92
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:96
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/create/createRLUser.jsx:99
 #: src/components/wallet/did/WalletDIDCreate.tsx:218
@@ -468,6 +472,10 @@ msgstr "建立"
 msgid "Create An Attestation Packet"
 msgstr "建立一個證明封包"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:65
+msgid "Create Chia Asset Token Wallet"
+msgstr ""
+
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
 #~ msgstr "Create DID wallet"
@@ -476,6 +484,11 @@ msgstr "建立一個證明封包"
 msgid "Create Distributed Identity Wallet"
 msgstr "建立分散式識別的錢包"
 
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:70
+msgid "Create New Chia Asset Token Wallet"
+msgstr ""
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:32
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
 msgstr "建立新錢包"
@@ -504,7 +517,7 @@ msgstr "建立速率限制使用者錢包"
 #~ msgid "Create Trade Offer"
 #~ msgstr "建立貿易提案"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/cat/WalletCAT.tsx:543
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
 #: src/components/wallet/standard/WalletStandard.tsx:483
 msgid "Create Transaction"
@@ -523,24 +536,28 @@ msgid "Create a new private key"
 msgstr "建立一個新的私鑰"
 
 #: src/components/wallet/create/WalletCreate.jsx:186
-msgid "Create admin wallet"
-msgstr "建立管理員錢包"
+#~ msgid "Create admin wallet"
+#~ msgstr "建立管理員錢包"
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:39
+msgid "Create from Existing"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:132
-msgid "Create new coloured coin"
-msgstr "建立新的有色代幣"
+#~ msgid "Create new coloured coin"
+#~ msgstr "建立新的有色代幣"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
-msgid "Create user wallet"
-msgstr "建立使用者錢包"
+#~ msgid "Create user wallet"
+#~ msgstr "建立使用者錢包"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:93
-msgid "Create wallet for colour"
-msgstr "建立有色代幣錢包"
+#~ msgid "Create wallet for colour"
+#~ msgstr "建立有色代幣錢包"
 
 #: src/components/wallet/create/WalletCreate.jsx:139
-msgid "Create wallet for existing colour"
-msgstr "用已有的有色代幣去建立錢包"
+#~ msgid "Create wallet for existing colour"
+#~ msgstr "用已有的有色代幣去建立錢包"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -669,7 +686,7 @@ msgstr "開發者工具"
 #~ msgid "Disconnect"
 #~ msgstr "斷線"
 
-#: src/components/wallet/create/WalletCreateList.tsx:28
+#: src/components/wallet/create/WalletCreateList.tsx:39
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
 msgstr "分散式識別"
@@ -761,7 +778,7 @@ msgstr "錯誤：不能發送 Chia 到有色地址。請輸入 Chia 地址。"
 #~ msgid "Failed to open (invalid plots)"
 #~ msgstr "開啟失敗（無效耕地）"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/cat/WalletCAT.tsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:532
 msgid "Farm"
 msgstr "耕種"
@@ -824,8 +841,6 @@ msgstr "農夫公鑰:"
 #~ msgstr "耕種狀態"
 
 #: src/components/wallet/WalletHistory.tsx:66
-#: src/components/wallet/create/createExistingColouredCoin.jsx:123
-#: src/components/wallet/create/createNewColouredCoin.jsx:132
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
@@ -841,7 +856,7 @@ msgstr "費用"
 #~ msgid "Fee ({0})"
 #~ msgstr "Fee ({0})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:595
+#: src/components/wallet/cat/WalletCAT.tsx:595
 msgid "Fee ({currencyCode})"
 msgstr "費用 ({currencyCode})"
 
@@ -897,8 +912,8 @@ msgid "Full Screen"
 msgstr "全畫面"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:102
-msgid "Generate New Colour"
-msgstr "生成新顏色"
+#~ msgid "Generate New Colour"
+#~ msgstr "生成新顏色"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
@@ -1106,6 +1121,10 @@ msgstr "正在讀取錢包列表"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
+#: src/components/dashboard/Dashboard.tsx:64
+msgid "Log Out"
+msgstr ""
+
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
 msgstr "登入中"
@@ -1186,6 +1205,10 @@ msgstr "我的 DID 錢包"
 msgid "My Pubkey"
 msgstr "我的公鑰"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:73
+msgid "Name"
+msgstr ""
+
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 #~ msgid "Network Name"
 #~ msgstr "網路名稱"
@@ -1198,7 +1221,7 @@ msgstr "我的公鑰"
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/cat/WalletCAT.tsx:685
 #: src/components/wallet/standard/WalletStandard.tsx:579
 msgid "New Address"
 msgstr "新位址"
@@ -1212,7 +1235,7 @@ msgstr "新錢包"
 msgid "Next"
 msgstr "下一步"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:249
+#: src/components/wallet/cat/WalletCAT.tsx:249
 msgid "Nickname"
 msgstr "暱稱"
 
@@ -1391,6 +1414,10 @@ msgstr "請輸入公鑰"
 msgid "Please enter a puzzlehash"
 msgstr "請輸入一個 PuzzleHash"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:36
+msgid "Please enter a valid CAT name"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
 msgstr "請輸入有效的初始金額"
@@ -1400,7 +1427,7 @@ msgstr "請輸入有效的初始金額"
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
 msgstr ""
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:40
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "Please enter a valid numeric amount"
@@ -1410,8 +1437,8 @@ msgstr "請輸入有效的數字值"
 msgid "Please enter a valid numeric amount."
 msgstr "請輸入有效的數值。"
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:70
-#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:46
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:50
 #: src/components/wallet/create/createRLAdmin.jsx:150
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 #: src/components/wallet/standard/WalletStandard.tsx:444
@@ -1745,7 +1772,7 @@ msgstr "拼圖哈希值"
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreateList.tsx:42
+#: src/components/wallet/create/WalletCreateList.tsx:45
 msgid "Rate Limited"
 msgstr "已限速"
 
@@ -1755,14 +1782,14 @@ msgid "Rate Limited Info"
 msgstr "速率限制資訊"
 
 #: src/components/wallet/create/WalletCreate.jsx:176
-msgid "Rate Limited Options"
-msgstr "速率限制選項"
+#~ msgid "Rate Limited Options"
+#~ msgstr "速率限制選項"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
 msgid "Rate Limited User Wallet Setup"
 msgstr "速率限制使用者錢包設定"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/cat/WalletCAT.tsx:650
 #: src/components/wallet/standard/WalletStandard.tsx:576
 msgid "Receive Address"
 msgstr "接收位址"
@@ -1806,7 +1833,7 @@ msgstr "發行說明"
 #~ msgid "Removing"
 #~ msgstr "移除中"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:265
+#: src/components/wallet/cat/WalletCAT.tsx:265
 msgid "Rename"
 msgstr "更改名稱"
 
@@ -1877,7 +1904,7 @@ msgstr "選擇金鑰"
 #~ msgid "Select Temporary Directory"
 #~ msgstr "選擇暫存資料夾"
 
-#: src/components/wallet/create/WalletCreateList.tsx:21
+#: src/components/wallet/create/WalletCreateList.tsx:25
 msgid "Select Wallet Type"
 msgstr "選擇錢包類型"
 
@@ -1926,7 +1953,7 @@ msgstr "選擇的還原檔案："
 #~ msgid "Sell"
 #~ msgstr "賣出"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/cat/WalletCAT.tsx:620
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:542
 msgid "Send"
@@ -1990,7 +2017,7 @@ msgid "Spendable Amount Per Interval"
 msgstr "每間隔可花用數量"
 
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
-#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/cat/WalletCAT.tsx:384
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
 msgid "Spendable Balance"
 msgstr "可花用餘額"
@@ -2279,7 +2306,7 @@ msgid "To"
 msgstr "到"
 
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:32
-#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/cat/WalletCAT.tsx:379
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
 msgid "Total Balance"
 msgstr "總餘額"
@@ -2424,7 +2451,7 @@ msgstr "檢視"
 msgid "View pending balances"
 msgstr "檢視未結餘額"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:393
+#: src/components/wallet/cat/WalletCAT.tsx:393
 msgid "View pending balances..."
 msgstr "檢視未結餘額..."
 

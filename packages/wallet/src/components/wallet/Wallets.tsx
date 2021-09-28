@@ -13,7 +13,7 @@ import { /*useDispatch, */ useSelector } from 'react-redux';
 import { FormatLargeNumber } from '@chia/core';
 import StandardWallet from './standard/WalletStandard';
 import { CreateWalletView } from './create/WalletCreate';
-import ColouredWallet from './coloured/WalletColoured';
+import WalletCAT from './cat/WalletCAT';
 import RateLimitedWallet from './rateLimited/WalletRateLimited';
 import DistributedWallet from './did/WalletDID';
 import type { RootState } from '../../modules/rootReducer';
@@ -142,8 +142,8 @@ export default function Wallets() {
                 <StandardWallet wallet_id={wallet.id} />
               )}
 
-              {wallet.type === WalletType.COLOURED_COIN && (
-                <ColouredWallet wallet_id={wallet.id} />
+              {wallet.type === WalletType.CAT && (
+                <WalletCAT wallet_id={wallet.id} />
               )}
 
               {wallet.type === WalletType.RATE_LIMITED && (

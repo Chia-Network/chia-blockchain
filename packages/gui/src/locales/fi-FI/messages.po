@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "Apuja"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "Auta kääntämisessä"
+#~ msgid "Help translate"
+#~ msgstr "Auta kääntämisessä"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "Yksilöllinen tunniste"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "Tuntematon"
+#~ msgid "Unknown"
+#~ msgstr "Tuntematon"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "Yardım"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "Çeviriye Yardım Et"
+#~ msgid "Help translate"
+#~ msgstr "Çeviriye Yardım Et"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "Benzersiz Tanımlayıcı"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "Bilinmeyen"
+#~ msgid "Unknown"
+#~ msgstr "Bilinmeyen"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

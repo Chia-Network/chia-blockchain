@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "Ndihmë"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "Ndihmo në përkthim"
+#~ msgid "Help translate"
+#~ msgstr "Ndihmo në përkthim"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "Identifikues unik"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "I panjohur"
+#~ msgid "Unknown"
+#~ msgstr "I panjohur"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

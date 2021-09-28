@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "المساعدة"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "المساعدة في الترجمة"
+#~ msgid "Help translate"
+#~ msgstr "المساعدة في الترجمة"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "معرف متميز"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "غير معروف"
+#~ msgid "Unknown"
+#~ msgstr "غير معروف"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

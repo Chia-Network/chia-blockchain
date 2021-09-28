@@ -56,7 +56,7 @@ const getCols = (type: WalletType) => [
   },
   {
     field: (row: Row) =>
-      type === WalletType.COLOURED_COIN
+      type === WalletType.CAT
         ? mojo_to_colouredcoin_string(row.amount)
         : mojo_to_chia_string(row.amount),
     title: <Trans>Amount</Trans>,

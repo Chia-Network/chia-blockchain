@@ -969,8 +969,8 @@ msgid "Help"
 msgstr "Hjälp"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:76
-msgid "Help translate"
-msgstr "Hjälp till med översättning"
+#~ msgid "Help translate"
+#~ msgstr "Hjälp till med översättning"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -2417,8 +2417,8 @@ msgid "Unique identifier"
 msgstr "Unik identifierare"
 
 #: src/components/LocaleToggle/LocaleToggle.tsx:55
-msgid "Unknown"
-msgstr "Okänd"
+#~ msgid "Unknown"
+#~ msgstr "Okänd"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"

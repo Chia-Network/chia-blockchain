@@ -118,8 +118,8 @@ msgstr "Adicionar ID de Backup"
 #~ msgid "Add {currencyCode} from the Faucet"
 #~ msgstr "Adicione {currencyCode} da Faucet"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:561
-#: src/components/wallet/coloured/WalletColoured.tsx:657
+#: src/components/wallet/cat/WalletCAT.tsx:561
+#: src/components/wallet/cat/WalletCAT.tsx:657
 #: src/components/wallet/standard/WalletStandard.tsx:596
 msgid "Address"
 msgstr "Endereço"
@@ -130,13 +130,12 @@ msgid "Address / Puzzle hash"
 msgstr "Endereço/Puzzle hash"
 
 #: src/components/wallet/WalletHistory.tsx:62
-#: src/components/wallet/create/createNewColouredCoin.jsx:119
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:720
 #: src/components/wallet/standard/WalletStandard.tsx:513
 msgid "Amount"
 msgstr "Quantidade"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:581
+#: src/components/wallet/cat/WalletCAT.tsx:581
 msgid "Amount ({cc_unit})"
 msgstr "Quantidade ({cc_unit})"
 
@@ -186,7 +185,7 @@ msgstr "Voltar"
 msgid "Backup file is used to restore smart wallets."
 msgstr "O arquivo de backup é usado para restaurar carteiras inteligentes."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:377
+#: src/components/wallet/cat/WalletCAT.tsx:377
 #: src/components/wallet/did/WalletDID.tsx:647
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:541
 msgid "Balance"
@@ -314,6 +313,11 @@ msgstr "Chat no KeyBase"
 msgid "Chia"
 msgstr "Chia"
 
+#: src/components/wallet/cat/WalletCATSelect.tsx:25
+#: src/components/wallet/create/WalletCreateList.tsx:32
+msgid "Chia Asset Token"
+msgstr ""
+
 #: src/electron/main.tsx:358
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki da Chia Blockchain"
@@ -357,25 +361,25 @@ msgstr "Nome da moeda"
 #~ msgid "Colour"
 #~ msgstr "Cor"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:223
+#: src/components/wallet/cat/WalletCAT.tsx:223
 msgid "Colour Info"
 msgstr "Informação da Cor"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:110
-msgid "Colour String"
-msgstr "Cadeia de Caracteres da Cor"
+#~ msgid "Colour String"
+#~ msgstr "Cadeia de Caracteres da Cor"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:228
+#: src/components/wallet/cat/WalletCAT.tsx:228
 msgid "Colour:"
 msgstr "Cor:"
 
 #: src/components/wallet/create/WalletCreateList.tsx:34
-msgid "Coloured Coin"
-msgstr "Moeda de Cor"
+#~ msgid "Coloured Coin"
+#~ msgstr "Moeda de Cor"
 
 #: src/components/wallet/create/WalletCreate.jsx:122
-msgid "Coloured Coin Options"
-msgstr "Opções da Moeda de Cor"
+#~ msgid "Coloured Coin Options"
+#~ msgstr "Opções da Moeda de Cor"
 
 #: src/electron/main.tsx:195
 #: src/hooks/useAbsorbRewards.tsx:46
@@ -444,7 +448,7 @@ msgstr "Contribua no GitHub"
 #~ msgid "Copied"
 #~ msgstr "Copiado"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:670
+#: src/components/wallet/cat/WalletCAT.tsx:670
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:306
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:485
@@ -456,8 +460,8 @@ msgstr "Copiar"
 #~ msgstr "Copiar para área de transferência"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/wallet/create/createExistingColouredCoin.jsx:133
-#: src/components/wallet/create/createNewColouredCoin.jsx:142
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:92
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:96
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/create/createRLUser.jsx:99
 #: src/components/wallet/did/WalletDIDCreate.tsx:218
@@ -468,6 +472,10 @@ msgstr "Criar"
 msgid "Create An Attestation Packet"
 msgstr "Criar um Pacote de Atestado"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:65
+msgid "Create Chia Asset Token Wallet"
+msgstr ""
+
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
 #~ msgstr "Create DID wallet"
@@ -476,6 +484,11 @@ msgstr "Criar um Pacote de Atestado"
 msgid "Create Distributed Identity Wallet"
 msgstr "Criar carteira de identidade distribuída"
 
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:70
+msgid "Create New Chia Asset Token Wallet"
+msgstr ""
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:32
 #: src/components/wallet/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
 msgstr "Criar uma nova carteira"
@@ -504,7 +517,7 @@ msgstr "Criar carteira de utilizador com taxa limitada"
 #~ msgid "Create Trade Offer"
 #~ msgstr "Criar oferta"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:543
+#: src/components/wallet/cat/WalletCAT.tsx:543
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:684
 #: src/components/wallet/standard/WalletStandard.tsx:483
 msgid "Create Transaction"
@@ -523,24 +536,28 @@ msgid "Create a new private key"
 msgstr "Crie uma nova chave privada"
 
 #: src/components/wallet/create/WalletCreate.jsx:186
-msgid "Create admin wallet"
-msgstr "Criar carteira de administrador"
+#~ msgid "Create admin wallet"
+#~ msgstr "Criar carteira de administrador"
+
+#: src/components/wallet/cat/WalletCATSelect.tsx:39
+msgid "Create from Existing"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:132
-msgid "Create new coloured coin"
-msgstr "Crie uma nova moeda colorida"
+#~ msgid "Create new coloured coin"
+#~ msgstr "Crie uma nova moeda colorida"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
-msgid "Create user wallet"
-msgstr "Criar carteira de utilizador"
+#~ msgid "Create user wallet"
+#~ msgstr "Criar carteira de utilizador"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:93
-msgid "Create wallet for colour"
-msgstr "Crie carteira para cores"
+#~ msgid "Create wallet for colour"
+#~ msgstr "Crie carteira para cores"
 
 #: src/components/wallet/create/WalletCreate.jsx:139
-msgid "Create wallet for existing colour"
-msgstr "Criar carteira para a cor existente"
+#~ msgid "Create wallet for existing colour"
+#~ msgstr "Criar carteira para a cor existente"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -669,7 +686,7 @@ msgstr "Ferramentas de desenvolvimento"
 #~ msgid "Disconnect"
 #~ msgstr "Desconectar"
 
-#: src/components/wallet/create/WalletCreateList.tsx:28
+#: src/components/wallet/create/WalletCreateList.tsx:39
 #: src/components/wallet/did/WalletDIDSelect.tsx:25
 msgid "Distributed Identity"
 msgstr "Identidade distribuída"
@@ -761,7 +778,7 @@ msgstr "Erro: Não é possível enviar chia para endereço colorido. Por favor, 
 #~ msgid "Failed to open (invalid plots)"
 #~ msgstr "Falha ao abrir (plots inválidos)"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:610
+#: src/components/wallet/cat/WalletCAT.tsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:532
 msgid "Farm"
 msgstr "Farm"
@@ -824,8 +841,6 @@ msgstr "Chave pública do Farmer:"
 #~ msgstr "Estado de Farming"
 
 #: src/components/wallet/WalletHistory.tsx:66
-#: src/components/wallet/create/createExistingColouredCoin.jsx:123
-#: src/components/wallet/create/createNewColouredCoin.jsx:132
 #: src/components/wallet/create/createRLAdmin.jsx:244
 #: src/components/wallet/create/createRLAdmin.jsx:272
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
@@ -841,7 +856,7 @@ msgstr "Taxa"
 #~ msgid "Fee ({0})"
 #~ msgstr "Fee ({0})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:595
+#: src/components/wallet/cat/WalletCAT.tsx:595
 msgid "Fee ({currencyCode})"
 msgstr "Taxa ({currencyCode})"
 
@@ -897,8 +912,8 @@ msgid "Full Screen"
 msgstr "Ecrã cheio"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:102
-msgid "Generate New Colour"
-msgstr "Gerar Nova Cor"
+#~ msgid "Generate New Colour"
+#~ msgstr "Gerar Nova Cor"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
@@ -1106,6 +1121,10 @@ msgstr "Carregar lista de carteiras"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
+#: src/components/dashboard/Dashboard.tsx:64
+msgid "Log Out"
+msgstr ""
+
 #: src/components/app/AppRouter.tsx:41
 msgid "Logging in"
 msgstr "Iniciando a sessão"
@@ -1186,6 +1205,10 @@ msgstr "Minha carteira DID"
 msgid "My Pubkey"
 msgstr "A minha chave pública"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:73
+msgid "Name"
+msgstr ""
+
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:19
 #~ msgid "Network Name"
 #~ msgstr "Nome da rede"
@@ -1198,7 +1221,7 @@ msgstr "A minha chave pública"
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:685
+#: src/components/wallet/cat/WalletCAT.tsx:685
 #: src/components/wallet/standard/WalletStandard.tsx:579
 msgid "New Address"
 msgstr "Novo endereço"
@@ -1212,7 +1235,7 @@ msgstr "Nova Carteira"
 msgid "Next"
 msgstr "Próximo"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:249
+#: src/components/wallet/cat/WalletCAT.tsx:249
 msgid "Nickname"
 msgstr "Apelido"
 
@@ -1391,6 +1414,10 @@ msgstr "Por favor, insira uma pubkey"
 msgid "Please enter a puzzlehash"
 msgstr "Por favor, insira um quebra-cabeça"
 
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:36
+msgid "Please enter a valid CAT name"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:140
 msgid "Please enter a valid initial coin amount"
 msgstr "Por favor, insira um valor de moeda inicial válido"
@@ -1400,7 +1427,7 @@ msgstr "Por favor, insira um valor de moeda inicial válido"
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
 msgstr "Por favor, insira um inteiro válido de 0 ou maior para o número de IDs de Backup necessários para a recuperação."
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:69
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:40
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:639
 #: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "Please enter a valid numeric amount"
@@ -1410,8 +1437,8 @@ msgstr "Insira um valor numérico válido"
 msgid "Please enter a valid numeric amount."
 msgstr "Insira um valor numérico válido."
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:70
-#: src/components/wallet/create/createNewColouredCoin.jsx:79
+#: src/components/wallet/cat/WalletCATCreateExisting.tsx:46
+#: src/components/wallet/cat/WalletCATCreateNew.tsx:50
 #: src/components/wallet/create/createRLAdmin.jsx:150
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 #: src/components/wallet/standard/WalletStandard.tsx:444
@@ -1745,7 +1772,7 @@ msgstr "Quebra-cabeça"
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreateList.tsx:42
+#: src/components/wallet/create/WalletCreateList.tsx:45
 msgid "Rate Limited"
 msgstr "Taxa limitada"
 
@@ -1755,14 +1782,14 @@ msgid "Rate Limited Info"
 msgstr "Informação de Taxa limitada"
 
 #: src/components/wallet/create/WalletCreate.jsx:176
-msgid "Rate Limited Options"
-msgstr "Opções de taxas limitadas"
+#~ msgid "Rate Limited Options"
+#~ msgstr "Opções de taxas limitadas"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:273
 msgid "Rate Limited User Wallet Setup"
 msgstr "Configuração da carteira do utilizador com taxa limitada"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:650
+#: src/components/wallet/cat/WalletCAT.tsx:650
 #: src/components/wallet/standard/WalletStandard.tsx:576
 msgid "Receive Address"
 msgstr "Endereço de recebimento"
@@ -1806,7 +1833,7 @@ msgstr "Notas de Lançamento"
 #~ msgid "Removing"
 #~ msgstr "A eliminar"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:265
+#: src/components/wallet/cat/WalletCAT.tsx:265
 msgid "Rename"
 msgstr "Renomear"
 
@@ -1877,7 +1904,7 @@ msgstr "Selecione a chave"
 #~ msgid "Select Temporary Directory"
 #~ msgstr "Selecione o diretório temporário"
 
-#: src/components/wallet/create/WalletCreateList.tsx:21
+#: src/components/wallet/create/WalletCreateList.tsx:25
 msgid "Select Wallet Type"
 msgstr "Selecione o tipo de carteira"
 
@@ -1926,7 +1953,7 @@ msgstr "Arquivo de recuperação selecionado:"
 #~ msgid "Sell"
 #~ msgstr "Vender"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:620
+#: src/components/wallet/cat/WalletCAT.tsx:620
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:542
 msgid "Send"
@@ -1990,7 +2017,7 @@ msgid "Spendable Amount Per Interval"
 msgstr "Quantidade de gasto por intervalo"
 
 #: src/components/wallet/card/WalletCardSpendableBalance.tsx:24
-#: src/components/wallet/coloured/WalletColoured.tsx:384
+#: src/components/wallet/cat/WalletCAT.tsx:384
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:548
 msgid "Spendable Balance"
 msgstr "Balanço para Despesas"
@@ -2279,7 +2306,7 @@ msgid "To"
 msgstr "Para"
 
 #: src/components/wallet/card/WalletCardTotalBalance.tsx:32
-#: src/components/wallet/coloured/WalletColoured.tsx:379
+#: src/components/wallet/cat/WalletCAT.tsx:379
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:543
 msgid "Total Balance"
 msgstr "Balanço Total"
@@ -2424,7 +2451,7 @@ msgstr "Vista"
 msgid "View pending balances"
 msgstr "Ver saldos pendentes"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:393
+#: src/components/wallet/cat/WalletCAT.tsx:393
 msgid "View pending balances..."
 msgstr "Ver saldos pendentes..."
 
