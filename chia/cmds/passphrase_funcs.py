@@ -53,6 +53,13 @@ def verify_passphrase_meets_requirements(
         raise Exception("Unexpected passphrase verification case")
 
 
+def prompt_for_passphrase(prompt: str) -> str:
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        print(prompt, end="")
+        prompt = ""
+    return getpass(prompt)
+
+
 def prompt_to_save_passphrase() -> bool:
     save: bool = False
 
