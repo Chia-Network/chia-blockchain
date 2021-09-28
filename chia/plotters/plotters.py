@@ -95,7 +95,7 @@ bladebit_plotter = [
 
 
 def get_plotters_root_path(root_path: Path) -> Path:
-    root_path = root_path.parent
+    root_path = root_path
     return root_path / "plotters"
 
 
