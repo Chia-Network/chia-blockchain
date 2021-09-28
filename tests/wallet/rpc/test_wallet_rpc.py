@@ -54,6 +54,7 @@ class TestWalletRpc:
         ph_2 = await wallet_2.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
