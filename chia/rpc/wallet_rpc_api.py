@@ -38,7 +38,6 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
-MAX_MEMO_SIZE = 1024  # Just a soft limit in RPC
 
 log = logging.getLogger(__name__)
 
@@ -728,8 +727,6 @@ class WalletRpcApi:
         memo: Optional[bytes] = None
         if "memo" in request:
             memo = hexstr_to_bytes(request["memo"])
-            if len(memo) > MAX_MEMO_SIZE:
-                raise ValueError(f"Memo too large, please use less than {MAX_MEMO_SIZE} bytes")
 
         if "fee" in request:
             fee = uint64(request["fee"])
@@ -815,8 +812,6 @@ class WalletRpcApi:
         memo: Optional[bytes] = None
         if "memo" in request:
             memo = hexstr_to_bytes(request["memo"])
-            if len(memo) > MAX_MEMO_SIZE:
-                raise ValueError(f"Memo too large, please use less than {MAX_MEMO_SIZE} bytes")
 
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
@@ -1170,8 +1165,6 @@ class WalletRpcApi:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
         memo_0 = None if "memo" not in additions[0] else hexstr_to_bytes(additions[0]["memo"])
-        if memo_0 is not None and len(memo_0) > MAX_MEMO_SIZE:
-            raise ValueError("Memo too large")
 
         additional_outputs = []
         for addition in additions[1:]:
@@ -1182,8 +1175,6 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memo = None if "memo" not in addition else hexstr_to_bytes(addition["memo"])
-            if memo is not None and len(memo) > MAX_MEMO_SIZE:
-                raise ValueError("Memo too large")
             additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memo": memo})
 
         fee = uint64(0)
