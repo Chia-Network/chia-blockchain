@@ -9,8 +9,8 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 
-# from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-# from chia.server.outbound_message import NodeType
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -35,22 +35,23 @@ def service_kwargs_for_data_layer(
     # upnp_list = []
     # if config["enable_upnp"]:
     #     upnp_list = [config["port"]]
-    # network_id = config["selected_network"]
+    network_id = config["selected_network"]
     kwargs: Dict[str, Any] = dict(
-        # root_path=root_path,
-        # node=api.full_node,
+        root_path=root_path,
+        node=api.data_layer,
         # TODO: not for peers...
         peer_api=api,
-        # node_type=NodeType.FULL_NODE,
-        # advertised_port=config["port"],
-        # service_name=SERVICE_NAME,
+        node_type=NodeType.DATA_LAYER,
+        # TODO: no publicly advertised port, at least not yet
+        advertised_port=config["port"],
+        service_name=SERVICE_NAME,
         # upnp_ports=upnp_list,
         # server_listen_ports=[config["port"]],
         # on_connect_callback=full_node.on_connect,
-        # network_id=network_id,
+        network_id=network_id,
     )
-    # if config["start_rpc_server"]:
-    #     kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
+    if config["start_rpc_server"]:
+        kwargs["rpc_info"] = (DataLayerRpcApi, config["rpc_port"])
     return kwargs
 
 

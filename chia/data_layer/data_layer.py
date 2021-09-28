@@ -1,11 +1,12 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_store import DataStore
+from chia.server.server import ChiaServer
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir, path_from_root
 
@@ -72,8 +73,11 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    # def _set_state_changed_callback(self, callback: Callable):
-    #     self.state_changed_callback = callback
+    def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
+        self.state_changed_callback = callback
+
+    def set_server(self, server: ChiaServer) -> None:
+        self.server = server
 
     async def _start(self) -> None:
         # self.timelord_lock = asyncio.Lock()
@@ -140,6 +144,32 @@ class DataLayer:
         # self.initialized = True
         # if self.full_node_peers is not None:
         #     asyncio.create_task(self.full_node_peers.start())
+
+    def _close(self) -> None:
+        # TODO: review for anything else we need to do here
+        self._shut_down = True
+        # if self._init_weight_proof is not None:
+        #     self._init_weight_proof.cancel()
+        #
+        # # blockchain is created in _start and in certain cases it may not exist here during _close
+        # if hasattr(self, "blockchain"):
+        #     self.blockchain.shut_down()
+        # # same for mempool_manager
+        # if hasattr(self, "mempool_manager"):
+        #     self.mempool_manager.shut_down()
+        #
+        # if self.full_node_peers is not None:
+        #     asyncio.create_task(self.full_node_peers.close())
+        # if self.uncompact_task is not None:
+        #     self.uncompact_task.cancel()
+
+    async def _await_closed(self) -> None:
+        # cancel_task_safe(self._sync_task, self.log)
+        # for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+        #     cancel_task_safe(task, self.log)
+        await self.connection.close()
+        # if self._init_weight_proof is not None:
+        #     await asyncio.wait([self._init_weight_proof])
 
     # def _state_changed(self, change: str):
     #     if self.state_changed_callback is not None:

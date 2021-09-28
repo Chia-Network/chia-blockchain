@@ -104,6 +104,7 @@ kwargs = dict(
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
+            "chia_data_layer = chia.server.start_data_layer:main",
         ]
     },
     package_data={

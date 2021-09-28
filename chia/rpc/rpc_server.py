@@ -302,40 +302,54 @@ async def start_rpc_server(
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
     """
-    app = aiohttp.web.Application()
-    rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-    rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-    http_routes: Dict[str, Callable] = rpc_api.get_routes()
+    try:
+        app = aiohttp.web.Application()
+        rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
+        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+        http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
-    routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
-    routes += [
-        aiohttp.web.post(
-            "/get_connections",
-            rpc_server._wrap_http_handler(rpc_server.get_connections),
-        ),
-        aiohttp.web.post(
-            "/open_connection",
-            rpc_server._wrap_http_handler(rpc_server.open_connection),
-        ),
-        aiohttp.web.post(
-            "/close_connection",
-            rpc_server._wrap_http_handler(rpc_server.close_connection),
-        ),
-        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
-    ]
+        routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
+        routes += [
+            aiohttp.web.post(
+                "/get_connections",
+                rpc_server._wrap_http_handler(rpc_server.get_connections),
+            ),
+            aiohttp.web.post(
+                "/open_connection",
+                rpc_server._wrap_http_handler(rpc_server.open_connection),
+            ),
+            aiohttp.web.post(
+                "/close_connection",
+                rpc_server._wrap_http_handler(rpc_server.close_connection),
+            ),
+            aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
+        ]
 
-    app.add_routes(routes)
-    if connect_to_daemon:
-        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
-    runner = aiohttp.web.AppRunner(app, access_log=None)
-    await runner.setup()
-    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
-    await site.start()
-
-    async def cleanup():
-        await rpc_server.stop()
-        await runner.cleanup()
+        app.add_routes(routes)
         if connect_to_daemon:
-            await daemon_connection
+            daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
+        runner = aiohttp.web.AppRunner(app, access_log=None)
+        await runner.setup()
+        site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
+        await site.start()
+    except Exception:
+        # TODO: move this logging to it's own PR
+        tb = traceback.format_exc()
+        log.error(f"Starting RPC server failed. Exception {tb}.")
+        return
 
-    return cleanup
+    try:
+        # TODO: There's only one line calling this function and it uses
+        #       `asyncio.create_task()` without capturing the task for output
+        #       collection.  So, this seems unused and we never do this cleanup?
+        async def cleanup():
+            await rpc_server.stop()
+            await runner.cleanup()
+            if connect_to_daemon:
+                await daemon_connection
+
+        return cleanup
+    except Exception:
+        tb = traceback.format_exc()
+        log.warning(f"Starting RPC server failed. Exception {tb}.")
+        return
