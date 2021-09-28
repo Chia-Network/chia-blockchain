@@ -611,10 +611,6 @@ class CCWallet:
         if self.cc_info.my_genesis_checker is None:
             raise ValueError("My genesis checker is None")
 
-        uncurried_mod, curried_args = self.cc_info.my_genesis_checker.uncurry()
-        _, args = GenesisById.match(uncurried_mod, curried_args)  # Static TAIL
-        genesis_id = args[0].as_python()
-
         spendable_cc_list = []
         innersol_list = []
         sigs: List[G2Element] = []
@@ -632,10 +628,15 @@ class CCWallet:
             innersol_list.append(innersol)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
-            new_spendable_cc = SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof.to_program())
+            new_spendable_cc = SpendableCC(
+                coin,
+                self.cc_info.my_genesis_checker,
+                inner_puzzle,
+                lineage_proof.to_program(),
+            )
             spendable_cc_list.append(new_spendable_cc)
             limitations_reveal = Program.to([]) if lineage_proof == LineageProof() else self.cc_info.my_genesis_checker
-            truths = get_cat_truths(new_spendable_cc, limitations_reveal, GenesisById.solve([], {}))  # Static TAIL
+            truths = get_cat_truths(new_spendable_cc, GenesisById.solve([], {}))  # Static TAIL
             sigs = sigs + (await self.get_sigs(coin_inner_puzzle, truths.cons(innersol), coin.name()))
 
         spend_bundle = spend_bundle_for_spendable_ccs(
