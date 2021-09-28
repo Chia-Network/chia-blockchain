@@ -65,7 +65,7 @@ class TestCCLifecycle:
             spendable_cc_list.append(
                 SpendableCC(
                     coin,
-                    coin.parent_coin_info,  # This doesn't matter, so we'll just use an available 32 byte value
+                    genesis_checker,  # This doesn't matter, so we'll just use an available 32 byte value
                     acs,
                     proof,
                 )
