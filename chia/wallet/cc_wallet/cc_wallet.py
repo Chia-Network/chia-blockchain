@@ -27,7 +27,7 @@ from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
     construct_cc_puzzle,
-    spend_bundle_for_spendable_ccs,
+    unsigned_spend_bundle_for_spendable_ccs,
     get_cat_truths,
     match_cat_puzzle,
     get_lineage_proof_from_coin_and_puz)
@@ -613,27 +613,27 @@ class CCWallet:
                     innersol = self.standard_wallet.make_solution(primaries=primaries)
             else:
                 innersol = self.standard_wallet.make_solution()
-            innersol_list.append(innersol)
-            lineage_proof = await self.get_lineage_proof_for_coin(coin)
+            lineage_proof = (await self.get_lineage_proof_for_coin(coin))
             assert lineage_proof is not None
             new_spendable_cc = SpendableCC(
                 coin,
                 self.cc_info.my_genesis_checker,
                 inner_puzzle,
-                lineage_proof.to_program(),
+                innersol,
+                limitations_solution=GenesisById.solve([], {}), # Static TAIL
+                lineage_proof=lineage_proof,
+                reveal_limitations_program=(lineage_proof == LineageProof()) # Static TAIL
             )
             spendable_cc_list.append(new_spendable_cc)
-            limitations_reveal = Program.to([]) if lineage_proof == LineageProof() else self.cc_info.my_genesis_checker
-            truths = get_cat_truths(new_spendable_cc, GenesisById.solve([], {}))  # Static TAIL
+            truths = get_cat_truths(new_spendable_cc)
             sigs = sigs + (await self.get_sigs(coin_inner_puzzle, truths.cons(innersol), coin.name()))
 
-        spend_bundle = spend_bundle_for_spendable_ccs(
+        spend_bundle = unsigned_spend_bundle_for_spendable_ccs(
             CC_MOD,
-            self.cc_info.my_genesis_checker,
             spendable_cc_list,
-            innersol_list,
-            sigs,
         )
+        agg_sig = AugSchemeMPL.aggregate(sigs)
+        spend_bundle = SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)]) # "Signing" the spend bundle
 
         # TODO add support for array in stored records
         return TransactionRecord(
