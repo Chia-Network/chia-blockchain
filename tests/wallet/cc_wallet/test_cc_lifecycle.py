@@ -19,7 +19,7 @@ from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
     construct_cc_puzzle,
-    spend_bundle_for_spendable_ccs,
+    unsigned_spend_bundle_for_spendable_ccs,
     get_lineage_proof_from_coin_and_puz,
 )
 from chia.wallet.puzzles.genesis_checkers import (
@@ -33,7 +33,7 @@ from tests.clvm.test_puzzles import secret_exponent_for_index
 
 acs = adapt_inner_to_singleton(Program.to(1))
 acs_ph = acs.get_tree_hash()
-NO_LINEAGE_PROOF = None
+NO_LINEAGE_PROOF = LineageProof()
 
 
 class TestCCLifecycle:
@@ -55,32 +55,41 @@ class TestCCLifecycle:
         lineage_proofs: List[Program],
         inner_solutions: List[Program],
         expected_result: Tuple[MempoolInclusionStatus, Err],
-        signatures: Optional[List[G2Element]] = None,
+        signatures: List[G2Element] = [],
         extra_deltas: Optional[List[int]] = None,
         additional_spends: List[SpendBundle] = [],
         limitations_solutions: Optional[List[Program]] = None,
     ):
+        if limitations_solutions is None:
+            limitations_solutions = [Program.to([])] * len(coins)
+        if extra_deltas is None:
+            extra_deltas = [0] * len(coins)
+
         spendable_cc_list: List[SpendableCC] = []
-        for coin, proof in zip(coins, lineage_proofs):
+        for coin, innersol, proof, limitations_solution, extra_delta in zip(coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas):
             spendable_cc_list.append(
                 SpendableCC(
                     coin,
-                    genesis_checker,  # This doesn't matter, so we'll just use an available 32 byte value
+                    genesis_checker,
                     acs,
-                    proof,
+                    innersol,
+                    limitations_solution=limitations_solution,
+                    lineage_proof=proof,
+                    extra_delta=extra_delta,
+                    reveal_limitations_program=True,
                 )
             )
 
-        spend_bundle: SpendBundle = spend_bundle_for_spendable_ccs(
+        spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_ccs(
             CC_MOD,
-            genesis_checker,
             spendable_cc_list,
-            inner_solutions,
-            sigs=signatures,
-            extra_deltas=extra_deltas,
-            limitations_solutions=limitations_solutions,
         )
-        result = await sim_client.push_tx(SpendBundle.aggregate([*additional_spends, spend_bundle]))
+        agg_sig = AugSchemeMPL.aggregate(signatures)
+        result = await sim_client.push_tx(SpendBundle.aggregate([
+            *additional_spends,
+            spend_bundle,
+            SpendBundle([], agg_sig), # "Signing" the spend bundle
+        ]))
         assert result == expected_result
         await sim.farm_block()
 
@@ -163,7 +172,7 @@ class TestCCLifecycle:
                 sim_client,
                 genesis_checker,
                 [(await sim_client.get_coin_records_by_puzzle_hash(cc_ph, include_spent_coins=False))[0].coin],
-                [lineage_proof.to_program()],
+                [lineage_proof],
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
             )

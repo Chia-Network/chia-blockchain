@@ -18,7 +18,12 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cc_wallet import cc_utils
-from chia.wallet.cc_wallet.cc_utils import CC_MOD, SpendableCC, spend_bundle_for_spendable_ccs, match_cat_puzzle
+from chia.wallet.cc_wallet.cc_utils import (
+    CC_MOD,
+    SpendableCC,
+    unsigned_spend_bundle_for_spendable_ccs,
+    match_cat_puzzle,
+)
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
 from chia.wallet.trade_record import TradeRecord
@@ -481,8 +486,13 @@ class TradeManager:
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
                 lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
-                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_coin_checker, inner_puzzle, lineage_proof))
-                innersol_list.append(inner_solution)
+                spendable_cc_list.append(SpendableCC(
+                    coloured_coin,
+                    genesis_coin_checker,
+                    inner_puzzle,
+                    inner_solution,
+                    lineage_proof=lineage_proof,
+                ))
 
             # Create SpendableCC for each of the coloured coins received
             for cc_coinsol_out in cc_coinsol_outamounts[colour]:
@@ -493,10 +503,13 @@ class TradeManager:
                 matched, curried_args = match_cat_puzzle(puzzle)
                 if matched:
                     mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
-                    inner_solution = solution.first()
-                    lineage_proof = solution.rest().rest().first()
-                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_coin_checker, inner_puzzle, lineage_proof))
-                    innersol_list.append(inner_solution)
+                    spendable_cc_list.append(SpendableCC(
+                        cc_coinsol.coin,
+                        genesis_coin_checker,
+                        inner_puzzle,
+                        solution.first(),
+                        lineage_proof=solution.rest().rest().first(),
+                    ))
 
             # Finish the output coin SpendableCC with new information
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
@@ -508,29 +521,29 @@ class TradeManager:
             assert inner_puzzle is not None
 
             lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
-            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_coin_checker, inner_puzzle, lineage_proof))
-            innersol_list.append(inner_solution)
+            spendable_cc_list.append(SpendableCC(
+                my_output_coin,
+                genesis_coin_checker,
+                inner_puzzle,
+                inner_solution,
+                lineage_proof=lineage_proof,
+            ))
 
             sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
             if spend_bundle is None:
-                spend_bundle = spend_bundle_for_spendable_ccs(
+                spend_bundle = unsigned_spend_bundle_for_spendable_ccs(
                     CC_MOD,
-                    Program.from_bytes(bytes.fromhex(colour)),
                     spendable_cc_list,
-                    innersol_list,
-                    [aggsig],
                 )
             else:
-                new_spend_bundle = spend_bundle_for_spendable_ccs(
+                new_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(
                     CC_MOD,
-                    Program.from_bytes(bytes.fromhex(colour)),
                     spendable_cc_list,
-                    innersol_list,
-                    [aggsig],
                 )
                 spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
+            spend_bundle = SpendBundle.aggregate([spend_bundle, SpendBundle([],aggsig)]) # "Signing" the spend bundle
             # reset sigs and aggsig so that they aren't included next time around
             sigs = []
             aggsig = AugSchemeMPL.aggregate(sigs)
