@@ -1,7 +1,9 @@
 import asyncio
+from typing import Optional
 
 from blspy import G2Element
 
+from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config, save_config
@@ -196,7 +198,11 @@ class TestWalletRpc:
             found: bool = False
             for addition in tx_res.spend_bundle.additions():
                 if addition.amount == 444:
-                    spend: CoinSpend = await client_node.get_puzzle_and_solution(addition.parent_coin_info)
+                    cr: Optional[CoinRecord] = await client_node.get_coin_record_by_name(addition.name())
+                    assert cr is not None
+                    spend: CoinSpend = await client_node.get_puzzle_and_solution(
+                        addition.parent_coin_info, cr.confirmed_block_index
+                    )
                     sb: SpendBundle = SpendBundle([spend], G2Element())
                     assert sb.get_memos() == {addition.name(): [b"hhh"]}
                     found = True

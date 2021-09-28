@@ -4,7 +4,7 @@ import logging
 import time
 from dataclasses import replace
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
 
