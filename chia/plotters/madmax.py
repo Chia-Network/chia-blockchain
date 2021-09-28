@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 import traceback
 import os
 import logging
@@ -36,8 +37,21 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     supported: bool = is_madmax_supported()
 
     if get_madmax_executable_path(plotters_root_path).exists():
-        installed = True
-        # TODO: Figure out how to get madmax version
+        try:
+            proc = subprocess.run(
+                [os.fspath(get_madmax_executable_path(plotters_root_path)), "--version"],
+                capture_output=True,
+                text=True,
+            )
+            version = proc.stdout.strip()
+        except Exception as e:
+            print(f"Failed to determine madmax version: {e}")
+
+        if version is not None:
+            installed = True
+            info["version"] = version
+        else:
+            installed = False
 
     info["installed"] = installed
     if installed is False:
