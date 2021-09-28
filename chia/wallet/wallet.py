@@ -298,6 +298,7 @@ class Wallet:
         primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
+        memo: Optional[bytes] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -343,9 +344,9 @@ class Wallet:
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
-                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
+                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memo": memo}]
                 else:
-                    primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
+                    primaries.append({"puzzlehash": newpuzzlehash, "amount": amount, "memo": memo})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": change})
@@ -387,13 +388,15 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
+        memo: Optional[bytes] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
+        The first output is (amount, puzzle_hash, memo), and the rest of the outputs are in primaries.
         """
         if primaries is None:
             non_change_amount = amount
@@ -401,7 +404,15 @@ class Wallet:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         transaction = await self._generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount, announcements_to_consume
+            amount,
+            puzzle_hash,
+            fee,
+            origin_id,
+            coins,
+            primaries,
+            ignore_max_send_amount,
+            announcements_to_consume,
+            memo,
         )
         assert len(transaction) > 0
 

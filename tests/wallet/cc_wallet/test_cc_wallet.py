@@ -451,7 +451,8 @@ class TestCCWallet:
             if tx.amount == 30:
                 memos = tx.get_memos()
                 assert len(memos) == 1
-                assert b"Markus Walburg" in memos.values()
+                assert [b"Markus Walburg"] in memos.values()
+                assert list(memos.keys())[0] in [a.name() for a in tx_record_3.spend_bundle.additions()]
 
     @pytest.mark.asyncio
     async def test_cc_max_amount_send(self, two_wallet_nodes):

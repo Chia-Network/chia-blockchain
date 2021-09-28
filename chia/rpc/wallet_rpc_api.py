@@ -7,7 +7,6 @@ from typing import Callable, Dict, List, Optional, Tuple
 from blspy import PrivateKey, G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.full_node.mempool_check_conditions import MAX_MEMO_SIZE
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -39,6 +38,7 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
+MAX_MEMO_SIZE = 1024  # Just a soft limit in RPC
 
 log = logging.getLogger(__name__)
 
@@ -654,7 +654,7 @@ class WalletRpcApi:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
         return {
-            "transaction": tr,
+            "transaction": tr.to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
 
@@ -672,17 +672,8 @@ class WalletRpcApi:
             end = 50
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
-        formatted_transactions = []
-        selected = self.service.config["selected_network"]
-        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-        for tx in transactions:
-            formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
-            formatted["memos"] = tx.get_memos()
-            formatted_transactions.append(formatted)
-
         return {
-            "transactions": formatted_transactions,
+            "transactions": [tr.to_json_dict_convenience(self.service.config) for tr in transactions],
             "wallet_id": wallet_id,
         }
 
@@ -733,21 +724,28 @@ class WalletRpcApi:
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+
+        memo: Optional[bytes] = None
+        if "memo" in request:
+            memo = hexstr_to_bytes(request["memo"])
+            if len(memo) > MAX_MEMO_SIZE:
+                raise ValueError(f"Memo too large, please use less than {MAX_MEMO_SIZE} bytes")
+
         if "fee" in request:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee)
+            tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee, memo=memo)
             await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
-            "transaction": tx,
+            "transaction": tx.to_json_dict_convenience(self.service.config),
             "transaction_id": tx.name,
         }
 
-    async def send_transaction_multi(self, request):
+    async def send_transaction_multi(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
@@ -757,16 +755,12 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            transaction: TransactionRecord = (await self.create_signed_transaction(request, hold_lock=False))[
-                "signed_tx"
-            ]
-            await wallet.push_transaction(transaction)
+            transaction: Dict = (await self.create_signed_transaction(request, hold_lock=False))["signed_tx"]
+            tr: TransactionRecord = TransactionRecord.from_json_dict_convenience(transaction)
+            await wallet.push_transaction(tr)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {
-            "transaction": transaction,
-            "transaction_id": transaction.name,
-        }
+        return {"transaction": transaction, "transaction_id": tr.name}
 
     async def delete_unconfirmed_transactions(self, request):
         wallet_id = uint32(request["wallet_id"])
@@ -836,7 +830,7 @@ class WalletRpcApi:
             await wallet.push_transaction(tx)
 
         return {
-            "transaction": tx,
+            "transaction": tx.to_json_dict_convenience(self.service.config),
             "transaction_id": tx.name,
         }
 
@@ -1163,7 +1157,8 @@ class WalletRpcApi:
             "last_height_farmed": last_height_farmed,
         }
 
-    async def create_signed_transaction(self, request, hold_lock=True):
+    async def create_signed_transaction(self, request, hold_lock=True) -> Dict:
+        assert self.service.wallet_state_manager is not None
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
 
@@ -1172,17 +1167,24 @@ class WalletRpcApi:
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
         puzzle_hash_0 = hexstr_to_bytes(additions[0]["puzzle_hash"])
         if len(puzzle_hash_0) != 32:
-            raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0}")
+            raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
+
+        memo_0 = None if "memo" not in additions[0] else hexstr_to_bytes(additions[0]["memo"])
+        if memo_0 is not None and len(memo_0) > MAX_MEMO_SIZE:
+            raise ValueError("Memo too large")
 
         additional_outputs = []
         for addition in additions[1:]:
             receiver_ph = hexstr_to_bytes(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
-                raise ValueError(f"Address must be 32 bytes. {receiver_ph}")
+                raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
             amount = uint64(addition["amount"])
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount})
+            memo = None if "memo" not in addition else hexstr_to_bytes(addition["memo"])
+            if memo is not None and len(memo) > MAX_MEMO_SIZE:
+                raise ValueError("Memo too large")
+            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memo": memo})
 
         fee = uint64(0)
         if "fee" in request:
@@ -1195,13 +1197,25 @@ class WalletRpcApi:
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                    amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
+                    amount_0,
+                    puzzle_hash_0,
+                    fee,
+                    coins=coins,
+                    ignore_max_send_amount=True,
+                    primaries=additional_outputs,
+                    memo=memo_0,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True, primaries=additional_outputs
+                amount_0,
+                puzzle_hash_0,
+                fee,
+                coins=coins,
+                ignore_max_send_amount=True,
+                primaries=additional_outputs,
+                memo=memo_0,
             )
-        return {"signed_tx": signed_tx}
+        return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 
     ##########################################################################################
     # Pool Wallet

@@ -540,12 +540,16 @@ class FullNodeRpcApi:
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
-        height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
-        if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
-            raise ValueError(f"Invalid height {height}. coin record {coin_record}")
+        if coin_record is None or not coin_record.spent:
+            raise ValueError(f"Invalid coin record {coin_record}")
 
-        header_hash = self.service.blockchain.height_to_hash(height)
+        if "height" in request:
+            height = request["height"]
+            if coin_record.spent_block_index != height:
+                raise ValueError(f"Invalid height {height}. coin record {coin_record}")
+
+        header_hash = self.service.blockchain.height_to_hash(coin_record.spent_block_index)
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
@@ -561,7 +565,8 @@ class FullNodeRpcApi:
 
         puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
         solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-        return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
+        spend: CoinSpend = CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
+        return {"coin_solution": spend, "coin_spend": spend}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:

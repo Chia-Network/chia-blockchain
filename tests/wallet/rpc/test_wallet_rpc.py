@@ -1,4 +1,9 @@
 import asyncio
+
+from blspy import G2Element
+
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config, save_config
 import logging
 from pathlib import Path
@@ -107,7 +112,7 @@ class TestWalletRpc:
                 pass
 
             # Tests sending a basic transaction
-            tx = await client.send_transaction("1", tx_amount, addr)
+            tx = await client.send_transaction("1", tx_amount, addr, memo=b"this is a basic tx")
             transaction_id = tx.name
 
             async def tx_in_mempool():
@@ -125,6 +130,13 @@ class TestWalletRpc:
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
 
+            # Checks that the memo can be retrieved
+            tx_confirmed = await client.get_transaction("1", transaction_id)
+            assert tx_confirmed.confirmed
+            assert len(tx_confirmed.get_memos()) == 1
+            assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
+            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
+
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
 
             # Tests offline signing
@@ -135,7 +147,7 @@ class TestWalletRpc:
             # Test basic transaction to one output
             signed_tx_amount = 888000
             tx_res: TransactionRecord = await client.create_signed_transaction(
-                [{"amount": signed_tx_amount, "puzzle_hash": ph_3}]
+                [{"amount": signed_tx_amount, "puzzle_hash": ph_3, "memo": "My memo".encode("utf-8")}]
             )
 
             assert tx_res.fee_amount == 0
@@ -154,6 +166,7 @@ class TestWalletRpc:
                 await asyncio.sleep(0.5)
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
+            # TODO: Test that memo exists in full node
 
             # Test transaction to two outputs, from a specified coin, with a fee
             coin_to_spend = None
@@ -163,7 +176,7 @@ class TestWalletRpc:
             assert coin_to_spend is not None
 
             tx_res = await client.create_signed_transaction(
-                [{"amount": 444, "puzzle_hash": ph_4}, {"amount": 999, "puzzle_hash": ph_5}],
+                [{"amount": 444, "puzzle_hash": ph_4, "memo": b"hhh"}, {"amount": 999, "puzzle_hash": ph_5}],
                 coins=[coin_to_spend],
                 fee=100,
             )
@@ -180,11 +193,25 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
+            found: bool = False
+            for addition in tx_res.spend_bundle.additions():
+                if addition.amount == 444:
+                    spend: CoinSpend = await client_node.get_puzzle_and_solution(addition.parent_coin_info)
+                    sb: SpendBundle = SpendBundle([spend], G2Element())
+                    assert sb.get_memos() == {addition.name(): [b"hhh"]}
+                    found = True
+            assert found
+
             new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
             await time_out_assert(5, eventual_balance, new_balance)
 
             send_tx_res: TransactionRecord = await client.send_transaction_multi(
-                "1", [{"amount": 555, "puzzle_hash": ph_4}, {"amount": 666, "puzzle_hash": ph_5}], fee=200
+                "1",
+                [
+                    {"amount": 555, "puzzle_hash": ph_4, "memo": "FiMemo".encode("utf-8")},
+                    {"amount": 666, "puzzle_hash": ph_5, "memo": "SeMemo".encode("utf-8")},
+                ],
+                fee=200,
             )
             assert send_tx_res is not None
             assert send_tx_res.fee_amount == 200
@@ -204,6 +231,16 @@ class TestWalletRpc:
 
             new_balance = new_balance - 555 - 666 - 200
             await time_out_assert(5, eventual_balance, new_balance)
+
+            # Checks that the memo can be retrieved
+            tx_confirmed = await client.get_transaction("1", send_tx_res.name)
+            assert tx_confirmed.confirmed
+            assert len(tx_confirmed.get_memos()) == 2
+            print(tx_confirmed.get_memos())
+            assert ["FiMemo".encode("utf-8")] in tx_confirmed.get_memos().values()
+            assert ["SeMemo".encode("utf-8")] in tx_confirmed.get_memos().values()
+            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
 
             address = await client.get_next_address("1", True)
             assert len(address) > 10
