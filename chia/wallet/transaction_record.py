@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
@@ -59,3 +60,31 @@ class TransactionRecord(Streamable):
                 if farmer_parent == self.additions[0].parent_coin_info:
                     return uint32(block_index)
         return None
+
+    def get_memos(self) -> Dict[bytes32, List[bytes]]:
+        if self.spend_bundle is None:
+            return {}
+        return self.spend_bundle.get_memos()
+
+    @classmethod
+    def from_json_dict_convenience(cls, modified_tx: Dict):
+        if "to_address" in modified_tx:
+            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
+        if "to_address" in modified_tx:
+            del modified_tx["to_address"]
+        if "memos" in modified_tx:
+            del modified_tx["memos"]
+        return cls.from_json_dict(modified_tx)
+
+    def to_json_dict_convenience(self, config: Dict) -> Dict:
+        selected = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+        formatted = self.to_json_dict()
+        formatted["to_address"] = encode_puzzle_hash(self.to_puzzle_hash, prefix)
+        formatted["memos"] = {
+            coin_id.hex(): memo.hex()
+            for coin_id, memos in self.get_memos().items()
+            for memo in memos
+            if memo is not None
+        }
+        return formatted
