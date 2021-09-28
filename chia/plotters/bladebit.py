@@ -18,7 +18,7 @@ BLADEBIT_MIN_RAM_GIBS = 416
 
 
 def is_bladebit_supported() -> bool:
-    return sys.platform.startswith("linux")
+    return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin"]
 
 
 def meets_memory_requirement() -> bool:
@@ -39,7 +39,10 @@ def get_bladebit_install_path(plotters_root_path: Path) -> Path:
 
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
-    return get_bladebit_install_path(plotters_root_path) / ".bin/release/bladebit"
+    bladebit_exec: str = "bladebit"
+    if sys.platform in ["win32", "cygwin"]:
+        bladebit_exec = "bladebit.exe"
+    return get_bladebit_install_path(plotters_root_path) / ".bin/release" / bladebit_exec
 
 
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
