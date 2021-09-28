@@ -1410,11 +1410,11 @@ class FullNodeAPI:
 
     @api_request
     async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo):
+        """Returns the start and end height of a sub-epoch for the height specified in request"""
+
         ses_height = self.full_node.blockchain.get_ses_heights()
         start_height = request.start_height
         end_height = request.end_height
-        start_ses_hash = None
-        end_ses_hash = None
         ses_hash_heights = []
         ses_reward_hashes = []
 
@@ -1436,8 +1436,8 @@ class FullNodeAPI:
                     # else add extra ses as request start <-> end spans two ses
                     next_next_height = ses_height[idx + 2]
                     ses_hash_heights.append([next_ses_height, next_next_height])
-                    ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
-                    ses_reward_hashes.append(ses.reward_chain_hash)
+                    nex_ses: SubEpochSummary = self.full_node.blockchain.get_ses(next_ses_height)
+                    ses_reward_hashes.append(nex_ses.reward_chain_hash)
                     break
 
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)

@@ -1,25 +1,17 @@
 import asyncio
 import logging
-from pathlib import Path
-from typing import List, Optional, Set, Tuple
-
-import aiosqlite
 import pytest
-import tempfile
-
 from clvm.casts import int_to_bytes
 
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain import Blockchain
 from chia.full_node.hint_store import HintStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from tests.core.full_node.test_coin_store import DBConnection
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt
-from tests.core.fixtures import empty_blockchain  # noqa: F401
 
 
 @pytest.fixture(scope="module")
@@ -31,21 +23,20 @@ def event_loop():
 log = logging.getLogger(__name__)
 
 
-
 class TestHintStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
         async with DBConnection() as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
-            hint_0 = 32*b"\0"
-            hint_1 = 32*b"\1"
-            not_existing_hint = 32*b"\3"
+            hint_0 = 32 * b"\0"
+            hint_1 = 32 * b"\1"
+            not_existing_hint = 32 * b"\3"
 
-            coin_id_0 = 32*b"\4"
-            coin_id_1 = 32*b"\5"
-            coin_id_2 = 32*b'\6'
+            coin_id_0 = 32 * b"\4"
+            coin_id_1 = 32 * b"\5"
+            coin_id_2 = 32 * b"\6"
 
-            hints = [(coin_id_0.hex(), hint_0.hex()), (coin_id_1.hex(), hint_0.hex()), (coin_id_2.hex(), hint_1.hex())]
+            hints = [(coin_id_0, hint_0), (coin_id_1, hint_0), (coin_id_2, hint_1)]
             await hint_store.add_hints(hints)
             await db_wrapper.commit_transaction()
             coins_for_hint_0 = await hint_store.get_hints(hint_0)
@@ -74,13 +65,18 @@ class TestHintStore:
             await blockchain.receive_block(block)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
-        puzzle_hash = 32*b"\0"
+        puzzle_hash = 32 * b"\0"
         amount = int_to_bytes(1)
-        hint = 32*b"\5"
+        hint = 32 * b"\5"
         coin_spent = list(blocks[-1].get_included_reward_coins())[0]
-        condition_dict = {ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]}
+        condition_dict = {
+            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
+        }
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), coin_spent, condition_dic=condition_dict,
+            10,
+            wt.get_new_puzzlehash(),
+            coin_spent,
+            condition_dic=condition_dict,
         )
 
         blocks = bt.get_consecutive_blocks(

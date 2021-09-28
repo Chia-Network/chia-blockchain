@@ -471,7 +471,6 @@ class TestSimpleSyncProtocol:
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
 
-
         wt: WalletTool = bt.get_pool_wallet_tool()
         ph = wt.get_new_puzzlehash()
         for i in range(0, num_blocks):
@@ -480,10 +479,10 @@ class TestSimpleSyncProtocol:
         await asyncio.sleep(6)
         coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
         coin_spent = coins[0].coin
-        puzzle_hash = 32*b"\0"
+        puzzle_hash = 32 * b"\0"
         amount = 1
         amount_bin = int_to_bytes(1)
-        hint = 32*b"\5"
+        hint = 32 * b"\5"
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
         msg = wallet_protocol.RegisterForPhUpdates([hint], 0)
@@ -492,15 +491,20 @@ class TestSimpleSyncProtocol:
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
         assert len(data_response.coin_states) == 0
 
-        condition_dict = {ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount_bin, hint])]}
+        condition_dict = {
+            ConditionOpcode.CREATE_COIN: [
+                ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount_bin, hint])
+            ]
+        }
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), coin_spent, condition_dic=condition_dict,
+            10,
+            wt.get_new_puzzlehash(),
+            coin_spent,
+            condition_dic=condition_dict,
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name()
-        )
+        await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))

@@ -35,7 +35,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
@@ -170,7 +169,10 @@ class Blockchain(BlockchainInterface):
         pre_validation_result: Optional[PreValidationResult] = None,
         fork_point_with_peak: Optional[uint32] = None,
     ) -> Tuple[
-        ReceiveBlockResult, Optional[Err], Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, List[CoinRecord]]]
+        ReceiveBlockResult,
+        Optional[Err],
+        Optional[uint32],
+        Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
     ]:
         """
         This method must be called under the blockchain lock
@@ -292,17 +294,17 @@ class Blockchain(BlockchainInterface):
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, ([], {})
 
-    def get_hint_list(self, npc_result: NPCResult) -> List[Tuple[str, str]]:
+    def get_hint_list(self, npc_result: NPCResult) -> List[Tuple[bytes, bytes]]:
         h_list = []
         for npc in npc_result.npc_list:
             for opcode, conditions in npc.conditions:
                 if opcode == ConditionOpcode.CREATE_COIN:
                     for condition in conditions:
-                        if len(condition.vars) > 2:
+                        if len(condition.vars) > 2 and condition.vars[2] != b"":
                             puzzle_hash, amount_bin = condition.vars[0], condition.vars[1]
                             amount = int_from_bytes(amount_bin)
-                            coin_id = Coin(npc.coin_name, puzzle_hash, amount).name().hex()
-                            h_list.append((coin_id, condition.vars[2].hex()))
+                            coin_id = Coin(npc.coin_name, puzzle_hash, amount).name()
+                            h_list.append((coin_id, condition.vars[2]))
                         else:
                             pass
         return h_list
@@ -314,7 +316,10 @@ class Blockchain(BlockchainInterface):
         fork_point_with_peak: Optional[uint32],
         npc_result: Optional[NPCResult],
     ) -> Tuple[
-        Optional[uint32], Optional[uint32], List[BlockRecord], Tuple[List[CoinRecord], Dict[bytes, List[CoinRecord]]]
+        Optional[uint32],
+        Optional[uint32],
+        List[BlockRecord],
+        Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
     ]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -324,7 +329,7 @@ class Blockchain(BlockchainInterface):
         """
         peak = self.get_peak()
         lastest_coin_state: Dict[bytes32, CoinRecord] = {}
-        hint_coin_state: Dict[bytes32, List[CoinRecord]] = {}
+        hint_coin_state: Dict[bytes32, Dict[bytes32, CoinRecord]] = {}
 
         if genesis:
             if peak is None:
@@ -430,10 +435,10 @@ class Blockchain(BlockchainInterface):
                         await self.hint_store.add_hints(hint_list)
                         # There can be multiple coins for the same hint
                         for coin_name, hint in hint_list:
-                            key = hexstr_to_bytes(hint)
+                            key = hint
                             if key not in hint_coin_state:
-                                hint_coin_state[key] = []
-                            hint_coin_state[key].append(lastest_coin_state[hexstr_to_bytes(coin_name)])
+                                hint_coin_state[key] = {}
+                            hint_coin_state[key][coin_name] = lastest_coin_state[coin_name]
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
