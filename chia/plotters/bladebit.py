@@ -1,4 +1,5 @@
 import asyncio
+import json
 import traceback
 import subprocess
 import os
@@ -21,15 +22,21 @@ def is_bladebit_supported() -> bool:
     return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin"]
 
 
-def meets_memory_requirement() -> bool:
+def meets_memory_requirement(plotters_root_path: Path) -> bool:
     have_enough_memory: bool = False
-    try:
-        total_bytes: int = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
-        total_gibs: int = int(total_bytes / (1024 * 1024 * 1024))
-        required_gibs = BLADEBIT_MIN_RAM_GIBS
-        have_enough_memory = total_gibs >= required_gibs
-    except Exception as e:
-        print(f"Unable to determine total amount of memory: {e}")
+    if get_bladebit_executable_path(plotters_root_path).exists():
+        try:
+            proc = subprocess.run(
+                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--memory-json"],
+                capture_output=True,
+                text=True,
+            )
+            memory_info: Dict[str, int] = json.loads(proc.stdout)
+            total_bytes: int = memory_info.get("total", -1)
+            required_bytes: int = memory_info.get("required", 0)
+            have_enough_memory = total_bytes >= required_bytes
+        except Exception as e:
+            print(f"Failed to determine bladebit memory requirements: {e}")
 
     return have_enough_memory
 
@@ -72,7 +79,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     if installed is False:
         info["can_install"] = supported
 
-    if supported and meets_memory_requirement() is False:
+    if supported and meets_memory_requirement(plotters_root_path) is False:
         info["bladebit_memory_warning"] = f"BladeBit requires at least {BLADEBIT_MIN_RAM_GIBS} GiB of RAM to operate"
 
     return info
