@@ -1836,6 +1836,7 @@ class FullNode:
                     ):
                         return False
                     return True
+        return False
 
     async def _can_accept_compact_proof(
         self,
