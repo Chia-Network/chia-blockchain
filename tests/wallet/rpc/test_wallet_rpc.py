@@ -260,6 +260,70 @@ class TestWalletRpc:
             assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
             assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
 
+            ##############
+            # CATS       #
+            ##############
+
+            # Creates a wallet and a CAT with 20 mojos
+            res = await client.create_new_cat_and_wallet(20)
+            assert res["success"]
+            cat_0_id = res["wallet_id"]
+            colour = bytes.fromhex(res["colour"])
+            assert len(colour) > 0
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 0
+            assert bal_0["pending_coin_removal_count"] == 1
+            col = await client.get_cat_colour(cat_0_id)
+            assert col == colour
+            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
+            await client.set_cat_name(cat_0_id, "My cat")
+            assert (await client.get_cat_name(cat_0_id)) == "My cat"
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            assert bal_0["confirmed_wallet_balance"] == 20
+            assert bal_0["pending_coin_removal_count"] == 0
+            assert bal_0["unspent_coin_count"] == 1
+
+            # Creates a second wallet with the same CAT
+            res = await client_2.create_wallet_for_existing_cat(colour)
+            assert res["success"]
+            cat_1_id = res["wallet_id"]
+            colour_1 = bytes.fromhex(res["colour"])
+            assert colour_1 == colour
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+            assert bal_1["confirmed_wallet_balance"] == 0
+
+            addr_0 = await client.get_next_address(cat_0_id, False)
+            addr_1 = await client_2.get_next_address(cat_1_id, False)
+
+            assert addr_0 != addr_1
+
+            await client.cat_spend(cat_0_id, 4, addr_1, 0, b"the cat memo")
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            bal_0 = await client.get_wallet_balance(cat_0_id)
+            bal_1 = await client_2.get_wallet_balance(cat_1_id)
+
+            assert bal_0["confirmed_wallet_balance"] == 16
+            assert bal_1["confirmed_wallet_balance"] == 4
+
+            # Keys and addresses
+
             address = await client.get_next_address("1", True)
             assert len(address) > 10
 
@@ -351,69 +415,6 @@ class TestWalletRpc:
                 raise Exception("Should not create tx if no balance")
             except ValueError:
                 pass
-
-            ##############
-            # CATS       #
-            ##############
-
-            # Creates a wallet and a CAT with 20 mojos
-            res = await client.create_new_cat_and_wallet(20)
-            assert res["success"]
-            cat_0_id = res["wallet_id"]
-            colour = bytes.fromhex(res["colour"])
-            assert len(colour) > 0
-
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 0
-            assert bal_0["pending_coin_removal_count"] == 1
-            col = await client.get_cat_colour(cat_0_id)
-            assert col == colour
-            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
-            await client.set_cat_name(cat_0_id, "My cat")
-            assert (await client.get_cat_name(cat_0_id)) == "My cat"
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
-
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 20
-            assert bal_0["pending_coin_removal_count"] == 0
-            assert bal_0["unspent_coin_count"] == 1
-
-            # Creates a second wallet with the same CAT
-            res = await client_2.create_wallet_for_existing_cat(colour)
-            assert res["success"]
-            cat_1_id = res["wallet_id"]
-            colour_1 = bytes.fromhex(res["colour"])
-            assert colour_1 == colour
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-            assert bal_1["confirmed_wallet_balance"] == 0
-
-            addr_0 = await client.get_next_address(cat_0_id, False)
-            addr_1 = await client_2.get_next_address(cat_1_id, False)
-
-            assert addr_0 != addr_1
-
-            await client.cat_spend(cat_0_id, 4, addr_1, 0, b"the cat memo")
-
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
-
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-
-            assert bal_0["confirmed_wallet_balance"] == 16
-            assert bal_1["confirmed_wallet_balance"] == 4
-
             # Delete all keys
             await client.delete_all_keys()
             assert len(await client.get_public_keys()) == 0
