@@ -339,8 +339,9 @@ class CCWallet:
                 parent_coin = coin_record.coin
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
-            lineage_proof = get_lineage_proof_from_coin_and_puz(parent_coin, puzzle)
-            await self.add_lineage(coin_name, lineage_proof)
+            await self.add_lineage(
+                coin_name, LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount)
+            )
             await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def get_new_inner_hash(self) -> bytes32:
