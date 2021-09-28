@@ -19,12 +19,10 @@ ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 
 # information needed to spend a cc
-# if we ever support more genesis conditions, like a re-issuable coin,
-# we may need also to save the `genesis_coin_mod` or its hash
 @dataclasses.dataclass
 class SpendableCC:
     coin: Coin
-    genesis_coin_id: bytes32
+    limitations_program: Program
     inner_puzzle: Program
     lineage_proof: Program
 
@@ -81,10 +79,10 @@ def next_info_for_spendable_cc(spendable_cc: SpendableCC) -> Program:
     return Program.to(list)
 
 
-def get_cat_truths(spendable_cc: SpendableCC, limitations_program: Program, limitations_solution: Program) -> Program:
+def get_cat_truths(spendable_cc: SpendableCC, limitations_solution: Program) -> Program:
     mod_hash = CC_MOD.get_tree_hash()
     mod_hash_hash = Program.to(mod_hash).get_tree_hash()
-    cc_struct = Program.to([mod_hash, mod_hash_hash, limitations_program, limitations_program.get_tree_hash()])
+    cc_struct = Program.to([mod_hash, mod_hash_hash, spendable_cc.limitations_program, spendable_cc.limitations_program.get_tree_hash()])
     # TRUTHS are: innerpuzhash my_amount lineage_proof CC_STRUCT my_id fullpuzhash parent_id limitations_solutions
     # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) limitations_program (sha256tree1 LIMITATIONS_PROGRAM_HASH)
     return Program.to(
@@ -139,7 +137,7 @@ def spend_bundle_for_spendable_ccs(
     for cc_spend_info, inner_solution, limitations_solution, extra_delta in zip(
         spendable_cc_list, inner_solutions, limitations_solutions, extra_deltas
     ):
-        truths = get_cat_truths(cc_spend_info, genesis_coin_checker, limitations_solution)
+        truths = get_cat_truths(cc_spend_info, limitations_solution)
         error, conditions, cost = conditions_dict_for_solution(
             cc_spend_info.inner_puzzle, truths.cons(inner_solution), INFINITE_COST
         )
@@ -168,7 +166,7 @@ def spend_bundle_for_spendable_ccs(
     for index in range(N):
         cc_spend_info = spendable_cc_list[index]
 
-        puzzle_reveal = construct_cc_puzzle(mod_code, genesis_coin_checker, cc_spend_info.inner_puzzle)
+        puzzle_reveal = construct_cc_puzzle(mod_code, cc_spend_info.limitations_program, cc_spend_info.inner_puzzle)
 
         prev_index = (index - 1) % N
         next_index = (index + 1) % N
@@ -178,7 +176,7 @@ def spend_bundle_for_spendable_ccs(
 
         solution = [
             inner_solutions[index],
-            genesis_coin_checker,  # This is a temporary hack, we are revealing the genesis checker every time!
+            cc_spend_info.limitations_program,  # This is a temporary hack, we are revealing the genesis checker every time!
             limitations_solutions[index],
             cc_spend_info.lineage_proof,
             prev_id,
@@ -227,9 +225,8 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
         mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
 
         genesis_coin_checker = Program.from_bytes(bytes(coin_spend.solution)).rest().first()
-        genesis_coin_id = genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker)
 
-        cc_spend_info = SpendableCC(new_coin, genesis_coin_id, inner_puzzle, lineage_proof.to_program())
+        cc_spend_info = SpendableCC(new_coin, genesis_coin_checker, inner_puzzle, lineage_proof.to_program())
         spendable_cc_list.append(cc_spend_info)
 
     return spendable_cc_list
