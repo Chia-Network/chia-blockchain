@@ -1861,7 +1861,7 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash_1 = "abababababababababababababababab"
         hint = "12341234123412341234213421341234"
-        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 "{hint}")')
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 ("{hint}"))')
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
