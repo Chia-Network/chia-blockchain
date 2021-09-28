@@ -517,7 +517,9 @@ class RLWallet:
         spends.append(CoinSpend(coin, puzzle, solution))
         return spends
 
-    async def generate_signed_transaction(self, amount, to_puzzle_hash, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def generate_signed_transaction(
+        self, amount, to_puzzle_hash, fee: uint64 = uint64(0), memo: Optional[List[bytes]] = None
+    ) -> TransactionRecord:
         self.rl_coin_record = await self._get_rl_coin_record()
         if not self.rl_coin_record:
             raise ValueError("No unspent coin (zero balance)")
