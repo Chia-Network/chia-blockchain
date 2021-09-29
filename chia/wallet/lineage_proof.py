@@ -23,3 +23,6 @@ class LineageProof(Streamable):
         if self.amount:
             final_list.append(self.amount)
         return Program.to(final_list)
+
+    def is_none(self) -> bool:
+        return not (self.parent_name or self.inner_puzzle_hash or self.amount)
