@@ -8,7 +8,6 @@ from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cc_loader import CC_MOD
 
@@ -26,7 +25,7 @@ class SpendableCC:
     inner_solution: Program
     limitations_solution: Program = Program.to([])
     lineage_proof: LineageProof = LineageProof()
-    extra_delta: uint64 = uint64(0)
+    extra_delta: int = 0
     reveal_limitations_program: bool = False
 
 
@@ -46,15 +45,6 @@ def construct_cc_puzzle(mod_code: Program, genesis_coin_checker: Program, inner_
     Given an inner puzzle hash and genesis_coin_checker calculate a puzzle program for a specific cc.
     """
     return mod_code.curry(mod_code.get_tree_hash(), genesis_coin_checker.get_tree_hash(), inner_puzzle)
-
-
-def get_lineage_proof_from_coin_and_puz(coin: Coin, puz: Program) -> LineageProof:
-    matched, curried_args = match_cat_puzzle(puz)
-    if matched:
-        _, _, inner_puzzle = curried_args
-        return LineageProof(coin.name(), inner_puzzle.get_tree_hash(), coin.amount)
-    else:
-        return LineageProof()
 
 
 def subtotals_for_deltas(deltas) -> List[int]:
@@ -173,47 +163,3 @@ def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list
         coin_spends.append(coin_spend)
 
     return SpendBundle(coin_spends, NULL_SIGNATURE)
-
-
-# We don't currently use this function, maybe we should remove it?
-def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -> List[SpendableCC]:
-
-    """
-    Given a `CoinSpend`, extract out a list of `SpendableCC` objects.
-
-    Since `SpendableCC` needs to track the inner puzzles and a `Coin` only includes
-    puzzle hash, we also need a `hash_to_puzzle_f` function that turns puzzle hashes into
-    the corresponding puzzles. This is generally either a `dict` or some kind of DB
-    (if it's large or persistent).
-    """
-
-    spendable_cc_list = []
-
-    coin = coin_spend.coin
-    puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-    lineage_proof = get_lineage_proof_from_coin_and_puz(coin, puzzle)
-
-    for new_coin in coin_spend.additions():
-        puzzle = hash_to_puzzle_f(new_coin.puzzle_hash)
-        if puzzle is None:
-            # we don't recognize this puzzle hash, skip it
-            continue
-        matched, curried_args = match_cat_puzzle(puzzle)
-        if not matched:
-            # this isn't a cc puzzle
-            continue
-
-        mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
-
-        genesis_coin_checker = Program.from_bytes(bytes(coin_spend.solution)).rest().first()
-
-        cc_spend_info = SpendableCC(
-            new_coin,
-            genesis_coin_checker,
-            inner_puzzle,
-            Program.to([]),  # We don't know how to solve this yet, so we're using a place holder
-            lineage_proof=lineage_proof,
-        )
-        spendable_cc_list.append(cc_spend_info)
-
-    return spendable_cc_list
