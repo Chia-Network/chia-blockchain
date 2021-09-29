@@ -1925,10 +1925,10 @@ class FullNode:
             if field_vdf == CompressibleVDFField.RC_SP_VDF:
                 if block.reward_chain_block.reward_chain_sp_vdf == vdf_info:
                     assert block.reward_chain_sp_proof is not None
-                    new_block = dataclass.replace(block, reward_chain_sp_proof=vdf_proof)
+                    new_block = dataclasses.replace(block, reward_chain_sp_proof=vdf_proof)
             if field_vdf == CompressibleVDFField.RC_IP_VDF:
                 if block.reward_chain_block.reward_chain_ip_vdf == vdf_info:
-                    new_block = dataclass.replace(block, reward_chain_ip_proof=vdf_proof)
+                    new_block = dataclasses.replace(block, reward_chain_ip_proof=vdf_proof)
             if field_vdf == CompressibleVDFField.RC_EOS_VDF:
                 for index, sub_slot in enumerate(block.finished_sub_slots):
                     if sub_slot.reward_chain.end_of_slot_vdf == vdf_info:
