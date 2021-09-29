@@ -1,18 +1,16 @@
 import dataclasses
-from typing import List, Optional, Tuple, Iterator
+from typing import List, Tuple, Iterator
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import G2Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cc_loader import CC_MOD
-from chia.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
 
 NULL_SIGNATURE = G2Element()
 
@@ -87,7 +85,9 @@ def next_info_for_spendable_cc(spendable_cc: SpendableCC) -> Program:
 def get_cat_truths(spendable_cc: SpendableCC) -> Program:
     mod_hash = CC_MOD.get_tree_hash()
     mod_hash_hash = Program.to(mod_hash).get_tree_hash()
-    cc_struct = Program.to([mod_hash, mod_hash_hash, spendable_cc.limitations_program, spendable_cc.limitations_program.get_tree_hash()])
+    cc_struct = Program.to(
+        [mod_hash, mod_hash_hash, spendable_cc.limitations_program, spendable_cc.limitations_program.get_tree_hash()]
+    )
     # TRUTHS are: innerpuzhash my_amount lineage_proof CC_STRUCT my_id fullpuzhash parent_id limitations_solutions
     # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) limitations_program (sha256tree1 LIMITATIONS_PROGRAM_HASH)
     return Program.to(
@@ -108,6 +108,7 @@ def get_cat_truths(spendable_cc: SpendableCC) -> Program:
             ),
         )
     )
+
 
 # This should probably return UnsignedSpendBundle if that type ever exists
 def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list: List[SpendableCC]) -> SpendBundle:
@@ -210,7 +211,7 @@ def spendable_cc_list_from_coin_spend(coin_spend: CoinSpend, hash_to_puzzle_f) -
             new_coin,
             genesis_coin_checker,
             inner_puzzle,
-            Program.to([]), # We don't know how to solve this yet, so we're using a place holder
+            Program.to([]),  # We don't know how to solve this yet, so we're using a place holder
             lineage_proof=lineage_proof,
         )
         spendable_cc_list.append(cc_spend_info)

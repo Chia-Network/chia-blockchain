@@ -28,9 +28,8 @@ from chia.wallet.cc_wallet.cc_utils import (
     SpendableCC,
     construct_cc_puzzle,
     unsigned_spend_bundle_for_spendable_ccs,
-    get_cat_truths,
     match_cat_puzzle,
-    get_lineage_proof_from_coin_and_puz)
+)
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.genesis_checkers import GenesisById, ALL_LIMITATIONS_PROGRAMS
@@ -524,21 +523,33 @@ class CCWallet:
         self.log.info(f"Successfully selected coins: {used_coins}")
         return used_coins
 
-    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name: bytes32) -> List[G2Element]:
-        puzzle_hash = remove_singleton_truth_wrapper(innerpuz).get_tree_hash()
-        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
-        error, conditions, cost = conditions_dict_for_solution(
-            innerpuz, innersol, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
-        )
-        if conditions is not None:
-            for _, msg in pkm_pairs_for_conditions_dict(
-                conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-            ):
-                signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
-                sigs.append(signature)
-        return sigs
+        for spend in spend_bundle.coin_spends:
+            matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
+            if matched:
+                _, _, inner_puzzle = puzzle_args
+                puzzle_hash = remove_singleton_truth_wrapper(inner_puzzle).get_tree_hash()
+                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+                error, conditions, cost = conditions_dict_for_solution(
+                    spend.puzzle_reveal.to_program(),
+                    spend.solution.to_program(),
+                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                )
+                if conditions is not None:
+                    synthetic_pk = synthetic_secret_key.get_g1()
+                    for pk, msg in pkm_pairs_for_conditions_dict(
+                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    ):
+                        try:
+                            assert synthetic_pk == pk
+                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                        except AssertionError:
+                            raise ValueError("This spend bundle cannot be signed by the CAT wallet")
+
+        agg_sig = AugSchemeMPL.aggregate(sigs)
+        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def inner_puzzle_for_cc_puzhash(self, cc_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -600,11 +611,8 @@ class CCWallet:
             raise ValueError("My genesis checker is None")
 
         spendable_cc_list = []
-        innersol_list = []
-        sigs: List[G2Element] = []
         first = True
         for coin in selected_coins:
-            coin_inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             if first:
                 first = False
                 if fee > 0:
@@ -613,27 +621,21 @@ class CCWallet:
                     innersol = self.standard_wallet.make_solution(primaries=primaries)
             else:
                 innersol = self.standard_wallet.make_solution()
-            lineage_proof = (await self.get_lineage_proof_for_coin(coin))
+            lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cc = SpendableCC(
                 coin,
                 self.cc_info.my_genesis_checker,
                 inner_puzzle,
                 innersol,
-                limitations_solution=GenesisById.solve([], {}), # Static TAIL
+                limitations_solution=GenesisById.solve([], {}),  # Static TAIL
                 lineage_proof=lineage_proof,
-                reveal_limitations_program=(lineage_proof == LineageProof()) # Static TAIL
+                reveal_limitations_program=(lineage_proof == LineageProof()),  # Static TAIL
             )
             spendable_cc_list.append(new_spendable_cc)
-            truths = get_cat_truths(new_spendable_cc)
-            sigs = sigs + (await self.get_sigs(coin_inner_puzzle, truths.cons(innersol), coin.name()))
 
-        spend_bundle = unsigned_spend_bundle_for_spendable_ccs(
-            CC_MOD,
-            spendable_cc_list,
-        )
-        agg_sig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)]) # "Signing" the spend bundle
+        unsigned_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list)
+        spend_bundle = await self.sign(unsigned_spend_bundle)
 
         # TODO add support for array in stored records
         return TransactionRecord(
@@ -690,7 +692,6 @@ class CCWallet:
         # Loop through coins and create solution for innerpuzzle
         list_of_solutions = []
         output_created = None
-        sigs: List[G2Element] = []
         for coin in cc_spends:
             if output_created is None:
                 newinnerpuzhash = await self.get_new_inner_hash()
@@ -701,7 +702,6 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution(consumed=[output_created.name()])
             innerpuz: Program = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
-            sigs = sigs + await self.get_sigs(innerpuz, innersol, coin.name())
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             if self.cc_info.my_genesis_checker is None:
                 raise ValueError("My genesis checker is None")
@@ -719,5 +719,4 @@ class CCWallet:
             ]
             list_of_solutions.append(CoinSpend(coin, puzzle_reveal, Program.to(solution)))
 
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle(list_of_solutions, aggsig)
+        return await self.sign(SpendBundle(list_of_solutions, G2Element()))
