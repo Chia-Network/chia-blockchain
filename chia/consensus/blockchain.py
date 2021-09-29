@@ -418,7 +418,7 @@ class Blockchain(BlockchainInterface):
                         await self.coin_store.get_coin_record(name) for name in tx_removals
                     ]
 
-                    # Set additions first, than removals in order to handle ephemeral coin state
+                    # Set additions first, then removals in order to handle ephemeral coin state
                     # Add in height order is also required
                     record: Optional[CoinRecord]
                     for record in added_rec:
