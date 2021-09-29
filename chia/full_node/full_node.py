@@ -24,6 +24,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
@@ -145,10 +146,11 @@ class FullNode:
         self.db_wrapper = DBWrapper(self.connection)
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
+        self.hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
+        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants, self.hint_store)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
@@ -859,11 +861,17 @@ class FullNode:
         return peers_with_peak
 
     async def update_wallets(
-        self, height: uint32, fork_height: uint32, peak_hash: bytes32, state_update: List[CoinRecord]
+        self,
+        height: uint32,
+        fork_height: uint32,
+        peak_hash: bytes32,
+        state_update: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
     ):
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
-        for coin_record in state_update:
+        states, hint_state = state_update
+
+        for coin_record in states:
             if coin_record.name in self.coin_subscriptions:
                 subscribed_peers = self.coin_subscriptions[coin_record.name]
                 for peer in subscribed_peers:
@@ -877,6 +885,15 @@ class FullNode:
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
+
+        for hint, records in hint_state.items():
+            if hint in self.ph_subscriptions:
+                subscribed_peers = self.ph_subscriptions[hint]
+                for peer in subscribed_peers:
+                    if peer not in changes_for_peer:
+                        changes_for_peer[peer] = set()
+                    for record in records.values():
+                        changes_for_peer[peer].add(record.coin_state)
 
         for peer, changes in changes_for_peer.items():
             if peer not in self.server.all_connections:
@@ -892,7 +909,7 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32], List[CoinRecord]]:
+    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes, CoinRecord]]]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
 
@@ -902,7 +919,7 @@ class FullNode:
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
-            return True, False, fork_height, []
+            return True, False, fork_height, ([], {})
 
         pre_validate_start = time.time()
         pre_validation_results: Optional[
@@ -914,25 +931,40 @@ class FullNode:
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         if pre_validation_results is None:
-            return False, False, None, []
+            return False, False, None, ([], {})
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
                 )
-                return False, advanced_peak, fork_height, []
+                return False, advanced_peak, fork_height, ([], {})
+
+        # Dicts because deduping
+        all_coin_changes: Dict[bytes32, CoinRecord] = {}
+        all_hint_changes: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
 
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             result, error, fork_height, coin_changes = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
+            coin_record_list, hint_records = coin_changes
+
+            # Update all changes
+            for record in coin_record_list:
+                all_coin_changes[record.name] = record
+            for hint, list_of_records in hint_records.items():
+                if hint not in all_hint_changes:
+                    all_hint_changes[hint] = {}
+                for record in list_of_records:
+                    all_hint_changes[hint][record.name] = record
+
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
             elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
-                return False, advanced_peak, fork_height, []
+                return False, advanced_peak, fork_height, ([], {})
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
@@ -943,7 +975,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: {advanced_peak}"
             )
-        return True, advanced_peak, fork_height, coin_changes
+        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)
 
     async def _finish_sync(self):
         """
@@ -1046,7 +1078,7 @@ class FullNode:
         record: BlockRecord,
         fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
-        coin_changes: List[CoinRecord],
+        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
     ):
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
@@ -1259,7 +1291,7 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
-        coin_changes: List[CoinRecord] = []
+        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]] = ([], {})
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
