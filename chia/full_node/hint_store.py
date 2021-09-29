@@ -16,8 +16,9 @@ class HintStore:
         self = cls()
         self.db_wrapper = db_wrapper
         self.coin_record_db = db_wrapper.db
-        # the coin_id is unique, same hint can be used for multiple coins
-        await self.coin_record_db.execute(("CREATE TABLE IF NOT EXISTS hints(coin_id blob PRIMARY KEY,  hint blob)"))
+        await self.coin_record_db.execute(
+            "CREATE TABLE IF NOT EXISTS hints(id INTEGER PRIMARY KEY AUTOINCREMENT, coin_id blob,  hint blob)"
+        )
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
         await self.coin_record_db.commit()
         return self
@@ -28,12 +29,12 @@ class HintStore:
         await cursor.close()
         coin_ids = []
         for row in rows:
-            coin_ids.append(row[0])
+            coin_ids.append(row[1])
         return coin_ids
 
     async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         cursor = await self.coin_record_db.executemany(
-            "INSERT INTO hints VALUES(?, ?)",
-            coin_hint_list,
+            "INSERT INTO hints VALUES(?, ?, ?)",
+            [(None,) + record for record in coin_hint_list],
         )
         await cursor.close()

@@ -10,7 +10,7 @@ from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_f
 from chia.protocols import wallet_protocol, full_node_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates
+from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates, CoinState
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -479,7 +479,7 @@ class TestSimpleSyncProtocol:
         await asyncio.sleep(6)
         coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
         coin_spent = coins[0].coin
-        puzzle_hash = 32 * b"\0"
+        hint_puzzle_hash = 32 * b"\2"
         amount = 1
         amount_bin = int_to_bytes(1)
         hint = 32 * b"\5"
@@ -493,7 +493,7 @@ class TestSimpleSyncProtocol:
 
         condition_dict = {
             ConditionOpcode.CREATE_COIN: [
-                ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount_bin, hint])
+                ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
         tx: SpendBundle = wt.generate_signed_transaction(
@@ -507,7 +507,7 @@ class TestSimpleSyncProtocol:
         await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         all_messages = await self.get_all_messages_in_queue(incoming_queue)
 
@@ -520,10 +520,15 @@ class TestSimpleSyncProtocol:
                 break
 
         assert notified_state is not None
-        assert notified_state.items[0].coin == Coin(coin_spent.name(), puzzle_hash, amount)
+        assert notified_state.items[0].coin == Coin(coin_spent.name(), hint_puzzle_hash, amount)
 
         msg = wallet_protocol.RegisterForPhUpdates([hint], 0)
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
         assert len(data_response.coin_states) == 1
+        coin_records: List[CoinRecord] = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+            True, hint_puzzle_hash
+        )
+        assert len(coin_records) == 1
+        assert data_response.coin_states[0] == coin_records[0].coin_state
