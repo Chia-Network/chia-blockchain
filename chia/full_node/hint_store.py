@@ -23,7 +23,7 @@ class HintStore:
         await self.coin_record_db.commit()
         return self
 
-    async def get_hints(self, hint: bytes) -> List[bytes32]:
+    async def get_coin_ids(self, hint: bytes) -> List[bytes32]:
         cursor = await self.coin_record_db.execute("SELECT * from hints WHERE hint=?", (hint,))
         rows = await cursor.fetchall()
         await cursor.close()

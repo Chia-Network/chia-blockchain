@@ -1338,11 +1338,11 @@ class FullNodeAPI:
         if peer.peer_node_id not in self.full_node.peer_sub_counter:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
 
-        hints = []
+        hint_coin_ids = []
         # Add peer to the "Subscribed" dictionary
         for puzzle_hash in request.puzzle_hashes:
-            ph_hints = await self.full_node.hint_store.get_hints(puzzle_hash)
-            hints.extend(ph_hints)
+            ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
+            hint_coin_ids.extend(ph_hint_coins)
             if puzzle_hash not in self.full_node.ph_subscriptions:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
             if (
@@ -1358,9 +1358,9 @@ class FullNodeAPI:
             include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
         )
 
-        if len(hints) > 0:
+        if len(hint_coin_ids) > 0:
             hint_states = await self.full_node.coin_store.get_coin_state_by_ids(
-                include_spent_coins=True, coin_ids=hints, start_height=request.min_height
+                include_spent_coins=True, coin_ids=hint_coin_ids, start_height=request.min_height
             )
             states.extend(hint_states)
 

@@ -39,15 +39,15 @@ class TestHintStore:
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_0), (coin_id_2, hint_1)]
             await hint_store.add_hints(hints)
             await db_wrapper.commit_transaction()
-            coins_for_hint_0 = await hint_store.get_hints(hint_0)
+            coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
 
             assert coin_id_0 in coins_for_hint_0
             assert coin_id_1 in coins_for_hint_0
 
-            coins_for_hint_1 = await hint_store.get_hints(hint_1)
+            coins_for_hint_1 = await hint_store.get_coin_ids(hint_1)
             assert coin_id_2 in coins_for_hint_1
 
-            coins_for_non_hint = await hint_store.get_hints(not_existing_hint)
+            coins_for_non_hint = await hint_store.get_coin_ids(not_existing_hint)
             assert coins_for_non_hint == []
 
     @pytest.mark.asyncio
@@ -86,6 +86,6 @@ class TestHintStore:
         for block in blocks:
             await blockchain.receive_block(block)
 
-        get_hint = await blockchain.hint_store.get_hints(hint)
+        get_hint = await blockchain.hint_store.get_coin_ids(hint)
 
         assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, 1).name()
