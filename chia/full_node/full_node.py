@@ -1852,10 +1852,15 @@ class FullNode:
         - Checks if the provided vdf_info is correct, assuming it refers to the start of sub-slot.
         - Checks if the existing proof was non-compact. Ignore this proof if we already have a compact proof.
         """
+
+        """
+        NOTE: This optimization is temporary disabled. Old clients will store an old `is_fully_compactified` version,
+        which excludes all reward chain fields in its calculation.
         is_fully_compactified = await self.block_store.is_fully_compactified(header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
+        """
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False
@@ -1961,9 +1966,13 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+        """
+        NOTE: This optimization is temporary disabled. Old clients will store an old `is_fully_compactified` version,
+        which excludes all reward chain fields in its calculation.
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return False
+        """
         header_block = await self.blockchain.get_header_block_by_height(
             request.height, request.header_hash, tx_filter=False
         )
