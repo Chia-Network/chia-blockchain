@@ -5,7 +5,9 @@ import WalletGraph from '../WalletGraph';
 import FarmCard from '../../farm/card/FarmCard';
 import useWallet from '../../../hooks/useWallet';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
-import { mojo_to_chia_string } from '../../../util/chia';
+import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../../util/chia';
+import getCatUnit from '../../../util/getCatUnit';
+import WalletType from '../../../constants/WalletType';
 
 const StyledGraphContainer = styled.div`
   margin-left: -1rem;
@@ -16,30 +18,32 @@ const StyledGraphContainer = styled.div`
 
 type Props = {
   wallet_id: number;
+  tooltip?: ReactNode;
 };
 
 export default function WalletCardTotalBalance(props: Props) {
-  const { wallet_id } = props;
+  const { wallet_id, tooltip } = props;
 
   const { wallet, loading } = useWallet(wallet_id);
   const currencyCode = useCurrencyCode();
 
   const value = wallet?.wallet_balance?.confirmed_wallet_balance;
+  const formatedValue = wallet?.type === WalletType.CAT
+    ? mojo_to_colouredcoin_string(value)
+    : mojo_to_chia_string(value);
+
+  const formatedCurrencyCode = wallet?.type === WalletType.CAT
+    ? getCatUnit(wallet?.name)
+    : currencyCode;
 
   return (
     <FarmCard
       loading={loading}
       title={<Trans>Total Balance</Trans>}
-      tooltip={
-        <Trans>
-          This is the total amount of chia in the blockchain at the current peak
-          sub block that is controlled by your private keys. It includes frozen
-          farming rewards, but not pending incoming and outgoing transactions.
-        </Trans>
-      }
+      tooltip={tooltip}
       value={
         <>
-          {mojo_to_chia_string(value)} {currencyCode}
+          {formatedValue} {formatedCurrencyCode}
         </>
       }
       description={

@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { create_cc_action } from '../../../modules/message';
 import { chia_to_mojo } from '../../../util/chia';
 import { openDialog } from '../../../modules/dialog';
+import { useHistory } from 'react-router';
 
 type CreateCATWalletData = {
   amount: string;
@@ -14,6 +15,7 @@ type CreateCATWalletData = {
 };
 
 export default function WalletCATCreateNew() {
+  const history = useHistory();
   const methods = useForm<CreateCATWalletData>({
     shouldUnregister: false,
     defaultValues: {
@@ -57,7 +59,10 @@ export default function WalletCATCreateNew() {
       const amountMojos = chia_to_mojo(amount);
       const feeMojos = chia_to_mojo(fee);
 
-      await dispatch(create_cc_action(amountMojos, feeMojos));
+      const response = await dispatch(create_cc_action(amountMojos, feeMojos));
+      if (response && response.data && response.data.success === true) {
+        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
+      }
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { AlertDialog, Fee, Back, ButtonLoading, Card, Flex, Form, TextField } fr
 import { Box, Grid } from '@material-ui/core';
 import { useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
+import { useHistory } from 'react-router';
 import { create_cc_for_colour_action } from '../../../modules/message';
 import { chia_to_mojo } from '../../../util/chia';
 import { openDialog } from '../../../modules/dialog';
@@ -23,6 +24,7 @@ export default function WalletCATCreateExisting() {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
+  const history = useHistory();
 
   async function handleSubmit(values: CreateExistingCATWalletData) {
     try {
@@ -52,7 +54,10 @@ export default function WalletCATCreateExisting() {
 
       const feeMojos = chia_to_mojo(fee);
 
-      await dispatch(create_cc_for_colour_action(name, feeMojos));
+      const response = await dispatch(create_cc_for_colour_action(name, feeMojos));
+      if (response && response.data && response.data.success === true) {
+        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +67,7 @@ export default function WalletCATCreateExisting() {
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <Back variant="h5">
-          <Trans>Create Chia Asset Token Wallet</Trans>
+          <Trans>Recovery Chia Asset Token Wallet</Trans>
         </Back>
         <Card>
           <Grid spacing={2} container>
@@ -70,7 +75,7 @@ export default function WalletCATCreateExisting() {
               <TextField
                 name="name"
                 variant="outlined"
-                label={<Trans>Name</Trans>}
+                label={<Trans>Token and Asset Issuance Limitations</Trans>}
                 fullWidth
               />
             </Grid>
@@ -89,7 +94,7 @@ export default function WalletCATCreateExisting() {
             color="primary"
             loading={loading}
           >
-            <Trans>Create</Trans>
+            <Trans>Recover</Trans>
           </ButtonLoading>
         </Box>
       </Flex>

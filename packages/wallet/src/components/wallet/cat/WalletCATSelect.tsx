@@ -36,7 +36,7 @@ export default function WalletCATSelect() {
         <Grid xs={12} sm={6} md={4} item>
           <WalletCreateCard
             onSelect={handleCreateExisting}
-            title={<Trans>Create from Existing</Trans>}
+            title={<Trans>Recovery Wallet</Trans>}
             icon={<RestoreIcon fontSize="large" color="primary" />}
           />
         </Grid>

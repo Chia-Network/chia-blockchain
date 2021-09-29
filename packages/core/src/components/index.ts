@@ -38,6 +38,7 @@ export { default as Log } from './Log';
 export { default as Logo } from './Logo';
 export { default as ModalDialogs } from './ModalDialogs';
 export { default as More } from './More';
+export { default as TextFieldNumber } from './TextFieldNumber';
 export { default as PrivateRoute } from './PrivateRoute';
 export { default as RadioGroup } from './RadioGroup';
 export { default as Select } from './Select';

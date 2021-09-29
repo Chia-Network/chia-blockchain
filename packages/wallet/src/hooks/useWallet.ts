@@ -12,6 +12,8 @@ export default function useWallet(walletId: number): {
 } {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
+  console.log('wallets', walletId, wallets);
+
   const wallet = useMemo(() => {
     return wallets?.find((item) => item.id === walletId);
   }, [wallets, walletId]);

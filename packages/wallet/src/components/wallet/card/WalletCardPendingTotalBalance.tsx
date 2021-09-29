@@ -3,7 +3,9 @@ import { Trans } from '@lingui/macro';
 import FarmCard from '../../farm/card/FarmCard';
 import useWallet from '../../../hooks/useWallet';
 import useCurrencyCode from '../../../hooks/useCurrencyCode';
-import { mojo_to_chia_string } from '../../../util/chia';
+import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../../util/chia';
+import getCatUnit from '../../../util/getCatUnit';
+import WalletType from '../../../constants/WalletType';
 
 type Props = {
   wallet_id: number;
@@ -20,6 +22,14 @@ export default function WalletCardPendingTotalBalance(props: Props) {
 
   const value = balance + balance_pending;
 
+  const formatedValue = wallet?.type === WalletType.CAT
+    ? mojo_to_colouredcoin_string(value)
+    : mojo_to_chia_string(value);
+
+  const formatedCurrencyCode = wallet?.type === WalletType.CAT
+    ? getCatUnit(wallet?.name)
+    : currencyCode;
+
   return (
     <FarmCard
       loading={loading}
@@ -33,7 +43,7 @@ export default function WalletCardPendingTotalBalance(props: Props) {
       }
       value={
         <>
-          {mojo_to_chia_string(value)} {currencyCode}
+          {formatedValue} {formatedCurrencyCode}
         </>
       }
     />

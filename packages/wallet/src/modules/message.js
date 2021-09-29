@@ -506,7 +506,7 @@ export const create_coloured_coin = (amount, fee) => {
   const action = walletMessage();
   action.message.command = 'create_new_wallet';
   action.message.data = {
-    wallet_type: 'cc_wallet',
+    wallet_type: 'cat_wallet',
     mode: 'new',
     amount,
     fee,
@@ -519,7 +519,7 @@ export const create_cc_for_colour = (colour, fee) => {
   const action = walletMessage();
   action.message.command = 'create_new_wallet';
   action.message.data = {
-    wallet_type: 'cc_wallet',
+    wallet_type: 'cat_wallet',
     mode: 'existing',
     colour,
     fee,
@@ -548,15 +548,12 @@ export const create_backup_action = (file_path) => (dispatch) =>
   });
 
 export const create_cc_action = (amount, fee) => (dispatch) =>
-  async_api(dispatch, create_coloured_coin(amount, fee), true).then(
+  async_api(dispatch, create_coloured_coin(amount, fee)).then(
     (response) => {
-      dispatch(createState(true, false));
       if (response.data.success) {
         // Go to wallet
         dispatch(format_message('get_wallets', {}));
-        dispatch(showCreateBackup(true));
-        dispatch(createState(true, false));
-        dispatch(changeCreateWallet(ALL_OPTIONS));
+        return response;
       } else {
         const { error } = response.data;
         dispatch(openErrorDialog(error));
@@ -565,14 +562,14 @@ export const create_cc_action = (amount, fee) => (dispatch) =>
   );
 
 export const create_cc_for_colour_action = (colour, fee) => (dispatch) =>
-  async_api(dispatch, create_cc_for_colour(colour, fee), true).then(
+  async_api(dispatch, create_cc_for_colour(colour, fee)).then(
     (response) => {
       dispatch(createState(true, false));
       if (response.data.success) {
         // Go to wallet
         dispatch(showCreateBackup(true));
         dispatch(format_message('get_wallets', {}));
-        dispatch(changeCreateWallet(ALL_OPTIONS));
+        return response;
       } else {
         const { error } = response.data;
         dispatch(openErrorDialog(error));
@@ -601,7 +598,7 @@ export const rename_cc_wallet = (wallet_id, name) => {
   return action;
 };
 
-export const cc_spend = (wallet_id, address, amount, fee) => {
+export const cc_spend_message = (wallet_id, address, amount, fee) => {
   const action = walletMessage();
   action.message.command = 'cc_spend';
   action.message.data = {
@@ -612,6 +609,15 @@ export const cc_spend = (wallet_id, address, amount, fee) => {
   };
   return action;
 };
+
+export const cc_spend = (wallet_id, address, amount, fee) => (dispatch) =>
+  async_api(
+    dispatch, 
+    cc_spend_message(wallet_id, address, amount, fee),
+    false,
+    true,
+  );
+
 
 export const logOut = (command, data) => ({ type: 'LOG_OUT', command, data });
 

@@ -21,6 +21,7 @@ import WalletType from '../../constants/WalletType';
 import LayoutMain from '../layout/LayoutMain';
 import config from '../../config/config';
 import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-router-dom';
+import WalletTab from './WalletTab';
 
 const { multipleWallets } = config;
 
@@ -101,6 +102,7 @@ export default function Wallets() {
   const loading = !wallets;
 
   function handleChange(_, newValue) {
+    console.log('tab', newValue, typeof newValue); 
     history.push(`/dashboard/wallets/${newValue}`);
   }
 
@@ -110,6 +112,8 @@ export default function Wallets() {
       history.push('/dashboard/wallets/1');
     }
   }, [wallets, walletId]);
+
+  console.log('walletId', walletId, typeof walletId);
 
   return (
     <LayoutMain
@@ -143,7 +147,7 @@ export default function Wallets() {
               )}
 
               {wallet.type === WalletType.CAT && (
-                <WalletCAT wallet_id={wallet.id} />
+                <WalletCAT walletId={wallet.id} />
               )}
 
               {wallet.type === WalletType.RATE_LIMITED && (
