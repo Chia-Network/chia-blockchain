@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, List, Optional
+from typing import Tuple, Dict, List, Optional, Any
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -159,18 +159,18 @@ class DelegatedLimitations(LimitationsProgram):
 
 # This should probably be much more elegant than just a dictionary with strings as identifiers
 # Right now this is small and experimental so it can stay like this
-ALL_LIMITATIONS_PROGRAMS = {
+ALL_LIMITATIONS_PROGRAMS: Dict[str, Any] = {
     "genesis_by_id": GenesisById,
     "genesis_by_puzhash": GenesisByPuzhash,
     "everything_with_signature": EverythingWithSig,
     "delegated_limitations": DelegatedLimitations,
 }
 
+
 def match_limitations_program(limitations_program: Program) -> Tuple[Optional[LimitationsProgram], List[Program]]:
     uncurried_mod, curried_args = limitations_program.uncurry()
-    for key, lp in ALL_LIMITATIONS_PROGRAMS:
+    for key, lp in ALL_LIMITATIONS_PROGRAMS.items():
         matched, args = lp.match(uncurried_mod, curried_args)
         if matched:
             return lp, args
-        else:
-            return None, []
+    return None, []

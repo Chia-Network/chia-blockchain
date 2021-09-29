@@ -66,7 +66,9 @@ class TestCCLifecycle:
             extra_deltas = [0] * len(coins)
 
         spendable_cc_list: List[SpendableCC] = []
-        for coin, innersol, proof, limitations_solution, extra_delta in zip(coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas):
+        for coin, innersol, proof, limitations_solution, extra_delta in zip(
+            coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
+        ):
             spendable_cc_list.append(
                 SpendableCC(
                     coin,
@@ -75,7 +77,7 @@ class TestCCLifecycle:
                     innersol,
                     limitations_solution=limitations_solution,
                     lineage_proof=proof,
-                    extra_delta=extra_delta,
+                    extra_delta=uint64(extra_delta),
                     reveal_limitations_program=True,
                 )
             )
@@ -85,11 +87,15 @@ class TestCCLifecycle:
             spendable_cc_list,
         )
         agg_sig = AugSchemeMPL.aggregate(signatures)
-        result = await sim_client.push_tx(SpendBundle.aggregate([
-            *additional_spends,
-            spend_bundle,
-            SpendBundle([], agg_sig), # "Signing" the spend bundle
-        ]))
+        result = await sim_client.push_tx(
+            SpendBundle.aggregate(
+                [
+                    *additional_spends,
+                    spend_bundle,
+                    SpendBundle([], agg_sig),  # "Signing" the spend bundle
+                ]
+            )
+        )
         assert result == expected_result
         await sim.farm_block()
 
