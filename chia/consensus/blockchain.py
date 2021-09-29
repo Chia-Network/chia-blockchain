@@ -305,8 +305,6 @@ class Blockchain(BlockchainInterface):
                             amount = int_from_bytes(amount_bin)
                             coin_id = Coin(npc.coin_name, puzzle_hash, amount).name()
                             h_list.append((coin_id, condition.vars[2]))
-                        else:
-                            pass
         return h_list
 
     async def _reconsider_peak(
