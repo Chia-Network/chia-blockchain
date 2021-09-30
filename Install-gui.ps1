@@ -1,4 +1,4 @@
-﻿#$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 if ((Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue) -eq $null)
 {
