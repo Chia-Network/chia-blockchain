@@ -2,40 +2,40 @@
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
 {
-    Write-Output "Chia requires a 64-bit Windows installation"
+    Write-Host "Chia requires a 64-bit Windows installation"
     Exit 1
 }
 
 if ((Get-Item "$env:windir\System32\msvcp140.dll").Exists -eq $false)
 {
-    Write-Output "Unable to find Visual C++ Runtime DLLs"
-    Write-Output ""
-    Write-Output "Download and install the Visual C++ Redistributable for Visual Studio 2019 package from:"
-    Write-Output "https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019"
+    Write-Host "Unable to find Visual C++ Runtime DLLs"
+    Write-Host ""
+    Write-Host "Download and install the Visual C++ Redistributable for Visual Studio 2019 package from:"
+    Write-Host "https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019"
     Exit 1
 }
 
-if ($null -eq (Get-Command git -ErrorAction SilentlyContinue))
+if ((Get-Command git -ErrorAction SilentlyContinue) -eq $null)
 {
-    Write-Output "Unable to find git"
+    Write-Host "Unable to find git"
     Exit 1
 }
 
 git submodule update --init mozilla-ca
 
-if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
+if ((Get-Command py -ErrorAction SilentlyContinue) -eq $null)
 {
-    Write-Output "Unable to find py"
+    Write-Host "Unable to find py"
     Exit 1
 }
 
 $pythonVersion = (py --version).split(" ")[1]
 if ([version]$pythonVersion -lt [version]"3.7.0")
 {
-    Write-Output "Installation requires Python 3.7 or later"
+    Write-Host "Installation requires Python 3.7 or later"
     Exit 1
 }
-Write-Output "Python version is:" $pythonVersion
+Write-Host "Python version is:" $pythonVersion
 
 py -m venv venv
 .\venv\Scripts\Activate.ps1
@@ -46,14 +46,14 @@ pip install --upgrade wheel
 pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 pip install --editable . --extra-index-url https://pypi.chia.net/simple/
 
-Write-Output ""
-Write-Output "Chia blockchain .\Install.ps1 complete."
-Write-Output "For assistance join us on Keybase in the #support chat channel:"
-Write-Output "https://keybase.io/team/chia_network.public"
-Write-Output ""
-Write-Output "Try the Quick Start Guide to running chia-blockchain:"
-Write-Output "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
-Write-Output ""
-Write-Output "To install the GUI type '.\Install-gui.ps1' after '.\venv\scripts\Activate.ps1'."
-Write-Output ""
-Write-Output "Type '.\venv\Scripts\Activate.ps1' and then 'chia init' to begin."
+Write-Host ""
+Write-Host "Chia blockchain .\Install.ps1 complete."
+Write-Host "For assistance join us on Keybase in the #support chat channel:"
+Write-Host "https://keybase.io/team/chia_network.public"
+Write-Host ""
+Write-Host "Try the Quick Start Guide to running chia-blockchain:"
+Write-Host "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+Write-Host ""
+Write-Host "To install the GUI type '.\Install-gui.ps1' after '.\venv\scripts\Activate.ps1'."
+Write-Host ""
+Write-Host "Type '.\venv\Scripts\Activate.ps1' and then 'chia init' to begin."
