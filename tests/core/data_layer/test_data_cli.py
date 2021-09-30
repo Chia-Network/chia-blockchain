@@ -76,7 +76,7 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[No
             process.terminate()
             try:
                 process.wait(timeout=10)
-            except TimeoutError:
+            except subprocess.TimeoutExpired:
                 process.kill()
 
 
