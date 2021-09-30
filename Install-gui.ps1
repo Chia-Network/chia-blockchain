@@ -1,25 +1,23 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
-if ((Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue) -eq $null)
+if ($null -eq (Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue))
 {
-    Write-Host "This requires the chia python virtual environment."
-    Write-Host "Execute '.\venv\Scripts\Activate.ps1' before running."
+    Write-Output "This requires the chia python virtual environment."
+    Write-Output "Execute '.\venv\Scripts\Activate.ps1' before running."
     Exit 1
 }
 
-if ((Get-Command node -ErrorAction SilentlyContinue) -eq $null)
+if ($null -eq (Get-Command node -ErrorAction SilentlyContinue))
 {
-    Write-Host "Unable to find Node.js"
+    Write-Output "Unable to find Node.js"
     Exit 1
 }
 
-Write-Host "Running git submodule update --init --recursive."
-Write-Host ""
+Write-Output "Running git submodule update --init --recursive."
+Write-Output ""
 git submodule update --init --recursive
-Write-Host "Running git submodule update."
-Write-Host ""
-git submodule update
-cd chia-blockchain-gui
+
+Set-Location chia-blockchain-gui
 
 $ErrorActionPreference = "SilentlyContinue"
 npm install --loglevel=error
@@ -27,7 +25,7 @@ npm audit fix
 npm run build
 py ..\installhelper.py
 
-Write-Host ""
-Write-Host "Chia blockchain Install-gui.ps1 completed."
-Write-Host ""
-Write-Host "Type 'cd chia-blockchain-gui' and then 'npm run electron' to start the GUI."
+Write-Output ""
+Write-Output "Chia blockchain Install-gui.ps1 completed."
+Write-Output ""
+Write-Output "Type 'cd chia-blockchain-gui' and then 'npm run electron' to start the GUI."
