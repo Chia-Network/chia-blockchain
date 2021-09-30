@@ -20,7 +20,7 @@ for setuptools_scm/PEP 440 reasons.
 - Added a config option for peer_connect_timeout.
 - Added support for unhardened key derivations.
 - Various CoinStore benchmark and performance improvements.
-- We now upload installer binaries to S3 whenever main is updated.
+- Beta builds are built on every merge to main, and are now available from <https://chia.net/download/>.
 - Thanks @Radexito for adding support for Raspberry Pi 4 64Bit to the GUI installation script.
 - Added macOS keyring.yaml support, migrating keys from macOS Keychain to keyring.yaml to support an upcoming release in which we'll add an optional passphrase to wallets.
 - We have made many full node changes to support our upcoming Chia Asset Token (CAT) standard and our upcoming standalone light wallet, which will use Chia's new electrum-style protocol to enable faster wallet syncing.
@@ -38,13 +38,13 @@ for setuptools_scm/PEP 440 reasons.
 - Made a change to allow the host to be configurable for the timelord launcher.
 - Thanks @dkackman for adding the ability to collect the IDs of plots as they are queued and return them with the response.
 - Made the SpendBundle.debug use the default genesis challenge by default.
-- Changes in full node to execute sqlite pragmas only once, at the level where the database is opened, and changed pragma synchronous=FULL to NORMAL to improve disk I/O performance. Also removed redundant database pragmas in wallet.
+- Changes in full node to execute sqlite pragmas only once, at the level where the database is opened, and changed pragma synchronous=FULL to OFF to improve disk I/O performance. Also removed redundant database pragmas in wallet.
 - Made a change to remove CoinStore's dependency on FullBlock to just pass in the parts of the block necessary to add the block.
-- Switched from using asynchio.to_thread to threading.Thread, as to_thread is only available in Python 3.9.
 - Improved log formatting.
 - A change to logging to only log warnings when more than 10 seconds has passed, to reduce the number of warning logs.
 - Improved and fixed some outdated messages in CLI. Thanks @jack60612 for the assist!
 - We previously added a Rust condition checker, to replace our existing Python-based condition checker. In this release, we're removing the old Python code.
+- Several clvm_rs updates to support our upcoming Chia Asset Token (CAT) standard.
 
 ### Fixed
 
@@ -56,7 +56,6 @@ for setuptools_scm/PEP 440 reasons.
 - Fixed Mypy issues on Python 3.9.7 that generated many errors when running mypy.
 - Thanks @olivernyc for fixing an edge case with negative inputs to 'truncate_to_significant_bits'.
 - Added a fix for Windows installs that were seeing exceptions when writing to the keyring.
-- Fixed a GUI loading issue on the farm page that caused an endless spinner for some users.
 
 ## 1.2.7 Chia blockchain 2021-09-16
 
