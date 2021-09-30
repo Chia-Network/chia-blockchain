@@ -30,10 +30,10 @@ export default function WalletCATCreateNew() {
     try {
       const { amount, fee } = values;
       setLoading(true);
-
-      if (!amount ||
-        Number(amount) === 0 ||
-        !Number(amount) ||
+/*
+      if (//!amount ||
+        // Number(amount) === 0 ||
+        // !Number(amount) ||
         isNaN(Number(amount))
       ) {
         dispatch(
@@ -45,6 +45,7 @@ export default function WalletCATCreateNew() {
         );
         return;
       }
+      */
       if (fee === '' || isNaN(Number(fee))) {
         dispatch(
           openDialog(

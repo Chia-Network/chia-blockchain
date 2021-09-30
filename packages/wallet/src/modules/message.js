@@ -548,7 +548,7 @@ export const create_backup_action = (file_path) => (dispatch) =>
   });
 
 export const create_cc_action = (amount, fee) => (dispatch) =>
-  async_api(dispatch, create_coloured_coin(amount, fee)).then(
+  async_api(dispatch, create_coloured_coin(amount, fee), false, true).then(
     (response) => {
       if (response.data.success) {
         // Go to wallet
@@ -562,7 +562,7 @@ export const create_cc_action = (amount, fee) => (dispatch) =>
   );
 
 export const create_cc_for_colour_action = (colour, fee) => (dispatch) =>
-  async_api(dispatch, create_cc_for_colour(colour, fee)).then(
+  async_api(dispatch, create_cc_for_colour(colour, fee), false, true).then(
     (response) => {
       dispatch(createState(true, false));
       if (response.data.success) {

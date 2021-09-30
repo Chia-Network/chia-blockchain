@@ -287,7 +287,7 @@ export default function WalletCAT(props: Props) {
     openDialog((
       <WalletRenameDialog
         name={name}
-        onSave={() => dispatch(rename_cc_wallet(id, newName))}
+        onSave={(newName) => dispatch(rename_cc_wallet(id, newName))}
       />
     ));
   }

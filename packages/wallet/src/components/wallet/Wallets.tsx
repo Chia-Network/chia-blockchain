@@ -18,10 +18,12 @@ import RateLimitedWallet from './rateLimited/WalletRateLimited';
 import DistributedWallet from './did/WalletDID';
 import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
+import WalletName from '../../constants/WalletName';
 import LayoutMain from '../layout/LayoutMain';
 import config from '../../config/config';
 import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-router-dom';
 import WalletTab from './WalletTab';
+import useTrans from '../../hooks/useTrans';
 
 const { multipleWallets } = config;
 
@@ -98,6 +100,7 @@ export default function Wallets() {
   const history = useHistory();
   const { walletId } = useParams();
   const { path } = useRouteMatch();
+  const trans = useTrans();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const loading = !wallets;
 
@@ -131,7 +134,7 @@ export default function Wallets() {
             variant="scrollable"
           >
             {wallets?.map((wallet) => (
-              <Tab label={wallet.name} value={String(wallet.id)} key={wallet.id} />
+              <Tab label={trans(WalletName[wallet.type])} value={String(wallet.id)} key={wallet.id} />
             ))}
             <Tab value="create" label={<Trans>+ Add Wallet</Trans>} />
           </StyledTabs>
