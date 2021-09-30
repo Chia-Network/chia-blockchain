@@ -161,7 +161,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="Size of the buffer, in MB.",
                 default=0,
             )
-        r_default = 0 if name == "chiapos" else 4
+        r_default = 4 if name == "madmax" else 0
         if option is Options.NUM_THREADS:
             parser.add_argument(
                 "-r",
