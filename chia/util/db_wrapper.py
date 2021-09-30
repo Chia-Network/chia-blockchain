@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 
 import aiosqlite
 
@@ -27,3 +28,18 @@ class DBWrapper:
 
     async def commit_transaction(self):
         await self.db.commit()
+
+    @contextlib.asynccontextmanager
+    async def locked_transaction(self):
+        # TODO: add a lock acquisition timeout
+        #       maybe https://docs.python.org/3/library/asyncio-task.html#asyncio.wait_for
+
+        async with self.lock:
+            await self.begin_transaction()
+            try:
+                yield
+            except:
+                await self.rollback_transaction()
+                raise
+            else:
+                await self.commit_transaction()
