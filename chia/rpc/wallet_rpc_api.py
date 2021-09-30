@@ -721,16 +721,16 @@ class WalletRpcApi:
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
 
-        memo: Optional[bytes] = None
-        if "memo" in request:
-            memo = hexstr_to_bytes(request["memo"])
+        memos: Optional[bytes] = None
+        if "memos" in request:
+            memos = [hexstr_to_bytes(mem) for mem in request["memos"]]
 
         if "fee" in request:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee, memo=memo)
+            tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee, memos=memos)
             await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
@@ -809,9 +809,9 @@ class WalletRpcApi:
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
         puzzle_hash_adapted: bytes32 = adapt_inner_puzzle_hash_to_singleton(puzzle_hash)
 
-        memo: Optional[bytes] = None
-        if "memo" in request:
-            memo = hexstr_to_bytes(request["memo"])
+        memos: Optional[bytes] = None
+        if "memos" in request:
+            memos = [hexstr_to_bytes(mem) for mem in request["memos"]]
 
         if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
@@ -822,7 +822,7 @@ class WalletRpcApi:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash_adapted], fee, memos=[memo]
+                [amount], [puzzle_hash_adapted], fee, memos=memos
             )
             await wallet.standard_wallet.push_transaction(tx)
 
@@ -1166,7 +1166,7 @@ class WalletRpcApi:
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
-        memo_0 = None if "memo" not in additions[0] else hexstr_to_bytes(additions[0]["memo"])
+        memos_0 = None if "memos" not in additions[0] else [hexstr_to_bytes(mem) for mem in additions[0]["memos"]]
 
         additional_outputs = []
         for addition in additions[1:]:
@@ -1176,8 +1176,8 @@ class WalletRpcApi:
             amount = uint64(addition["amount"])
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            memo = None if "memo" not in addition else hexstr_to_bytes(addition["memo"])
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memo": memo})
+            memos = None if "memos" not in addition else [hexstr_to_bytes(mem) for mem in addition["memos"]]
+            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
 
         fee = uint64(0)
         if "fee" in request:
@@ -1196,7 +1196,7 @@ class WalletRpcApi:
                     coins=coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
-                    memo=memo_0,
+                    memos=memos_0,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -1206,7 +1206,7 @@ class WalletRpcApi:
                 coins=coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
-                memo=memo_0,
+                memos=memos_0,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 

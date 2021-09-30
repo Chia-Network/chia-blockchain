@@ -3,9 +3,9 @@ from typing import Optional, List
 from chia.util.condition_tools import ConditionOpcode
 
 
-def make_create_coin_condition(puzzle_hash, amount, memo: Optional[bytes]) -> List:
-    if memo is not None:
-        return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount, [memo]]
+def make_create_coin_condition(puzzle_hash, amount, memos: Optional[List[bytes]]) -> List:
+    if memos is not None:
+        return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount, memos]
     return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
 
 

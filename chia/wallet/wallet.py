@@ -208,11 +208,11 @@ class Wallet:
         condition_list = []
         if primaries:
             for primary in primaries:
-                if "memo" in primary:
-                    memo = primary["memo"]
+                if "memos" in primary:
+                    memos = primary["memos"]
                 else:
-                    memo = None
-                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"], memo))
+                    memos = None
+                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"], memos))
         if min_time > 0:
             condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
         if me:
@@ -297,7 +297,7 @@ class Wallet:
         primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
-        memo: Optional[bytes] = None,
+        memos: Optional[List[bytes]] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -341,9 +341,9 @@ class Wallet:
             # Only one coin creates outputs
             if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
-                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memo": memo}]
+                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos}]
                 else:
-                    primaries.append({"puzzlehash": newpuzzlehash, "amount": amount, "memo": memo})
+                    primaries.append({"puzzlehash": newpuzzlehash, "amount": amount, "memos": memos})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": change})
@@ -388,12 +388,12 @@ class Wallet:
         primaries: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
-        memo: Optional[bytes] = None,
+        memos: Optional[List[bytes]] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
-        The first output is (amount, puzzle_hash, memo), and the rest of the outputs are in primaries.
+        The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
         if primaries is None:
             non_change_amount = amount
@@ -409,7 +409,7 @@ class Wallet:
             primaries,
             ignore_max_send_amount,
             announcements_to_consume,
-            memo,
+            memos,
         )
         assert len(transaction) > 0
 

@@ -128,7 +128,7 @@ class TestWalletRpc:
                 pass
 
             # Tests sending a basic transaction
-            tx = await client.send_transaction("1", tx_amount, addr, memo=b"this is a basic tx")
+            tx = await client.send_transaction("1", tx_amount, addr, memos=[b"this is a basic tx"])
             transaction_id = tx.name
 
             async def tx_in_mempool():
@@ -163,7 +163,7 @@ class TestWalletRpc:
             # Test basic transaction to one output
             signed_tx_amount = 888000
             tx_res: TransactionRecord = await client.create_signed_transaction(
-                [{"amount": signed_tx_amount, "puzzle_hash": ph_3, "memo": "My memo".encode("utf-8")}]
+                [{"amount": signed_tx_amount, "puzzle_hash": ph_3, "memos": ["My memo".encode("utf-8")]}]
             )
 
             assert tx_res.fee_amount == 0
@@ -191,7 +191,7 @@ class TestWalletRpc:
             assert coin_to_spend is not None
 
             tx_res = await client.create_signed_transaction(
-                [{"amount": 444, "puzzle_hash": ph_4, "memo": b"hhh"}, {"amount": 999, "puzzle_hash": ph_5}],
+                [{"amount": 444, "puzzle_hash": ph_4, "memos": [b"hhh"]}, {"amount": 999, "puzzle_hash": ph_5}],
                 coins=[coin_to_spend],
                 fee=100,
             )
@@ -227,8 +227,8 @@ class TestWalletRpc:
             send_tx_res: TransactionRecord = await client.send_transaction_multi(
                 "1",
                 [
-                    {"amount": 555, "puzzle_hash": ph_4, "memo": "FiMemo".encode("utf-8")},
-                    {"amount": 666, "puzzle_hash": ph_5, "memo": "SeMemo".encode("utf-8")},
+                    {"amount": 555, "puzzle_hash": ph_4, "memos": ["FiMemo".encode("utf-8")]},
+                    {"amount": 666, "puzzle_hash": ph_5, "memos": ["SeMemo".encode("utf-8")]},
                 ],
                 fee=200,
             )
@@ -310,7 +310,7 @@ class TestWalletRpc:
 
             assert addr_0 != addr_1
 
-            await client.cat_spend(cat_0_id, 4, addr_1, 0, b"the cat memo")
+            await client.cat_spend(cat_0_id, 4, addr_1, 0, [b"the cat memo"])
 
             await asyncio.sleep(1)
             for i in range(0, 5):
