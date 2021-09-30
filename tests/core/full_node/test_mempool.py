@@ -2130,7 +2130,7 @@ class TestMaliciousGenerators:
         # amount
         assert npc_result.error == Err.RESERVE_FEE_CONDITION_FAILED.value
         assert len(npc_result.npc_list) == 0
-        assert run_time < 1
+        assert run_time < 1.5
         print(f"run time:{run_time}")
 
     @pytest.mark.parametrize(
