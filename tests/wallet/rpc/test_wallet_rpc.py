@@ -274,7 +274,7 @@ class TestWalletRpc:
 
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 0
-            assert bal_0["pending_coin_removal_count"] == 1
+            assert bal_0["pending_coin_removal_count"] == 2
             col = await client.get_cat_colour(cat_0_id)
             assert col == colour
             assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"

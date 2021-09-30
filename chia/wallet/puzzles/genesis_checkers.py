@@ -7,7 +7,12 @@ from chia.util.ints import uint64
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.cc_wallet.cc_utils import CC_MOD, construct_cc_puzzle
+from chia.wallet.cc_wallet.cc_utils import (
+    CC_MOD,
+    construct_cc_puzzle,
+    unsigned_spend_bundle_for_spendable_ccs,
+    SpendableCC,
+)
 from chia.wallet.cc_wallet.cc_info import CCInfo
 from chia.wallet.transaction_record import TransactionRecord
 
@@ -75,10 +80,26 @@ class GenesisById(LimitationsProgram):
         )
         assert tx_record.spend_bundle is not None
 
+        eve_spend = unsigned_spend_bundle_for_spendable_ccs(
+            CC_MOD,
+            [
+                SpendableCC(
+                    list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
+                    genesis_coin_checker,
+                    cc_inner,
+                    wallet.standard_wallet.make_solution(
+                        primaries=[{"puzzlehash": cc_inner.get_tree_hash(), "amount": amount}]
+                    ),
+                    reveal_limitations_program=True,
+                )
+            ],
+        )
+        signed_eve_spend = await wallet.sign(eve_spend)
+
         if wallet.cc_info.my_genesis_checker is None:
             await wallet.save_info(CCInfo(genesis_coin_checker, wallet.cc_info.lineage_proofs), False)
 
-        return tx_record.spend_bundle
+        return SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
 
 
 class GenesisByPuzhash(LimitationsProgram):
