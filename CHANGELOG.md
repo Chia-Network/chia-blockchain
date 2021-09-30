@@ -49,7 +49,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 
 - Thanks @mgraczyk for the fix to keyring_path.
-- Fixed a issue blocking the Ubuntu installer that required manual installation of Python 3.9 as a workaround.
+- Fixed an issue blocking the Ubuntu installer that required manual installation of Python 3.9 as a workaround.
 - Fixed an issue where the config.yaml and keyring.yaml are only partially written out to, if another process is attempting to read the config while it's being written.
 - Fixed rmtree call in create_pool_plot.
 - Thanks @Knight1 for fixing an issue in which fix-ssl-permissions shows the current 'mode' not the 'updated mode'.
