@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 from dataclasses import replace
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -32,7 +33,7 @@ from chia.wallet.cc_wallet.cc_utils import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.genesis_checkers import GenesisById, ALL_LIMITATIONS_PROGRAMS
+from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -50,6 +51,14 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
+# This should probably not live in this file but it's for experimental right now
+@dataclasses.dataclass
+class Payment:
+    puzzle_hash: bytes32
+    amount: uint64
+    memos: Optional[List[Optional[bytes]]] = None
+
+
 class CCWallet:
     wallet_state_manager: Any
     log: logging.Logger
@@ -62,7 +71,7 @@ class CCWallet:
     async def create_new_cc_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
-        cat_tail_info: Dict,
+        cat_tail_info: Dict[str, Any],
         amount: uint64,
     ):
         self = CCWallet()
@@ -492,62 +501,72 @@ class CCWallet:
                 return proof
         return None
 
-    async def generate_signed_transaction(
+    async def generate_unsigned_spendbundle(
         self,
-        amounts: List[uint64],
-        puzzle_hashes: List[bytes32],
+        payments: List[Payment],
         fee: uint64 = uint64(0),
+        cat_discrepancy: Optional[Tuple[int, Program]] = None,  # (extra_delta, limitations_solution)
         coins: Set[Coin] = None,
-        ignore_max_send_amount: bool = False,
-        memos: Optional[List[List[Optional[bytes]]]] = None,
-    ) -> TransactionRecord:
-        if memos is None:
-            memos = [None for _ in range(len(puzzle_hashes))]
-
-        if not (len(memos) == len(puzzle_hashes) == len(amounts)):
-            raise ValueError("Memos, puzzle_hashes, and amounts must have the same length")
-
-        # Get coins and calculate amount of change required
-        outgoing_amount = uint64(sum(amounts))
-        total_outgoing = outgoing_amount + fee
-
-        if not ignore_max_send_amount:
-            max_send = await self.get_max_send_amount()
-            if total_outgoing > max_send:
-                raise ValueError(f"Can't send more than {max_send} in a single transaction")
+    ) -> SpendBundle:
+        if cat_discrepancy is not None:
+            extra_delta, limitations_solution = cat_discrepancy
+        else:
+            extra_delta, limitations_solution = 0, Program.to([])
+        payment_amount: int = sum([p.amount for p in payments])
+        starting_amount: int = payment_amount - extra_delta
 
         if coins is None:
-            selected_coins: Set[Coin] = await self.select_coins(uint64(total_outgoing))
+            cat_coins = await self.select_coins(uint64(starting_amount))
         else:
-            selected_coins = coins
+            cat_coins = coins
 
-        total_amount = sum([x.amount for x in selected_coins])
-        change = total_amount - total_outgoing
+        selected_cat_amount = sum([c.amount for c in cat_coins])
+        assert selected_cat_amount >= starting_amount
+
+        # Figure out if we need to absorb/melt some XCH as part of this
+        regular_chia_to_claim: int = 0
+        if payment_amount > starting_amount:
+            fee = uint64(fee + payment_amount - starting_amount)
+        elif payment_amount < starting_amount:
+            regular_chia_to_claim = payment_amount
+
+        # Create the absorb/melt transaction
+        chia_spend_bundle = SpendBundle([], G2Element())
+        if fee > 0 or regular_chia_to_claim > 0:
+            chia_coins = await self.standard_wallet.select_coins(fee)
+            selected_amount = sum([c.amount for c in chia_coins])
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
+                uint64(selected_amount + regular_chia_to_claim),
+                self.standard_wallet.get_new_puzzlehash(),
+                fee=fee,
+                coins=chia_coins,
+                ignore_change=True,
+            )
+            assert chia_tx.spend_bundle is not None
+            chia_spend_bundle = chia_tx.spend_bundle
+
+        # Calculate standard puzzle solutions
+        change = selected_cat_amount - starting_amount
         primaries = []
-        for amount, puzzle_hash, memo in zip(amounts, puzzle_hashes, memos):
-            primaries.append({"puzzlehash": puzzle_hash, "amount": amount, "memos": memo})
+        for payment in payments:
+            primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-        coin = list(selected_coins)[0]
-        inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+        assert self.cc_info.my_genesis_checker is not None
 
-        if self.cc_info.my_genesis_checker is None:
-            raise ValueError("My genesis checker is None")
-
+        # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cc_list = []
         first = True
-        for coin in selected_coins:
+        for coin in cat_coins:
             if first:
                 first = False
-                if fee > 0:
-                    innersol = self.standard_wallet.make_solution(primaries=primaries, fee=fee)
-                else:
-                    innersol = self.standard_wallet.make_solution(primaries=primaries)
+                innersol = self.standard_wallet.make_solution(primaries=primaries)
             else:
                 innersol = self.standard_wallet.make_solution()
+            inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cc = SpendableCC(
@@ -555,21 +574,49 @@ class CCWallet:
                 self.cc_info.my_genesis_checker,
                 inner_puzzle,
                 innersol,
-                limitations_solution=GenesisById.solve([], {}),  # Static TAIL
+                limitations_solution=limitations_solution,
+                extra_delta=extra_delta,
                 lineage_proof=lineage_proof,
-                reveal_limitations_program=lineage_proof.is_none(),  # Static TAIL
+                reveal_limitations_program=(cat_discrepancy is not None),
             )
             spendable_cc_list.append(new_spendable_cc)
 
-        unsigned_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list)
+        return SpendBundle.aggregate(
+            [
+                unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list),
+                chia_spend_bundle,
+            ]
+        )
+
+    async def generate_signed_transaction(
+        self,
+        amounts: List[uint64],
+        puzzle_hashes: List[bytes32],
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = None,
+        ignore_max_send_amount: bool = False,
+        memos: Optional[List[Optional[List[Optional[bytes]]]]] = None,
+    ) -> TransactionRecord:
+        if memos is None:
+            memos = [None for _ in range(len(puzzle_hashes))]
+
+        if not (len(memos) == len(puzzle_hashes) == len(amounts)):
+            raise ValueError("Memos, puzzle_hashes, and amounts must have the same length")
+
+        payments = []
+        for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
+            payments.append(Payment(puzhash, amount, memo_list))
+
+        unsigned_spend_bundle = await self.generate_unsigned_spendbundle(payments, fee, coins=coins)
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
+        payment_sum = sum([p.amount for p in payments])
         # TODO add support for array in stored records
         return TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],
-            amount=uint64(outgoing_amount),
+            amount=payment_sum,
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),
