@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import time
+import traceback
 from secrets import token_bytes
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
@@ -724,6 +725,7 @@ class FullNodeAPI:
                             curr_l_tb.header_hash
                         )
                     except Exception as e:
+                        self.log.error(f"Traceback: {traceback.format_exc()}")
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
                         mempool_bundle = None
                     if mempool_bundle is not None:
