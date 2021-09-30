@@ -298,6 +298,7 @@ class Wallet:
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
+        ignore_change: bool = False,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -323,8 +324,12 @@ class Wallet:
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
-        change = spend_value - total_amount
-        assert change >= 0
+
+        if ignore_change:
+            change = 0
+        else:
+            change = spend_value - total_amount
+            assert change >= 0
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -389,6 +394,7 @@ class Wallet:
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
+        ignore_change: bool = False,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -410,6 +416,7 @@ class Wallet:
             ignore_max_send_amount,
             announcements_to_consume,
             memos,
+            ignore_change,
         )
         assert len(transaction) > 0
 
