@@ -392,7 +392,7 @@ class TestCCWallet:
         print(len(txs))
         # Test with Memo
         tx_record_3: TransactionRecord = await cc_wallet_1.generate_signed_transaction(
-            [uint64(30)], [cc_hash], memos=[b"Markus Walburg"]
+            [uint64(30)], [cc_hash], memos=[[b"Markus Walburg"]]
         )
         with pytest.raises(ValueError):
             await cc_wallet_1.generate_signed_transaction([uint64(30)], [cc_hash], memos=[b"too", b"many", b"memos"])
