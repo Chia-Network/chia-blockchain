@@ -499,7 +499,7 @@ class CCWallet:
         fee: uint64 = uint64(0),
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
-        memos: Optional[List[Optional[bytes]]] = None,
+        memos: Optional[List[List[Optional[bytes]]]] = None,
     ) -> TransactionRecord:
         if memos is None:
             memos = [None for _ in range(len(puzzle_hashes))]
@@ -525,7 +525,7 @@ class CCWallet:
         change = total_amount - total_outgoing
         primaries = []
         for amount, puzzle_hash, memo in zip(amounts, puzzle_hashes, memos):
-            primaries.append({"puzzlehash": puzzle_hash, "amount": amount, "memo": memo})
+            primaries.append({"puzzlehash": puzzle_hash, "amount": amount, "memos": memo})
 
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
