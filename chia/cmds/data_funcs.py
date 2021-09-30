@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 import aiohttp
@@ -52,7 +53,7 @@ async def get_row(rpc_port: Optional[int], table_string: str, row_hash_string: s
         # TODO: context manager for this and closing etc?
         client = await DataLayerRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
         row = await client.get_row(table=table_bytes, row_hash=row_hash_bytes)
-        print(row)
+        print(json.dumps(row, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None
@@ -79,7 +80,7 @@ async def insert_row(rpc_port: Optional[int], table_string: str, row_data_string
         # TODO: context manager for this and closing etc?
         client = await DataLayerRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
         row = await client.insert_row(table=table_bytes, row_data=row_data_bytes)
-        print(row)
+        print(json.dumps(row, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None
