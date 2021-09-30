@@ -1,11 +1,8 @@
-# from collections import OrderedDict
 from dataclasses import dataclass, replace
 from enum import IntEnum
 import io
 import logging
 import random
-
-# from typing import Dict, List, Optional, Tuple
 from typing import Iterable, List, Tuple
 
 import aiosqlite
@@ -13,18 +10,10 @@ from clvm.CLVMObject import CLVMObject
 from clvm.SExp import SExp
 from clvm.serialize import sexp_from_stream
 
-# from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
-
-# from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.tree_hash import sha256_treehash
-
-# from chia.types.full_block import FullBlock
-# from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper
 
-# from chia.util.ints import uint32
-# from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -90,16 +79,6 @@ class TableRow:
         return object.__hash__(replace(self, clvm_object=SExp.to(self.clvm_object)))
 
 
-# # TODO: remove or formalize this
-# async def _debug_dump(db, description=""):
-#     cursor = await db.execute("SELECT name FROM sqlite_master WHERE type='table';")
-#     print("-" * 50, description, flush=True)
-#     for [name] in await cursor.fetchall():
-#         cursor = await db.execute(f"SELECT * FROM {name}")
-#         x = await cursor.fetchall()
-#         print(f"\n -- {name} ------", x, flush=True)
-
-
 @dataclass(frozen=True)
 class Action:
     op: OperationType
@@ -141,9 +120,6 @@ class DataStore:
         # await self.db.execute("pragma journal_mode=wal")
         # await self.db.execute("pragma synchronous=2")
 
-        # TODO: make this handle multiple data layer tables
-        # TODO: do we need to handle multiple equal rows
-
         await self.db.execute("CREATE TABLE IF NOT EXISTS tables(id TEXT PRIMARY KEY, name STRING)")
         await self.db.execute("CREATE TABLE IF NOT EXISTS keys_values(key TEXT PRIMARY KEY, value BLOB)")
         await self.db.execute(
@@ -173,16 +149,9 @@ class DataStore:
             ")"
         )
 
-        # TODO: As operations are reverted do they get deleted?  Or perhaps we track
-        #       a reference into the table and only remove when a non-matching forward
-        #       step is taken?  Or reverts are just further actions?
-
         await self.db.commit()
 
         return self
-
-    # TODO: Add some handling for multiple tables.  Could be another layer of class
-    #       for each table or another parameter to select the table.
 
     # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
 
