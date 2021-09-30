@@ -38,7 +38,7 @@ class DBWrapper:
             await self.begin_transaction()
             try:
                 yield
-            except:
+            except BaseException:
                 await self.rollback_transaction()
                 raise
             else:
