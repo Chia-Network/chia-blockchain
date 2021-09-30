@@ -7,11 +7,19 @@ import subprocess
 import sys
 import sysconfig
 import time
+from typing import Any, IO, Iterator, List, Optional, Union
 
 import pytest
 
 
-scripts_path = pathlib.Path(sysconfig.get_path("scripts"))
+scripts_string = sysconfig.get_path("scripts")
+if scripts_string is None:
+    raise Exception("These tests depend on the scripts path existing")
+scripts_path = pathlib.Path(scripts_string)
+
+
+# from subprocess.pyi
+_FILE = Union[None, int, IO[Any]]
 
 
 @dataclass
@@ -19,22 +27,34 @@ class ChiaRoot:
     path: pathlib.Path
 
     def run(
-        self, args, *other_args, check=True, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
-    ):
+        self,
+        args: List[Union[str, os.PathLike[str]]],
+        *other_args: Any,
+        check: bool = True,
+        encoding: str = "utf-8",
+        stdout: Optional[_FILE] = subprocess.PIPE,
+        stderr: Optional[_FILE] = subprocess.PIPE,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
         # TODO: --root-path doesn't seem to work here...
         kwargs.setdefault("env", {})
         kwargs["env"]["CHIA_ROOT"] = os.fspath(self.path)
 
-        modified_args = [scripts_path.joinpath("chia"), "--root-path", self.path, *args]
-        modified_args = [os.fspath(element) for element in modified_args]
-        other_args = [modified_args, *other_args]
+        modified_args: List[Union[str, os.PathLike[str]]] = [
+            scripts_path.joinpath("chia"),
+            "--root-path",
+            self.path,
+            *args,
+        ]
+        processed_args: List[str] = [os.fspath(element) for element in modified_args]
+        final_args = [processed_args, *other_args]
 
         kwargs["check"] = check
         kwargs["encoding"] = encoding
         kwargs["stdout"] = stdout
         kwargs["stderr"] = stderr
 
-        return subprocess.run(*other_args, **kwargs)
+        return subprocess.run(*final_args, **kwargs)
 
 
 @pytest.fixture(name="chia_root", scope="function")
@@ -46,7 +66,7 @@ def chia_root_fixture(tmp_path: pathlib.Path) -> ChiaRoot:
 
 
 @contextlib.contextmanager
-def closing_chia_root_popen(chia_root: ChiaRoot, args):
+def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[None]:
     environment = {**os.environ, "CHIA_ROOT": os.fspath(chia_root.path)}
 
     with subprocess.Popen(args=args, env=environment) as process:
@@ -61,7 +81,7 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args):
 
 
 @pytest.fixture(name="chia_daemon", scope="function")
-def chia_daemon_fixture(chia_root: ChiaRoot) -> None:
+def chia_daemon_fixture(chia_root: ChiaRoot) -> Iterator[None]:
     with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]):
         # TODO: this is not pretty as a hard coded time
         # let it settle
@@ -70,7 +90,7 @@ def chia_daemon_fixture(chia_root: ChiaRoot) -> None:
 
 
 @pytest.fixture(name="chia_data", scope="function")
-def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None) -> None:
+def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None) -> Iterator[None]:
     with closing_chia_root_popen(chia_root=chia_root, args=[os.fspath(scripts_path.joinpath("chia_data_layer"))]):
         # TODO: this is not pretty as a hard coded time
         # let it settle
@@ -79,7 +99,7 @@ def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_help(chia_root):
+async def test_help(chia_root: ChiaRoot) -> None:
     """Just a trivial test to make sure the subprocessing is at least working and the
     data executable does run.
     """
@@ -87,7 +107,7 @@ async def test_help(chia_root):
     assert "Show this message and exit" in completed_process.stdout
 
 
-def test_round_trip(chia_root, chia_daemon: None, chia_data: None):
+def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> None:
     """Create a table, insert a row, get the row by its hash."""
 
     table = "0102030405060708091011121314151617181920212223242526272829303132"
