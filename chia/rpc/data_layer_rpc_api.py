@@ -1,8 +1,4 @@
-import io
 from typing import Any, Callable, Dict, List
-
-from clvm.CLVMObject import CLVMObject
-from clvm.serialize import sexp_from_stream
 
 from chia.data_layer.data_layer import DataLayer
 
@@ -47,8 +43,7 @@ class DataLayerRpcApi:
             if change["action"] == "insert":
                 row_data = hexstr_to_bytes(change["row_data"])
                 operation = OperationType.INSERT
-                clvm_object = sexp_from_stream(io.BytesIO(row_data), to_sexp=CLVMObject)
-                table_row = await self.service.data_store.insert_row(table=table, clvm_object=clvm_object)
+                table_row = await self.service.data_store.insert_row(table=table, clvm_bytes=row_data)
             else:
                 assert change["action"] == "delete"
                 row_hash = bytes32(hexstr_to_bytes(change["row_hash"]))
