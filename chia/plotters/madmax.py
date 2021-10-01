@@ -1,5 +1,4 @@
 import asyncio
-import subprocess
 import traceback
 import os
 import logging
@@ -38,8 +37,9 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
 
     if get_madmax_executable_path(plotters_root_path).exists():
         try:
-            proc = subprocess.run(
+            proc = run_command(
                 [os.fspath(get_madmax_executable_path(plotters_root_path)), "--version"],
+                "Failed to call madmax with --version option",
                 capture_output=True,
                 text=True,
             )
@@ -104,7 +104,7 @@ def install_madmax(plotters_root_path: Path):
                 MADMAX_PLOTTER_DIR,
             ],
             "Could not clone madmax git repository",
-            os.fspath(plotters_root_path),
+            cwd=os.fspath(plotters_root_path),
         )
 
         print("Installing git submodules.")
@@ -118,11 +118,11 @@ def install_madmax(plotters_root_path: Path):
                 "--recursive",
             ],
             "Could not initialize git submodules",
-            madmax_path,
+            cwd=madmax_path,
         )
 
         print("Running install script.")
-        run_command(["./make_devel.sh"], "Error while running install script", madmax_path)
+        run_command(["./make_devel.sh"], "Error while running install script", cwd=madmax_path)
     else:
         raise RuntimeError("Platform not supported yet for madmax plotter.")
 
