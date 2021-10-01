@@ -50,7 +50,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 # sets the version for chia-blockchain in package.json
-pip install jq
+brew install jq
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
