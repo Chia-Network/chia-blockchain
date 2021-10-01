@@ -101,7 +101,7 @@ table_columns: Dict[str, List[str]] = {
     "keys_values": ["key", "value"],
     "table_values": ["table_id", "key"],
     "commits": ["id", "table_id", "state"],
-    "actions": ["commit_id", "idx", "operation", "key"],
+    "actions": ["commit_id", "idx", "operation", "key", "table_id"],
 }
 
 

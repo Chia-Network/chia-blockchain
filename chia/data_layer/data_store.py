@@ -147,7 +147,9 @@ class DataStore:
                 " idx INTEGER,"
                 " operation INTEGER,"
                 " key TEXT,"
-                " PRIMARY KEY(commit_id, idx)"
+                " table_id TEXT,"
+                " PRIMARY KEY(commit_id, idx),"
+                " FOREIGN KEY(table_id) REFERENCES tables(id)"
                 ")"
             )
 
@@ -248,15 +250,23 @@ class DataStore:
             [commit_id] = [commit_id for commit_id, table_id in commits_rows]
 
             cursor = await self.db.execute(
-                "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id.hex()}
+                "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id AND table_id == :table_id",
+                {"commit_id": commit_id.hex(), "table_id": table.hex()},
             )
             # make sure we got just one
             [max_actions_index] = [row["MAX(idx)"] async for row in cursor]
 
             next_actions_index = max_actions_index + 1
         await self.db.execute(
-            "INSERT INTO actions(idx, commit_id, operation, key) VALUES(:idx, :commit_id, :operation, :key)",
-            {"idx": next_actions_index, "commit_id": commit_id.hex(), "operation": operation_type, "key": key.hex()},
+            "INSERT INTO actions(idx, commit_id, operation, key, table_id)"
+            " VALUES(:idx, :commit_id, :operation, :key, :table_id)",
+            {
+                "idx": next_actions_index,
+                "commit_id": commit_id.hex(),
+                "operation": operation_type,
+                "key": key.hex(),
+                "table_id": table.hex(),
+            },
         )
 
     async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
@@ -277,7 +287,9 @@ class DataStore:
             cursor = await self.db.execute(
                 "SELECT actions.operation, keys_values.value"
                 " FROM actions INNER JOIN keys_values"
-                " WHERE actions.key == keys_values.key"
+                " WHERE actions.key == keys_values.key AND actions.table_id == :table_id"
+                " ORDER BY actions.idx",
+                {"table_id": table.hex()},
             )
 
             return [
