@@ -103,6 +103,10 @@ jobs:
       with:
         node-version: '12.x'
 
+    - name: Add jq
+      run: |
+        sudo apt-get install -y jq
+
     - name: Build .deb package
       run: |
         . ./activate
