@@ -225,7 +225,7 @@ class DataStore:
 
     async def add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
         async with self.db_wrapper.locked_transaction():
-            return await self.add_action(operation_type=operation_type, key=key, table=table)
+            return await self._raw_add_action(operation_type=operation_type, key=key, table=table)
 
     async def _raw_add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
         cursor = await self.db.execute(
