@@ -807,7 +807,7 @@ class WebSocketServer:
         final_dir: str = job.get("final_dir", "")
         exclude_final_dir: bool = job.get("exclude_final_dir", False)
 
-        log.info(f"Post-processing plotter job with ID {id}")
+        log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
 
         if exclude_final_dir is False and len(final_dir) > 0:
             resolved_final_dir: str = str(Path(final_dir).resolve())
@@ -817,12 +817,12 @@ class WebSocketServer:
             if resolved_final_dir not in plot_directories_list:
                 # Adds the directory to the plot directories if it is not present
                 log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                config = add_plot_directory(self.root_path, resolved_final_dir)
+                add_plot_directory(self.root_path, resolved_final_dir)
 
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
         try:
-            log.info(f"Starting plotting with ID {id}")
+            log.info(f"Starting plotting with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
             config = self._get_plots_queue_item(id)
 
             if config is None:
@@ -910,7 +910,7 @@ class WebSocketServer:
             id = str(uuid.uuid4())
             ids.append(id)
             config = {
-                "id": id,
+                "id": id,  # lgtm [py/clear-text-logging-sensitive-data]
                 "size": size,
                 "queue": queue,
                 "plotter": plotter,
