@@ -250,8 +250,7 @@ class DataStore:
             cursor = await self.db.execute(
                 "SELECT MAX(idx) FROM actions WHERE commit_id == :commit_id", {"commit_id": commit_id.hex()}
             )
-            # TODO: not using .fetchone() is an extra guardrail but...  maybe not so legible?
-            # max_actions_index = (await cursor.fetchone())["MAX(idx)"]
+            # make sure we got just one
             [max_actions_index] = [row["MAX(idx)"] async for row in cursor]
 
             next_actions_index = max_actions_index + 1
@@ -262,11 +261,7 @@ class DataStore:
 
     async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
         async with self.db_wrapper.locked_transaction():
-            # TODO: do we really want to bother getting just so we can have the value and bytes?
             table_row = await self._raw_get_row_by_hash(table=table, row_hash=row_hash)
-
-            # TODO: How do we generally handle multiple incoming requests to avoid them
-            #       trompling over each other via race conditions such as here?
 
             await self.db.execute(
                 "DELETE FROM table_values WHERE table_id == :table_id AND key == :key",
@@ -279,15 +274,12 @@ class DataStore:
 
     async def get_all_actions(self, table: bytes32) -> List[Action]:
         async with self.db_wrapper.locked_transaction():
-            # TODO: What needs to be done to retain proper ordering, relates to the question
-            #       at the table creation as well.
             cursor = await self.db.execute(
                 "SELECT actions.operation, keys_values.value"
                 " FROM actions INNER JOIN keys_values"
                 " WHERE actions.key == keys_values.key"
             )
 
-            # TODO: hmm, doesn't use the table name as part of the row key...
             return [
                 Action(op=OperationType(row["operation"]), row=TableRow.from_clvm_bytes(clvm_bytes=row["value"]))
                 async for row in cursor
@@ -296,7 +288,6 @@ class DataStore:
     async def get_table_state(self, table: bytes32) -> bytes32:
         pass
 
-    # TODO: I'm not sure about the name here.  I'm thinking that this will
     async def create_commit(self) -> Commit:
         """Create a commit of the modifications since the last commit.  The returned
         object provides the information needed to update the singleton.  The database
