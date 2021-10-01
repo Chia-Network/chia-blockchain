@@ -595,10 +595,10 @@ class CCWallet:
         fee: uint64 = uint64(0),
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
-        memos: Optional[List[Optional[List[Optional[bytes]]]]] = None,
+        memos: Optional[List[List[bytes]]] = None,
     ) -> TransactionRecord:
         if memos is None:
-            memos = [None for _ in range(len(puzzle_hashes))]
+            memos = [[] for _ in range(len(puzzle_hashes))]
 
         if not (len(memos) == len(puzzle_hashes) == len(amounts)):
             raise ValueError("Memos, puzzle_hashes, and amounts must have the same length")
@@ -607,10 +607,15 @@ class CCWallet:
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
             payments.append(Payment(puzhash, amount, memo_list))
 
+        payment_sum = sum([p.amount for p in payments])
+        if not ignore_max_send_amount:
+            max_send = await self.get_max_send_amount()
+            if payment_sum > max_send:
+                raise ValueError(f"Can't melt more than {max_send} in a single transaction")
+
         unsigned_spend_bundle = await self.generate_unsigned_spendbundle(payments, fee, coins=coins)
         spend_bundle = await self.sign(unsigned_spend_bundle)
 
-        payment_sum = sum([p.amount for p in payments])
         # TODO add support for array in stored records
         return TransactionRecord(
             confirmed_at_height=uint32(0),

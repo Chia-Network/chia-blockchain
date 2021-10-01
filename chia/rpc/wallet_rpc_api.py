@@ -809,7 +809,7 @@ class WalletRpcApi:
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
         puzzle_hash_adapted: bytes32 = adapt_inner_puzzle_hash_to_singleton(puzzle_hash)
 
-        memos: Optional[bytes] = None
+        memos: List[bytes] = None
         if "memos" in request:
             memos = [hexstr_to_bytes(mem) for mem in request["memos"]]
 
