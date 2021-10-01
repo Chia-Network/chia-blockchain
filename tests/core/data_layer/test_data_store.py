@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 #         yield connection
 async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
-        # TODO: consider this...  should it be used at runtime?
+        # make sure this is on for tests even if we disable it at run time
         await connection.execute("PRAGMA foreign_keys = ON")
         yield connection
 

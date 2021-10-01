@@ -116,40 +116,40 @@ class DataStore:
         self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
         self.db.row_factory = aiosqlite.Row
 
-        # TODO: what pragmas do we want?  maybe foreign_keys?
-        # await self.db.execute("pragma journal_mode=wal")
-        # await self.db.execute("pragma synchronous=2")
+        await self.db.execute("pragma journal_mode=wal")
+        # https://github.com/Chia-Network/chia-blockchain/pull/8514#issuecomment-923310041
+        await self.db.execute("pragma synchronous=OFF")
+        await self.db.execute("PRAGMA foreign_keys=ON")
 
-        await self.db.execute("CREATE TABLE IF NOT EXISTS tables(id TEXT PRIMARY KEY, name STRING)")
-        await self.db.execute("CREATE TABLE IF NOT EXISTS keys_values(key TEXT PRIMARY KEY, value BLOB)")
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS table_values("
-            "table_id TEXT,"
-            " key STRING,"
-            " PRIMARY KEY(table_id, key),"
-            " FOREIGN KEY(table_id) REFERENCES tables(id),"
-            " FOREIGN KEY(key) REFERENCES keys_values(key)"
-            ")"
-        )
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS commits("
-            "id TEXT PRIMARY KEY,"
-            " table_id TEXT,"
-            " state INTEGER,"
-            " FOREIGN KEY(table_id) REFERENCES tables(id)"
-            ")"
-        )
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS actions("
-            "commit_id TEXT,"
-            " idx INTEGER,"
-            " operation INTEGER,"
-            " key TEXT,"
-            " PRIMARY KEY(commit_id, idx)"
-            ")"
-        )
-
-        await self.db.commit()
+        async with self.db_wrapper.locked_transaction():
+            await self.db.execute("CREATE TABLE IF NOT EXISTS tables(id TEXT PRIMARY KEY, name STRING)")
+            await self.db.execute("CREATE TABLE IF NOT EXISTS keys_values(key TEXT PRIMARY KEY, value BLOB)")
+            await self.db.execute(
+                "CREATE TABLE IF NOT EXISTS table_values("
+                "table_id TEXT,"
+                " key STRING,"
+                " PRIMARY KEY(table_id, key),"
+                " FOREIGN KEY(table_id) REFERENCES tables(id),"
+                " FOREIGN KEY(key) REFERENCES keys_values(key)"
+                ")"
+            )
+            await self.db.execute(
+                "CREATE TABLE IF NOT EXISTS commits("
+                "id TEXT PRIMARY KEY,"
+                " table_id TEXT,"
+                " state INTEGER,"
+                " FOREIGN KEY(table_id) REFERENCES tables(id)"
+                ")"
+            )
+            await self.db.execute(
+                "CREATE TABLE IF NOT EXISTS actions("
+                "commit_id TEXT,"
+                " idx INTEGER,"
+                " operation INTEGER,"
+                " key TEXT,"
+                " PRIMARY KEY(commit_id, idx)"
+                ")"
+            )
 
         return self
 
@@ -157,19 +157,24 @@ class DataStore:
 
     # TODO: should be Set[TableRow] but our stuff isn't super hashable yet...
     async def get_rows(self, table: bytes32) -> List[TableRow]:
-        cursor = await self.db.execute(
-            "SELECT value FROM keys_values INNER JOIN table_values"
-            " WHERE"
-            " keys_values.key == table_values.key"
-            " AND table_values.table_id == :table_id",
-            {"table_id": table.hex()},
-        )
+        async with self.db_wrapper.locked_transaction():
+            cursor = await self.db.execute(
+                "SELECT value FROM keys_values INNER JOIN table_values"
+                " WHERE"
+                " keys_values.key == table_values.key"
+                " AND table_values.table_id == :table_id",
+                {"table_id": table.hex()},
+            )
 
-        table_rows = [TableRow.from_clvm_bytes(clvm_bytes=row["value"]) async for row in cursor]
+            table_rows = [TableRow.from_clvm_bytes(clvm_bytes=row["value"]) async for row in cursor]
 
         return table_rows
 
     async def get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
+        async with self.db_wrapper.locked_transaction():
+            return await self._raw_get_row_by_hash(table=table, row_hash=row_hash)
+
+    async def _raw_get_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
         cursor = await self.db.execute(
             "SELECT value FROM keys_values INNER JOIN table_values"
             " WHERE"
@@ -179,8 +184,7 @@ class DataStore:
             {"key": row_hash.hex(), "table_id": table.hex()},
         )
 
-        # TODO: not using .fetchone() is an extra guardrail but...  maybe not so legible?
-        # clvm_bytes = (await cursor.fetchone())["value"]
+        # make sure we got just one
         [clvm_bytes] = [row["value"] async for row in cursor]
 
         table_row = TableRow(
@@ -192,8 +196,8 @@ class DataStore:
         return table_row
 
     async def create_table(self, id: bytes32, name: str) -> None:
-        await self.db.execute("INSERT INTO tables(id, name) VALUES(:id, :name)", {"id": id.hex(), "name": name})
-        await self.db.commit()
+        async with self.db_wrapper.locked_transaction():
+            await self.db.execute("INSERT INTO tables(id, name) VALUES(:id, :name)", {"id": id.hex(), "name": name})
 
     async def insert_row(self, table: bytes32, clvm_object: CLVMObject) -> TableRow:
         """
@@ -205,24 +209,25 @@ class DataStore:
         row_hash = sha256_treehash(sexp=clvm_object)
         clvm_bytes = SExp.to(clvm_object).as_bin()
 
-        await self.db.execute(
-            "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash.hex(), "value": clvm_bytes}
-        )
+        async with self.db_wrapper.locked_transaction():
+            await self.db.execute(
+                "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash.hex(), "value": clvm_bytes}
+            )
 
-        await self.db.execute(
-            "INSERT INTO table_values(table_id, key) VALUES(:table_id, :key)",
-            {"table_id": table.hex(), "key": row_hash.hex()},
-        )
+            await self.db.execute(
+                "INSERT INTO table_values(table_id, key) VALUES(:table_id, :key)",
+                {"table_id": table.hex(), "key": row_hash.hex()},
+            )
 
-        await self.add_action(operation_type=OperationType.INSERT, key=row_hash, table=table)
-
-        # TODO: Review reentrancy on .commit() since it isn't clearly tied to this
-        #       particular task's activity.
-        await self.db.commit()
+            await self._raw_add_action(operation_type=OperationType.INSERT, key=row_hash, table=table)
 
         return TableRow(clvm_object=clvm_object, hash=row_hash, bytes=clvm_bytes)
 
     async def add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
+        async with self.db_wrapper.locked_transaction():
+            return await self._raw_add_action(operation_type=operation_type, key=key, table=table)
+
+    async def _raw_add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
         cursor = await self.db.execute(
             "SELECT id, table_id FROM commits WHERE table_id == :table_id AND state == :state",
             {"table_id": table.hex(), "state": CommitState.OPEN},
@@ -256,37 +261,37 @@ class DataStore:
         )
 
     async def delete_row_by_hash(self, table: bytes32, row_hash: bytes32) -> TableRow:
-        # TODO: do we really want to bother getting just so we can have the value and bytes?
-        table_row = await self.get_row_by_hash(table=table, row_hash=row_hash)
+        async with self.db_wrapper.locked_transaction():
+            # TODO: do we really want to bother getting just so we can have the value and bytes?
+            table_row = await self._raw_get_row_by_hash(table=table, row_hash=row_hash)
 
-        # TODO: How do we generally handle multiple incoming requests to avoid them
-        #       trompling over each other via race conditions such as here?
+            # TODO: How do we generally handle multiple incoming requests to avoid them
+            #       trompling over each other via race conditions such as here?
 
-        await self.db.execute(
-            "DELETE FROM table_values WHERE table_id == :table_id AND key == :key",
-            {"table_id": table.hex(), "key": row_hash.hex()},
-        )
+            await self.db.execute(
+                "DELETE FROM table_values WHERE table_id == :table_id AND key == :key",
+                {"table_id": table.hex(), "key": row_hash.hex()},
+            )
 
-        await self.add_action(operation_type=OperationType.DELETE, key=row_hash, table=table)
-
-        await self.db.commit()
+            await self._raw_add_action(operation_type=OperationType.DELETE, key=row_hash, table=table)
 
         return table_row
 
     async def get_all_actions(self, table: bytes32) -> List[Action]:
-        # TODO: What needs to be done to retain proper ordering, relates to the question
-        #       at the table creation as well.
-        cursor = await self.db.execute(
-            "SELECT actions.operation, keys_values.value"
-            " FROM actions INNER JOIN keys_values"
-            " WHERE actions.key == keys_values.key"
-        )
+        async with self.db_wrapper.locked_transaction():
+            # TODO: What needs to be done to retain proper ordering, relates to the question
+            #       at the table creation as well.
+            cursor = await self.db.execute(
+                "SELECT actions.operation, keys_values.value"
+                " FROM actions INNER JOIN keys_values"
+                " WHERE actions.key == keys_values.key"
+            )
 
-        # TODO: hmm, doesn't use the table name as part of the row key...
-        return [
-            Action(op=OperationType(row["operation"]), row=TableRow.from_clvm_bytes(clvm_bytes=row["value"]))
-            async for row in cursor
-        ]
+            # TODO: hmm, doesn't use the table name as part of the row key...
+            return [
+                Action(op=OperationType(row["operation"]), row=TableRow.from_clvm_bytes(clvm_bytes=row["value"]))
+                async for row in cursor
+            ]
 
     async def get_table_state(self, table: bytes32) -> bytes32:
         pass
