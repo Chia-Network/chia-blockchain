@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
 {
@@ -26,12 +26,16 @@ git submodule update --init mozilla-ca
 if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
 {
     Write-Output "Unable to find py"
+    Write-Output "Note the check box during installation of Python to install the Python Launcher for Windows."
+    Write-Output ""
+    Write-Output "https://docs.python.org/3/using/windows.html#installation-steps"
     Exit 1
 }
 
 $pythonVersion = (py --version).split(" ")[1]
 if ([version]$pythonVersion -lt [version]"3.7.0")
 {
+    Write-Output "Found Python version:" $pythonVersion
     Write-Output "Installation requires Python 3.7 or later"
     Exit 1
 }

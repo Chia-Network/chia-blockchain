@@ -1,8 +1,8 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 if ($null -eq (Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue))
 {
-    Write-Output "This requires the chia python virtual environment."
+    Write-Output "This script requires that the Chia Python virtual environment is activated."
     Write-Output "Execute '.\venv\Scripts\Activate.ps1' before running."
     Exit 1
 }
@@ -13,7 +13,7 @@ if ($null -eq (Get-Command node -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-Write-Output "Running git submodule update --init --recursive."
+Write-Output "Running 'git submodule update --init --recursive'."
 Write-Output ""
 git submodule update --init --recursive
 
