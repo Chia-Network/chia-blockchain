@@ -22,7 +22,7 @@ class DataLayerRpcApi:
         self.service_name = "chia_data_layer"
 
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
-        return {"/create_table": self.create_table, "/update": self.update, "/get_row": self.get_row}
+        return {"/create_table": self.create_table, "/update_table": self.update_table, "/get_row": self.get_row}
 
     async def create_table(self, request: Dict[str, Any]) -> None:
         table_bytes = bytes32(bytes.fromhex(request["table"]))
@@ -35,7 +35,7 @@ class DataLayerRpcApi:
         table_row = await self.service.data_store.get_row_by_hash(table=table_bytes, row_hash=hash_bytes)
         return {"row_data": table_row.bytes.hex(), "row_hash": table_row.hash.hex()}
 
-    async def update(self, request: Dict[str, Any]) -> Dict:
+    async def update_table(self, request: Dict[str, Any]) -> Dict:
         """
         rows_to_add a list of clvmobjects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove

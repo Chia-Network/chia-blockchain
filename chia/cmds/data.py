@@ -10,6 +10,16 @@ def data_cmd() -> None:
 #       malformed inputs.
 
 
+def create_changelist_option():
+    return click.option(
+        "-d",
+        "--changelist",
+        help="str representing the changelist",
+        type=str,
+        required=True,
+    )
+
+
 def create_row_data_option():
     return click.option(
         "-d",
@@ -69,38 +79,38 @@ def create_rpc_port_option():
 @create_table_option()
 @create_table_name_option()
 @create_rpc_port_option()
-def create_table_cmd(
+def create_table(
     table_string: str,
     table_name: str,
     data_rpc_port: int,
 ) -> None:
     import asyncio
 
-    from chia.cmds.data_funcs import create_table
+    from chia.cmds.data_funcs import create_table_cmd
 
-    asyncio.run(create_table(rpc_port=data_rpc_port, table_string=table_string, table_name=table_name))
+    asyncio.run(create_table_cmd(rpc_port=data_rpc_port, table_string=table_string, table_name=table_name))
 
 
 @data_cmd.command("get_row", short_help="Get a data row by its hash")
 @create_row_hash_option()
 @create_table_option()
 @create_rpc_port_option()
-def get_row_cmd(
+def get_row(
     row_hash_string: str,
     table_string: str,
     data_rpc_port: int,
 ) -> None:
     import asyncio
 
-    from chia.cmds.data_funcs import get_row
+    from chia.cmds.data_funcs import get_row_cmd
 
-    asyncio.run(get_row(rpc_port=data_rpc_port, table_string=table_string, row_hash_string=row_hash_string))
+    asyncio.run(get_row_cmd(rpc_port=data_rpc_port, table_string=table_string, row_hash_string=row_hash_string))
 
 
-@data_cmd.command("insert_row", short_help="Insert a new row.")
-@create_row_data_option()
+@data_cmd.command("update_table", short_help="Update a table.")
 @create_table_option()
 @create_rpc_port_option()
+@create_changelist_option()
 def update_table(
     changelist: str,
     table_string: str,
@@ -108,6 +118,6 @@ def update_table(
 ) -> None:
     import asyncio
 
-    from chia.cmds.data_funcs import update
+    from chia.cmds.data_funcs import update_table_cmd
 
-    asyncio.run(update(rpc_port=data_rpc_port, table_string=table_string, changelist=changelist))
+    asyncio.run(update_table_cmd(rpc_port=data_rpc_port, table_string=table_string, changelist=changelist))

@@ -13,9 +13,13 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("get_row", {"table": table.hex(), "row_hash": row_hash.hex()})
         return response
 
-    async def update(self, table: bytes32, changelist: bytes) -> Dict:
+    async def updat_table(self, table: bytes32, changelist: str) -> Dict:
+        print("update table")
         response = await self.fetch(
-            "update",
+            "update_table",
             {"table": table.hex(), "changelist": changelist},
         )
         return response
+
+    async def get_table_state(self, table: bytes32) -> bytes32:
+        pass
