@@ -71,6 +71,7 @@ kwargs = dict(
         "chia.farmer",
         "chia.harvester",
         "chia.introducer",
+        "chia.plotters",
         "chia.plotting",
         "chia.pools",
         "chia.protocols",
