@@ -5,7 +5,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_table(self, table: bytes32, name: str) -> Dict:
+    async def create_table(self, table: bytes32, name: str):
         response = await self.fetch("create_table", {"table": table.hex(), "name": name})
         return response
 
@@ -13,9 +13,9 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("get_row", {"table": table.hex(), "row_hash": row_hash.hex()})
         return response
 
-    async def insert_row(self, table: bytes32, row_data: bytes) -> Dict:
+    async def update(self, table: bytes32, changelist: bytes) -> Dict:
         response = await self.fetch(
             "update",
-            {"table": table.hex(), "changelist": [{"action": "insert", "row_data": row_data.hex()}]},
+            {"table": table.hex(), "changelist": changelist},
         )
         return response

@@ -101,13 +101,13 @@ def get_row_cmd(
 @create_row_data_option()
 @create_table_option()
 @create_rpc_port_option()
-def insert_row_cmd(
-    row_data_string: str,
+def update_table(
+    changelist: str,
     table_string: str,
     data_rpc_port: int,
 ) -> None:
     import asyncio
 
-    from chia.cmds.data_funcs import insert_row
+    from chia.cmds.data_funcs import update
 
-    asyncio.run(insert_row(rpc_port=data_rpc_port, table_string=table_string, row_data_string=row_data_string))
+    asyncio.run(update(rpc_port=data_rpc_port, table_string=table_string, changelist=changelist))
