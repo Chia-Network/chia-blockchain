@@ -41,8 +41,9 @@ async def run_plotter(args, progress_dict):
     await process.wait()
 
 
-def run_command(args, exc_description, cwd=None):
+def run_command(args, exc_description, *, check=True, **kwargs) -> subprocess.CompletedProcess:
     try:
-        subprocess.run(args, check=True, cwd=cwd)
+        proc = subprocess.run(args, check=check, **kwargs)
     except Exception as e:
         raise RuntimeError(f"{exc_description} {e}")
+    return proc

@@ -1,13 +1,12 @@
 import asyncio
 import json
 import traceback
-import subprocess
 import os
 import sys
 import logging
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from chia.plotting.create_plots import resolve_plot_keys
 from chia.plotters.plotters_util import run_plotter, run_command
 
@@ -15,19 +14,20 @@ log = logging.getLogger(__name__)
 
 
 BLADEBIT_PLOTTER_DIR = "bladebit"
-BLADEBIT_MIN_RAM_GIBS = 416
 
 
 def is_bladebit_supported() -> bool:
     return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin"]
 
 
-def meets_memory_requirement(plotters_root_path: Path) -> bool:
+def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[str]]:
     have_enough_memory: bool = False
+    warning_string: Optional[str] = None
     if get_bladebit_executable_path(plotters_root_path).exists():
         try:
-            proc = subprocess.run(
-                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--memory-json"],
+            proc = run_command(
+                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--memory-json-xyz"],
+                "Failed to call bladebit with --memory-json option",
                 capture_output=True,
                 text=True,
             )
@@ -35,10 +35,12 @@ def meets_memory_requirement(plotters_root_path: Path) -> bool:
             total_bytes: int = memory_info.get("total", -1)
             required_bytes: int = memory_info.get("required", 0)
             have_enough_memory = total_bytes >= required_bytes
+            if have_enough_memory is False:
+                warning_string = f"BladeBit requires at least {int(required_bytes / 1024**3)} GiB of RAM to operate"
         except Exception as e:
             print(f"Failed to determine bladebit memory requirements: {e}")
 
-    return have_enough_memory
+    return have_enough_memory, warning_string
 
 
 def get_bladebit_install_path(plotters_root_path: Path) -> Path:
@@ -47,9 +49,11 @@ def get_bladebit_install_path(plotters_root_path: Path) -> Path:
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
     bladebit_exec: str = "bladebit"
+    build_dir: str = "build"
     if sys.platform in ["win32", "cygwin"]:
         bladebit_exec = "bladebit.exe"
-    return get_bladebit_install_path(plotters_root_path) / ".bin/release" / bladebit_exec
+        build_dir = "build/Release"
+    return get_bladebit_install_path(plotters_root_path) / build_dir / bladebit_exec
 
 
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
@@ -60,8 +64,9 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     if get_bladebit_executable_path(plotters_root_path).exists():
         version: Optional[str] = None
         try:
-            proc = subprocess.run(
+            proc = run_command(
                 [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--version"],
+                "Failed to call bladebit with --version option",
                 capture_output=True,
                 text=True,
             )
@@ -79,8 +84,10 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     if installed is False:
         info["can_install"] = supported
 
-    if supported and meets_memory_requirement(plotters_root_path) is False:
-        info["bladebit_memory_warning"] = f"BladeBit requires at least {BLADEBIT_MIN_RAM_GIBS} GiB of RAM to operate"
+    if supported:
+        _, memory_warning = meets_memory_requirement(plotters_root_path)
+        if memory_warning is not None:
+            info["bladebit_memory_warning"] = memory_warning
 
     return info
 
@@ -133,17 +140,20 @@ def install_bladebit(root_path):
                 "https://github.com/Chia-Network/bladebit.git",
             ],
             "Could not clone bladebit repository",
-            os.fspath(root_path),
+            cwd=os.fspath(root_path),
         )
 
-        bladebit_path = os.fspath(root_path.joinpath("bladebit"))
-        print("Building BLS library.")
-        # Build bls library. Only needs to be done once.
-        run_command(["./build-bls"], "Building BLS library failed", bladebit_path)
+        bladebit_path: str = os.fspath(root_path.joinpath("bladebit"))
+        build_path: str = os.fspath(Path(bladebit_path) / "build")
 
         print("Build bladebit.")
-        run_command(["make", "clean"], "Building bladebit failed", bladebit_path)
-        run_command(["make"], "Building bladebit failed", bladebit_path)
+        run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
+        run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
+        run_command(
+            ["cmake", "--build", ".", "--target", "bladebit", "--config", "Release"],
+            "Building bladebit failed",
+            cwd=build_path,
+        )
     else:
         raise RuntimeError("Platform not supported yet for bladebit plotter.")
 
