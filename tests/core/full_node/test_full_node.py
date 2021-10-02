@@ -1414,6 +1414,7 @@ class TestFullNodeProtocol:
         await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
         timelord_protocol_finished = []
         cc_eos_count = 0
+        rc_eos_count = 0
         for sub_slot in block.finished_sub_slots:
             vdf_info, vdf_proof = get_vdf_info_and_proof(
                 test_constants,
@@ -1430,6 +1431,24 @@ class TestFullNodeProtocol:
                     block.header_hash,
                     block.height,
                     CompressibleVDFField.CC_EOS_VDF,
+                )
+            )
+            rc_eos_count += 1
+            rc_vdf_info, rc_vdf_proof = get_vdf_info_and_proof(
+                test_constants,
+                ClassgroupElement.get_default_element(),
+                sub_slot.reward_chain.end_of_slot_vdf.challenge,
+                sub_slot.reward_chain.end_of_slot_vdf.number_of_iterations,
+                True,
+            )
+
+            timelord_protocol_finished.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    rc_vdf_info,
+                    rc_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.RC_EOS_VDF,
                 )
             )
         blocks_2 = bt.get_consecutive_blocks(num_blocks=2, block_list_input=blocks, skip_slots=3)
@@ -1455,6 +1474,25 @@ class TestFullNodeProtocol:
                         CompressibleVDFField.ICC_EOS_VDF,
                     )
                 )
+                rc_eos_count += 1
+                rc_vdf_info, rc_vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    sub_slot.reward_chain.end_of_slot_vdf.challenge,
+                    sub_slot.reward_chain.end_of_slot_vdf.number_of_iterations,
+                    True,
+                )
+
+                timelord_protocol_finished.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        rc_vdf_info,
+                        rc_vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.RC_EOS_VDF,
+                    )
+                )
+
         assert block.reward_chain_block.challenge_chain_sp_vdf is not None
         vdf_info, vdf_proof = get_vdf_info_and_proof(
             test_constants,
@@ -1488,16 +1526,53 @@ class TestFullNodeProtocol:
                 CompressibleVDFField.CC_IP_VDF,
             )
         )
-
+        # RC SP.
+        vdf_info, vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.reward_chain_sp_vdf.challenge,
+            block.reward_chain_block.reward_chain_sp_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_finished.append(
+            timelord_protocol.RespondCompactProofOfTime(
+                vdf_info,
+                vdf_proof,
+                block.header_hash,
+                block.height,
+                CompressibleVDFField.RC_SP_VDF,
+            )
+        )
+        # RC IP.
+        vdf_info, vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.reward_chain_ip_vdf.challenge,
+            block.reward_chain_block.reward_chain_ip_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_finished.append(
+            timelord_protocol.RespondCompactProofOfTime(
+                vdf_info,
+                vdf_proof,
+                block.header_hash,
+                block.height,
+                CompressibleVDFField.RC_IP_VDF,
+            )
+        )
         # Note: the below numbers depend on the block cache, so might need to be updated
-        assert cc_eos_count == 4 and icc_eos_count == 3
+        assert cc_eos_count == 4 and icc_eos_count == 3 and rc_eos_count == 7
         for compact_proof in timelord_protocol_finished:
             await full_node_1.full_node.respond_compact_proof_of_time(compact_proof)
         stored_blocks = await full_node_1.get_all_full_blocks()
         cc_eos_compact_count = 0
         icc_eos_compact_count = 0
+        rc_eos_compact_count = 0
         has_compact_cc_sp_vdf = False
         has_compact_cc_ip_vdf = False
+        has_compact_rc_sp_vdf = False
+        has_compact_rc_ip_vdf = False
+
         for block in stored_blocks:
             for sub_slot in block.finished_sub_slots:
                 if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
@@ -1507,15 +1582,24 @@ class TestFullNodeProtocol:
                     and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
                 ):
                     icc_eos_compact_count += 1
+                if sub_slot.proofs.reward_chain_slot_proof.normalized_to_identity:
+                    rc_eos_compact_count += 1
             if block.challenge_chain_sp_proof is not None and block.challenge_chain_sp_proof.normalized_to_identity:
                 has_compact_cc_sp_vdf = True
             if block.challenge_chain_ip_proof.normalized_to_identity:
                 has_compact_cc_ip_vdf = True
+            if block.reward_chain_sp_proof is not None and block.reward_chain_sp_proof.normalized_to_identity:
+                has_compact_rc_sp_vdf = True
+            if block.reward_chain_ip_proof.normalized_to_identity:
+                has_compact_rc_ip_vdf = True
         # Note: the below numbers depend on the block cache, so might need to be updated
         assert cc_eos_compact_count == 4
         assert icc_eos_compact_count == 3
+        assert rc_eos_compact_count == 7
         assert has_compact_cc_sp_vdf
         assert has_compact_cc_ip_vdf
+        assert has_compact_rc_sp_vdf
+        assert has_compact_rc_ip_vdf
         for height, block in enumerate(stored_blocks):
             await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
             assert full_node_2.full_node.blockchain.get_peak().height == height
@@ -1540,7 +1624,7 @@ class TestFullNodeProtocol:
             True,
         )
         timelord_protocol_invalid_messages = []
-        full_node_protocol_invalid_messaages = []
+        full_node_protocol_invalid_messages = []
         for block in blocks_2[:2]:
             for sub_slot in block.finished_sub_slots:
                 vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
@@ -1560,11 +1644,37 @@ class TestFullNodeProtocol:
                         CompressibleVDFField.CC_EOS_VDF,
                     )
                 )
-                full_node_protocol_invalid_messaages.append(
+                full_node_protocol_invalid_messages.append(
                     fnp.RespondCompactVDF(
                         block.height,
                         block.header_hash,
                         CompressibleVDFField.CC_EOS_VDF,
+                        vdf_info,
+                        wrong_vdf_proof,
+                    )
+                )
+                vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    sub_slot.reward_chain.end_of_slot_vdf.challenge,
+                    sub_slot.reward_chain.end_of_slot_vdf.number_of_iterations,
+                    True,
+                )
+                assert wrong_vdf_proof != correct_vdf_proof
+                timelord_protocol_invalid_messages.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info,
+                        wrong_vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.RC_EOS_VDF,
+                    )
+                )
+                full_node_protocol_invalid_messages.append(
+                    fnp.RespondCompactVDF(
+                        block.height,
+                        block.header_hash,
+                        CompressibleVDFField.RC_EOS_VDF,
                         vdf_info,
                         wrong_vdf_proof,
                     )
@@ -1587,7 +1697,7 @@ class TestFullNodeProtocol:
                             CompressibleVDFField.ICC_EOS_VDF,
                         )
                     )
-                    full_node_protocol_invalid_messaages.append(
+                    full_node_protocol_invalid_messages.append(
                         fnp.RespondCompactVDF(
                             block.height,
                             block.header_hash,
@@ -1618,7 +1728,7 @@ class TestFullNodeProtocol:
                         CompressibleVDFField.CC_SP_VDF,
                     )
                 )
-                full_node_protocol_invalid_messaages.append(
+                full_node_protocol_invalid_messages.append(
                     fnp.RespondCompactVDF(
                         block.height,
                         block.header_hash,
@@ -1627,7 +1737,59 @@ class TestFullNodeProtocol:
                         sp_vdf_proof,
                     )
                 )
-
+            if block.reward_chain_block.reward_chain_sp_vdf is not None:
+                vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    block.reward_chain_block.reward_chain_sp_vdf.challenge,
+                    block.reward_chain_block.reward_chain_sp_vdf.number_of_iterations,
+                    True,
+                )
+                assert wrong_vdf_proof != correct_vdf_proof
+                timelord_protocol_invalid_messages.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info,
+                        wrong_vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.RC_SP_VDF,
+                    )
+                )
+                full_node_protocol_invalid_messages.append(
+                    fnp.RespondCompactVDF(
+                        block.height,
+                        block.header_hash,
+                        CompressibleVDFField.RC_SP_VDF,
+                        vdf_info,
+                        wrong_vdf_proof,
+                    )
+                )
+            vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                test_constants,
+                ClassgroupElement.get_default_element(),
+                block.reward_chain_block.reward_chain_ip_vdf.challenge,
+                block.reward_chain_block.reward_chain_ip_vdf.number_of_iterations,
+                True,
+            )
+            assert wrong_vdf_proof != correct_vdf_proof
+            timelord_protocol_invalid_messages.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    vdf_info,
+                    wrong_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.RC_IP_VDF,
+                )
+            )
+            full_node_protocol_invalid_messages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.RC_IP_VDF,
+                    vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
             vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
                 test_constants,
                 ClassgroupElement.get_default_element(),
@@ -1648,7 +1810,7 @@ class TestFullNodeProtocol:
                     CompressibleVDFField.CC_IP_VDF,
                 )
             )
-            full_node_protocol_invalid_messaages.append(
+            full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
                     block.height,
                     block.header_hash,
@@ -1694,7 +1856,7 @@ class TestFullNodeProtocol:
                     CompressibleVDFField.CC_IP_VDF,
                 )
             )
-            full_node_protocol_invalid_messaages.append(
+            full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
                     block.height,
                     block.header_hash,
@@ -1703,7 +1865,7 @@ class TestFullNodeProtocol:
                     wrong_vdf_proof,
                 )
             )
-            full_node_protocol_invalid_messaages.append(
+            full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
                     block.height,
                     block.header_hash,
@@ -1712,7 +1874,7 @@ class TestFullNodeProtocol:
                     wrong_vdf_proof,
                 )
             )
-            full_node_protocol_invalid_messaages.append(
+            full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
                     block.height,
                     block.header_hash,
@@ -1721,7 +1883,7 @@ class TestFullNodeProtocol:
                     wrong_vdf_proof,
                 )
             )
-            full_node_protocol_invalid_messaages.append(
+            full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
                     block.height,
                     block.header_hash,
@@ -1730,12 +1892,40 @@ class TestFullNodeProtocol:
                     wrong_vdf_proof,
                 )
             )
+            full_node_protocol_invalid_messages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.RC_SP_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+            full_node_protocol_invalid_messages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.RC_IP_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+            full_node_protocol_invalid_messages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.RC_EOS_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
         peer = await connect_and_get_peer(server_1, server_2)
         for invalid_compact_proof in timelord_protocol_invalid_messages:
             await full_node_1.full_node.respond_compact_proof_of_time(invalid_compact_proof)
-        for invalid_compact_proof in full_node_protocol_invalid_messaages:
+        for invalid_compact_proof in full_node_protocol_invalid_messages:
             await full_node_1.full_node.respond_compact_vdf(invalid_compact_proof, peer)
         stored_blocks = await full_node_1.get_all_full_blocks()
         for block in stored_blocks:
@@ -1743,6 +1933,10 @@ class TestFullNodeProtocol:
                 assert not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
                 if sub_slot.proofs.infused_challenge_chain_slot_proof is not None:
                     assert not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                assert not sub_slot.proofs.reward_chain_slot_proof.normalized_to_identity
             if block.challenge_chain_sp_proof is not None:
                 assert not block.challenge_chain_sp_proof.normalized_to_identity
             assert not block.challenge_chain_ip_proof.normalized_to_identity
+            if block.reward_chain_sp_proof is not None:
+                assert not block.reward_chain_sp_proof.normalized_to_identity
+            assert not block.reward_chain_ip_proof.normalized_to_identity
