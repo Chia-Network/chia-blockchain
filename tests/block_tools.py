@@ -161,7 +161,7 @@ class BlockTools:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
         else:
             self.keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, user="testing-1.8.0", testing=True
+                self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
 
         await self.keychain_proxy.delete_all_keys()
