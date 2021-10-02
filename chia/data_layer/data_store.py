@@ -122,12 +122,16 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            await self.db.execute("CREATE TABLE IF NOT EXISTS tables(id TEXT PRIMARY KEY, name STRING)")
-            await self.db.execute("CREATE TABLE IF NOT EXISTS keys_values(key TEXT PRIMARY KEY, value BLOB)")
+            await self.db.execute(
+                "CREATE TABLE IF NOT EXISTS tables(id TEXT PRIMARY KEY NOT NULL, name STRING NOT NULL)"
+            )
+            await self.db.execute(
+                "CREATE TABLE IF NOT EXISTS keys_values(key TEXT PRIMARY KEY NOT NULL, value BLOB NOT NULL)"
+            )
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS table_values("
-                "table_id TEXT,"
-                " key STRING,"
+                "table_id TEXT NOT NULL,"
+                " key STRING NOT NULL,"
                 " PRIMARY KEY(table_id, key),"
                 " FOREIGN KEY(table_id) REFERENCES tables(id),"
                 " FOREIGN KEY(key) REFERENCES keys_values(key)"
@@ -135,19 +139,19 @@ class DataStore:
             )
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS commits("
-                "id TEXT PRIMARY KEY,"
-                " table_id TEXT,"
-                " state INTEGER,"
+                "id TEXT PRIMARY KEY NOT NULL,"
+                " table_id TEXT NOT NULL,"
+                " state INTEGER NOT NULL,"
                 " FOREIGN KEY(table_id) REFERENCES tables(id)"
                 ")"
             )
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS actions("
-                "commit_id TEXT,"
-                " idx INTEGER,"
-                " operation INTEGER,"
-                " key TEXT,"
-                " table_id TEXT,"
+                "commit_id TEXT NOT NULL,"
+                " idx INTEGER NOT NULL,"
+                " operation INTEGER NOT NULL,"
+                " key TEXT NOT NULL,"
+                " table_id TEXT NOT NULL,"
                 " PRIMARY KEY(commit_id, idx),"
                 " FOREIGN KEY(table_id) REFERENCES tables(id)"
                 ")"
