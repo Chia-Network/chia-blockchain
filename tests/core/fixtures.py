@@ -10,6 +10,7 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir
@@ -29,7 +30,8 @@ async def create_blockchain(constants: ConsensusConstants):
     wrapper = DBWrapper(connection)
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)
-    bc1 = await Blockchain.create(coin_store, store, constants)
+    hint_store = await HintStore.create(wrapper)
+    bc1 = await Blockchain.create(coin_store, store, constants, hint_store)
     assert bc1.get_peak() is None
     return bc1, connection, db_path
 
