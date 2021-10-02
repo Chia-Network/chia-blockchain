@@ -211,29 +211,48 @@ class TestWalletRpc:
             transactions = await client.get_transactions("1")
             assert len(transactions) > 1
 
-            # TODO: make this "get all transactions" feature test be not garbage.
-            #       for example, taking 14 seconds is a bit attrocious.
-            total = 50
-            # create wins so we have some coins to spend all at once...
-            for _ in range(total // 2):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-                new_balance += calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
+            # TODO: still a mess here, but let's see if it works in CI now
+            import time
+            start_time = time.monotonic()
+            ph_x = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            # 110 is more than the hard coded limit which is 50 as of the writing of this
+            amounts = [500 + i for i in range(110)]
 
-            for _ in range(5):
-                # just lets things settle or something
+            # break our coin up so we have enough for all the transactions we want to create
+            x = await client.send_transaction_multi(
+                wallet_id="1", additions=[{"amount": amount, "puzzle_hash": ph_x} for amount in amounts]
+            )
+            assert set(amounts).issubset(addition.amount for addition in x.additions)
+
+            async def y():
+                z = await client.get_transaction(wallet_id="1", transaction_id=x.name)
+                return z.confirmed
+
+            # process the transaction
+            for _ in range(2):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            await time_out_assert(5, eventual_balance, new_balance)
+            await time_out_assert(timeout=10, function=y, value=True)
+            z = await client.get_transaction(wallet_id="1", transaction_id=x.name)
+            additions = {addition.amount: addition for addition in z.additions}
+            assert set(amounts).issubset(additions.keys())
 
-            for _ in range(total):
-                await client.send_transaction(wallet_id="1", amount=1, address=addr)
+            transactions = await client.get_transactions(wallet_id="1")
+
+            for amount in amounts:
+                await client.send_transaction_multi(
+                    wallet_id="1",
+                    additions=[{"amount": amount, "puzzle_hash": ph_x}],
+                    coins=[additions[amount]],
+                )
 
             all_transactions = await client.get_transactions(wallet_id="1", all=True)
-            assert len(all_transactions) == len(transactions) + 2 * total  # 2* for wins+transactions
+            assert len(all_transactions) == len(transactions) + len(amounts)
             await client.delete_unconfirmed_transactions("1")
-            for _ in range(3):
-                # just lets things settle or something
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            end_time = time.monotonic()
+            delta_time = end_time - start_time
+            print(f'---- took {delta_time}')
 
             pks = await client.get_public_keys()
             assert len(pks) == 1
