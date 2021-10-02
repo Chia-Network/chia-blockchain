@@ -12,15 +12,19 @@ from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from time import sleep
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
+CURRENT_KEY_VERSION = "1.8"
+DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
+DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
 )  # noqa: E501
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
+MIN_PASSPHRASE_LEN = 8
 
 
 class KeyringIsLocked(Exception):
@@ -31,7 +35,7 @@ class KeyringRequiresMigration(Exception):
     pass
 
 
-class KeyringCurrentPassphaseIsInvalid(Exception):
+class KeyringCurrentPassphraseIsInvalid(Exception):
     pass
 
 
@@ -45,6 +49,20 @@ def supports_keyring_passphrase() -> bool:
     # from sys import platform
 
     # return platform == "linux"
+
+
+def supports_os_passphrase_storage() -> bool:
+    return sys.platform in ["darwin"]
+
+
+def passphrase_requirements() -> Dict[str, Any]:
+    """
+    Returns a dictionary specifying current passphrase requirements
+    """
+    if not supports_keyring_passphrase:
+        return {}
+
+    return {"is_optional": True, "min_length": MIN_PASSPHRASE_LEN}  # lgtm [py/clear-text-logging-sensitive-data]
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:
@@ -192,6 +210,21 @@ def mnemonic_to_seed(mnemonic: str, passphrase: str) -> bytes:
     return seed
 
 
+def default_keychain_user() -> str:
+    return DEFAULT_USER
+
+
+def default_keychain_service() -> str:
+    return DEFAULT_SERVICE
+
+
+def get_private_key_user(user: str, index: int) -> str:
+    """
+    Returns the keychain user string for a key index.
+    """
+    return f"wallet-{user}-{index}"
+
+
 class Keychain:
     """
     The keychain stores two types of keys: private keys, which are PrivateKeys from blspy,
@@ -203,23 +236,10 @@ class Keychain:
     list of all keys.
     """
 
-    testing: bool
-    keyring_wrapper: KeyringWrapper
-    user: str
-
-    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
-        self.user = user
-        self.testing = testing
+    def __init__(self, user: Optional[str] = None, service: Optional[str] = None):
+        self.user = user if user is not None else default_keychain_user()
+        self.service = service if service is not None else default_keychain_service()
         self.keyring_wrapper = KeyringWrapper.get_shared_instance()
-
-    def _get_service(self) -> str:
-        """
-        The keychain stores keys under a different name for tests.
-        """
-        if self.testing:
-            return f"chia-{self.user}-test"
-        else:
-            return f"chia-{self.user}"
 
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
@@ -228,7 +248,7 @@ class Keychain:
         include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        read_str = self.keyring_wrapper.get_passphrase(self._get_service(), user)
+        read_str = self.keyring_wrapper.get_passphrase(self.service, user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
@@ -237,22 +257,13 @@ class Keychain:
             str_bytes[G1Element.SIZE :],  # flake8: noqa
         )
 
-    def _get_private_key_user(self, index: int) -> str:
-        """
-        Returns the keychain user string for a key index.
-        """
-        if self.testing:
-            return f"wallet-{self.user}-test-{index}"
-        else:
-            return f"wallet-{self.user}-{index}"
-
     def _get_free_private_key_index(self) -> int:
         """
         Get the index of the first free spot in the keychain.
         """
         index = 0
         while True:
-            pk = self._get_private_key_user(index)
+            pk = get_private_key_user(self.user, index)
             pkent = self._get_pk_and_entropy(pk)
             if pkent is None:
                 return index
@@ -276,8 +287,8 @@ class Keychain:
             return key
 
         self.keyring_wrapper.set_passphrase(
-            self._get_service(),
-            self._get_private_key_user(index),
+            self.service,
+            get_private_key_user(self.user, index),
             bytes(key.get_g1()).hex() + entropy.hex(),
         )
         return key
@@ -287,7 +298,7 @@ class Keychain:
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
         index = 0
-        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
@@ -298,7 +309,7 @@ class Keychain:
                     if key.get_g1() == pk:
                         return (key, ent)
             index += 1
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return None
 
     def get_private_key_by_fingerprint(
@@ -308,7 +319,7 @@ class Keychain:
         Return first private key which have the given public key fingerprint.
         """
         index = 0
-        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
@@ -319,7 +330,7 @@ class Keychain:
                     if pk.get_fingerprint() == fingerprint:
                         return (key, ent)
             index += 1
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return None
 
     def get_all_private_keys(self, passphrases: List[str] = [""]) -> List[Tuple[PrivateKey, bytes]]:
@@ -330,7 +341,7 @@ class Keychain:
         all_keys: List[Tuple[PrivateKey, bytes]] = []
 
         index = 0
-        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
@@ -341,7 +352,7 @@ class Keychain:
                     if key.get_g1() == pk:
                         all_keys.append((key, ent))
             index += 1
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return all_keys
 
     def get_all_public_keys(self) -> List[G1Element]:
@@ -351,13 +362,13 @@ class Keychain:
         all_keys: List[Tuple[G1Element, bytes]] = []
 
         index = 0
-        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
                 all_keys.append(pk)
             index += 1
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return all_keys
 
     def get_first_public_key(self) -> Optional[G1Element]:
@@ -365,13 +376,13 @@ class Keychain:
         Returns the first public key.
         """
         index = 0
-        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
                 return pk
             index += 1
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return None
 
     def delete_key_by_fingerprint(self, fingerprint: int):
@@ -380,14 +391,14 @@ class Keychain:
         """
 
         index = 0
-        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
+                    self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
             index += 1
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
 
     def delete_all_keys(self):
         """
@@ -399,8 +410,8 @@ class Keychain:
         pkent = None
         while True:
             try:
-                pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
+                pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -416,9 +427,9 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(
-                    self._get_private_key_user(index)
+                    get_private_key_user(self.user, index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                self.keyring_wrapper.delete_passphrase(self._get_service(), self._get_private_key_user(index))
+                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -451,6 +462,56 @@ class Keychain:
         format for passphrase support.
         """
         return KeyringWrapper.get_shared_instance().using_legacy_keyring()
+
+    @staticmethod
+    def handle_migration_completed():
+        """
+        When migration completes outside of the current process, we rely on a notification to inform
+        the current process that it needs to reset/refresh its keyring. This allows us to stop using
+        the legacy keyring in an already-running daemon if migration is completed using the CLI.
+        """
+        KeyringWrapper.get_shared_instance().refresh_keyrings()
+
+    @staticmethod
+    def migrate_legacy_keyring(passphrase: Optional[str] = None, cleanup_legacy_keyring: bool = False) -> None:
+        """
+        Begins legacy keyring migration in a non-interactive manner
+        """
+        if passphrase is not None and passphrase != "":
+            KeyringWrapper.get_shared_instance().set_master_passphrase(
+                current_passphrase=None, new_passphrase=passphrase, write_to_keyring=False, allow_migration=False
+            )
+
+        KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
+
+    @staticmethod
+    def passphrase_is_optional() -> bool:
+        """
+        Returns whether a user-supplied passphrase is optional, as specified by the passphrase requirements.
+        """
+        return passphrase_requirements().get("is_optional", False)
+
+    @staticmethod
+    def minimum_passphrase_length() -> int:
+        """
+        Returns the minimum passphrase length, as specified by the passphrase requirements.
+        """
+        return passphrase_requirements().get("min_length", 0)
+
+    @staticmethod
+    def passphrase_meets_requirements(passphrase: Optional[str]) -> bool:
+        """
+        Returns whether the provided passphrase satisfies the passphrase requirements.
+        """
+        # Passphrase is not required and None was provided
+        if (passphrase is None or passphrase == "") and Keychain.passphrase_is_optional():
+            return True
+
+        # Passphrase meets the minimum length requirement
+        if passphrase is not None and len(passphrase) >= Keychain.minimum_passphrase_length():
+            return True
+
+        return False
 
     @staticmethod
     def has_master_passphrase() -> bool:
@@ -493,14 +554,18 @@ class Keychain:
 
     @staticmethod
     def set_master_passphrase(
-        current_passphrase: Optional[str], new_passphrase: str, allow_migration: bool = True
+        current_passphrase: Optional[str],
+        new_passphrase: str,
+        *,
+        allow_migration: bool = True,
+        save_passphrase: bool = False,
     ) -> None:
         """
         Encrypts the keyring contents to new passphrase, provided that the current
         passphrase can decrypt the contents
         """
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            current_passphrase, new_passphrase, allow_migration=allow_migration
+            current_passphrase, new_passphrase, allow_migration=allow_migration, save_passphrase=save_passphrase
         )
 
     @staticmethod

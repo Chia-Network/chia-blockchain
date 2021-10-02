@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import shutil
+import ssl
 import sys
 import tempfile
 import time
@@ -31,12 +32,12 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_puzzlehash_for_pk, create_farmer_coin, create_pool_coin
+from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
@@ -48,10 +49,12 @@ from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.util import PlotInfo, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
 from chia.plotting.manager import PlotManager
+from chia.server.server import ssl_context_for_server
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -63,16 +66,14 @@ from chia.types.blockchain_format.slots import (
 )
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.types.name_puzzle_condition import NPC
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
+from chia.util.condition_tools import ConditionOpcode
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -91,7 +92,6 @@ from chia.wallet.derive_keys import (
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
-        "RUST_CONDITION_CHECKER": 0,
         "MIN_PLOT_SIZE": 18,
         "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
         "DIFFICULTY_STARTING": 2 ** 12,
@@ -161,7 +161,7 @@ class BlockTools:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
         else:
             self.keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, user="testing-1.8.0", testing=True
+                self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
 
         await self.keychain_proxy.delete_all_keys()
@@ -249,7 +249,7 @@ class BlockTools:
             sys.exit(1)
 
         refresh_done = False
-        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(120, 2, 10)
+        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
 
         def test_callback(update_result: PlotRefreshResult):
             if update_result.remaining_files == 0:
@@ -283,6 +283,13 @@ class BlockTools:
     @property
     def config(self) -> Dict:
         return copy.deepcopy(self._config)
+
+    def get_daemon_ssl_context(self) -> Optional[ssl.SSLContext]:
+        crt_path = self.root_path / self.config["daemon_ssl"]["private_crt"]
+        key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
+        ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
+        ca_key_path = self.root_path / self.config["private_ssl_ca"]["key"]
+        return ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
 
     def get_plot_signature(self, m: bytes32, plot_pk: G1Element) -> G2Element:
         """
@@ -1462,43 +1469,26 @@ def get_full_block_and_block_record(
     return full_block, block_record
 
 
-def get_name_puzzle_conditions_test(generator: BlockGenerator, max_cost: int) -> NPCResult:
-    """
-    This is similar to get_name_puzzle_conditions(), but it doesn't validate
-    the conditions. We rely on this in tests to create invalid blocks.
-    safe_mode is implicitly True in this call
-    """
+def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(max_cost, block_program, block_program_args)
-
-        npc_list: List[NPC] = []
+        clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(INFINITE_COST, block_program, block_program_args)
+        size_cost = len(bytes(generator.program)) * cost_per_byte
+        condition_cost = 0
 
         for res in result.first().as_iter():
-            conditions_list: List[ConditionWithArgs] = []
-
-            spent_coin_parent_id: bytes32 = res.first().as_atom()
-            res = res.rest()
-            spent_coin_puzzle_hash: bytes32 = res.first().as_atom()
-            res = res.rest()
-            spent_coin_amount: uint64 = uint64(res.first().as_int())
-            res = res.rest()
-            spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
-
+            res = res.rest()  # skip parent coind id
+            res = res.rest()  # skip puzzle hash
+            res = res.rest()  # skip amount
             for cond in res.first().as_iter():
                 condition = cond.first().as_atom()
-                cvl = ConditionWithArgs(ConditionOpcode(condition), cond.rest().as_atom_list())
-                conditions_list.append(cvl)
-
-            conditions_dict = conditions_by_opcode(conditions_list)
-            if conditions_dict is None:
-                conditions_dict = {}
-            npc_list.append(
-                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()])
-            )
-        return NPCResult(None, npc_list, uint64(clvm_cost))
+                if condition in [ConditionOpcode.AGG_SIG_UNSAFE, ConditionOpcode.AGG_SIG_ME]:
+                    condition_cost += ConditionCost.AGG_SIG.value
+                elif condition == ConditionOpcode.CREATE_COIN:
+                    condition_cost += ConditionCost.CREATE_COIN.value
+        return None, uint64(clvm_cost + size_cost + condition_cost)
     except Exception:
-        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
+        return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
 
 
 def create_test_foliage(
@@ -1592,8 +1582,8 @@ def create_test_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list()
-            result: NPCResult = get_name_puzzle_conditions_test(block_generator, constants.MAX_BLOCK_COST_CLVM)
-            cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
+            err, cost = compute_cost_test(block_generator, constants.COST_PER_BYTE)
+            assert err is None
 
             removal_amount = 0
             addition_amount = 0

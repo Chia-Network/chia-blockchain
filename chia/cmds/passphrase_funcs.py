@@ -1,13 +1,16 @@
+import click
 import sys
 
-from chia.util.keychain import Keychain, obtain_current_passphrase
+from chia.daemon.client import acquire_connection_to_daemon
+from chia.util.keychain import Keychain, obtain_current_passphrase, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.misc import prompt_yes_no
+from chia.util.ws_message import WsRpcMessage
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Optional, Tuple
 
-MIN_PASSPHRASE_LEN = 8
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
 PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
 
@@ -27,44 +30,69 @@ def verify_passphrase_meets_requirements(
     new_passphrase: str, confirmation_passphrase: str
 ) -> Tuple[bool, Optional[str]]:
     match = new_passphrase == confirmation_passphrase
-    meets_len_requirement = len(new_passphrase) >= MIN_PASSPHRASE_LEN
+    min_length = Keychain.minimum_passphrase_length()
+    meets_len_requirement = len(new_passphrase) >= min_length
 
     if match and meets_len_requirement:
         return True, None
     elif not match:
         return False, "Passphrases do not match"
     elif not meets_len_requirement:
-        return False, f"Minimum passphrase length is {MIN_PASSPHRASE_LEN}"
+        return False, f"Minimum passphrase length is {min_length}"
     else:
         raise Exception("Unexpected passphrase verification case")
 
 
-def tidy_passphrase(passphrase: str) -> str:
-    """
-    Perform any string processing we want to apply to the entered passphrase.
-    Currently we strip leading/trailing whitespace.
-    """
-    return passphrase.strip()
+def prompt_to_save_passphrase() -> bool:
+    save: bool = False
+
+    try:
+        if supports_os_passphrase_storage():
+            location: Optional[str] = None
+
+            if sys.platform == "darwin":
+                location = "macOS Keychain"
+
+            if location is None:
+                raise ValueError("OS-specific credential store not specified")
+
+            print(
+                "\n"
+                "Your passphrase can be stored in your system's secure credential store. "
+                "Other Chia processes will be able to access your keys without prompting for your passphrase."
+            )
+            save = prompt_yes_no(f"Would you like to save your passphrase to the {location} (y/n) ")
+
+    except Exception as e:
+        print(f"Caught exception: {e}")
+        return False
+
+    return save
 
 
-def prompt_for_new_passphrase() -> str:
-    if MIN_PASSPHRASE_LEN > 0:
-        n = MIN_PASSPHRASE_LEN
+def prompt_for_new_passphrase() -> Tuple[str, bool]:
+    min_length: int = Keychain.minimum_passphrase_length()
+    if min_length > 0:
+        n = min_length
         print(f"\nPassphrases must be {n} or more characters in length")  # lgtm [py/clear-text-logging-sensitive-data]
     while True:
-        passphrase = tidy_passphrase(getpass("New Passphrase: "))
-        confirmation = tidy_passphrase(getpass("Confirm Passphrase: "))
+        passphrase: str = getpass("New Passphrase: ")
+        confirmation: str = getpass("Confirm Passphrase: ")
+        save_passphrase: bool = False
 
         valid_passphrase, error_msg = verify_passphrase_meets_requirements(passphrase, confirmation)
 
         if valid_passphrase:
-            return passphrase
+            if supports_os_passphrase_storage():
+                save_passphrase = prompt_to_save_passphrase()
+
+            return passphrase, save_passphrase
         elif error_msg:
             print(f"{error_msg}\n")  # lgtm [py/clear-text-logging-sensitive-data]
 
 
 def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
-    passphrase = tidy_passphrase(passphrase_file.read())
+    passphrase = passphrase_file.read()
     passphrase_file.close()
     return passphrase
 
@@ -78,14 +106,18 @@ def initialize_passphrase() -> None:
     # We'll rely on Keyring initialization to leverage the cached passphrase for
     # bootstrapping the keyring encryption process
     print("Setting keyring passphrase")
-    passphrase = None
+    passphrase: Optional[str] = None
+    # save_passphrase indicates whether the passphrase should be saved in the
+    # macOS Keychain or Windows Credential Manager
+    save_passphrase: bool = False
+
     if Keychain.has_cached_passphrase():
         passphrase = Keychain.get_cached_master_passphrase()
 
     if not passphrase or passphrase == default_passphrase():
-        passphrase = prompt_for_new_passphrase()
+        passphrase, save_passphrase = prompt_for_new_passphrase()
 
-    Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase)
+    Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase, save_passphrase=save_passphrase)
 
 
 def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str]) -> bool:
@@ -102,17 +134,21 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
                 print(f"Unable to confirm current passphrase: {e}")
                 sys.exit(1)
 
-    success = False
-    new_passphrase = passphrase
+    success: bool = False
+    new_passphrase: Optional[str] = passphrase
+    save_passphrase: bool = False
+
     try:
         # Prompt for the new passphrase, if necessary
-        if not new_passphrase:
-            new_passphrase = prompt_for_new_passphrase()
+        if new_passphrase is None:
+            new_passphrase, save_passphrase = prompt_for_new_passphrase()
 
         if new_passphrase == current_passphrase:
             raise ValueError("passphrase is unchanged")
 
-        Keychain.set_master_passphrase(current_passphrase=current_passphrase, new_passphrase=new_passphrase)
+        Keychain.set_master_passphrase(
+            current_passphrase=current_passphrase, new_passphrase=new_passphrase, save_passphrase=save_passphrase
+        )
         success = True
     except Exception as e:
         print(f"Unable to set or update passphrase: {e}")
@@ -187,25 +223,45 @@ def using_default_passphrase() -> bool:
 
 
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
-    from chia.daemon.client import connect_to_daemon_and_validate
-
+    """
+    Attempt to connect to the daemon and update the cached passphrase
+    """
     new_passphrase = Keychain.get_cached_master_passphrase()
     assert new_passphrase is not None
 
-    daemon = None
     try:
-        daemon = await connect_to_daemon_and_validate(root_path, quiet=True)
-        if daemon:
-            response = await daemon.unlock_keyring(new_passphrase)
+        async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+            if daemon is not None:
+                response = await daemon.unlock_keyring(new_passphrase)
+                if response is None:
+                    raise Exception("daemon didn't respond")
 
-            if not response:
-                raise Exception("daemon didn't respond")
-
-            if response["data"].get("success", False) is False:
-                error = response["data"].get("error", "unknown error")
-                raise Exception(error)
+                success: bool = response.get("data", {}).get("success", False)
+                if success is False:
+                    error = response.get("data", {}).get("error", "unknown error")
+                    raise Exception(error)
     except Exception as e:
         print(f"Failed to notify daemon of updated keyring passphrase: {e}")
 
-    if daemon:
-        await daemon.close()
+
+async def async_update_daemon_migration_completed_if_running() -> None:
+    """
+    Attempt to connect to the daemon to notify that keyring migration has completed.
+    This allows the daemon to refresh its keyring so that it can stop using the
+    legacy keyring.
+    """
+    ctx: click.Context = click.get_current_context()
+    root_path: Path = ctx.obj["root_path"]
+
+    if root_path is None:
+        print("Missing root_path in context. Unable to notify daemon")
+        return None
+
+    async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+        if daemon is not None:
+            passphrase: str = Keychain.get_cached_master_passphrase()
+
+            print("Updating daemon... ", end="")
+            response: WsRpcMessage = await daemon.notify_keyring_migration_completed(passphrase)
+            success: bool = response.get("data", {}).get("success", False)
+            print("succeeded" if success is True else "failed")
