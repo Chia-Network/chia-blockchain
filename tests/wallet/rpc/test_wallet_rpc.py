@@ -211,29 +211,35 @@ class TestWalletRpc:
             transactions = await client.get_transactions("1")
             assert len(transactions) > 1
 
-            # TODO: still a mess here, but let's see if it works in CI now
-            import time
-            start_time = time.monotonic()
-            ph_x = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            a_wallet_one_puzzle_hash = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
             # 110 is more than the hard coded limit which is 50 as of the writing of this
             amounts = [500 + i for i in range(110)]
 
             # break our coin up so we have enough for all the transactions we want to create
-            x = await client.send_transaction_multi(
-                wallet_id="1", additions=[{"amount": amount, "puzzle_hash": ph_x} for amount in amounts]
+            initial_breakup_transaction_result = await client.send_transaction_multi(
+                wallet_id="1",
+                additions=[{"amount": amount, "puzzle_hash": a_wallet_one_puzzle_hash} for amount in amounts],
             )
-            assert set(amounts).issubset(addition.amount for addition in x.additions)
+            assert set(amounts).issubset(addition.amount for addition in initial_breakup_transaction_result.additions)
 
-            async def y():
-                z = await client.get_transaction(wallet_id="1", transaction_id=x.name)
-                return z.confirmed
+            async def breakup_transaction_confirmed(transaction_name):
+                maybe_confirmed_breakup_transaction_result = await client.get_transaction(
+                    wallet_id="1",
+                    transaction_id=transaction_name,
+                )
+                return maybe_confirmed_breakup_transaction_result.confirmed
 
             # process the transaction
             for _ in range(2):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            await time_out_assert(timeout=10, function=y, value=True)
-            z = await client.get_transaction(wallet_id="1", transaction_id=x.name)
+            await time_out_assert(
+                timeout=10,
+                function=breakup_transaction_confirmed,
+                value=True,
+                transaction_name=initial_breakup_transaction_result.name,
+            )
+            z = await client.get_transaction(wallet_id="1", transaction_id=initial_breakup_transaction_result.name)
             additions = {addition.amount: addition for addition in z.additions}
             assert set(amounts).issubset(additions.keys())
 
@@ -242,17 +248,14 @@ class TestWalletRpc:
             for amount in amounts:
                 await client.send_transaction_multi(
                     wallet_id="1",
-                    additions=[{"amount": amount, "puzzle_hash": ph_x}],
+                    additions=[{"amount": amount, "puzzle_hash": a_wallet_one_puzzle_hash}],
                     coins=[additions[amount]],
                 )
 
             all_transactions = await client.get_transactions(wallet_id="1", all=True)
             assert len(all_transactions) == len(transactions) + len(amounts)
+            # test is complete, just throw out the transactions instead of waiting for them to process
             await client.delete_unconfirmed_transactions("1")
-
-            end_time = time.monotonic()
-            delta_time = end_time - start_time
-            print(f'---- took {delta_time}')
 
             pks = await client.get_public_keys()
             assert len(pks) == 1
