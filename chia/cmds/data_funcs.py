@@ -28,19 +28,19 @@ async def create_table_cmd(rpc_port: Optional[int], table_string: str, table_nam
     # TODO: nice cli error handling
 
     table_bytes = bytes32(hexstr_to_bytes(table_string))
-    res = True
     try:
         client, rpc_port = await get_client(rpc_port)
-        await client.create_table(table=table_bytes, name=table_name)
+        response = await client.create_table(table=table_bytes, name=table_name)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
-        res = False
+        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
-        res = False
+        return None
+
     client.close()
     await client.await_closed()
-    return res
+    return response
 
 
 async def get_row_cmd(rpc_port: Optional[int], table_string: str, row_hash_string: str) -> Optional[Dict]:
@@ -68,15 +68,16 @@ async def update_table_cmd(rpc_port: Optional[int], table_string: str, changelis
     # TODO: nice cli error handling
 
     table_bytes = bytes32(hexstr_to_bytes(table_string))
-    response = None
     try:
         client, rpc_port = await get_client(rpc_port)
         response = await client.update_table(table=table_bytes, changelist=changelist)
         print(json.dumps(response, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
+        return None
     except Exception as e:
         print(f"Exception from 'data': {e}")
+        return None
 
     client.close()
     await client.await_closed()
