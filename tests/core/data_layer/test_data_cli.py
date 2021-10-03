@@ -121,15 +121,15 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
     """Create a table, insert a row, get the row by its hash."""
 
     table = "0102030405060708091011121314151617181920212223242526272829303132"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": "0xffff8353594d8083616263"}]
-
+    row_data = "ffff8353594d8083616263"
     row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
+
+    changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
 
     chia_root.run(args=["data", "create_table", "--table_name", "test table", "--table", table])
     chia_root.run(args=["data", "update_table", "--table", table, "--changelist", json.dumps(changelist)])
     completed_process = chia_root.run(args=["data", "get_row", "--table", table, "--row_hash", row_hash])
-    # parsed = json.loads(completed_process.stdout)
-    print(completed_process)
-    # expected = {"row_data": changelist, "row_hash": row_hash, "success": True}
+    parsed = json.loads(completed_process.stdout)
+    expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
 
-    # assert parsed == expected
+    assert parsed == expected

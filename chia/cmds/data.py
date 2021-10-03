@@ -1,3 +1,4 @@
+import json
 from typing import Coroutine
 
 import click
@@ -28,6 +29,7 @@ def create_changelist_option():
     return click.option(
         "-d",
         "--changelist",
+        "changelist_string",
         help="str representing the changelist",
         type=str,
         required=True,
@@ -122,10 +124,12 @@ def get_row(
 @create_rpc_port_option()
 @create_changelist_option()
 def update_table(
-    changelist: str,
+    changelist_string: str,
     table_string: str,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import update_table_cmd
+
+    changelist = json.loads(changelist_string)
 
     run(update_table_cmd(rpc_port=data_rpc_port, table_string=table_string, changelist=changelist))
