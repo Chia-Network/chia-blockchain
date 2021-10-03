@@ -103,10 +103,15 @@ fi
 
 INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
+# Allow an override of venv directory.
+if [ -z "${VENV_DIR}" ] ; then
+    VENV_DIR=./venv
+fi
+
 echo "Python version is $INSTALL_PYTHON_VERSION"
-$INSTALL_PYTHON_PATH -m venv venv
-if [ ! -f "activate" ]; then
-	ln -s venv/bin/activate .
+$INSTALL_PYTHON_PATH -m venv "${VENV_DIR}"
+if [ ! -f "activate" ] ; then
+    ln -s "${VENV_DIR}/bin/activate" .
 fi
 
 # shellcheck disable=SC1091

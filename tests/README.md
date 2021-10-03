@@ -51,3 +51,22 @@ Set `install_timelord` to `False` to omit the step of installing a Time Lord for
 
 Set `job_timeout` to the number of minutes you want the CI system to wait before it kills your job.
 Add two or three minutes to allow for job setup.
+
+### Easy test runs in docker
+
+Run create-docker-test-image.py once to create "chia-test:latest" and a bunch of
+docker compose yaml files in tests/docker-compose (for example build-test-ubuntu-clvm.yml)
+that can be run like this:
+
+    PYVER=3_9 docker-compose -f ./tests/docker-compose/build-test-ubuntu-clvm.yml up
+    
+set ```CHIAPROFILE=true``` as well to run the test in profile mode dropping a "profile"
+file in your chia-blockchain directory.  It can be examined like
+
+    import pstats
+    p = pstats.Stats('profile')
+    p.strip_dirs()
+    p.sort_stats('cumtime')
+    p.print_stats(50)
+    
+( more info https://stackoverflow.com/questions/18830232/can-i-run-line-profiler-over-a-pytest-test )

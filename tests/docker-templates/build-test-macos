@@ -1,0 +1,13 @@
+version: "3.3"
+
+services:
+  pytest:
+    sysctls:
+      - "net.ipv6.conf.all.disable_ipv6=0"
+    image: chia-test
+    network_mode: bridge
+    environment:
+      - PYVER
+    volumes:
+      - CHIAHOME:/app
+    command: ["sudo", "bash", "-c", ". /py/venv${PYVER}/bin/activate ; if [ -z \"${CHIAPROFILE}\" ] ; then HOME=/home/chia pytest --durations 0 TEST_DIR ; else HOME=/home/chia python3 -m cProfile -o profile -m pytest --durations 0 TEST_DIR ; fi"]

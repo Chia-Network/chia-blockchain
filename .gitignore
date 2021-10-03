@@ -98,3 +98,7 @@ chia-blockchain-gui/src/locales/_build
 build_scripts\win_build
 build_scripts/win_build
 win_code_sign_cert.p12
+
+# Created by test generator
+tests/docker-compose
+docker-stage
