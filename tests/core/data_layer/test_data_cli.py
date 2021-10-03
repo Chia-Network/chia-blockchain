@@ -7,7 +7,7 @@ import subprocess
 import sys
 import sysconfig
 import time
-from typing import Any, IO, Iterator, List, Optional, Union, Dict
+from typing import Any, IO, Iterator, List, Optional, Union, Dict, TYPE_CHECKING
 
 import pytest
 
@@ -22,25 +22,34 @@ scripts_path = pathlib.Path(scripts_string)
 _FILE = Union[None, int, IO[Any]]
 
 
+if TYPE_CHECKING:
+    # these require Python 3.9 at runtime
+    os_PathLike_str = os.PathLike[str]
+    subprocess_CompletedProcess_str = subprocess.CompletedProcess[str]
+else:
+    os_PathLike_str = os.PathLike
+    subprocess_CompletedProcess_str = subprocess.CompletedProcess
+
+
 @dataclass
 class ChiaRoot:
     path: pathlib.Path
 
     def run(
         self,
-        args: List[Union[str, os.PathLike[str]]],
+        args: List[Union[str, os_PathLike_str]],
         *other_args: Any,
         check: bool = True,
         encoding: str = "utf-8",
         stdout: Optional[_FILE] = subprocess.PIPE,
         stderr: Optional[_FILE] = subprocess.PIPE,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess_CompletedProcess_str:
         # TODO: --root-path doesn't seem to work here...
         kwargs.setdefault("env", {})
         kwargs["env"]["CHIA_ROOT"] = os.fspath(self.path)
 
-        modified_args: List[Union[str, os.PathLike[str]]] = [
+        modified_args: List[Union[str, os_PathLike_str]] = [
             scripts_path.joinpath("chia"),
             "--root-path",
             self.path,
