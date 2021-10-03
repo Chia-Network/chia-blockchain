@@ -136,8 +136,8 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
     default=None,
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-n", "--get_new_address", help="Generate new public wallet address.", type=bool, default=False, is_flag=True, show_default=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-n", "--get_new_address", help="Generate new public wallet address.", type=bool, default=False, is_flag=True, show_default=True)
 
 def get_address_cmd(wallet_rpc_port: Optional[int], id, get_new_address: bool, fingerprint: int) -> None:
     extra_params = {"id": id, "get_new_address": get_new_address}
