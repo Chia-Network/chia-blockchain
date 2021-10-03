@@ -71,7 +71,7 @@ async def update_table_cmd(rpc_port: Optional[int], table_string: str, changelis
     response = None
     try:
         client, rpc_port = await get_client(rpc_port)
-        response = await client.updat_table(table=table_bytes, changelist=changelist)
+        response = await client.update_table(table=table_bytes, changelist=changelist)
         print(json.dumps(response, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
