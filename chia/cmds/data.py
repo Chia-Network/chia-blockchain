@@ -1,4 +1,18 @@
+from typing import Coroutine
+
 import click
+
+
+# TODO: this is more general and should be part of refactoring the overall CLI code duplication
+def run(coro: Coroutine):
+    import asyncio
+
+    response = asyncio.run(coro)
+
+    success = response is not None and response.get("success", False)
+
+    if not success:
+        raise click.ClickException(message=f"query unsuccessful, response: {response}")
 
 
 @click.group("data", short_help="Manage your data")
@@ -84,11 +98,9 @@ def create_table(
     table_name: str,
     data_rpc_port: int,
 ) -> None:
-    import asyncio
-
     from chia.cmds.data_funcs import create_table_cmd
 
-    asyncio.run(create_table_cmd(rpc_port=data_rpc_port, table_string=table_string, table_name=table_name))
+    run(create_table_cmd(rpc_port=data_rpc_port, table_string=table_string, table_name=table_name))
 
 
 @data_cmd.command("get_row", short_help="Get a data row by its hash")
@@ -100,11 +112,9 @@ def get_row(
     table_string: str,
     data_rpc_port: int,
 ) -> None:
-    import asyncio
-
     from chia.cmds.data_funcs import get_row_cmd
 
-    asyncio.run(get_row_cmd(rpc_port=data_rpc_port, table_string=table_string, row_hash_string=row_hash_string))
+    run(get_row_cmd(rpc_port=data_rpc_port, table_string=table_string, row_hash_string=row_hash_string))
 
 
 @data_cmd.command("update_table", short_help="Update a table.")
@@ -116,8 +126,6 @@ def update_table(
     table_string: str,
     data_rpc_port: int,
 ) -> None:
-    import asyncio
-
     from chia.cmds.data_funcs import update_table_cmd
 
-    asyncio.run(update_table_cmd(rpc_port=data_rpc_port, table_string=table_string, changelist=changelist))
+    run(update_table_cmd(rpc_port=data_rpc_port, table_string=table_string, changelist=changelist))
