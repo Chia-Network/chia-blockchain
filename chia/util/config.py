@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
@@ -22,7 +23,10 @@ def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> No
         mkdir(path.parent)
         with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
-        os.replace(str(tmp_path), str(path))
+        try:
+            os.replace(str(tmp_path), str(path))
+        except PermissionError:
+            shutil.move(str(tmp_path), str(path))
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
@@ -37,7 +41,10 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     tmp_path: Path = path.with_suffix("." + str(os.getpid()))
     with open(tmp_path, "w") as f:
         yaml.safe_dump(config_data, f)
-    os.replace(str(tmp_path), path)
+    try:
+        os.replace(str(tmp_path), path)
+    except PermissionError:
+        shutil.move(str(tmp_path), str(path))
 
 
 def load_config(
