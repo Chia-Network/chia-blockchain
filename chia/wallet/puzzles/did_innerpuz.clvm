@@ -1,34 +1,30 @@
-(mod (MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)
+; The DID innerpuzzle is designed to sit inside the singleton layer and provide functionality related to being an identity.
+; At the moment the two pieces of functionality are recovery and message creation.
+; A DID's ID is it's Singleton ID
+; Recovery is based around having a list of known other DIDs which can send messages approving you change the innerpuzzle of your DID singleton
+
+(mod
+  (
+  MY_PUBKEY  ; the public key of the owner used for signing transactions
+  RECOVERY_DID_LIST_HASH  ; the list of DIDs that can send messages to you for recovery we store only the hash so that we don't have to reveal every time we make a message spend
+  NUM_VERIFICATIONS_REQUIRED  ; how many of the above list are required for a recovery
+  Truths  ; Truths are sent from the singleton layer
+  mode  ; this indicates which spend mode we want. Create message, recover, or self-destruct
+  new_amount  ; DIDs can receive payments so when we recreate ourselves sometimes we want to change our amount
+  message  ; this is a list of messages when creating a message spend, or a new puzhash when recovering or self destructing
+  new_inner_puzhash  ; this is used during the message creation spend to optionally give ourselves a new inner puzzle - this is useful for updating our recovery list
+  parent_innerpuzhash_amounts_for_recovery_ids  ; during a recovery we need extra information about our recovery list coins
+  pubkey  ; this is the new pubkey used for a recovery
+  recovery_list_reveal  ; this is the reveal of the stored list of DIDs approved for recovery
+  )
   ;message is the new puzzle in the recovery and standard spend cases
 
   ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST_HASH are curried into the puzzle
   ;EXAMPLE SOLUTION (0xcafef00d 0x12341234 0x923bf9a7856b19d335a65f12d68957d497e1f0c16c0e14baf6d120e60753a1ce 2 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) () (0xfafafafa 0xfaf5faf5 200)) 0xfadeddab (0x22222222 0x33333333 0x44444444))
 
   (include condition_codes.clvm)
-
-  (defmacro and ARGS
-      (if ARGS
-          (qq (if (unquote (f ARGS))
-              (unquote (c and (r ARGS)))
-              ()
-          ))
-      1)
-  )
-
-  (defmacro not (ARGS)
-      (qq (if (unquote ARGS) 0 1))
-  )
-
-  (defun is-in-list (atom items)
-    ;; returns 1 iff `atom` is in the list of `items`
-    (if items
-      (if (= atom (f items))
-        1
-        (is-in-list atom (r items))
-      )
-      0
-    )
-  )
+  (include curry-and-treehash.clinc)
+  (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
@@ -38,77 +34,45 @@
       )
   )
 
-  ;; utility function used by `curry_args`
-  (defun fix_curry_args (items core)
-    (if items
-        (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
-        core
-    )
-  )
-
-  ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-  (defun curry_args (func list_of_args) (qq (a (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1))))))
-
-  ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
-  (defun curry (func . args) (curry_args func args))
-
-  ;; hash a tree with escape values representing already-hashed subtrees
-  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
-  ;; You probably actually want to use `curry_and_hash` though.
-  (defun sha256tree_esc_list
-         (TREE LITERALS)
-         (if (l TREE)
-             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
-             (if (is-in-list TREE LITERALS)
-                 TREE
-                 (sha256 1 TREE)
-             )
-         )
-  )
-
-  ;; hash a tree with escape values representing already-hashed subtrees
-  ;; This optimization can be useful if you know the tree hash of a sub-expression.
-  (defun sha256tree_esc
-     (TREE . LITERAL)
-     (sha256tree_esc_list TREE LITERAL)
-  )
-
-  ;recovery message module - gets values curried in to make the puzzle
-  ;TODO - this should probably be imported
+  ; recovery message module - gets values curried in to make the puzzle
   (defun make_message_puzzle (recovering_coin newpuz pubkey)
     (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG_UNSAFE) (unquote pubkey) (unquote newpuz)))))
   )
 
+  ; this function creates the assert announcement for each message coin approving a recovery
   (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
     (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
   )
 
-  ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
-    (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
-                    mod_hash
-                    mod_hash_hash
-                    inner_puzzle_hash)
+  ; this function calculates a coin ID given the inner puzzle and singleton information
+  (defun create_coin_ID_for_recovery (SINGLETON_STRUCT launcher_id parent innerpuzhash amount)
+    (sha256 parent (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c launcher_id (r (r SINGLETON_STRUCT)))) innerpuzhash) amount)
   )
 
-  (defun-inline create_coin_ID_for_recovery (mod_hash mod_hash_hash did parent innerpuzhash amount)
-    (sha256 parent (create_fullpuzhash mod_hash mod_hash_hash did innerpuzhash) amount)
-  )
 
-  (defmacro recreate_self (my_puzhash amount)
-    (qq (c CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) ()))))
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree1 SINGLETON_STRUCT)
+     )
   )
 
   (defmacro create_new_coin (amount new_puz)
     (qq (c CREATE_COIN (c (unquote new_puz) (c (unquote amount) ()))))
   )
 
-  (defun check_messages_from_identities (mod_hash mod_hash_hash num_verifications_required identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids pubkey num_verifications)
+  ; this loops over our identities to check list, and checks if we have been given parent information for this identity
+  ; the reason for this is because we might only require 3/5 of the IDs give approval messages for a recovery
+  ; if we have the information for an identity then we create a consume message using that information
+
+  (defun check_messages_from_identities (SINGLETON_STRUCT num_verifications_required identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids pubkey num_verifications)
     (if identities
       (if (f parent_innerpuzhash_amounts_for_recovery_ids)
+        ; if we have parent information then we should create a consume coin condition
         (check_messages_from_identities
-          mod_hash
-          mod_hash_hash
+          SINGLETON_STRUCT
           num_verifications_required
           (r identities)
           my_id
@@ -116,8 +80,7 @@
             (create_consume_message
               ; create coin_id from DID
               (create_coin_ID_for_recovery
-                mod_hash
-                mod_hash_hash
+                SINGLETON_STRUCT
                 (f identities)
                 (f (f parent_innerpuzhash_amounts_for_recovery_ids))
                 (f (r (f parent_innerpuzhash_amounts_for_recovery_ids)))
@@ -131,10 +94,9 @@
           pubkey
           (+ num_verifications 1)
         )
+        ; if no parent information found for this identity, move on to next in list
         (check_messages_from_identities
-          mod_hash
-          mod_hash_hash
-          num_verifications_required
+          SINGLETON_STRUCT
           (r identities)
           my_id
           output
@@ -149,35 +111,52 @@
         (c (list AGG_SIG_UNSAFE pubkey new_puz) output)
         (if (= num_verifications num_verifications_required)
           (c (list AGG_SIG_UNSAFE pubkey new_puz) output)
-          (x "not enough verifications")
+          (x)
         )
       )
     )
   )
 
+  ; for a list of messages in the format (type . message) create a message
+  ; type 0 is 0 value coin
+  ; type 1 is coin announcement
+  ; type 2 is puzzle announcement
+  (defun create_messages (messages)
+    (if messages
+      (c
+        (if (f (f messages))
+           (list (if (= (f (f messages)) 1) CREATE_COIN_ANNOUNCEMENT CREATE_PUZZLE_ANNOUNCEMENT) (r (f messages)))
+           (list CREATE_COIN (r (f messages)) 0)
+        )
+        (create_messages (r messages))
+      )
+      ()
+    )
+  )
+
   ;Spend modes:
-  ;0 = normal spend
-  ;1 = attest
-  ;2 (or anything else) = recovery
+  ;0 = exit spend
+  ;1 = create messages and recreate singleton
+  ;2 = recovery
 
   ;MAIN
 
   (if mode
     (if (= mode 1)
-      ; mode one - create message
-      (list (recreate_self my_puzhash amount) (list CREATE_COIN message 0) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list my_puzhash amount message))))
+      ; mode one - create messages and recreate singleton
+      (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message))) (create_messages message)))
     ; mode two - recovery
     ; check that recovery list is not empty
       (if recovery_list_reveal
         (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-          (check_messages_from_identities MOD_HASH (sha256tree1 MOD_HASH) NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
+          (check_messages_from_identities (singleton_struct_truth Truths) NUM_VERIFICATIONS_REQUIRED recovery_list_reveal (my_id_truth Truths) (list (create_new_coin new_amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
           (x)
         )
         (x)
       )
     )
-    ; mode zero - normal spend
-    (list (create_new_coin amount message) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list amount message))))
+    ; mode zero - exit spend
+    (list (list CREATE_COIN 0x00 -113) (list CREATE_COIN message new_amount) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_amount message))))
   )
 
 )

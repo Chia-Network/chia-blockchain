@@ -1,4 +1,5 @@
 import asyncio
+from chia.util.config import load_config, save_config
 import logging
 from pathlib import Path
 
@@ -11,11 +12,12 @@ from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32
+from chia.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -132,15 +134,16 @@ class TestWalletRpc:
 
             # Test basic transaction to one output
             signed_tx_amount = 888000
-            tx_res = await client.create_signed_transaction([{"amount": signed_tx_amount, "puzzle_hash": ph_3}])
+            tx_res: TransactionRecord = await client.create_signed_transaction(
+                [{"amount": signed_tx_amount, "puzzle_hash": ph_3}]
+            )
 
-            assert tx_res["success"]
-            assert tx_res["signed_tx"]["fee_amount"] == 0
-            assert tx_res["signed_tx"]["amount"] == signed_tx_amount
-            assert len(tx_res["signed_tx"]["additions"]) == 2  # The output and the change
-            assert any([addition["amount"] == signed_tx_amount for addition in tx_res["signed_tx"]["additions"]])
+            assert tx_res.fee_amount == 0
+            assert tx_res.amount == signed_tx_amount
+            assert len(tx_res.additions) == 2  # The output and the change
+            assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
 
-            push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
+            push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             assert (await client.get_wallet_balance("1"))[
                 "confirmed_wallet_balance"
@@ -154,9 +157,9 @@ class TestWalletRpc:
 
             # Test transaction to two outputs, from a specified coin, with a fee
             coin_to_spend = None
-            for addition in tx_res["signed_tx"]["additions"]:
-                if addition["amount"] != signed_tx_amount:
-                    coin_to_spend = Coin.from_json_dict(addition)
+            for addition in tx_res.additions:
+                if addition.amount != signed_tx_amount:
+                    coin_to_spend = addition
             assert coin_to_spend is not None
 
             tx_res = await client.create_signed_transaction(
@@ -164,27 +167,43 @@ class TestWalletRpc:
                 coins=[coin_to_spend],
                 fee=100,
             )
-            assert tx_res["success"]
-            assert tx_res["signed_tx"]["fee_amount"] == 100
-            assert tx_res["signed_tx"]["amount"] == 444 + 999
-            assert len(tx_res["signed_tx"]["additions"]) == 3  # The outputs and the change
-            assert any([addition["amount"] == 444 for addition in tx_res["signed_tx"]["additions"]])
-            assert any([addition["amount"] == 999 for addition in tx_res["signed_tx"]["additions"]])
-            assert (
-                sum([rem["amount"] for rem in tx_res["signed_tx"]["removals"]])
-                - sum([ad["amount"] for ad in tx_res["signed_tx"]["additions"]])
-                == 100
-            )
+            assert tx_res.fee_amount == 100
+            assert tx_res.amount == 444 + 999
+            assert len(tx_res.additions) == 3  # The outputs and the change
+            assert any([addition.amount == 444 for addition in tx_res.additions])
+            assert any([addition.amount == 999 for addition in tx_res.additions])
+            assert sum([rem.amount for rem in tx_res.removals]) - sum([ad.amount for ad in tx_res.additions]) == 100
 
-            push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
+            push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            await time_out_assert(
-                5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
+            new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
+            await time_out_assert(5, eventual_balance, new_balance)
+
+            send_tx_res: TransactionRecord = await client.send_transaction_multi(
+                "1", [{"amount": 555, "puzzle_hash": ph_4}, {"amount": 666, "puzzle_hash": ph_5}], fee=200
             )
+            assert send_tx_res is not None
+            assert send_tx_res.fee_amount == 200
+            assert send_tx_res.amount == 555 + 666
+            assert len(send_tx_res.additions) == 3  # The outputs and the change
+            assert any([addition.amount == 555 for addition in send_tx_res.additions])
+            assert any([addition.amount == 666 for addition in send_tx_res.additions])
+            assert (
+                sum([rem.amount for rem in send_tx_res.removals]) - sum([ad.amount for ad in send_tx_res.additions])
+                == 200
+            )
+
+            await asyncio.sleep(3)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            new_balance = new_balance - 555 - 666 - 200
+            await time_out_assert(5, eventual_balance, new_balance)
 
             address = await client.get_next_address("1", True)
             assert len(address) > 10
@@ -196,6 +215,17 @@ class TestWalletRpc:
             assert len(pks) == 1
 
             assert (await client.get_height_info()) > 0
+
+            created_tx = await client.send_transaction("1", tx_amount, addr)
+
+            async def tx_in_mempool_2():
+                tx = await client.get_transaction("1", created_tx.name)
+                return tx.is_in_mempool()
+
+            await time_out_assert(5, tx_in_mempool_2, True)
+            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
+            await client.delete_unconfirmed_transactions("1")
+            assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
             sk_dict = await client.get_private_key(pks[0])
             assert sk_dict["fingerprint"] == pks[0]
@@ -214,6 +244,36 @@ class TestWalletRpc:
             await client.log_in_and_skip(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
+
+            # Add in reward addresses into farmer and pool for testing delete key checks
+            # set farmer to first private key
+            sk = await wallet_node.get_key_for_fingerprint(pks[0])
+            test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+            test_config = load_config(wallet_node.root_path, "config.yaml")
+            test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+            # set pool to second private key
+            sk = await wallet_node.get_key_for_fingerprint(pks[1])
+            test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+            test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+            save_config(wallet_node.root_path, "config.yaml", test_config)
+
+            # Check first key
+            sk_dict = await client.check_delete_key(pks[0])
+            assert sk_dict["fingerprint"] == pks[0]
+            assert sk_dict["used_for_farmer_rewards"] is True
+            assert sk_dict["used_for_pool_rewards"] is False
+
+            # Check second key
+            sk_dict = await client.check_delete_key(pks[1])
+            assert sk_dict["fingerprint"] == pks[1]
+            assert sk_dict["used_for_farmer_rewards"] is False
+            assert sk_dict["used_for_pool_rewards"] is True
+
+            # Check unknown key
+            sk_dict = await client.check_delete_key(123456)
+            assert sk_dict["fingerprint"] == 123456
+            assert sk_dict["used_for_farmer_rewards"] is False
+            assert sk_dict["used_for_pool_rewards"] is False
 
             await client.delete_key(pks[0])
             await client.log_in_and_skip(pks[1])

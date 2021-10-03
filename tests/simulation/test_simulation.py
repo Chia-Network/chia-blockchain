@@ -1,11 +1,12 @@
 import pytest
 
 from chia.types.peer_info import PeerInfo
-from chia.util.block_tools import BlockTools
+from tests.block_tools import create_block_tools_async
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import self_hostname, setup_full_node, setup_full_system, test_constants
 from tests.time_out_assert import time_out_assert
+from tests.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
     **{
@@ -26,9 +27,10 @@ test_constants_modified = test_constants.replace(
 class TestSimulation:
     @pytest.fixture(scope="function")
     async def extra_node(self):
-        b_tools = BlockTools(constants=test_constants_modified)
-        async for _ in setup_full_node(test_constants_modified, "blockchain_test_3.db", 21240, b_tools):
-            yield _
+        with TempKeyring() as keychain:
+            b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
+            async for _ in setup_full_node(test_constants_modified, "blockchain_test_3.db", 21240, b_tools):
+                yield _
 
     @pytest.fixture(scope="function")
     async def simulation(self):

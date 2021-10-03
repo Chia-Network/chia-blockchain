@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import G1Element
+from blspy import G1Element, AugSchemeMPL, PrivateKey
 from chiapos import Verifier
 
 from chia.consensus.constants import ConsensusConstants
@@ -39,20 +39,26 @@ class ProofOfSpace(Streamable):
     ) -> Optional[bytes32]:
         # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
         if (self.pool_public_key is None) and (self.pool_contract_puzzle_hash is None):
+            log.error("Fail 1")
             return None
         if (self.pool_public_key is not None) and (self.pool_contract_puzzle_hash is not None):
+            log.error("Fail 2")
             return None
         if self.size < constants.MIN_PLOT_SIZE:
+            log.error("Fail 3")
             return None
         if self.size > constants.MAX_PLOT_SIZE:
+            log.error("Fail 4")
             return None
         plot_id: bytes32 = self.get_plot_id()
         new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
         if new_challenge != self.challenge:
+            log.error("New challenge is not challenge")
             return None
 
         if not ProofOfSpace.passes_plot_filter(constants, plot_id, original_challenge_hash, signage_point):
+            log.error("Fail 5")
             return None
 
         return self.get_quality_string(plot_id)
@@ -98,5 +104,15 @@ class ProofOfSpace(Streamable):
         return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
     @staticmethod
-    def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:
-        return local_pk + farmer_pk
+    def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
+        taproot_message: bytes = bytes(local_pk + farmer_pk) + bytes(local_pk) + bytes(farmer_pk)
+        taproot_hash: bytes32 = std_hash(taproot_message)
+        return AugSchemeMPL.key_gen(taproot_hash)
+
+    @staticmethod
+    def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element, include_taproot: bool = False) -> G1Element:
+        if include_taproot:
+            taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(local_pk, farmer_pk)
+            return local_pk + farmer_pk + taproot_sk.get_g1()
+        else:
+            return local_pk + farmer_pk

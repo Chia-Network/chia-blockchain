@@ -5,13 +5,14 @@ from unittest import TestCase
 
 from chia.full_node.bundle_tools import (
     bundle_suitable_for_compression,
-    compressed_coin_solution_entry_list,
+    compressed_coin_spend_entry_list,
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
     simple_solution_generator,
-    spend_bundle_to_serialized_coin_solution_entry_list,
+    spend_bundle_to_serialized_coin_spend_entry_list,
 )
 from chia.full_node.generator import run_generator, create_generator_args
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
 from chia.types.spend_bundle import SpendBundle
@@ -31,10 +32,10 @@ TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_r
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
 
 DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clvm", package_or_requirement="chia.wallet.puzzles")
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
 )
 DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
 TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -61,7 +62,7 @@ def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: Spe
     """
     Decompress a transaction by referencing bytes from multiple input generator references
     """
-    compressed_cse_list = compressed_coin_solution_entry_list(spend_bundle)
+    compressed_cse_list = compressed_coin_spend_entry_list(spend_bundle)
     program = TEST_MULTIPLE.curry(
         DECOMPRESS_PUZZLE,
         DECOMPRESS_CSE_WITH_PREFIX,
@@ -80,14 +81,14 @@ def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: Spe
     return BlockGenerator(program, generator_args)
 
 
-def spend_bundle_to_coin_solution_entry_list(bundle: SpendBundle) -> List[Any]:
+def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
     r = []
-    for coin_solution in bundle.coin_solutions:
+    for coin_spend in bundle.coin_spends:
         entry = [
-            coin_solution.coin.parent_coin_info,
-            sexp_from_stream(io.BytesIO(bytes(coin_solution.puzzle_reveal)), SExp.to),
-            coin_solution.coin.amount,
-            sexp_from_stream(io.BytesIO(bytes(coin_solution.solution)), SExp.to),
+            coin_spend.coin.parent_coin_info,
+            sexp_from_stream(io.BytesIO(bytes(coin_spend.puzzle_reveal)), SExp.to),
+            coin_spend.coin.amount,
+            sexp_from_stream(io.BytesIO(bytes(coin_spend.solution)), SExp.to),
         ]
         r.append(entry)
     return r
@@ -136,11 +137,28 @@ class TestCompression(TestCase):
         assert result_s is not None
         assert result_c == result_s
 
-    def test_spend_byndle_coin_solution(self):
+    def test_get_removals_for_single_coin(self):
+        sb: SpendBundle = make_spend_bundle(1)
+        start, end = match_standard_transaction_at_any_index(original_generator)
+        ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
+        c = compressed_spend_bundle_solution(ca, sb)
+        removal = sb.coin_spends[0].coin.name()
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(c, removal, INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
+        # Test non compressed generator as well
+        s = simple_solution_generator(sb)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal, INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
+
+    def test_spend_byndle_coin_spend(self):
         for i in range(0, 10):
             sb: SpendBundle = make_spend_bundle(i)
-            cs1 = SExp.to(spend_bundle_to_coin_solution_entry_list(sb)).as_bin()
-            cs2 = spend_bundle_to_serialized_coin_solution_entry_list(sb)
+            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()
+            cs2 = spend_bundle_to_serialized_coin_spend_entry_list(sb)
             assert cs1 == cs2
 
 
@@ -180,7 +198,7 @@ class TestDecompression(TestCase):
     #    print(out)
 
     def test_decompress_cse(self):
-        """Decompress a single CSE / CoinSolutionEntry"""
+        """Decompress a single CSE / CoinSpendEntry"""
         cse0 = binutils.assemble(
             "((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ())))"
         )  # noqa
@@ -232,7 +250,7 @@ class TestDecompression(TestCase):
         start = 2 + 44
         end = start + 238
 
-        # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
+        # (mod (decompress_puzzle decompress_coin_spend_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
         cost, out = DECOMPRESS_BLOCK.run_with_cost(
             INFINITE_COST,
@@ -274,7 +292,7 @@ class TestDecompression(TestCase):
         start = 2 + 44
         end = start + 238
 
-        # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
+        # (mod (decompress_puzzle decompress_coin_spend_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
         p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
         cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, [bytes(original_generator)]])

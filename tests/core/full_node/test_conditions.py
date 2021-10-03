@@ -3,10 +3,11 @@ These are quick-to-run test that check spends can be added to the blockchain whe
 or that they're failing for the right reason when they're invalid.
 """
 
+import atexit
 import logging
 import time
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pytest
 
@@ -18,17 +19,27 @@ from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_record import CoinRecord
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
-from chia.util.block_tools import BlockTools, test_constants
 from chia.util.errors import Err
+from chia.util.ints import uint32
+from tests.block_tools import create_block_tools, test_constants
+from tests.util.keyring import TempKeyring
 
 from .ram_db import create_ram_blockchain
 
 
-bt = BlockTools(constants=test_constants)
+def cleanup_keyring(keyring: TempKeyring):
+    keyring.cleanup()
+
+
+temp_keyring = TempKeyring()
+keychain = temp_keyring.get_keychain()
+atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
+bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
 log = logging.getLogger(__name__)
@@ -56,7 +67,7 @@ async def check_spend_bundle_validity(
     blocks: List[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
-):
+) -> Tuple[List[CoinRecord], List[CoinRecord]]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
@@ -65,7 +76,7 @@ async def check_spend_bundle_validity(
     try:
         connection, blockchain = await create_ram_blockchain(constants)
         for block in blocks:
-            received_block_result, err, fork_height = await blockchain.receive_block(block)
+            received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(block)
             assert err is None
 
         additional_blocks = bt.get_consecutive_blocks(
@@ -76,7 +87,14 @@ async def check_spend_bundle_validity(
         )
         newest_block = additional_blocks[-1]
 
-        received_block_result, err, fork_height = await blockchain.receive_block(newest_block)
+        received_block_result, err, fork_height, coin_changes = await blockchain.receive_block(newest_block)
+
+        if fork_height:
+            coins_added = await blockchain.coin_store.get_coins_added_at_height(uint32(fork_height + 1))
+            coins_removed = await blockchain.coin_store.get_coins_removed_at_height(uint32(fork_height + 1))
+        else:
+            coins_added = []
+            coins_removed = []
 
         if expected_err is None:
             assert err is None
@@ -86,6 +104,9 @@ async def check_spend_bundle_validity(
             assert err == expected_err
             assert received_block_result == ReceiveBlockResult.INVALID_BLOCK
             assert fork_height is None
+
+        return coins_added, coins_removed
+
     finally:
         # if we don't close the connection, the test process doesn't exit cleanly
         await connection.close()
@@ -100,8 +121,8 @@ async def check_conditions(
     blocks = initial_blocks()
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
 
-    coin_solution = CoinSolution(coin, EASY_PUZZLE, condition_solution)
-    spend_bundle = SpendBundle([coin_solution], G2Element())
+    coin_spend = CoinSpend(coin, EASY_PUZZLE, condition_solution)
+    spend_bundle = SpendBundle([coin_spend], G2Element())
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 

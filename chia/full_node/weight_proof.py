@@ -177,7 +177,7 @@ class WeightProofHandler:
                 min_height = ses_height - 1
                 break
         log.debug(f"start {min_height} end {tip_height}")
-        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
+        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0
         curr_height = tip_height
@@ -275,7 +275,7 @@ class WeightProofHandler:
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
         header_blocks = await self.blockchain.get_header_blocks_in_range(
-            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
+            start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS, tx_filter=False
         )
         curr: Optional[HeaderBlock] = header_blocks[se_start.header_hash]
         height = se_start.height
@@ -654,7 +654,7 @@ def _get_weights_for_sampling(
         q = 1 - delta ** u
         # todo check division and type conversions
         weight = q * float(total_weight)
-        weight_to_check.append(uint128(weight))
+        weight_to_check.append(uint128(int(weight)))
     weight_to_check.sort()
     return weight_to_check
 

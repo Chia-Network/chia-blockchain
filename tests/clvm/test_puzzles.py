@@ -5,7 +5,7 @@ from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.hash import std_hash
@@ -26,6 +26,7 @@ T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)
 
 MAX_BLOCK_COST_CLVM = int(1e18)
+COST_PER_BYTE = int(12000)
 
 
 def secret_exponent_for_index(index: int) -> int:
@@ -69,10 +70,10 @@ def do_test_spend(
     coin = coin_db.farm_coin(puzzle_hash, farm_time)
 
     # spend it
-    coin_solution = CoinSolution(coin, puzzle_reveal, solution)
+    coin_spend = CoinSpend(coin, puzzle_reveal, solution)
 
-    spend_bundle = SpendBundle([coin_solution], G2Element())
-    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM)
+    spend_bundle = SpendBundle([coin_spend], G2Element())
+    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
 
     # ensure all outputs are there
     for puzzle_hash, amount in payments:
@@ -84,10 +85,10 @@ def do_test_spend(
 
     # make sure we can actually sign the solution
     signatures = []
-    for coin_solution in spend_bundle.coin_solutions:
-        signature = key_lookup.signature_for_solution(coin_solution, bytes([2] * 32))
+    for coin_spend in spend_bundle.coin_spends:
+        signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)
-    return SpendBundle(spend_bundle.coin_solutions, AugSchemeMPL.aggregate(signatures))
+    return SpendBundle(spend_bundle.coin_spends, AugSchemeMPL.aggregate(signatures))
 
 
 def default_payments_and_conditions(

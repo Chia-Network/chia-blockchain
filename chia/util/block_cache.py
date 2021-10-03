@@ -74,7 +74,9 @@ class BlockCache(BlockchainInterface):
     def add_block_record(self, block: BlockRecord):
         self._block_records[block.header_hash] = block
 
-    async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
+    async def get_header_blocks_in_range(
+        self, start: int, stop: int, tx_filter: bool = True
+    ) -> Dict[bytes32, HeaderBlock]:
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(

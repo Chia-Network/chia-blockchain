@@ -123,7 +123,7 @@ class FullNodeSimulator(FullNodeAPI):
             block_count,
             farmer_reward_puzzle_hash=coinbase_ph,
             pool_reward_puzzle_hash=coinbase_ph,
-            block_list_input=current_blocks[:old_index],
+            block_list_input=current_blocks[: old_index + 1],
             force_overflow=True,
             guarantee_transaction_block=True,
             seed=32 * b"1",

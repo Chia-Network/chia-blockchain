@@ -7,7 +7,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, unlocks_keyring
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 keychain: Keychain = Keychain()
@@ -25,6 +25,7 @@ def generate_and_print():
     return mnemonic
 
 
+@unlocks_keyring(use_passphrase_cache=True)
 def generate_and_add():
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
@@ -35,11 +36,13 @@ def generate_and_add():
     add_private_key_seed(mnemonic)
 
 
+@unlocks_keyring(use_passphrase_cache=True)
 def query_and_add_private_key_seed():
     mnemonic = input("Enter the mnemonic you want to use: ")
     add_private_key_seed(mnemonic)
 
 
+@unlocks_keyring(use_passphrase_cache=True)
 def add_private_key_seed(mnemonic: str):
     """
     Add a private key seed to the keyring, with the given mnemonic.
@@ -49,14 +52,14 @@ def add_private_key_seed(mnemonic: str):
         passphrase = ""
         sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
-        print(f"Added private key with public key fingerprint {fingerprint} and mnemonic")
-        print(mnemonic)
+        print(f"Added private key with public key fingerprint {fingerprint}")
 
     except ValueError as e:
         print(e)
         return None
 
 
+@unlocks_keyring(use_passphrase_cache=True)
 def show_all_keys(show_mnemonic: bool):
     """
     Prints all keys and mnemonics (if available).
@@ -69,7 +72,7 @@ def show_all_keys(show_mnemonic: bool):
     if len(private_keys) == 0:
         print("There are no saved private keys")
         return None
-    msg = "Showing all public keys derived from your private keys:"
+    msg = "Showing all public keys derived from your master seed and private key:"
     if show_mnemonic:
         msg = "Showing all public and private keys"
     print(msg)
@@ -91,13 +94,14 @@ def show_all_keys(show_mnemonic: bool):
             print("Master private key (m):", bytes(sk).hex())
             print(
                 "First wallet secret key (m/12381/8444/2/0):",
-                master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+                master_sk_to_wallet_sk(sk, uint32(0)),
             )
             mnemonic = bytes_to_mnemonic(seed)
             print("  Mnemonic seed (24 secret words):")
             print(mnemonic)
 
 
+@unlocks_keyring(use_passphrase_cache=True)
 def delete(fingerprint: int):
     """
     Delete a key by its public key fingerprint (which is an integer).
@@ -106,7 +110,8 @@ def delete(fingerprint: int):
     keychain.delete_key_by_fingerprint(fingerprint)
 
 
-def sign(message: str, fingerprint: int, hd_path: str):
+@unlocks_keyring(use_passphrase_cache=True)
+def sign(message: str, fingerprint: int, hd_path: str, as_bytes: bool):
     k = Keychain()
     private_keys = k.get_all_private_keys()
 
@@ -115,8 +120,9 @@ def sign(message: str, fingerprint: int, hd_path: str):
         if sk.get_g1().get_fingerprint() == fingerprint:
             for c in path:
                 sk = AugSchemeMPL.derive_child_sk(sk, c)
+            data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
             print("Public key:", sk.get_g1())
-            print("Signature:", AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
+            print("Signature:", AugSchemeMPL.sign(sk, data))
             return None
     print(f"Fingerprint {fingerprint} not found in keychain")
 

@@ -1,3 +1,19 @@
+def format_bytes(bytes: int) -> str:
+
+    if not isinstance(bytes, int) or bytes < 0:
+        return "Invalid"
+
+    LABELS = ("MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB")
+    BASE = 1024
+    value = bytes / BASE
+    for label in LABELS:
+        value /= BASE
+        if value < BASE:
+            return f"{value:.3f} {label}"
+
+    return f"{value:.3f} {LABELS[-1]}"
+
+
 def format_minutes(minutes: int) -> str:
 
     if not isinstance(minutes, int):
@@ -42,3 +58,13 @@ def format_minutes(minutes: int) -> str:
         return format_unit_string("minute", minutes)
 
     return "Unknown"
+
+
+def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
+    while True:
+        response = str(input(prompt)).lower().strip()
+        ch = response[:1]
+        if ch == "y":
+            return True
+        elif ch == "n":
+            return False

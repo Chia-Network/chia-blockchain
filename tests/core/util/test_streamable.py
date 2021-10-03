@@ -17,6 +17,8 @@ from chia.util.streamable import (
     Streamable,
     streamable,
     parse_bool,
+    parse_uint32,
+    write_uint32,
     parse_optional,
     parse_bytes,
     parse_list,
@@ -217,6 +219,34 @@ class TestStreamable(unittest.TestCase):
 
         with raises(ValueError):
             parse_bool(io.BytesIO(b"\x02"))
+
+    def test_uint32(self):
+        assert parse_uint32(io.BytesIO(b"\x00\x00\x00\x00")) == 0
+        assert parse_uint32(io.BytesIO(b"\x00\x00\x00\x01")) == 1
+        assert parse_uint32(io.BytesIO(b"\x00\x00\x00\x01"), "little") == 16777216
+        assert parse_uint32(io.BytesIO(b"\x01\x00\x00\x00")) == 16777216
+        assert parse_uint32(io.BytesIO(b"\x01\x00\x00\x00"), "little") == 1
+        assert parse_uint32(io.BytesIO(b"\xff\xff\xff\xff"), "little") == 4294967295
+
+        def test_write(value, byteorder):
+            f = io.BytesIO()
+            write_uint32(f, uint32(value), byteorder)
+            f.seek(0)
+            assert parse_uint32(f, byteorder) == value
+
+        test_write(1, "big")
+        test_write(1, "little")
+        test_write(4294967295, "big")
+        test_write(4294967295, "little")
+
+        with raises(AssertionError):
+            parse_uint32(io.BytesIO(b""))
+        with raises(AssertionError):
+            parse_uint32(io.BytesIO(b"\x00"))
+        with raises(AssertionError):
+            parse_uint32(io.BytesIO(b"\x00\x00"))
+        with raises(AssertionError):
+            parse_uint32(io.BytesIO(b"\x00\x00\x00"))
 
     def test_parse_optional(self):
         assert parse_optional(io.BytesIO(b"\x00"), parse_bool) is None

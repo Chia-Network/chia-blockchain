@@ -18,7 +18,7 @@ class TransactionsInfo(Streamable):
     generator_refs_root: bytes32  # sha256 of the concatenation of the generator ref list entries
     aggregated_signature: G2Element
     fees: uint64  # This only includes user fees, not block rewards
-    cost: uint64  # This is the total cost of running this block in the CLVM
+    cost: uint64  # This is the total cost of this block, including CLVM cost, cost of program size and conditions
     reward_claims_incorporated: List[Coin]  # These can be in any order
 
 

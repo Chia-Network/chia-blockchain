@@ -28,8 +28,6 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
-        await self.db.execute("pragma journal_mode=wal")
-        await self.db.execute("pragma synchronous=2")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
             "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -66,16 +64,12 @@ class BlockStore:
         self.ses_challenge_cache = LRUCache(50)
         return self
 
-    async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
-        cached = self.block_cache.get(block.header_hash)
-        if cached is not None:
-            # Since write to db can fail, we remove from cache here to avoid potential inconsistency
-            # Adding to cache only from reading
-            self.block_cache.remove(block.header_hash)
+    async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
+        self.block_cache.put(header_hash, block)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
-                block.header_hash.hex(),
+                header_hash.hex(),
                 block.height,
                 int(block.is_transaction_block()),
                 int(block.is_fully_compactified()),
@@ -88,7 +82,7 @@ class BlockStore:
         cursor_2 = await self.db.execute(
             "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
             (
-                block.header_hash.hex(),
+                header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.height,
                 bytes(block_record),
@@ -130,26 +124,35 @@ class BlockStore:
             return challenge_segments
         return None
 
-    def cache_block(self, block: FullBlock):
-        self.block_cache.put(block.header_hash, block)
+    def rollback_cache_block(self, header_hash: bytes32):
+        try:
+            self.block_cache.remove(header_hash)
+        except KeyError:
+            # this is best effort. When rolling back, we may not have added the
+            # block to the cache yet
+            pass
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
+        log.debug(f"cache miss for block {header_hash.hex()}")
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
             block = FullBlock.from_bytes(row[0])
-            self.block_cache.put(block.header_hash, block)
+            self.block_cache.put(header_hash, block)
             return block
         return None
 
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            return cached
+            log.debug(f"cache hit for block {header_hash.hex()}")
+            return bytes(cached)
+        log.debug(f"cache miss for block {header_hash.hex()}")
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
@@ -202,15 +205,18 @@ class BlockStore:
             return []
 
         header_hashes_db = tuple([hh.hex() for hh in header_hashes])
-        formatted_str = f'SELECT block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        formatted_str = (
+            f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        )
         cursor = await self.db.execute(formatted_str, header_hashes_db)
         rows = await cursor.fetchall()
         await cursor.close()
         all_blocks: Dict[bytes32, FullBlock] = {}
         for row in rows:
-            full_block: FullBlock = FullBlock.from_bytes(row[0])
-            all_blocks[full_block.header_hash] = full_block
-            self.block_cache.put(full_block.header_hash, full_block)
+            header_hash = bytes.fromhex(row[0])
+            full_block: FullBlock = FullBlock.from_bytes(row[1])
+            all_blocks[header_hash] = full_block
+            self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
             if hh not in all_blocks:
@@ -228,26 +234,6 @@ class BlockStore:
         if row is not None:
             return BlockRecord.from_bytes(row[0])
         return None
-
-    async def get_block_records(
-        self,
-    ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
-        """
-        Returns a dictionary with all blocks, as well as the header hash of the peak,
-        if present.
-        """
-        cursor = await self.db.execute("SELECT * from block_records")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        ret: Dict[bytes32, BlockRecord] = {}
-        peak: Optional[bytes32] = None
-        for row in rows:
-            header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = BlockRecord.from_bytes(row[3])
-            if row[5]:
-                assert peak is None  # Sanity check, only one peak
-                peak = header_hash
-        return ret, peak
 
     async def get_block_records_in_range(
         self,
@@ -357,12 +343,19 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_first_not_compactified(self, min_height: int) -> Optional[int]:
+    async def get_random_not_compactified(self, number: int) -> List[int]:
+        # Since orphan blocks do not get compactified, we need to check whether all blocks with a
+        # certain height are not compact. And if we do have compact orphan blocks, then all that
+        # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
         cursor = await self.db.execute(
-            "SELECT MIN(height) from full_blocks WHERE is_fully_compactified=0 AND height>=?", (min_height,)
+            f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
+            f"ORDER BY RANDOM() LIMIT {number}"
         )
-        row = await cursor.fetchone()
+        rows = await cursor.fetchall()
         await cursor.close()
-        if row is None:
-            return None
-        return int(row[0])
+
+        heights = []
+        for row in rows:
+            heights.append(int(row[0]))
+
+        return heights

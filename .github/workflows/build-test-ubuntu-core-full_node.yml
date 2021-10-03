@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: Ubuntu core-full_node Test
 
 on:
@@ -25,7 +28,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.0
+      uses: styfle/cancel-workflow-action@0.9.1
       with:
         access_token: ${{ github.token }}
 
@@ -40,7 +43,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -53,7 +56,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -65,7 +68,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.26.0'
+        ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -97,9 +100,19 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
 
     - name: Test core-full_node code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_full_node.py tests/core/full_node/test_full_node_store.py tests/core/full_node/test_initial_freeze.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_conditions.py tests/core/full_node/test_full_node.py tests/core/full_node/test_full_node_store.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_performance.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py -s -v --durations 0
+
+
+    - name: Check resource usage
+      run: |
+        sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
+        ./tests/check_pytest_monitor_output.py <metrics.out
+
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

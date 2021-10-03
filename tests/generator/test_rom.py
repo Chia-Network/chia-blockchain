@@ -1,5 +1,3 @@
-from unittest import TestCase
-
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
@@ -16,6 +14,7 @@ from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
+COST_PER_BYTE = int(12000)
 
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -83,7 +82,7 @@ EXPECTED_OUTPUT = (
 )
 
 
-class TestROM(TestCase):
+class TestROM:
     def test_rom_inputs(self):
         # this test checks that the generator just works
         # It's useful for debugging the generator prior to having the ROM invoke it.
@@ -101,10 +100,10 @@ class TestROM(TestCase):
         cost, r = run_generator(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, safe_mode=False)
+        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, safe_mode=False)
         assert npc_result.error is None
         assert npc_result.clvm_cost == EXPECTED_COST
-        cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500)])
+        cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500), b""])
         CONDITIONS = [
             (ConditionOpcode.CREATE_COIN, [cond_1]),
         ]
@@ -125,7 +124,7 @@ class TestROM(TestCase):
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
-            self.assertEqual(extra_data.as_atom_list(), b"extra data for coin".split())
+            assert extra_data.as_atom_list() == b"extra data for coin".split()
 
     def test_block_extras(self):
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
@@ -133,4 +132,4 @@ class TestROM(TestCase):
         gen = block_generator()
         cost, r = run_generator(gen, max_cost=MAX_COST)
         extra_block_data = r.rest()
-        self.assertEqual(extra_block_data.as_atom_list(), b"extra data for block".split())
+        assert extra_block_data.as_atom_list() == b"extra data for block".split()

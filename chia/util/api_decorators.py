@@ -59,3 +59,14 @@ def execute_task(func):
         return func
 
     return inner()
+
+
+def reply_type(type):
+    def wrap(func):
+        def inner():
+            setattr(func, "reply_type", type)
+            return func
+
+        return inner()
+
+    return wrap

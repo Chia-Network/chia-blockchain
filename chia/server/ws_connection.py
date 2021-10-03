@@ -8,6 +8,8 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_state_machine import message_response_ok
+from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -56,7 +58,7 @@ class WSChiaConnection:
 
         peername = self.ws._writer.transport.get_extra_info("peername")
         if peername is None:
-            raise ValueError(f"Was not able to get peername from {self.ws_witer} at {self.peer_host}")
+            raise ValueError(f"Was not able to get peername from {self.peer_host}")
 
         connection_port = peername[1]
         self.peer_port = connection_port
@@ -103,6 +105,9 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
+        # Used by crawler/dns introducer
+        self.version = None
+
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
             outbound_handshake = make_msg(
@@ -122,10 +127,20 @@ class WSChiaConnection:
             if inbound_handshake_msg is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
-            if ProtocolMessageTypes(inbound_handshake_msg.type) != ProtocolMessageTypes.handshake:
+
+            # Handle case of invalid ProtocolMessageType
+            try:
+                message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
+            except Exception:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+            if message_type != ProtocolMessageTypes.handshake:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
+
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            self.version = inbound_handshake.software_version
 
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
@@ -138,9 +153,17 @@ class WSChiaConnection:
 
             if message is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(message.data)
-            if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.handshake:
+
+            # Handle case of invalid ProtocolMessageType
+            try:
+                message_type = ProtocolMessageTypes(message.type)
+            except Exception:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+            if message_type != ProtocolMessageTypes.handshake:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+            inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
             outbound_handshake = make_msg(
@@ -195,6 +218,12 @@ class WSChiaConnection:
             self.close_callback(self, ban_time)
             raise
         self.close_callback(self, ban_time)
+
+    async def ban_peer_bad_protocol(self, log_err_msg: str):
+        """Ban peer for protocol violation"""
+        ban_seconds = INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
+        self.log.error(f"Banning peer for {ban_seconds} seconds: {self.peer_host} {log_err_msg}")
+        await self.close(ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE)
 
     def cancel_pending_timeouts(self):
         for _, task in self.pending_timeouts.items():
@@ -253,14 +282,22 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
+            msg: Message = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
-            result = await self.create_request(msg, timeout)
+            result = await self.send_request(msg, timeout)
             self.log.debug(
-                f"Time for request {attr_name}: {self.get_peer_info()} = {time.time() - request_start_t}, "
+                f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
                 f"None? {result is None}"
             )
             if result is not None:
+                sent_message_type = ProtocolMessageTypes(msg.type)
+                recv_message_type = ProtocolMessageTypes(result.type)
+                if not message_response_ok(sent_message_type, recv_message_type):
+                    # peer protocol violation
+                    error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
+                    f"but received {recv_message_type.name}"
+                    await self.ban_peer_bad_protocol(self.error_message)
+                    raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
 
                 req_annotations = ret_attr.__annotations__
@@ -276,7 +313,7 @@ class WSChiaConnection:
 
         return invoke
 
-    async def create_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:
+    async def send_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:
         """Sends a message and waits for a response."""
         if self.closed:
             return None
@@ -319,7 +356,7 @@ class WSChiaConnection:
         if message.id in self.request_results:
             result = self.request_results[message.id]
             assert result is not None
-            self.log.info(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
+            self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
             self.request_results.pop(result.id)
 
         return result
@@ -366,7 +403,7 @@ class WSChiaConnection:
                 )
 
         await self.ws.send_bytes(encoded)
-        self.log.info(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.debug(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
@@ -445,6 +482,10 @@ class WSChiaConnection:
             await asyncio.sleep(3)
         return None
 
+    # Used by crawler/dns introducer
+    def get_version(self):
+        return self.version
+
     def get_peer_info(self) -> Optional[PeerInfo]:
         result = self.ws._writer.transport.get_extra_info("peername")
         if result is None:
@@ -452,3 +493,12 @@ class WSChiaConnection:
         connection_host = result[0]
         port = self.peer_server_port if self.peer_server_port is not None else self.peer_port
         return PeerInfo(connection_host, port)
+
+    def get_peer_logging(self) -> PeerInfo:
+        info: Optional[PeerInfo] = self.get_peer_info()
+        if info is None:
+            # in this case, we will use self.peer_host which is friendlier for logging
+            port = self.peer_server_port if self.peer_server_port is not None else self.peer_port
+            return PeerInfo(self.peer_host, port)
+        else:
+            return info

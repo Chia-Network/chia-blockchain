@@ -1,4 +1,4 @@
-(mod (block_program block_ref coinname)
+(mod (block_program (block_ref) coinname)
 
     (defconstant local_deserialize_mod
         ;; this monstrosity is the assembly output of `chialisp_deserialisation.clvm`
@@ -16,15 +16,15 @@
           (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
           (sha256 1 TREE)))
 
-  (defun check_coin_solution ((parent puzzle amount solution) coinname)
+  (defun check_coin_spend ((parent puzzle amount solution) coinname)
       (= (sha256 parent (sha256tree1 puzzle) amount) coinname)
   )
 
-  (defun check_for_coinname (coin_solutions coinname)
-    (if coin_solutions
-      (if (check_coin_solution (f coin_solutions) coinname)
-        (list (f (r (f coin_solutions))) (f (r (r (r (f coin_solutions))))))
-        (check_for_coinname (r coin_solutions) coinname)
+  (defun check_for_coinname (coin_spends coinname)
+    (if coin_spends
+      (if (check_coin_spend (f coin_spends) coinname)
+        (list (f (r (f coin_spends))) (f (r (r (r (f coin_spends))))))
+        (check_for_coinname (r coin_spends) coinname)
       )
       (x)
     )

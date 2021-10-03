@@ -89,7 +89,7 @@ def generate_replacements(defaults, conf, dir, test_files):
     if not conf["install_timelord"]:
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
     if conf["parallel"]:
-        replacements["PYTEST_PARALLEL_ARGS"] = "-n auto"
+        replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
     test_paths = ["tests/" + str(f) for f in test_files]
@@ -99,6 +99,8 @@ def generate_replacements(defaults, conf, dir, test_files):
     replacements["TEST_NAME"] = test_name(str(dir))
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
+    for var in conf["custom_vars"]:
+        replacements[var] = conf[var] if var in conf else ""
     return replacements
 
 

@@ -1,6 +1,6 @@
 import pathlib
 from multiprocessing import freeze_support
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -8,7 +8,6 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.types.peer_info import PeerInfo
-from chia.util.block_tools import test_constants
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
@@ -26,7 +25,7 @@ def service_kwargs_for_wallet(
     root_path: pathlib.Path,
     config: Dict,
     consensus_constants: ConsensusConstants,
-    keychain: Keychain,
+    keychain: Optional[Keychain] = None,
 ) -> Dict:
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
@@ -36,11 +35,13 @@ def service_kwargs_for_wallet(
         trusted_peer = full_node_config["ssl"]["public_crt"]
         config["trusted_peers"] = {}
         config["trusted_peers"]["local_node"] = trusted_peer
+    if "short_sync_blocks_behind_threshold" not in config:
+        config["short_sync_blocks_behind_threshold"] = 20
     node = WalletNode(
         config,
-        keychain,
         root_path,
         consensus_constants=updated_constants,
+        local_keychain=keychain,
     )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
@@ -81,14 +82,15 @@ def main() -> None:
     # This is simulator
     local_test = config["testing"]
     if local_test is True:
+        from tests.block_tools import test_constants
+
         constants = test_constants
         current = config["database_path"]
         config["database_path"] = f"{current}_simulation"
         config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    keychain = Keychain(testing=False)
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
     return run_service(**kwargs)
 
 

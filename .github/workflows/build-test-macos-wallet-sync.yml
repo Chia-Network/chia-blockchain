@@ -1,3 +1,6 @@
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
 name: MacOS wallet-sync Tests
 
 on:
@@ -25,7 +28,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.0
+      uses: styfle/cancel-workflow-action@0.9.1
       with:
         access_token: ${{ github.token }}
 
@@ -39,13 +42,20 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Create keychain for CI use
+      run: |
+        security create-keychain -p foo chiachain
+        security default-keychain -s chiachain
+        security unlock-keychain -p foo chiachain
+        security set-keychain-settings -t 7200 -u chiachain
+
     - name: Get pip cache dir
       id: pip-cache
       run: |
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.5
+      uses: actions/cache@v2.1.6
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -58,7 +68,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.26.0'
+        ref: '0.27.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -90,4 +100,7 @@ jobs:
     - name: Test wallet-sync code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/sync/test_wallet_sync.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/sync/test_wallet_sync.py -s -v --durations 0
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

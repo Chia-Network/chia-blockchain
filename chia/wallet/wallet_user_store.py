@@ -23,8 +23,6 @@ class WalletUserStore:
 
         self.db_wrapper = db_wrapper
         self.db_connection = db_wrapper.db
-        await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS users_wallets("
@@ -56,22 +54,34 @@ class WalletUserStore:
         await self.db_connection.commit()
 
     async def create_wallet(
-        self, name: str, wallet_type: int, data: str, id: Optional[int] = None
+        self, name: str, wallet_type: int, data: str, id: Optional[int] = None, in_transaction=False
     ) -> Optional[WalletInfo]:
-        async with self.db_wrapper.lock:
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
             cursor = await self.db_connection.execute(
                 "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
                 (id, name, wallet_type, data),
             )
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
+
         return await self.get_last_wallet()
 
-    async def delete_wallet(self, id: int):
-        async with self.db_wrapper.lock:
+    async def delete_wallet(self, id: int, in_transaction: bool):
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
             cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def update_wallet(self, wallet_info: WalletInfo, in_transaction):
         if not in_transaction:

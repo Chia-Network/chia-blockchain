@@ -44,7 +44,7 @@ class SyncStore:
     def get_sync_target_hash(self) -> Optional[bytes32]:
         return self.sync_target_header_hash
 
-    def get_sync_target_height(self) -> Optional[bytes32]:
+    def get_sync_target_height(self) -> Optional[uint32]:
         return self.sync_target_height
 
     def set_sync_mode(self, sync_mode: bool):
@@ -58,6 +58,9 @@ class SyncStore:
 
     def get_long_sync(self) -> bool:
         return self.long_sync
+
+    def seen_header_hash(self, header_hash: bytes32) -> bool:
+        return header_hash in self.peak_to_peer
 
     def peer_has_block(self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool):
         """
