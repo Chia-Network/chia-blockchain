@@ -244,7 +244,6 @@ class DataStore:
         if len(commits_rows) == 0:
             # TODO: just copied from elsewhere...  reconsider
             commit_id = random.randint(0, 100000000).to_bytes(32, "big")
-            print("table_id", repr(table))
             await self.db.execute(
                 "INSERT INTO commits(id, table_id, state) VALUES(:id, :table_id, :state)",
                 {"id": commit_id.hex(), "table_id": table.hex(), "state": CommitState.OPEN},
