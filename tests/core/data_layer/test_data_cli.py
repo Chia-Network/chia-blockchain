@@ -65,11 +65,35 @@ class ChiaRoot:
 
         return subprocess.run(*final_args, **kwargs)
 
+    def read_log(self):
+        return self.path.joinpath("log", "debug.log").read_text(encoding="utf-8")
+
+    def print_log(self):
+        try:
+            log_text = self.read_log()
+        except FileNotFoundError:
+            log_text = None
+
+        if log_text is None:
+            print(f"---- no log at: {self.path}")
+        else:
+            print(f"---- start of: {self.path}")
+            print(log_text)
+            print(f"---- end of: {self.path}")
+
+    @contextlib.contextmanager
+    def print_log_after(self):
+        try:
+            yield
+        finally:
+            self.print_log()
+
 
 @pytest.fixture(name="chia_root", scope="function")
 def chia_root_fixture(tmp_path: pathlib.Path) -> ChiaRoot:
     root = ChiaRoot(path=tmp_path.joinpath("chia_root"))
     root.run(args=["init"])
+    root.run(args=["configure", "--set-log-level", "DEBUG"])
 
     return root
 
@@ -120,16 +144,17 @@ async def test_help(chia_root: ChiaRoot) -> None:
 def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> None:
     """Create a table, insert a row, get the row by its hash."""
 
-    table = "0102030405060708091011121314151617181920212223242526272829303132"
-    row_data = "ffff8353594d8083616263"
-    row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
+    with chia_root.print_log_after():
+        table = "0102030405060708091011121314151617181920212223242526272829303132"
+        row_data = "ffff8353594d8083616263"
+        row_hash = "1a6f915513173902a7216e7d9e4a16bfd088e20683f45de3b432ce72e9cc7aa8"
 
-    changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
+        changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
 
-    chia_root.run(args=["data", "create_table", "--table_name", "test table", "--table", table])
-    chia_root.run(args=["data", "update_table", "--table", table, "--changelist", json.dumps(changelist)])
-    completed_process = chia_root.run(args=["data", "get_row", "--table", table, "--row_hash", row_hash])
-    parsed = json.loads(completed_process.stdout)
-    expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
+        chia_root.run(args=["data", "create_table", "--table_name", "test table", "--table", table])
+        chia_root.run(args=["data", "update_table", "--table", table, "--changelist", json.dumps(changelist)])
+        completed_process = chia_root.run(args=["data", "get_row", "--table", table, "--row_hash", row_hash])
+        parsed = json.loads(completed_process.stdout)
+        expected = {"row_data": row_data, "row_hash": row_hash, "success": True}
 
-    assert parsed == expected
+        assert parsed == expected
