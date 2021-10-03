@@ -65,10 +65,12 @@ class ChiaRoot:
 
         return subprocess.run(*final_args, **kwargs)
 
-    def read_log(self):
+    def read_log(self) -> str:
         return self.path.joinpath("log", "debug.log").read_text(encoding="utf-8")
 
-    def print_log(self):
+    def print_log(self) -> None:
+        log_text: Optional[str]
+
         try:
             log_text = self.read_log()
         except FileNotFoundError:
@@ -82,7 +84,7 @@ class ChiaRoot:
             print(f"---- end of: {self.path}")
 
     @contextlib.contextmanager
-    def print_log_after(self):
+    def print_log_after(self) -> Iterator[None]:
         try:
             yield
         finally:

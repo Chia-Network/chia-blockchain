@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Tuple, Dict
+from typing import Any, Optional, Tuple, Dict
 
 import aiohttp
 
@@ -24,7 +24,7 @@ async def get_client(rpc_port) -> Tuple[DataLayerRpcClient, int]:
     return client, rpc_port
 
 
-async def create_table_cmd(rpc_port: Optional[int], table_string: str, table_name: str) -> bool:
+async def create_table_cmd(rpc_port: Optional[int], table_string: str, table_name: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     table_bytes = bytes32(hexstr_to_bytes(table_string))
@@ -43,7 +43,7 @@ async def create_table_cmd(rpc_port: Optional[int], table_string: str, table_nam
     return response
 
 
-async def get_row_cmd(rpc_port: Optional[int], table_string: str, row_hash_string: str) -> Optional[Dict]:
+async def get_row_cmd(rpc_port: Optional[int], table_string: str, row_hash_string: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     row_hash_bytes = bytes32(hexstr_to_bytes(row_hash_string))
@@ -64,7 +64,7 @@ async def get_row_cmd(rpc_port: Optional[int], table_string: str, row_hash_strin
     return response
 
 
-async def update_table_cmd(rpc_port: Optional[int], table_string: str, changelist: str) -> Optional[Dict]:
+async def update_table_cmd(rpc_port: Optional[int], table_string: str, changelist: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     table_bytes = bytes32(hexstr_to_bytes(table_string))
