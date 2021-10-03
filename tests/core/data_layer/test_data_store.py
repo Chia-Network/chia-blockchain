@@ -2,7 +2,7 @@ import logging
 
 # import random
 # import sqlite3
-from typing import Dict, AsyncIterable, List, Set, Tuple
+from typing import Dict, AsyncIterable, List
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -11,7 +11,8 @@ import pytest
 
 # from chia.consensus.blockchain import Blockchain
 from chia.data_layer.data_store import Action, DataStore, OperationType, TableRow
-from chia.types.blockchain_format.tree_hash import bytes32, sha256_treehash
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.tree_hash import bytes32
 
 # from chia.full_node.block_store import BlockStore
 # from chia.full_node.coin_store import CoinStore
@@ -64,7 +65,8 @@ async def data_store_fixture(db_wrapper: DBWrapper, table_id: bytes32) -> DataSt
     return data_store
 
 
-clvm_objects = [
+# TODO: understand this better and make some sensible looking example objects
+_serialized_programs = [
     CLVMObject(
         (
             CLVMObject(bytes([37])),
@@ -95,6 +97,9 @@ clvm_objects = [
     ),
 ]
 
+serialized_programs: List[SerializedProgram] = [
+    SerializedProgram.from_bytes(SExp.to(clvm_object).as_bin()) for clvm_object in _serialized_programs
+]
 
 table_columns: Dict[str, List[str]] = {
     "tables": ["id", "name"],
@@ -132,80 +137,88 @@ async def test_create_creates_tables_and_columns(
 async def test_insert_with_invalid_table_fails(data_store: DataStore) -> None:
     # TODO: If this API is retained then it should have a specific exception.
     with pytest.raises(Exception):
-        await data_store.insert_row(table=b"non-existant table", clvm_object=clvm_objects[0])
+        await data_store.insert_row(table=b"non-existant table", serialized_program=serialized_programs[0])
 
 
 @pytest.mark.asyncio
 async def test_get_row_by_hash_single_match(data_store: DataStore, table_id: bytes32) -> None:
-    a_clvm_object, *_ = clvm_objects
+    a_serialized_program, *_ = serialized_programs
 
-    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
+    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
 
-    row_hash = sha256_treehash(SExp.to(a_clvm_object))
+    row_hash = a_serialized_program.get_tree_hash()
     table_row = await data_store.get_row_by_hash(table=table_id, row_hash=row_hash)
 
-    assert table_row == TableRow.from_clvm_object(clvm_object=a_clvm_object)
+    assert table_row == TableRow.from_serialized_program(serialized_program=a_serialized_program)
 
 
 @pytest.mark.asyncio
 async def test_get_row_by_hash_no_match(data_store: DataStore, table_id: bytes32) -> None:
-    a_clvm_object, another_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
+    a_serialized_program, another_serialized_program, *_ = serialized_programs
+    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
 
-    other_row_hash = sha256_treehash(SExp.to(another_clvm_object))
+    other_row_hash = another_serialized_program.get_tree_hash()
 
     # TODO: If this API is retained then it should have a specific exception.
     with pytest.raises(Exception):
         await data_store.get_row_by_hash(table=table_id, row_hash=other_row_hash)
 
 
-def expected_keys(clvm_objects: List[CLVMObject]) -> Set[Tuple[bytes]]:
-    return {sha256_treehash(SExp.to(clvm_object)) for clvm_object in clvm_objects}
-
-
 @pytest.mark.asyncio
 async def test_insert_does(data_store: DataStore, table_id: bytes32) -> None:
-    a_clvm_object, another_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
-    await data_store.insert_row(table=table_id, clvm_object=another_clvm_object)
+    a_serialized_program, another_serialized_program, *_ = serialized_programs
+    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
+    await data_store.insert_row(table=table_id, serialized_program=another_serialized_program)
 
     table_rows = await data_store.get_rows(table=table_id)
 
-    expected = [
-        TableRow.from_clvm_object(clvm_object=clvm_object) for clvm_object in [a_clvm_object, another_clvm_object]
-    ]
-    assert table_rows == expected
+    expected = {
+        TableRow.from_serialized_program(serialized_program=serialized_program)
+        for serialized_program in [a_serialized_program, another_serialized_program]
+    }
+    assert set(table_rows) == expected
 
 
 @pytest.mark.asyncio
 async def test_deletes_row_by_hash(data_store: DataStore, table_id: bytes32) -> None:
-    a_clvm_object, another_clvm_object, *_ = clvm_objects
-    await data_store.insert_row(table=table_id, clvm_object=a_clvm_object)
-    await data_store.insert_row(table=table_id, clvm_object=another_clvm_object)
-    await data_store.delete_row_by_hash(table=table_id, row_hash=sha256_treehash(SExp.to(a_clvm_object)))
+    a_serialized_program, another_serialized_program, *_ = serialized_programs
+    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
+    await data_store.insert_row(table=table_id, serialized_program=another_serialized_program)
+    await data_store.delete_row_by_hash(table=table_id, row_hash=a_serialized_program.get_tree_hash())
 
     table_rows = await data_store.get_rows(table=table_id)
 
-    expected = [TableRow.from_clvm_object(clvm_object=clvm_object) for clvm_object in [another_clvm_object]]
+    expected = {
+        TableRow.from_serialized_program(serialized_program=serialized_program)
+        for serialized_program in [another_serialized_program]
+    }
 
-    assert table_rows == expected
+    assert set(table_rows) == expected
 
 
 @pytest.mark.asyncio
 async def test_get_all_actions_just_inserts(data_store: DataStore, table_id: bytes32) -> None:
     expected = []
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[0])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[0])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[0])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[0]))
+    )
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[1])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[1])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[1])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[1]))
+    )
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[2])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[2])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[2])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[2]))
+    )
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[3])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[3])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[3])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[3]))
+    )
 
     all_actions = await data_store.get_all_actions(table=table_id)
 
@@ -216,21 +229,31 @@ async def test_get_all_actions_just_inserts(data_store: DataStore, table_id: byt
 async def test_get_all_actions_with_a_delete(data_store: DataStore, table_id: bytes32) -> None:
     expected = []
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[0])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[0])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[0])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[0]))
+    )
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[1])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[1])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[1])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[1]))
+    )
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[2])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[2])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[2])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[2]))
+    )
 
     # note this is a delete
-    await data_store.delete_row_by_hash(table=table_id, row_hash=sha256_treehash(sexp=clvm_objects[1]))
-    expected.append(Action(op=OperationType.DELETE, row=TableRow.from_clvm_object(clvm_object=clvm_objects[1])))
+    await data_store.delete_row_by_hash(table=table_id, row_hash=serialized_programs[1].get_tree_hash())
+    expected.append(
+        Action(op=OperationType.DELETE, row=TableRow.from_serialized_program(serialized_program=serialized_programs[1]))
+    )
 
-    await data_store.insert_row(table=table_id, clvm_object=clvm_objects[3])
-    expected.append(Action(op=OperationType.INSERT, row=TableRow.from_clvm_object(clvm_object=clvm_objects[3])))
+    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[3])
+    expected.append(
+        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[3]))
+    )
 
     all_actions = await data_store.get_all_actions(table=table_id)
 
