@@ -16,13 +16,13 @@ class DataLayer:
     db_wrapper: DBWrapper
     db_path: Path
     connection: aiosqlite.Connection
-    config: Dict
+    config: Dict[str, Any]
     server: Any
     log: logging.Logger
     # constants: ConsensusConstants
     # _shut_down: bool
     # root_path: Path
-    state_changed_callback: Optional[Callable]
+    state_changed_callback: Optional[Callable[..., object]]
     initialized: bool
     # _ui_tasks: Set[asyncio.Task]
 
@@ -44,7 +44,7 @@ class DataLayer:
         self.config = config
         self.server = None
         # self.constants = consensus_constants
-        self.state_changed_callback: Optional[Callable] = None
+        self.state_changed_callback = None
         self.log = logging.getLogger(name if name is None else __name__)
 
         # self._ui_tasks = set()
