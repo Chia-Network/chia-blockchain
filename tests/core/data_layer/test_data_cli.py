@@ -117,7 +117,7 @@ async def test_help(chia_root: ChiaRoot) -> None:
 
 
 @pytest.mark.asyncio
-def test_round_trip(chia_root: ChiaRoot) -> None:
+def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> None:
     """Create a table, insert a row, get the row by its hash."""
 
     table = "0102030405060708091011121314151617181920212223242526272829303132"
