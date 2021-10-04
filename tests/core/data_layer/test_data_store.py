@@ -24,15 +24,7 @@ from chia.util.ints import uint32
 log = logging.getLogger(__name__)
 
 
-# @pytest.fixture(name="db_path", scope="function")
-# def db_path_fixture(tmp_path: Path):
-#     return tmp_path.joinpath("data_layer_test.db")
-
-
 @pytest.fixture(name="db_connection", scope="function")
-# async def db_connection_fixture(db_path: Path):
-#     async with aiosqlite.connect(db_path) as connection:
-#         yield connection
 async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
         # make sure this is on for tests even if we disable it at run time
@@ -43,12 +35,6 @@ async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
 @pytest.fixture(name="db_wrapper", scope="function")
 def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
     return DBWrapper(db_connection)
-
-
-# TODO: Isn't this effectively a silly repeat of the `db_connection` fixture?
-@pytest.fixture(name="db", scope="function")
-def db_fixture(db_wrapper: DBWrapper) -> aiosqlite.Connection:
-    return db_wrapper.db
 
 
 @pytest.fixture(name="table_id", scope="function")

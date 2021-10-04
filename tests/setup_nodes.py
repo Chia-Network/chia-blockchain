@@ -128,10 +128,7 @@ async def setup_data_layer(
     # db_name,
     port,
     local_bt,
-    # introducer_port=None,
     # simulator=False,
-    # send_uncompact_interval=0,
-    # sanitize_weight_proof_only=False,
     # connect_to_daemon=False,
 ):
     # db_path = local_bt.root_path / f"{db_name}"
@@ -139,10 +136,6 @@ async def setup_data_layer(
     #     db_path.unlink()
     config = local_bt.config["data_layer"]
     # config["database_path"] = db_name
-    # config["send_uncompact_interval"] = send_uncompact_interval
-    # config["target_uncompact_proofs"] = 30
-    # config["peer_connect_interval"] = 50
-    # config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
     # if introducer_port is not None:
     #     config["introducer_peer"]["host"] = self_hostname
     #     config["introducer_peer"]["port"] = introducer_port

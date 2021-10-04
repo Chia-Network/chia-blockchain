@@ -212,3 +212,17 @@ class RequestChildren(Streamable):
 @streamable
 class RespondChildren(Streamable):
     coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
+class RequestSESInfo(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondSESInfo(Streamable):
+    reward_chain_hash: List[bytes32]
+    heights: List[List[uint32]]

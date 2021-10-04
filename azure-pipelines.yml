@@ -9,7 +9,7 @@ trigger:
       - "*"
   tags:
     include:
-    - "*"
+      - "*"
 
 pool:
   vmImage: "macOS-10.15"
@@ -44,24 +44,18 @@ steps:
       deleteCert: true
 
   - script: |
-      python -m venv venv
-      ln -s venv/bin/activate .
-      . ./activate
-      python -m pip install --upgrade pip
-      pip install wheel pep517 setuptools_scm
-      node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
-      cd build_scripts
+      python3 -m venv ../venv
+      . ../venv/bin/activate
+      pip install setuptools_scm
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-    displayName: "Install dependencies"
+      python ./build_scripts/installer-version.py > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      deactivate
+    displayName: Create installer version number
 
   - script: |
-      . ./activate
-      clang --version
-      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
-    displayName: "Build and install wheels"
+      sh install.sh
+    displayName: "Install dependencies"
 
   - task: NodeTool@0
     inputs:
@@ -75,16 +69,9 @@ steps:
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
       if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
-      git submodule update --init --recursive
       cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
-
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/wheels
-      artifactName: MacOS-wheels
-    displayName: "Upload MacOS wheels"
 
   - task: PublishPipelineArtifact@1
     inputs:

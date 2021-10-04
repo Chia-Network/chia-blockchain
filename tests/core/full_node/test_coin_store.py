@@ -12,6 +12,7 @@ from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
@@ -263,7 +264,8 @@ class TestCoinStoreWithBlocks:
             blocks = bt.get_consecutive_blocks(initial_block_count)
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
+            hint_store = await HintStore.create(db_wrapper)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store)
             try:
 
                 records: List[Optional[CoinRecord]] = []
@@ -327,7 +329,8 @@ class TestCoinStoreWithBlocks:
             )
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
             store = await BlockStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
+            hint_store = await HintStore.create(db_wrapper)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store)
             for block in blocks:
                 res, err, _, _ = await b.receive_block(block)
                 assert err is None
