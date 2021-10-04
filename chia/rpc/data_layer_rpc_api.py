@@ -1,13 +1,10 @@
-import io
 from typing import Any, Callable, Dict, List
-
-from clvm.CLVMObject import CLVMObject
-from clvm.serialize import sexp_from_stream
 
 from chia.data_layer.data_layer import DataLayer
 
 # from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import Action, OperationType
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
@@ -37,7 +34,7 @@ class DataLayerRpcApi:
 
     async def update_table(self, request: Dict[str, Any]) -> Dict:
         """
-        rows_to_add a list of clvmobjects as bytes to add to talbe
+        rows_to_add a list of serialized programs as hex strings to add to table
         rows_to_remove a list of row hashes to remove
         """
         table: bytes32 = bytes32(hexstr_to_bytes(request["table"]))
@@ -45,10 +42,9 @@ class DataLayerRpcApi:
         action_list: List[Action] = []
         for change in changelist:
             if change["action"] == "insert":
-                row_data = hexstr_to_bytes(change["row_data"])
+                serialized_program = SerializedProgram.fromhex(hexstr=change["row_data"])
+                table_row = await self.service.data_store.insert_row(table=table, serialized_program=serialized_program)
                 operation = OperationType.INSERT
-                clvm_object = sexp_from_stream(io.BytesIO(row_data), to_sexp=CLVMObject)
-                table_row = await self.service.data_store.insert_row(table=table, clvm_object=clvm_object)
             else:
                 assert change["action"] == "delete"
                 row_hash = bytes32(hexstr_to_bytes(change["row_hash"]))

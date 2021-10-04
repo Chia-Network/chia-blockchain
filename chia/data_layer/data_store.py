@@ -1,17 +1,13 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import IntEnum
-import io
 import logging
 import random
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Set, Tuple
 
 import aiosqlite
-from clvm.CLVMObject import CLVMObject
-from clvm.SExp import SExp
-from clvm.serialize import sexp_from_stream
 
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.tree_hash import sha256_treehash
 from chia.util.db_wrapper import DBWrapper
 
 
@@ -31,52 +27,24 @@ class CommitState(IntEnum):
 
 @dataclass(frozen=True)
 class TableRow:
-    clvm_object: CLVMObject
     hash: bytes32
     bytes: bytes
 
     @classmethod
-    def from_clvm_object(cls, clvm_object: CLVMObject) -> "TableRow":
-        sexp = SExp.to(clvm_object)
+    def from_serialized_program(cls, serialized_program: SerializedProgram) -> "TableRow":
+        hash = serialized_program.get_tree_hash()
+        bytes_ = bytes(serialized_program)
 
-        return cls(
-            clvm_object=clvm_object,
-            hash=sha256_treehash(sexp),
-            bytes=sexp.as_bin(),
-        )
+        return cls(hash=hash, bytes=bytes_)
 
     @classmethod
-    def from_clvm_bytes(cls, clvm_bytes: bytes) -> "TableRow":
-        clvm_object = sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject)
-        sexp = SExp.to(clvm_object)
+    def from_bytes(cls, blob: bytes) -> "TableRow":
+        serialized_program = SerializedProgram.from_bytes(blob=blob)
 
-        return cls(
-            clvm_object=clvm_object,
-            hash=sha256_treehash(sexp),
-            bytes=clvm_bytes,
-        )
+        return cls(hash=serialized_program.get_tree_hash(), bytes=blob)
 
-    def __eq__(self, other: object) -> bool:
-        # TODO: I think this would not be needed if we switched from CLVMObject to SExp.
-        #       CLVMObjects have not defined a `.__eq__()` so they inherit usage of `is`
-        #       for equality checks.
-
-        if not isinstance(other, TableRow):
-            # Intentionally excluding subclasses, feel free to express other preferences
-            return False
-
-        if isinstance(self.clvm_object, SExp):
-            # This would be the simple way but CLVMObject.__new__ trips it up
-            # return dataclasses.asdict(self) == dataclasses.asdict(other)
-            return self.clvm_object == other.clvm_object and self.hash == other.hash and self.bytes == other.bytes
-
-        sexp_self = replace(self, clvm_object=SExp.to(self.clvm_object))
-
-        return sexp_self == other
-
-    def __hash__(self) -> int:
-        # TODO: this is dirty, consider the TODOs in .__eq__()
-        return object.__hash__(replace(self, clvm_object=SExp.to(self.clvm_object)))
+    def serialized_program(self) -> SerializedProgram:
+        return SerializedProgram.from_bytes(self.bytes)
 
 
 @dataclass(frozen=True)
@@ -161,8 +129,7 @@ class DataStore:
 
     # chia.util.merkle_set.TerminalNode requires 32 bytes so I think that's applicable here
 
-    # TODO: should be Set[TableRow] but our stuff isn't super hashable yet...
-    async def get_rows(self, table: bytes32) -> List[TableRow]:
+    async def get_rows(self, table: bytes32) -> Set[TableRow]:
         async with self.db_wrapper.locked_transaction():
             cursor = await self.db.execute(
                 "SELECT value FROM keys_values INNER JOIN table_values"
@@ -172,7 +139,7 @@ class DataStore:
                 {"table_id": table.hex()},
             )
 
-            table_rows = [TableRow.from_clvm_bytes(clvm_bytes=row["value"]) async for row in cursor]
+            table_rows = {TableRow.from_bytes(blob=row["value"]) async for row in cursor}
 
         return table_rows
 
@@ -191,13 +158,9 @@ class DataStore:
         )
 
         # make sure we got just one
-        [clvm_bytes] = [row["value"] async for row in cursor]
+        [blob] = [row["value"] async for row in cursor]
 
-        table_row = TableRow(
-            clvm_object=sexp_from_stream(io.BytesIO(clvm_bytes), to_sexp=CLVMObject),
-            hash=row_hash,
-            bytes=clvm_bytes,
-        )
+        table_row = TableRow.from_bytes(blob=blob)
 
         return table_row
 
@@ -205,19 +168,13 @@ class DataStore:
         async with self.db_wrapper.locked_transaction():
             await self.db.execute("INSERT INTO tables(id, name) VALUES(:id, :name)", {"id": id.hex(), "name": name})
 
-    async def insert_row(self, table: bytes32, clvm_object: CLVMObject) -> TableRow:
-        """
-        Args:
-            clvm_object: The CLVM object to insert.
-        """
-        # TODO: Should we be using CLVMObject or SExp?
-
-        row_hash = sha256_treehash(sexp=clvm_object)
-        clvm_bytes = SExp.to(clvm_object).as_bin()
+    async def insert_row(self, table: bytes32, serialized_program: SerializedProgram) -> TableRow:
+        row_hash = serialized_program.get_tree_hash()
+        blob = bytes(serialized_program)
 
         async with self.db_wrapper.locked_transaction():
             await self.db.execute(
-                "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash.hex(), "value": clvm_bytes}
+                "INSERT INTO keys_values(key, value) VALUES(:key, :value)", {"key": row_hash.hex(), "value": blob}
             )
 
             await self.db.execute(
@@ -227,7 +184,7 @@ class DataStore:
 
             await self._raw_add_action(operation_type=OperationType.INSERT, key=row_hash, table=table)
 
-        return TableRow(clvm_object=clvm_object, hash=row_hash, bytes=clvm_bytes)
+        return TableRow.from_bytes(blob=blob)
 
     async def add_action(self, operation_type: OperationType, key: bytes32, table: bytes32) -> None:
         async with self.db_wrapper.locked_transaction():
@@ -296,7 +253,7 @@ class DataStore:
             )
 
             return [
-                Action(op=OperationType(row["operation"]), row=TableRow.from_clvm_bytes(clvm_bytes=row["value"]))
+                Action(op=OperationType(row["operation"]), row=TableRow.from_bytes(blob=row["value"]))
                 async for row in cursor
             ]
 
