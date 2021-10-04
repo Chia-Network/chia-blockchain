@@ -537,7 +537,7 @@ class CCWallet:
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + regular_chia_to_claim),
-                self.standard_wallet.get_new_puzzlehash(),
+                (await self.standard_wallet.get_new_puzzlehash()),
                 fee=fee,
                 coins=chia_coins,
                 ignore_change=True,
