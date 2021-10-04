@@ -626,7 +626,8 @@ class Farmer:
                         )
                 else:
                     self.log.error(
-                        "Harvester did not respond. You might need to update harvester to the latest version"
+                        f"Harvester '{connection.peer_host}/{connection.peer_node_id}' did not respond: "
+                        f"(version mismatch or time out {UPDATE_HARVESTER_CACHE_INTERVAL}s)"
                     )
         return updated
 
