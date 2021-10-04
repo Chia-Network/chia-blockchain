@@ -232,9 +232,10 @@ class FullNodeDiscovery:
             if self.address_manager is None:
                 return
             self.pending_outbound_connections.add(addr.host)
+            on_connect = self.server.on_connect if self.server.on_connect is not None else self.on_connect
             client_connected = await self.server.start_client(
                 addr,
-                on_connect=self.server.on_connect,
+                on_connect=on_connect,
                 is_feeler=is_feeler,
             )
             if self.server.is_duplicate_or_self_connection(addr):
@@ -696,7 +697,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self) -> None:
-        self.initial_wait = 600
+        self.initial_wait = 60
         await self.initialize_address_manager()
         await self.start_tasks()
 
