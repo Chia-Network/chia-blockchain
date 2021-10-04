@@ -29,7 +29,7 @@ def plot_refresh_callback(refresh_result: PlotRefreshResult):
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
     config = load_config(root_path, "config.yaml")
-    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(100, 100, 1)
+    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=0)
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,

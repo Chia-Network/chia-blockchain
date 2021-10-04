@@ -29,9 +29,6 @@ class WalletTransactionStore:
 
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
-
-        await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS transaction_record("
@@ -151,6 +148,8 @@ class WalletTransactionStore:
         current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
         if current is None:
             return None
+        if current.confirmed_at_height == height:
+            return
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_height=height,
             created_at_time=current.created_at_time,

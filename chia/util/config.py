@@ -17,11 +17,16 @@ def initial_config_file(filename: Union[str, Path]) -> str:
 
 def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> None:
     for filename in filenames:
-        default_config_file_data = initial_config_file(filename)
-        path = config_path_for_filename(root_path, filename)
+        default_config_file_data: str = initial_config_file(filename)
+        path: Path = config_path_for_filename(root_path, filename)
+        tmp_path: Path = path.with_suffix("." + str(os.getpid()))
         mkdir(path.parent)
-        with open(path, "w") as f:
+        with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
+        try:
+            os.replace(str(tmp_path), str(path))
+        except PermissionError:
+            shutil.move(str(tmp_path), str(path))
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
@@ -32,10 +37,14 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
-    path = config_path_for_filename(root_path, filename)
-    with open(path.with_suffix("." + str(os.getpid())), "w") as f:
+    path: Path = config_path_for_filename(root_path, filename)
+    tmp_path: Path = path.with_suffix("." + str(os.getpid()))
+    with open(tmp_path, "w") as f:
         yaml.safe_dump(config_data, f)
-    shutil.move(str(path.with_suffix("." + str(os.getpid()))), path)
+    try:
+        os.replace(str(tmp_path), path)
+    except PermissionError:
+        shutil.move(str(tmp_path), str(path))
 
 
 def load_config(

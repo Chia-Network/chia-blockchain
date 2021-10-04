@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import shutil
+import ssl
 import sys
 import tempfile
 import time
@@ -48,6 +49,7 @@ from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.util import PlotInfo, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
 from chia.plotting.manager import PlotManager
+from chia.server.server import ssl_context_for_server
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -90,7 +92,6 @@ from chia.wallet.derive_keys import (
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
-        "RUST_CONDITION_CHECKER": 0,
         "MIN_PLOT_SIZE": 18,
         "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
         "DIFFICULTY_STARTING": 2 ** 12,
@@ -160,7 +161,7 @@ class BlockTools:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
         else:
             self.keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, user="testing-1.8.0", testing=True
+                self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
 
         await self.keychain_proxy.delete_all_keys()
@@ -248,7 +249,7 @@ class BlockTools:
             sys.exit(1)
 
         refresh_done = False
-        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(120, 2, 10)
+        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
 
         def test_callback(update_result: PlotRefreshResult):
             if update_result.remaining_files == 0:
@@ -282,6 +283,13 @@ class BlockTools:
     @property
     def config(self) -> Dict:
         return copy.deepcopy(self._config)
+
+    def get_daemon_ssl_context(self) -> Optional[ssl.SSLContext]:
+        crt_path = self.root_path / self.config["daemon_ssl"]["private_crt"]
+        key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
+        ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
+        ca_key_path = self.root_path / self.config["private_ssl_ca"]["key"]
+        return ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
 
     def get_plot_signature(self, m: bytes32, plot_pk: G1Element) -> G2Element:
         """

@@ -18,6 +18,7 @@ def configure(
     set_outbound_peer_count: str,
     set_peer_count: str,
     testnet: str,
+    peer_connect_timeout: str,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
@@ -145,6 +146,10 @@ def configure(
         else:
             print("Please choose True or False")
 
+    if peer_connect_timeout is not None:
+        config["full_node"]["peer_connect_timeout"] = int(peer_connect_timeout)
+        change_made = True
+
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
@@ -190,6 +195,7 @@ def configure(
     type=str,
 )
 @click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
+@click.option("--set-peer-connect-timeout", help="Update the peer connect timeout (default 30)", type=str)
 @click.pass_context
 def configure_cmd(
     ctx,
@@ -202,6 +208,7 @@ def configure_cmd(
     set_outbound_peer_count,
     set_peer_count,
     testnet,
+    set_peer_connect_timeout,
 ):
     configure(
         ctx.obj["root_path"],
@@ -214,4 +221,5 @@ def configure_cmd(
         set_outbound_peer_count,
         set_peer_count,
         testnet,
+        set_peer_connect_timeout,
     )

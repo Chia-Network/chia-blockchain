@@ -28,8 +28,6 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
         self.db = db_wrapper.db
-        await self.db.execute("pragma journal_mode=wal")
-        await self.db.execute("pragma synchronous=2")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
             "  is_block tinyint, is_fully_compactified tinyint, block blob)"

@@ -9,7 +9,7 @@ trigger:
       - "*"
   tags:
     include:
-    - "*"
+      - "*"
 
 pool:
   vmImage: "macOS-10.15"
@@ -44,24 +44,18 @@ steps:
       deleteCert: true
 
   - script: |
-      python -m venv venv
-      ln -s venv/bin/activate .
-      . ./activate
-      python -m pip install --upgrade pip
-      pip install wheel pep517 setuptools_scm
-      node -v
-      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.2.2
-      cd build_scripts
+      python3 -m venv ../venv
+      . ../venv/bin/activate
+      pip install setuptools_scm
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-      python -m installer-version > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-    displayName: "Install dependencies"
+      python ./build_scripts/installer-version.py > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
+      deactivate
+    displayName: Create installer version number
 
   - script: |
-      . ./activate
-      clang --version
-      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
-    displayName: "Build and install wheels"
+      sh install.sh
+    displayName: "Install dependencies"
 
   - task: NodeTool@0
     inputs:
@@ -75,27 +69,15 @@ steps:
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
       if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
-      git submodule update --init --recursive
       cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/wheels
-      artifactName: MacOS-wheels
-    displayName: "Upload MacOS wheels"
-
-  - task: PublishPipelineArtifact@1
-    inputs:
       targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"
-
-  - bash: |
-      ls $(System.DefaultWorkingDirectory)/build_scripts/
-      cat $(System.DefaultWorkingDirectory)/build_scripts/version.txt
-    displayName: "list files in dir"
 
   - bash: |
       ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
@@ -121,6 +103,17 @@ steps:
       ls
     displayName: "Create torrent file"
     condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/tags/'))
+
+  - bash: |
+      export AWS_ACCESS_KEY_ID=$(AccessKey)
+      export AWS_SECRET_ACCESS_KEY=$(SecretKey)
+      export AWS_DEFAULT_REGION=us-west-2
+      cd $(System.DefaultWorkingDirectory)/build_scripts/
+      export CHIA_VERSION="Chia-"$(<version.txt)
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg s3://download-chia-net/beta/Chia-intel_latest_beta.dmg
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/$CHIA_VERSION.dmg.sha256 s3://download-chia-net/beta/Chia-intel_latest_beta.dmg.sha256
+    displayName: "Upload Beta Files"
+    condition: and(succeeded(), contains(variables['build.sourceBranch'], 'refs/heads/main'))
 
   - bash: |
       export AWS_ACCESS_KEY_ID=$(AccessKey)
