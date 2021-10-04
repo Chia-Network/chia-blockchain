@@ -95,3 +95,5 @@ class ProtocolMessageTypes(Enum):
     respond_to_coin_update = 73
     request_children = 74
     respond_children = 75
+    request_ses_hashes = 76
+    respond_ses_hashes = 77

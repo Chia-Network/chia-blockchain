@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from time import time
 
 from typing import Dict, List, Optional, Tuple, Callable
 
@@ -13,6 +14,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -29,6 +31,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
 from blspy import G2Element
 
+from chia.util.recursive_replace import recursive_replace
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
@@ -1818,7 +1821,7 @@ class TestGeneratorConditions:
             assert c.conditions == [
                 (
                     opcode.value,
-                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10])])],
+                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10]), b""])],
                 )
             ]
 
@@ -1832,11 +1835,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5])])
+            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5])])
+            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
@@ -1849,11 +1852,11 @@ class TestGeneratorConditions:
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5])])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
         assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4])])
+            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4]), b""])
             in npc_result.npc_list[0].conditions[0][1]
         )
 
@@ -1861,7 +1864,7 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash_1 = "abababababababababababababababab"
         hint = "12341234123412341234213421341234"
-        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 "{hint}")')
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 ("{hint}"))')
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
@@ -1880,3 +1883,324 @@ class TestGeneratorConditions:
                 else:
                     assert npc_result.error is None
                     assert npc_result.npc_list[0].conditions == []
+
+
+# the tests below are malicious generator programs
+
+# this program:
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c V (iter V (- N 1))) ())
+#  )
+#  (iter (c (q . 83) (c (concat (large_string 0x00 A) (q . 100)) ())) B)
+# )
+# with A=28 and B specified as {num}
+
+SINGLE_ARG_INT_COND = "(a (q 2 4 (c 2 (c (c (q . {opcode}) (c (concat (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (q . {val})) ())) (c 11 ())))) (c (q (a (i 11 (q 4 5 (a 4 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 28 {num})))"  # noqa
+
+# this program:
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c (c (q . 83) (c V ())) (iter (substr V 1) (- N 1))) ())
+#  )
+#  (iter (concat (large_string 0x00 A) (q . 100)) B)
+# )
+# truncates the first byte of the large string being passed down for each
+# iteration, in an attempt to defeat any caching of integers by node ID.
+# substr is cheap, and no memory is copied, so we can perform a lot of these
+SINGLE_ARG_INT_SUBSTR_COND = "(a (q 2 4 (c 2 (c (concat (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (q . {val})) (c 11 ())))) (c (q (a (i 11 (q 4 (c (q . {opcode}) (c 5 ())) (a 4 (c 2 (c (substr 5 (q . 1)) (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 28 {num})))"  # noqa
+
+# this program:
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c (c (q . 83) (c V ())) (iter (substr V 0 (- (strlen V) 1)) (- N 1))) ())
+#  )
+#  (iter (concat (large_string 0x00 A) (q . 0xffffffff)) B)
+# )
+SINGLE_ARG_INT_SUBSTR_TAIL_COND = "(a (q 2 4 (c 2 (c (concat (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (q . {val})) (c 11 ())))) (c (q (a (i 11 (q 4 (c (q . {opcode}) (c 5 ())) (a 4 (c 2 (c (substr 5 () (- (strlen 5) (q . 1))) (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 25 {num})))"  # noqa
+
+# (mod (A B)
+#  (defun large_string (V N)
+#    (if N (large_string (concat V V) (- N 1)) V)
+#  )
+#  (defun iter (V N)
+#    (if N (c (c (q . 83) (c (concat V N) ())) (iter V (- N 1))) ())
+#  )
+#  (iter (large_string 0x00 A) B)
+# )
+SINGLE_ARG_INT_LADDER_COND = "(a (q 2 4 (c 2 (c (a 6 (c 2 (c (q . {filler}) (c 5 ())))) (c 11 ())))) (c (q (a (i 11 (q 4 (c (q . {opcode}) (c (concat 5 11) ())) (a 4 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) 2 (i 11 (q 2 6 (c 2 (c (concat 5 5) (c (- 11 (q . 1)) ())))) (q . 5)) 1) (q 24 {num})))"  # noqa
+
+# this program:
+# (mod (A B)
+#  (defun large_message (N)
+#    (lsh (q . "a") N)
+#  )
+#  (defun iter (V N)
+#    (if N (c V (iter V (- N 1))) ())
+#  )
+#  (iter (c (q . 60) (c (large_message A) ())) B)
+# )
+# with B set to {num}
+
+CREATE_ANNOUNCE_COND = "(a (q 2 4 (c 2 (c (c (q . {opcode}) (c (a 6 (c 2 (c 5 ()))) ())) (c 11 ())))) (c (q (a (i 11 (q 4 5 (a 4 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) 23 (q . 97) 5) (q 8184 {num})))"  # noqa
+
+# this program:
+# (mod (A)
+#  (defun iter (V N)
+#    (if N (c V (iter V (- N 1))) ())
+#  )
+#  (iter (q 51 "abababababababababababababababab" 1) A)
+# )
+CREATE_COIN = '(a (q 2 2 (c 2 (c (q 51 "abababababababababababababababab" 1) (c 5 ())))) (c (q 2 (i 11 (q 4 5 (a 2 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) (q {num})))'  # noqa
+
+# this program:
+# (mod (A)
+#   (defun append (L B)
+#     (if L
+#       (c (f L) (append (r L) B))
+#       (c B ())
+#     )
+#   )
+#   (defun iter (V N)
+#     (if N (c (append V N) (iter V (- N 1))) ())
+#   )
+#   (iter (q 51 "abababababababababababababababab") A)
+# )
+# creates {num} CREATE_COIN conditions, each with a different amount
+CREATE_UNIQUE_COINS = '(a (q 2 6 (c 2 (c (q 51 "abababababababababababababababab") (c 5 ())))) (c (q (a (i 5 (q 4 9 (a 4 (c 2 (c 13 (c 11 ()))))) (q 4 11 ())) 1) 2 (i 11 (q 4 (a 4 (c 2 (c 5 (c 11 ())))) (a 6 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) (q {num})))'  # noqa
+
+
+class TestMaliciousGenerators:
+
+    # TODO: create a lot of announcements. The messages can be made different by
+    # using substr on a large buffer
+
+    # for all the height/time locks, we should only return the most strict
+    # condition, not all of them
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_ladder(self, opcode):
+        condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode,
+                [ConditionWithArgs(opcode, [int_to_bytes(28)])],
+            )
+        ]
+        assert run_time < 1.5
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer(self, opcode):
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode,
+                [ConditionWithArgs(opcode, [bytes([100])])],
+            )
+        ]
+        assert run_time < 2.5
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_substr(self, opcode):
+        condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode,
+                [ConditionWithArgs(opcode, [bytes([100])])],
+            )
+        ]
+        assert run_time < 3
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_substr_tail(self, opcode):
+        condition = SINGLE_ARG_INT_SUBSTR_TAIL_COND.format(
+            opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
+        )
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+
+        print(npc_result.npc_list[0].conditions[0][1])
+        assert ConditionWithArgs(opcode, [int_to_bytes(0xFFFFFFFF)]) in npc_result.npc_list[0].conditions[0][1]
+        assert run_time < 1
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_large_integer_negative(self, opcode):
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == []
+        assert run_time < 2
+        print(f"run time:{run_time}")
+
+    def test_duplicate_reserve_fee(self):
+        opcode = ConditionOpcode.RESERVE_FEE
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert npc_result.npc_list[0].conditions == [
+            (
+                opcode.value,
+                [ConditionWithArgs(opcode, [int_to_bytes(100 * 280000)])],
+            )
+        ]
+        assert run_time < 2
+        print(f"run time:{run_time}")
+
+    def test_duplicate_reserve_fee_negative(self):
+        opcode = ConditionOpcode.RESERVE_FEE
+        condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        # RESERVE_FEE conditions fail unconditionally if they have a negative
+        # amount
+        assert npc_result.error == Err.RESERVE_FEE_CONDITION_FAILED.value
+        assert len(npc_result.npc_list) == 0
+        assert run_time < 1.5
+        print(f"run time:{run_time}")
+
+    @pytest.mark.parametrize(
+        "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
+    )
+    def test_duplicate_coin_announces(self, opcode):
+        condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        # coin announcements are not propagated to python, but validated in rust
+        assert len(npc_result.npc_list[0].conditions) == 0
+        # TODO: optimize clvm to make this run in < 1 second
+        assert run_time < 13.5
+        print(f"run time:{run_time}")
+
+    def test_create_coin_duplicates(self):
+        # CREATE_COIN
+        # this program will emit 6000 identical CREATE_COIN conditions. However,
+        # we'll just end up looking at two of them, and fail at the first
+        # duplicate
+        condition = CREATE_COIN.format(num=600000)
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error == Err.DUPLICATE_OUTPUT.value
+        assert len(npc_result.npc_list) == 0
+        assert run_time < 2
+        print(f"run time:{run_time}")
+
+    def test_many_create_coin(self):
+        # CREATE_COIN
+        # this program will emit many CREATE_COIN conditions, all with different
+        # amounts.
+        # the number 6095 was chosen carefully to not exceed the maximum cost
+        condition = CREATE_UNIQUE_COINS.format(num=6094)
+        start_time = time()
+        npc_result = generator_condition_tester(condition, quote=False)
+        run_time = time() - start_time
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        assert len(npc_result.npc_list[0].conditions) == 1
+        assert npc_result.npc_list[0].conditions[0][0] == ConditionOpcode.CREATE_COIN.value
+        assert len(npc_result.npc_list[0].conditions[0][1]) == 6094
+        assert run_time < 1
+        print(f"run time:{run_time}")
+
+    @pytest.mark.asyncio
+    async def test_invalid_coin_spend_coin(self, two_nodes):
+        reward_ph = WALLET_A.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            5,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await time_out_assert(60, node_height_at_least, True, full_node_2, blocks[-1].height)
+
+        spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
+        coin_spend_0 = recursive_replace(spend_bundle.coin_spends[0], "coin.puzzle_hash", bytes32([1] * 32))
+        new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
+        assert spend_bundle is not None
+        res = await full_node_1.full_node.respond_transaction(new_bundle, new_bundle.name())
+        assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
