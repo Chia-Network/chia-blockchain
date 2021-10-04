@@ -115,7 +115,6 @@ class MempoolManager:
                 f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
             )
             agg = SpendBundle.aggregate(spend_bundles)
-            assert set(agg.removals()) == set(removals)
             return agg, additions, removals
         else:
             return None
