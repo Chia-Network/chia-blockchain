@@ -284,6 +284,14 @@ class FullNodeStore:
 
         if peak is not None and peak.total_iters > last_slot_iters:
             # Peak is in this slot
+
+            # Note: Adding an end of subslot does not lock the blockchain, for performance reasons. Only the
+            # timelord_lock is used. Therefore, it's possible that we add a new peak at the same time as seeing
+            # the finished subslot, and the peak is not fully added yet, so it looks like we still need the subslot.
+            # In that case, we will exit here and let the new_peak code add the subslot.
+            if total_iters < peak.total_iters:
+                return None
+
             rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
             cc_start_element = peak.challenge_vdf_output
             iters = uint64(total_iters - peak.total_iters)
