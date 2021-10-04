@@ -232,7 +232,9 @@ class FullNodeDiscovery:
             if self.address_manager is None:
                 return
             self.pending_outbound_connections.add(addr.host)
-            on_connect = self.server.on_connect if self.server.on_connect is not None else self.on_connect
+            on_connect: Optional[Callable] = (
+                self.server.on_connect if self.server.on_connect is not None else self.on_connect
+            )
             client_connected = await self.server.start_client(
                 addr,
                 on_connect=on_connect,
