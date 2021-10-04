@@ -2018,6 +2018,20 @@ class FullNode:
             and header_block.reward_chain_block.challenge_chain_ip_vdf == request.vdf_info
         ):
             vdf_proof = header_block.challenge_chain_ip_proof
+        if (
+            field_vdf == CompressibleVDFField.RC_SP_VDF
+            and header_block.reward_chain_block.reward_chain_sp_vdf == request.vdf_info
+        ):
+            vdf_proof = header_block.reward_chain_sp_proof
+        if (
+            field_vdf == CompressibleVDFField.RC_IP_VDF
+            and header_block.reward_chain_block.reward_chain_ip_vdf == request.vdf_info
+        ):
+            vdf_proof = header_block.reward_chain_ip_proof
+        if field_vdf == CompressibleVDFField.RC_EOS_VDF:
+            for sub_slot in header_block.finished_sub_slots:
+                if sub_slot.reward_chain.end_of_slot_vdf == request.vdf_info:
+                    vdf_proof = sub_slot.proofs.reward_chain_slot_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
             return None
