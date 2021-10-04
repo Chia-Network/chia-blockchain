@@ -37,6 +37,7 @@ from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
+from chia import __version__
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -328,6 +329,8 @@ class WebSocketServer:
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
         elif command == "get_status":
             response = self.get_status()
+        elif command == "get_version":
+            response = self.get_version()
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
@@ -539,6 +542,10 @@ class WebSocketServer:
 
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
+        return response
+
+    def get_version(self) -> Dict[str, Any]:
+        response = {"success": True, "version": __version__}
         return response
 
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
