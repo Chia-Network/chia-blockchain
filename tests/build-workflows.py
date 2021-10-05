@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import List
 
 
-def subdirs(root_dirs: List[str]) -> List[Path]:
+def subdirs() -> List[Path]:
     dirs: List[Path] = []
-    for r in root_dirs:
+    for r in testconfig.root_test_dirs:
         dirs.extend(Path(r).rglob("**/"))
     return [d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts))]
 
@@ -126,7 +126,7 @@ if args.verbose:
     logging.basicConfig(format="%(asctime)s:%(message)s", level=logging.DEBUG)
 
 # main
-test_dirs = subdirs(testconfig.root_test_dirs)
+test_dirs = subdirs()
 
 for os in testconfig.oses:
     template_text = workflow_yaml_template_text(os)
