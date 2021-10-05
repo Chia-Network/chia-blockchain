@@ -3,7 +3,7 @@ import shutil
 import tempfile
 
 from chia.util.file_keyring import FileKeyring
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, default_keychain_service, default_keychain_user, get_private_key_user
 from chia.util.keyring_wrapper import KeyringWrapper
 from functools import wraps
 from keyring.util import platform_
@@ -21,6 +21,16 @@ def create_empty_cryptfilekeyring():
     fd = os.open(crypt_file_keyring.file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
     os.close(fd)
     assert Path(crypt_file_keyring.file_path).exists()
+
+
+def add_dummy_key_to_cryptfilekeyring():
+    """
+    Add a fake key to the CryptFileKeyring
+    """
+    crypt_file_keyring = CryptFileKeyring()
+    crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
+    user: str = get_private_key_user(default_keychain_user(), 0)
+    crypt_file_keyring.set_password(default_keychain_service(), user, "abc123")
 
 
 def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
@@ -88,6 +98,7 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
 class TempKeyring:
     def __init__(
         self,
+        *,
         user: str = "testing-1.8.0",
         service: str = "testing-chia-1.8.0",
         populate: bool = False,
@@ -97,13 +108,14 @@ class TempKeyring:
         use_os_credential_store: bool = False,
     ):
         self.keychain = self._patch_and_create_keychain(
-            user, service, populate, existing_keyring_path, use_os_credential_store, setup_cryptfilekeyring
+            user=user, service=service, populate=populate, existing_keyring_path=existing_keyring_path, use_os_credential_store=use_os_credential_store, setup_cryptfilekeyring=setup_cryptfilekeyring
         )
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
     def _patch_and_create_keychain(
         self,
+        *,
         user: str,
         service: str,
         populate: bool,
@@ -130,9 +142,12 @@ class TempKeyring:
         mock_configure_backend = mock_configure_backend_patch.start()
         setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
-        mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
-        mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
-        mock_configure_legacy_backend.return_value = None
+        if setup_cryptfilekeyring is False:
+            mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
+            mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
+            mock_configure_legacy_backend.return_value = None
+        else:
+            mock_configure_legacy_backend_patch = None
 
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()
@@ -141,9 +156,10 @@ class TempKeyring:
         # We don't want CryptFileKeyring finding the real legacy keyring
         mock_data_root.return_value = temp_dir
 
-        if setup_cryptfilekeyring:
+        if setup_cryptfilekeyring is True:
             # Create an empty legacy keyring
             create_empty_cryptfilekeyring()
+            add_dummy_key_to_cryptfilekeyring()
 
         keychain = Keychain(user=user, service=service)
         keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
@@ -182,7 +198,8 @@ class TempKeyring:
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_supports_os_passphrase_storage_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()
-        self.keychain._mock_configure_legacy_backend_patch.stop()
+        if self.keychain._mock_configure_legacy_backend_patch is not None:
+            self.keychain._mock_configure_legacy_backend_patch.stop()
         self.keychain._mock_data_root_patch.stop()
 
         self.cleaned_up = True
