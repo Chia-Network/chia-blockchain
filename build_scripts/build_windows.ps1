@@ -65,7 +65,7 @@ pip install --no-index --find-links=.\win_build\ flora-blockchain
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create flora .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (python -c 'import flora; print(flora.PYINSTALLER_SPEC_PATH)') -join "`n"
+$SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
 pyinstaller --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
