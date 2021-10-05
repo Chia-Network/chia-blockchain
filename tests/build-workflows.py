@@ -64,23 +64,16 @@ def test_files_in_dir(dir):
     return [] if g is None else [f for f in g]
 
 
-# -----
-
-default_replacements = {
-    "INSTALL_TIMELORD": read_file("runner-templates/install-timelord.include.yml").rstrip(),
-    "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file("runner-templates/checkout-test-plots.include.yml").rstrip(),
-    "TEST_DIR": "",
-    "TEST_NAME": "",
-    "PYTEST_PARALLEL_ARGS": "",
-}
-
-# -----
-
-
 # Replace with update_config
-def generate_replacements(defaults, conf, dir, test_files):
+def generate_replacements(conf, dir, test_files):
     assert len(test_files) > 0
-    replacements = dict(defaults)
+    replacements = {
+        "INSTALL_TIMELORD": read_file("runner-templates/install-timelord.include.yml").rstrip(),
+        "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file("runner-templates/checkout-test-plots.include.yml").rstrip(),
+        "TEST_DIR": "",
+        "TEST_NAME": "",
+        "PYTEST_PARALLEL_ARGS": "",
+    }
 
     if not conf["checkout_blocks_and_plots"]:
         replacements[
@@ -143,7 +136,7 @@ for os in testconfig.oses:
             logging.info(f"Skipping {dir}: no tests collected")
             continue
         conf = update_config(module_dict(testconfig), dir_config(dir))
-        replacements = generate_replacements(default_replacements, conf, dir, test_files)
+        replacements = generate_replacements(conf, dir, test_files)
         txt = transform_template(template_text, replacements)
         logging.info(f"Writing {os}-{test_name(dir)}")
         workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)
