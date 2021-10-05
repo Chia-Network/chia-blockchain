@@ -3,6 +3,8 @@
 # Run from the current directory.
 
 import argparse
+import sys
+
 import testconfig
 import logging
 import subprocess
@@ -123,6 +125,7 @@ def dir_path(string):
 # args
 arg_parser = argparse.ArgumentParser(description="Build github workflows")
 arg_parser.add_argument("--output-dir", "-d", default="../.github/workflows", type=dir_path)
+arg_parser.add_argument("--fail-on-update", "-f", action="store_true")
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 args = arg_parser.parse_args()
 
@@ -147,5 +150,7 @@ for os in testconfig.oses:
 
 if subprocess.run(["git", "--no-pager", "diff", args.output_dir], capture_output=True).stdout:
     print("New workflow updates available.")
+    if args.fail_on_update:
+        sys.exit(1)
 else:
     print("Nothing to do.")
