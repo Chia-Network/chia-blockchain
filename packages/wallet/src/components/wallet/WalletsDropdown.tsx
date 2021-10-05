@@ -41,7 +41,7 @@ export default function WalletsDropdown(props: Props) {
               primary={(
                 <Flex gap={1} alignItems="center">
                   <Typography>{primaryTitle}</Typography>
-                  <WalletBadge wallet={wallet} fontSize="small" />
+                  <WalletBadge wallet={wallet} fontSize="small" tooltip />
                 </Flex>
               )}
               secondary={!hasSameTitle ? secondaryTitle: undefined}

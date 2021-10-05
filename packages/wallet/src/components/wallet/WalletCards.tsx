@@ -68,7 +68,6 @@ export default function WalletCards(props: Props) {
 }
 
 WalletCards.defaultProps = {
-  unit: undefined,
   totalBalanceTooltip: undefined,
   spendableBalanceTooltip: undefined,
   pendingTotalBalanceTooltip: undefined,

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
+import { Tooltip } from '@chia/core'
 import { VerifiedUser as VerifiedUserIcon, VerifiedUserProps } from '@material-ui/icons';
 import styled from 'styled-components';
 import Wallet from '../../types/Wallet';
@@ -11,17 +13,28 @@ const StyledSmallBadge = styled(VerifiedUserIcon)`
 
 type Props = VerifiedUserProps & {
   wallet: Wallet;
+  tooltip?: boolean;
 };
 
 export default function WalletBadge(props: Props) {
-  const { wallet, ...rest } = props;
+  const { wallet, tooltip, ...rest } = props;
 
   if (wallet.type === WalletType.CAT) {
     const token = Tokens.find((token) => token.tail === wallet.colour);
     if (token) {
-      return <StyledSmallBadge {...rest} />
+      return tooltip 
+        ? (
+          <Tooltip title={<Trans>This access token is whitelisted</Trans>}>
+            <StyledSmallBadge {...rest} />
+          </Tooltip>
+        )
+        : <StyledSmallBadge {...rest} />
     }
   }
 
   return null;
 }
+
+WalletBadge.defaultProps = {
+  tooltip: false,
+};

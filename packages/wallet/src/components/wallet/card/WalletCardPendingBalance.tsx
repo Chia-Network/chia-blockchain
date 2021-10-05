@@ -11,12 +11,12 @@ type Props = {
 
 export default function WalletCardPendingBalance(props: Props) {
   const { walletId, tooltip } = props;
-  const { wallet, unit, loading } = useWallet(walletId);
+  const { wallet, unit = '', loading } = useWallet(walletId);
 
   const isLoading = loading || !wallet?.wallet_balance;
   const value = wallet?.wallet_balance?.balance_pending;
 
-  const humanValue = useMemo(() => wallet && value !== undefined && unit
+  const humanValue = useMemo(() => wallet && value !== undefined
       ? `${getWalletHumanValue(wallet, value)} ${unit}`
       : ''
   ,[value, wallet, unit]);

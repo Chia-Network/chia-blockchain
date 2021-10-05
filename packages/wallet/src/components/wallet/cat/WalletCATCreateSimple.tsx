@@ -63,7 +63,7 @@ export default function WalletCATCreateSimple() {
                 key={token.symbol}
                 onSelect={handleSelect}
                 title={token.name}
-                icon={<token.icon fontSize="large" color="primary" />}
+                symbol={token.symbol}
                 disabled={isPresent}
                 description={token.description}
               />
