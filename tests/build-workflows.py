@@ -9,11 +9,13 @@ import subprocess
 from pathlib import Path
 from typing import List
 
+root_path = Path(__file__).parent.resolve()
+
 
 def subdirs() -> List[Path]:
     dirs: List[Path] = []
     for r in testconfig.root_test_dirs:
-        dirs.extend(Path(r).rglob("**/"))
+        dirs.extend(Path(root_path / r).rglob("**/"))
     return [d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts))]
 
 
@@ -24,7 +26,7 @@ def module_dict(module):
 def dir_config(dir):
     import importlib
 
-    module_name = str(dir).replace("/", ".") + ".config"
+    module_name = str(dir.relative_to(root_path)).replace("/", ".") + ".config"
     try:
         return module_dict(importlib.import_module(module_name))
     except ModuleNotFoundError:
@@ -39,7 +41,7 @@ def read_file(filename):
 
 # Input file
 def workflow_yaml_template_text(os):
-    return Path(f"runner-templates/build-test-{os}").read_text()
+    return Path(root_path / f"runner-templates/build-test-{os}").read_text()
 
 
 # Output files
@@ -49,7 +51,7 @@ def workflow_yaml_file(dir, os, test_name):
 
 # String function from test dir to test name
 def test_name(dir):
-    return str(dir).replace("/", "-")
+    return str(dir.relative_to(root_path)).replace("/", "-")
 
 
 def transform_template(template_text, replacements):
@@ -60,7 +62,7 @@ def transform_template(template_text, replacements):
 
 
 def test_files_in_dir(dir):
-    g = dir.glob("test_*.py")
+    g = Path(root_path / dir).glob("test_*.py")
     return [] if g is None else [f for f in g]
 
 
@@ -68,8 +70,10 @@ def test_files_in_dir(dir):
 def generate_replacements(conf, dir, test_files):
     assert len(test_files) > 0
     replacements = {
-        "INSTALL_TIMELORD": read_file("runner-templates/install-timelord.include.yml").rstrip(),
-        "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file("runner-templates/checkout-test-plots.include.yml").rstrip(),
+        "INSTALL_TIMELORD": read_file(Path(root_path / "runner-templates/install-timelord.include.yml")).rstrip(),
+        "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
+            Path(root_path / "runner-templates/checkout-test-plots.include.yml")
+        ).rstrip(),
         "TEST_DIR": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
@@ -85,11 +89,11 @@ def generate_replacements(conf, dir, test_files):
         replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    test_paths = ["tests/" + str(f) for f in test_files]
+    test_paths = [str(f.relative_to(root_path.parent)) for f in test_files]
     # We have to list the test files individually until pytest has the
     # option to only collect tests in the named dir, and not those below
     replacements["TEST_DIR"] = " ".join(sorted(test_paths))
-    replacements["TEST_NAME"] = test_name(str(dir))
+    replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
     for var in conf["custom_vars"]:
@@ -109,7 +113,7 @@ def update_config(parent, child):
 
 
 def dir_path(string):
-    p = Path(string)
+    p = Path(root_path / string)
     if p.is_dir():
         return p
     else:
