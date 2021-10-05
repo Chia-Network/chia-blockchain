@@ -6,6 +6,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.2.9 Chia blockchain 2021-10-01
+
+### Changed
+
+- Changed "About" section in client to indicate correct release version.
+
+## 1.2.8 Chia blockchain 2021-09-30
+
+### Added
+
+- Added RPC updates to support keyring migration and to support adding a passphrase for wallets in an upcoming release.
+- Added plot memo caching in PlotManager, speeding initial loading and cached loading, by enabling harvester to save the parsed plot memo on disk on shutdown, then load it back into memory on startup so that it can skip key parsing calculations for all already known plots.
+- Added a debug option to log all SQL commands.
+- Added support for DID, our decentralized identity solution, as a building block toward Chia's broader set of DID capabilities.
+- Thanks @olivernyc for the addition of a query in CoinStore to special case height 0 to avoid querying all unspent coins.
+- Starting logging the timing of applying additions and removals to the coin store.
+- Made max message size configurable in config.yaml, as a possible workaround for very large farms where reporting plot information exceeds the maximum message size.
+- Added a config option for peer_connect_timeout.
+- Added support for unhardened key derivations.
+- Various CoinStore benchmark and performance improvements.
+- Beta builds are built on every merge to main, and are now available from <https://chia.net/download/>.
+- Thanks @Radexito for adding support for Raspberry Pi 4 64Bit to the GUI installation script.
+- Added macOS keyring.yaml support, migrating keys from macOS Keychain to keyring.yaml to support an upcoming release in which we'll add an optional passphrase to wallets.
+- We have made many full node changes to support our upcoming Chia Asset Token (CAT) standard and our upcoming standalone light wallet, which will use Chia's new electrum-style protocol to enable faster wallet syncing.
+- We have many new translations added in this release. Thanks to the following community members for their contributions: Albanian @ATSHOOTER; Arabic @younes.huawei.test; Belarusian @LUXDAD; Catalan @Poliwhirl; Chinese Traditional @MongWu-NeiTherHwoGer-Long, @danielrangel6; Chinese, Simplified @SupperDog; Croatian @vjukopila5 @marko.anti12; Czech @HansCZ; Danish @loppefaaret; Dutch @netlob;English @sharjeelaziz @darkflare; English, Australia @nzjake; English, New Zealand @nzjake @sharjeelaziz; Finnish @f00b4r; French @burnt; Hungarian @SirGeoff; Hebrew @Arielzikri; Indonesian @lespau;Lithuanian @Mariusxz; Polish @bartlomiej.tokarzewski; Portuguese @darkflare; Portuguese, Brazilian @fsavaget; Sinhala @HelaBasa;Slovak @atomsymbol; Spanish @needNRG; Spanish, Argentina @juands1644 @gdestribats; Spanish, Mexico @danielrangel6; Swedish @MrDyngrak; Thai @3bb.pintakam.7m1 @taweesak0803650558 @taweesak.25may1993 @3bb.pintakam.7m1; Turkish @baturman @ExtremeSTRAUSSER.
+
+### Changed
+
+- Bluebox proofs are now randomized instead of looking at the oldest part of the blockchain first to find uncompacted proofs.
+- Bumped sortedcontainers to version 2.4.0.
+- Dropped some redundant code in plotting/manager.py
+- Updated some hooks: Update `flake8` to 3.9.2, `pre-commit-hooks` to 4.0.1, `black` to 21.8b0
+- Bump clvm_rs to 0.1.14.
+- Added tests for invalid list terminators in conditions.
+- Updated blspy to 1.0.6.
+- Made a change to allow the host to be configurable for the timelord launcher.
+- Thanks @dkackman for adding the ability to collect the IDs of plots as they are queued and return them with the response.
+- Made the SpendBundle.debug use the default genesis challenge by default.
+- Changes in full node to execute sqlite pragmas only once, at the level where the database is opened, and changed pragma synchronous=FULL to OFF to improve disk I/O performance. Also removed redundant database pragmas in wallet.
+- Made a change to remove CoinStore's dependency on FullBlock to just pass in the parts of the block necessary to add the block.
+- Improved log formatting.
+- A change to logging to only log warnings when more than 10 seconds has passed, to reduce the number of warning logs.
+- Improved and fixed some outdated messages in CLI. Thanks @jack60612 for the assist!
+- We previously added a Rust condition checker, to replace our existing Python-based condition checker. In this release, we're removing the old Python code.
+- Several clvm_rs updates to support our upcoming Chia Asset Token (CAT) standard.
+
+### Fixed
+
+- Thanks @mgraczyk for the fix to keyring_path.
+- Fixed an issue blocking the Ubuntu installer that required manual installation of Python 3.9 as a workaround.
+- Fixed an issue where the config.yaml and keyring.yaml are only partially written out to, if another process is attempting to read the config while it's being written.
+- Fixed rmtree call in create_pool_plot.
+- Thanks @Knight1 for fixing an issue in which fix-ssl-permissions shows the current 'mode' not the 'updated mode'.
+- Fixed Mypy issues on Python 3.9.7 that generated many errors when running mypy.
+- Thanks @olivernyc for fixing an edge case with negative inputs to 'truncate_to_significant_bits'.
+- Added a fix for Windows installs that were seeing exceptions when writing to the keyring.
+
 ## 1.2.7 Chia blockchain 2021-09-16
 
 ### Fixed
@@ -98,7 +155,7 @@ submissions. Thanks to @RuiZhe for Chinese, Traditional; @HansCZ for Czech;
 - Thanks @aarcro for adding timing metrics to plot check.
 - Thanks @chadwick2143 for adding the ability to set the port to use for the harvester.
 - Added more friendly error reporting for peername errors.
-- We have added many new translations in this release. Thanks to @L3Sota,  @hodokami and @L3Sota for Japanese; @danielrangel6, @memph1x and @dvd101x for Spanish (Mexico); @fsavaget, @semnosao and @ygalvao for Portuguese (Brazilian); @juands1644 for Spanish (Argentina); @darkflare for Portuguese; @wong8888, @RuiZhe, @LM_MA, @ezio20121225, @GRIP123, @11221206 and @nicko1122 for Chinese Traditional; @atomsymbol for Slovak; @SirGeoff and @rolandfarkasCOM for Hungarian; @ordtrogen for Swedish; @HansCZ and @kafkic for Czech; @SupperDog for Chinese Simplified; @baturman and @Ansugo for Turkish; @thebacktrack for Russian; @itservicelukaswinter for German; @saeed508, @Amirr_ezA and @themehran for Persian; @hgthtung for Vietnamese; @f00b4r for Finnish; @IMIMIM for Latvian; @Rothnita and @vanntha85 for Khmer; @Rothnita and @Gammaubl for Thai; @marcin1990 for Polish; @mydienst for Bosnian; @dvd101x and @darkflare for Spanish; @ATSHOOTER for Albanian; @Munyuk81 for Indonesian; @loppefaaret for Danish; @sharjeelazizn and @nzjake for English; @nzjake for English (New Zealand). We apologize if we missed anyone and welcome corrections.
+- We have added many new translations in this release. Thanks to @L3Sota,  @hodokami and @L3Sota for Japanese; @danielrangel6, @memph1x and @dvd101x for Spanish (Mexico); @fsavaget, @semnosao and @ygalvao for Portuguese (Brazilian); @juands1644 for Spanish (Argentina); @darkflare for Portuguese; @wong8888, @RuiZhe, @LM_MA, @ezio20121225, @GRIP123, @11221206 and @nicko1122 for Chinese Traditional; @atomsymbol for Slovak; @SirGeoff and @rolandfarkasCOM for Hungarian; @ordtrogen for Swedish; @HansCZ and @kafkic for Czech; @SupperDog for Chinese Simplified; @baturman and @Ansugo for Turkish; @thebacktrack for Russian; @itservicelukaswinter for German; @saeed508, @Amirr_ezA and @themehran for Persian; @hgthtung for Vietnamese; @f00b4r for Finnish; @IMIMIM for Latvian; @Rothnita and @vanntha85 for Khmer; @Rothnita and @Gammaubl for Thai; @marcin1990 for Polish; @mydienst for Bosnian; @dvd101x and @darkflare for Spanish; @ATSHOOTER for Albanian; @Munyuk81 for Indonesian; @loppefaaret for Danish; @sharjeelaziz and @nzjake for English; @nzjake for English (New Zealand). We apologize if we missed anyone and welcome corrections.
 
 ### Changed
 

@@ -115,7 +115,6 @@ class MempoolManager:
                 f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
             )
             agg = SpendBundle.aggregate(spend_bundles)
-            assert set(agg.removals()) == set(removals)
             return agg, additions, removals
         else:
             return None
@@ -255,6 +254,8 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err(npc_result.error)
         # build removal list
         removal_names: List[bytes32] = [npc.coin_name for npc in npc_list]
+        if set(removal_names) != set([s.name() for s in new_spend.removals()]):
+            return None, MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
 
         additions = additions_for_npc(npc_list)
 
