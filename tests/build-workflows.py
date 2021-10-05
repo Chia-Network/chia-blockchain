@@ -59,11 +59,6 @@ def transform_template(template_text, replacements):
     return t
 
 
-def test_files_in_dir(dir):
-    g = dir.glob("test_*.py")
-    return [] if g is None else [f for f in g]
-
-
 # -----
 
 default_replacements = {
@@ -78,8 +73,7 @@ default_replacements = {
 
 
 # Replace with update_config
-def generate_replacements(defaults, conf, dir, test_files):
-    assert len(test_files) > 0
+def generate_replacements(defaults, conf, dir: Path):
     replacements = dict(defaults)
 
     if not conf["checkout_blocks_and_plots"]:
@@ -92,10 +86,8 @@ def generate_replacements(defaults, conf, dir, test_files):
         replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    test_paths = ["tests/" + str(f) for f in test_files]
-    # We have to list the test files individually until pytest has the
-    # option to only collect tests in the named dir, and not those below
-    replacements["TEST_DIR"] = " ".join(sorted(test_paths))
+
+    replacements["TEST_DIR"] = str(Path("tests") / dir / "test_*.py")
     replacements["TEST_NAME"] = test_name(str(dir))
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
@@ -138,12 +130,8 @@ test_dirs = subdirs(testconfig.root_test_dirs)
 for os in testconfig.oses:
     template_text = workflow_yaml_template_text(os)
     for dir in test_dirs:
-        test_files = test_files_in_dir(dir)
-        if len(test_files) == 0:
-            logging.info(f"Skipping {dir}: no tests collected")
-            continue
         conf = update_config(module_dict(testconfig), dir_config(dir))
-        replacements = generate_replacements(default_replacements, conf, dir, test_files)
+        replacements = generate_replacements(default_replacements, conf, dir)
         txt = transform_template(template_text, replacements)
         logging.info(f"Writing {os}-{test_name(dir)}")
         workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)
