@@ -55,7 +55,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-service_plotter = "chia plots create"
+service_plotter = "flora plots create"
 
 
 async def fetch(url: str):
