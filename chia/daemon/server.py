@@ -88,15 +88,15 @@ class PlotEvent(str, Enum):
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
     name_map = {
-        "chia": "chia",
-        "chia_wallet": "start_wallet",
-        "chia_full_node": "start_full_node",
-        "chia_harvester": "start_harvester",
-        "chia_farmer": "start_farmer",
-        "chia_introducer": "start_introducer",
-        "chia_timelord": "start_timelord",
-        "chia_timelord_launcher": "timelord_launcher",
-        "chia_full_node_simulator": "start_simulator",
+        "flora": "flora",
+        "flora_wallet": "start_wallet",
+        "flora_full_node": "start_full_node",
+        "flora_harvester": "start_harvester",
+        "flora_farmer": "start_farmer",
+        "flora_introducer": "start_introducer",
+        "flora_timelord": "start_timelord",
+        "flora_timelord_launcher": "timelord_launcher",
+        "flora_full_node_simulator": "start_simulator",
     }
 
     def executable_for_service(service_name: str) -> str:
