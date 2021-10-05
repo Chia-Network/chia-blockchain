@@ -30,10 +30,10 @@
   (defun-inline my_limitations_solution_cat_truth (Truths) (r (r (r Truths))))
 
 
-  ; CAT mod_struct is: (MOD_HASH MOD_HASH_hash GENESIS_COIN_CHECKER GENESIS_COIN_CHECKER_hash)
+  ; CAT mod_struct is: (MOD_HASH MOD_HASH_hash TAIL_PROGRAM TAIL_PROGRAM_hash)
 
   (defun-inline cat_mod_hash_truth (Truths) (f (cat_struct_truth Truths)))
   (defun-inline cat_mod_hash_hash_truth (Truths) (f (r (cat_struct_truth Truths))))
-  (defun-inline cat_genesis_checker_truth (Truths) (f (r (r (cat_struct_truth Truths)))))
-  (defun-inline cat_genesis_checker_hash_truth (Truths) (f (r (r (r (cat_struct_truth Truths))))))
+  (defun-inline cat_tail_program_truth (Truths) (f (r (r (cat_struct_truth Truths)))))
+  (defun-inline cat_tail_program_hash_truth (Truths) (f (r (r (r (cat_struct_truth Truths))))))
 )
