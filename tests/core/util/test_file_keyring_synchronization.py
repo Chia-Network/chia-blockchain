@@ -22,7 +22,7 @@ DUMMY_SLEEP_VALUE = 2
 
 def dummy_set_passphrase(service, user, passphrase, keyring_path):
     with TempKeyring(existing_keyring_path=keyring_path, delete_on_cleanup=False):
-        if platform == "linux":
+        if platform == "linux" or platform == "win32" or platform == "cygwin":
             # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
             # otherwise file events won't be detected in the child process
             KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
@@ -84,7 +84,7 @@ class TestFileKeyringSynchronization(unittest.TestCase):
         # When: spinning off children to each set a passphrase concurrently
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
-            res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
+            res.get(timeout=40)  # 40 second timeout to prevent a bad test from spoiling the fun
 
         # Expect: parent process should be able to find all passphrases that were set by the child processes
         for item in passphrase_list:
@@ -238,10 +238,10 @@ class TestFileKeyringSynchronization(unittest.TestCase):
 
             # When: timing out waiting for the child process (because it aborted)
             with pytest.raises(TimeoutError):
-                res.get(timeout=1)
+                res.get(timeout=2)
 
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
-            assert lock.acquire_write_lock(timeout=(1)) is True
+            assert lock.acquire_write_lock(timeout=(2)) is True
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -267,6 +267,8 @@ class TestFileKeyringSynchronization(unittest.TestCase):
             # Expect: lock acquisition times out (raises as FileKeyringLockTimeout)
             with pytest.raises(FileKeyringLockTimeout):
                 res.get(timeout=2)
+
+        lock.release_read_lock()
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
