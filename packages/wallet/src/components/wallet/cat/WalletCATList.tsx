@@ -2,7 +2,7 @@ import React from 'react';
 import { Switch, Route, useRouteMatch } from 'react-router-dom';
 import WalletCATSelect from './WalletCATSelect';
 import WalletCATCreateNew from './WalletCATCreateNew';
-import WalletCATCreateExisting from './WalletCATCreateExisting';
+import WalletCATCreateExistingSimple from './WalletCATCreateExistingSimple';
 
 export default function WalletCATList() {
   const { path } = useRouteMatch();
@@ -16,7 +16,7 @@ export default function WalletCATList() {
         <WalletCATCreateNew />
       </Route>
       <Route path={`${path}/existing`} exact>
-        <WalletCATCreateExisting />
+        <WalletCATCreateExistingSimple />
       </Route>
     </Switch>
   );

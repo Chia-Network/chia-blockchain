@@ -5,64 +5,68 @@ import { Box, Grid } from '@material-ui/core';
 import { useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { useHistory } from 'react-router';
-import { create_cc_for_colour_action } from '../../../modules/message';
+import { createCATWalletFromToken } from '../../../modules/message';
 import { chia_to_mojo } from '../../../util/chia';
 import { openDialog } from '../../../modules/dialog';
 import config from '../../../config/config';
+import useShowError from '../../../hooks/useShowError';
 
-const { asteroid } = config;
 
 type CreateExistingCATWalletData = {
   name: string;
-  fee: string;
+  tail: string;
+  symbol?: string;
 };
 
 export default function WalletCATCreateExisting() {
   const methods = useForm<CreateExistingCATWalletData>({
     shouldUnregister: false,
     defaultValues: {
+      tail: '',
       name: '',
-      fee: '',
+      symbol: '',
     },
   });
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const history = useHistory();
+  const showError = useShowError();
 
   async function handleSubmit(values: CreateExistingCATWalletData) {
     try {
-      const { name, fee } = values;
+      const { name, tail } = values;
       setLoading(true);
+
+
+      if (!tail) {
+        dispatch(
+          openDialog(
+            <AlertDialog>
+              <Trans>Please enter a valid TAIL</Trans>
+            </AlertDialog>,
+          ),
+        );
+        return;
+      }
 
       if (!name) {
         dispatch(
           openDialog(
             <AlertDialog>
-              <Trans>Please enter a valid CAT name</Trans>
+              <Trans>Please enter a valid token name</Trans>
             </AlertDialog>,
           ),
         );
         return;
       }
 
-      /* FEE is optional
-      if (fee === '' || isNaN(Number(fee))) {
-        dispatch(
-          openDialog(
-            <AlertDialog>
-              <Trans>Please enter a valid numeric fee</Trans>
-            </AlertDialog>,
-          ),
-        );
-        return;
-      }*/
-
-      const feeMojos = chia_to_mojo(fee || '0');
-
-      const response = await dispatch(create_cc_for_colour_action(name, feeMojos));
-      if (response && response.data && response.data.success === true) {
-        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
-      }
+      const walletId = await dispatch(createCATWalletFromToken({
+        name,
+        tail,
+      }));
+      history.push(`/dashboard/wallets/${walletId}`);
+    } catch (error) {
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -72,27 +76,32 @@ export default function WalletCATCreateExisting() {
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <Back variant="h5">
-          {asteroid 
-            ? <Trans>Create custom CAT Wallet</Trans>
-            : <Trans>Create Chia Asset Token Wallet from Existing TAIL</Trans>}
-          
+          <Trans>Create Token</Trans>
         </Back>
         <Card>
+        <Grid spacing={2} direction="column" container>
+            <Grid xs={12} md={8} lg={6} item>
           <Grid spacing={2} container>
-            <Grid xs={12} md={6} item>
+            <Grid xs={12} item>
               <TextField
-                name="name"
+                  name="name"
+                  variant="outlined"
+                  label={<Trans>Name</Trans>}
+                  fullWidth
+                  autoFocus
+                />
+            </Grid>
+            <Grid xs={12} item>
+              <TextField
+                name="tail"
                 variant="outlined"
                 label={<Trans>Token and Asset Issuance Limitations</Trans>}
+                multiline
                 fullWidth
               />
             </Grid>
-            <Grid xs={12} md={6} item>
-              <Fee
-                variant="outlined"
-                fullWidth
-              />
-            </Grid>
+          </Grid>
+          </Grid>
           </Grid>
         </Card>
         <Box>
@@ -102,7 +111,7 @@ export default function WalletCATCreateExisting() {
             color="primary"
             loading={loading}
           >
-            <Trans>Recover</Trans>
+            <Trans>Create</Trans>
           </ButtonLoading>
         </Box>
       </Flex>

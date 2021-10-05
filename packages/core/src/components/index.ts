@@ -21,6 +21,7 @@ export { default as Dropzone } from './Dropzone';
 export { default as Fee } from './Fee';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
+export { default as Dropdown } from './Dropdown';
 export { default as Flex } from './Flex';
 export { default as Form } from './Form';
 export { default as FormBackButton } from './FormBackButton';

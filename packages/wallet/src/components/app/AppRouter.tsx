@@ -10,6 +10,7 @@ import Dashboard from '../dashboard/Dashboard';
 import BackupRestore from '../backup/BackupRestore';
 import type { RootState } from '../../modules/rootReducer';
 import LayoutLoading from '../layout/LayoutLoading';
+import WalletHero from '../wallet/hero/WalletHero';
 
 export default function AppRouter() {
   const loggedInReceived = useSelector(
@@ -47,6 +48,9 @@ export default function AppRouter() {
     <Switch>
       <Route path="/" exact>
         <SelectKey />
+      </Route>
+      <Route path="/wallets">
+        <WalletHero />
       </Route>
       <Route path="/wallet/add" exact>
         <WalletAdd />

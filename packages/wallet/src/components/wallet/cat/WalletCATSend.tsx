@@ -30,6 +30,7 @@ type SendTransactionData = {
   address: string;
   amount: string;
   fee: string;
+  memo: string;
 };
 
 export default function WalletSend(props: Props) {
@@ -43,6 +44,7 @@ export default function WalletSend(props: Props) {
       address: '',
       amount: '',
       fee: '',
+      memo: '',
     },
   });
 
@@ -88,7 +90,7 @@ export default function WalletSend(props: Props) {
         throw new Error(t`Please enter a valid numeric amount`);
       }
 
-      const fee = data.fee.trim();
+      const fee = data.fee.trim() || '0';
       if (!isNumeric(fee)) {
         throw new Error(t`Please enter a valid numeric fee`);
       }
@@ -119,11 +121,12 @@ export default function WalletSend(props: Props) {
       const amountValue = Number.parseFloat(colouredcoin_to_mojo(amount));
       const feeValue = Number.parseFloat(chia_to_mojo(fee));
 
-      const response = await dispatch(cc_spend(id, address, amountValue, feeValue));
-      console.log('response', response);
+      const memo = data.memo.trim();
+      const memos = memo ? [memo] : undefined;
+
+      const response = await dispatch(cc_spend(id, address, amountValue, feeValue, memos));
       if (response && response.data && response.data.success === true) {
         const result = get_transaction_result(response.data);
-        console.log('transaction result', result);
         if (result.success) {
             openDialog(
               <AlertDialog title={<Trans>Success</Trans>}>
@@ -167,6 +170,7 @@ export default function WalletSend(props: Props) {
               fullWidth
               disabled={isSubmitting}
               label={<Trans>Address / Puzzle hash</Trans>}
+              required
             />
           </Grid>
           <Grid xs={12} md={6} item>
@@ -179,6 +183,7 @@ export default function WalletSend(props: Props) {
               label={<Trans>Amount</Trans>}
               currency={currency}
               fullWidth
+              required
             />
           </Grid>
           <Grid xs={12} md={6} item>
@@ -190,6 +195,16 @@ export default function WalletSend(props: Props) {
               disabled={isSubmitting}
               label={<Trans>Fee</Trans>}
               fullWidth
+            />
+          </Grid>
+          <Grid xs={12} item>
+            <TextField
+              name="memo"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={isSubmitting}
+              label={<Trans>Memo</Trans>}
             />
           </Grid>
           <Grid xs={12} item>

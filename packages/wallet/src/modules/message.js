@@ -1,4 +1,5 @@
 import { push } from 'connected-react-router';
+import { t } from '@lingui/macro';
 import { service_wallet } from '../util/service_names';
 import { openProgress, closeProgress } from './progress';
 import { refreshAllState } from '../middleware/middleware_api';
@@ -23,6 +24,11 @@ import { wsDisconnect } from './websocket';
 import config from '../config/config';
 
 const { backup_host } = config;
+
+// const WALLETD_PATH = '/wallets';
+// const WALLETD_PATH = '/dashboard/wallets/1';
+const WALLETD_PATH = '/dashboard/wallets/1';
+
 
 // TODO this is not doing anything because wallet id is missing
 export const clearSend = () => {
@@ -211,7 +217,7 @@ export const add_new_key_action = (mnemonic) => (dispatch) =>
         dispatch(resetMnemonic());
         dispatch(format_message('get_public_keys', {}));
         dispatch(refreshAllState());
-        dispatch(push('/dashboard/wallets'));
+        dispatch(push(WALLETD_PATH));
       } else {
         if (response.data.word) {
           dispatch(setIncorrectWord(response.data.word));
@@ -233,7 +239,7 @@ export const add_and_skip_backup = (mnemonic) => (dispatch) =>
         dispatch(resetMnemonic());
         dispatch(format_message('get_public_keys', {}));
         dispatch(refreshAllState());
-        dispatch(push('/dashboard/wallets'));
+        dispatch(push(WALLETD_PATH));
       } else {
         if (response.data.word) {
           dispatch(setIncorrectWord(response.data.word));
@@ -348,7 +354,7 @@ export const log_in_and_import_backup_action =
       if (response.data.success) {
         // Go to wallet
         dispatch(refreshAllState());
-        dispatch(push('/dashboard/wallets'));
+        dispatch(push(WALLETD_PATH));
       } else {
         const { error } = response.data;
         if (error === 'not_initialized') {
@@ -368,7 +374,7 @@ export const login_and_skip_action = (fingerprint) => (dispatch) => {
       if (response.data.success) {
         // Go to wallet
         dispatch(refreshAllState());
-        dispatch(push('/dashboard/wallets'));
+        dispatch(push(WALLETD_PATH));
       } else {
         const { error } = response.data;
         if (error === 'not_initialized') {
@@ -389,7 +395,7 @@ export const login_action = (fingerprint) => (dispatch) => {
       if (response.data.success) {
         // Go to wallet
         await dispatch(refreshAllState());
-        dispatch(push('/dashboard/wallets'));
+        dispatch(push(WALLETD_PATH));
       } else {
         const { error } = response.data;
         if (error === 'not_initialized') {
@@ -515,13 +521,13 @@ export const create_coloured_coin = (amount, fee) => {
   return action;
 };
 
-export const create_cc_for_colour = (colour, fee) => {
+export const create_cc_for_existing_tail = (tail, fee) => {
   const action = walletMessage();
   action.message.command = 'create_new_wallet';
   action.message.data = {
     wallet_type: 'cat_wallet',
     mode: 'existing',
-    colour,
+    colour: tail,
     fee,
     host: backup_host,
   };
@@ -547,32 +553,34 @@ export const create_backup_action = (file_path) => (dispatch) =>
     }
   });
 
+export const get_wallets = () => (dispatch) =>
+  async_api(dispatch, format_message('get_wallets', {}), false, true);
+
 export const create_cc_action = (amount, fee) => (dispatch) =>
   async_api(dispatch, create_coloured_coin(amount, fee), false, true).then(
-    (response) => {
+    async (response) => {
+      console.log('real response', response);
       if (response.data.success) {
         // Go to wallet
-        dispatch(format_message('get_wallets', {}));
+        await dispatch(get_wallets());
         return response;
       } else {
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
+        throw new Error(response.data.error || t`Something went wrong`);
       }
     },
   );
 
-export const create_cc_for_colour_action = (colour, fee) => (dispatch) =>
-  async_api(dispatch, create_cc_for_colour(colour, fee), false, true).then(
-    (response) => {
-      dispatch(createState(true, false));
+export const create_cc_for_colour_action = (tail, fee) => (dispatch) =>
+  async_api(dispatch, create_cc_for_existing_tail(tail, fee), false, true).then(
+    async (response) => {
+      console.log('real response', response);
       if (response.data.success) {
         // Go to wallet
+        await dispatch(get_wallets());
         dispatch(showCreateBackup(true));
-        dispatch(format_message('get_wallets', {}));
         return response;
       } else {
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
+        throw new Error(response.data.error || t`Something went wrong`);
       }
     },
   );
@@ -591,33 +599,80 @@ export const get_colour_name = (wallet_id) => {
   return action;
 };
 
-export const rename_cc_wallet = (wallet_id, name) => {
+export const rename_cc_wallet_message = (wallet_id, name) => {
   const action = walletMessage();
   action.message.command = 'cc_set_name';
   action.message.data = { wallet_id, name };
   return action;
 };
 
-export const cc_spend_message = (wallet_id, address, amount, fee) => {
+export const rename_cc_wallet = (wallet_id, name) => (dispatch) =>
+  async_api(
+    dispatch, 
+    rename_cc_wallet_message(wallet_id, name),
+    false,
+    true,
+  );
+
+export const cc_spend_message = (wallet_id, address, amount, fee, memos) => {
   const action = walletMessage();
   action.message.command = 'cc_spend';
-  action.message.data = {
+
+  const data = {
     wallet_id,
     inner_address: address,
     amount,
     fee,
   };
+
+  if (memos) {
+    data.memos = memos;
+  }
+
+  action.message.data = data;
   return action;
 };
 
-export const cc_spend = (wallet_id, address, amount, fee) => (dispatch) =>
+export const cc_spend = (wallet_id, address, amount, fee, memos) => (dispatch) =>
   async_api(
     dispatch, 
-    cc_spend_message(wallet_id, address, amount, fee),
+    cc_spend_message(wallet_id, address, amount, fee, memos),
     false,
     true,
   );
 
+export const createCATWalletFromToken = (token) => async (dispatch) => {
+  const { name, tail } = token;
+  if (!name) {
+    throw new Error(t`Token has empty name`);
+  }
+
+  if (!tail) {
+    throw new Error(t`Token has empty tail`);
+  }
+
+  try {
+    await dispatch(openProgress());
+    const response = await dispatch(create_cc_for_colour_action(tail, '0'));
+    console.log('response', response);
+    if (response?.data?.success !== true) {
+      throw new Error(response?.data?.error || t`Something went wrong`);
+    }
+    
+    const walletId = response?.data?.wallet_id;
+    if (!walletId) {
+      throw new Error(t`Wallet id is not defined`);
+    }
+    
+    await dispatch(openProgress());
+    await dispatch(rename_cc_wallet(walletId, name));
+
+    return walletId;
+  } finally {
+    await dispatch(closeProgress());
+  }
+}
+  
 
 export const logOut = (command, data) => ({ type: 'LOG_OUT', command, data });
 

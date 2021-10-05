@@ -3,6 +3,7 @@ import { Switch, Route, useRouteMatch } from 'react-router-dom';
 import WalletCreateList from './WalletCreateList';
 import WalletDIDList from '../did/WalletDIDList';
 import WalletCATList from '../cat/WalletCATList';
+import WalletCATCreateSimple from '../cat/WalletCATCreateSimple';
 
 /*
 export const useStyles = makeStyles((theme) => ({
@@ -119,6 +120,9 @@ export function CreateWalletView() {
       </Route>
       <Route path={`${path}/cat`}>
         <WalletCATList />
+      </Route>
+      <Route path={`${path}/simple`}>
+        <WalletCATCreateSimple />
       </Route>
     </Switch>
   );

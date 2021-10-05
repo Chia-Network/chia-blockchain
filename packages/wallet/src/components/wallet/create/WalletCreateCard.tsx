@@ -4,7 +4,7 @@ import { Typography } from '@material-ui/core';
 import styled from 'styled-components';
 
 const StyledCardBody = styled(Flex)`
-  min-height: 250px;
+  min-height: 200px;
 `;
 
 type Props = {
@@ -13,13 +13,14 @@ type Props = {
   onSelect?: () => void;
   icon: ReactNode;
   disabled?: boolean;
+  description?: string;
 };
 
 export default function WalletCreateCard(props: Props) {
-  const { title, children, icon, onSelect, disabled } = props;
+  const { title, children, icon, onSelect, disabled, description } = props;
 
   return (
-    <Card onSelect={onSelect} disabled={disabled}>
+    <Card onSelect={onSelect} disabled={disabled} fullHeight>
       <StyledCardBody flexDirection="column" gap={3}>
         <Flex flexDirection="column" gap={2} flexGrow={1} alignItems="center" justifyContent="center">
           {icon}
@@ -31,6 +32,9 @@ export default function WalletCreateCard(props: Props) {
           {children}
         </Typography>
       </StyledCardBody>
+      <Typography variant="caption" align="center">
+        {description}
+      </Typography>
     </Card>
   );
 }

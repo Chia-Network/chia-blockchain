@@ -30,7 +30,7 @@ export default function WalletCATCreateNew() {
     try {
       const { amount, fee } = values;
       setLoading(true);
-/*
+      /* fee and amount is optional
       if (//!amount ||
         // Number(amount) === 0 ||
         // !Number(amount) ||
@@ -45,7 +45,7 @@ export default function WalletCATCreateNew() {
         );
         return;
       }
-      */
+      
       if (fee === '' || isNaN(Number(fee))) {
         dispatch(
           openDialog(
@@ -56,9 +56,10 @@ export default function WalletCATCreateNew() {
         );
         return;
       }
+      */
 
-      const amountMojos = chia_to_mojo(amount);
-      const feeMojos = chia_to_mojo(fee);
+      const amountMojos = chia_to_mojo(amount || '0');
+      const feeMojos = chia_to_mojo(fee || '0');
 
       const response = await dispatch(create_cc_action(amountMojos, feeMojos));
       if (response && response.data && response.data.success === true) {

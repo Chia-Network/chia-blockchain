@@ -60,7 +60,6 @@ export default function SelectKey() {
   }
 
   async function handleDeletePrivateKey(fingerprint: Fingerprint) {
-
     dispatch(openProgress());
     const response: any = await dispatch(check_delete_key_action(fingerprint));
     dispatch(closeProgress());
@@ -133,12 +132,12 @@ export default function SelectKey() {
         <Flex flexDirection="column" alignItems="center" gap={3}>
           <Logo width={130} />
           {hasFingerprints ? (
-            <Typography variant="h5" component="h1" gutterBottom>
+            <Typography variant="h5" component="h1">
               <Trans>Select Key</Trans>
             </Typography>
           ) : (
             <>
-              <Typography variant="h5" component="h1" gutterBottom>
+              <Typography variant="h5" component="h1">
                 <Trans>Sign In</Trans>
               </Typography>
               <Typography variant="subtitle1">

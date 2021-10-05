@@ -334,6 +334,7 @@ export default function WalletSend(props: SendCardProps) {
               fullWidth
               disabled={sending_transaction}
               label={<Trans>Address / Puzzle hash</Trans>}
+              required
             />
           </Grid>
           <Grid xs={12} md={6} item>
@@ -344,6 +345,7 @@ export default function WalletSend(props: SendCardProps) {
               name="amount"
               disabled={sending_transaction}
               label={<Trans>Amount</Trans>}
+              required
               fullWidth
             />
           </Grid>

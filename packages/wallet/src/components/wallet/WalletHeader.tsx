@@ -1,16 +1,19 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import {
+  Back,
   More,
   Flex,
   ConfirmDialog,
 } from '@chia/core';
+import { useHistory } from 'react-router';
 import { useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
   ListItemIcon,
   MenuItem,
+  Button,
 } from '@material-ui/core';
 import {
   Delete as DeleteIcon,
@@ -18,18 +21,18 @@ import {
 import { deleteUnconfirmedTransactions } from '../../modules/incoming';
 import WalletStatus from './WalletStatus';
 import useOpenDialog from '../../hooks/useOpenDialog';
+import WalletsDropdodown from './WalletsDropdown';
 
 type StandardWalletProps = {
-  wallet_id: number;
-  hideTitle?: boolean;
-  title: ReactNode;
+  walletId: number;
   actions?: ({ onClose } : { onClose: () => void } ) => ReactNode;
 };
 
 export default function WalletHeader(props: StandardWalletProps) {
-  const { wallet_id, hideTitle, actions, title } = props;
+  const { walletId, actions } = props;
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
+  const history = useHistory();
 
   async function handleDeleteUnconfirmedTransactions() {
     const deleteConfirmed = await openDialog(
@@ -44,26 +47,32 @@ export default function WalletHeader(props: StandardWalletProps) {
 
     // @ts-ignore
     if (deleteConfirmed) {
-      dispatch(deleteUnconfirmedTransactions(wallet_id));
+      dispatch(deleteUnconfirmedTransactions(walletId));
     }
+  }
+
+  function handleAddToken() {
+    history.push('/dashboard/wallets/create/simple');
   }
 
   return (
     <Flex gap={1} alignItems="center">
-      <Flex flexGrow={1}>
-        {!hideTitle && (
-          <Typography variant="h5" gutterBottom>
-            {title}
-          </Typography>
-        )}
+      <Flex flexGrow={1} gap={1}>
+        <WalletsDropdodown walletId={walletId} />
+        <Button
+          color="primary"
+          onClick={handleAddToken}
+        >
+          <Trans>+ Add Token</Trans>
+        </Button>
       </Flex>
       <Flex gap={1} alignItems="center">
         <Flex alignItems="center">
           <Typography variant="body1" color="textSecondary">
-            <Trans>Wallet Status:</Trans>
+            <Trans>Status:</Trans>
           </Typography>
           &nbsp;
-          <WalletStatus height />
+          <WalletStatus />
         </Flex>
         <More>
           {({ onClose }) => (

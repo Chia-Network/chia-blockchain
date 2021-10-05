@@ -3,7 +3,7 @@ import WalletType from './WalletType';
 
 const WalletName = {
   [WalletType.STANDARD_WALLET]: defineMessage({
-    message: 'Chia Wallet',
+    message: 'Standard Wallet',
   }),
   [WalletType.RATE_LIMITED]: defineMessage({
     message: 'RL Wallet',
