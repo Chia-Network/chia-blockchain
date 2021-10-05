@@ -782,7 +782,7 @@ class WebSocketServer:
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
 
         except (subprocess.SubprocessError, IOError):
-            log.exception(f"problem starting {service_name}")
+            log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
             config["error"] = error
@@ -1052,7 +1052,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     else:
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
-    log.info(f"Service array: {service_array}")
+    log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
     process = subprocess.Popen(
         service_array,
         shell=False,

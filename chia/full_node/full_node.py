@@ -1655,6 +1655,9 @@ class FullNode:
     ) -> Tuple[Optional[Message], bool]:
 
         fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
+
+        # We are not interested in sub-slots which have the same challenge chain but different reward chain. If there
+        # is a reorg, we will find out through the broadcast of blocks instead.
         if fetched_ss is not None:
             # Already have the sub-slot
             return None, True

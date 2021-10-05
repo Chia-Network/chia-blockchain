@@ -47,7 +47,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.util import PlotInfo, PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
+from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, parse_plot_info
 from chia.plotting.manager import PlotManager
 from chia.server.server import ssl_context_for_server
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -82,6 +82,7 @@ from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from tests.time_out_assert import time_out_assert
 from tests.wallet_tools import WalletTool
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -156,6 +157,26 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
+        self.refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
+        self.plot_dir: Path = get_plot_dir()
+        self.temp_dir: Path = get_plot_tmp_dir()
+        mkdir(self.plot_dir)
+        mkdir(self.temp_dir)
+        self.expected_plots: Dict[bytes32, Path] = {}
+
+        def test_callback(update_result: PlotRefreshResult):
+            if update_result.remaining_files == 0:
+                assert len(self.plot_manager.plots) == len(self.expected_plots)
+            else:
+                assert 0 < update_result.loaded_plots <= self.refresh_parameter.batch_size
+                assert update_result.loaded_plots == update_result.processed_files
+                assert update_result.loaded_size > 0
+                assert 0 < update_result.duration < 5
+
+        self.plot_manager: PlotManager = PlotManager(
+            self.root_path, refresh_parameter=self.refresh_parameter, refresh_callback=test_callback
+        )
+
     async def setup_keys(self):
         if self.local_keychain:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
@@ -188,6 +209,8 @@ class BlockTools:
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
+        self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+
     def change_config(self, new_config: Dict):
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -196,21 +219,31 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
 
     async def setup_plots(self):
-        plot_dir = get_plot_dir()
-        mkdir(plot_dir)
-        temp_dir = get_plot_tmp_dir()
-        mkdir(temp_dir)
-        num_pool_public_key_plots = 15
-        num_pool_address_plots = 5
+        assert len(self.expected_plots) == 0
+        # OG Plots
+        for i in range(15):
+            await self.new_plot()
+        # Pool Plots
+        for i in range(5):
+            await self.new_plot(self.pool_ph)
+        await self.refresh_plots()
+
+    async def new_plot(
+        self, pool_contract_puzzle_hash: Optional[bytes32] = None, path: Path = None
+    ) -> Optional[bytes32]:
+        final_dir = self.plot_dir
+        if path is not None:
+            final_dir = path
+            mkdir(final_dir)
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = num_pool_public_key_plots  # Some plots created to a pool public key, and some to a pool puzzle hash
+        args.num = 1
         args.buffer = 100
-        args.tmp_dir = temp_dir
-        args.tmp2_dir = plot_dir
-        args.final_dir = plot_dir
+        args.tmp_dir = self.temp_dir
+        args.tmp2_dir = final_dir
+        args.final_dir = final_dir
         args.plotid = None
         args.memo = None
         args.buckets = 0
@@ -219,66 +252,61 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
-        test_private_keys = [
-            AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big")))
-            for i in range(num_pool_public_key_plots + num_pool_address_plots)
-        ]
         try:
-            plot_keys_1 = PlotKeys(self.farmer_pk, self.pool_pk, None)
+            pool_pk: Optional[G1Element] = None
+            pool_address: Optional[str] = None
+            if pool_contract_puzzle_hash is None:
+                pool_pk = self.pool_pk
+            else:
+                pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
 
+            keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
-            await create_plots(
+            created, existed = await create_plots(
                 args,
-                plot_keys_1,
+                keys,
                 self.root_path,
                 use_datetime=False,
-                test_private_keys=test_private_keys[:num_pool_public_key_plots],
+                test_private_keys=[AugSchemeMPL.key_gen(std_hash(len(self.expected_plots).to_bytes(2, "big")))],
             )
-            # Create more plots, but to a pool address instead of public key
-            plot_keys_2 = PlotKeys(self.farmer_pk, None, encode_puzzle_hash(self.pool_ph, "xch"))
-            args.num = num_pool_address_plots
-            await create_plots(
-                args,
-                plot_keys_2,
-                self.root_path,
-                use_datetime=False,
-                test_private_keys=test_private_keys[num_pool_public_key_plots:],
-            )
+
+            plot_id_new: Optional[bytes32] = None
+            path_new: Path = Path()
+
+            if len(created):
+                assert len(existed) == 0
+                plot_id_new, path_new = list(created.items())[0]
+
+            if len(existed):
+                assert len(created) == 0
+                plot_id_new, path_new = list(existed.items())[0]
+
+            self.expected_plots[plot_id_new] = path_new
+
+            # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
+            self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
+                "plot_directories"
+            ]
+
+            return plot_id_new
+
         except KeyboardInterrupt:
-            shutil.rmtree(plot_dir, ignore_errors=True)
+            shutil.rmtree(self.plot_dir, ignore_errors=True)
             sys.exit(1)
 
-        refresh_done = False
-        refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
+    async def refresh_plots(self):
+        self.plot_manager.trigger_refresh()
+        assert self.plot_manager.needs_refresh()
+        self.plot_manager.start_refreshing()
+        await time_out_assert(10, self.plot_manager.needs_refresh, value=False)
+        self.plot_manager.stop_refreshing()
+        assert not self.plot_manager.needs_refresh()
 
-        def test_callback(update_result: PlotRefreshResult):
-            if update_result.remaining_files == 0:
-                nonlocal refresh_done
-                refresh_done = True
-            else:
-                assert 0 < update_result.loaded_plots <= refresh_parameter.batch_size
-                assert update_result.loaded_plots == update_result.processed_files
-                assert update_result.remaining_files > 0
-                assert update_result.loaded_size > 0
-                assert 0 < update_result.duration < 5
-
-        plot_manager: PlotManager = PlotManager(
-            self.root_path, refresh_parameter=refresh_parameter, refresh_callback=test_callback
-        )
-        plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
-        plot_manager.start_refreshing()
-
-        retry = 5
-        while not refresh_done and retry > 0:
-            time.sleep(1)
-            retry -= 1
-        assert refresh_done
-        plot_manager.stop_refreshing()
-        self.plots: Dict[Path, PlotInfo] = plot_manager.plots
-        # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
-        self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
-            "plot_directories"
-        ]
+    async def delete_plot(self, plot_id: bytes32):
+        assert plot_id in self.expected_plots
+        self.expected_plots[plot_id].unlink()
+        del self.expected_plots[plot_id]
+        await self.refresh_plots()
 
     @property
     def config(self) -> Dict:
@@ -296,7 +324,7 @@ class BlockTools:
         Returns the plot signature of the header data.
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
-        for _, plot_info in self.plots.items():
+        for plot_info in self.plot_manager.plots.values():
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
                 if plot_info.prover.get_id() in self.local_sk_cache:
@@ -1043,11 +1071,8 @@ class BlockTools:
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-        plots: List[PlotInfo] = [
-            plot_info for _, plot_info in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
-        ]
         random.seed(seed)
-        for plot_info in plots:
+        for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
