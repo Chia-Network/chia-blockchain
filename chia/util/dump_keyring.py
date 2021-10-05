@@ -73,7 +73,7 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
     if passphrase_file is not None:
         passphrase = read_passphrase_from_file(passphrase_file)
 
-    keyring = DumpKeyring(keyring_file)
+    keyring = DumpKeyring(Path(keyring_file))
 
     if full_payload:
         keyring.load_outer_payload()

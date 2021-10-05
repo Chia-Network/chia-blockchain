@@ -1,16 +1,18 @@
+import datetime
 import fasteners
 import logging
 import os
 import pytest
-import random
 
 from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.path import mkdir
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from sys import platform
 from tests.util.keyring import TempKeyring, using_temp_file_keyring
 from time import sleep
+from typing import List
 
 
 log = logging.getLogger(__name__)
@@ -19,19 +21,36 @@ log = logging.getLogger(__name__)
 DUMMY_SLEEP_VALUE = 2
 
 
-def dummy_set_passphrase(service, user, passphrase, keyring_path):
+def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_workers):
     with TempKeyring(existing_keyring_path=keyring_path, delete_on_cleanup=False):
         if platform == "linux" or platform == "win32" or platform == "cygwin":
             # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
             # otherwise file events won't be detected in the child process
             KeyringWrapper.get_shared_instance().keyring.setup_keyring_file_watcher()
 
+        # Write out a file indicating this process is ready to begin
+        ready_file_path: Path = Path(keyring_path).parent / "ready" / f"{index}.ready"
+        with open(ready_file_path, "w") as f:
+            f.write(f"{os.getpid()}\n")
+
+        # Wait up to 30 seconds for all processes to indicate readiness
+        remaining_attempts = 120
+        while remaining_attempts > 0:
+            entries: List[str] = [ent.name for ent in os.scandir(ready_file_path.parent)]
+            if "start" in entries:
+                break
+            else:
+                sleep(0.25)
+                remaining_attempts -= 1
+
+        log.warning(
+            f"{datetime.datetime.utcnow().isoformat()} [set] Process {index} setting passphrase for user {user}"
+        )
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
-        # Wait a short while between writing and reading. Without proper locking, this helps ensure
-        # the concurrent processes get into a bad state
-        sleep(random.random() * 10 % 3)
-
+        log.warning(
+            f"{datetime.datetime.utcnow().isoformat()} [get] Process {index} getting passphrase for user {user}"
+        )
         found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
         if found_passphrase != passphrase:
             log.error(
@@ -39,6 +58,12 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path):
                 f"get_passphrase: {found_passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
                 f", expected: {passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
             )
+
+        # Write out a file indicating this process has completed its work
+        finished_file_path: Path = Path(keyring_path).parent / "finished" / f"{index}.finished"
+        with open(finished_file_path, "w") as f:
+            f.write(f"{os.getpid()}\n")
+
         assert found_passphrase == passphrase
 
 
@@ -74,20 +99,60 @@ class TestFileKeyringSynchronization:
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_multiple_writers(self):
-        # Temporarily disabled. Fixes are in keyring_macos and keyring_windows branches
-        if platform != "linux":
-            return
-
         num_workers = 20
         keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         passphrase_list = list(
-            map(lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}", keyring_path), range(num_workers))
+            map(
+                lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}", keyring_path, x, num_workers),
+                range(num_workers),
+            )
         )
+
+        # Create a directory for each process to indicate readiness
+        ready_dir: Path = Path(keyring_path).parent / "ready"
+        mkdir(ready_dir)
+
+        finished_dir: Path = Path(keyring_path).parent / "finished"
+        mkdir(finished_dir)
 
         # When: spinning off children to each set a passphrase concurrently
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
-            res.get(timeout=40)  # 40 second timeout to prevent a bad test from spoiling the fun
+
+            # Wait up to 30 seconds for all processes to indicate readiness
+            remaining_attempts = 30
+            while remaining_attempts > 0:
+                entries: List[os.DirEntry] = list(os.scandir(ready_dir))
+                if len(entries) < num_workers:  # Expecting num_workers of dir entries
+                    log.warning(f"Test setup not complete: {len(entries)} of {num_workers} workers ready")
+                    sleep(1)
+                    remaining_attempts -= 1
+                else:
+                    log.warning(f"Test setup complete: {len(entries)} of {num_workers} workers ready")
+                    break
+
+            assert remaining_attempts >= 0
+
+            start_file_path: Path = ready_dir / "start"
+            with open(start_file_path, "w") as f:
+                f.write(f"{os.getpid()}\n")
+
+            # Wait up to 30 seconds for all processes to indicate completion
+            remaining_attempts = 30
+            while remaining_attempts > 0:
+                entries: List[os.DirEntry] = list(os.scandir(finished_dir))
+                if len(entries) < num_workers:  # Expecting num_workers of dir entries
+                    log.warning(f"Waiting for completion: {len(entries)} of {num_workers} workers finished")
+                    sleep(1)
+                    remaining_attempts -= 1
+                else:
+                    log.warning(f"Finished: {len(entries)} of {num_workers} workers finished")
+                    break
+
+            assert remaining_attempts >= 0
+
+            # Collect results
+            res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
 
         # Expect: parent process should be able to find all passphrases that were set by the child processes
         for item in passphrase_list:
