@@ -145,6 +145,7 @@ for os in testconfig.oses:
         logging.info(f"Writing {os}-{test_name(dir)}")
         workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)
 
-out = subprocess.run(["git", "diff", args.output_dir])
-if out.stdout:
-    print(out.stdout)
+if subprocess.run(["git", "--no-pager", "diff", args.output_dir], capture_output=True).stdout:
+    print("New workflow updates available.")
+else:
+    print("Nothing to do.")
