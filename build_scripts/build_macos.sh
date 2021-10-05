@@ -65,7 +65,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" ]; then
+if [ "$NOTARIZE" == true ]; then
   electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
   --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
@@ -91,7 +91,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" ]; then
+if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
 	cd final_installer || exit
   notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \
