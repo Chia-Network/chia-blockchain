@@ -1688,51 +1688,64 @@ class TestGeneratorConditions:
         npc_result = generator_condition_tester("(80 50) . 3")
         assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
 
-    def test_duplicate_height_time_conditions(self):
-        # ASSERT_SECONDS_RELATIVE
-        # ASSERT_SECONDS_ABSOLUTE
-        # ASSERT_HEIGHT_RELATIVE
-        # ASSERT_HEIGHT_ABSOLUTE
-        for cond in [80, 81, 82, 83]:
-            # even though the generator outputs multiple conditions, we only
-            # need to return the highest one (i.e. most strict)
-            npc_result = generator_condition_tester(" ".join([f"({cond} {i})" for i in range(50, 101)]))
-            assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            opcode = ConditionOpcode(bytes([cond]))
-            max_arg = 0
-            assert npc_result.npc_list[0].conditions[0][0] == opcode
-            for c in npc_result.npc_list[0].conditions[0][1]:
-                assert c.opcode == opcode
-                max_arg = max(max_arg, int_from_bytes(c.vars[0]))
-            assert max_arg == 100
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+        ],
+    )
+    def test_duplicate_height_time_conditions(self, opcode):
+        # even though the generator outputs multiple conditions, we only
+        # need to return the highest one (i.e. most strict)
+        npc_result = generator_condition_tester(" ".join([f"({opcode.value[0]} {i})" for i in range(50, 101)]))
+        print(npc_result)
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        max_arg = 0
+        assert npc_result.npc_list[0].conditions[0][0] == opcode
+        for c in npc_result.npc_list[0].conditions[0][1]:
+            assert c.opcode == opcode
+            max_arg = max(max_arg, int_from_bytes(c.vars[0]))
+        assert max_arg == 100
 
-    def test_just_announcement(self):
-        # CREATE_COIN_ANNOUNCEMENT
-        # CREATE_PUZZLE_ANNOUNCEMENT
-        for cond in [60, 62]:
-            message = "a" * 1024
-            # announcements are validated on the Rust side and never returned
-            # back. They are either satisified or cause an immediate failure
-            npc_result = generator_condition_tester(f'({cond} "{message}") ' * 50)
-            assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            # create-announcements and assert-announcements are dropped once
-            # validated
-            assert npc_result.npc_list[0].conditions == []
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
+            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
+        ],
+    )
+    def test_just_announcement(self, opcode):
+        message = "a" * 1024
+        # announcements are validated on the Rust side and never returned
+        # back. They are either satisified or cause an immediate failure
+        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ' * 50)
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == 1
+        # create-announcements and assert-announcements are dropped once
+        # validated
+        assert npc_result.npc_list[0].conditions == []
 
-    def test_assert_announcement_fail(self):
-        # ASSERT_COIN_ANNOUNCEMENT
-        # ASSERT_PUZZLE_ANNOUNCEMENT
-        for cond in [61, 63]:
-            message = "a" * 1024
-            # announcements are validated on the Rust side and never returned
-            # back. They ar either satisified or cause an immediate failure
-            # in this test we just assert announcements, we never make them, so
-            # these should fail
-            npc_result = generator_condition_tester(f'({cond} "{message}") ')
-            assert npc_result.error == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.value
-            assert npc_result.npc_list == []
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
+            ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
+        ],
+    )
+    def test_assert_announcement_fail(self, opcode):
+        message = "a" * 1024
+        # announcements are validated on the Rust side and never returned
+        # back. They ar either satisified or cause an immediate failure
+        # in this test we just assert announcements, we never make them, so
+        # these should fail
+        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ')
+        print(npc_result)
+        assert npc_result.error == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.value
+        assert npc_result.npc_list == []
 
     def test_multiple_reserve_fee(self):
         # RESERVE_FEE
@@ -1872,17 +1885,20 @@ class TestGeneratorConditions:
             opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), hint.encode("ascii")]
         )
 
-    def test_unknown_condition(self):
-        for sm in [True, False]:
-            for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
-                npc_result = generator_condition_tester(c, safe_mode=sm)
-                print(npc_result)
-                if sm:
-                    assert npc_result.error == Err.INVALID_CONDITION.value
-                    assert npc_result.npc_list == []
-                else:
-                    assert npc_result.error is None
-                    assert npc_result.npc_list[0].conditions == []
+    @pytest.mark.parametrize(
+        "safe_mode",
+        [True, False],
+    )
+    def test_unknown_condition(self, safe_mode):
+        for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
+            npc_result = generator_condition_tester(c, safe_mode=safe_mode)
+            print(npc_result)
+            if safe_mode:
+                assert npc_result.error == Err.INVALID_CONDITION.value
+                assert npc_result.npc_list == []
+            else:
+                assert npc_result.error is None
+                assert npc_result.npc_list[0].conditions == []
 
 
 # the tests below are malicious generator programs
