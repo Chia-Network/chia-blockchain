@@ -5,7 +5,7 @@
 ; The genesis_id is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
 (mod (
       GENESIS_ID
-      Truths ; These should be the same CAT truths
+      Truths
       parent_is_cat
       lineage_proof
       delta
@@ -17,7 +17,7 @@
 
     (if delta
         (x)
-        (if (any parent_is_cat (= (my_parent_cat_truth Truths) GENESIS_ID))
+        (if (= (my_parent_cat_truth Truths) GENESIS_ID)
           inner_conditions
           (x)
         )

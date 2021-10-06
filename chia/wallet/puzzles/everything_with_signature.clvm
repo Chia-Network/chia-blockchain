@@ -1,7 +1,7 @@
 ; This is a "limitations_program" for use with cat.clvm.
 (mod (
       PUBKEY
-      Truths ; These should be the same CAT truths
+      Truths
       parent_is_cat
       lineage_proof
       delta
@@ -11,8 +11,5 @@
 
     (include condition_codes.clvm)
 
-    (if parent_is_cat
-      inner_conditions
-      (c (list AGG_SIG_ME PUBKEY delta) inner_conditions) ; Careful with a delta of zero, the bytecode is 80 not 00
-    )
+    (c (list AGG_SIG_ME PUBKEY delta) inner_conditions) ; Careful with a delta of zero, the bytecode is 80 not 00
 )
