@@ -14,6 +14,9 @@ from sys import exit, platform
 from typing import Any, List, Optional, Tuple, Type, Union
 
 
+import logging
+log = logging.getLogger(__name__)
+
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
 #
 # WARNING: Changing the default passphrase will prevent passphrase-less users from accessing
@@ -49,7 +52,7 @@ def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
     return None
 
 
-def check_legacy_keyring_keys_present(keyring: Union[MacKeyring, WinKeyring]) -> bool:
+def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
     from keyring.credentials import SimpleCredential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
@@ -60,7 +63,11 @@ def check_legacy_keyring_keys_present(keyring: Union[MacKeyring, WinKeyring]) ->
         current_user: str = get_private_key_user(keychain_user, index)
         credential: Optional[SimpleCredential] = keyring.get_credential(keychain_service, current_user)
         if credential is not None:
+            if type(keyring) is CryptFileKeyring:
+                log.warning(f"Found credential in legacy keyring: {keyring.file_path}")
             return True
+    if type(keyring) is CryptFileKeyring:
+        log.warning(f"Didn't find any credentials in legacy keyring: {keyring.file_path}")
     return False
 
 
