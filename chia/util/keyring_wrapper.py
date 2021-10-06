@@ -7,7 +7,8 @@ from chia.util.file_keyring import FileKeyring
 from chia.util.misc import prompt_yes_no
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from keyring.backends.macOS import Keyring as MacKeyring
-from keyring.errors import KeyringError
+from keyring.backends.Windows import WinVaultKeyring as WinKeyring
+from keyring.errors import KeyringError, PasswordDeleteError
 from pathlib import Path
 from sys import exit, platform
 from typing import Any, List, Optional, Tuple, Type, Union
@@ -20,11 +21,35 @@ from typing import Any, List, Optional, Tuple, Type, Union
 # the new passphrase.
 DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE = "$ chia passphrase set # all the cool kids are doing it!"
 
-MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE = "Chia Passphrase"
-MAC_KEYCHAIN_MASTER_PASSPHRASE_USER = "Chia Passphrase"
+MASTER_PASSPHRASE_SERVICE_NAME = "Chia Passphrase"
+MASTER_PASSPHRASE_USER_NAME = "Chia Passphrase"
 
 
-def check_macos_keychain_keys_present(mac_keychain: MacKeyring) -> bool:
+LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
+OSPassphraseStore = Union[MacKeyring, WinKeyring]
+
+
+def get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
+    if platform == "darwin":
+        return MacKeyring()
+    elif platform == "win32" or platform == "cygwin":
+        return WinKeyring()
+    elif platform == "linux":
+        keyring: CryptFileKeyring = CryptFileKeyring()
+        keyring.keyring_key = "your keyring password"  # type: ignore
+        return keyring
+    return None
+
+
+def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
+    if platform == "darwin":
+        return MacKeyring()
+    elif platform == "win32" or platform == "cygwin":
+        return WinKeyring()
+    return None
+
+
+def check_legacy_keyring_keys_present(keyring: Union[MacKeyring, WinKeyring]) -> bool:
     from keyring.credentials import SimpleCredential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
@@ -33,18 +58,19 @@ def check_macos_keychain_keys_present(mac_keychain: MacKeyring) -> bool:
 
     for index in range(0, MAX_KEYS):
         current_user: str = get_private_key_user(keychain_user, index)
-        credential: Optional[SimpleCredential] = mac_keychain.get_credential(keychain_service, current_user)
+        credential: Optional[SimpleCredential] = keyring.get_credential(keychain_service, current_user)
         if credential is not None:
             return True
     return False
 
 
-def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError):
+def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
     """
     Check if the macOS Keychain error is errSecInteractionNotAllowed. This commonly
     occurs when the keychain is accessed while headless (such as remoting into a Mac
     via SSH). Because macOS Keychain operations may require prompting for login creds,
-    a connection to the WindowServer is required.
+    a connection to the WindowServer is required. Returns True if the error was
+    handled.
     """
 
     if "-25308" in str(error):
@@ -52,6 +78,8 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError):
             "WARNING: Unable to access the macOS Keychain (-25308 errSecInteractionNotAllowed). "
             "Are you logged-in remotely?"
         )
+        return True
+    return False
 
 
 class KeyringWrapper:
@@ -95,59 +123,41 @@ class KeyringWrapper:
         # Initialize the cached_passphrase
         self.cached_passphrase = self._get_initial_cached_passphrase()
 
-    def _configure_backend(self) -> Union[Any, FileKeyring]:
+    def _configure_backend(self) -> Union[LegacyKeyring, FileKeyring]:
         from chia.util.keychain import supports_keyring_passphrase
+
+        keyring: Union[LegacyKeyring, FileKeyring]
 
         if self.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
 
-        if platform == "win32" or platform == "cygwin":
-            import keyring.backends.Windows
-
-            keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
-            # TODO: New keyring + passphrase support can be enabled for Windows by updating
-            # supports_keyring_passphrase() and uncommenting the lines below. Leaving the
-            # lines below in place for testing.
-            #
-            # if supports_keyring_passphrase():
-            #     keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
-            # else:
-            #     keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
-        elif platform == "darwin":
-            if supports_keyring_passphrase():
-                keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
-            else:
-                keyring = MacKeyring()  # type: ignore
-                keyring_main.set_keyring(keyring)
-        elif platform == "linux":
-            if supports_keyring_passphrase():
-                keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
-            else:
-                keyring = CryptFileKeyring()
-                keyring.keyring_key = "your keyring password"  # type: ignore
+        if supports_keyring_passphrase():
+            keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
         else:
-            keyring = keyring_main
+            legacy_keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
+            if legacy_keyring is None:
+                legacy_keyring = keyring_main
+            else:
+                keyring_main.set_keyring(legacy_keyring)
+            keyring = legacy_keyring
 
         return keyring
 
-    def _configure_legacy_backend(self) -> Union[CryptFileKeyring, MacKeyring]:
-        # If keyring.yaml isn't found or is empty, check if we're using CryptFileKeyring or the Mac Keychain
+    def _configure_legacy_backend(self) -> LegacyKeyring:
+        # If keyring.yaml isn't found or is empty, check if we're using
+        # CryptFileKeyring, Mac Keychain, or Windows Credential Manager
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
         if filekeyring and not filekeyring.has_content():
-            if platform == "linux":
-                old_keyring = CryptFileKeyring()
-                if Path(old_keyring.file_path).is_file():
-                    # After migrating content from legacy_keyring, we'll prompt to clear those keys
-                    old_keyring.keyring_key = "your keyring password"  # type: ignore
-                    return old_keyring
-            elif platform == "darwin":
-                mac_keychain: MacKeyring = MacKeyring()
-                if check_macos_keychain_keys_present(mac_keychain):
-                    return mac_keychain
-
+            keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
+            if keyring is not None and check_legacy_keyring_keys_present(keyring):
+                return keyring
         return None
 
     def _get_initial_cached_passphrase(self) -> str:
+        """
+        Grab the saved passphrase from the OS credential store (if available), otherwise
+        use the default passphrase
+        """
         from chia.util.keychain import supports_os_passphrase_storage
 
         passphrase: Optional[str] = None
@@ -277,36 +287,39 @@ class KeyringWrapper:
         self.set_master_passphrase(current_passphrase, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
 
     def save_master_passphrase_to_credential_store(self, passphrase: str) -> None:
-        if platform == "darwin":
-            mac_keychain = MacKeyring()
+        passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+        if passphrase_store is not None:
             try:
-                mac_keychain.set_password(
-                    MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER, passphrase
-                )
+                passphrase_store.set_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME, passphrase)
             except KeyringError as e:
-                warn_if_macos_errSecInteractionNotAllowed(e)
+                if not warn_if_macos_errSecInteractionNotAllowed(e):
+                    raise e
         return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
-        if platform == "darwin":
-            mac_keychain = MacKeyring()
+        passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+        if passphrase_store is not None:
             try:
-                mac_keychain.delete_password(
-                    MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER
-                )
+                passphrase_store.delete_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
+            except PasswordDeleteError as e:
+                if (
+                    passphrase_store.get_credential(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
+                    is not None
+                ):
+                    raise e
             except KeyringError as e:
-                warn_if_macos_errSecInteractionNotAllowed(e)
+                if not warn_if_macos_errSecInteractionNotAllowed(e):
+                    raise e
         return None
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
-        if platform == "darwin":
-            mac_keychain = MacKeyring()
+        passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+        if passphrase_store is not None:
             try:
-                return mac_keychain.get_password(
-                    MAC_KEYCHAIN_MASTER_PASSPHRASE_SERVICE, MAC_KEYCHAIN_MASTER_PASSPHRASE_USER
-                )
+                return passphrase_store.get_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
             except KeyringError as e:
-                warn_if_macos_errSecInteractionNotAllowed(e)
+                if not warn_if_macos_errSecInteractionNotAllowed(e):
+                    raise e
         return None
 
     # Legacy keyring migration
@@ -315,7 +328,7 @@ class KeyringWrapper:
         def __init__(
             self,
             original_private_keys: List[Tuple[PrivateKey, bytes]],
-            legacy_keyring: Any,
+            legacy_keyring: LegacyKeyring,
             keychain_service: str,
             keychain_users: List[str],
         ):
@@ -451,9 +464,8 @@ class KeyringWrapper:
             keyring_name = str(migration_results.legacy_keyring.file_path)
         elif legacy_keyring_type is MacKeyring:
             keyring_name = "macOS Keychain"
-        # leaving this here for when Windows migration is supported
-        # elif legacy_keyring_type is Win32Keyring:
-        #     keyring_name = "Windows Credential Manager"
+        elif legacy_keyring_type is WinKeyring:
+            keyring_name = "Windows Credential Manager"
 
         prompt = "Remove keys from old keyring"
         if len(keyring_name) > 0:

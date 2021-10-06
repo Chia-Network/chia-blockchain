@@ -1,4 +1,5 @@
 import colorama
+import os
 import pkg_resources
 import sys
 import unicodedata
@@ -7,7 +8,6 @@ from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
-from getpass import getpass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
@@ -44,15 +44,15 @@ class KeyringMaxUnlockAttempts(Exception):
 
 
 def supports_keyring_passphrase() -> bool:
-    # TODO: Enable for Linux once GUI work is finalized (including migration)
-    return False
+    # TODO: Enable once all platforms are supported and GUI work is finalized (including migration)
+    return False or os.environ.get("CHIA_PASSPHRASE_SUPPORT", "").lower() in ["1", "true"]
     # from sys import platform
 
     # return platform == "linux"
 
 
 def supports_os_passphrase_storage() -> bool:
-    return sys.platform in ["darwin"]
+    return sys.platform in ["darwin", "win32", "cygwin"]
 
 
 def passphrase_requirements() -> Dict[str, Any]:
@@ -79,6 +79,8 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     prompted interactively to enter their passphrase a max of MAX_RETRIES times
     before failing.
     """
+    from chia.cmds.passphrase_funcs import prompt_for_passphrase
+
     if use_passphrase_cache:
         passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
         if passphrase:
@@ -98,7 +100,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     for i in range(MAX_RETRIES):
         colorama.init()
 
-        passphrase = getpass(prompt)
+        passphrase = prompt_for_passphrase(prompt)
 
         if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
             # If using the passphrase cache, and the user inputted a passphrase, update the cache

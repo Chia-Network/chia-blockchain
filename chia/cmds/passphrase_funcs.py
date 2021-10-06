@@ -1,4 +1,5 @@
 import click
+import colorama
 import sys
 
 from chia.daemon.client import acquire_connection_to_daemon
@@ -13,6 +14,15 @@ from typing import Optional, Tuple
 
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
 PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
+
+SAVE_MASTER_PASSPHRASE_WARNING = (
+    colorama.Fore.YELLOW
+    + colorama.Style.BRIGHT
+    + "\n!!! SECURITY WARNING !!!\n"
+    + colorama.Style.RESET_ALL
+    + "Other processes may be able to access your saved passphrase, possibly exposing your private keys.\n"
+    + "You should not save your passphrase unless you fully trust your environment.\n"
+)
 
 
 def remove_passphrase_options_from_cmd(cmd) -> None:
@@ -43,15 +53,27 @@ def verify_passphrase_meets_requirements(
         raise Exception("Unexpected passphrase verification case")
 
 
+def prompt_for_passphrase(prompt: str) -> str:
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        print(prompt, end="")
+        prompt = ""
+    return getpass(prompt)
+
+
 def prompt_to_save_passphrase() -> bool:
     save: bool = False
 
     try:
         if supports_os_passphrase_storage():
             location: Optional[str] = None
+            warning: Optional[str] = None
 
             if sys.platform == "darwin":
                 location = "macOS Keychain"
+                warning = SAVE_MASTER_PASSPHRASE_WARNING
+            elif sys.platform == "win32" or sys.platform == "cygwin":
+                location = "Windows Credential Manager"
+                warning = SAVE_MASTER_PASSPHRASE_WARNING
 
             if location is None:
                 raise ValueError("OS-specific credential store not specified")
@@ -61,6 +83,10 @@ def prompt_to_save_passphrase() -> bool:
                 "Your passphrase can be stored in your system's secure credential store. "
                 "Other Chia processes will be able to access your keys without prompting for your passphrase."
             )
+            if warning is not None:
+                colorama.init()
+
+                print(warning)
             save = prompt_yes_no(f"Would you like to save your passphrase to the {location} (y/n) ")
 
     except Exception as e:
