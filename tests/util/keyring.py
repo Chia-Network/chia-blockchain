@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import tempfile
@@ -11,6 +12,9 @@ from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMiss
 from pathlib import Path
 from typing import Any, Optional
 from unittest.mock import patch
+
+
+log = logging.getLogger(__name__)
 
 
 def create_empty_cryptfilekeyring():
@@ -28,6 +32,7 @@ def add_dummy_key_to_cryptfilekeyring():
     Add a fake key to the CryptFileKeyring
     """
     crypt_file_keyring = CryptFileKeyring()
+    log.warning(f"Adding dummy key to cryptfilekeyring: {crypt_file_keyring.file_path}")
     crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
     user: str = get_private_key_user(default_keychain_user(), 0)
     crypt_file_keyring.set_password(default_keychain_service(), user, "abc123")
@@ -148,12 +153,12 @@ class TempKeyring:
         setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
         mock_configure_legacy_backend_patch: Any
-        if setup_cryptfilekeyring is False:
+        if setup_cryptfilekeyring is True:
+            mock_configure_legacy_backend_patch = None
+        else:
             mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
             mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
             mock_configure_legacy_backend.return_value = None
-        else:
-            mock_configure_legacy_backend_patch = None
 
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()

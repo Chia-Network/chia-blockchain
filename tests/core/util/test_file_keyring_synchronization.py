@@ -4,6 +4,7 @@ import logging
 import os
 import pytest
 
+from chia.util.dump_keyring import dump_to_string
 from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.path import mkdir
@@ -44,12 +45,12 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_wor
                 remaining_attempts -= 1
 
         log.warning(
-            f"{datetime.datetime.utcnow().isoformat()} [set] Process {index} setting passphrase for user {user}"
+            f"{datetime.datetime.utcnow().isoformat()} [pid:{os.getpid()}] [set] Process {index} setting passphrase for user {user}"
         )
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
         log.warning(
-            f"{datetime.datetime.utcnow().isoformat()} [get] Process {index} getting passphrase for user {user}"
+            f"{datetime.datetime.utcnow().isoformat()} [pid:{os.getpid()}] [get] Process {index} getting passphrase for user {user}"
         )
         found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
         if found_passphrase != passphrase:
@@ -58,6 +59,8 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_wor
                 f"get_passphrase: {found_passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
                 f", expected: {passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
             )
+            s = dump_to_string(KeyringWrapper.get_shared_instance().keyring.keyring_path, True, None, True)
+            log.warning(f"[pid:{os.getpid()}] keyring contents: {s}")
 
         # Write out a file indicating this process has completed its work
         finished_file_path: Path = Path(keyring_path).parent / "finished" / f"{index}.finished"
