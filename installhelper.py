@@ -47,7 +47,7 @@ def make_semver(version_str):
 
 
 def update_version():
-    with open(f"{os.path.dirname(__file__)}/flora-blockchain-gui-dev/package.json") as f:
+    with open(f"{os.path.dirname(__file__)}/flora-blockchain-gui/package.json") as f:
         data = json.load(f)
 
     version: str = "0.0"
@@ -57,7 +57,7 @@ def update_version():
 
     data["version"] = make_semver(version)
 
-    with open(f"{os.path.dirname(__file__)}/flora-blockchain-gui-dev/package.json", "w") as w:
+    with open(f"{os.path.dirname(__file__)}/flora-blockchain-gui/package.json", "w") as w:
         json.dump(data, indent=4, fp=w)
 
 

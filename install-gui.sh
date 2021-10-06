@@ -90,7 +90,7 @@ if [ ! "$CI" ]; then
 	echo "Running git submodule update."
 	echo ""
 	git submodule update
-	cd flora-blockchain-gui-dev
+	cd flora-blockchain-gui
 
 	if [ "$SUBMODULE_BRANCH" ];
 	then
@@ -111,6 +111,8 @@ else
 fi
 
 echo ""
-echo "Chia blockchain install-gui.sh completed."
+echo "Flora blockchain install-gui.sh completed."
+echo "Visit us: https://floracoin.farm"
+echo "Join us: https://discord.gg/82K4jFvNEy"
 echo ""
-echo "Type 'cd flora-blockchain-gui-dev' and then 'npm run electron &' to start the GUI."
+echo "Type 'cd flora-blockchain-gui' and then 'npm run electron &' to start the GUI."

@@ -69,10 +69,10 @@ $SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join 
 pyinstaller --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
-Write-Output "Copy flora executables to flora-blockchain-gui-dev\"
+Write-Output "Copy flora executables to flora-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\flora-blockchain-gui-dev\" -Recurse
-Set-Location -Path "..\flora-blockchain-gui-dev" -PassThru
+Copy-Item "dist\daemon" -Destination "..\flora-blockchain-gui\" -Recurse
+Set-Location -Path "..\flora-blockchain-gui" -PassThru
 
 git status
 

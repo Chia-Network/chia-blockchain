@@ -2,6 +2,6 @@
 	path = mozilla-ca
 	url = https://github.com/Chia-Network/mozilla-ca.git
         branch = main
-[submodule "flora-blockchain-gui-dev"]
-	path = flora-blockchain-gui-dev
-	url = https://github.com/Flora-Network/flora-blockchain-gui-dev.git
+[submodule "flora-blockchain-gui"]
+	path = flora-blockchain-gui
+	url = https://github.com/Flora-Network/flora-blockchain-gui.git

@@ -2,11 +2,11 @@ name: Windows Installer on Windows 10 and Python 3.7
 
 on:
   push:
-    branches: []
+    branches:
+      - '**'
+      - '!main'
     tags:
-        - '**'
-  pull_request:
-    branches: []
+      - '**'
 
 jobs:
   build:
@@ -74,7 +74,7 @@ jobs:
       uses: kitek/decode-base64-into-file-action@1.0
       with:
         encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-        destination-file: .\flora-blockchain-gui-dev\win_code_sign_cert.p12
+        destination-file: .\flora-blockchain-gui\win_code_sign_cert.p12
 
     - name: Build Windows installer with build_scripts\build_windows.ps1
       env:
@@ -89,10 +89,10 @@ jobs:
       uses: actions/upload-artifact@v2.2.2
       with:
         name: Windows-Exe
-        path: ${{ github.workspace }}\flora-blockchain-gui-dev\Flora-win32-x64\
+        path: ${{ github.workspace }}\flora-blockchain-gui\Flora-win32-x64\
 
     - name: Upload Installer to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
         name: Windows-Installers
-        path: ${{ github.workspace }}\flora-blockchain-gui-dev\release-builds\
+        path: ${{ github.workspace }}\flora-blockchain-gui\release-builds\
