@@ -99,7 +99,9 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
             break
 
 
-def dump_to_string(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapper], pretty_print: bool) -> str:
+def dump_to_string(
+    keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapper], pretty_print: bool
+) -> str:
     saved_passphrase: Optional[str] = KeyringWrapper.get_shared_instance().get_master_passphrase_from_credential_store()
     passphrase: str = saved_passphrase or DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
     prompt: str = get_passphrase_prompt(str(keyring_file))
@@ -128,7 +130,7 @@ def dump_to_string(keyring_file, full_payload: bool, passphrase_file: Optional[T
             if pretty_print:
                 s = yaml.dump(data)
             else:
-                s = data
+                s = str(data)
             break
         except (ValueError, InvalidTag):
             passphrase = prompt_for_passphrase(prompt)
