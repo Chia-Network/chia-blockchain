@@ -77,32 +77,32 @@
 
 ;; GLOSSARY:
 ;;  MOD_HASH: this code's sha256 tree hash
-;;  LIMITATIONS_PROGRAM_HASH: the program that determines if a coin can mint new cats, burn cats, and check if its lineage is valid if its parent is not a CAT
+;;  TAIL_PROGRAM_HASH: the program that determines if a coin can mint new cats, burn cats, and check if its lineage is valid if its parent is not a CAT
 ;;  INNER_PUZZLE: an independent puzzle protecting the coins. Solutions to this puzzle are expected to generate `AGG_SIG` conditions and possibly `CREATE_COIN` conditions.
 ;; ---- items above are curried into the puzzle hash ----
 ;;  inner_puzzle_solution: the solution to the inner puzzle
 ;;  prev_coin_id: the id for the previous coin
-;;  limitations_program: reveal of LIMITATIONS_PROGRAM_HASH required to run the program if desired
-;;  limitations_solution: optional solution passed into limitations_program
+;;  tail_program_reveal: reveal of TAIL_PROGRAM_HASH required to run the program if desired
+;;  tail_solution: optional solution passed into tail_program
 ;;  lineage_proof: optional proof that our coin's parent is a CAT
 ;;  this_coin_info: (parent_id puzzle_hash amount)
-;;  next_coin_info: (parent_id inner_puzzle_hash amount)
+;;  next_coin_proof: (parent_id inner_puzzle_hash amount)
 ;;  prev_subtotal: the subtotal between prev-coin and this-coin
 ;;  extra_delta: an amount that is added to our delta and checked by the TAIL program
 ;;
 
 (mod (MOD_HASH                 ;; curried into puzzle
-      LIMITATIONS_PROGRAM_HASH ;; curried into puzzle
+      TAIL_PROGRAM_HASH ;; curried into puzzle
       INNER_PUZZLE             ;; curried into puzzle
       inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
       ;;; These arguments are optional depending on how you want to verify that this is a valid spend
-      limitations_program      ;; The reveal of the hash curried above.  Can be optional for default lineage checking.
-      limitations_solution     ;; The solution to the limitations program.  Can be optional for default lineage checking.
-      lineage_proof            ;; This is the parent's coin info, used to check if the parent was a CAT. Optional if using limitations_program.
+      tail_program_reveal      ;; The reveal of the hash curried above.  Can be optional for default lineage checking.
+      tail_solution     ;; The solution to the tail program.  Can be optional for default lineage checking.
+      lineage_proof            ;; This is the parent's coin info, used to check if the parent was a CAT. Optional if using tail_program.
       ;;;
       prev_coin_id             ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       this_coin_info           ;; verified with ASSERT_MY_COIN_ID
-      next_coin_info           ;; used to generate ASSERT_COIN_ANNOUNCEMENT
+      next_coin_proof          ;; used to generate ASSERT_COIN_ANNOUNCEMENT
       prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       extra_delta              ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
     )
@@ -157,7 +157,7 @@
                     (r (r condition)))
          )
          (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
-           (list CREATE_COIN_ANNOUNCEMENT (concat 0xca (f (r condition))))
+           (list CREATE_COIN_ANNOUNCEMENT (sha256 0xca (f (r condition))))
            condition
          )
        )
@@ -187,7 +187,7 @@
      ;; calculate the hash of an announcement
      ;; we add 0xcb so ring announcements exist in a different namespace to announcements from inner_puzzles
      (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_id cat_mod_struct)
-       (sha256 next_coin_id 0xcb this_coin_id this_subtotal)
+       (sha256 next_coin_id (sha256 0xcb this_coin_id this_subtotal))
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
@@ -205,7 +205,7 @@
      ;; we add 0xcb so ring announcements exist in a different namespace to announcements from inner_puzzles
      (defun-inline create_announcement_condition (prev_coin_id prev_subtotal)
        (list CREATE_COIN_ANNOUNCEMENT
-             (concat 0xcb (concat prev_coin_id prev_subtotal))
+             (sha256 0xcb prev_coin_id prev_subtotal)
        )
       )
 
@@ -253,57 +253,51 @@
      ;;;;;;;;;;;;;;;;;;;;;;;;;;; lineage checking
 
      ;; return true iff parent of `this_coin_info` is provably a cat
-     (defun is_parent_cat (
+     ;; A 'lineage proof' consists of (parent_parent_id parent_INNER_puzzle_hash parent_amount)
+     ;; We use this information to construct a coin who's puzzle has been wrapped in this MOD and verify that,
+     ;; once wrapped, it matches our parent coin's ID.
+     (defun-inline is_parent_cat (
        cat_mod_struct
        parent_id
        lineage_proof
      )
-       (if (= parent_id
-              (sha256 (f lineage_proof)
-                      (cat_puzzle_hash cat_mod_struct (f (r lineage_proof)))
-                      (f (r (r lineage_proof)))
-              )
-           )
-           1
-           ()
+       (= parent_id
+          (sha256 (f lineage_proof)
+                  (cat_puzzle_hash cat_mod_struct (f (r lineage_proof)))
+                  (f (r (r lineage_proof)))
+          )
        )
      )
 
-     ;; return true iff the lineage proof is valid
-     ;; lineage_proof is of one of two forms:
-     ;;  (1 . (parent_parent_coin_id parent_inner_puzzle_hash parent_amount))
-     ;;  (0 . some_opaque_proof_passed_to_GENESIS_COIN_CHECKER)
-     ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
-
-     (defun-inline limitations_program_from_cat_struct (cat_mod_struct)
+     (defun-inline tail_program_from_cat_struct (cat_mod_struct)
        (f (r (r cat_mod_struct)))
      )
 
-     (defun-inline limitations_program_hash_from_cat_struct (cat_mod_struct)
+     (defun-inline tail_program_hash_from_cat_struct (cat_mod_struct)
        (f (r (r (r cat_mod_struct))))
      )
 
-    (defun check_lineage_or_run_limitations_program
+    (defun check_lineage_or_run_tail_program
       (
         this_coin_info
-        limitations_program
-        limitations_solution
+        tail_program_reveal
+        tail_solution
         parent_is_cat  ; flag which says whether or not the parent CAT check ran and passed
         lineage_proof
         Truths
         extra_delta
         inner_conditions
       )
-      (if limitations_program
-          (assert (= (sha256tree1 limitations_program) (limitations_program_hash_from_cat_struct (cat_struct_truth Truths)))
-            (a limitations_program
+      (if tail_program_reveal
+          (assert (= (sha256tree1 tail_program_reveal) (tail_program_hash_from_cat_struct (cat_struct_truth Truths)))
+            (a tail_program_reveal
                 (list
                   Truths
                   parent_is_cat
                   lineage_proof
                   extra_delta
                   inner_conditions
-                  limitations_solution
+                  tail_solution
                 )
             )
           )
@@ -318,7 +312,7 @@
      (defun stager_three (
          Truths
          inner_conditions
-         limitations_solution
+         tail_solution
          lineage_proof
          prev_coin_id
          this_coin_info
@@ -326,10 +320,10 @@
          prev_subtotal
          extra_delta
       )
-      (check_lineage_or_run_limitations_program
+      (check_lineage_or_run_tail_program
             this_coin_info
-            (limitations_program_from_cat_struct (cat_struct_truth Truths))
-            limitations_solution
+            (tail_program_from_cat_struct (cat_struct_truth Truths))
+            tail_solution
             (if lineage_proof (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) lineage_proof) ())
             lineage_proof
             Truths
@@ -337,7 +331,7 @@
             (generate_final_output_conditions
               prev_subtotal
               ; the expression on the next line calculates `this_subtotal` by adding the delta to `prev_subtotal`
-              (+ (+ prev_subtotal (- (input_amount_for_coin this_coin_info) (output_totals inner_conditions))) extra_delta)
+              (+ prev_subtotal (- (input_amount_for_coin this_coin_info) (output_totals inner_conditions)) extra_delta)
               (morph_conditions inner_conditions (cat_struct_truth Truths))
               prev_coin_id
               (my_id_cat_truth Truths)
@@ -352,7 +346,7 @@
         Truths
         INNER_PUZZLE
         inner_solution
-        limitations_solution
+        tail_solution
         lineage_proof
         prev_coin_id
         this_coin_info
@@ -363,7 +357,7 @@
       (c (list ASSERT_MY_COIN_ID (my_id_cat_truth Truths))
          (stager_three Truths
                        (a INNER_PUZZLE (c Truths inner_solution))
-                       limitations_solution
+                       tail_solution
                        lineage_proof
                        prev_coin_id
                        this_coin_info
@@ -384,25 +378,34 @@
         cat_mod_struct
         INNER_PUZZLE
         inner_solution
-        limitations_solution
+        tail_solution
         lineage_proof
         inner_puzzle_hash
         my_id
         prev_coin_id
         this_coin_info
-        next_coin_info
+        next_coin_proof
         prev_subtotal
         extra_delta
      )
       ; struct construction params - (my_id my_parent full_puzhash my_amount innerpuzhash lineage_proof cat_struct)
-      (stager_two (cat_truth_data_to_truth_struct my_id (f this_coin_info) (f (r this_coin_info)) (f (r (r this_coin_info))) inner_puzzle_hash lineage_proof limitations_solution cat_mod_struct)
+      (stager_two (cat_truth_data_to_truth_struct
+                    my_id
+                    (f this_coin_info)
+                    (f (r this_coin_info))
+                    (f (r (r this_coin_info)))
+                    inner_puzzle_hash
+                    lineage_proof
+                    tail_solution
+                    cat_mod_struct
+                  )
              INNER_PUZZLE
              inner_solution
-             limitations_solution
+             tail_solution
              lineage_proof
              prev_coin_id
              this_coin_info
-             (coin_id_for_coin next_coin_info cat_mod_struct)
+             (coin_id_for_coin next_coin_proof cat_mod_struct)
              prev_subtotal
              extra_delta
        )
@@ -410,16 +413,16 @@
 
     (stager
         ;; caclculate cat_mod_struct, inner_puzzle_hash, coin_id
-        (list MOD_HASH (sha256 1 MOD_HASH) limitations_program LIMITATIONS_PROGRAM_HASH)
+        (list MOD_HASH (sha256 1 MOD_HASH) tail_program_reveal TAIL_PROGRAM_HASH)
         INNER_PUZZLE
         inner_puzzle_solution
-        limitations_solution
+        tail_solution
         lineage_proof
         (sha256tree1 INNER_PUZZLE)
         (sha256 (f this_coin_info) (f (r this_coin_info)) (f (r (r this_coin_info))))
         prev_coin_id    ; ID
         this_coin_info  ; (parent_id puzzle_hash amount)
-        next_coin_info  ; (parent_id innerpuzhash amount)
+        next_coin_proof ; (parent_id innerpuzhash amount)
         prev_subtotal
         extra_delta
     )
