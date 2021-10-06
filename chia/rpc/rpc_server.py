@@ -29,7 +29,7 @@ class RpcServer:
         self.log = log
         self.shut_down = False
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
-        self.service_name = service_name.replace('chia','flora')
+        self.service_name = service_name
         self.root_path = root_path
         self.net_config = net_config
         self.crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
