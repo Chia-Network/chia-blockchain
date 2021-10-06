@@ -121,9 +121,6 @@ class DataStore:
             #   EMPTY: unused
             #   INTERNAL: both are foreign keys against node.hash
             #   TERMINAL: both are serialized CLVM objects with `first` being the key and `rest` being the value
-            # TODO: Should we have the two columns for each of `first` and `rest` to be
-            #       separated for explicitness rather than merged for storage
-            #       optimization?
             # TODO: I think the generation needs to be added to the key so the
             #       "same node" can be tagged with multiple generations if it gets
             #       removed and re-added, or added to different tables, etc.  Or,
@@ -134,8 +131,12 @@ class DataStore:
                 "hash TEXT PRIMARY KEY NOT NULL,"
                 " type INTEGER NOT NULL,"
                 " generation INTEGER NOT NULL,"
-                " first TEXT,"
-                " rest TEXT"
+                " left TEXT,"
+                " right TEXT,"
+                " key TEXT,"
+                " value TEXT,"
+                " FOREIGN KEY(left) REFERENCES node(hash),"
+                " FOREIGN KEY(right) REFERENCES node(hash)"
                 ")"
             )
             await self.db.execute(
@@ -179,28 +180,35 @@ class DataStore:
             # TODO: use a more specific exception
             raise Exception("must be a pair")
 
-        first = program.first()
-        rest = program.rest()
+        left = program.first()
+        right = program.rest()
 
-        how_many_pairs = sum(1 if o.pair is not None else 0 for o in [first, rest])
+        how_many_pairs = sum(1 if o.pair is not None else 0 for o in [left, right])
 
         if how_many_pairs == 1:
             # TODO: use a better exception
             raise Exception("not an allowed state, must terminate with key/value")
 
         if how_many_pairs == 0:
-            node_hash = await self._insert_key_value(key=first, value=rest)
+            node_hash = await self._insert_key_value(key=left, value=right)
             return node_hash
 
         # TODO: unroll the recursion
-        first_hash = self._insert_program(program=first)
-        rest_hash = self._insert_program(program=rest)
+        left_hash = self._insert_program(program=left)
+        right_hash = self._insert_program(program=right)
 
-        node_hash = Program.to([first_hash, rest_hash]).get_tree_hash(first_hash, rest_hash)
+        node_hash = Program.to([left_hash, right_hash]).get_tree_hash(left_hash, right_hash)
 
         await self.db.execute(
-            "INSERT INTO node(hash, type, first, rest) VALUE(:hash, :type, :first, :rest)",
-            {"hash": node_hash.hex(), "type": NodeType.INTERNAL, "first": first_hash.hex(), "rest": rest_hash.hex()},
+            "INSERT INTO node(hash, type, left, right, key, value) VALUE(:hash, :type, :left, :right, :key, :value)",
+            {
+                "hash": node_hash.hex(),
+                "type": NodeType.INTERNAL,
+                "left": left_hash.hex(),
+                "right": right_hash.hex(),
+                "key": None,
+                "value": None,
+            },
         )
 
         return node_hash
@@ -210,13 +218,16 @@ class DataStore:
         node_hash = Program.to([key, value]).get_tree_hash()
 
         await self.db.execute(
-            "INSERT INTO node(hash, type, generation, first, rest) VALUE(:hash, :type, :generation, :first, :rest)",
+            "INSERT INTO node(hash, type, generation, left, right, key, value)"
+            " VALUE(:hash, :type, :generation, :left, :right, :key, :value)",
             {
                 "hash": node_hash.hex(),
                 "type": NodeType.TERMINAL,
                 "generation": generation,
-                "first": key.hex(),
-                "rest": value.hex(),
+                "left": None,
+                "right": None,
+                "key": key.hex(),
+                "value": value.hex(),
             },
         )
 
@@ -233,14 +244,16 @@ class DataStore:
         async with self.db_wrapper.locked_transaction():
             await _debug_dump(db=self.db, description="before")
             await self.db.execute(
-                "INSERT INTO node(hash, type, generation, first, rest)"
-                " VALUES(:hash, :type, :generation, :first, :rest)",
+                "INSERT INTO node(hash, type, generation, left, right, key, value)"
+                " VALUES(:hash, :type, :generation, :left, :right, :key, :value)",
                 {
                     "hash": node_hash.hex(),
                     "type": NodeType.EMPTY,
                     "generation": generation,
-                    "first": None,
-                    "rest": None,
+                    "left": None,
+                    "right": None,
+                    "key": None,
+                    "value": None,
                 },
             )
         async with self.db_wrapper.locked_transaction():

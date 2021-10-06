@@ -93,7 +93,7 @@ serialized_programs: List[SerializedProgram] = [
 
 table_columns: Dict[str, List[str]] = {
     "tree": ["id"],
-    "node": ["hash", "type", "generation", "first", "rest"],
+    "node": ["hash", "type", "generation", "left", "right", "key", "value"],
     "root": ["tree_id", "node_hash"],
 }
 
