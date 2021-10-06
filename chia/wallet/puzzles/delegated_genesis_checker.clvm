@@ -1,14 +1,14 @@
 ; This is a "limitations_program" for use with cat.clvm.
 (mod (
       PUBKEY
-      Truths ; These should be the same CAT truths
+      Truths
       parent_is_cat
       lineage_proof
       delta
       inner_conditions
       (
-        genesis_puzzle
-        genesis_solution
+        delegated_puzzle
+        delegated_solution
       )
     )
 
@@ -19,10 +19,7 @@
               (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
               (sha256 1 TREE)))
 
-    (if parent_is_cat
-      inner_conditions
-      (c (list AGG_SIG_UNSAFE PUBKEY (sha256tree1 genesis_puzzle))
-        (a genesis_puzzle (c Truths (c parent_is_cat (c lineage_proof (c delta (c inner_conditions genesis_solution))))))
-      )
+    (c (list AGG_SIG_UNSAFE PUBKEY (sha256tree1 delegated_puzzle))
+      (a delegated_puzzle (c Truths (c parent_is_cat (c lineage_proof (c delta (c inner_conditions delegated_solution))))))
     )
 )
