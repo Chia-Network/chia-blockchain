@@ -1,5 +1,6 @@
 import base64
 import fasteners
+import logging
 import os
 import shutil
 import sys
@@ -16,6 +17,9 @@ from secrets import token_bytes
 from typing import Optional
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
+
+log = logging.getLogger(__name__)
 
 
 SALT_BYTES = 16  # PBKDF2 param
@@ -55,8 +59,10 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
     result = None
     for i in range(0, max_iters):
         if lock.acquire_write_lock(timeout=timeout):
+            log.warning(f"[pid:{os.getpid()} acquired writer lock")
             yield  # <----
             lock.release_write_lock()
+            log.warning(f"[pid:{os.getpid()} released writer lock")
             break
         else:
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
@@ -74,8 +80,10 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
     result = None
     for i in range(0, max_iters):
         if lock.acquire_read_lock(timeout=timeout):
+            log.warning(f"[pid:{os.getpid()} acquired reader lock")
             yield  # <----
             lock.release_read_lock()
+            log.warning(f"[pid:{os.getpid()} released reader lock")
             break
         else:
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
