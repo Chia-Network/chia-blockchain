@@ -45,12 +45,14 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_wor
                 remaining_attempts -= 1
 
         log.warning(
-            f"{datetime.datetime.utcnow().isoformat()} [pid:{os.getpid()}] [set] Process {index} setting passphrase for user {user}"
+            f"{datetime.datetime.utcnow().isoformat()} [pid:{os.getpid()}] [set] "
+            f"Process {index} setting passphrase for user {user}"
         )
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
         log.warning(
-            f"{datetime.datetime.utcnow().isoformat()} [pid:{os.getpid()}] [get] Process {index} getting passphrase for user {user}"
+            f"{datetime.datetime.utcnow().isoformat()} [pid:{os.getpid()}] [get] "
+            f"Process {index} getting passphrase for user {user}"
         )
         found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
         if found_passphrase != passphrase:
