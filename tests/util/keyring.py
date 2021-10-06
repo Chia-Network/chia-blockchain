@@ -9,7 +9,7 @@ from functools import wraps
 from keyring.util import platform_
 from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from unittest.mock import patch
 
 
@@ -108,7 +108,12 @@ class TempKeyring:
         use_os_credential_store: bool = False,
     ):
         self.keychain = self._patch_and_create_keychain(
-            user=user, service=service, populate=populate, existing_keyring_path=existing_keyring_path, use_os_credential_store=use_os_credential_store, setup_cryptfilekeyring=setup_cryptfilekeyring
+            user=user,
+            service=service,
+            populate=populate,
+            existing_keyring_path=existing_keyring_path,
+            use_os_credential_store=use_os_credential_store,
+            setup_cryptfilekeyring=setup_cryptfilekeyring,
         )
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
@@ -142,6 +147,7 @@ class TempKeyring:
         mock_configure_backend = mock_configure_backend_patch.start()
         setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
+        mock_configure_legacy_backend_patch: Any
         if setup_cryptfilekeyring is False:
             mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
             mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
