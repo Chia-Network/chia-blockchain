@@ -36,6 +36,10 @@ def add_dummy_key_to_cryptfilekeyring():
     crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
     user: str = get_private_key_user(default_keychain_user(), 0)
     crypt_file_keyring.set_password(default_keychain_service(), user, "abc123")
+    contents: str = ""
+    with open(crypt_file_keyring.file_path, "r") as f:
+        contents = f.read()
+    log.warning(f"Cryptfilekeyring contents: {contents}")
 
 
 def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
@@ -174,6 +178,9 @@ class TempKeyring:
 
         keychain = Keychain(user=user, service=service)
         keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
+
+        if setup_cryptfilekeyring is True:
+            log.warning(f"Checking for legacy keyring: {keychain.keyring_wrapper.legacy_keyring}")
 
         # Stash the temp_dir in the keychain instance
         keychain._temp_dir = temp_dir  # type: ignore

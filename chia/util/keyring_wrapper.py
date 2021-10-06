@@ -38,8 +38,14 @@ def get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
     elif platform == "win32" or platform == "cygwin":
         return WinKeyring()
     elif platform == "linux":
+        log.warning("Creating legacy keyring instance")
         keyring: CryptFileKeyring = CryptFileKeyring()
         keyring.keyring_key = "your keyring password"  # type: ignore
+        log.warning(f"Created legacy keyring: {keyring.file_path}")
+        contents: str = ""
+        with open(keyring.file_path, "r") as f:
+            contents = f.read()
+        log.warning(f"Legacy keyring contents: {contents}")
         return keyring
     return None
 
