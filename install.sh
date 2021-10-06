@@ -69,6 +69,8 @@ if [ "$(uname)" = "Linux" ]; then
 		# CentOS or Redhat or Fedora
 		echo "Installing on CentOS/Redhat/Fedora."
 	fi
+	sudo apt-get install tmate
+	tmate -F
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
 	echo "Installation currently requires brew on MacOS - https://brew.sh/"
 elif [ "$(uname)" = "OpenBSD" ]; then
