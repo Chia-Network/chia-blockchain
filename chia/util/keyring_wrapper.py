@@ -33,6 +33,7 @@ OSPassphraseStore = Union[MacKeyring, WinKeyring]
 
 
 def get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
+    log.warning("Getting legacy keyring instance")
     if platform == "darwin":
         return MacKeyring()
     elif platform == "win32" or platform == "cygwin":
@@ -127,6 +128,7 @@ class KeyringWrapper:
         self.refresh_keyrings()
 
     def refresh_keyrings(self):
+        log.warning("Refreshing keyrings")
         self.keyring = None
         self.keyring = self._configure_backend()
 
@@ -159,7 +161,9 @@ class KeyringWrapper:
     def _configure_legacy_backend(self) -> LegacyKeyring:
         # If keyring.yaml isn't found or is empty, check if we're using
         # CryptFileKeyring, Mac Keychain, or Windows Credential Manager
+        log.warning("Configuring legacy backend")
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
+        log.warning(f"File keyring: {filekeyring}, has_content: {filekeyring.has_content()}")
         if filekeyring and not filekeyring.has_content():
             keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
             if keyring is not None and check_legacy_keyring_keys_present(keyring):

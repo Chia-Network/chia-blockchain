@@ -176,7 +176,11 @@ class TempKeyring:
             create_empty_cryptfilekeyring()
             add_dummy_key_to_cryptfilekeyring()
 
+        log.warning("Creating keychain")
         keychain = Keychain(user=user, service=service)
+        log.warning("Cleaning up shared keyring wrapper instance")
+        KeyringWrapper.cleanup_shared_instance()
+        log.warning("Creating keyring wrapper and setting on keychain")
         keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
 
         if setup_cryptfilekeyring is True:
