@@ -48,6 +48,7 @@ class TestKeyringWrapper:
         if platform != "linux":
             return
 
+        KeyringWrapper.cleanup_shared_instance()
         # Expect: the new keyring should not have content (not actually empty though...)
         assert KeyringWrapper.get_shared_instance().keyring.has_content() is False
         assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).exists() is True
