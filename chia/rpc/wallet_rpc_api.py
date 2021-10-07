@@ -22,7 +22,6 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
-from chia.wallet.puzzles.singleton_top_layer import adapt_inner_puzzle_hash_to_singleton
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -805,7 +804,6 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        # This inner address is a normal XCH address of the inner puzzle, not adapted
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
 
         memos: List[bytes] = None
@@ -820,9 +818,7 @@ class WalletRpcApi:
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash], fee, memos=memos
-            )
+            tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee, memos=memos)
             await wallet.standard_wallet.push_transaction(tx)
 
         return {

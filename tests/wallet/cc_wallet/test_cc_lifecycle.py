@@ -70,13 +70,13 @@ class TestCCLifecycle:
             spendable_cc_list.append(
                 SpendableCC(
                     coin,
-                    genesis_checker,
+                    genesis_checker.get_tree_hash(),
                     acs,
                     innersol,
                     limitations_solution=limitations_solution,
                     lineage_proof=proof,
                     extra_delta=extra_delta,
-                    reveal_limitations_program=True,
+                    limitations_program_reveal=genesis_checker,
                 )
             )
 
@@ -107,7 +107,7 @@ class TestCCLifecycle:
             # This program always returns the 4th argument to the limiter (inner_conditions)
             genesis_checker = Program.to([FIRST, [REST, [REST, [REST, [REST, 1]]]]])
             checker_solution = Program.to([])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cc_ph))[0].coin
@@ -240,7 +240,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisById.construct([Program.to(starting_coin.name())])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
@@ -276,7 +276,7 @@ class TestCCLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             genesis_checker: Program = GenesisByPuzhash.construct([Program.to(starting_coin.puzzle_hash)])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
             await sim_client.push_tx(
@@ -308,7 +308,7 @@ class TestCCLifecycle:
         try:
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
             await sim.farm_block(cc_ph)
 
@@ -401,7 +401,7 @@ class TestCCLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             genesis_checker: Program = DelegatedLimitations.construct([Program.to(sk.get_g1())])
-            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker, acs)
+            cc_puzzle: Program = construct_cc_puzzle(CC_MOD, genesis_checker.get_tree_hash(), acs)
             cc_ph: bytes32 = cc_puzzle.get_tree_hash()
 
             await sim_client.push_tx(

@@ -10,5 +10,6 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 @streamable
 class CCInfo(Streamable):
+    limitations_program_hash: bytes32
     my_genesis_checker: Optional[Program]  # this is the program
     lineage_proofs: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): lineage_proof}
