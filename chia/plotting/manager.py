@@ -247,7 +247,6 @@ class PlotManager:
             self.log.debug(
                 f"_refresh_task: total_result.loaded_plots {total_result.loaded_plots}, "
                 f"total_result.removed_plots {total_result.removed_plots}, "
-                f"total_result.loaded_size {total_result.loaded_size / (1024 ** 4):.2f} TiB, "
                 f"total_duration {total_result.duration:.2f} seconds"
             )
 
@@ -373,7 +372,6 @@ class PlotManager:
 
                 with counter_lock:
                     result.loaded_plots += 1
-                    result.loaded_size += stat_info.st_size
 
                 if file_path in self.failed_to_open_filenames:
                     del self.failed_to_open_filenames[file_path]
@@ -433,7 +431,6 @@ class PlotManager:
 
         self.log.debug(
             f"refresh_batch: loaded_plots {result.loaded_plots}, "
-            f"loaded_size {result.loaded_size / (1024 ** 4):.2f} TiB, "
             f"removed_plots {result.removed_plots}, processed_plots {result.processed_files}, "
             f"remaining_plots {result.remaining_files}, batch_size {self.refresh_parameter.batch_size}, "
             f"duration: {result.duration:.2f} seconds"

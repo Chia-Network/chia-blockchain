@@ -170,7 +170,6 @@ class BlockTools:
             else:
                 assert 0 < update_result.loaded_plots <= self.refresh_parameter.batch_size
                 assert update_result.loaded_plots == update_result.processed_files
-                assert update_result.loaded_size > 0
                 assert 0 < update_result.duration < 5
 
         self.plot_manager: PlotManager = PlotManager(

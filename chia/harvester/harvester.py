@@ -79,7 +79,6 @@ class Harvester:
     def _plot_refresh_callback(self, update_result: PlotRefreshResult):
         self.log.info(
             f"refresh_batch: loaded_plots {update_result.loaded_plots}, "
-            f"loaded_size {update_result.loaded_size / (1024 ** 4):.2f} TiB, "
             f"removed_plots {update_result.removed_plots}, processed_plots {update_result.processed_files}, "
             f"remaining_plots {update_result.remaining_files}, "
             f"duration: {update_result.duration:.2f} seconds"
