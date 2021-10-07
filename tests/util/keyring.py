@@ -171,20 +171,23 @@ class TempKeyring:
         # We don't want CryptFileKeyring finding the real legacy keyring
         mock_data_root.return_value = temp_dir
 
-        if setup_cryptfilekeyring is True:
-            # Create an empty legacy keyring
-            create_empty_cryptfilekeyring()
-            add_dummy_key_to_cryptfilekeyring()
+        try:
+            if setup_cryptfilekeyring is True:
+                # Create an empty legacy keyring
+                create_empty_cryptfilekeyring()
+                add_dummy_key_to_cryptfilekeyring()
 
-        log.warning("Creating keychain")
-        keychain = Keychain(user=user, service=service)
-        log.warning("Cleaning up shared keyring wrapper instance")
-        KeyringWrapper.cleanup_shared_instance()
-        log.warning("Creating keyring wrapper and setting on keychain")
-        keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
+            log.warning("Creating keychain")
+            keychain = Keychain(user=user, service=service)
+            log.warning("Cleaning up shared keyring wrapper instance")
+            KeyringWrapper.cleanup_shared_instance()
+            log.warning("Creating keyring wrapper and setting on keychain")
+            keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
 
-        if setup_cryptfilekeyring is True:
-            log.warning(f"Checking for legacy keyring: {keychain.keyring_wrapper.legacy_keyring}")
+            if setup_cryptfilekeyring is True:
+                log.warning(f"Checking for legacy keyring: {keychain.keyring_wrapper.legacy_keyring}")
+        except Exception as e:
+            log.warning(f"Caught exception during test keyring setup: {e}")
 
         # Stash the temp_dir in the keychain instance
         keychain._temp_dir = temp_dir  # type: ignore

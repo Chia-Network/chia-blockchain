@@ -15,6 +15,7 @@ from typing import Any, List, Optional, Tuple, Type, Union
 
 
 import logging
+
 log = logging.getLogger(__name__)
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
@@ -131,8 +132,9 @@ class KeyringWrapper:
         log.warning("Refreshing keyrings")
         self.keyring = None
         self.keyring = self._configure_backend()
-
+        log.warning("Keyring backend: {self.keyring}")
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
+        log.warning("Calling _configure_legacy_backend")
         self.legacy_keyring = self._configure_legacy_backend()
 
         # Initialize the cached_passphrase
@@ -147,8 +149,10 @@ class KeyringWrapper:
             raise Exception("KeyringWrapper has already been instantiated")
 
         if supports_keyring_passphrase():
+            log.warning("Configuring FileKeyring backend")
             keyring = FileKeyring(keys_root_path=self.keys_root_path)  # type: ignore
         else:
+            log.warning("FileKeyring backend not supported")
             legacy_keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
             if legacy_keyring is None:
                 legacy_keyring = keyring_main
@@ -163,7 +167,10 @@ class KeyringWrapper:
         # CryptFileKeyring, Mac Keychain, or Windows Credential Manager
         log.warning("Configuring legacy backend")
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
-        log.warning(f"File keyring: {filekeyring}, has_content: {filekeyring.has_content()}")
+        log.warning(
+            f"File keyring: {filekeyring}, "
+            f"has_content: {filekeyring.has_content() if filekeyring is not None else False}"
+        )
         if filekeyring and not filekeyring.has_content():
             keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
             if keyring is not None and check_legacy_keyring_keys_present(keyring):
