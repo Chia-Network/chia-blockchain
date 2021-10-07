@@ -158,6 +158,7 @@ class TempKeyring:
 
         mock_configure_legacy_backend_patch: Any = None
         if setup_cryptfilekeyring is False:
+            log.warning("Patching _configure_legacy_backend to return None")
             mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
             mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
             mock_configure_legacy_backend.return_value = None
