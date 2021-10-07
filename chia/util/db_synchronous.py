@@ -8,7 +8,7 @@ def db_synchronous_on(setting: str, db_path: Path) -> bool:
         return False
 
     # for now, default to synchronous=NORMAL mode. This can be made more
-    # sohpisticated in the future. There are still material performance
+    # sophisticated in the future. There are still material performance
     # improvements to be had in cases where the risks are low.
 
     # e.g.
