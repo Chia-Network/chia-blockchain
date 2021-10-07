@@ -159,9 +159,9 @@ class TempKeyring:
             crypt_file_keyring = create_empty_cryptfilekeyring()
             add_dummy_key_to_cryptfilekeyring(crypt_file_keyring)
 
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_shared_instance(KeyringWrapper(keys_root_path=Path(temp_dir), refresh=False))
         keychain = Keychain(user=user, service=service)
+        KeyringWrapper.set_shared_instance(KeyringWrapper(keys_root_path=Path(temp_dir), refresh=False))
+        keychain.keyring_wrapper = KeyringWrapper.get_shared_instance()
 
         mock_configure_backend_patch = patch.object(keychain.keyring_wrapper, "_configure_backend")
         mock_configure_backend = mock_configure_backend_patch.start()
@@ -170,7 +170,6 @@ class TempKeyring:
         mock_configure_legacy_backend_patch: Any = None
         log.warning(
             f"[before] _patch_and_create_keychain: "
-            f"KeyringWrapper instance: {keychain.keyring_wrapper}, "
             f"KeyringWrapper._configure_legacy_backend: {keychain.keyring_wrapper._configure_legacy_backend}"
         )
         if setup_cryptfilekeyring is False:
@@ -179,7 +178,6 @@ class TempKeyring:
             mock_configure_legacy_backend.return_value = None
         log.warning(
             f"[after] _patch_and_create_keychain: "
-            f"KeyringWrapper instance: {keychain.keyring_wrapper}, "
             f"KeyringWrapper._configure_legacy_backend: {keychain.keyring_wrapper._configure_legacy_backend}"
         )
 
@@ -211,8 +209,7 @@ class TempKeyring:
     def cleanup(self):
         log.warning(
             f"[before] cleanup: "
-            f"KeyringWrapper instance: {self.keychain.keyring_wrapper}, "
-            f"KeyringWrapper._configure_legacy_backend: {self.keychain.keyring_wrapper._configure_legacy_backend}"
+            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
         )
         assert not self.cleaned_up
 
@@ -232,6 +229,5 @@ class TempKeyring:
         self.cleaned_up = True
         log.warning(
             f"[after] cleanup: "
-            f"KeyringWrapper instance: {self.keychain.keyring_wrapper}, "
-            f"KeyringWrapper._configure_legacy_backend: {self.keychain.keyring_wrapper._configure_legacy_backend}"
+            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
         )
