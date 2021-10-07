@@ -156,10 +156,8 @@ class TempKeyring:
         mock_configure_backend = mock_configure_backend_patch.start()
         setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
-        mock_configure_legacy_backend_patch: Any
-        if setup_cryptfilekeyring is True:
-            mock_configure_legacy_backend_patch = None
-        else:
+        mock_configure_legacy_backend_patch: Any = None
+        if setup_cryptfilekeyring is False:
             mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
             mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
             mock_configure_legacy_backend.return_value = None
