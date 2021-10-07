@@ -5,6 +5,7 @@ from blspy import G2Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -20,13 +21,13 @@ ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 @dataclasses.dataclass
 class SpendableCC:
     coin: Coin
-    limitations_program: Program
+    limitations_program_hash: bytes32
     inner_puzzle: Program
     inner_solution: Program
     limitations_solution: Program = Program.to([])
     lineage_proof: LineageProof = LineageProof()
     extra_delta: int = 0
-    reveal_limitations_program: bool = False
+    limitations_program_reveal: Program = Program.to([])
 
 
 def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
@@ -40,11 +41,11 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
         return False, iter(())
 
 
-def construct_cc_puzzle(mod_code: Program, genesis_coin_checker: Program, inner_puzzle: Program) -> Program:
+def construct_cc_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
     """
     Given an inner puzzle hash and genesis_coin_checker calculate a puzzle program for a specific cc.
     """
-    return mod_code.curry(mod_code.get_tree_hash(), genesis_coin_checker.get_tree_hash(), inner_puzzle)
+    return mod_code.curry(mod_code.get_tree_hash(), limitations_program_hash, inner_puzzle)
 
 
 def subtotals_for_deltas(deltas) -> List[int]:
@@ -110,7 +111,7 @@ def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list
     for index in range(N):
         spend_info = spendable_cc_list[index]
 
-        puzzle_reveal = construct_cc_puzzle(mod_code, spend_info.limitations_program, spend_info.inner_puzzle)
+        puzzle_reveal = construct_cc_puzzle(mod_code, spend_info.limitations_program_hash, spend_info.inner_puzzle)
 
         prev_index = (index - 1) % N
         next_index = (index + 1) % N
@@ -118,10 +119,9 @@ def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list
         my_info = infos_for_me[index]
         next_info = infos_for_next[next_index]
 
-        limitations_reveal = spend_info.limitations_program if spend_info.reveal_limitations_program else Program.to([])
         solution = [
             spend_info.inner_solution,
-            limitations_reveal,
+            spend_info.limitations_program_reveal,
             spend_info.limitations_solution,
             spend_info.lineage_proof.to_program(),
             prev_id,

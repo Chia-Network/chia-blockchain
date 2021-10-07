@@ -73,7 +73,9 @@ class GenesisById(LimitationsProgram):
         await wallet.add_lineage(origin_id, LineageProof())
         genesis_coin_checker: Program = cls.construct([Program.to(origin_id)])
 
-        minted_cc_puzzle_hash: bytes32 = construct_cc_puzzle(CC_MOD, genesis_coin_checker, cc_inner).get_tree_hash()
+        minted_cc_puzzle_hash: bytes32 = construct_cc_puzzle(
+            CC_MOD, genesis_coin_checker.get_tree_hash(), cc_inner
+        ).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
             amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
@@ -85,19 +87,22 @@ class GenesisById(LimitationsProgram):
             [
                 SpendableCC(
                     list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
-                    genesis_coin_checker,
+                    genesis_coin_checker.get_tree_hash(),
                     cc_inner,
                     wallet.standard_wallet.make_solution(
                         primaries=[{"puzzlehash": cc_inner.get_tree_hash(), "amount": amount}]
                     ),
-                    reveal_limitations_program=True,
+                    limitations_program_reveal=genesis_coin_checker,
                 )
             ],
         )
         signed_eve_spend = await wallet.sign(eve_spend)
 
         if wallet.cc_info.my_genesis_checker is None:
-            await wallet.save_info(CCInfo(genesis_coin_checker, wallet.cc_info.lineage_proofs), False)
+            await wallet.save_info(
+                CCInfo(genesis_coin_checker.get_tree_hash(), genesis_coin_checker, wallet.cc_info.lineage_proofs),
+                False,
+            )
 
         return SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
 
