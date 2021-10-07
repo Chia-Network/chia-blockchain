@@ -33,18 +33,18 @@ class PlotInfo:
 
 @dataclass
 class PlotRefreshResult:
-    loaded_plots: int = 0
-    removed_plots: int = 0
-    processed_files: int = 0
-    remaining_files: int = 0
+    loaded: int = 0
+    removed: int = 0
+    processed: int = 0
+    remaining: int = 0
     duration: float = 0
 
     def __add__(self, other):
         result: PlotRefreshResult = PlotRefreshResult()
-        result.loaded_plots = self.loaded_plots + other.loaded_plots
-        result.removed_plots = self.removed_plots + other.removed_plots
-        result.processed_files = self.processed_files + other.processed_files
-        result.remaining_files = other.remaining_files
+        result.loaded = self.loaded + other.loaded
+        result.removed = self.removed + other.removed
+        result.processed = self.processed + other.processed
+        result.remaining = other.remaining
         result.duration = self.duration + other.duration
         return result
 

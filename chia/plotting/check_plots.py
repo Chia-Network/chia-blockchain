@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 def plot_refresh_callback(refresh_result: PlotRefreshResult):
-    log.info(f"loaded {refresh_result.loaded_plots} plots, {refresh_result.remaining_files} remaining")
+    log.info(f"loaded {refresh_result.loaded} plots, {refresh_result.remaining} remaining")
 
 
 def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
