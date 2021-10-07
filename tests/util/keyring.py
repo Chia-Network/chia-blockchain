@@ -148,24 +148,6 @@ class TempKeyring:
         # Patch supports_os_passphrase_storage() to return use_os_credential_store
         mock_supports_os_passphrase_storage.return_value = use_os_credential_store
 
-        mock_configure_backend_patch = patch.object(KeyringWrapper, "_configure_backend")
-        mock_configure_backend = mock_configure_backend_patch.start()
-        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
-
-        mock_configure_legacy_backend_patch: Any = None
-        log.warning(
-            f"[before] _patch_and_create_keychain: "
-            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
-        )
-        if setup_cryptfilekeyring is False:
-            mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
-            mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
-            mock_configure_legacy_backend.return_value = None
-        log.warning(
-            f"[after] _patch_and_create_keychain: "
-            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
-        )
-
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()
 
@@ -178,7 +160,29 @@ class TempKeyring:
             add_dummy_key_to_cryptfilekeyring(crypt_file_keyring)
 
         keychain = Keychain(user=user, service=service)
-        keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
+        KeyringWrapper.set_shared_instance(KeyringWrapper(keys_root_path=Path(temp_dir), refresh=False))
+        keychain.keyring_wrapper = KeyringWrapper.get_shared_instance()
+
+        mock_configure_backend_patch = patch.object(keychain.keyring_wrapper, "_configure_backend")
+        mock_configure_backend = mock_configure_backend_patch.start()
+        setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
+
+        mock_configure_legacy_backend_patch: Any = None
+        log.warning(
+            f"[before] _patch_and_create_keychain: "
+            f"KeyringWrapper._configure_legacy_backend: {keychain.keyring_wrapper._configure_legacy_backend}"
+        )
+        if setup_cryptfilekeyring is False:
+            mock_configure_legacy_backend_patch = patch.object(keychain.keyring_wrapper, "_configure_legacy_backend")
+            mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
+            mock_configure_legacy_backend.return_value = None
+        log.warning(
+            f"[after] _patch_and_create_keychain: "
+            f"KeyringWrapper._configure_legacy_backend: {keychain.keyring_wrapper._configure_legacy_backend}"
+        )
+
+        # Finish initializing the keyring wrapper
+        keychain.keyring_wrapper.refresh_keyrings()
 
         # Stash the temp_dir in the keychain instance
         keychain._temp_dir = temp_dir  # type: ignore
