@@ -116,7 +116,7 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 }
 
 
-def create_node(row: Dict[str, Any]) -> Node:
+def row_to_node(row: Dict[str, Any]) -> Node:
     cls = node_type_to_class[row["type"]]
     return cls.from_row(row=row)
 
@@ -141,17 +141,7 @@ class DataStore:
         await self.db.execute("PRAGMA foreign_keys=ON")
 
         async with self.db_wrapper.locked_transaction():
-            # TODO: should the hashes/ids be TEXT or BLOB?
             await self.db.execute("CREATE TABLE IF NOT EXISTS tree(id TEXT PRIMARY KEY NOT NULL)")
-            # Note that the meaning of `first` and `rest` depend on the value of `type`:
-            #   EMPTY: unused
-            #   INTERNAL: both are foreign keys against node.hash
-            #   TERMINAL: both are serialized CLVM objects with `first` being the key and `rest` being the value
-            # TODO: I think the generation needs to be added to the key so the
-            #       "same node" can be tagged with multiple generations if it gets
-            #       removed and re-added, or added to different tables, etc.  Or,
-            #       perhaps the generation should be handled differently to avoid
-            #       such repetition of subtrees.
             # TODO: figure out the use of the generation
             await self.db.execute(
                 "CREATE TABLE IF NOT EXISTS node("
@@ -349,7 +339,7 @@ class DataStore:
                     if row is None:
                         break
 
-                    new_node = create_node(row=row)
+                    new_node = row_to_node(row=row)
                     parents.append(new_node)
                     traversal_hash = new_node.hash
 
