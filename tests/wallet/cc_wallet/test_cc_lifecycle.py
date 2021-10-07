@@ -14,7 +14,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.singleton_top_layer import adapt_inner_to_singleton
 from chia.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
@@ -30,7 +29,7 @@ from chia.wallet.puzzles.genesis_checkers import (
 
 from tests.clvm.test_puzzles import secret_exponent_for_index
 
-acs = adapt_inner_to_singleton(Program.to(1))
+acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
 NO_LINEAGE_PROOF = LineageProof()
 

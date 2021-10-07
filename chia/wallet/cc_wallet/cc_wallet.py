@@ -38,11 +38,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.puzzles.singleton_top_layer import (
-    adapt_inner_to_singleton,
-    adapt_inner_puzzle_hash_to_singleton,
-    remove_singleton_truth_wrapper,
-)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -352,17 +347,17 @@ class CCWallet:
             await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def get_new_inner_hash(self) -> bytes32:
-        puzzle = adapt_inner_to_singleton(await self.standard_wallet.get_new_puzzle())
+        puzzle = await self.get_new_inner_puzzle()
         return puzzle.get_tree_hash()
 
     async def get_new_inner_puzzle(self) -> Program:
-        return adapt_inner_to_singleton(await self.standard_wallet.get_new_puzzle())
+        return await self.standard_wallet.get_new_puzzle()
 
     async def get_new_puzzlehash(self) -> bytes32:
-        return adapt_inner_puzzle_hash_to_singleton(await self.standard_wallet.get_new_puzzlehash())
+        return await self.standard_wallet.get_new_puzzlehash()
 
     def puzzle_for_pk(self, pubkey) -> Program:
-        inner_puzzle = adapt_inner_to_singleton(self.standard_wallet.puzzle_for_pk(bytes(pubkey)))
+        inner_puzzle = self.standard_wallet.puzzle_for_pk(bytes(pubkey))
         if self.cc_info.my_genesis_checker is None:
             raise ValueError("My genesis checker is None")
         cc_puzzle: Program = construct_cc_puzzle(CC_MOD, self.cc_info.my_genesis_checker, inner_puzzle)
@@ -466,7 +461,7 @@ class CCWallet:
             matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
             if matched:
                 _, _, inner_puzzle = puzzle_args
-                puzzle_hash = remove_singleton_truth_wrapper(inner_puzzle).get_tree_hash()
+                puzzle_hash = inner_puzzle.get_tree_hash()
                 pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
@@ -492,7 +487,7 @@ class CCWallet:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             cc_hash.hex()
         )
-        inner_puzzle: Program = adapt_inner_to_singleton(self.standard_wallet.puzzle_for_pk(bytes(record.pubkey)))
+        inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
 
     async def get_lineage_proof_for_coin(self, coin) -> Optional[LineageProof]:
