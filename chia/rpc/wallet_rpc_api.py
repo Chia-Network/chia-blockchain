@@ -807,7 +807,6 @@ class WalletRpcApi:
 
         # This inner address is a normal XCH address of the inner puzzle, not adapted
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
-        puzzle_hash_adapted: bytes32 = adapt_inner_puzzle_hash_to_singleton(puzzle_hash)
 
         memos: List[bytes] = None
         if "memos" in request:
@@ -822,7 +821,7 @@ class WalletRpcApi:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash_adapted], fee, memos=memos
+                [amount], [puzzle_hash], fee, memos=memos
             )
             await wallet.standard_wallet.push_transaction(tx)
 

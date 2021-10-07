@@ -72,34 +72,6 @@ def next_info_for_spendable_cc(spendable_cc: SpendableCC) -> Program:
     return Program.to(list)
 
 
-def get_cat_truths(spendable_cc: SpendableCC) -> Program:
-    mod_hash = CC_MOD.get_tree_hash()
-    mod_hash_hash = Program.to(mod_hash).get_tree_hash()
-    cc_struct = Program.to(
-        [mod_hash, mod_hash_hash, spendable_cc.limitations_program, spendable_cc.limitations_program.get_tree_hash()]
-    )
-    # TRUTHS are: innerpuzhash my_amount lineage_proof CC_STRUCT my_id fullpuzhash parent_id limitations_solutions
-    # CC_STRUCT is: MOD_HASH (sha256 1 MOD_HASH) limitations_program (sha256tree1 LIMITATIONS_PROGRAM_HASH)
-    return Program.to(
-        (
-            (
-                (
-                    (
-                        spendable_cc.inner_puzzle.get_tree_hash(),
-                        [],
-                    ),
-                    spendable_cc.coin.amount,
-                ),
-                (spendable_cc.lineage_proof.to_program(), cc_struct),
-            ),
-            (
-                (spendable_cc.coin.name(), spendable_cc.coin.puzzle_hash),
-                (spendable_cc.coin.parent_coin_info, spendable_cc.limitations_solution),
-            ),
-        )
-    )
-
-
 # This should probably return UnsignedSpendBundle if that type ever exists
 def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list: List[SpendableCC]) -> SpendBundle:
     """
@@ -112,9 +84,8 @@ def unsigned_spend_bundle_for_spendable_ccs(mod_code: Program, spendable_cc_list
     # figure out what the deltas are by running the inner puzzles & solutions
     deltas = []
     for spend_info in spendable_cc_list:
-        truths = get_cat_truths(spend_info)
         error, conditions, cost = conditions_dict_for_solution(
-            spend_info.inner_puzzle, truths.cons(spend_info.inner_solution), INFINITE_COST
+            spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST
         )
         total = spend_info.extra_delta * -1
         if conditions:
