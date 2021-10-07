@@ -4,6 +4,12 @@
 name: Ubuntu core-util Test
 
 on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'     
+        required: false
+        default: false
   push:
     branches:
       - main
@@ -101,6 +107,12 @@ jobs:
       run: |
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
+
+    - uses: actions/checkout@v2
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
+
 
     - name: Test core-util code with pytest
       run: |
