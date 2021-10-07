@@ -182,6 +182,14 @@ class PlotManager:
         with self:
             return len(self.plots)
 
+    def get_duplicates(self):
+        result = []
+        for plot_filename, paths_entry in self.plot_filename_paths.items():
+            _, duplicated_paths = paths_entry
+            for path in duplicated_paths:
+                result.append(Path(path) / plot_filename)
+        return result
+
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
