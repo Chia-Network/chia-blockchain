@@ -17,7 +17,7 @@ from unittest.mock import patch
 log = logging.getLogger(__name__)
 
 
-def create_empty_cryptfilekeyring():
+def create_empty_cryptfilekeyring() -> CryptFileKeyring:
     """
     Create an empty legacy keyring
     """
@@ -25,13 +25,13 @@ def create_empty_cryptfilekeyring():
     fd = os.open(crypt_file_keyring.file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
     os.close(fd)
     assert Path(crypt_file_keyring.file_path).exists()
+    return crypt_file_keyring
 
 
-def add_dummy_key_to_cryptfilekeyring():
+def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
     """
     Add a fake key to the CryptFileKeyring
     """
-    crypt_file_keyring = CryptFileKeyring()
     log.warning(f"Adding dummy key to cryptfilekeyring: {crypt_file_keyring.file_path}")
     crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
     user: str = get_private_key_user(default_keychain_user(), 0)
@@ -173,8 +173,10 @@ class TempKeyring:
         try:
             if setup_cryptfilekeyring is True:
                 # Create an empty legacy keyring
-                create_empty_cryptfilekeyring()
-                add_dummy_key_to_cryptfilekeyring()
+                crypt_file_keyring = create_empty_cryptfilekeyring()
+                add_dummy_key_to_cryptfilekeyring(crypt_file_keyring)
+                log.warning(f"_configure_legacy_backend should return {crypt_file_keyring}")
+                # mock_configure_legacy_backend.return_value = crypt_file_keyring
 
             log.warning("Creating keychain")
             keychain = Keychain(user=user, service=service)

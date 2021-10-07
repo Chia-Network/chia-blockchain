@@ -134,7 +134,7 @@ class KeyringWrapper:
         self.keyring = self._configure_backend()
         log.warning(f"Keyring backend: {self.keyring}")
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
-        log.warning(f"Calling _configure_legacy_backend: {self._configure_backend}")
+        log.warning(f"Calling _configure_legacy_backend: {self._configure_legacy_backend}")
         self.legacy_keyring = self._configure_legacy_backend()
 
         # Initialize the cached_passphrase
