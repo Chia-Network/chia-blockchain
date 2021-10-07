@@ -132,12 +132,13 @@ class KeyringWrapper:
         log.warning("Refreshing keyrings")
         self.keyring = None
         self.keyring = self._configure_backend()
-        log.warning("Keyring backend: {self.keyring}")
+        log.warning(f"Keyring backend: {self.keyring}")
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
         log.warning("Calling _configure_legacy_backend")
         self.legacy_keyring = self._configure_legacy_backend()
 
         # Initialize the cached_passphrase
+        log.warning("Getting initial cached passphrase")
         self.cached_passphrase = self._get_initial_cached_passphrase()
 
     def _configure_backend(self) -> Union[LegacyKeyring, FileKeyring]:
@@ -207,6 +208,10 @@ class KeyringWrapper:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
+
+    @staticmethod
+    def set_shared_instance(instance: Any):
+        KeyringWrapper.__shared_instance = instance
 
     @staticmethod
     def cleanup_shared_instance():

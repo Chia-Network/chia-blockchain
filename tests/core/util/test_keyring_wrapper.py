@@ -55,6 +55,7 @@ class TestKeyringWrapper:
         assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).stat().st_size != 0
 
         # Expect: legacy keyring should be in use
+        assert KeyringWrapper.get_shared_instance() is not None
         assert KeyringWrapper.get_shared_instance().legacy_keyring is not None
         assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is True
         assert KeyringWrapper.get_shared_instance().get_keyring() == KeyringWrapper.get_shared_instance().legacy_keyring

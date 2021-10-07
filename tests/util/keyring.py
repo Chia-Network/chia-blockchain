@@ -182,7 +182,8 @@ class TempKeyring:
             log.warning("Cleaning up shared keyring wrapper instance")
             KeyringWrapper.cleanup_shared_instance()
             log.warning("Creating keyring wrapper and setting on keychain")
-            keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
+            KeyringWrapper.set_shared_instance(KeyringWrapper(keys_root_path=Path(temp_dir)))
+            keychain.keyring_wrapper = KeyringWrapper.get_shared_instance()
 
             if setup_cryptfilekeyring is True:
                 log.warning(f"Checking for legacy keyring: {keychain.keyring_wrapper.legacy_keyring}")
