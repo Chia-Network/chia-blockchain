@@ -39,15 +39,6 @@ class PlotRefreshResult:
     remaining: int = 0
     duration: float = 0
 
-    def __add__(self, other):
-        result: PlotRefreshResult = PlotRefreshResult()
-        result.loaded = self.loaded + other.loaded
-        result.removed = self.removed + other.removed
-        result.processed = self.processed + other.processed
-        result.remaining = other.remaining
-        result.duration = self.duration + other.duration
-        return result
-
 
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
     if config is None:

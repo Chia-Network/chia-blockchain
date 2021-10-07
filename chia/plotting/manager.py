@@ -225,7 +225,11 @@ class PlotManager:
             total_result: PlotRefreshResult = PlotRefreshResult()
             while self.needs_refresh() and self._refreshing_enabled:
                 batch_result: PlotRefreshResult = self.refresh_batch(plot_paths, plot_directories)
-                total_result += batch_result
+                total_result.loaded += batch_result.loaded
+                total_result.removed += batch_result.removed
+                total_result.processed += batch_result.processed
+                total_result.remaining = batch_result.remaining
+                total_result.duration += batch_result.duration
                 self._refresh_callback(batch_result)
                 if batch_result.remaining == 0:
                     break
