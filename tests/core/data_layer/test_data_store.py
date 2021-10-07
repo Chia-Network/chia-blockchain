@@ -1,3 +1,4 @@
+import itertools
 import logging
 
 # import random
@@ -10,7 +11,7 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import Action, DataStore, OperationType, TableRow
+from chia.data_layer.data_store import DataStore, Side
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
@@ -52,7 +53,13 @@ async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
 @pytest.fixture(name="data_store", scope="function")
 async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> DataStore:
     await raw_data_store.create_tree(tree_id=tree_id)
+    # await raw_data_store.create_root(tree_id=tree_id)
     return raw_data_store
+
+
+@pytest.fixture(name="root_hash", scope="function")
+async def root_hash_fixture(data_store: DataStore, tree_id: bytes32) -> DataStore:
+    return await data_store.get_tree_root(tree_id=tree_id)
 
 
 # TODO: understand this better and make some sensible looking example objects
@@ -93,8 +100,8 @@ serialized_programs: List[SerializedProgram] = [
 
 table_columns: Dict[str, List[str]] = {
     "tree": ["id"],
-    "node": ["hash", "type", "generation", "left", "right", "key", "value"],
-    "root": ["tree_id", "node_hash"],
+    "node": ["hash", "type", "left", "right", "key", "value"],
+    "root": ["tree_id", "generation", "node_hash"],
 }
 
 
@@ -123,7 +130,7 @@ async def test_create_creates_tables_and_columns(
 
 @pytest.mark.asyncio
 async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
-    tree_id = bytes32(b'\0' * 32)
+    tree_id = bytes32(b"\0" * 32)
 
     await raw_data_store.create_tree(tree_id=tree_id)
 
@@ -131,7 +138,7 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
 @pytest.mark.asyncio
 async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
-    bad_tree_id = b'\0' * length
+    bad_tree_id = b"\0" * length
 
     # TODO: require a more specific exception
     with pytest.raises(Exception):
@@ -143,7 +150,7 @@ async def test_get_trees(raw_data_store: DataStore) -> None:
     expected_tree_ids = set()
 
     for n in range(10):
-        tree_id = bytes32((b'\0' * 31 + bytes([n])))
+        tree_id = bytes32((b"\0" * 31 + bytes([n])))
         await raw_data_store.create_tree(tree_id=tree_id)
         expected_tree_ids.add(tree_id)
 
@@ -153,10 +160,62 @@ async def test_get_trees(raw_data_store: DataStore) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_root_provides_bytes32(data_store: DataStore, tree_id: bytes32) -> None:
-    root_hash = await data_store.create_root(tree_id=tree_id)
+async def test_table_is_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert is_empty
 
-    assert isinstance(root_hash, bytes32)
+
+@pytest.mark.asyncio
+async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    key = Program.to([1, 2])
+    value = Program.to("abc")
+
+    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert not is_empty
+
+
+# @pytest.mark.asyncio
+# async def test_create_root_provides_bytes32(raw_data_store: DataStore, tree_id: bytes32) -> None:
+#     await raw_data_store.create_tree(tree_id=tree_id)
+#     # TODO: catchup with the node_hash=
+#     root_hash = await raw_data_store.create_root(tree_id=tree_id, node_hash=23)
+#
+#     assert isinstance(root_hash, bytes32)
+
+
+@pytest.mark.asyncio
+async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    key = Program.to([1, 2])
+    value = Program.to("abc")
+
+    node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    assert node_hash == Program.to([key, value]).get_tree_hash()
+
+
+@pytest.mark.asyncio
+async def test_insert_increments_generation(data_store: DataStore, tree_id: bytes32) -> None:
+    keys = list("abcd")#efghijklmnopqrstuvwxyz")
+    value = Program.to([1, 2, 3])
+
+    generations = []
+    expected = []
+
+    node_hash = None
+    for key, expected_generation in zip(keys, itertools.count(start=1)):
+        node_hash = await data_store.insert(
+            key=Program.to(key),
+            value=value,
+            tree_id=tree_id,
+            reference_node_hash=node_hash,
+            side=None if node_hash is None else Side.LEFT,
+        )
+        generation = await data_store.get_tree_generation(tree_id=tree_id)
+        generations.append(generation)
+        expected.append(expected_generation)
+
+    assert generations == expected
 
 
 # @pytest.mark.asyncio
