@@ -487,7 +487,7 @@ class TradeManager:
                 spendable_cc_list.append(
                     SpendableCC(
                         coloured_coin,
-                        genesis_coin_checker,
+                        genesis_coin_checker.get_tree_hash(),
                         inner_puzzle,
                         inner_solution,
                         lineage_proof=lineage_proof,
@@ -506,7 +506,7 @@ class TradeManager:
                     spendable_cc_list.append(
                         SpendableCC(
                             cc_coinsol.coin,
-                            genesis_coin_checker,
+                            genesis_coin_checker_hash,
                             inner_puzzle,
                             solution.first(),
                             lineage_proof=solution.rest().rest().first(),
@@ -526,7 +526,7 @@ class TradeManager:
             spendable_cc_list.append(
                 SpendableCC(
                     my_output_coin,
-                    genesis_coin_checker,
+                    genesis_coin_checker_hash,
                     inner_puzzle,
                     inner_solution,
                     lineage_proof=lineage_proof,

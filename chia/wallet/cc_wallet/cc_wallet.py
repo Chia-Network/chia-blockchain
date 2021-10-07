@@ -79,7 +79,9 @@ class CCWallet:
             raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
 
-        self.cc_info = CCInfo(None, [])
+        # We use 00 bytes because it's not optional. We must check this is overidden during issuance.
+        empty_bytes = bytearray(32)
+        self.cc_info = CCInfo(empty_bytes, None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CAT Wallet", WalletType.COLOURED_COIN, info_as_string
@@ -93,6 +95,8 @@ class CCWallet:
                 cat_tail_info,
                 amount,
             )
+            assert self.cc_info.limitations_program_hash != empty_bytes
+            assert self.cc_info.lineage_proofs != []
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id(), False)
             raise
@@ -159,7 +163,7 @@ class CCWallet:
     async def create_wallet_for_cc(
         wallet_state_manager: Any,
         wallet: Wallet,
-        genesis_checker_hex: str,
+        limitations_program_hash_hex: str,
     ) -> CCWallet:
         self = CCWallet()
         self.cost_of_single_tx = None
@@ -168,7 +172,8 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.cc_info = CCInfo(Program.fromhex(genesis_checker_hex), [])
+        limitations_program_hash = bytes.fromhex(limitations_program_hash_hex)
+        self.cc_info = CCInfo(limitations_program_hash, None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
@@ -284,8 +289,14 @@ class CCWallet:
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
 
     def get_colour(self) -> str:
-        assert self.cc_info.my_genesis_checker is not None
-        return bytes(self.cc_info.my_genesis_checker).hex()
+        return bytes(self.cc_info.limitations_program_hash).hex()
+
+    def set_tail_program(self, tail_program: str):
+        assert Program.fromhex(tail_program).get_tree_hash() == self.cc_info.limitations_program_hash
+        self.save_info(
+            CCInfo(self.cc_info.limitations_program_hash, Program.fromhex(tail_program), self.cc_info.lineage_proofs),
+            False,
+        )
 
     async def coin_added(self, coin: Coin, height: uint32):
         """Notification from wallet state manager that wallet has been received."""
@@ -358,9 +369,7 @@ class CCWallet:
 
     def puzzle_for_pk(self, pubkey) -> Program:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(bytes(pubkey))
-        if self.cc_info.my_genesis_checker is None:
-            raise ValueError("My genesis checker is None")
-        cc_puzzle: Program = construct_cc_puzzle(CC_MOD, self.cc_info.my_genesis_checker, inner_puzzle)
+        cc_puzzle: Program = construct_cc_puzzle(CC_MOD, self.cc_info.limitations_program_hash, inner_puzzle)
         return cc_puzzle
 
     async def get_new_cc_puzzle_hash(self):
@@ -550,7 +559,11 @@ class CCWallet:
             changepuzzlehash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-        assert self.cc_info.my_genesis_checker is not None
+        limitations_program_reveal = Program.to([])
+        if self.cc_info.my_genesis_checker is None:
+            assert cat_discrepancy is None
+        elif cat_discrepancy is not None:
+            limitations_program_reveal = self.cc_info.my_genesis_checker
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cc_list = []
@@ -566,13 +579,13 @@ class CCWallet:
             assert lineage_proof is not None
             new_spendable_cc = SpendableCC(
                 coin,
-                self.cc_info.my_genesis_checker,
+                self.cc_info.limitations_program_hash,
                 inner_puzzle,
                 innersol,
                 limitations_solution=limitations_solution,
                 extra_delta=extra_delta,
                 lineage_proof=lineage_proof,
-                reveal_limitations_program=(cat_discrepancy is not None),
+                limitations_program_reveal=limitations_program_reveal,
             )
             spendable_cc_list.append(new_spendable_cc)
 
@@ -600,13 +613,15 @@ class CCWallet:
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            payments.append(Payment(puzhash, amount, memo_list))
+            memos_with_hint = [puzhash]
+            memos_with_hint.extend(memo_list)
+            payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
-                raise ValueError(f"Can't melt more than {max_send} in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
         unsigned_spend_bundle = await self.generate_unsigned_spendbundle(payments, fee, coins=coins)
         spend_bundle = await self.sign(unsigned_spend_bundle)
@@ -616,7 +631,7 @@ class CCWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],
-            amount=payment_sum,
+            amount=uint64(payment_sum),
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),
@@ -638,7 +653,7 @@ class CCWallet:
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list.append((name, lineage))
-        cc_info: CCInfo = CCInfo(self.cc_info.my_genesis_checker, current_list)
+        cc_info: CCInfo = CCInfo(self.cc_info.limitations_program_hash, self.cc_info.my_genesis_checker, current_list)
         await self.save_info(cc_info, in_transaction)
 
     async def save_info(self, cc_info: CCInfo, in_transaction):
@@ -683,7 +698,7 @@ class CCWallet:
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             if self.cc_info.my_genesis_checker is None:
                 raise ValueError("My genesis checker is None")
-            puzzle_reveal = construct_cc_puzzle(CC_MOD, self.cc_info.my_genesis_checker, innerpuz)
+            puzzle_reveal = construct_cc_puzzle(CC_MOD, self.cc_info.limitations_program_hash, innerpuz)
             # Use coin info to create solution and add coin and solution to list of CoinSpends
             solution = [
                 innersol,
