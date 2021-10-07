@@ -198,6 +198,8 @@ class TestRpc:
             expected_result: PlotRefreshResult = PlotRefreshResult()
             expected_result_matched = True
 
+            # Note: We assign `expected_result_matched` in the callback and assert it in the test thread to avoid
+            # crashing the refresh thread of the plot manager with invalid assertions.
             def test_refresh_callback(refresh_result: PlotRefreshResult):
                 def test_value(name: str, actual: PlotRefreshResult, expected: PlotRefreshResult):
                     nonlocal expected_result_matched
