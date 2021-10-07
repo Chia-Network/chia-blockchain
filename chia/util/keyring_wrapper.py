@@ -104,15 +104,14 @@ class KeyringWrapper:
     cached_passphrase_is_validated: bool = False
     legacy_keyring = None
 
-    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH, refresh: bool = True):
+    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
         """
         Initializes the keyring backend based on the OS. For Linux, we previously
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
         self.keys_root_path = keys_root_path
-        if refresh is True:
-            self.refresh_keyrings()
+        self.refresh_keyrings()
 
     def refresh_keyrings(self):
         self.keyring = None
@@ -184,10 +183,6 @@ class KeyringWrapper:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
-
-    @staticmethod
-    def set_shared_instance(keyring_wrapper: Any):
-        KeyringWrapper.__shared_instance = keyring_wrapper
 
     @staticmethod
     def cleanup_shared_instance():
