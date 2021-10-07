@@ -219,7 +219,13 @@ class TestRpc:
             harvester.plot_manager.set_refresh_callback(test_refresh_callback)
 
             async def test_case(
-                trigger, expect_loaded, expect_removed, expect_processed, expected_directories, expect_total_plots
+                trigger,
+                expect_loaded,
+                expect_duplicates,
+                expect_removed,
+                expect_processed,
+                expected_directories,
+                expect_total_plots,
             ):
                 nonlocal expected_result_matched
                 expected_result.loaded_plots = expect_loaded
@@ -234,6 +240,7 @@ class TestRpc:
                 result = await client_2.get_plots()
                 assert len(result["plots"]) == expect_total_plots
                 assert len(harvester.plot_manager.cache) == expect_total_plots
+                assert len(harvester.plot_manager.get_duplicates()) == expect_duplicates
                 assert len(harvester.plot_manager.failed_to_open_filenames) == 0
 
             # Add plot_dir with two new plots
@@ -242,6 +249,7 @@ class TestRpc:
                 expect_loaded=2,
                 expect_removed=0,
                 expect_processed=2,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots + 2,
             )
@@ -251,15 +259,18 @@ class TestRpc:
                 expect_loaded=0,
                 expect_removed=0,
                 expect_processed=1,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 2,
             )
+            assert plot_dir_sub.resolve() / filename_2 in harvester.plot_manager.get_duplicates()
             # Delete one plot
             await test_case(
                 client_2.delete_plot(str(plot_dir / filename)),
                 expect_loaded=0,
                 expect_removed=1,
                 expect_processed=0,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -269,15 +280,18 @@ class TestRpc:
                 expect_loaded=0,
                 expect_removed=1,
                 expect_processed=0,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots + 1,
             )
+            assert plot_dir_sub.resolve() / filename_2 not in harvester.plot_manager.get_duplicates()
             # Re-add the directory with the duplicate for other tests
             await test_case(
                 client_2.add_plot_directory(str(plot_dir_sub)),
                 expect_loaded=0,
                 expect_removed=0,
                 expect_processed=1,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -288,6 +302,7 @@ class TestRpc:
                 expect_loaded=1,
                 expect_removed=1,
                 expect_processed=1,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots + 1,
             )
@@ -297,6 +312,7 @@ class TestRpc:
                 expect_loaded=0,
                 expect_removed=0,
                 expect_processed=1,
+                expect_duplicates=1,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -306,6 +322,7 @@ class TestRpc:
                 expect_loaded=0,
                 expect_removed=1,
                 expect_processed=0,
+                expect_duplicates=0,
                 expected_directories=3,
                 expect_total_plots=num_plots + 1,
             )
@@ -315,6 +332,7 @@ class TestRpc:
                 expect_loaded=0,
                 expect_removed=1,
                 expect_processed=0,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=num_plots,
             )
@@ -324,6 +342,7 @@ class TestRpc:
                 expect_loaded=0,
                 expect_removed=20,
                 expect_processed=0,
+                expect_duplicates=0,
                 expected_directories=1,
                 expect_total_plots=0,
             )
@@ -334,6 +353,7 @@ class TestRpc:
                 expect_loaded=20,
                 expect_removed=0,
                 expect_processed=20,
+                expect_duplicates=0,
                 expected_directories=2,
                 expect_total_plots=20,
             )
