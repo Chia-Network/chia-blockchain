@@ -49,7 +49,11 @@ async def spawn_process(host: str, port: int, counter: int):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            resolved = socket.gethostbyname(host)
+            check_addr = PeerInfo(host,port)
+            if check_addr.is_valid():
+                resolved = host
+            else:
+                resolved = socket.gethostbyname(host)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
