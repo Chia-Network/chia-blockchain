@@ -1,12 +1,7 @@
 import logging
 import pytest
 
-from chia.util.keyring_wrapper import (
-    KeyringWrapper,
-    DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
-    get_legacy_keyring_instance,
-    check_legacy_keyring_keys_present,
-)
+from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from pathlib import Path
 from sys import platform
 from tests.util.keyring import using_temp_file_keyring, using_temp_file_keyring_and_cryptfilekeyring
@@ -53,23 +48,10 @@ class TestKeyringWrapper:
         if platform != "linux":
             return
 
-        from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
-
         # Expect: the new keyring should not have content (not actually empty though...)
         assert KeyringWrapper.get_shared_instance().keyring.has_content() is False
         assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).exists() is True
         assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).stat().st_size != 0
-
-        log.warning(f"KeyringWrapper.keyring: {KeyringWrapper.get_shared_instance().keyring}")
-        log.warning(f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}")
-        legacy_keyring = get_legacy_keyring_instance()
-        log.warning(f"legacy_keyring: {legacy_keyring}, path: {legacy_keyring.file_path}")
-        legacy_backend = KeyringWrapper.get_shared_instance()._configure_legacy_backend()
-        log.warning(f"legacy_backend: {legacy_backend}, path: {legacy_backend.file_path}")
-        crypt_file_keyring = CryptFileKeyring()
-        crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
-        log.warning(f"crypt_file_keyring: {crypt_file_keyring}, path: {crypt_file_keyring.file_path}")
-        log.warning(f"check_legacy_keyring_keys_present: {check_legacy_keyring_keys_present(crypt_file_keyring)}")
 
         # Expect: legacy keyring should be in use
         assert KeyringWrapper.get_shared_instance().legacy_keyring is not None
