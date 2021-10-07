@@ -104,7 +104,7 @@
       this_coin_info           ;; verified with ASSERT_MY_COIN_ID
       next_coin_proof          ;; used to generate ASSERT_COIN_ANNOUNCEMENT
       prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
-      extra_delta              ;; this is the number of "legal discrepancy" between your real delta and what you're announcing your delta is
+      extra_delta              ;; this is the "legal discrepancy" between your real delta and what you're announcing your delta is
     )
 
      ;;;;; start library code
@@ -269,14 +269,6 @@
        )
      )
 
-     (defun-inline tail_program_from_cat_struct (cat_mod_struct)
-       (f (r (r cat_mod_struct)))
-     )
-
-     (defun-inline tail_program_hash_from_cat_struct (cat_mod_struct)
-       (f (r (r (r cat_mod_struct))))
-     )
-
     (defun check_lineage_or_run_tail_program
       (
         this_coin_info
@@ -289,7 +281,7 @@
         inner_conditions
       )
       (if tail_program_reveal
-          (assert (= (sha256tree1 tail_program_reveal) (tail_program_hash_from_cat_struct (cat_struct_truth Truths)))
+          (assert (= (sha256tree1 tail_program_reveal) (cat_tail_program_hash_truth Truths))
             (a tail_program_reveal
                 (list
                   Truths
@@ -309,7 +301,7 @@
 
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-     (defun stager_three (
+     (defun stager_two (
          Truths
          inner_conditions
          tail_solution
@@ -322,7 +314,7 @@
       )
       (check_lineage_or_run_tail_program
             this_coin_info
-            (tail_program_from_cat_struct (cat_struct_truth Truths))
+            (cat_tail_program_truth Truths)
             tail_solution
             (if lineage_proof (is_parent_cat (cat_struct_truth Truths) (my_parent_cat_truth Truths) lineage_proof) ())
             lineage_proof
@@ -341,38 +333,9 @@
         )
     )
 
-    ; Add the ASSERT_MY_ID and calculate the conditions from running the innerpuzzle with innersol and Truths
-    (defun stager_two (
-        Truths
-        INNER_PUZZLE
-        inner_solution
-        tail_solution
-        lineage_proof
-        prev_coin_id
-        this_coin_info
-        next_coin_id
-        prev_subtotal
-        extra_delta
-     )
-      (c (list ASSERT_MY_COIN_ID (my_id_cat_truth Truths))
-         (stager_three Truths
-                       (a INNER_PUZZLE (c Truths inner_solution))
-                       tail_solution
-                       lineage_proof
-                       prev_coin_id
-                       this_coin_info
-                       next_coin_id
-                       prev_subtotal
-                       extra_delta
-         )
-      )
-   )
-
-
-
     ; CAT TRUTHS struct is: ; CAT Truths is: (((innerpuzhash . my_amount) . (lineage_proof . cat_struct)) . ((my_id . full_puzhash) . (my_parent . ())))
     ; create truths - this_coin_info verified true because we calculated my ID from it!
-    ; lineaege proof is verified later by cat parent check or genesis_checker_program
+    ; lineage proof is verified later by cat parent check or genesis_checker_program
 
     (defun stager (
         cat_mod_struct
@@ -388,31 +351,26 @@
         prev_subtotal
         extra_delta
      )
-      ; struct construction params - (my_id my_parent full_puzhash my_amount innerpuzhash lineage_proof cat_struct)
-      (stager_two (cat_truth_data_to_truth_struct
-                    my_id
-                    (f this_coin_info)
-                    (f (r this_coin_info))
-                    (f (r (r this_coin_info)))
-                    inner_puzzle_hash
-                    lineage_proof
-                    tail_solution
-                    cat_mod_struct
-                  )
-             INNER_PUZZLE
-             inner_solution
-             tail_solution
-             lineage_proof
-             prev_coin_id
-             this_coin_info
-             (coin_id_for_coin next_coin_proof cat_mod_struct)
-             prev_subtotal
-             extra_delta
-       )
+      (c (list ASSERT_MY_COIN_ID my_id) (stager_two
+        (cat_truth_data_to_truth_struct
+          inner_puzzle_hash
+          cat_mod_struct
+          my_id
+          this_coin_info
+        )
+        (a INNER_PUZZLE inner_solution)
+        tail_solution
+        lineage_proof
+        prev_coin_id
+        this_coin_info
+        (coin_id_for_coin next_coin_proof cat_mod_struct)
+        prev_subtotal
+        extra_delta
+      ))
     )
 
     (stager
-        ;; caclculate cat_mod_struct, inner_puzzle_hash, coin_id
+        ;; calculate cat_mod_struct, inner_puzzle_hash, coin_id
         (list MOD_HASH (sha256 1 MOD_HASH) tail_program_reveal TAIL_PROGRAM_HASH)
         INNER_PUZZLE
         inner_puzzle_solution
