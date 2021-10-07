@@ -13,11 +13,6 @@ from typing import Any, Optional
 from unittest.mock import patch
 
 
-import logging
-
-log = logging.getLogger(__name__)
-
-
 def create_empty_cryptfilekeyring() -> CryptFileKeyring:
     """
     Create an empty legacy keyring
@@ -153,18 +148,10 @@ class TempKeyring:
         setup_mock_file_keyring(mock_configure_backend, temp_dir, populate=populate)
 
         mock_configure_legacy_backend_patch: Any = None
-        log.warning(
-            f"[before] _patch_and_create_keychain: "
-            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
-        )
         if setup_cryptfilekeyring is False:
             mock_configure_legacy_backend_patch = patch.object(KeyringWrapper, "_configure_legacy_backend")
             mock_configure_legacy_backend = mock_configure_legacy_backend_patch.start()
             mock_configure_legacy_backend.return_value = None
-        log.warning(
-            f"[after] _patch_and_create_keychain: "
-            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
-        )
 
         mock_data_root_patch = patch.object(platform_, "data_root")
         mock_data_root = mock_data_root_patch.start()
@@ -203,10 +190,6 @@ class TempKeyring:
         return self.keychain
 
     def cleanup(self):
-        log.warning(
-            f"[before] cleanup: "
-            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
-        )
         assert not self.cleaned_up
 
         if self.delete_on_cleanup:
@@ -223,7 +206,3 @@ class TempKeyring:
         self.keychain._mock_data_root_patch.stop()
 
         self.cleaned_up = True
-        log.warning(
-            f"[after] cleanup: "
-            f"KeyringWrapper._configure_legacy_backend: {KeyringWrapper._configure_legacy_backend}"
-        )
