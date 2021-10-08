@@ -36,9 +36,7 @@ def loads_keyring(method):
 
     @wraps(method)
     def inner(self, *args, **kwargs):
-        # Watchdog's event dispatch timing is unreliable on macOS. Force a file modification time check for macOS.
-        if sys.platform == "darwin":
-            self.check_if_keyring_file_modified()
+        self.check_if_keyring_file_modified()
 
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
