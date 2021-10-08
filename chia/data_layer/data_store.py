@@ -247,6 +247,36 @@ class DataStore:
 
         return Root.from_row(row=root_dict)
 
+    async def get_heritage(self, node_hash: bytes32, tree_id: bytes32) -> List[Node]:
+        async with self.db_wrapper.locked_transaction():
+            root = await self._raw_get_tree_root(tree_id=tree_id)
+
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    tree_from_root_hash(hash, type, left, right, key, value, depth) AS (
+                        SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
+                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                    ),
+                    ancestors(hash, type, left, right, key, value, depth) AS (
+                        SELECT node.*, NULL AS depth FROM node WHERE node.hash == :reference_hash
+                        UNION ALL
+                        SELECT node.*, NULL AS depth FROM node, ancestors
+                        WHERE node.left == ancestors.hash OR node.right == ancestors.hash
+                    )
+                SELECT * FROM tree_from_root_hash INNER JOIN ancestors
+                WHERE tree_from_root_hash.hash == ancestors.hash
+                ORDER BY tree_from_root_hash.depth DESC
+                """,
+                {"reference_hash": node_hash.hex(), "root_hash": root.node_hash.hex()},
+            )
+
+            heritage = [row_to_node(row=row) async for row in cursor]
+
+        return heritage
+
     # async def _insert_program(self, program: Program) -> bytes32:
     #     if not program.pair:
     #         # TODO: use a more specific exception
@@ -318,7 +348,7 @@ class DataStore:
                     raise Exception("can not insert a new key/value on an internal node")
 
             # TODO: don't we decode from a program...?  and this undoes that...?
-            new_terminal_node_hash = Program.to([key, value]).get_tree_hash()
+            new_terminal_node_hash = Program.to([key.as_bin(), value.as_bin()]).get_tree_hash()
 
             # create new terminal node
             await self.db.execute(
@@ -456,6 +486,11 @@ class DataStore:
                 )
 
         return new_terminal_node_hash
+
+    async def get_node_by_key(self, key: Program) -> TerminalNode:
+        async with self.db_wrapper.locked_transaction():
+            cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key.as_bin()})
+
 
     async def _raw_get_node(self, node_hash: bytes32) -> Node:
         cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})

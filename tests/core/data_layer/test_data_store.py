@@ -1,9 +1,10 @@
+from dataclasses import dataclass
 import itertools
 import logging
 
 # import random
 # import sqlite3
-from typing import AsyncIterable, Dict, List, Optional
+from typing import AsyncIterable, Dict, List, Optional, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -11,7 +12,7 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import _debug_dump, DataStore, Root, Side
+from chia.data_layer.data_store import _debug_dump, DataStore, Root, row_to_node, Side
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
@@ -57,9 +58,9 @@ async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> Dat
     return raw_data_store
 
 
-@pytest.fixture(name="root_hash", scope="function")
-async def root_hash_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
-    return await data_store.get_tree_root(tree_id=tree_id)
+# @pytest.fixture(name="root", scope="function")
+# async def root_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
+#     return await data_store.get_tree_root(tree_id=tree_id)
 
 
 # TODO: understand this better and make some sensible looking example objects
@@ -191,7 +192,7 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     value = Program.to("abc")
 
     node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    assert node_hash == Program.to([key, value]).get_tree_hash()
+    assert node_hash == Program.to([key.as_bin(), value.as_bin()]).get_tree_hash()
 
 
 @pytest.mark.asyncio
@@ -218,8 +219,13 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
     assert generations == expected
 
 
-@pytest.mark.asyncio
-async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
+@dataclass(frozen=True)
+class Example:
+    expected: Program
+    terminal_nodes: Tuple[bytes32]
+
+
+async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     keys_values = {bytes([key]): [bytes([x]) for x in [0x10 + key, key]] for key in [0, 1, 2, 3]}
 
     # this hint is specific to this data, it doesn't need to be this strict
@@ -236,14 +242,14 @@ async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
             (
                 CLVMObject(
                     (
-                        kv(b'\x00', [b'\x10', b'\x00']),
-                        kv(b'\x01', [b'\x11', b'\x01']),
+                        kv(b"\x00", [b"\x10", b"\x00"]),
+                        kv(b"\x01", [b"\x11", b"\x01"]),
                     ),
                 ),
                 CLVMObject(
                     (
-                        kv(b'\x02', [b'\x12', b'\x02']),
-                        kv(b'\x03', [b'\x13', b'\x03']),
+                        kv(b"\x02", [b"\x12", b"\x02"]),
+                        kv(b"\x03", [b"\x13", b"\x03"]),
                     ),
                 ),
             ),
@@ -252,8 +258,8 @@ async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
 
     async def insert(key: bytes, reference_node_hash: bytes32, side: Optional[Side]) -> bytes32:
         return await data_store.insert(
-            key=Program.to(key).as_bin(),
-            value=Program.to(keys_values[key]).as_bin(),
+            key=Program.to(key),
+            value=Program.to(keys_values[key]),
             tree_id=tree_id,
             reference_node_hash=reference_node_hash,
             side=side,
@@ -280,12 +286,35 @@ async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
     print(f"{actual.as_python()=}")
 
+    return Example(expected=expected, terminal_nodes=(c_hash, b_hash, d_hash, a_hash))
+
+
+@pytest.mark.asyncio
+async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
-    print('actual  ', actual.as_python())
-    print('expected', expected.as_python())
-    assert actual == expected
+    print("actual  ", actual.as_python())
+    print("expected", example.expected.as_python())
+    assert actual == example.expected
+
+
+@pytest.mark.asyncio
+async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    reference_node_hash = example.terminal_nodes[0]
+    root = await data_store.get_tree_root(tree_id=tree_id)
+
+    heritage = await data_store.get_heritage(node_hash=reference_node_hash, tree_id=tree_id)
+    hashes = [node.hash.hex() for node in heritage]
+    assert hashes == [
+        "1d9f66aa837256c19d65ef8be77c33e30a7eb2ebf5f6c9f774383172c6c3a937",
+        "f3bb419ad917572fd2f46291f627a00c3a315ffd2fdc5ac408935cbb51d78fc8",
+        "1c71210dbb62bc617e7e192b8aca1031ff0f1189bb7ae686ecaa98d9611108a9",
+    ]
+
 
 # @pytest.mark.asyncio
 # async def test_create_first_pair(data_store: DataStore, tree_id: bytes) -> None:
