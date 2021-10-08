@@ -5,7 +5,6 @@ import aiosqlite
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper
@@ -285,47 +284,6 @@ class BlockStore:
             header_hash = bytes.fromhex(row[0])
             ret[header_hash] = BlockRecord.from_bytes(row[1])
         return ret, bytes.fromhex(peak_row[0])
-
-    async def get_peak_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
-        """
-        Returns a dictionary with all blocks, as well as the header hash of the peak,
-        if present.
-        """
-
-        res = await self.db.execute("SELECT * from block_records WHERE is_peak = 1")
-        row = await res.fetchone()
-        await res.close()
-        if row is None:
-            return {}, {}
-
-        peak: bytes32 = bytes.fromhex(row[0])
-        cursor = await self.db.execute("SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        hash_to_prev_hash: Dict[bytes32, bytes32] = {}
-        hash_to_height: Dict[bytes32, uint32] = {}
-        hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
-
-        for row in rows:
-            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
-            hash_to_height[bytes.fromhex(row[0])] = row[2]
-            if row[3] is not None:
-                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
-
-        height_to_hash: Dict[uint32, bytes32] = {}
-        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
-
-        curr_header_hash = peak
-        curr_height = hash_to_height[curr_header_hash]
-        while True:
-            height_to_hash[curr_height] = curr_header_hash
-            if curr_header_hash in hash_to_summary:
-                sub_epoch_summaries[curr_height] = hash_to_summary[curr_header_hash]
-            if curr_height == 0:
-                break
-            curr_header_hash = hash_to_prev_hash[curr_header_hash]
-            curr_height = hash_to_height[curr_header_hash]
-        return height_to_hash, sub_epoch_summaries
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
