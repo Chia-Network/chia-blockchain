@@ -33,6 +33,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.db_synchronous import db_synchronous_on
 from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
@@ -138,7 +139,11 @@ class WalletStateManager:
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
         await self.db_connection.execute("pragma journal_mode=wal")
-        await self.db_connection.execute("pragma synchronous=OFF")
+
+        if db_synchronous_on(self.config.get("db_sync", "auto"), db_path):
+            await self.db_connection.execute("pragma synchronous=NORMAL")
+        else:
+            await self.db_connection.execute("pragma synchronous=OFF")
 
         self.db_wrapper = DBWrapper(self.db_connection)
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
