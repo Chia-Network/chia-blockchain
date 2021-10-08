@@ -33,10 +33,10 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_wor
             f.write(f"{os.getpid()}\n")
 
         # Wait up to 30 seconds for all processes to indicate readiness
+        start_file_path: Path = Path(ready_file_path.parent) / "start"
         remaining_attempts = 120
         while remaining_attempts > 0:
-            entries: List[str] = [ent.name for ent in os.scandir(ready_file_path.parent)]
-            if "start" in entries:
+            if start_file_path.exists():
                 break
             else:
                 sleep(0.25)
@@ -89,6 +89,21 @@ def child_writer_dispatch(func, lock_path: Path, timeout: int, max_iters: int):
         raise e
 
 
+def poll_directory(dir: Path, expected_entries: int, max_attempts: int, interval: float = 1.0) -> bool:
+    found_all: bool = False
+    remaining_attempts: int = 30
+    while remaining_attempts > 0:
+        entries: List[os.DirEntry] = list(os.scandir(dir))
+        if len(entries) < expected_entries:  # Expecting num_workers of dir entries
+            log.warning(f"Polling not complete: {len(entries)} of {expected_entries} entries found")
+            sleep(1)
+            remaining_attempts -= 1
+        else:
+            found_all = True
+            break
+    return found_all
+
+
 class TestFileKeyringSynchronization:
 
     # When: using a new empty keyring
@@ -115,36 +130,19 @@ class TestFileKeyringSynchronization:
             res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
 
             # Wait up to 30 seconds for all processes to indicate readiness
-            remaining_attempts = 30
-            while remaining_attempts > 0:
-                entries: List[os.DirEntry] = list(os.scandir(ready_dir))
-                if len(entries) < num_workers:  # Expecting num_workers of dir entries
-                    log.warning(f"Test setup not complete: {len(entries)} of {num_workers} workers ready")
-                    sleep(1)
-                    remaining_attempts -= 1
-                else:
-                    log.warning(f"Test setup complete: {len(entries)} of {num_workers} workers ready")
-                    break
+            assert poll_directory(ready_dir, num_workers, 30) is True
 
-            assert remaining_attempts >= 0
+            log.warning(f"Test setup complete: {num_workers} workers ready")
 
+            # Signal that testing should begin
             start_file_path: Path = ready_dir / "start"
             with open(start_file_path, "w") as f:
                 f.write(f"{os.getpid()}\n")
 
             # Wait up to 30 seconds for all processes to indicate completion
-            remaining_attempts = 30
-            while remaining_attempts > 0:
-                entries: List[os.DirEntry] = list(os.scandir(finished_dir))
-                if len(entries) < num_workers:  # Expecting num_workers of dir entries
-                    log.warning(f"Waiting for completion: {len(entries)} of {num_workers} workers finished")
-                    sleep(1)
-                    remaining_attempts -= 1
-                else:
-                    log.warning(f"Finished: {len(entries)} of {num_workers} workers finished")
-                    break
+            assert poll_directory(finished_dir, num_workers, 30) is True
 
-            assert remaining_attempts >= 0
+            log.warning(f"Finished: {num_workers} workers finished")
 
             # Collect results
             res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
