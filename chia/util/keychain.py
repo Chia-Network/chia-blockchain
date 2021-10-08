@@ -475,13 +475,19 @@ class Keychain:
         KeyringWrapper.get_shared_instance().refresh_keyrings()
 
     @staticmethod
-    def migrate_legacy_keyring(passphrase: Optional[str] = None, cleanup_legacy_keyring: bool = False) -> None:
+    def migrate_legacy_keyring(
+        passphrase: Optional[str] = None, save_passphrase: bool = False, cleanup_legacy_keyring: bool = False
+    ) -> None:
         """
         Begins legacy keyring migration in a non-interactive manner
         """
         if passphrase is not None and passphrase != "":
             KeyringWrapper.get_shared_instance().set_master_passphrase(
-                current_passphrase=None, new_passphrase=passphrase, write_to_keyring=False, allow_migration=False
+                current_passphrase=None,
+                new_passphrase=passphrase,
+                write_to_keyring=False,
+                save_passphrase=save_passphrase,
+                allow_migration=False,
             )
 
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
