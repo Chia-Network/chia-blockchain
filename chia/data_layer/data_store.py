@@ -363,12 +363,13 @@ class DataStore:
                     cursor = await self.db.execute(
                         """
                         WITH RECURSIVE
-                            parent(hash, type, left, right, key, value) AS (
+                            tree_from_root_hash(hash, type, left, right, key, value) AS (
                                 SELECT node.* FROM node WHERE node.hash == :root_hash
                                 UNION ALL
-                                SELECT node.* FROM node, parent WHERE node.hash == parent.left OR node.hash == parent.right
+                                SELECT node.* FROM node, tree_from_root_hash
+                                WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                             )
-                        SELECT * FROM parent
+                        SELECT * FROM tree_from_root_hash
                         WHERE left == :hash OR right == :hash
                         """,
                         {"hash": traversal_hash.hex(), "root_hash": root.node_hash.hex()},
@@ -475,12 +476,13 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    parent(hash, type, left, right, key, value) AS (
+                    tree_from_root_hash(hash, type, left, right, key, value) AS (
                         SELECT node.* FROM node WHERE node.hash == :root_hash
                         UNION ALL
-                        SELECT node.* FROM node, parent WHERE node.hash == parent.left OR node.hash == parent.right
+                        SELECT node.* FROM node, tree_from_root_hash
+                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                     )
-                SELECT * FROM parent
+                SELECT * FROM tree_from_root_hash
                 """,
                 {"root_hash": root_node.hash.hex()},
             )
