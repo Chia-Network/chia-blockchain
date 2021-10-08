@@ -220,41 +220,35 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 
 @pytest.mark.asyncio
 async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
-    keys_values = {key: Program.to([1, 2, 3, key]) for key in [bytes([b]) for b in b"\x00\x01\x02\x03"]}
+    keys_values = {bytes([key]): [bytes([x]) for x in [0x10 + key, key]] for key in [0, 1, 2, 3]}
+
+    # this hint is specific to this data, it doesn't need to be this strict
+    def kv(k: bytes, v: List[bytes]) -> CLVMObject:
+        return CLVMObject(
+            (
+                CLVMObject(Program.to(k).as_bin()),
+                CLVMObject(Program.to(v).as_bin()),
+            )
+        )
 
     expected = Program.to(
-        [
-            [b'\x01', keys_values[b'\x01']],
-            [
-                [b'\x02', keys_values[b'\x02']],
-                [b'\x03', keys_values[b'\x03']],
-            ],
-        ],
+        CLVMObject(
+            (
+                CLVMObject(
+                    (
+                        kv(b'\x00', [b'\x10', b'\x00']),
+                        kv(b'\x01', [b'\x11', b'\x01']),
+                    ),
+                ),
+                CLVMObject(
+                    (
+                        kv(b'\x02', [b'\x12', b'\x02']),
+                        kv(b'\x03', [b'\x13', b'\x03']),
+                    ),
+                ),
+            ),
+        ),
     )
-    # expected = Program.to(
-    #     [
-    #         [
-    #             [Program.to(0), Program.to([1, 2, 3, 0]).as_bin()],
-    #             [Program.to(1), Program.to([1, 2, 3, 1]).as_bin()],
-    #         ],
-    #         [
-    #             [Program.to(2), Program.to([1, 2, 3, 2]).as_bin()],
-    #             [Program.to(3), Program.to([1, 2, 3, 3]).as_bin()],
-    #         ],
-    #     ],
-    # )
-    # expected = Program.to(
-    #     [
-    #         [
-    #             Program.to([0, Program.to([1, 2, 3, 0])]),
-    #             Program.to([1, Program.to([1, 2, 3, 1])]),
-    #         ],
-    #         [
-    #             Program.to([2, Program.to([1, 2, 3, 2])]),
-    #             Program.to([3, Program.to([1, 2, 3, 3])]),
-    #         ],
-    #     ],
-    # )
 
     async def insert(key: bytes, reference_node_hash: bytes32, side: Optional[Side]) -> bytes32:
         return await data_store.insert(
@@ -267,19 +261,30 @@ async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
 
     c_hash = await insert(key=b"\x02", reference_node_hash=None, side=None)
     await _debug_dump(db=data_store.db, description="after 2")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
 
     b_hash = await insert(key=b"\x01", reference_node_hash=c_hash, side=Side.LEFT)
     await _debug_dump(db=data_store.db, description="after 1")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
 
     d_hash = await insert(key=b"\x03", reference_node_hash=c_hash, side=Side.RIGHT)
     await _debug_dump(db=data_store.db, description="after 3")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
 
     # TODO: next step messes up...
-    # a_hash = await insert(key=b"\x00", reference_node_hash=b_hash, side=Side.LEFT)
-    # await _debug_dump(db=data_store.db, description="after 0")
+    a_hash = await insert(key=b"\x00", reference_node_hash=b_hash, side=Side.LEFT)
+    await _debug_dump(db=data_store.db, description="after 0")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
+
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print('actual  ', actual.as_python())
+    print('expected', expected.as_python())
     assert actual == expected
 
 # @pytest.mark.asyncio

@@ -5,6 +5,7 @@ import random
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
 import aiosqlite
+from clvm.CLVMObject import CLVMObject
 from clvm.SExp import SExp
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -69,7 +70,7 @@ class TerminalNode:
 
     @property
     def pair(self) -> Tuple[Program, Program]:
-        return self.key, self.value
+        return Program.to(CLVMObject(v=self.key.as_bin())), Program.to(CLVMObject(self.value.as_bin()))
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
@@ -306,6 +307,7 @@ class DataStore:
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction():
             was_empty = await self._raw_table_is_empty(tree_id=tree_id)
+            root = await self._raw_get_tree_root(tree_id=tree_id)
 
             if reference_node_hash is None:
                 # TODO: tidy up and real exceptions
@@ -357,12 +359,29 @@ class DataStore:
                 print(f"traversal hash: {traversal_hash}")
 
                 while True:
-                    # TODO: but but but ...  multiple parents could be referencing this node...
-                    cursor = await self.db.execute("SELECT * FROM node WHERE left == :hash OR right == :hash", {"hash": traversal_hash.hex()})
+                    # TODO: uh yeah, let's not do this a bunch of times in the while loop...
+                    cursor = await self.db.execute(
+                        """
+                        WITH RECURSIVE
+                            parent(hash, type, left, right, key, value) AS (
+                                SELECT node.* FROM node WHERE node.hash == :root_hash
+                                UNION ALL
+                                SELECT node.* FROM node, parent WHERE node.hash == parent.left OR node.hash == parent.right
+                            )
+                        SELECT * FROM parent
+                        WHERE left == :hash OR right == :hash
+                        """,
+                        {"hash": traversal_hash.hex(), "root_hash": root.node_hash.hex()},
+                    )
                     row = await cursor.fetchone()
 
                     if row is None:
                         break
+
+                    # TODO: debugging stuff
+                    abc = await cursor.fetchone()
+                    if abc is not None:
+                        1/0
 
                     new_node = row_to_node(row=row)
                     parents.append(new_node)
@@ -479,6 +498,8 @@ class DataStore:
             print(root_node)
             # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
             program: Program = Program.to(root_node)
+            program.as_bin()
+            print(program)
             print(program.as_bin())
             # for node in reversed(nodes):
             #     print('    ', node)
