@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 import logging
 import random
@@ -14,6 +14,9 @@ from chia.util.db_wrapper import DBWrapper
 
 
 log = logging.getLogger(__name__)
+
+
+# TODO: review and replace all asserts
 
 
 class NodeType(IntEnum):
@@ -38,7 +41,7 @@ class CommitState(IntEnum):
 
 
 # TODO: remove or formalize this
-async def _debug_dump(db, description=""):
+async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
     cursor = await db.execute("SELECT name FROM sqlite_master WHERE type='table';")
     print("-" * 50, description, flush=True)
     for [name] in await cursor.fetchall():
@@ -62,8 +65,14 @@ class TerminalNode:
     key: Program
     value: Program
 
+    atom: None = field(init=False, default=None)
+
+    @property
+    def pair(self) -> Tuple[Program, Program]:
+        return self.key, self.value
+
     @classmethod
-    def from_row(cls, row: Dict[str, Any]) -> "TerminalNode":
+    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
         return cls(
             hash=hexstr_to_bytes32(row["hash"]),
             # generation=row["generation"],
@@ -76,11 +85,14 @@ class TerminalNode:
 class InternalNode:
     hash: bytes32
     # generation: int
-    left_hash: Node
-    right_hash: Node
+    left_hash: bytes32
+    right_hash: bytes32
+
+    pair: Optional[Tuple[Node, Node]] = None
+    atom: None = None
 
     @classmethod
-    def from_row(cls, row: Dict[str, Any]) -> "InternalNode":
+    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
         return cls(
             hash=hexstr_to_bytes32(row["hash"]),
             # generation=row["generation"],
@@ -96,7 +108,7 @@ class Root:
     generation: int
 
     @classmethod
-    def from_row(cls, row: Dict[str, Any]) -> "Root":
+    def from_row(cls, row: aiosqlite.Row) -> "Root":
         raw_node_hash = row["node_hash"]
         if raw_node_hash is None:
             node_hash = None
@@ -116,7 +128,7 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 }
 
 
-def row_to_node(row: Dict[str, Any]) -> Node:
+def row_to_node(row: aiosqlite.Row) -> Node:
     cls = node_type_to_class[row["type"]]
     return cls.from_row(row=row)
 
@@ -148,12 +160,12 @@ class DataStore:
                 "hash TEXT PRIMARY KEY NOT NULL,"
                 # " generation INTEGER NOT NULL",
                 " type INTEGER NOT NULL,"
-                " left TEXT,"
-                " right TEXT,"
+                " left TEXT REFERENCES node,"
+                " right TEXT REFERENCES node,"
                 " key TEXT,"
-                " value TEXT,"
-                " FOREIGN KEY(left) REFERENCES node(hash),"
-                " FOREIGN KEY(right) REFERENCES node(hash)"
+                " value TEXT"
+                # " FOREIGN KEY(left) REFERENCES node(hash),"
+                # " FOREIGN KEY(right) REFERENCES node(hash)"
                 ")"
             )
             await self.db.execute(
@@ -215,7 +227,9 @@ class DataStore:
             {"tree_id": tree_id.hex()},
         )
         row = await cursor.fetchone()
-        generation = row["MAX(generation)"]
+        # TODO: real handling
+        assert row is not None
+        generation: int = row["MAX(generation)"]
         return generation
 
     async def get_tree_root(self, tree_id: bytes32) -> Root:
@@ -271,25 +285,35 @@ class DataStore:
     #     return node_hash
 
     async def _raw_get_node_type(self, node_hash: bytes32) -> NodeType:
-        cursor = self.db.execute("SELECT type FROM node WHERE hash == :hash", {"hash": node_hash})
-        [node_type] = (NodeType(row["type"]) async for row in cursor)
-        return node_type
+        cursor = await self.db.execute("SELECT type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+        raw_node_type = await cursor.fetchone()
+        # [node_type] = await cursor.fetchall()
+        # TODO: i'm pretty curious why this one fails...
+        # [node_type] = (NodeType(row["type"]) async for row in cursor)
+
+        # TODO: real handling
+        assert raw_node_type is not None
+
+        return NodeType(raw_node_type["type"])
 
     async def insert(
         self,
         key: Program,
         value: Program,
         tree_id: bytes32,
-        reference_node_hash: bytes32,
+        reference_node_hash: Optional[bytes32],
         side: Optional[Side],
     ) -> bytes32:
-        # TODO: this should be one big transaction
         async with self.db_wrapper.locked_transaction():
             was_empty = await self._raw_table_is_empty(tree_id=tree_id)
 
-            reference_node_type = self._raw_get_node_type(node_hash=reference_node_hash)
-            if reference_node_type == NodeType.INTERNAL:
-                raise Exception("can not insert a new key/value on an internal node")
+            if reference_node_hash is None:
+                # TODO: tidy up and real exceptions
+                assert was_empty
+            else:
+                reference_node_type = await self._raw_get_node_type(node_hash=reference_node_hash)
+                if reference_node_type == NodeType.INTERNAL:
+                    raise Exception("can not insert a new key/value on an internal node")
 
             # TODO: don't we decode from a program...?  and this undoes that...?
             new_terminal_node_hash = Program.to([key, value]).get_tree_hash()
@@ -326,6 +350,7 @@ class DataStore:
             else:
                 # TODO: a real exception
                 assert side is not None
+                assert reference_node_hash is not None
 
                 traversal_hash = reference_node_hash
                 parents = []
@@ -375,6 +400,8 @@ class DataStore:
                 traversal_node_hash = reference_node_hash
 
                 for parent in parents:
+                    # TODO: really handle
+                    assert isinstance(parent, InternalNode)
                     if parent.left_hash == traversal_node_hash:
                         left = new_hash
                         right = parent.right_hash
@@ -408,10 +435,59 @@ class DataStore:
                     },
                 )
 
-        # TODO: debug, remove
-        await _debug_dump(db=self.db)
-
         return new_terminal_node_hash
+
+    async def _raw_get_node(self, node_hash: bytes32) -> Node:
+        cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+        row = await cursor.fetchone()
+        # TODO: really handle
+        assert row is not None
+
+        node = row_to_node(row=row)
+        return node
+
+    async def get_tree_as_program(self, tree_id: bytes32) -> Program:
+        async with self.db_wrapper.locked_transaction():
+            root = await self._raw_get_tree_root(tree_id=tree_id)
+            root_node = await self._raw_get_node(node_hash=root.node_hash)
+
+            # await self.db.execute("SELECT * FROM node WHERE node.left == :hash OR node.right == :hash", {"hash": root_node.hash})
+
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    parent(hash, type, left, right, key, value) AS (
+                        SELECT node.* FROM node WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT node.* FROM node, parent WHERE node.hash == parent.left OR node.hash == parent.right
+                    )
+                SELECT * FROM parent
+                """,
+                {"root_hash": root_node.hash.hex()},
+            )
+            nodes = [row_to_node(row=row) async for row in cursor]
+            hash_to_node: Dict[bytes32, Node] = {}
+            for node in reversed(nodes):
+                # node = row_to_node(row)
+                if isinstance(node, InternalNode):
+                    node = replace(node, pair=(hash_to_node[node.left_hash], hash_to_node[node.right_hash]))
+                hash_to_node[node.hash] = node
+
+            # nodes = [row_to_node(row=row) async for row in cursor]
+            print(' ++++++++++++++++++++++++++++++++++++++')
+            root_node = hash_to_node[root_node.hash]
+            print(root_node)
+            # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
+            program: Program = Program.to(root_node)
+            print(program.as_bin())
+            # for node in reversed(nodes):
+            #     print('    ', node)
+            # async for row in cursor:
+            #     # row = {key: value.hex() for key, value in dict(row).items()}
+            #     print(f"    {dict(row)}")
+            print(' ++++++++++++++++++++++++++++++++++++++')
+
+        return program
 
     # async def create_root(self, tree_id: bytes32, node_hash: bytes32):
     #     # generation = 0

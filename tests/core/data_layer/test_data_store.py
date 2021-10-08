@@ -3,7 +3,7 @@ import logging
 
 # import random
 # import sqlite3
-from typing import Dict, AsyncIterable, List
+from typing import AsyncIterable, Dict, List, Optional
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -11,7 +11,7 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import DataStore, Side
+from chia.data_layer.data_store import _debug_dump, DataStore, Root, Side
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
@@ -58,7 +58,7 @@ async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> Dat
 
 
 @pytest.fixture(name="root_hash", scope="function")
-async def root_hash_fixture(data_store: DataStore, tree_id: bytes32) -> DataStore:
+async def root_hash_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
     return await data_store.get_tree_root(tree_id=tree_id)
 
 
@@ -196,7 +196,7 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
 
 @pytest.mark.asyncio
 async def test_insert_increments_generation(data_store: DataStore, tree_id: bytes32) -> None:
-    keys = list("abcd")#efghijklmnopqrstuvwxyz")
+    keys = list("abcd")  # efghijklmnopqrstuvwxyz")
     value = Program.to([1, 2, 3])
 
     generations = []
@@ -217,6 +217,70 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 
     assert generations == expected
 
+
+@pytest.mark.asyncio
+async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
+    keys_values = {key: Program.to([1, 2, 3, key]) for key in [bytes([b]) for b in b"\x00\x01\x02\x03"]}
+
+    expected = Program.to(
+        [
+            [b'\x01', keys_values[b'\x01']],
+            [
+                [b'\x02', keys_values[b'\x02']],
+                [b'\x03', keys_values[b'\x03']],
+            ],
+        ],
+    )
+    # expected = Program.to(
+    #     [
+    #         [
+    #             [Program.to(0), Program.to([1, 2, 3, 0]).as_bin()],
+    #             [Program.to(1), Program.to([1, 2, 3, 1]).as_bin()],
+    #         ],
+    #         [
+    #             [Program.to(2), Program.to([1, 2, 3, 2]).as_bin()],
+    #             [Program.to(3), Program.to([1, 2, 3, 3]).as_bin()],
+    #         ],
+    #     ],
+    # )
+    # expected = Program.to(
+    #     [
+    #         [
+    #             Program.to([0, Program.to([1, 2, 3, 0])]),
+    #             Program.to([1, Program.to([1, 2, 3, 1])]),
+    #         ],
+    #         [
+    #             Program.to([2, Program.to([1, 2, 3, 2])]),
+    #             Program.to([3, Program.to([1, 2, 3, 3])]),
+    #         ],
+    #     ],
+    # )
+
+    async def insert(key: bytes, reference_node_hash: bytes32, side: Optional[Side]) -> bytes32:
+        return await data_store.insert(
+            key=Program.to(key).as_bin(),
+            value=Program.to(keys_values[key]).as_bin(),
+            tree_id=tree_id,
+            reference_node_hash=reference_node_hash,
+            side=side,
+        )
+
+    c_hash = await insert(key=b"\x02", reference_node_hash=None, side=None)
+    await _debug_dump(db=data_store.db, description="after 2")
+
+    b_hash = await insert(key=b"\x01", reference_node_hash=c_hash, side=Side.LEFT)
+    await _debug_dump(db=data_store.db, description="after 1")
+
+    d_hash = await insert(key=b"\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+    await _debug_dump(db=data_store.db, description="after 3")
+
+    # TODO: next step messes up...
+    # a_hash = await insert(key=b"\x00", reference_node_hash=b_hash, side=Side.LEFT)
+    # await _debug_dump(db=data_store.db, description="after 0")
+
+    await _debug_dump(db=data_store.db, description="final")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    assert actual == expected
 
 # @pytest.mark.asyncio
 # async def test_create_first_pair(data_store: DataStore, tree_id: bytes) -> None:
