@@ -332,6 +332,29 @@ async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> 
     assert pairs == []
 
 
+@pytest.mark.asyncio()
+async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: bytes32) -> None:
+    key = Program.to(5)
+
+    first_hash = await data_store.insert(
+        key=key,
+        value=Program.to(6),
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+    )
+
+    # TODO: more specific exception
+    with pytest.raises(Exception):
+        await data_store.insert(
+            key=key,
+            value=Program.to(7),
+            tree_id=tree_id,
+            reference_node_hash=first_hash,
+            side=Side.RIGHT,
+        )
+
+
 # @pytest.mark.asyncio
 # async def test_create_first_pair(data_store: DataStore, tree_id: bytes) -> None:
 #     key = SExp.to([1, 2])

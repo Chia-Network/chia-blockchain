@@ -369,6 +369,13 @@ class DataStore:
             was_empty = await self._raw_table_is_empty(tree_id=tree_id)
             root = await self._raw_get_tree_root(tree_id=tree_id)
 
+            if not was_empty:
+                # TODO: is there any way the db can enforce this?
+                pairs = await self._raw_get_pairs(tree_id=tree_id)
+                if any(key == node.key for node in pairs):
+                    # TODO: more specific exception
+                    raise Exception("key already present")
+
             if reference_node_hash is None:
                 # TODO: tidy up and real exceptions
                 assert was_empty
