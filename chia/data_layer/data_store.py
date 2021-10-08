@@ -277,6 +277,36 @@ class DataStore:
 
         return heritage
 
+    async def get_pairs(self, tree_id: bytes32) -> List[TerminalNode]:
+        async with self.db_wrapper.locked_transaction():
+            return await self._raw_get_pairs(tree_id=tree_id)
+
+    async def _raw_get_pairs(self, tree_id: bytes32) -> List[TerminalNode]:
+        root = await self._raw_get_tree_root(tree_id=tree_id)
+
+        if root.node_hash is None:
+            return []
+
+        cursor = await self.db.execute(
+            """
+            WITH RECURSIVE
+                tree_from_root_hash(hash, type, left, right, key, value, depth) AS (
+                    SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
+                    UNION ALL
+                    SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
+                    WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                )
+            SELECT * FROM tree_from_root_hash
+            WHERE type == :type
+            """,
+            {"root_hash": root.node_hash.hex(), "type": NodeType.TERMINAL},
+        )
+
+        terminal_nodes = [row_to_node(row=row) async for row in cursor]
+
+        return terminal_nodes
+
+
     # async def _insert_program(self, program: Program) -> bytes32:
     #     if not program.pair:
     #         # TODO: use a more specific exception
