@@ -252,7 +252,7 @@ class WeightProofHandler:
                 return None
             await self.__create_persist_segment(prev_ses_block, ses_block, ses_height, sub_epoch_n)
             prev_ses_block = ses_block
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.01)
         log.debug("done checking segments")
         return None
 
