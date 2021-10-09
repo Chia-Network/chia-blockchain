@@ -44,6 +44,11 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
+# sets the version for chia-blockchain in package.json
+brew install jq
+cp package.json package.json.orig
+jq --arg VER "$FLORA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
+
 electron-packager . Flora --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Flora.icns --overwrite --app-bundle-id=net.flora.blockchain \
 --appVersion=$FLORA_INSTALLER_VERSION

@@ -106,6 +106,15 @@ $packageName = "Flora-$packageVersion"
 Write-Output "packageName is $packageName"
 
 Write-Output "   ---"
+Write-Output "fix version in package.json"
+choco install jq
+cp package.json package.json.orig
+jq --arg VER "$env:FLORA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json
+rm package.json
+mv temp.json package.json
+Write-Output "   ---"
+
+Write-Output "   ---"
 Write-Output "electron-packager"
 electron-packager . Flora --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\flora.ico --app-version=$packageVersion
 Write-Output "   ---"
