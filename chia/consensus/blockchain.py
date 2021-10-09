@@ -5,8 +5,8 @@ import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
-from covid.util.default_root import DEFAULT_ROOT_PATH
-from covid.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.config import load_config
 
 from clvm.casts import int_from_bytes
 
