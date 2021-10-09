@@ -140,13 +140,19 @@ async def pprint_pool_wallet_state(
     if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
         print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
         if pool_wallet_info.launcher_id in pool_state_dict:
+            pool_state = pool_state_dict[pool_wallet_info.launcher_id]
             print(f"Current difficulty: {pool_state_dict[pool_wallet_info.launcher_id]['current_difficulty']}")
             print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points']}")
-            num_points_found_24h = len(pool_state_dict[pool_wallet_info.launcher_id]["points_found_24h"])
-            if num_points_found_24h > 0:
-                num_points_ack_24h = len(pool_state_dict[pool_wallet_info.launcher_id]["points_acknowledged_24h"])
-                success_pct = num_points_ack_24h / num_points_found_24h
-                print(f"Percent Successful Points (24h): {success_pct:.2%}")
+            points_found_24h = [points for timestamp, points in pool_state["points_found_24h"]]
+            points_acknowledged_24h = [points for timestamp, points in pool_state["points_acknowledged_24h"]]
+            summed_points_found_24h = sum(points_found_24h)
+            summed_points_acknowledged_24h = sum(points_acknowledged_24h)
+            if summed_points_found_24h == 0:
+                success_pct = 0.0
+            else:
+                success_pct = summed_points_acknowledged_24h / summed_points_found_24h
+            print(f"Points found (24h): {summed_points_found_24h}")
+            print(f"Percent Successful Points (24h): {success_pct:.2%}")
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
         payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
         try:

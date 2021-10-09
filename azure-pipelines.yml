@@ -68,7 +68,8 @@ steps:
       export APPLE_NOTARIZE_USERNAME
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
-      if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
+      if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; else NOTARIZE="false"; fi
+      export NOTARIZE
       cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"

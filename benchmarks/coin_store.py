@@ -1,5 +1,6 @@
 import asyncio
 import random
+import secrets
 from time import time
 from pathlib import Path
 from chia.full_node.coin_store import CoinStore
@@ -32,7 +33,7 @@ async def setup_db() -> DBWrapper:
 
 
 def rand_hash() -> bytes32:
-    return random.randbytes(32)
+    return secrets.token_bytes(32)
 
 
 def make_coin() -> Coin:
