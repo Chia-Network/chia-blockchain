@@ -2148,7 +2148,7 @@ class TestMaliciousGenerators:
         # coin announcements are not propagated to python, but validated in rust
         assert len(npc_result.npc_list[0].conditions) == 0
         # TODO: optimize clvm to make this run in < 1 second
-        assert run_time < 16
+        assert run_time < 21
         print(f"run time:{run_time}")
 
     def test_create_coin_duplicates(self):
