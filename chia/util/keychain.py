@@ -600,3 +600,11 @@ class Keychain:
         Returns the passphrase hint from the keyring
         """
         return KeyringWrapper.get_shared_instance().get_master_passphrase_hint()
+
+    @staticmethod
+    def set_master_passphrase_hint(current_passphrase: str, passphrase_hint: Optional[str]) -> None:
+        """
+        Convenience method for setting/removing the passphrase hint. Requires the current
+        passphrase, as the passphrase hint is written as part of a passphrase update.
+        """
+        Keychain.set_master_passphrase(current_passphrase, current_passphrase, passphrase_hint=passphrase_hint)

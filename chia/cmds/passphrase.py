@@ -94,3 +94,55 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
                 async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])
             )
         )
+
+
+@passphrase_cmd.command("hint", short_help="Display, set, or remove the keyring passphrase hint")
+@click.option(
+    "--display",
+    default=False,
+    is_flag=True,
+    help="Display the keyring passphrase hint",
+)
+@click.option(
+    "--set",
+    "-s",
+    default=None,
+    help="Set the keyring passphrase hint",
+    type=str,
+    required=False,
+)
+@click.option(
+    "--remove",
+    "-r",
+    default=False,
+    help="Remove the keyring passphrase hint",
+    is_flag=True,
+)
+def hint_cmd(display: bool, set: Optional[str], remove: bool):
+    from chia.util.keychain import Keychain
+    from .passphrase_funcs import (
+        get_current_passphrase,
+        using_default_passphrase,
+    )
+
+    passphrase_hint: Optional[str] = None
+    if display is True:
+        passphrase_hint = Keychain.get_master_passphrase_hint()
+        if passphrase_hint is not None:
+            print(f"Passphrase hint: {passphrase_hint}")
+        else:
+            print("Passphrase hint is not set")
+    elif set is not None or remove is True:
+        # No point in setting/removing the hint if no passphrase is in use
+        if Keychain.has_master_passphrase() is False or using_default_passphrase():
+            print("Passphrase is not set")
+        else:
+            current_passphrase: Optional[str] = get_current_passphrase()
+            assert current_passphrase is not None
+            if set is not None:
+                passphrase_hint = set
+                Keychain.set_master_passphrase_hint(current_passphrase, passphrase_hint)
+                print("Passphrase hint set")
+            else:  # remove is True
+                Keychain.set_master_passphrase_hint(current_passphrase, None)
+                print("Passphrase hint removed")
