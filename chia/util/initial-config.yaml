@@ -3,7 +3,7 @@ min_mainnet_k_size: 32
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
-daemon_port: 55400
+daemon_port: 55600
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
@@ -12,9 +12,9 @@ network_overrides: &network_overrides
   constants:
     mainnet:
       NETWORK_TYPE: 0
-      GENESIS_CHALLENGE: ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+      GENESIS_CHALLENGE: 34a5de60dee5c3899c7d3b9c4eb1b4d3e143948439c3b1bb6d6de35c6ba8bfb9
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "0x0d271ebe20b73b4cdf2a7805a152def6f5569ac0b16da9872bd4de4dedfebaf8"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "0x0d271ebe20b73b4cdf2a7805a152def6f5569ac0b16da9872bd4de4dedfebaf8"
     testnet0:
       MIN_PLOT_SIZE: 18
       GENESIS_CHALLENGE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -59,8 +59,8 @@ network_overrides: &network_overrides
     testnet7:
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
       GENESIS_CHALLENGE: 117816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 0x0d271ebe20b73b4cdf2a7805a152def6f5569ac0b16da9872bd4de4dedfebaf8
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 0x0d271ebe20b73b4cdf2a7805a152def6f5569ac0b16da9872bd4de4dedfebaf8
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
       MEMPOOL_BLOCK_BUFFER: 10
@@ -68,21 +68,21 @@ network_overrides: &network_overrides
       DIFFICULTY_STARTING: 30
   config:
     mainnet:
-      address_prefix: "xch"
-      default_full_node_port: 8444
+      address_prefix: "cno"
+      default_full_node_port: 28442
     testnet0:
-      address_prefix: "txch"
+      address_prefix: "tcno"
     testnet1:
-      address_prefix: "txch"
+      address_prefix: "tcno"
     testnet2:
-      address_prefix: "txch"
+      address_prefix: "tcno"
     testnet3:
-      address_prefix: "txch"
+      address_prefix: "tcno"
     testnet4:
-      address_prefix: "txch"
+      address_prefix: "tcno"
     testnet7:
-      address_prefix: "txch"
-      default_full_node_port: 58444
+      address_prefix: "tcno"
+      default_full_node_port: 28222
 
 selected_network: &selected_network "mainnet"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
@@ -116,14 +116,14 @@ logging: &logging
 
 harvester:
   # The harvester server (if run) will run on this port
-  port: 8448
+  port: 28448
   farmer_peer:
     host: *self_hostname
-    port: 8447
+    port: 28447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8560
+  rpc_port: 28560
   num_threads: 30
   plots_refresh_parameter:
     interval_seconds: 120 # The interval in seconds to refresh the plot file manager
@@ -156,7 +156,7 @@ harvester:
 
 pool:
   # Replace this with a real puzzle hash
-  # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
+  # cno_target_address: tcno102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -164,23 +164,23 @@ pool:
 
 farmer:
   # The farmer server (if run) will run on this port
-  port: 8447
+  port: 28447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
     port: 8444
   harvester_peer:
     host: *self_hostname
-    port: 8448
+    port: 28448
 
   pool_public_keys: []
 
   # Replace this with a real puzzle hash
-  # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
+  # cno_target_address: tcno102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
-  rpc_port: 8559
+  rpc_port: 28559
 
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
@@ -198,7 +198,7 @@ farmer:
 timelord_launcher:
   # The server where the VDF clients will connect to.
   host: *self_hostname
-  port: 8000
+  port: 28000
   # Number of VDF client processes to keep alive in the local machine.
   process_count: 3
   logging: *logging
@@ -363,7 +363,7 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 55400
+  daemon_port: 55600
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
