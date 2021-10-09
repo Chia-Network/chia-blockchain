@@ -444,7 +444,7 @@ class WalletRpcApi:
         wallet_state_manager = self.service.wallet_state_manager
         main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
-        fee: uint64 = uint64(request.get('fee', 0))
+        fee: uint64 = uint64(request.get("fee", 0))
 
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
@@ -721,7 +721,7 @@ class WalletRpcApi:
 
         amount: uint64 = uint64(request["amount"])
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        fee: uint64 = uint64(request.get('fee', 0))
+        fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee)
@@ -805,7 +805,7 @@ class WalletRpcApi:
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
 
         amount: uint64 = uint64(request["amount"])
-        fee = uint64(request.get('fee', 0))
+        fee = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee)
@@ -875,7 +875,7 @@ class WalletRpcApi:
         trade_id: bytes = hexstr_to_bytes(request["trade_id"])
         trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade is None:
-            raise ValueError(f"No trade with trade id: {trade_id}")
+            raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         result = trade_record_to_dict(trade)
         return {"trade": result}
