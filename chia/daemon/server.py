@@ -347,6 +347,8 @@ class WebSocketServer:
         locked: bool = Keychain.is_keyring_locked()
         needs_migration: bool = Keychain.needs_migration()
         can_remove_legacy_keys: bool = False  # Disabling GUI support for removing legacy keys post-migration
+        can_set_passphrase_hint: bool = True
+        passphrase_hint: str = Keychain.get_master_passphrase_hint() or ""
         requirements: Dict[str, Any] = passphrase_requirements()
         response: Dict[str, Any] = {
             "success": True,
@@ -356,6 +358,8 @@ class WebSocketServer:
             "user_passphrase_is_set": user_passphrase_is_set,
             "needs_migration": needs_migration,
             "can_remove_legacy_keys": can_remove_legacy_keys,
+            "can_set_passphrase_hint": can_set_passphrase_hint,
+            "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
         }
         return response
@@ -423,11 +427,15 @@ class WebSocketServer:
         success: bool = False
         error: Optional[str] = None
         passphrase: Optional[str] = request.get("passphrase", None)
+        passphrase_hint: Optional[str] = request.get("passphrase_hint", None)
         save_passphrase: bool = request.get("save_passphrase", False)
         cleanup_legacy_keyring: bool = request.get("cleanup_legacy_keyring", False)
 
         if passphrase is not None and type(passphrase) is not str:
             return {"success": False, "error": 'expected string value for "passphrase"'}
+
+        if passphrase_hint is not None and type(passphrase_hint) is not str:
+            return {"success": False, "error": 'expected string value for "passphrase_hint"'}
 
         if not Keychain.passphrase_meets_requirements(passphrase):
             return {"success": False, "error": "passphrase doesn't satisfy requirements"}
@@ -437,7 +445,10 @@ class WebSocketServer:
 
         try:
             Keychain.migrate_legacy_keyring(
-                passphrase=passphrase, save_passphrase=save_passphrase, cleanup_legacy_keyring=cleanup_legacy_keyring
+                passphrase=passphrase,
+                passphrase_hint=passphrase_hint,
+                save_passphrase=save_passphrase,
+                cleanup_legacy_keyring=cleanup_legacy_keyring,
             )
             success = True
             # Inform the GUI of keyring status changes
@@ -455,6 +466,7 @@ class WebSocketServer:
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
         new_passphrase: Optional[str] = None
+        passphrase_hint: Optional[str] = None
         save_passphrase: bool = request.get("save_passphrase", False)
 
         if using_default_passphrase():
@@ -473,9 +485,15 @@ class WebSocketServer:
             return {"success": False, "error": "passphrase doesn't satisfy requirements"}
 
         try:
+            passphrase_hint = request.get("passphrase_hint", None)
+
             assert new_passphrase is not None  # mypy, I love you
             Keychain.set_master_passphrase(
-                current_passphrase, new_passphrase, allow_migration=False, save_passphrase=save_passphrase
+                current_passphrase,
+                new_passphrase,
+                allow_migration=False,
+                passphrase_hint=passphrase_hint,
+                save_passphrase=save_passphrase,
             )
         except KeyringRequiresMigration:
             error = "keyring requires migration"

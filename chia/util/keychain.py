@@ -476,7 +476,10 @@ class Keychain:
 
     @staticmethod
     def migrate_legacy_keyring(
-        passphrase: Optional[str] = None, save_passphrase: bool = False, cleanup_legacy_keyring: bool = False
+        passphrase: Optional[str] = None,
+        passphrase_hint: Optional[str] = None,
+        save_passphrase: bool = False,
+        cleanup_legacy_keyring: bool = False,
     ) -> None:
         """
         Begins legacy keyring migration in a non-interactive manner
@@ -486,8 +489,9 @@ class Keychain:
                 current_passphrase=None,
                 new_passphrase=passphrase,
                 write_to_keyring=False,
-                save_passphrase=save_passphrase,
                 allow_migration=False,
+                passphrase_hint=passphrase_hint,
+                save_passphrase=save_passphrase,
             )
 
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
@@ -566,6 +570,7 @@ class Keychain:
         new_passphrase: str,
         *,
         allow_migration: bool = True,
+        passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
         """
@@ -573,7 +578,11 @@ class Keychain:
         passphrase can decrypt the contents
         """
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            current_passphrase, new_passphrase, allow_migration=allow_migration, save_passphrase=save_passphrase
+            current_passphrase,
+            new_passphrase,
+            allow_migration=allow_migration,
+            passphrase_hint=passphrase_hint,
+            save_passphrase=save_passphrase,
         )
 
     @staticmethod
@@ -584,3 +593,10 @@ class Keychain:
         default passphrase.
         """
         KeyringWrapper.get_shared_instance().remove_master_passphrase(current_passphrase)
+
+    @staticmethod
+    def get_master_passphrase_hint() -> Optional[str]:
+        """
+        Returns the passphrase hint from the keyring
+        """
+        return KeyringWrapper.get_shared_instance().get_master_passphrase_hint()

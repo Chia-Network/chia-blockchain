@@ -238,6 +238,7 @@ class KeyringWrapper:
         *,
         write_to_keyring: bool = True,
         allow_migration: bool = True,
+        passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
         """
@@ -259,6 +260,8 @@ class KeyringWrapper:
             raise KeyringCurrentPassphraseIsInvalid("invalid current passphrase")
 
         self.set_cached_master_passphrase(new_passphrase, validated=True)
+
+        self.keyring.set_passphrase_hint(passphrase_hint)
 
         if write_to_keyring:
             # We'll migrate the legacy contents to the new keyring at this point
@@ -321,6 +324,9 @@ class KeyringWrapper:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise e
         return None
+
+    def get_master_passphrase_hint(self) -> Optional[str]:
+        return self.keyring.get_passphrase_hint()
 
     # Legacy keyring migration
 
