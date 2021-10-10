@@ -46,7 +46,14 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        await self.wallet_node.new_peak_wallet(peak, peer)
+        try:
+            await self.wallet_node.new_peak_wallet(peak, peer)
+        except BaseException as e:
+            import traceback
+
+            tb = traceback.format_exc()
+            self.log.error(f"{tb}")
+            breakpoint()
 
     @api_request
     async def reject_block_header(self, response: wallet_protocol.RejectHeaderRequest):
@@ -122,9 +129,10 @@ class WalletNodeAPI:
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
 
+    @peer_required
     @api_request
-    async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate):
-        await self.wallet_node.state_update_received(request)
+    async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
+        await self.wallet_node.state_update_received(request, peer)
 
     @api_request
     async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
@@ -136,4 +144,12 @@ class WalletNodeAPI:
 
     @api_request
     async def respond_children(self, request: wallet_protocol.RespondChildren):
+        pass
+
+    @api_request
+    async def respond_ses_hashes(self, request: wallet_protocol.RespondSESInfo):
+        pass
+
+    @api_request
+    async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         pass

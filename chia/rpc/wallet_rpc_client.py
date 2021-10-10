@@ -125,7 +125,7 @@ class WalletRpcClient(RpcClient):
                 "amount": amount,
                 "address": address,
                 "fee": fee,
-                "memos": [mem.hex() for mem in memos]
+                "memos": [mem.hex() for mem in memos],
             }
         res = await self.fetch("send_transaction", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
