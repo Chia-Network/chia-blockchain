@@ -129,7 +129,7 @@ def hint_cmd(display: bool, set: Optional[str], remove: bool):
     if display is True:
         passphrase_hint = Keychain.get_master_passphrase_hint()
         if passphrase_hint is not None:
-            print(f"Passphrase hint: {passphrase_hint}")
+            print(f"Passphrase hint: {passphrase_hint}")  # lgtm [py/clear-text-logging-sensitive-data]
         else:
             print("Passphrase hint is not set")
     elif set is not None or remove is True:
