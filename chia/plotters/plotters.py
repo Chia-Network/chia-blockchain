@@ -314,6 +314,15 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
 
 
+def print_thirdparty_disclaimer():
+    print("=" * 80)
+    print("DISCLAIMER".center(80))
+    print("")
+    print("Chia Network is not responsible for this third-party plotter".center(80))
+    print("=" * 80)
+    print("")
+
+
 def call_plotters(root_path: Path, args):
     # Add `plotters` section in CHIA_ROOT.
     chia_root_path = root_path
@@ -341,6 +350,10 @@ def call_plotters(root_path: Path, args):
         "install_plotter", type=str, help="The plotters available for installing. Choose from madmax or bladebit."
     )
     args = plotters.parse_args(args)
+
+    if args.plotter in ["madmax"]:
+        print_thirdparty_disclaimer()
+
     if args.plotter == "chiapos":
         plot_chia(args, chia_root_path)
     if args.plotter == "madmax":
