@@ -326,7 +326,9 @@ class KeyringWrapper:
         return None
 
     def get_master_passphrase_hint(self) -> Optional[str]:
-        return self.keyring.get_passphrase_hint()
+        if self.keyring_supports_master_passphrase():
+            return self.keyring.get_passphrase_hint()
+        return None
 
     # Legacy keyring migration
 
