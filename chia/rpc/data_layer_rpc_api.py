@@ -1,10 +1,15 @@
+import io
+from argparse import Action
 from typing import Any, Callable, Dict, List
+
+from clvm.CLVMObject import CLVMObject
+from clvm.serialize import sexp_from_stream
 
 from chia.data_layer.data_layer import DataLayer
 
 # from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.data_layer.data_store import Action, OperationType
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.data_layer.data_store import Side
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
@@ -19,45 +24,41 @@ class DataLayerRpcApi:
         self.service_name = "chia_data_layer"
 
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
-        return {"/create_table": self.create_table, "/update_table": self.update_table, "/get_row": self.get_row}
+        return {
+            "/create_kv_store": self.create_kv_store,
+            "/update_kv_store": self.update_kv_store,
+            "/get_value": self.get_value,
+        }
 
-    async def create_table(self, request: Dict[str, Any]) -> None:
-        table_bytes = bytes32(bytes.fromhex(request["table"]))
-        name = request["name"]
-        await self.service.data_store.create_table(id=table_bytes, name=name)
+    async def create_kv_store(self, request: Dict[str, Any]) -> None:
+        store_id = bytes32(bytes.fromhex(request["id"]))  # this should be an index we keep
+        await self.service.data_store.create_tree(store_id)
 
-    async def get_row(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        hash_bytes = bytes32(hexstr_to_bytes(request["row_hash"]))
-        table_bytes = bytes32(hexstr_to_bytes(request["table"]))
-        table_row = await self.service.data_store.get_row_by_hash(table=table_bytes, row_hash=hash_bytes)
-        return {"row_data": table_row.bytes.hex(), "row_hash": table_row.hash.hex()}
+    async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        hash_bytes = bytes32(hexstr_to_bytes(request["key"]))
+        value = await self.service.data_store.get_node_by_key(hash_bytes)
+        return {"data": value}
 
-    async def update_table(self, request: Dict[str, Any]) -> Dict:
+    async def update_kv_store(self, request: Dict[str, Any]):
         """
-        rows_to_add a list of serialized programs as hex strings to add to table
+        rows_to_add a list of clvmobjects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
         """
-        table: bytes32 = bytes32(hexstr_to_bytes(request["table"]))
         changelist = request["changelist"]
-        action_list: List[Action] = []
+        # todo input checks
         for change in changelist:
             if change["action"] == "insert":
-                serialized_program = SerializedProgram.fromhex(hexstr=change["row_data"])
-                table_row = await self.service.data_store.insert_row(table=table, serialized_program=serialized_program)
-                operation = OperationType.INSERT
+                key = Program.from_bytes(change["key"])
+                value = Program.from_bytes(change["value"])
+                reference_node_hash = Program.from_bytes(change["reference_node_hash"])
+                tree_id = bytes32(change["tree_id"])
+                side = Side(change["side"])
+                await self.service.data_store.insert(key, value, tree_id, reference_node_hash, side)
             else:
                 assert change["action"] == "delete"
-                row_hash = bytes32(hexstr_to_bytes(change["row_hash"]))
-                table_row = await self.service.data_store.delete_row_by_hash(table, row_hash)
-                operation = OperationType.DELETE
-            action_list.append(Action(op=operation, row=table_row))
-
-        changelist = []
-
-        for action in action_list:
-            changelist.append({"action": "insert", "row_data": action.row.bytes, "row_hash": action.row.hash})
-
-        return {"changelist": changelist}
+                key = Program.from_bytes(change["key"])
+                tree_id = bytes32(change["tree_id"])  # todo one changelist for multiple singletons ?
+                await self.service.data_store.delete(key, tree_id)
 
         # TODO: commented out until we identify how to get the wallet available here
         # state = await self.service.data_store.get_table_state(table)

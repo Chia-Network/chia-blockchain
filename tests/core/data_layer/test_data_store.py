@@ -12,7 +12,7 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import _debug_dump, DataStore, Root, row_to_node, Side
+from chia.data_layer.data_store import _debug_dump, DataStore, Root, row_to_node, Side, TerminalNode
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
@@ -222,7 +222,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 @dataclass(frozen=True)
 class Example:
     expected: Program
-    terminal_nodes: Tuple[bytes32]
+    terminal_nodes: List[bytes32]
 
 
 async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
@@ -286,7 +286,7 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
     print(f"{actual.as_python()=}")
 
-    return Example(expected=expected, terminal_nodes=(c_hash, b_hash, d_hash, a_hash))
+    return Example(expected=expected, terminal_nodes=[c_hash, b_hash, d_hash, a_hash])
 
 
 @pytest.mark.asyncio

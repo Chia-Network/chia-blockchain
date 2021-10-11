@@ -5,21 +5,21 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_table(self, table: bytes32, name: str):
-        response = await self.fetch("create_table", {"table": table.hex(), "name": name})
+    async def create_kv_store(self, tree_id: bytes32):
+        # todo tree id should probably be a running id of all trees
+        # response = await self.fetch("create_kv_store", {"tree_id": tree_id})
+        response = await self.fetch("create_kv_store", {})
         return response
 
-    async def get_row(self, table: bytes32, row_hash: bytes32) -> Dict:
-        response = await self.fetch("get_row", {"table": table.hex(), "row_hash": row_hash.hex()})
-        return response
+    async def get_value(self, tree_id: bytes32, key: bytes) -> Dict:
+        return await self.fetch("get_value", {"tree_id": tree_id, "key": key})
 
-    async def update_table(self, table: bytes32, changelist: str) -> Dict:
-        print("update table")
+    async def update_kv_store(self, tree_id: bytes32, changelist: str) -> Dict:
         response = await self.fetch(
-            "update_table",
-            {"table": table.hex(), "changelist": changelist},
+            "update_kv_store",
+            {"tree_id": tree_id, "changelist": changelist},
         )
         return response
 
-    async def get_table_state(self, table: bytes32) -> bytes32:
+    async def get_tree_state(self, tree_id: bytes32) -> bytes32:
         pass

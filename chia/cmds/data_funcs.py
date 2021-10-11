@@ -24,13 +24,13 @@ async def get_client(rpc_port) -> Tuple[DataLayerRpcClient, int]:
     return client, rpc_port
 
 
-async def create_table_cmd(rpc_port: Optional[int], table_string: str, table_name: str) -> Optional[Dict[str, Any]]:
+async def create_kv_store_cmd(rpc_port: Optional[int], table_string: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     table_bytes = bytes32(hexstr_to_bytes(table_string))
     try:
         client, rpc_port = await get_client(rpc_port)
-        response = await client.create_table(table=table_bytes, name=table_name)
+        response = await client.create_kv_store(tree_id=table_bytes)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None
@@ -43,14 +43,14 @@ async def create_table_cmd(rpc_port: Optional[int], table_string: str, table_nam
     return response
 
 
-async def get_row_cmd(rpc_port: Optional[int], table_string: str, row_hash_string: str) -> Optional[Dict[str, Any]]:
+async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
-    row_hash_bytes = bytes32(hexstr_to_bytes(row_hash_string))
-    table_bytes = bytes32(hexstr_to_bytes(table_string))
+    tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))
+    key_bytes = hexstr_to_bytes(key)
     try:
         client, rpc_port = await get_client(rpc_port)
-        response = await client.get_row(table=table_bytes, row_hash=row_hash_bytes)
+        response = await client.get_value(tree_id=tree_id_bytes, key=key_bytes)
         print(json.dumps(response, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -64,13 +64,13 @@ async def get_row_cmd(rpc_port: Optional[int], table_string: str, row_hash_strin
     return response
 
 
-async def update_table_cmd(rpc_port: Optional[int], table_string: str, changelist: str) -> Optional[Dict[str, Any]]:
+async def update_kv_store(rpc_port: Optional[int], tree_id: str, changelist: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
-    table_bytes = bytes32(hexstr_to_bytes(table_string))
+    tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))
     try:
         client, rpc_port = await get_client(rpc_port)
-        response = await client.update_table(table=table_bytes, changelist=changelist)
+        response = await client.update_kv_store(tree_id=tree_id_bytes, changelist=changelist)
         print(json.dumps(response, indent=4))
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")

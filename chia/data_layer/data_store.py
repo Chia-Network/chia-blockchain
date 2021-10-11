@@ -30,6 +30,7 @@ class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
 
+
 class OperationType(IntEnum):
     INSERT = 0
     DELETE = 1
@@ -250,7 +251,8 @@ class DataStore:
     async def get_heritage(self, node_hash: bytes32, tree_id: bytes32) -> List[Node]:
         async with self.db_wrapper.locked_transaction():
             root = await self._raw_get_tree_root(tree_id=tree_id)
-
+            assert root.node_hash
+            assert root  # todo handle errors
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
@@ -302,10 +304,13 @@ class DataStore:
             {"root_hash": root.node_hash.hex(), "type": NodeType.TERMINAL},
         )
 
-        terminal_nodes = [row_to_node(row=row) async for row in cursor]
-
+        terminal_nodes: List[TerminalNode] = []
+        rows = await cursor.fetchall()
+        for row in rows:
+            node = row_to_node(row=row)
+            assert isinstance(node, TerminalNode)
+            terminal_nodes.append(node)
         return terminal_nodes
-
 
     # async def _insert_program(self, program: Program) -> bytes32:
     #     if not program.pair:
@@ -420,7 +425,7 @@ class DataStore:
                 # TODO: a real exception
                 assert side is not None
                 assert reference_node_hash is not None
-
+                assert root.node_hash  # todo handle errors
                 traversal_hash = reference_node_hash
                 parents = []
                 print(f"traversal hash: {traversal_hash}")
@@ -449,7 +454,7 @@ class DataStore:
                     # TODO: debugging stuff
                     abc = await cursor.fetchone()
                     if abc is not None:
-                        1/0
+                        1 / 0
 
                     new_node = row_to_node(row=row)
                     parents.append(new_node)
@@ -524,10 +529,32 @@ class DataStore:
 
         return new_terminal_node_hash
 
+    async def delete(
+        self,
+        key: Program,
+        tree_id: bytes32,
+    ) -> bool:
+        pass
+        # async with self.db_wrapper.locked_transaction():
+        # todo delete from db
+
     async def get_node_by_key(self, key: Program) -> TerminalNode:
         async with self.db_wrapper.locked_transaction():
             cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key.as_bin()})
+            row = await cursor.fetchone()
+        assert row  # todo handle errors
+        node = row_to_node(row=row)
+        assert isinstance(node, TerminalNode)
+        return node
 
+    async def get_node_by_key_bytes(self, key: bytes32) -> TerminalNode:
+        async with self.db_wrapper.locked_transaction():
+            cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key})
+            row = await cursor.fetchone()
+        assert row  # todo handle errors
+        node = row_to_node(row=row)
+        assert isinstance(node, TerminalNode)
+        return node
 
     async def _raw_get_node(self, node_hash: bytes32) -> Node:
         cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
@@ -567,7 +594,7 @@ class DataStore:
                 hash_to_node[node.hash] = node
 
             # nodes = [row_to_node(row=row) async for row in cursor]
-            print(' ++++++++++++++++++++++++++++++++++++++')
+            print(" ++++++++++++++++++++++++++++++++++++++")
             root_node = hash_to_node[root_node.hash]
             print(root_node)
             # TODO: clvm needs py.typed, SExp.to() needs def to(class_: Type[T], v: CastableType) -> T:
@@ -580,7 +607,7 @@ class DataStore:
             # async for row in cursor:
             #     # row = {key: value.hex() for key, value in dict(row).items()}
             #     print(f"    {dict(row)}")
-            print(' ++++++++++++++++++++++++++++++++++++++')
+            print(" ++++++++++++++++++++++++++++++++++++++")
 
         return program
 
