@@ -2,17 +2,16 @@ from dataclasses import dataclass
 import itertools
 import logging
 
-# import random
-# import sqlite3
-from typing import AsyncIterable, Dict, List, Optional, Tuple
+
+from typing import AsyncIterable, Dict, List, Optional
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
 from clvm.SExp import SExp
 import pytest
 
-# from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import _debug_dump, DataStore, Root, row_to_node, Side, TerminalNode
+
+from chia.data_layer.data_store import _debug_dump, DataStore, Side
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
@@ -305,7 +304,7 @@ async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
     reference_node_hash = example.terminal_nodes[0]
-    root = await data_store.get_tree_root(tree_id=tree_id)
+    # root = await data_store.get_tree_root(tree_id=tree_id)
 
     heritage = await data_store.get_heritage(node_hash=reference_node_hash, tree_id=tree_id)
     hashes = [node.hash.hex() for node in heritage]

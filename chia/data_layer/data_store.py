@@ -1,14 +1,14 @@
 from dataclasses import dataclass, field, replace
 from enum import IntEnum
 import logging
-import random
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
+
+from typing import Dict, List, Optional, Set, Tuple, Type, Union
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
-from clvm.SExp import SExp
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
@@ -570,7 +570,8 @@ class DataStore:
             root = await self._raw_get_tree_root(tree_id=tree_id)
             root_node = await self._raw_get_node(node_hash=root.node_hash)
 
-            # await self.db.execute("SELECT * FROM node WHERE node.left == :hash OR node.right == :hash", {"hash": root_node.hash})
+            # await self.db.execute("SELECT * FROM node WHERE node.left ==
+            # :hash OR node.right == :hash", {"hash": root_node.hash})
 
             cursor = await self.db.execute(
                 """
