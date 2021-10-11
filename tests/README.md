@@ -18,6 +18,7 @@ Each subdirectory below the directories `root_test_dirs` in `testconfig.py` beco
 If your jobs run too long, simply move some tests into new subdirectories and run `build-workflows.py`.
 A workflow built from a parent directory does not include the tests in its subdirectories.
 The subdirectory jobs do not include the tests from their parents.
+Note that calling `pytest root/path` will execute all tests found in `root/path/one`, `root/path/two`, etc.
 
 ## testconfig.py
 

@@ -1,5 +1,6 @@
 # Github actions template config.
 oses = ["ubuntu", "macos"]
+root_dir = "tests"
 root_test_dirs = ["blockchain", "clvm", "core", "generator", "pools", "simulation", "wallet"]
 
 # Defaults are conservative.
