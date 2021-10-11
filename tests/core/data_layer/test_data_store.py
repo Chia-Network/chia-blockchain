@@ -1,8 +1,10 @@
+from dataclasses import dataclass
+import itertools
 import logging
 
 # import random
 # import sqlite3
-from typing import Dict, AsyncIterable, List
+from typing import AsyncIterable, Dict, List, Optional, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -10,8 +12,8 @@ from clvm.SExp import SExp
 import pytest
 
 # from chia.consensus.blockchain import Blockchain
-from chia.data_layer.data_store import Action, DataStore, OperationType, TableRow
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.data_layer.data_store import _debug_dump, DataStore, Root, row_to_node, Side
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
 # from chia.full_node.block_store import BlockStore
@@ -37,18 +39,28 @@ def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
     return DBWrapper(db_connection)
 
 
-@pytest.fixture(name="table_id", scope="function")
-def table_id_fixture() -> bytes32:
-    base = b"a table id"
+@pytest.fixture(name="tree_id", scope="function")
+def tree_id_fixture() -> bytes32:
+    base = b"a tree id"
     pad = b"." * (32 - len(base))
     return bytes32(pad + base)
 
 
+@pytest.fixture(name="raw_data_store", scope="function")
+async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
+    return await DataStore.create(db_wrapper=db_wrapper)
+
+
 @pytest.fixture(name="data_store", scope="function")
-async def data_store_fixture(db_wrapper: DBWrapper, table_id: bytes32) -> DataStore:
-    data_store = await DataStore.create(db_wrapper=db_wrapper)
-    await data_store.create_table(id=table_id, name="A Table")
-    return data_store
+async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> DataStore:
+    await raw_data_store.create_tree(tree_id=tree_id)
+    # await raw_data_store.create_root(tree_id=tree_id)
+    return raw_data_store
+
+
+# @pytest.fixture(name="root", scope="function")
+# async def root_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
+#     return await data_store.get_tree_root(tree_id=tree_id)
 
 
 # TODO: understand this better and make some sensible looking example objects
@@ -88,11 +100,9 @@ serialized_programs: List[SerializedProgram] = [
 ]
 
 table_columns: Dict[str, List[str]] = {
-    "tables": ["id", "name"],
-    "keys_values": ["key", "value"],
-    "table_values": ["table_id", "key"],
-    "commits": ["id", "table_id", "state"],
-    "actions": ["commit_id", "idx", "operation", "key", "table_id"],
+    "tree": ["id"],
+    "node": ["hash", "type", "left", "right", "key", "value"],
+    "root": ["tree_id", "generation", "node_hash"],
 }
 
 
@@ -120,127 +130,237 @@ async def test_create_creates_tables_and_columns(
 
 
 @pytest.mark.asyncio
-async def test_insert_with_invalid_table_fails(data_store: DataStore) -> None:
-    # TODO: If this API is retained then it should have a specific exception.
+async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
+    tree_id = bytes32(b"\0" * 32)
+
+    await raw_data_store.create_tree(tree_id=tree_id)
+
+
+@pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
+@pytest.mark.asyncio
+async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
+    bad_tree_id = b"\0" * length
+
+    # TODO: require a more specific exception
     with pytest.raises(Exception):
-        await data_store.insert_row(table=b"non-existant table", serialized_program=serialized_programs[0])
+        await raw_data_store.create_tree(tree_id=bad_tree_id)
 
 
 @pytest.mark.asyncio
-async def test_get_row_by_hash_single_match(data_store: DataStore, table_id: bytes32) -> None:
-    a_serialized_program, *_ = serialized_programs
+async def test_get_trees(raw_data_store: DataStore) -> None:
+    expected_tree_ids = set()
 
-    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
+    for n in range(10):
+        tree_id = bytes32((b"\0" * 31 + bytes([n])))
+        await raw_data_store.create_tree(tree_id=tree_id)
+        expected_tree_ids.add(tree_id)
 
-    row_hash = a_serialized_program.get_tree_hash()
-    table_row = await data_store.get_row_by_hash(table=table_id, row_hash=row_hash)
+    tree_ids = await raw_data_store.get_tree_ids()
 
-    assert table_row == TableRow.from_serialized_program(serialized_program=a_serialized_program)
-
-
-@pytest.mark.asyncio
-async def test_get_row_by_hash_no_match(data_store: DataStore, table_id: bytes32) -> None:
-    a_serialized_program, another_serialized_program, *_ = serialized_programs
-    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
-
-    other_row_hash = another_serialized_program.get_tree_hash()
-
-    # TODO: If this API is retained then it should have a specific exception.
-    with pytest.raises(Exception):
-        await data_store.get_row_by_hash(table=table_id, row_hash=other_row_hash)
+    assert tree_ids == expected_tree_ids
 
 
 @pytest.mark.asyncio
-async def test_insert_does(data_store: DataStore, table_id: bytes32) -> None:
-    a_serialized_program, another_serialized_program, *_ = serialized_programs
-    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
-    await data_store.insert_row(table=table_id, serialized_program=another_serialized_program)
-
-    table_rows = await data_store.get_rows(table=table_id)
-
-    expected = {
-        TableRow.from_serialized_program(serialized_program=serialized_program)
-        for serialized_program in [a_serialized_program, another_serialized_program]
-    }
-    assert set(table_rows) == expected
+async def test_table_is_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert is_empty
 
 
 @pytest.mark.asyncio
-async def test_deletes_row_by_hash(data_store: DataStore, table_id: bytes32) -> None:
-    a_serialized_program, another_serialized_program, *_ = serialized_programs
-    await data_store.insert_row(table=table_id, serialized_program=a_serialized_program)
-    await data_store.insert_row(table=table_id, serialized_program=another_serialized_program)
-    await data_store.delete_row_by_hash(table=table_id, row_hash=a_serialized_program.get_tree_hash())
+async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    key = Program.to([1, 2])
+    value = Program.to("abc")
 
-    table_rows = await data_store.get_rows(table=table_id)
+    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
 
-    expected = {
-        TableRow.from_serialized_program(serialized_program=serialized_program)
-        for serialized_program in [another_serialized_program]
-    }
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
+    assert not is_empty
 
-    assert set(table_rows) == expected
+
+# @pytest.mark.asyncio
+# async def test_create_root_provides_bytes32(raw_data_store: DataStore, tree_id: bytes32) -> None:
+#     await raw_data_store.create_tree(tree_id=tree_id)
+#     # TODO: catchup with the node_hash=
+#     root_hash = await raw_data_store.create_root(tree_id=tree_id, node_hash=23)
+#
+#     assert isinstance(root_hash, bytes32)
 
 
 @pytest.mark.asyncio
-async def test_get_all_actions_just_inserts(data_store: DataStore, table_id: bytes32) -> None:
+async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    key = Program.to([1, 2])
+    value = Program.to("abc")
+
+    node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    assert node_hash == Program.to([key.as_bin(), value.as_bin()]).get_tree_hash()
+
+
+@pytest.mark.asyncio
+async def test_insert_increments_generation(data_store: DataStore, tree_id: bytes32) -> None:
+    keys = list("abcd")  # efghijklmnopqrstuvwxyz")
+    value = Program.to([1, 2, 3])
+
+    generations = []
     expected = []
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[0])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[0]))
+    node_hash = None
+    for key, expected_generation in zip(keys, itertools.count(start=1)):
+        node_hash = await data_store.insert(
+            key=Program.to(key),
+            value=value,
+            tree_id=tree_id,
+            reference_node_hash=node_hash,
+            side=None if node_hash is None else Side.LEFT,
+        )
+        generation = await data_store.get_tree_generation(tree_id=tree_id)
+        generations.append(generation)
+        expected.append(expected_generation)
+
+    assert generations == expected
+
+
+@dataclass(frozen=True)
+class Example:
+    expected: Program
+    terminal_nodes: Tuple[bytes32]
+
+
+async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
+    keys_values = {bytes([key]): [bytes([x]) for x in [0x10 + key, key]] for key in [0, 1, 2, 3]}
+
+    # this hint is specific to this data, it doesn't need to be this strict
+    def kv(k: bytes, v: List[bytes]) -> CLVMObject:
+        return CLVMObject(
+            (
+                CLVMObject(Program.to(k).as_bin()),
+                CLVMObject(Program.to(v).as_bin()),
+            )
+        )
+
+    expected = Program.to(
+        CLVMObject(
+            (
+                CLVMObject(
+                    (
+                        kv(b"\x00", [b"\x10", b"\x00"]),
+                        kv(b"\x01", [b"\x11", b"\x01"]),
+                    ),
+                ),
+                CLVMObject(
+                    (
+                        kv(b"\x02", [b"\x12", b"\x02"]),
+                        kv(b"\x03", [b"\x13", b"\x03"]),
+                    ),
+                ),
+            ),
+        ),
     )
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[1])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[1]))
-    )
+    async def insert(key: bytes, reference_node_hash: bytes32, side: Optional[Side]) -> bytes32:
+        return await data_store.insert(
+            key=Program.to(key),
+            value=Program.to(keys_values[key]),
+            tree_id=tree_id,
+            reference_node_hash=reference_node_hash,
+            side=side,
+        )
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[2])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[2]))
-    )
+    c_hash = await insert(key=b"\x02", reference_node_hash=None, side=None)
+    await _debug_dump(db=data_store.db, description="after 2")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[3])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[3]))
-    )
+    b_hash = await insert(key=b"\x01", reference_node_hash=c_hash, side=Side.LEFT)
+    await _debug_dump(db=data_store.db, description="after 1")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
 
-    all_actions = await data_store.get_all_actions(table=table_id)
+    d_hash = await insert(key=b"\x03", reference_node_hash=c_hash, side=Side.RIGHT)
+    await _debug_dump(db=data_store.db, description="after 3")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
 
-    assert all_actions == expected
+    # TODO: next step messes up...
+    a_hash = await insert(key=b"\x00", reference_node_hash=b_hash, side=Side.LEFT)
+    await _debug_dump(db=data_store.db, description="after 0")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print(f"{actual.as_python()=}")
+
+    return Example(expected=expected, terminal_nodes=(c_hash, b_hash, d_hash, a_hash))
 
 
 @pytest.mark.asyncio
-async def test_get_all_actions_with_a_delete(data_store: DataStore, table_id: bytes32) -> None:
-    expected = []
+async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[0])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[0]))
+    await _debug_dump(db=data_store.db, description="final")
+    actual = await data_store.get_tree_as_program(tree_id=tree_id)
+    print("actual  ", actual.as_python())
+    print("expected", example.expected.as_python())
+    assert actual == example.expected
+
+
+@pytest.mark.asyncio
+async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    reference_node_hash = example.terminal_nodes[0]
+    root = await data_store.get_tree_root(tree_id=tree_id)
+
+    heritage = await data_store.get_heritage(node_hash=reference_node_hash, tree_id=tree_id)
+    hashes = [node.hash.hex() for node in heritage]
+    assert hashes == [
+        "1d9f66aa837256c19d65ef8be77c33e30a7eb2ebf5f6c9f774383172c6c3a937",
+        "f3bb419ad917572fd2f46291f627a00c3a315ffd2fdc5ac408935cbb51d78fc8",
+        "1c71210dbb62bc617e7e192b8aca1031ff0f1189bb7ae686ecaa98d9611108a9",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_pairs(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    pairs = await data_store.get_pairs(tree_id=tree_id)
+
+    assert {node.hash for node in pairs} == set(example.terminal_nodes)
+
+
+@pytest.mark.asyncio
+async def test_get_pairs_when_empty(data_store: DataStore, tree_id: bytes32) -> None:
+    pairs = await data_store.get_pairs(tree_id=tree_id)
+
+    assert pairs == []
+
+
+@pytest.mark.asyncio()
+async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: bytes32) -> None:
+    key = Program.to(5)
+
+    first_hash = await data_store.insert(
+        key=key,
+        value=Program.to(6),
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
     )
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[1])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[1]))
-    )
+    # TODO: more specific exception
+    with pytest.raises(Exception):
+        await data_store.insert(
+            key=key,
+            value=Program.to(7),
+            tree_id=tree_id,
+            reference_node_hash=first_hash,
+            side=Side.RIGHT,
+        )
 
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[2])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[2]))
-    )
 
-    # note this is a delete
-    await data_store.delete_row_by_hash(table=table_id, row_hash=serialized_programs[1].get_tree_hash())
-    expected.append(
-        Action(op=OperationType.DELETE, row=TableRow.from_serialized_program(serialized_program=serialized_programs[1]))
-    )
-
-    await data_store.insert_row(table=table_id, serialized_program=serialized_programs[3])
-    expected.append(
-        Action(op=OperationType.INSERT, row=TableRow.from_serialized_program(serialized_program=serialized_programs[3]))
-    )
-
-    all_actions = await data_store.get_all_actions(table=table_id)
-
-    assert all_actions == expected
+# @pytest.mark.asyncio
+# async def test_create_first_pair(data_store: DataStore, tree_id: bytes) -> None:
+#     key = SExp.to([1, 2])
+#     value = SExp.to(b'abc')
+#
+#     root_hash = await data_store.create_root(tree_id=tree_id)
+#
+#
+#     await data_store.create_pair(key=key, value=value)
