@@ -220,7 +220,8 @@ class DataStore:
     #     node_hash = Program.to([left_hash, right_hash]).get_tree_hash(left_hash, right_hash)
     #
     #     await self.db.execute(
-    #         "INSERT INTO node(hash, node_type, left, right, key, value) VALUE(:hash, :node_type, :left, :right, :key, :value)",
+    #         "INSERT INTO node(hash, node_type, left, right, key, value)"
+    #         " VALUE(:hash, :node_type, :left, :right, :key, :value)",
     #         {
     #             "hash": node_hash.hex(),
     #             "node_type": NodeType.INTERNAL,
