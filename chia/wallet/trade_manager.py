@@ -352,7 +352,6 @@ class TradeManager:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
             return False, None, "Unknown Error"
-        trade_offer = None
         try:
             trade_offer_hex = file_path.read_text()
             trade_offer = TradeRecord.from_bytes(hexstr_to_bytes(trade_offer_hex))

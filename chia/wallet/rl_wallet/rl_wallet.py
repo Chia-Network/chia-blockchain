@@ -343,11 +343,11 @@ class RLWallet:
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+    async def get_spendable_balance(self) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id())
         return spendable_am
 
-    async def get_max_send_amount(self, records=None):
+    async def get_max_send_amount(self):
         # Rate limited wallet is a singleton, max send is same as spendable
         return await self.get_spendable_balance()
 
@@ -396,7 +396,7 @@ class RLWallet:
     async def can_generate_rl_puzzle_hash(self, hash) -> bool:
         return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
 
-    def puzzle_for_pk(self, pk) -> Optional[Program]:
+    def puzzle_for_pk(self) -> Optional[Program]:
         if self.rl_info.initialized is False:
             return None
         if (

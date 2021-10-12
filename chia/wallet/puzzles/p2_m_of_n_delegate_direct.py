@@ -16,5 +16,5 @@ def puzzle_for_m_of_public_key_list(m, public_key_list) -> Program:
     return MOD.curry(m, public_key_list)
 
 
-def solution_for_delegated_puzzle(m, selectors, puzzle, solution) -> Program:
+def solution_for_delegated_puzzle(selectors, puzzle, solution) -> Program:
     return Program.to([selectors, puzzle, solution])

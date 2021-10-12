@@ -137,7 +137,6 @@ class WalletNode:
         return self.keychain_proxy
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
-        key: PrivateKey = None
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             key = await keychain_proxy.get_key_for_fingerprint(fingerprint)

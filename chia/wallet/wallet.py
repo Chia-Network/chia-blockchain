@@ -440,7 +440,6 @@ class Wallet:
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
         list_of_solutions = []
-        utxos = None
 
         # If we're losing value then get coins with at least that much value
         # If we're gaining value then our amount doesn't matter

@@ -621,7 +621,6 @@ class WalletStateManager:
             for cs in additional_coin_spends:
                 if cs.coin.puzzle_hash == SINGLETON_LAUNCHER_HASH:
                     already_have = False
-                    pool_state = None
                     for wallet_id, wallet in self.wallets.items():
                         if (
                             wallet.type() == WalletType.POOLING_WALLET
