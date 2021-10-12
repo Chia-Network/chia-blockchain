@@ -50,7 +50,6 @@ class DataStore:
                 "right TEXT REFERENCES node,"
                 "key TEXT,"
                 "value TEXT,"
-                "tree_id TEXT REFERENCES node"
                 # "FOREIGN KEY(left) REFERENCES node(hash),"
                 # " FOREIGN KEY(right) REFERENCES node(hash)"
                 ")"
@@ -177,6 +176,21 @@ class DataStore:
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
+        cursor = await self.db.execute(
+            """
+            WITH RECURSIVE
+                tree_from_root_hash(hash, type, left, right, key, value, depth) AS (
+                    SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
+                    UNION ALL
+                    SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
+                    WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                )
+            SELECT * FROM tree_from_root_hash
+            WHERE type == :type
+            """,
+            {"root_hash": root.node_hash.hex(), "type": NodeType.TERMINAL},
+        )
+
         terminal_nodes: List[TerminalNode] = []
         for row in rows:
             node = row_to_node(row=row)
