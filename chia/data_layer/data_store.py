@@ -1,16 +1,15 @@
-from dataclasses import dataclass, field, replace
-from enum import IntEnum
+from dataclasses import dataclass, replace
+
 import logging
 
-from typing import Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Dict, List, Optional, Set
 
 import aiosqlite
-from clvm.CLVMObject import CLVMObject
 
-
+from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode
+from chia.data_layer.data_layer_util import hexstr_to_bytes32, row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
 
@@ -18,121 +17,6 @@ log = logging.getLogger(__name__)
 
 
 # TODO: review and replace all asserts
-
-
-class NodeType(IntEnum):
-    # EMPTY = 0
-    INTERNAL = 1
-    TERMINAL = 2
-
-
-class Side(IntEnum):
-    LEFT = 0
-    RIGHT = 1
-
-
-class OperationType(IntEnum):
-    INSERT = 0
-    DELETE = 1
-
-
-class CommitState(IntEnum):
-    OPEN = 0
-    FINALIZED = 1
-    ROLLED_BACK = 2
-
-
-# TODO: remove or formalize this
-async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
-    cursor = await db.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    print("-" * 50, description, flush=True)
-    for [name] in await cursor.fetchall():
-        cursor = await db.execute(f"SELECT * FROM {name}")
-        print(f"\n -- {name} ------", flush=True)
-        async for row in cursor:
-            print(f"        {dict(row)}")
-
-
-def hexstr_to_bytes32(hexstr: str) -> bytes32:
-    return bytes32(hexstr_to_bytes(hexstr))
-
-
-Node = Union["TerminalNode", "InternalNode"]
-
-
-@dataclass(frozen=True)
-class TerminalNode:
-    hash: bytes32
-    # generation: int
-    key: Program
-    value: Program
-
-    atom: None = field(init=False, default=None)
-
-    @property
-    def pair(self) -> Tuple[Program, Program]:
-        return Program.to(CLVMObject(v=self.key.as_bin())), Program.to(CLVMObject(self.value.as_bin()))
-
-    @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
-        return cls(
-            hash=hexstr_to_bytes32(row["hash"]),
-            # generation=row["generation"],
-            key=Program.fromhex(row["key"]),
-            value=Program.fromhex(row["value"]),
-        )
-
-
-@dataclass(frozen=True)
-class InternalNode:
-    hash: bytes32
-    # generation: int
-    left_hash: bytes32
-    right_hash: bytes32
-
-    pair: Optional[Tuple[Node, Node]] = None
-    atom: None = None
-
-    @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
-        return cls(
-            hash=hexstr_to_bytes32(row["hash"]),
-            # generation=row["generation"],
-            left_hash=hexstr_to_bytes32(row["left"]),
-            right_hash=hexstr_to_bytes32(row["right"]),
-        )
-
-
-@dataclass(frozen=True)
-class Root:
-    tree_id: bytes32
-    node_hash: Optional[bytes32]
-    generation: int
-
-    @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "Root":
-        raw_node_hash = row["node_hash"]
-        if raw_node_hash is None:
-            node_hash = None
-        else:
-            node_hash = hexstr_to_bytes32(raw_node_hash)
-
-        return cls(
-            tree_id=hexstr_to_bytes32(row["tree_id"]),
-            node_hash=node_hash,
-            generation=row["generation"],
-        )
-
-
-node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]] = {
-    NodeType.INTERNAL: InternalNode,
-    NodeType.TERMINAL: TerminalNode,
-}
-
-
-def row_to_node(row: aiosqlite.Row) -> Node:
-    cls = node_type_to_class[row["type"]]
-    return cls.from_row(row=row)
 
 
 @dataclass
@@ -161,12 +45,13 @@ class DataStore:
                 "CREATE TABLE IF NOT EXISTS node("
                 "hash TEXT PRIMARY KEY NOT NULL,"
                 # " generation INTEGER NOT NULL",
-                " type INTEGER NOT NULL,"
-                " left TEXT REFERENCES node,"
-                " right TEXT REFERENCES node,"
-                " key TEXT,"
-                " value TEXT"
-                # " FOREIGN KEY(left) REFERENCES node(hash),"
+                "node_type INTEGER NOT NULL,"
+                "left TEXT REFERENCES node,"
+                "right TEXT REFERENCES node,"
+                "key TEXT,"
+                "value TEXT,"
+                "tree_id TEXT REFERENCES node"
+                # "FOREIGN KEY(left) REFERENCES node(hash),"
                 # " FOREIGN KEY(right) REFERENCES node(hash)"
                 ")"
             )
@@ -288,24 +173,11 @@ class DataStore:
 
         if root.node_hash is None:
             return []
-
-        cursor = await self.db.execute(
-            """
-            WITH RECURSIVE
-                tree_from_root_hash(hash, type, left, right, key, value, depth) AS (
-                    SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
-                    UNION ALL
-                    SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
-                    WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
-                )
-            SELECT * FROM tree_from_root_hash
-            WHERE type == :type
-            """,
-            {"root_hash": root.node_hash.hex(), "type": NodeType.TERMINAL},
-        )
-
-        terminal_nodes: List[TerminalNode] = []
+        formatted_str = f"SELECT * from nodes WHERE tree_id == {tree_id} and node_type == 2"
+        cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
+        await cursor.close()
+        terminal_nodes: List[TerminalNode] = []
         for row in rows:
             node = row_to_node(row=row)
             assert isinstance(node, TerminalNode)

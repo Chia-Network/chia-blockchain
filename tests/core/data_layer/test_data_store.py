@@ -10,13 +10,13 @@ from clvm.CLVMObject import CLVMObject
 from clvm.SExp import SExp
 import pytest
 
-
-from chia.data_layer.data_store import _debug_dump, DataStore, Side
+from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_util import _debug_dump
+from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.tree_hash import bytes32
 
-# from chia.full_node.block_store import BlockStore
-# from chia.full_node.coin_store import CoinStore
+
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 
