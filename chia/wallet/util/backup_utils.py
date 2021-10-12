@@ -41,9 +41,7 @@ def open_backup_file(file_path, private_key):
     data_bytes = f.decrypt(encrypted_data)
     data_text = data_bytes.decode()
     data_json = json.loads(data_text)
-    unencrypted = {}
-    unencrypted["data"] = data_json
-    unencrypted["meta_data"] = meta_data
+    unencrypted = {"data": data_json, "meta_data": meta_data}
     return unencrypted
 
 
@@ -55,12 +53,9 @@ def get_backup_info(file_path, private_key):
     info_dict = {}
     wallets = []
     for wallet_info in wallet_list_json:
-        wallet = {}
-        wallet["name"] = wallet_info["name"]
-        wallet["type"] = wallet_info["type"]
-        wallet["type_name"] = WalletType(wallet_info["type"]).name
-        wallet["id"] = wallet_info["id"]
-        wallet["data"] = wallet_info["data"]
+        wallet = {"name": wallet_info["name"], "type": wallet_info["type"],
+                  "type_name": WalletType(wallet_info["type"]).name, "id": wallet_info["id"],
+                  "data": wallet_info["data"]}
         wallets.append(wallet)
 
     info_dict["version"] = data["version"]

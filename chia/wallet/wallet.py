@@ -51,9 +51,9 @@ class Wallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        info: WalletInfo,
-        name: str = None,
+            wallet_state_manager: Any,
+            info: WalletInfo,
+            name: str = None,
     ):
         self = Wallet()
         self.log = logging.getLogger(name if name else __name__)
@@ -144,7 +144,8 @@ class Wallet:
 
         return uint64(addition_amount)
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    @staticmethod
+    def puzzle_for_pk(pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
@@ -193,16 +194,16 @@ class Wallet:
     async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction)).puzzle_hash
 
+    @staticmethod
     def make_solution(
-        self,
-        primaries: Optional[List[Dict[str, Any]]] = None,
-        min_time=0,
-        me=None,
-        coin_announcements: Optional[Set[bytes32]] = None,
-        coin_announcements_to_assert: Optional[Set[bytes32]] = None,
-        puzzle_announcements: Optional[Set[bytes32]] = None,
-        puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
-        fee=0,
+            primaries: Optional[List[Dict[str, Any]]] = None,
+            min_time=0,
+            me=None,
+            coin_announcements: Optional[Set[bytes32]] = None,
+            coin_announcements_to_assert: Optional[Set[bytes32]] = None,
+            puzzle_announcements: Optional[Set[bytes32]] = None,
+            puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
+            fee=0,
     ) -> Program:
         assert fee >= 0
         condition_list = []
@@ -284,15 +285,15 @@ class Wallet:
         return used_coins
 
     async def _generate_unsigned_transaction(
-        self,
-        amount: uint64,
-        newpuzzlehash: bytes32,
-        fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
-        coins: Set[Coin] = None,
-        primaries_input: Optional[List[Dict[str, Any]]] = None,
-        ignore_max_send_amount: bool = False,
-        announcements_to_consume: Set[Announcement] = None,
+            self,
+            amount: uint64,
+            newpuzzlehash: bytes32,
+            fee: uint64 = uint64(0),
+            origin_id: bytes32 = None,
+            coins: Set[Coin] = None,
+            primaries_input: Optional[List[Dict[str, Any]]] = None,
+            ignore_max_send_amount: bool = False,
+            announcements_to_consume: Set[Announcement] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -376,15 +377,15 @@ class Wallet:
         )
 
     async def generate_signed_transaction(
-        self,
-        amount: uint64,
-        puzzle_hash: bytes32,
-        fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
-        coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
-        ignore_max_send_amount: bool = False,
-        announcements_to_consume: Set[Announcement] = None,
+            self,
+            amount: uint64,
+            puzzle_hash: bytes32,
+            fee: uint64 = uint64(0),
+            origin_id: bytes32 = None,
+            coins: Set[Coin] = None,
+            primaries: Optional[List[Dict[str, bytes32]]] = None,
+            ignore_max_send_amount: bool = False,
+            announcements_to_consume: Set[Announcement] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.

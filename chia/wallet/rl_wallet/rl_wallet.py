@@ -673,7 +673,8 @@ class RLWallet:
 
         return SpendBundle(list_of_coin_spends, aggsig)
 
-    def rl_get_aggregation_puzzlehash(self, wallet_puzzle):
+    @staticmethod
+    def rl_get_aggregation_puzzlehash(wallet_puzzle):
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()
 
         return puzzle_hash

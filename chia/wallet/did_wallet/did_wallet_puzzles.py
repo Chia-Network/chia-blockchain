@@ -73,8 +73,8 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
     inner_f, args = r
     if not is_did_core(inner_f):
         return None
-    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
-    return INNER_PUZZLE
+    singleton_struct, inner_puzzle = list(args.as_iter())
+    return inner_puzzle
 
 
 def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32, pubkey: G1Element):

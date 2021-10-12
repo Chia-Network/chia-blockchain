@@ -110,9 +110,9 @@ def spend_bundle_for_spendable_ccs(
     for fixing it.
     """
 
-    N = len(spendable_cc_list)
+    n = len(spendable_cc_list)
 
-    if len(inner_solutions) != N:
+    if len(inner_solutions) != n:
         raise ValueError("spendable_cc_list and inner_solutions are different lengths")
 
     input_coins = [_.coin for _ in spendable_cc_list]
@@ -131,7 +131,7 @@ def spend_bundle_for_spendable_ccs(
 
     coin_spends = []
 
-    deltas = [input_coins[_].amount - output_amounts[_] for _ in range(N)]
+    deltas = [input_coins[_].amount - output_amounts[_] for _ in range(n)]
     subtotals = subtotals_for_deltas(deltas)
 
     if sum(deltas) != 0:
@@ -139,13 +139,13 @@ def spend_bundle_for_spendable_ccs(
 
     bundles = [bundle_for_spendable_cc_list(_) for _ in spendable_cc_list]
 
-    for index in range(N):
+    for index in range(n):
         cc_spend_info = spendable_cc_list[index]
 
         puzzle_reveal = cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, cc_spend_info.inner_puzzle)
 
-        prev_index = (index - 1) % N
-        next_index = (index + 1) % N
+        prev_index = (index - 1) % n
+        next_index = (index + 1) % n
         prev_bundle = bundles[prev_index]
         my_bundle = bundles[index]
         next_bundle = bundles[next_index]

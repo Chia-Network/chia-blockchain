@@ -35,8 +35,8 @@ def rl_puzzle_for_pk(
     ASSERT_COIN_BLOCK_AGE_EXCEEDS min_block_age
     """
 
-    MOD = load_clvm("rl.clvm")
-    return MOD.curry(pubkey, rate_amount, interval_time, origin_id, clawback_pk)
+    mod = load_clvm("rl.clvm")
+    return mod.curry(pubkey, rate_amount, interval_time, origin_id, clawback_pk)
 
 
 def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_amount):
@@ -120,5 +120,5 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)
     """
 
-    MOD = load_clvm("rl_aggregation.clvm")
-    return MOD.curry(wallet_puzzle)
+    mod = load_clvm("rl_aggregation.clvm")
+    return mod.curry(wallet_puzzle)
