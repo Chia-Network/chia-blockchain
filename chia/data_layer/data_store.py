@@ -67,26 +67,24 @@ class DataStore:
 
         return self
 
-    async def create_tree(self, tree_id: bytes32) -> None:
+    async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> None:
         tree_id = bytes32(tree_id)
 
-        async with self.db_wrapper.locked_transaction():
+        async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
             await self.db.execute(
                 "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
                 {"tree_id": tree_id.hex(), "generation": 0, "node_hash": None},
             )
 
-    async def table_is_empty(self, tree_id: bytes32) -> bool:
-        async with self.db_wrapper.locked_transaction():
-            return await self._raw_table_is_empty(tree_id=tree_id)
+    async def table_is_empty(self, tree_id: bytes32, *, lock: bool = True) -> bool:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            tree_root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
-    async def _raw_table_is_empty(self, tree_id: bytes32) -> bool:
-        tree_root = await self._raw_get_tree_root(tree_id=tree_id)
         return tree_root.node_hash is None
 
-    async def get_tree_ids(self) -> Set[bytes32]:
-        async with self.db_wrapper.locked_transaction():
+    async def get_tree_ids(self, *, lock: bool = True) -> Set[bytes32]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT id FROM tree")
 
         tree_ids = {hexstr_to_bytes32(row["id"]) async for row in cursor}
@@ -103,38 +101,33 @@ class DataStore:
     #
     #     return generation
 
-    async def get_tree_generation(self, tree_id: bytes32) -> int:
-        async with self.db_wrapper.locked_transaction():
-            return await self._raw_get_tree_generation(tree_id=tree_id)
+    async def get_tree_generation(self, tree_id: bytes32, *, lock: bool = True) -> int:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            row = await cursor.fetchone()
 
-    async def _raw_get_tree_generation(self, tree_id: bytes32) -> int:
-        cursor = await self.db.execute(
-            "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id",
-            {"tree_id": tree_id.hex()},
-        )
-        row = await cursor.fetchone()
         # TODO: real handling
         assert row is not None
         generation: int = row["MAX(generation)"]
         return generation
 
-    async def get_tree_root(self, tree_id: bytes32) -> Root:
-        async with self.db_wrapper.locked_transaction():
-            return await self._raw_get_tree_root(tree_id=tree_id)
-
-    async def _raw_get_tree_root(self, tree_id: bytes32) -> Root:
-        generation = await self._raw_get_tree_generation(tree_id=tree_id)
-        cursor = await self.db.execute(
-            "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
-            {"tree_id": tree_id.hex(), "generation": generation},
-        )
-        [root_dict] = [row async for row in cursor]
+    async def get_tree_root(self, tree_id: bytes32, *, lock: bool = True) -> Root:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+            cursor = await self.db.execute(
+                "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation",
+                {"tree_id": tree_id.hex(), "generation": generation},
+            )
+            [root_dict] = [row async for row in cursor]
 
         return Root.from_row(row=root_dict)
 
-    async def get_heritage(self, node_hash: bytes32, tree_id: bytes32) -> List[Node]:
-        async with self.db_wrapper.locked_transaction():
-            root = await self._raw_get_tree_root(tree_id=tree_id)
+    async def get_heritage(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[Node]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            root = await self.get_tree_root(tree_id=tree_id, lock=False)
             assert root.node_hash
             assert root  # todo handle errors
             cursor = await self.db.execute(
@@ -163,36 +156,34 @@ class DataStore:
 
         return heritage
 
-    async def get_pairs(self, tree_id: bytes32) -> List[TerminalNode]:
-        async with self.db_wrapper.locked_transaction():
-            return await self._raw_get_pairs(tree_id=tree_id)
+    async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
-    async def _raw_get_pairs(self, tree_id: bytes32) -> List[TerminalNode]:
-        root = await self._raw_get_tree_root(tree_id=tree_id)
+            if root.node_hash is None:
+                return []
 
-        if root.node_hash is None:
-            return []
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
+                        SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
+                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                    )
+                SELECT * FROM tree_from_root_hash
+                WHERE node_type == :node_type
+                """,
+                {"root_hash": root.node_hash.hex(), "node_type": NodeType.TERMINAL},
+            )
 
-        cursor = await self.db.execute(
-            """
-            WITH RECURSIVE
-                tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
-                    SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
-                    UNION ALL
-                    SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
-                    WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
-                )
-            SELECT * FROM tree_from_root_hash
-            WHERE node_type == :node_type
-            """,
-            {"root_hash": root.node_hash.hex(), "node_type": NodeType.TERMINAL},
-        )
+            terminal_nodes: List[TerminalNode] = []
+            async for row in cursor:
+                node = row_to_node(row=row)
+                assert isinstance(node, TerminalNode)
+                terminal_nodes.append(node)
 
-        terminal_nodes: List[TerminalNode] = []
-        async for row in cursor:
-            node = row_to_node(row=row)
-            assert isinstance(node, TerminalNode)
-            terminal_nodes.append(node)
         return terminal_nodes
 
     # async def _insert_program(self, program: Program) -> bytes32:
@@ -234,12 +225,13 @@ class DataStore:
     #
     #     return node_hash
 
-    async def _raw_get_node_type(self, node_hash: bytes32) -> NodeType:
-        cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
-        raw_node_type = await cursor.fetchone()
-        # [node_type] = await cursor.fetchall()
-        # TODO: i'm pretty curious why this one fails...
-        # [node_type] = (NodeType(row["node_type"]) async for row in cursor)
+    async def get_node_type(self, node_hash: bytes32, *, lock: bool = True) -> NodeType:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+            raw_node_type = await cursor.fetchone()
+            # [node_type] = await cursor.fetchall()
+            # TODO: i'm pretty curious why this one fails...
+            # [node_type] = (NodeType(row["node_type"]) async for row in cursor)
 
         # TODO: real handling
         assert raw_node_type is not None
@@ -253,14 +245,16 @@ class DataStore:
         tree_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
+        *,
+        lock: bool = True,
     ) -> bytes32:
-        async with self.db_wrapper.locked_transaction():
-            was_empty = await self._raw_table_is_empty(tree_id=tree_id)
-            root = await self._raw_get_tree_root(tree_id=tree_id)
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
+            root = await self.get_tree_root(tree_id=tree_id, lock=False)
 
             if not was_empty:
                 # TODO: is there any way the db can enforce this?
-                pairs = await self._raw_get_pairs(tree_id=tree_id)
+                pairs = await self.get_pairs(tree_id=tree_id, lock=False)
                 if any(key == node.key for node in pairs):
                     # TODO: more specific exception
                     raise Exception("key already present")
@@ -269,7 +263,7 @@ class DataStore:
                 # TODO: tidy up and real exceptions
                 assert was_empty
             else:
-                reference_node_type = await self._raw_get_node_type(node_hash=reference_node_hash)
+                reference_node_type = await self.get_node_type(node_hash=reference_node_hash, lock=False)
                 if reference_node_type == NodeType.INTERNAL:
                     raise Exception("can not insert a new key/value on an internal node")
 
@@ -291,7 +285,7 @@ class DataStore:
                 },
             )
 
-            generation = await self._raw_get_tree_generation(tree_id=tree_id)
+            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
             if was_empty:
                 # TODO: a real exception
@@ -413,17 +407,13 @@ class DataStore:
 
         return new_terminal_node_hash
 
-    async def delete(
-        self,
-        key: Program,
-        tree_id: bytes32,
-    ) -> bool:
+    async def delete(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> bool:
         pass
-        # async with self.db_wrapper.locked_transaction():
+        # async with self.db_wrapper.locked_transaction(lock=lock):
         # todo delete from db
 
-    async def get_node_by_key(self, key: Program) -> TerminalNode:
-        async with self.db_wrapper.locked_transaction():
+    async def get_node_by_key(self, key: Program, *, lock: bool = True) -> TerminalNode:
+        async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key.as_bin()})
             row = await cursor.fetchone()
         assert row  # todo handle errors
@@ -431,8 +421,8 @@ class DataStore:
         assert isinstance(node, TerminalNode)
         return node
 
-    async def get_node_by_key_bytes(self, key: bytes32) -> TerminalNode:
-        async with self.db_wrapper.locked_transaction():
+    async def get_node_by_key_bytes(self, key: bytes32, *, lock: bool = True) -> TerminalNode:
+        async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key})
             row = await cursor.fetchone()
         assert row  # todo handle errors
@@ -440,19 +430,21 @@ class DataStore:
         assert isinstance(node, TerminalNode)
         return node
 
-    async def _raw_get_node(self, node_hash: bytes32) -> Node:
-        cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
-        row = await cursor.fetchone()
+    async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+            row = await cursor.fetchone()
+
         # TODO: really handle
         assert row is not None
 
         node = row_to_node(row=row)
         return node
 
-    async def get_tree_as_program(self, tree_id: bytes32) -> Program:
-        async with self.db_wrapper.locked_transaction():
-            root = await self._raw_get_tree_root(tree_id=tree_id)
-            root_node = await self._raw_get_node(node_hash=root.node_hash)
+    async def get_tree_as_program(self, tree_id: bytes32, *, lock: bool = True) -> Program:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            root_node = await self.get_node(node_hash=root.node_hash, lock=False)
 
             # await self.db.execute("SELECT * FROM node WHERE node.left ==
             # :hash OR node.right == :hash", {"hash": root_node.hash})

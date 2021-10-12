@@ -30,7 +30,12 @@ class DBWrapper:
         await self.db.commit()
 
     @contextlib.asynccontextmanager
-    async def locked_transaction(self):
+    async def locked_transaction(self, *, lock=True):
+        # TODO: look into contextvars perhaps instead of this manual lock tracking
+        if not lock:
+            yield
+            return
+
         # TODO: add a lock acquisition timeout
         #       maybe https://docs.python.org/3/library/asyncio-task.html#asyncio.wait_for
 
