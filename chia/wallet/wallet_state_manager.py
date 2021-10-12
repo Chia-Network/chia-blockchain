@@ -16,7 +16,6 @@ from cryptography.fernet import Fernet
 from chia import __version__
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution, CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -52,7 +51,6 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from chia.wallet.wallet_interested_store import WalletInterestedStore
-from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
@@ -114,7 +112,6 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
-    pool_store: WalletPoolStore
     weight_proof_handler: Any
     server: ChiaServer
     root_path: Path
@@ -163,7 +160,6 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
-        self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.blockchain = await WalletBlockchain.create(self.basic_store)
         await self.coin_store._clear_database()
         # await self.basic_store._clear_database()
@@ -199,12 +195,6 @@ class WalletStateManager:
                 wallet = await RLWallet.create(self, wallet_info)
             elif wallet_info.type == WalletType.DISTRIBUTED_ID:
                 wallet = await DIDWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_info.type == WalletType.POOLING_WALLET:
-                wallet = await PoolWallet.create_from_db(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -310,31 +300,6 @@ class WalletStateManager:
             for index in range(start_index, unused + to_generate):
                 if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
                     continue
-                # if WalletType(target_wallet.type()) == WalletType.RATE_LIMITED:
-                #     if target_wallet.rl_info.initialized is False:
-                #         break
-                #     wallet_type = target_wallet.rl_info.type
-                #     if wallet_type == "user":
-                #         rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
-                #     else:
-                #         rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.admin_pubkey)
-                #     rl_puzzle: Program = target_wallet.puzzle_for_pk(rl_pubkey)
-                #     puzzle_hash: bytes32 = rl_puzzle.get_tree_hash()
-                #
-                #     rl_index = self.get_derivation_index(rl_pubkey)
-                #     if rl_index == -1:
-                #         break
-                #
-                #     derivation_paths.append(
-                #         DerivationRecord(
-                #             uint32(rl_index),
-                #             puzzle_hash,
-                #             rl_pubkey,
-                #             target_wallet.type(),
-                #             uint32(target_wallet.id()),
-                #         )
-                #     )
-                #     break
 
                 # Hardened
                 pubkey: G1Element = self.get_public_key(uint32(index))
@@ -1006,17 +971,6 @@ class WalletStateManager:
             ]:
                 await self.tx_store.tx_reorged(record)
         self.tx_pending_changed()
-        # Removes wallets that were created from a blockchain transaction which got reorged.
-        remove_ids = []
-        for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == WalletType.POOLING_WALLET.value:
-                remove: bool = await wallet.rewind(height)
-                if remove:
-                    remove_ids.append(wallet_id)
-        for wallet_id in remove_ids:
-            await self.user_store.delete_wallet(wallet_id, in_transaction=True)
-            self.wallets.pop(wallet_id)
-            self.new_peak_callbacks.pop(wallet_id)
 
     async def close_all_stores(self) -> None:
         await self.db_connection.close()
@@ -1175,14 +1129,6 @@ class WalletStateManager:
                     if callback_str is not None:
                         callback = getattr(wallet, callback_str)
                         await callback(unwrapped, action.id)
-
-    async def get_next_interesting_coin_ids(self, spend: CoinSpend, in_transaction: bool) -> List[bytes32]:
-        pool_wallet_interested: List[bytes32] = PoolWallet.get_next_interesting_coin_ids(spend)
-        for coin_id in pool_wallet_interested:
-            await self.interested_store.add_interested_coin_id(coin_id, in_transaction)
-
-        await self.subscribe_to_coin_ids_update(pool_wallet_interested)
-        return pool_wallet_interested
 
     async def new_peak(self, peak: wallet_protocol.NewPeakWallet):
         await self.blockchain.set_peak_height(peak.height)
