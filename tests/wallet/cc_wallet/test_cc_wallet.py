@@ -201,7 +201,7 @@ class TestCCWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         colour = cc_wallet.get_colour()
-        cc_wallet.set_tail_program(bytes(cc_wallet.cc_info.my_genesis_checker).hex())
+        await cc_wallet.set_tail_program(bytes(cc_wallet.cc_info.my_genesis_checker).hex())
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cc_wallet
 
     @pytest.mark.asyncio
