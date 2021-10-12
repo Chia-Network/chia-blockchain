@@ -417,15 +417,15 @@ class WalletNode:
     async def subscribe_to_phs(self, puzzle_hashes, peer, height=uint32(0)):
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, height)
         all_state: Union[Optional, RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
-        # TODO validate state if received from untrusted peer
-        if all_state is not None:
+        # State for untrusted sync is processed only in wp sync | or short  sync backwards
+        if all_state is not None and self.is_trusted(peer):
             await self.handle_coin_state_change(all_state.coin_states)
 
     async def subscribe_to_coin_updates(self, coin_names, full_node, height=uint32(0)):
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
         all_coins_state: Optional[RespondToCoinUpdates] = await full_node.register_interest_in_coin(msg)
-        # TODO validate state if received from untrusted peer
-        if all_coins_state is not None:
+        # State for untrusted sync is processed only in wp sync | or short  sync backwards
+        if all_coins_state is not None and self.is_trusted(full_node):
             await self.handle_coin_state_change(all_coins_state.coin_states)
 
     async def get_coin_state(self, coin_names) -> List[CoinState]:
@@ -453,11 +453,14 @@ class WalletNode:
         assert coin_state is not None
         return coin_state.coin_states
 
+    def is_trusted(self, peer):
+        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+
     async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer):
         assert self.wallet_state_manager is not None
         assert self.server is not None
         async with self.wallet_state_manager.lock:
-            if self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
+            if self.is_trusted(peer):
                 await self.handle_coin_state_change(request.items, request.fork_height, request.height)
             else:
                 # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
@@ -724,6 +727,7 @@ class WalletNode:
                 header_block_records.append(hbr)
 
                 for added_coin in added_coins:
+                    self.log.info(f"coin added {added_coin}")
                     wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(added_coin.puzzle_hash)
                     if wallet_info is None:
                         continue
@@ -739,7 +743,18 @@ class WalletNode:
                         added_coin, block.height, all_outgoing, wallet_id, wallet_type, trade_additions
                     )
 
+                all_unconfirmed: List[
+                    TransactionRecord
+                ] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+
                 for removed_coin in removed_coins:
+                    self.log.info(f"coin removed {removed_coin}")
+                    for unconfirmed_record in all_unconfirmed:
+                        if removed_coin in unconfirmed_record.removals:
+                            self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
+                            await self.wallet_state_manager.tx_store.set_confirmed(
+                                unconfirmed_record.name, block.height
+                            )
                     record = await self.wallet_state_manager.coin_store.get_coin_record(removed_coin.name())
                     if record is None:
                         continue
