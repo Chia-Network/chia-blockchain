@@ -35,7 +35,7 @@
     )
   )
 
-  (defun-inline do_merkle_proof (leaf_content proof_of_inclusion)
+  (defun-inline calculate_merkle_root_for_merkle_proof (leaf_content proof_of_inclusion)
     (calculate_merkle_root
       (f proof_of_inclusion)
       (sha256tree leaf_content)
@@ -56,7 +56,7 @@
 
   (if spend_type
     ; CLAIM
-    (assert (= current_root (do_merkle_proof K_V_PAIR_NEEDED inclusion_proof))  ; current root is validated in assert_puzzle_announcement below
+    (assert (= current_root (calculate_merkle_root_for_merkle_proof K_V_PAIR_NEEDED inclusion_proof))  ; current root is validated in assert_puzzle_announcement below
       (c (list CREATE_COIN CLAIM_TARGET my_amount) (c (list ASSERT_MY_AMOUNT my_amount) (list (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_db_current_puzzlehash DB_SINGLETON_STRUCT DB_LAYER_MOD_HASH current_root singleton_innerpuz_hash) current_root)))))
     )
     ; RECOVER
