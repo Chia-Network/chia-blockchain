@@ -30,7 +30,9 @@ def api_request(f):
                     continue
                 if hasattr(f, "bytes_required"):
                     inter[f"{param_name}_bytes"] = inter[param_name]
-                inter[param_name] = param_class.from_bytes(inter[param_name])
+                inter[param_name] = param_class.from_bytes(
+                    inter[param_name],
+                )
         return f(**inter)
 
     setattr(f_substitute, "api_function", True)

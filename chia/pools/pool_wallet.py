@@ -872,8 +872,10 @@ class PoolWallet:
     async def get_spendable_balance(self, record_list=None) -> uint64:
         return await self.get_confirmed_balance(record_list)
 
-    async def get_pending_change_balance(self) -> uint64:
+    @staticmethod
+    async def get_pending_change_balance() -> uint64:
         return uint64(0)
 
-    async def get_max_send_amount(self, record_list=None) -> uint64:
+    @staticmethod
+    async def get_max_send_amount(record_list=None) -> uint64:
         return uint64(0)

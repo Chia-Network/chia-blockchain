@@ -60,7 +60,8 @@ class WalletTool:
                     return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    @staticmethod
+    def puzzle_for_pk(pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
     def get_new_puzzle(self) -> bytes32:
@@ -81,7 +82,8 @@ class WalletTool:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
         return AugSchemeMPL.sign(privatekey, value)
 
-    def make_solution(self, condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]]) -> Program:
+    @staticmethod
+    def make_solution(condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]]) -> Program:
         ret = []
 
         for con_list in condition_dic.values():

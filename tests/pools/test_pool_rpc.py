@@ -133,13 +133,15 @@ class TestPoolWalletRpc:
             rpc_cleanup,
         )
 
-    async def get_total_block_rewards(self, num_blocks):
+    @staticmethod
+    async def get_total_block_rewards(num_blocks):
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
         return funds
 
-    async def farm_blocks(self, full_node_api, ph: bytes32, num_blocks: int):
+    @staticmethod
+    async def farm_blocks(full_node_api, ph: bytes32, num_blocks: int):
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         return num_blocks

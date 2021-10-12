@@ -50,7 +50,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 
 log = logging.getLogger(__name__)
-bad_element = ClassgroupElement.from_bytes(b"\x00")
+bad_element = ClassgroupElement.from_bytes(b"\x00", )
 
 
 @pytest.fixture(scope="session")
@@ -464,7 +464,8 @@ class TestBlockHeaderValidation:
         assert result == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.SHOULD_NOT_HAVE_ICC
 
-    async def do_test_invalid_icc_sub_slot_vdf(self, keychain):
+    @staticmethod
+    async def do_test_invalid_icc_sub_slot_vdf(keychain):
         bt_high_iters = await create_block_tools_async(
             constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14)),
             keychain=keychain,

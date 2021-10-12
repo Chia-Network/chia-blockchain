@@ -189,7 +189,7 @@ class AddressManagerStore:
 
         # address_manager.tried_count -= lost_count
         for node_id, bucket in new_table_entries:
-            if node_id >= 0 and node_id < address_manager.new_count:
+            if 0 <= node_id < address_manager.new_count:
                 info = address_manager.map_info[node_id]
                 bucket_pos = info.get_bucket_position(address_manager.key, True, bucket)
                 if address_manager.new_matrix[bucket][bucket_pos] == -1 and info.ref_count < NEW_BUCKETS_PER_ADDRESS:

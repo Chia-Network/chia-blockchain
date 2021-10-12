@@ -19,6 +19,7 @@ DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 
 class DumpKeyring(FileKeyring):  # lgtm [py/missing-call-to-init]
     def __init__(self, keyring_file: Path):
+        super().__init__()
         self.keyring_path = keyring_file
         self.payload_cache = {}
         self.load_keyring_lock = threading.RLock()

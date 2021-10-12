@@ -26,10 +26,15 @@ def trade_status_ui_string(status: TradeStatus):
 
 def trade_record_to_dict(record: TradeRecord) -> Dict:
     """Convenience function to return only part of trade record we care about and show correct status to the ui"""
-    result = {"trade_id": record.trade_id.hex(), "sent": record.sent, "my_offer": record.my_offer,
-              "created_at_time": record.created_at_time, "accepted_at_time": record.accepted_at_time,
-              "confirmed_at_index": record.confirmed_at_index,
-              "status": trade_status_ui_string(TradeStatus(record.status))}
+    result = {
+        "trade_id": record.trade_id.hex(),
+        "sent": record.sent,
+        "my_offer": record.my_offer,
+        "created_at_time": record.created_at_time,
+        "accepted_at_time": record.accepted_at_time,
+        "confirmed_at_index": record.confirmed_at_index,
+        "status": trade_status_ui_string(TradeStatus(record.status)),
+    }
     success, offer_dict, error = get_discrepancies_for_spend_bundle(record.spend_bundle)
     if success is False or offer_dict is None:
         raise ValueError(error)

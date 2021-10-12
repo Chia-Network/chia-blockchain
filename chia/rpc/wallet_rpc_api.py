@@ -113,7 +113,8 @@ class WalletRpcApi:
             "/pw_status": self.pw_status,
         }
 
-    async def _state_changed(self, *args) -> List[WsRpcMessage]:
+    @staticmethod
+    async def _state_changed(*args) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
@@ -236,7 +237,8 @@ class WalletRpcApi:
             }
         return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
-    async def generate_mnemonic(self, request: Dict):
+    @staticmethod
+    async def generate_mnemonic(request: Dict):
         return {"mnemonic": generate_mnemonic().split(" ")}
 
     async def add_key(self, request):
@@ -295,9 +297,8 @@ class WalletRpcApi:
             path.unlink()
         return {}
 
-    async def _check_key_used_for_rewards(
-        self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
-    ) -> Tuple[bool, bool]:
+    @staticmethod
+    async def _check_key_used_for_rewards(new_root: Path, sk: PrivateKey, max_ph_to_search: int) -> Tuple[bool, bool]:
         """Checks if the given key is used for either the farmer rewards or pool rewards
         returns a tuple of two booleans
         The first is true if the key is used as the Farmer rewards, otherwise false
@@ -686,7 +687,8 @@ class WalletRpcApi:
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
-    async def get_initial_freeze_period(self, _: Dict):
+    @staticmethod
+    async def get_initial_freeze_period(_: Dict):
         # Mon May 03 2021 17:00:00 GMT+0000
         return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 

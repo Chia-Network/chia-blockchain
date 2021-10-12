@@ -328,7 +328,7 @@ class TestStreamable(unittest.TestCase):
             b: bytes
 
             @classmethod
-            def from_bytes(self, b):
+            def from_bytes(cls, b):
                 ret = TestFromBytes()
                 ret.b = b
                 return ret
@@ -341,7 +341,7 @@ class TestStreamable(unittest.TestCase):
 
         class FailFromBytes:
             @classmethod
-            def from_bytes(self, b):
+            def from_bytes(cls, b):
                 raise ValueError()
 
         # error in underlying type

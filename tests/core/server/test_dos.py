@@ -45,7 +45,8 @@ async def setup_two_nodes():
 
 
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg):
+    @staticmethod
+    def process_msg_and_check(msg):
         return True
 
 

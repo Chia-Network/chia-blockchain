@@ -437,7 +437,7 @@ class MempoolManager:
         log.log(
             logging.WARNING if now - start_time > 1 else logging.DEBUG,
             f"add_spendbundle {spend_name} took {now - start_time:0.2f} seconds. "
-            f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
+            f"Cost: {cost} ({round(100.0 * float(cost)/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None

@@ -73,7 +73,8 @@ class FullNodeRpcApi:
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
-    async def get_initial_freeze_period(self, _: Dict):
+    @staticmethod
+    async def get_initial_freeze_period(_: Dict):
         # Mon May 03 2021 17:00:00 GMT+0000
         return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 
@@ -420,14 +421,12 @@ class FullNodeRpcApi:
         """
         if "puzzle_hash" not in request:
             raise ValueError("Puzzle hash not in request")
-        kwargs: Dict[str, Any] = {"include_spent_coins": False, "puzzle_hash": hexstr_to_bytes(request["puzzle_hash"])}
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
-
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
+        kwargs: Dict[str, Any] = {
+            "include_spent_coins": request.get("include_spent_coins", False),
+            "puzzle_hash": hexstr_to_bytes(request["puzzle_hash"]),
+            "start_height": uint32(request.get("start_height", None)),
+            "end_height": uint32(request.get("end_height", None)),
+        }
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
@@ -440,16 +439,11 @@ class FullNodeRpcApi:
         if "puzzle_hashes" not in request:
             raise ValueError("Puzzle hashes not in request")
         kwargs: Dict[str, Any] = {
-            "include_spent_coins": False,
+            "include_spent_coins": request.get("include_spent_coins", False),
             "puzzle_hashes": [hexstr_to_bytes(ph) for ph in request["puzzle_hashes"]],
+            "start_height": uint32(request.get("start_height", None)),
+            "end_height": uint32(request.get("end_height", None)),
         }
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
-
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
@@ -476,16 +470,11 @@ class FullNodeRpcApi:
         if "names" not in request:
             raise ValueError("Names not in request")
         kwargs: Dict[str, Any] = {
-            "include_spent_coins": False,
+            "include_spent_coins": request.get("include_spent_coins", False),
             "names": [hexstr_to_bytes(name) for name in request["names"]],
+            "start_height": uint32(request.get("start_height", None)),
+            "end_height": uint32(request.get("end_height", None)),
         }
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
-
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
@@ -498,16 +487,11 @@ class FullNodeRpcApi:
         if "parent_ids" not in request:
             raise ValueError("Parent IDs not in request")
         kwargs: Dict[str, Any] = {
-            "include_spent_coins": False,
+            "include_spent_coins": request.get("include_spent_coins", False),
             "parent_ids": [hexstr_to_bytes(ph) for ph in request["parent_ids"]],
+            "start_height": uint32(request.get("start_height", None)),
+            "end_height": uint32(request.get("end_height", None)),
         }
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
-
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 

@@ -1805,8 +1805,9 @@ class FullNode:
                 )
         return status, error
 
+    @staticmethod
     async def _needs_compact_proof(
-        self, vdf_info: VDFInfo, header_block: HeaderBlock, field_vdf: CompressibleVDFField
+        vdf_info: VDFInfo, header_block: HeaderBlock, field_vdf: CompressibleVDFField
     ) -> bool:
         if field_vdf == CompressibleVDFField.CC_EOS_VDF:
             for sub_slot in header_block.finished_sub_slots:

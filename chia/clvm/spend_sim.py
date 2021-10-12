@@ -52,7 +52,6 @@ class SimBlockRecord:
 
 
 class SpendSim:
-
     connection: aiosqlite.Connection
     mempool_manager: MempoolManager
     block_records: List[SimBlockRecord]
@@ -99,11 +98,18 @@ class SpendSim:
 
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])),
+                bytes32(bytes.fromhex(row[5])),
+                uint64.from_bytes(
+                    row[7],
+                ),
+            )
             coins.add(coin)
         return list(coins)
 
-    async def generate_transaction_generator(self, bundle: Optional[SpendBundle]) -> Optional[BlockGenerator]:
+    @staticmethod
+    async def generate_transaction_generator(bundle: Optional[SpendBundle]) -> Optional[BlockGenerator]:
         if bundle is None:
             return None
         return simple_solution_generator(bundle)
@@ -137,7 +143,7 @@ class SpendSim:
         generator_bundle: Optional[SpendBundle] = None
         return_additions: List[Coin] = []
         return_removals: List[Coin] = []
-        if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
+        if (len(self.block_records) > 0) and self.mempool_manager.mempool.spends:
             peak = self.mempool_manager.peak
             if peak is not None:
                 result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash)

@@ -47,11 +47,11 @@ class uint128(int):
         read_bytes = f.read(16)
         assert len(read_bytes) == 16
         n = int.from_bytes(read_bytes, "big", signed=False)
-        assert n <= (2 ** 128) - 1 and n >= 0
+        assert (2 ** 128) - 1 >= n >= 0
         return cls(n)
 
     def stream(self, f):
-        assert self <= (2 ** 128) - 1 and self >= 0
+        assert (2 ** 128) - 1 >= self >= 0
         f.write(self.to_bytes(16, "big", signed=False))
 
 
@@ -71,9 +71,9 @@ class int512(int):
         read_bytes = f.read(65)
         assert len(read_bytes) == 65
         n = int.from_bytes(read_bytes, "big", signed=True)
-        assert n < (2 ** 512) and n > -(2 ** 512)
+        assert (2 ** 512) > n > -(2 ** 512)
         return cls(n)
 
     def stream(self, f):
-        assert self < (2 ** 512) and self > -(2 ** 512)
+        assert (2 ** 512) > self > -(2 ** 512)
         f.write(self.to_bytes(65, "big", signed=True))

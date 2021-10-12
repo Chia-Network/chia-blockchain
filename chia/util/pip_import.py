@@ -1,4 +1,4 @@
-"Import a package and install it with PIP if it doesn't exist."
+"""Import a package and install it with PIP if it doesn't exist."""
 
 import subprocess
 import sys

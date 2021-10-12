@@ -501,7 +501,7 @@ class TestWalletSimulator:
 
         # extract coin_spend from generated spend_bundle
         for cs in tx.spend_bundle.coin_spends:
-            if cs.additions() == []:
+            if not cs.additions():
                 stolen_cs = cs
         # get a legit signature
         stolen_sb = await wallet.sign_transaction([stolen_cs])

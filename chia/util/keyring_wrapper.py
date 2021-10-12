@@ -286,7 +286,8 @@ class KeyringWrapper:
         """
         self.set_master_passphrase(current_passphrase, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE)
 
-    def save_master_passphrase_to_credential_store(self, passphrase: str) -> None:
+    @staticmethod
+    def save_master_passphrase_to_credential_store(passphrase: str) -> None:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
@@ -296,7 +297,8 @@ class KeyringWrapper:
                     raise e
         return None
 
-    def remove_master_passphrase_from_credential_store(self) -> None:
+    @staticmethod
+    def remove_master_passphrase_from_credential_store() -> None:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
@@ -312,7 +314,8 @@ class KeyringWrapper:
                     raise e
         return None
 
-    def get_master_passphrase_from_credential_store(self) -> Optional[str]:
+    @staticmethod
+    def get_master_passphrase_from_credential_store() -> Optional[str]:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
@@ -423,7 +426,6 @@ class KeyringWrapper:
 
         # Stop using the legacy keyring. This will direct subsequent reads to the new keyring.
         self.legacy_keyring = None
-        success: bool = False
 
         print("Verifying migration results...", end="")
 
@@ -451,7 +453,8 @@ class KeyringWrapper:
 
         return success
 
-    def confirm_legacy_keyring_cleanup(self, migration_results) -> bool:
+    @staticmethod
+    def confirm_legacy_keyring_cleanup(migration_results) -> bool:
         """
         Ask the user whether we should remove keys from the legacy keyring. In the case
         of CryptFileKeyring, we can't just delete the file because other python processes
@@ -475,7 +478,8 @@ class KeyringWrapper:
         prompt += " (y/n) "
         return prompt_yes_no(prompt)
 
-    def cleanup_legacy_keyring(self, migration_results: MigrationResults):
+    @staticmethod
+    def cleanup_legacy_keyring(migration_results: MigrationResults):
         for user in migration_results.keychain_users:
             migration_results.legacy_keyring.delete_password(migration_results.keychain_service, user)
 

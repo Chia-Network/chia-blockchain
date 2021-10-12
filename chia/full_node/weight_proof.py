@@ -439,8 +439,8 @@ class WeightProofHandler:
 
         return sub_slots_data, first_rc_end_of_slot_vdf
 
+    @staticmethod
     def first_rc_end_of_slot_vdf(
-        self,
         header_block,
         blocks: Dict[bytes32, BlockRecord],
         header_blocks: Dict[bytes32, HeaderBlock],
@@ -808,8 +808,7 @@ def handle_end_of_slot(
 
 
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
-    compressed_segments = []
-    compressed_segments.append(segments[0])
+    compressed_segments = [segments[0]]
     for idx, segment in enumerate(segments[1:]):
         if idx != full_segment_index:
             # remove all redundant values

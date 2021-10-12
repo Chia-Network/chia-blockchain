@@ -78,7 +78,9 @@ def dataclass_from_dict(klass, d):
         return klass(hexstr_to_bytes(d))
     elif klass.__name__ in unhashable_types:
         # Type is unhashable (bls type), so cast from hex string
-        return klass.from_bytes(hexstr_to_bytes(d))
+        return klass.from_bytes(
+            hexstr_to_bytes(d),
+        )
     else:
         # Type is a primitive, cast with correct class
         return klass(d)

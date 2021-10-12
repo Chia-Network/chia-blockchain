@@ -72,7 +72,7 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
-    async def stop_service(self, service_name: str, delay_before_kill: int = 15) -> WsRpcMessage:
+    async def stop_service(self, service_name: str) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("stop_service", data)
         response = await self._get(request)

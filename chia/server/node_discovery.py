@@ -184,7 +184,8 @@ class FullNodeDiscovery:
     (https://en.wikipedia.org/wiki/Poisson_distribution)
     """
 
-    def _poisson_next_send(self, now, avg_interval_seconds, random):
+    @staticmethod
+    def _poisson_next_send(now, avg_interval_seconds, random):
         return now + (
             math.log(random.randrange(1 << 48) * -0.0000000000000035527136788 + 1) * avg_interval_seconds * -1000000.0
             + 0.5

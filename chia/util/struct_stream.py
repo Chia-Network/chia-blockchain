@@ -34,7 +34,7 @@ class StructStream(int):
         f.write(struct.pack(self.PACK, self))
 
     @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:  # type: ignore
+    def from_bytes(cls: Any, blob: bytes, **kwargs) -> Any:  # type: ignore
         f = io.BytesIO(blob)
         result = cls.parse(f)
         assert f.read() == b""

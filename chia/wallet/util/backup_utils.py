@@ -53,9 +53,13 @@ def get_backup_info(file_path, private_key):
     info_dict = {}
     wallets = []
     for wallet_info in wallet_list_json:
-        wallet = {"name": wallet_info["name"], "type": wallet_info["type"],
-                  "type_name": WalletType(wallet_info["type"]).name, "id": wallet_info["id"],
-                  "data": wallet_info["data"]}
+        wallet = {
+            "name": wallet_info["name"],
+            "type": wallet_info["type"],
+            "type_name": WalletType(wallet_info["type"]).name,
+            "id": wallet_info["id"],
+            "data": wallet_info["data"],
+        }
         wallets.append(wallet)
 
     info_dict["version"] = data["version"]

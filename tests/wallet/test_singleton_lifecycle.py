@@ -58,17 +58,11 @@ def launcher_conditions_and_spend_bundle(
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     expected_announcement = Announcement(launcher_coin.name(), message_program.get_tree_hash())
-    expected_conditions = []
-    expected_conditions.append(
-        Program.to(
-            binutils.assemble(f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.name()})")
-        )
-    )
-    expected_conditions.append(
-        Program.to(
-            binutils.assemble(f"(0x{ConditionOpcode.CREATE_COIN.hex()} 0x{launcher_puzzle_hash} {launcher_amount})")
-        )
-    )
+    expected_conditions = [Program.to(
+        binutils.assemble(f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.name()})")
+    ), Program.to(
+        binutils.assemble(f"(0x{ConditionOpcode.CREATE_COIN.hex()} 0x{launcher_puzzle_hash} {launcher_amount})")
+    )]
     launcher_solution = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     coin_spend = CoinSpend(launcher_coin, launcher_puzzle, launcher_solution)
     spend_bundle = SpendBundle([coin_spend], G2Element())

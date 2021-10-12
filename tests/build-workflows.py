@@ -34,7 +34,6 @@ def dir_config(dir):
 def read_file(filename):
     with open(filename) as f:
         return f.read()
-    return None
 
 
 # Input file

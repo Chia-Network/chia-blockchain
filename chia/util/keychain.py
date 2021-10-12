@@ -14,7 +14,6 @@ from secrets import token_bytes
 from time import sleep
 from typing import Any, Dict, List, Optional, Tuple
 
-
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8

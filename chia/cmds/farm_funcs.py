@@ -101,7 +101,6 @@ async def get_average_block_time(rpc_port: Optional[int]) -> float:
 
 
 async def get_wallets_stats(wallet_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    amounts = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]

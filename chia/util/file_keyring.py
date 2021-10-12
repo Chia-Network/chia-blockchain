@@ -17,7 +17,6 @@ from typing import Optional
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-
 SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
 HASH_ITERS = 100000  # PBKDF2 param
@@ -237,7 +236,7 @@ class FileKeyring(FileSystemEventHandler):
             return self._inner_get_password(service, user)
 
     @loads_keyring
-    def _inner_set_password(self, service: str, user: str, passphrase: str, *args, **kwargs):
+    def _inner_set_password(self, service: str, user: str, passphrase: str):
         keys = self.ensure_cached_keys_dict()
         # Convert the passphrase to a string (if necessary)
         passphrase = bytes(passphrase).hex() if type(passphrase) == bytes else str(passphrase)  # type: ignore
@@ -306,7 +305,8 @@ class FileKeyring(FileSystemEventHandler):
             return False
         return self.have_valid_checkbytes(decrypted_data)
 
-    def have_valid_checkbytes(self, decrypted_data: bytes) -> bool:
+    @staticmethod
+    def have_valid_checkbytes(decrypted_data: bytes) -> bool:
         checkbytes = decrypted_data[: len(CHECKBYTES_VALUE)]
         return checkbytes == CHECKBYTES_VALUE
 
@@ -326,12 +326,14 @@ class FileKeyring(FileSystemEventHandler):
 
         return FileKeyring.symmetric_key_from_passphrase(passphrase, salt)
 
-    def encrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
+    @staticmethod
+    def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         encryptor = ChaCha20Poly1305(key)
         data = encryptor.encrypt(nonce, input_data, None)
         return data
 
-    def decrypt_data(self, input_data: bytes, key: bytes, nonce: bytes) -> bytes:
+    @staticmethod
+    def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
         decryptor = ChaCha20Poly1305(key)
         output = decryptor.decrypt(nonce, input_data, None)
         return output
@@ -369,7 +371,6 @@ class FileKeyring(FileSystemEventHandler):
 
         salt = bytes.fromhex(salt_str)
         nonce = bytes.fromhex(nonce_str)
-        key = None
 
         if passphrase:
             key = FileKeyring.symmetric_key_from_passphrase(passphrase, salt)
@@ -393,7 +394,6 @@ class FileKeyring(FileSystemEventHandler):
         inner_payload = self.payload_cache
         inner_payload_yaml = yaml.safe_dump(inner_payload)
         nonce = FileKeyring.generate_nonce()
-        key = None
 
         # Update the salt when changing the master passphrase or when the keyring is new (empty)
         if fresh_salt or not self.salt:

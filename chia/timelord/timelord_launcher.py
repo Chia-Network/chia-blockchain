@@ -63,7 +63,7 @@ async def spawn_process(host: str, port: int, counter: int):
                 env={"PATH": dirname},
             )
         except Exception as e:
-            log.warning(f"Exception while spawning process {counter}: {(e)}")
+            log.warning(f"Exception while spawning process {counter}: {e}")
             continue
         async with lock:
             active_processes.append(proc)

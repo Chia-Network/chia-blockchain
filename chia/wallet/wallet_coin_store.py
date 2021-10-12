@@ -135,7 +135,13 @@ class WalletCoinStore:
 
     @staticmethod
     def coin_record_from_row(row: sqlite3.Row) -> WalletCoinRecord:
-        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+        coin = Coin(
+            bytes32(bytes.fromhex(row[6])),
+            bytes32(bytes.fromhex(row[5])),
+            uint64.from_bytes(
+                row[7],
+            ),
+        )
         return WalletCoinRecord(
             coin, uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
         )
