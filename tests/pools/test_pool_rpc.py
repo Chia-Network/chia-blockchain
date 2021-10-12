@@ -20,7 +20,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from tests.block_tools import get_plot_dir, get_plot_tmp_dir
+from tests.block_tools import get_plot_dir
 from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
