@@ -1,0 +1,65 @@
+(mod (
+  DB_LAYER_MOD_HASH
+  DB_SINGLETON_STRUCT  ; (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+  K_V_PAIR_NEEDED
+  CLAIM_TARGET
+  RECOVERY_TARGET
+  RECOVERY_TIMELOCK
+  spend_type
+  my_amount
+  singleton_innerpuz_hash
+  current_root
+  inclusion_proof
+  )
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun calculate_merkle_root (path starting_point additional_steps)
+    (if additional_steps
+      (calculate_merkle_root
+        (lsh path -1)
+        (if (logand path 1)
+          (tree_branch_hash
+            (f additional_steps)
+            starting_point
+          )
+          (tree_branch_hash
+            starting_point
+            (f additional_steps)
+          )
+        )
+        (r additional_steps)
+      )
+      starting_point
+    )
+  )
+
+  ; This could maybe be curried in for flexibility
+  (defun do_merkle_proof (inner_puzzle_hash current_root proof_of_inclusion)
+    (calculate_merkle_root
+      (f proof_of_inclusion)
+      (tree_node_hash inner_puzzle_hash)
+      (if (r proof_of_inclusion) (f (r proof_of_inclusion)) ())
+    )
+  )
+
+  (defun-inline calculate_db_current_puzzlehash (DB_SINGLETON_STRUCT DB_LAYER_MOD_HASH current_root singleton_innerpuz_hash)
+    (puzzle-hash-of-curried-function (f DB_SINGLETON_STRUCT)
+        (puzzle-hash-of-curried-function DB_LAYER_MOD_HASH
+                                         singleton_innerpuz_hash
+                                         (sha256 1 current_root)
+                                         (sha256 1 DB_LAYER_MOD_HASH)
+        )
+        (sha256tree1 DB_SINGLETON_STRUCT)
+    )
+  )
+
+  (if spend_type
+    ; CLAIM
+    (assert (= current_root (calculate_merkle_root ))  ; current root is validated in assert_puzzle_announcement below
+      (c (list CREATE_COIN CLAIM_TARGET my_amount) (c (list ASSERT_MY_AMOUNT my_amount) (list (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_db_current_puzzlehash DB_SINGLETON_STRUCT DB_LAYER_MOD_HASH current_root singleton_innerpuz_hash) current_root)))))
+    )
+    ; RECOVER
+    (list (list CREATE_COIN RECOVERY_TARGET my_amount) (list ASSERT_MY_AMOUNT my_amount) (list ASSERT_SECONDS_RELATIVE RECOVERY_TIMELOCK))
+  )
+)
