@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -euo pipefail
+
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined.
 # If the env variable NOTARIZE and the username and password variables are
@@ -44,16 +47,25 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
+# sets the version for chia-blockchain in package.json
+brew install jq
+cp package.json package.json.orig
+jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
+
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
+
+# reset the package.json to the original
+mv package.json.orig package.json
+
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-packager failed!"
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" ]; then
+if [ "$NOTARIZE" == true ]; then
   electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
   --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
@@ -79,7 +91,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" ]; then
+if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
 	cd final_installer || exit
   notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \

@@ -1,21 +1,20 @@
 import logging
-import unittest
+import pytest
 
 from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from pathlib import Path
+from sys import platform
 from tests.util.keyring import using_temp_file_keyring, using_temp_file_keyring_and_cryptfilekeyring
 
 log = logging.getLogger(__name__)
 
 
-class TestKeyringWrapper(unittest.TestCase):
-    def setUp(self) -> None:
-        return super().setUp()
-
-    def tearDown(self) -> None:
+class TestKeyringWrapper:
+    @pytest.fixture(autouse=True, scope="function")
+    def setup_keyring_wrapper(self):
+        yield
         KeyringWrapper.cleanup_shared_instance()
         assert KeyringWrapper.get_shared_instance(create_if_necessary=False) is None
-        return super().tearDown()
 
     def test_shared_instance(self):
         """
@@ -39,12 +38,16 @@ class TestKeyringWrapper(unittest.TestCase):
 
     # When: creating a new file keyring with a legacy keyring in place
     @using_temp_file_keyring_and_cryptfilekeyring()
-    def test_using_legacy_keyring(self):
+    def test_using_legacy_cryptfilekeyring(self):
         """
         In the case that an existing CryptFileKeyring (legacy) keyring exists and we're
         creating a new FileKeyring, the legacy keyring's use should be prioritized over
         the FileKeyring (until migration is triggered by a write to the keyring.)
         """
+
+        if platform != "linux":
+            return
+
         # Expect: the new keyring should not have content (not actually empty though...)
         assert KeyringWrapper.get_shared_instance().keyring.has_content() is False
         assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).exists() is True

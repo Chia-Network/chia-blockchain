@@ -524,6 +524,75 @@ class TestFullNodeProtocol:
         )
 
     @pytest.mark.asyncio
+    async def test_respond_end_of_sub_slot_no_reorg(self, wallet_nodes):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
+
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        # First get two blocks in the same sub slot
+        blocks = await full_node_1.get_all_full_blocks()
+        saved_seed = b""
+        for i in range(0, 9999999):
+            blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, skip_slots=1, seed=i.to_bytes(4, "big"))
+            if len(blocks[-1].finished_sub_slots) == 0:
+                saved_seed = i.to_bytes(4, "big")
+                break
+
+        # Then create a fork after the first block.
+        blocks_alt_1 = bt.get_consecutive_blocks(1, block_list_input=blocks[:-1], skip_slots=1)
+        for slot in blocks[-1].finished_sub_slots[:-2]:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        # Add all blocks
+        for block in blocks:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
+
+        original_ss = full_node_1.full_node.full_node_store.finished_sub_slots[:]
+
+        # Add subslot for first alternative
+        for slot in blocks_alt_1[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        assert full_node_1.full_node.full_node_store.finished_sub_slots == original_ss
+
+    @pytest.mark.asyncio
+    async def test_respond_end_of_sub_slot_race(self, wallet_nodes):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
+
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        # First get two blocks in the same sub slot
+        blocks = await full_node_1.get_all_full_blocks()
+        saved_seed = b""
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+
+        original_ss = full_node_1.full_node.full_node_store.finished_sub_slots[:].copy()
+        # Add the block
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
+
+        # Replace with original SS in order to imitate race condition (block added but subslot not yet added)
+        full_node_1.full_node.full_node_store.finished_sub_slots = original_ss
+
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+    @pytest.mark.asyncio
     async def test_respond_unfinished(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
@@ -772,7 +841,9 @@ class TestFullNodeProtocol:
                 condition_dic=conditions_dict,
             )
             assert spend_bundle is not None
-            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
+            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
+                spend_bundle, spend_bundle.name()
+            )
             log.info(f"Cost result: {cost_result.clvm_cost}")
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
@@ -1385,7 +1456,7 @@ class TestFullNodeProtocol:
         invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
         invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
 
-        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(invalid_block)
+        result, error, fork_h, _ = await full_node_1.full_node.blockchain.receive_block(invalid_block)
         assert error is not None
         assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
 

@@ -10,6 +10,7 @@ import pytest
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
 
@@ -44,7 +45,8 @@ class TestBlockStore:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants)
+        hint_store = await HintStore.create(db_wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store)
 
         store = await BlockStore.create(db_wrapper)
         await BlockStore.create(db_wrapper_2)
@@ -105,7 +107,8 @@ class TestBlockStore:
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants)
+        hint_store = await HintStore.create(wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store)
         block_records = []
         for block in blocks:
             await bc.receive_block(block)

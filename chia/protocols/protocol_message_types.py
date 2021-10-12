@@ -86,3 +86,14 @@ class ProtocolMessageTypes(Enum):
     new_signage_point_harvester = 66
     request_plots = 67
     respond_plots = 68
+
+    # More wallet protocol
+    coin_state_update = 69
+    register_interest_in_puzzle_hash = 70
+    respond_to_ph_update = 71
+    register_interest_in_coin = 72
+    respond_to_coin_update = 73
+    request_children = 74
+    respond_children = 75
+    request_ses_hashes = 76
+    respond_ses_hashes = 77
