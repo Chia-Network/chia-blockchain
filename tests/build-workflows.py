@@ -75,7 +75,9 @@ default_replacements = {
     "PYTEST_PARALLEL_ARGS": "",
 }
 
+
 # -----
+
 def collapse_dirs(files):
     result_set = set([])
     for f in files:
