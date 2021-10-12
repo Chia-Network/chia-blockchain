@@ -102,7 +102,7 @@ jobs:
             pip install --upgrade pip && \
             pip install wheel && \
             pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2 && \
-            pip install . --extra-index-url https://pypi.chia.net/simple/ && \
+            pip install -e . --extra-index-url https://pypi.chia.net/simple/ && \
             ldd --version && \
             cd build_scripts && \
             sh build_linux_deb.sh arm64 \
