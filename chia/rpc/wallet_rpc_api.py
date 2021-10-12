@@ -624,7 +624,6 @@ class WalletRpcApi:
             unconfirmed_removals: Dict[
                 bytes32, Coin
             ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
-
         wallet_balance = {
             "wallet_id": wallet_id,
             "confirmed_wallet_balance": balance,
@@ -818,7 +817,9 @@ class WalletRpcApi:
         else:
             fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee, memos=[memos])
+            tx: TransactionRecord = await wallet.generate_signed_transaction(
+                [amount], [puzzle_hash], fee, memos=[memos]
+            )
             await wallet.standard_wallet.push_transaction(tx)
 
         return {
