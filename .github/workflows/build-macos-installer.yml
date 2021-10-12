@@ -87,11 +87,23 @@ jobs:
         p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
+    # Get the most recent release from chia-plotter-madmax
+    - uses: actions/github-script@v4
+      id: 'latest-madmax'
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        result-encoding: string
+        script: |
+          const releases = await github.repos.listReleases({
+            owner: 'Chia-Network',
+            repo: 'chia-plotter-madmax',
+          });
+          return releases.data[0].tag_name;
+
     - name: Get latest madmax plotter
       run: |
-        # testing from s3 for now, for PoC
         mkdir "$GITHUB_WORKSPACE/madmax"
-        wget -P "$GITHUB_WORKSPACE/madmax/" https://download-chia-net.s3.us-west-2.amazonaws.com/madmax-test/chia_plot
+        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-tag.outputs.result }}/chia_plot-${{ steps.latest-tag.outputs.result }}-macos-intel
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
 
     - name: Run install script
