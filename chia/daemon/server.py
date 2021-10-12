@@ -466,7 +466,7 @@ class WebSocketServer:
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
         new_passphrase: Optional[str] = None
-        passphrase_hint: Optional[str] = None
+        passphrase_hint: Optional[str] = request.get("passphrase_hint", None)
         save_passphrase: bool = request.get("save_passphrase", False)
 
         if using_default_passphrase():
@@ -485,8 +485,6 @@ class WebSocketServer:
             return {"success": False, "error": "passphrase doesn't satisfy requirements"}
 
         try:
-            passphrase_hint = request.get("passphrase_hint", None)
-
             assert new_passphrase is not None  # mypy, I love you
             Keychain.set_master_passphrase(
                 current_passphrase,
