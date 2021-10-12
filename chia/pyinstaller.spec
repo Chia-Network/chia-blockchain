@@ -101,6 +101,10 @@ if THIS_IS_WINDOWS:
             "C:\\Windows\\System32\\vcruntime140_1.dll",
             ".",
         ),
+        (
+            f"{ROOT}\\madmax\\chia_plot",
+            "madmax"
+        ),
     ]
 
 
