@@ -6,6 +6,7 @@ import argparse
 import testconfig
 import logging
 import subprocess
+from os.path import dirname
 from pathlib import Path
 from typing import List
 
@@ -75,6 +76,11 @@ default_replacements = {
 }
 
 # -----
+def collapse_dirs(files):
+    result_set = set([])
+    for f in files:
+        result_set.add(dirname(f))
+    return list(result_set)
 
 
 # Replace with update_config
@@ -92,7 +98,7 @@ def generate_replacements(defaults, conf, dir, test_files):
         replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    test_paths = ["tests/" + str(f) for f in test_files]
+    test_paths = collapse_dirs(["tests/" + str(f) for f in test_files])
     # We have to list the test files individually until pytest has the
     # option to only collect tests in the named dir, and not those below
     replacements["TEST_DIR"] = " ".join(sorted(test_paths))
