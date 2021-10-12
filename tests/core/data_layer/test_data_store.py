@@ -7,13 +7,12 @@ from typing import AsyncIterable, Dict, List, Optional
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
-from clvm.SExp import SExp
 import pytest
 
 from chia.data_layer.data_layer_types import Side
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 
 
@@ -61,42 +60,6 @@ async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> Dat
 # async def root_fixture(data_store: DataStore, tree_id: bytes32) -> Root:
 #     return await data_store.get_tree_root(tree_id=tree_id)
 
-
-# TODO: understand this better and make some sensible looking example objects
-_serialized_programs = [
-    CLVMObject(
-        (
-            CLVMObject(bytes([37])),
-            # uint32(37),
-            CLVMObject(bytes(uint32(29))),
-        ),
-    ),
-    CLVMObject(
-        (
-            CLVMObject(bytes([14])),
-            # uint32(37),
-            CLVMObject(bytes(uint32(9))),
-        ),
-    ),
-    CLVMObject(
-        (
-            CLVMObject(bytes([99])),
-            # uint32(37),
-            CLVMObject(bytes(uint32(3))),
-        ),
-    ),
-    CLVMObject(
-        (
-            CLVMObject(bytes([23])),
-            # uint32(37),
-            CLVMObject(bytes(uint32(5))),
-        ),
-    ),
-]
-
-serialized_programs: List[SerializedProgram] = [
-    SerializedProgram.from_bytes(SExp.to(clvm_object).as_bin()) for clvm_object in _serialized_programs
-]
 
 table_columns: Dict[str, List[str]] = {
     "tree": ["id"],
