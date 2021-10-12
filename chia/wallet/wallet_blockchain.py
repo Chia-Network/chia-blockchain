@@ -1,8 +1,10 @@
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from chia.consensus.constants import ConsensusConstants
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
+from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
 from chia.wallet.key_val_store import KeyValStore
 
@@ -24,6 +26,11 @@ class WalletBlockchain:
     basic_store: KeyValStore
     latest_tx_block: Optional[HeaderBlock]
     peak: Optional[HeaderBlock]
+    peak_verified_by_peer: Dict[bytes32, HeaderBlock]  # Peer node id / Header block that we validated the weight for
+    synced_weight_proof: Optional[WeightProof]
+    recent_blocks: List[HeaderBlock]
+    recent_blocks_dict: Dict[bytes32, HeaderBlock]
+    height_to_hash: Dict[uint32, bytes32]
 
     @staticmethod
     async def create(basic_store: KeyValStore):
@@ -33,6 +40,7 @@ class WalletBlockchain:
         in the consensus constants config.
         """
         self = WalletBlockchain()
+        self.peak_verified_by_peer = {}
         self.basic_store = basic_store
         stored_height = await self.basic_store.get_str("STORED_HEIGHT")
         self.latest_tx_block = None
@@ -43,7 +51,44 @@ class WalletBlockchain:
             self._peak_height = uint32(0)
         else:
             self._peak_height = uint32(int(stored_height))
+
+        self.synced_weight_proof = None
+        self.recent_blocks = []
+        self.recent_blocks_dict = {}
+        self.height_to_hash = {}
+
         return self
+
+    def contains_block(self, header_hash):
+        if header_hash in self.recent_blocks_dict:
+            return True
+        else:
+            return False
+
+    def new_weight_proof(self, weight_proof):
+        self.synced_weight_proof = weight_proof
+        for block in weight_proof.recent_blocks:
+            self.recent_blocks_dict[block.header_hash] = block
+            self.height_to_hash[block.height] = block.header_hash
+
+    async def new_recent_blocks(self, recent_blocks):
+        for block in recent_blocks:
+            if block.height in self.height_to_hash:
+                current_hash = self.height_to_hash[block.height]
+                if current_hash in self.recent_blocks_dict:
+                    self.recent_blocks_dict.pop(current_hash)
+
+            self.recent_blocks_dict[block.header_hash] = block
+            self.height_to_hash[block.height] = block.header_hash
+            if self.peak is None or block.height > self.peak.height:
+                await self.set_peak_block(block)
+                await self.set_peak_height(block.height)
+
+    async def rollback_to_height(self, height):
+        pass
+
+    def get_last_peak_from_peer(self, peer_node_id) -> Optional[HeaderBlock]:
+        return self.peak_verified_by_peer.get(peer_node_id, None)
 
     async def set_peak_height(self, height):
         self._peak_height = height
