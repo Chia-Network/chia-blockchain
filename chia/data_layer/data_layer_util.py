@@ -17,5 +17,5 @@ async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
 
 
 def row_to_node(row: aiosqlite.Row) -> Node:
-    cls = node_type_to_class[row["type"]]
+    cls = node_type_to_class[row["node_type"]]
     return cls.from_row(row=row)

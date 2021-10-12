@@ -49,7 +49,7 @@ class DataStore:
                 "left TEXT REFERENCES node,"
                 "right TEXT REFERENCES node,"
                 "key TEXT,"
-                "value TEXT,"
+                "value TEXT"
                 # "FOREIGN KEY(left) REFERENCES node(hash),"
                 # " FOREIGN KEY(right) REFERENCES node(hash)"
                 ")"
@@ -140,13 +140,13 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, type, left, right, key, value, depth) AS (
+                    tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
                         SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
                         UNION ALL
                         SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
                         WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                     ),
-                    ancestors(hash, type, left, right, key, value, depth) AS (
+                    ancestors(hash, node_type, left, right, key, value, depth) AS (
                         SELECT node.*, NULL AS depth FROM node WHERE node.hash == :reference_hash
                         UNION ALL
                         SELECT node.*, NULL AS depth FROM node, ancestors
@@ -172,27 +172,24 @@ class DataStore:
 
         if root.node_hash is None:
             return []
-        formatted_str = f"SELECT * from nodes WHERE tree_id == {tree_id} and node_type == 2"
-        cursor = await self.db.execute(formatted_str)
-        rows = await cursor.fetchall()
-        await cursor.close()
+
         cursor = await self.db.execute(
             """
             WITH RECURSIVE
-                tree_from_root_hash(hash, type, left, right, key, value, depth) AS (
+                tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
                     SELECT node.*, 0 AS depth FROM node WHERE node.hash == :root_hash
                     UNION ALL
                     SELECT node.*, tree_from_root_hash.depth + 1 AS depth FROM node, tree_from_root_hash
                     WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                 )
             SELECT * FROM tree_from_root_hash
-            WHERE type == :type
+            WHERE node_type == :node_type
             """,
-            {"root_hash": root.node_hash.hex(), "type": NodeType.TERMINAL},
+            {"root_hash": root.node_hash.hex(), "node_type": NodeType.TERMINAL},
         )
 
         terminal_nodes: List[TerminalNode] = []
-        for row in rows:
+        async for row in cursor:
             node = row_to_node(row=row)
             assert isinstance(node, TerminalNode)
             terminal_nodes.append(node)
@@ -223,10 +220,10 @@ class DataStore:
     #     node_hash = Program.to([left_hash, right_hash]).get_tree_hash(left_hash, right_hash)
     #
     #     await self.db.execute(
-    #         "INSERT INTO node(hash, type, left, right, key, value) VALUE(:hash, :type, :left, :right, :key, :value)",
+    #         "INSERT INTO node(hash, node_type, left, right, key, value) VALUE(:hash, :node_type, :left, :right, :key, :value)",
     #         {
     #             "hash": node_hash.hex(),
-    #             "type": NodeType.INTERNAL,
+    #             "node_type": NodeType.INTERNAL,
     #             "left": left_hash.hex(),
     #             "right": right_hash.hex(),
     #             "key": None,
@@ -237,16 +234,16 @@ class DataStore:
     #     return node_hash
 
     async def _raw_get_node_type(self, node_hash: bytes32) -> NodeType:
-        cursor = await self.db.execute("SELECT type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+        cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
         raw_node_type = await cursor.fetchone()
         # [node_type] = await cursor.fetchall()
         # TODO: i'm pretty curious why this one fails...
-        # [node_type] = (NodeType(row["type"]) async for row in cursor)
+        # [node_type] = (NodeType(row["node_type"]) async for row in cursor)
 
         # TODO: real handling
         assert raw_node_type is not None
 
-        return NodeType(raw_node_type["type"])
+        return NodeType(raw_node_type["node_type"])
 
     async def insert(
         self,
@@ -280,11 +277,11 @@ class DataStore:
 
             # create new terminal node
             await self.db.execute(
-                "INSERT INTO node(hash, type, left, right, key, value)"
-                " VALUES(:hash, :type, :left, :right, :key, :value)",
+                "INSERT INTO node(hash, node_type, left, right, key, value)"
+                " VALUES(:hash, :node_type, :left, :right, :key, :value)",
                 {
                     "hash": new_terminal_node_hash.hex(),
-                    "type": NodeType.TERMINAL,
+                    "node_type": NodeType.TERMINAL,
                     # "generation": generation,
                     "left": None,
                     "right": None,
@@ -321,7 +318,7 @@ class DataStore:
                     cursor = await self.db.execute(
                         """
                         WITH RECURSIVE
-                            tree_from_root_hash(hash, type, left, right, key, value) AS (
+                            tree_from_root_hash(hash, node_type, left, right, key, value) AS (
                                 SELECT node.* FROM node WHERE node.hash == :root_hash
                                 UNION ALL
                                 SELECT node.* FROM node, tree_from_root_hash
@@ -363,11 +360,11 @@ class DataStore:
 
                 # create first new internal node
                 await self.db.execute(
-                    "INSERT INTO node(hash, type, left, right, key, value)"
-                    " VALUES(:hash, :type, :left, :right, :key, :value)",
+                    "INSERT INTO node(hash, node_type, left, right, key, value)"
+                    " VALUES(:hash, :node_type, :left, :right, :key, :value)",
                     {
                         "hash": new_hash.hex(),
-                        "type": NodeType.INTERNAL,
+                        "node_type": NodeType.INTERNAL,
                         "left": left.hex(),
                         "right": right.hex(),
                         "key": None,
@@ -392,11 +389,11 @@ class DataStore:
                     new_hash = Program.to([left, right]).get_tree_hash()
 
                     await self.db.execute(
-                        "INSERT INTO node(hash, type, left, right, key, value)"
-                        " VALUES(:hash, :type, :left, :right, :key, :value)",
+                        "INSERT INTO node(hash, node_type, left, right, key, value)"
+                        " VALUES(:hash, :node_type, :left, :right, :key, :value)",
                         {
                             "hash": new_hash.hex(),
-                            "type": NodeType.INTERNAL,
+                            "node_type": NodeType.INTERNAL,
                             "left": left.hex(),
                             "right": right.hex(),
                             "key": None,
@@ -462,7 +459,7 @@ class DataStore:
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
-                    tree_from_root_hash(hash, type, left, right, key, value) AS (
+                    tree_from_root_hash(hash, node_type, left, right, key, value) AS (
                         SELECT node.* FROM node WHERE node.hash == :root_hash
                         UNION ALL
                         SELECT node.* FROM node, tree_from_root_hash
@@ -505,11 +502,11 @@ class DataStore:
     #         await _debug_dump(db=self.db, description="before")
     #
     #         # await self.db.execute(
-    #         #     "INSERT INTO node(hash, type, left, right, key, value)"
-    #         #     " VALUES(:hash, :type, :left, :right, :key, :value)",
+    #         #     "INSERT INTO node(hash, node_type, left, right, key, value)"
+    #         #     " VALUES(:hash, :node_type, :left, :right, :key, :value)",
     #         #     {
     #         #         "hash": node_hash.hex(),
-    #         #         "type": NodeType.EMPTY,
+    #         #         "node_type": NodeType.EMPTY,
     #         #         # "generation": generation,
     #         #         "left": None,
     #         #         "right": None,
