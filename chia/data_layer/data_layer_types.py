@@ -4,11 +4,12 @@ from typing import Tuple, Optional, Union, Dict, Type
 
 import aiosqlite as aiosqlite
 
-from chia.data_layer.data_layer_util import hexstr_to_bytes32
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 from clvm.CLVMObject import CLVMObject
+
+from chia.util.byte_types import hexstr_to_bytes
 
 
 class NodeType(IntEnum):
@@ -104,3 +105,7 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
+
+
+def hexstr_to_bytes32(hexstr: str) -> bytes32:
+    return bytes32(hexstr_to_bytes(hexstr))

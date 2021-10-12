@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Set
 
 import aiosqlite
 
-from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode
-from chia.data_layer.data_layer_util import hexstr_to_bytes32, row_to_node
+from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode, hexstr_to_bytes32
+from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper

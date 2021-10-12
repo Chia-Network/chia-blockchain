@@ -16,10 +16,6 @@ async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
             print(f"        {dict(row)}")
 
 
-def hexstr_to_bytes32(hexstr: str) -> bytes32:
-    return bytes32(hexstr_to_bytes(hexstr))
-
-
 def row_to_node(row: aiosqlite.Row) -> Node:
     cls = node_type_to_class[row["type"]]
     return cls.from_row(row=row)
