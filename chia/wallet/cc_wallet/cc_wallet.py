@@ -238,6 +238,7 @@ class CCWallet:
         result = confirmed - removal_amount + addition_amount
 
         self.log.info(f"Unconfirmed balance for cc wallet {self.id()} is {result}")
+        self.log.info(f"unconfirmed_tx balance for cc wallet {unconfirmed_tx}")
         return uint128(result)
 
     async def get_max_send_amount(self, records=None):
@@ -291,9 +292,9 @@ class CCWallet:
     def get_colour(self) -> str:
         return bytes(self.cc_info.limitations_program_hash).hex()
 
-    def set_tail_program(self, tail_program: str):
+    async def set_tail_program(self, tail_program: str):
         assert Program.fromhex(tail_program).get_tree_hash() == self.cc_info.limitations_program_hash
-        self.save_info(
+        await self.save_info(
             CCInfo(self.cc_info.limitations_program_hash, Program.fromhex(tail_program), self.cc_info.lineage_proofs),
             False,
         )
