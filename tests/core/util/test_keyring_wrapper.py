@@ -395,6 +395,20 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("私は幸せな農夫ではありません", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫ではありません") is False
 
+    # When: using a new empty keyring
+    @using_temp_file_keyring()
+    def test_set_master_passphrase_with_hint(self):
+        """
+        Setting a passphrase hint at the same time as setting the passphrase
+        """
+        # When: setting the master passphrase with a hint
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            None, "new master passphrase", passphrase_hint="some passphrase hint"
+        )
+
+        # Expect: hint can be retrieved
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "some passphrase hint"
+
     @using_temp_file_keyring()
     def test_passphrase_hint(self):
         """
