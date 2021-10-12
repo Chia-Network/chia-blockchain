@@ -252,6 +252,30 @@ async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    key_node_hash = example.terminal_nodes[0]
+
+    # TODO: make a nicer relationship between the hash and the key
+
+    actual = await data_store.get_node_by_key(key=Program.to(b"\x02"), tree_id=tree_id)
+    assert actual.hash == key_node_hash
+
+
+@pytest.mark.asyncio
+async def test_get_node_by_key_bytes(data_store: DataStore, tree_id: bytes32) -> None:
+    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    key_node_hash = example.terminal_nodes[0]
+
+    # TODO: make a nicer relationship between the hash and the key
+
+    actual = await data_store.get_node_by_key_bytes(key=Program.to(b"\x02").as_bin(), tree_id=tree_id)
+    assert actual.hash == key_node_hash
+
+
+@pytest.mark.asyncio
 async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 

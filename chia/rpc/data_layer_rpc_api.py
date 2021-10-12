@@ -31,7 +31,8 @@ class DataLayerRpcApi:
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         hash_bytes = bytes32(hexstr_to_bytes(request["key"]))
-        value = await self.service.data_store.get_node_by_key(hash_bytes)
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        value = await self.service.data_store.get_node_by_key(hash_bytes, tree_id=store_id)
         return {"data": value}
 
     async def update_kv_store(self, request: Dict[str, Any]):

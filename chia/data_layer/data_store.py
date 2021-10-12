@@ -412,23 +412,27 @@ class DataStore:
         # async with self.db_wrapper.locked_transaction(lock=lock):
         # todo delete from db
 
-    async def get_node_by_key(self, key: Program, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key.as_bin()})
-            row = await cursor.fetchone()
-        assert row  # todo handle errors
-        node = row_to_node(row=row)
-        assert isinstance(node, TerminalNode)
-        return node
+            nodes = await self.get_pairs(tree_id=tree_id, lock=False)
 
-    async def get_node_by_key_bytes(self, key: bytes32, *, lock: bool = True) -> TerminalNode:
+        for node in nodes:
+            if node.key == key:
+                return node
+
+        # TODO: fill out the exception
+        raise Exception("node not found")
+
+    async def get_node_by_key_bytes(self, key: bytes32, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node WHERE left == :bytes", {"bytes": key})
-            row = await cursor.fetchone()
-        assert row  # todo handle errors
-        node = row_to_node(row=row)
-        assert isinstance(node, TerminalNode)
-        return node
+            nodes = await self.get_pairs(tree_id=tree_id, lock=False)
+
+        for node in nodes:
+            if node.key.as_bin() == key:
+                return node
+
+        # TODO: fill out the exception
+        raise Exception("node not found")
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):
