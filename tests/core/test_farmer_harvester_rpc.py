@@ -198,6 +198,8 @@ class TestRpc:
             expected_result: PlotRefreshResult = PlotRefreshResult()
             expected_result_matched = True
 
+            # Note: We assign `expected_result_matched` in the callback and assert it in the test thread to avoid
+            # crashing the refresh thread of the plot manager with invalid assertions.
             def test_refresh_callback(refresh_result: PlotRefreshResult):
                 def test_value(name: str, actual: PlotRefreshResult, expected: PlotRefreshResult):
                     nonlocal expected_result_matched
@@ -218,6 +220,16 @@ class TestRpc:
 
             harvester.plot_manager.set_refresh_callback(test_refresh_callback)
 
+            async def test_refresh_results(manager: PlotManager, start_refreshing: bool = False):
+                nonlocal expected_result_matched
+                expected_result_matched = True
+                if start_refreshing:
+                    manager.start_refreshing()
+                else:
+                    manager.trigger_refresh()
+                await time_out_assert(5, manager.needs_refresh, value=False)
+                assert expected_result_matched
+
             async def test_case(
                 trigger, expect_loaded, expect_removed, expect_processed, expected_directories, expect_total_plots
             ):
@@ -226,11 +238,8 @@ class TestRpc:
                 expected_result.removed_plots = expect_removed
                 expected_result.processed_files = expect_processed
                 await trigger
-                expected_result_matched = True
-                harvester.plot_manager.trigger_refresh()
                 assert len(await client_2.get_plot_directories()) == expected_directories
-                await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
-                assert expected_result_matched
+                await test_refresh_results(harvester.plot_manager)
                 result = await client_2.get_plots()
                 assert len(result["plots"]) == expect_total_plots
                 assert len(harvester.plot_manager.cache) == expect_total_plots
@@ -352,9 +361,9 @@ class TestRpc:
             expected_result.processed_files = 20
             expected_result.remaining_files = 0
             plot_manager: PlotManager = PlotManager(harvester.root_path, test_refresh_callback)
-            plot_manager.start_refreshing()
+            plot_manager.cache.load()
             assert len(harvester.plot_manager.cache) == len(plot_manager.cache)
-            await time_out_assert(5, plot_manager.needs_refresh, value=False)
+            await test_refresh_results(plot_manager, start_refreshing=True)
             for path, plot_info in harvester.plot_manager.plots.items():
                 assert path in plot_manager.plots
                 assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
@@ -385,8 +394,7 @@ class TestRpc:
             expected_result.removed_plots = 0
             expected_result.processed_files = 20
             expected_result.remaining_files = 0
-            plot_manager.start_refreshing()
-            await time_out_assert(5, plot_manager.needs_refresh, value=False)
+            await test_refresh_results(plot_manager, start_refreshing=True)
             assert len(plot_manager.plots) == len(harvester.plot_manager.plots)
             plot_manager.stop_refreshing()
 
@@ -404,23 +412,20 @@ class TestRpc:
             expected_result.removed_plots = 0
             expected_result.processed_files = 1
             expected_result.remaining_files = 0
-            harvester.plot_manager.start_refreshing()
-            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            await test_refresh_results(harvester.plot_manager, start_refreshing=True)
             assert retry_test_plot in harvester.plot_manager.failed_to_open_filenames
             # Make sure the file stays in `failed_to_open_filenames` and doesn't get loaded or processed in the next
             # update round
             expected_result.loaded_plots = 0
             expected_result.processed_files = 0
-            harvester.plot_manager.trigger_refresh()
-            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            await test_refresh_results(harvester.plot_manager)
             assert retry_test_plot in harvester.plot_manager.failed_to_open_filenames
             # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
             harvester.plot_manager.refresh_parameter.retry_invalid_seconds = 0
             move(retry_test_plot_save, retry_test_plot)
             expected_result.loaded_plots = 1
             expected_result.processed_files = 1
-            harvester.plot_manager.trigger_refresh()
-            await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+            await test_refresh_results(harvester.plot_manager)
             assert retry_test_plot not in harvester.plot_manager.failed_to_open_filenames
 
             targets_1 = await client.get_reward_targets(False)
