@@ -3,7 +3,7 @@ import itertools
 import logging
 
 
-from typing import AsyncIterable, Dict, List, Optional
+from typing import AsyncIterable, Dict, List, Optional, Tuple
 
 import aiosqlite
 from clvm.CLVMObject import CLVMObject
@@ -191,29 +191,18 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     keys_values = {bytes([key]): [bytes([x]) for x in [0x10 + key, key]] for key in [0, 1, 2, 3]}
 
     # this hint is specific to this data, it doesn't need to be this strict
-    def kv(k: bytes, v: List[bytes]) -> CLVMObject:
-        return CLVMObject(
-            (
-                CLVMObject(Program.to(k).as_bin()),
-                CLVMObject(Program.to(v).as_bin()),
-            )
-        )
+    def kv(k: bytes, v: List[bytes]) -> Tuple[bytes, bytes]:
+        return Program.to(k).as_bin(), Program.to(v).as_bin()
 
     expected = Program.to(
-        CLVMObject(
+        (
             (
-                CLVMObject(
-                    (
-                        kv(b"\x00", [b"\x10", b"\x00"]),
-                        kv(b"\x01", [b"\x11", b"\x01"]),
-                    ),
-                ),
-                CLVMObject(
-                    (
-                        kv(b"\x02", [b"\x12", b"\x02"]),
-                        kv(b"\x03", [b"\x13", b"\x03"]),
-                    ),
-                ),
+                kv(b"\x00", [b"\x10", b"\x00"]),
+                kv(b"\x01", [b"\x11", b"\x01"]),
+            ),
+            (
+                kv(b"\x02", [b"\x12", b"\x02"]),
+                kv(b"\x03", [b"\x13", b"\x03"]),
             ),
         ),
     )
