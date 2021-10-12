@@ -933,7 +933,9 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.additions])
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.subscribe_to_coin_ids_update(all_coins_names)
+        nodes = self.server.get_full_node_connections()
+        for node in nodes:
+            await self.subscribe_to_coin_ids_update(all_coins_names, node)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
