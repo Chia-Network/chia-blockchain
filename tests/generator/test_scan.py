@@ -54,7 +54,7 @@ class TestScan(TestCase):
         assert m is None
 
         m = match_standard_transaction_exactly_and_return_pubkey(
-            gen1[EXPECTED_START: EXPECTED_END + PUBKEY_PLUS_SUFFIX]
+            gen1[EXPECTED_START : EXPECTED_END + PUBKEY_PLUS_SUFFIX]
         )
         assert m == hexstr_to_bytes(
             "b081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3"

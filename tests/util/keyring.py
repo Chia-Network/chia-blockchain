@@ -39,12 +39,12 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
         file_keyring_path = FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir))
         os.makedirs(os.path.dirname(file_keyring_path), 0o700, True)
         with open(
-                os.open(
-                    FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir)),
-                    os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
-                    0o600,
-                ),
-                "w",
+            os.open(
+                FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir)),
+                os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
+                0o600,
+            ),
+            "w",
         ) as f:
             f.write(
                 # Encrypted using DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE. Data holds an empty keyring.
@@ -97,15 +97,15 @@ def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
 
 class TempKeyring:
     def __init__(
-            self,
-            *,
-            user: str = "testing-1.8.0",
-            service: str = "testing-chia-1.8.0",
-            populate: bool = False,
-            setup_cryptfilekeyring: bool = False,
-            existing_keyring_path: str = None,
-            delete_on_cleanup: bool = True,
-            use_os_credential_store: bool = False,
+        self,
+        *,
+        user: str = "testing-1.8.0",
+        service: str = "testing-chia-1.8.0",
+        populate: bool = False,
+        setup_cryptfilekeyring: bool = False,
+        existing_keyring_path: str = None,
+        delete_on_cleanup: bool = True,
+        use_os_credential_store: bool = False,
     ):
         self.keychain = self._patch_and_create_keychain(
             user=user,
@@ -120,13 +120,13 @@ class TempKeyring:
 
     @staticmethod
     def _patch_and_create_keychain(
-            *,
-            user: str,
-            service: str,
-            populate: bool,
-            setup_cryptfilekeyring: bool,
-            existing_keyring_path: Optional[str],
-            use_os_credential_store: bool,
+        *,
+        user: str,
+        service: str,
+        populate: bool,
+        setup_cryptfilekeyring: bool,
+        existing_keyring_path: Optional[str],
+        use_os_credential_store: bool,
     ):
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")

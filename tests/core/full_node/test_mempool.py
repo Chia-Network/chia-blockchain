@@ -52,11 +52,11 @@ log = logging.getLogger(__name__)
 
 
 def generate_test_spend_bundle(
-        coin: Coin,
-        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
-        fee: uint64 = uint64(0),
-        amount: uint64 = uint64(1000),
-        new_puzzle_hash=BURN_PUZZLE_HASH,
+    coin: Coin,
+    condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
+    fee: uint64 = uint64(0),
+    amount: uint64 = uint64(1000),
+    new_puzzle_hash=BURN_PUZZLE_HASH,
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
@@ -190,11 +190,11 @@ class TestMempool:
 @api_request
 @bytes_required
 async def respond_transaction(
-        node: FullNodeAPI,
-        tx: full_node_protocol.RespondTransaction,
-        peer: ws.WSChiaConnection,
-        tx_bytes: bytes = b"",
-        test: bool = False,
+    node: FullNodeAPI,
+    tx: full_node_protocol.RespondTransaction,
+    peer: ws.WSChiaConnection,
+    tx_bytes: bytes = b"",
+    test: bool = False,
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
     """
     Receives a full transaction from peer.
@@ -430,11 +430,11 @@ class TestMempoolManager:
 
     @staticmethod
     async def condition_tester(
-            two_nodes,
-            dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
-            fee: int = 0,
-            num_blocks: int = 3,
-            coin: Optional[Coin] = None,
+        two_nodes,
+        dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
+        fee: int = 0,
+        num_blocks: int = 3,
+        coin: Optional[Coin] = None,
     ):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -1651,11 +1651,11 @@ MAX_BLOCK_COST_CLVM = 11000000000
 
 
 def generator_condition_tester(
-        conditions: str,
-        *,
-        safe_mode: bool = False,
-        quote: bool = True,
-        max_cost: int = MAX_BLOCK_COST_CLVM,
+    conditions: str,
+    *,
+    safe_mode: bool = False,
+    quote: bool = True,
+    max_cost: int = MAX_BLOCK_COST_CLVM,
 ) -> NPCResult:
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
     print(f"program: {prg}")

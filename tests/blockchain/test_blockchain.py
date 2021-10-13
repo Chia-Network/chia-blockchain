@@ -50,7 +50,9 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 
 log = logging.getLogger(__name__)
-bad_element = ClassgroupElement.from_bytes(b"\x00", )
+bad_element = ClassgroupElement.from_bytes(
+    b"\x00",
+)
 
 
 @pytest.fixture(scope="session")
