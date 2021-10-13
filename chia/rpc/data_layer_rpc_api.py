@@ -25,19 +25,14 @@ class DataLayerRpcApi:
             "/get_value": self.get_value,
         }
 
-    async def create_kv_store(self, request: Dict[str, Any]) -> None:
-        # create singleton
-        # get id
-        # create store in db
-        # todo need to wait for confirmation somehow,
-        # or have a pending state in the db waiting for the tx to get submitted
-        store_id = bytes32(bytes.fromhex(request["id"]))  # this should be an index we keep
-        await self.service.data_store.create_tree(store_id)
+    async def create_kv_store(self, request: Dict[str, Any] = None) -> Dict[str, Any]:
+        value = await self.service.create_store()
+        return {"id": value}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        hash_bytes = bytes32(hexstr_to_bytes(request["key"]))
         store_id = bytes32(hexstr_to_bytes(request["id"]))
-        value = await self.service.data_store.get_node_by_key(hash_bytes, tree_id=store_id)
+        key = Program.from_bytes(bytes(request["key"]))
+        value = await self.service.data_store.get_node_by_key(key, tree_id=store_id)
         return {"data": value}
 
     async def update_kv_store(self, request: Dict[str, Any]):
@@ -46,28 +41,7 @@ class DataLayerRpcApi:
         rows_to_remove a list of row hashes to remove
         """
         changelist = request["changelist"]
-        tree_id = request["id"]
+
+        tree_id = bytes32(bytes.fromhex(request["id"]))
         # todo input checks
-        for change in changelist:
-            if change["action"] == "insert":
-                key = Program.from_bytes(bytes(change["key"]))
-                value = Program.from_bytes(bytes(change["value"]))
-                reference_node_hash = None
-                if "reference_node_hash" in change:
-                    reference_node_hash = Program.from_bytes(change["reference_node_hash"])
-                side = None
-                if side in change:
-                    side = Side(change["side"])
-                await self.service.data_store.insert(key, value, tree_id, reference_node_hash, side)
-            else:
-                assert change["action"] == "delete"
-                key = Program.from_bytes(change["key"])
-                await self.service.data_store.delete(key, tree_id)
-
-        # TODO: commented out until we identify how to get the wallet available here
-        # state = await self.service.data_store.get_table_state(table)
-
-        # todo get changelist hash, order changelist before committing hash
-        # TODO: commented out until we identify how to get the wallet available here
-        # await self.data_layer_wallet.uptate_table_state(table, state, std_hash(action_list))
-        # todo need to mark data as pending and change once tx is confirmed
+        await self.service.insert(tree_id, changelist)

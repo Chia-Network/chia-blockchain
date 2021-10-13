@@ -93,7 +93,6 @@ def create_rpc_port_option():
 
 @data_cmd.command("create_table", short_help="Get a data row by its hash")
 @create_table_option()
-@create_table_name_option()
 @create_rpc_port_option()
 def create_table(
     table_string: str,

@@ -67,15 +67,14 @@ class DataStore:
 
         return self
 
-    async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> None:
-        tree_id = bytes32(tree_id)
-
+    async def create_tree(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute("INSERT INTO tree(id) VALUES(:id)", {"id": tree_id.hex()})
             await self.db.execute(
                 "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
                 {"tree_id": tree_id.hex(), "generation": 0, "node_hash": None},
             )
+        return True
 
     async def table_is_empty(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):

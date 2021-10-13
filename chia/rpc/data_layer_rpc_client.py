@@ -6,7 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 class DataLayerRpcClient(RpcClient):
     async def create_kv_store(self):
-        response = await self.fetch("create_kv_store", {})
+        response = await self.fetch("create_kv_store")
         return response
 
     async def get_value(self, tree_id: bytes32, key: bytes) -> Dict:

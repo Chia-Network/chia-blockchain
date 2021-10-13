@@ -1,12 +1,16 @@
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List
 
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
+from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.data_store import DataStore
 from chia.server.server import ChiaServer
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir, path_from_root
 
@@ -19,7 +23,7 @@ class DataLayer:
     config: Dict[str, Any]
     server: Any
     log: logging.Logger
-    # constants: ConsensusConstants
+    wallet: DataLayerWallet
     # _shut_down: bool
     # root_path: Path
     state_changed_callback: Optional[Callable[..., object]]
@@ -40,7 +44,7 @@ class DataLayer:
             name = None
 
         self.initialized = False
-        # self.root_path = root_path
+        self.wallet = DataLayerWallet()
         self.config = config
         self.server = None
         # self.constants = consensus_constants
@@ -75,6 +79,48 @@ class DataLayer:
 
     async def _await_closed(self) -> None:
         await self.connection.close()
+
+    async def create_store(self) -> bytes32:
+        # todo  create singelton with wavaluellet and get id
+        store_id = await self.wallet.create_data_store()
+        res = await self.data_store.create_tree(store_id)
+        if res == False:
+            self.log.error("Failed to create tree")
+        return store_id
+
+    async def insert(
+        self,
+        tree_id: bytes32,
+        changelist: List[Dict[str, Any]],
+    ) -> bool:
+        for change in changelist:
+            if change["action"] == "insert":
+                key = Program.from_bytes(bytes(change["key"]))
+                value = Program.from_bytes(bytes(change["value"]))
+                reference_node_hash = None
+                if "reference_node_hash" in change:
+                    reference_node_hash = Program.from_bytes(change["reference_node_hash"])
+                side = None
+                if side in change:
+                    side = Side(change["side"])
+                await self.data_store.insert(key, value, tree_id, reference_node_hash, side)
+            else:
+                assert change["action"] == "delete"
+                key = Program.from_bytes(change["key"])
+                await self.data_store.delete(key, tree_id)
+
+        # state = await self.data_store.get_table_state(table)
+        # await self.data_layer_wallet.uptate_table_state(table, state, std_hash(action_list))
+        # todo need to mark data as pending and change once tx is confirmed
+        return True
+
+    async def get_value(self) -> bytes32:
+        # todo  create singelton with wallet and get id
+        id = "0102030405060708091011121314151617181920212223242526272829303132"
+        res = await self.data_store.create_tree(id)
+        if res == False:
+            self.log.error("Failed to create tree")
+        return id
 
     # def _state_changed(self, change: str):
     #     if self.state_changed_callback is not None:

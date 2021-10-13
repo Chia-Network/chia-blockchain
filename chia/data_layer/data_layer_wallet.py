@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32
@@ -24,14 +25,15 @@ class DataLayerWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def create_table(self, id: bytes32) -> bool:
+    async def create_data_store(self, name: str = "") -> bytes32:
+        tree_id = bytes32.from_bytes(os.urandom(32))
+        return tree_id
+
+    async def delete_data_store(self, id: bytes32) -> bool:
         return True
 
-    async def delete_table(self, id: bytes32) -> bool:
-        return True
-
-    async def get_table_state(self, id: bytes32) -> bytes:
+    async def get_data_store_state(self, id: bytes32) -> bytes:
         return b""
 
-    async def uptate_table_state(self, id: bytes32, new_state: bytes32, action: bytes32) -> bool:
+    async def uptate__data_store_state(self, id: bytes32, new_state: bytes32, action: bytes32) -> bool:
         return True

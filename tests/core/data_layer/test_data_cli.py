@@ -151,7 +151,7 @@ async def test_help(chia_root: ChiaRoot) -> None:
     assert "Show this message and exit" in completed_process.stdout
 
 
-@pytest.mark.xfail(strict=True)
+# @pytest.mark.xfail(strict=True)
 @pytest.mark.asyncio
 def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> None:
     """Create a table, insert a row, get the row by its hash."""
@@ -163,7 +163,7 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
 
         changelist: List[Dict[str, str]] = [{"action": "insert", "row_data": row_data}]
 
-        create = chia_root.run(args=["data", "create_table", "--table_name", "test table", "--table", table])
+        create = chia_root.run(args=["data", "create_table", "--table", "test table"])
         print(f"create {create}")
         update = chia_root.run(args=["data", "update_table", "--table", table, "--changelist", json.dumps(changelist)])
         print(f"update {update}")
@@ -191,11 +191,11 @@ async def test_create() -> None:
     data_layer.initialized = True
 
     rpc_api = DataLayerRpcApi(data_layer)
-    tree_id = "0102030405060708091011121314151617181920212223242526272829303132"
     key = Program.to("abc")
     value = Program.to([1, 2])
     changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.as_bin(), "value": value.as_bin()}]
-    # await rpc_api.create_kv_store({"id": tree_id})
-    # await rpc_api.update_kv_store({"id": tree_id, "changelist": changelist})
-    # await rpc_api.get_value({"id": tree_id, "key": key.as_bin()})
+    tree_id = await rpc_api.create_kv_store()
+    print(tree_id)
+    await rpc_api.update_kv_store({"id": tree_id, "changelist": changelist})
+    await rpc_api.get_value({"id": tree_id, "key": key.as_bin()})
     return
