@@ -21,9 +21,13 @@ def passphrase_cmd():
 @click.option(
     "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
 )
+@click.option("--hint", type=str, help="Passphrase hint")
 @click.pass_context
 def set_cmd(
-    ctx: click.Context, passphrase_file: Optional[TextIOWrapper], current_passphrase_file: Optional[TextIOWrapper]
+    ctx: click.Context,
+    passphrase_file: Optional[TextIOWrapper],
+    current_passphrase_file: Optional[TextIOWrapper],
+    hint: Optional[str],
 ) -> None:
     from .passphrase_funcs import (
         async_update_daemon_passphrase_cache_if_running,
@@ -53,9 +57,11 @@ def set_cmd(
             print(f"Failed to read passphrase: {e}")
         else:
             # Interactively prompt for the current passphrase (if set)
-            success = set_or_update_passphrase(passphrase=new_passphrase, current_passphrase=current_passphrase)
+            success = set_or_update_passphrase(
+                passphrase=new_passphrase, current_passphrase=current_passphrase, hint=hint
+            )
     else:
-        success = set_or_update_passphrase(passphrase=None, current_passphrase=current_passphrase)
+        success = set_or_update_passphrase(passphrase=None, current_passphrase=current_passphrase, hint=hint)
 
     if success:
         # Attempt to update the daemon's passphrase cache
@@ -94,3 +100,30 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
                 async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])
             )
         )
+
+
+@passphrase_cmd.group("hint", short_help="Manage the optional keyring passphrase hint")
+def hint_cmd() -> None:
+    pass
+
+
+@hint_cmd.command("display", short_help="Display the keyring passphrase hint")
+def display_hint():
+    from .passphrase_funcs import display_passphrase_hint
+
+    display_passphrase_hint()
+
+
+@hint_cmd.command("set", short_help="Set or update the keyring passphrase hint")
+@click.argument("hint", nargs=1)
+def set_hint(hint):
+    from .passphrase_funcs import set_passphrase_hint
+
+    set_passphrase_hint(hint)
+
+
+@hint_cmd.command("remove", short_help="Remove the keyring passphrase hint")
+def remove_hint():
+    from .passphrase_funcs import remove_passphrase_hint
+
+    remove_passphrase_hint()
