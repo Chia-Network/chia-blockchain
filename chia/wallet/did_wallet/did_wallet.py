@@ -1008,7 +1008,7 @@ class DIDWallet:
         )
         return spendable_am
 
-    async def get_max_send_amount(self):
+    async def get_max_send_amount(self, records=None):
         max_send_amount = await self.get_confirmed_balance()
 
         return max_send_amount

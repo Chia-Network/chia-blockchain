@@ -139,7 +139,7 @@ class MerkleSet:
         r = self.root.is_included(tocheck, 0, proof)
         return r, b"".join(proof)
 
-    def _audit(self):
+    def _audit(self, hashes: List[bytes]):
         newhashes: List = []
         self.root._audit(newhashes, [])
         assert newhashes == sorted(newhashes)

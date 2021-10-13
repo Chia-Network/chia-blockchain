@@ -581,6 +581,7 @@ class CCWallet:
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         fee: uint64 = uint64(0),
+        origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
