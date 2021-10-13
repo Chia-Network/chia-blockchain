@@ -298,7 +298,7 @@ class Wallet:
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
-        ignore_change: bool = False,
+        negative_change_allowed: bool = False,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -325,11 +325,11 @@ class Wallet:
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
 
-        if ignore_change:
-            change = 0
-        else:
-            change = spend_value - total_amount
-            assert change >= 0
+        change = spend_value - total_amount
+        if negative_change_allowed:
+            change = max(0, change)
+
+        assert change >= 0
 
         spends: List[CoinSpend] = []
         primary_announcement_hash: Optional[bytes32] = None
@@ -394,7 +394,7 @@ class Wallet:
         ignore_max_send_amount: bool = False,
         announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
-        ignore_change: bool = False,
+        negative_change_allowed: bool = False,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -416,7 +416,7 @@ class Wallet:
             ignore_max_send_amount,
             announcements_to_consume,
             memos,
-            ignore_change,
+            negative_change_allowed,
         )
         assert len(transaction) > 0
 
@@ -432,7 +432,13 @@ class Wallet:
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
-        assert sum(a.amount for a in add_list) + fee == sum(r.amount for r in rem_list)
+
+        output_amount = sum(a.amount for a in add_list) + fee
+        input_amount = sum(r.amount for r in rem_list)
+        if negative_change_allowed:
+            assert output_amount >= input_amount
+        else:
+            assert output_amount == input_amount
 
         return TransactionRecord(
             confirmed_at_height=uint32(0),
