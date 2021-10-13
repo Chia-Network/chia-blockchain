@@ -361,6 +361,8 @@ class WalletNode:
             self.log.info("Disconnecting, full node running old software")
             await peer.close()
 
+        trusted = self.is_trusted(peer)
+        self.log.info(f"Connected peer {peer} is {trusted}")
         messages_peer_ids = await self._messages_to_resend()
         self.wallet_state_manager.state_changed("add_connection")
         for msg, peer_ids in messages_peer_ids:
@@ -551,7 +553,7 @@ class WalletNode:
         assert self.wallet_state_manager is not None
         assert self.server is not None
         async with self.new_peak_lock:
-            if self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
+            if self.is_trusted(peer):
                 async with self.wallet_state_manager.lock:
                     if peer.peer_node_id not in self.synced_peers:
                         await self.trusted_sync(peer)
