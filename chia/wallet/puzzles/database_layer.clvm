@@ -1,5 +1,5 @@
 (mod (
-  DB_LAYER_MOD  ; This mod file - used to update our state
+  DB_LAYER_MOD_HASH  ; This mod file - used to update our state
   CURRENT_STATE  ; 32 byte merkle root
   INNER_PUZZLE  ; Our inner inner puzzle
   spend_type
@@ -22,22 +22,22 @@
       )
 
   ; return the puzzle hash for a db_layer with the given CURRENT_STATE and inner_puzzle_hash
-    (defun db_layer_puzzle_hash (DB_LAYER_MOD_hash new_state inner_puzzle_hash)
-      (puzzle-hash-of-curried-function DB_LAYER_MOD_hash
+    (defun db_layer_puzzle_hash (DB_LAYER_MOD_HASH new_state inner_puzzle_hash)
+      (puzzle-hash-of-curried-function DB_LAYER_MOD_HASH
                                        inner_puzzle_hash
                                        (sha256 1 new_state)
                                        (sha256 1 DB_LAYER_MOD_hash)
       )
     )
 
-  (defun process_innerpuz_results (DB_LAYER_MOD (new_state new_inner_puzhash conditions) my_amount)
-    (c (list CREATE_PUZZLE_ANNOUNCEMENT new_state) (c (list CREATE_NEW_COIN (db_layer_puzzle_hash DB_LAYER_MOD_hash new_state inner_puzzle_hash) my_amount) (c (list ASSERT_MY_AMOUNT my_amount) conditions)))
+  (defun process_innerpuz_results (DB_LAYER_MOD_HASH (new_state new_inner_puzhash conditions) my_amount)
+    (c (list CREATE_PUZZLE_ANNOUNCEMENT new_state) (c (list CREATE_NEW_COIN (db_layer_puzzle_hash DB_LAYER_MOD_HASH new_state inner_puzzle_hash) my_amount) (c (list ASSERT_MY_AMOUNT my_amount) conditions)))
   )
 
   (if spend_type
     ; REPORT
     (list (list CREATE_PUZZLE_ANNOUNCEMENT CURRENT_STATE) (list CREATE_COIN my_puzhash my_amount) (list ASSERT_MY_PUZZLEHASH my_puzhash) (list ASSERT_MY_AMOUNT my_amount))
     ; UPDATE
-    (process_innerpuz_results (sha256tree1 DB_LAYER_MOD) (a INNER_PUZZLE inner_solution) my_amount)
+    (process_innerpuz_results DB_LAYER_MOD_HASH (a INNER_PUZZLE inner_solution) my_amount)
   )
 )
