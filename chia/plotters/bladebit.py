@@ -47,13 +47,20 @@ def get_bladebit_install_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / BLADEBIT_PLOTTER_DIR
 
 
+def get_bladebit_package_path() -> Path:
+    return Path(os.path.dirname(sys.executable)) / "bladebit"
+
+
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
+    bladebit_dir: Path = get_bladebit_package_path()
     bladebit_exec: str = "bladebit"
     build_dir: str = "build"
     if sys.platform in ["win32", "cygwin"]:
         bladebit_exec = "bladebit.exe"
         build_dir = "build/Release"
-    return get_bladebit_install_path(plotters_root_path) / build_dir / bladebit_exec
+    if not bladebit_dir.exists():
+        bladebit_dir = get_bladebit_install_path(plotters_root_path) / build_dir
+    return bladebit_dir / bladebit_exec
 
 
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:

@@ -1,6 +1,7 @@
 import asyncio
 import traceback
 import os
+import pkg_resources
 import logging
 import sys
 
@@ -23,11 +24,18 @@ def get_madmax_install_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / MADMAX_PLOTTER_DIR
 
 
+def get_madmax_package_path() -> Path:
+    return Path(os.path.dirname(sys.executable)) / "madmax"
+
+
 def get_madmax_executable_path(plotters_root_path: Path) -> Path:
+    madmax_dir: Path = get_madmax_package_path()
     madmax_exec: str = "chia_plot"
     if sys.platform in ["win32", "cygwin"]:
         madmax_exec = "chia_plot.exe"
-    return get_madmax_install_path(plotters_root_path) / "build" / madmax_exec
+    if not madmax_dir.exists():
+        madmax_dir = get_madmax_install_path(plotters_root_path) / "build"
+    return madmax_dir / madmax_exec
 
 
 def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
