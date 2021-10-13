@@ -102,7 +102,7 @@ if THIS_IS_WINDOWS:
             ".",
         ),
         (
-            f"{ROOT}\\madmax\\chia_plot",
+            f"{ROOT}\\madmax\\chia_plot.exe",
             "madmax"
         ),
     ]
