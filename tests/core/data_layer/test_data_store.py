@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+import functools
 import itertools
 import logging
 
 
-from typing import AsyncIterable, Dict, List, Optional, Tuple
+from typing import AsyncIterable, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 import pytest
@@ -183,6 +184,23 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
     assert generations == expected
 
 
+async def general_insert(
+    data_store: DataStore,
+    tree_id: bytes32,
+    key: bytes,
+    value: List[bytes],
+    reference_node_hash: bytes32,
+    side: Optional[Side],
+) -> bytes32:
+    return await data_store.insert(
+        key=Program.to(key),
+        value=Program.to(value),
+        tree_id=tree_id,
+        reference_node_hash=reference_node_hash,
+        side=side,
+    )
+
+
 @dataclass(frozen=True)
 class Example:
     expected: Program
@@ -190,8 +208,6 @@ class Example:
 
 
 async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
-    keys_values = {bytes([key]): [bytes([x]) for x in [0x10 + key, key]] for key in [0, 1, 2, 3]}
-
     expected = Program.to(
         (
             (
@@ -205,41 +221,66 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
         ),
     )
 
-    async def insert(key: bytes, reference_node_hash: bytes32, side: Optional[Side]) -> bytes32:
-        return await data_store.insert(
-            key=Program.to(key),
-            value=Program.to(keys_values[key]),
-            tree_id=tree_id,
-            reference_node_hash=reference_node_hash,
-            side=side,
-        )
+    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
 
-    c_hash = await insert(key=b"\x02", reference_node_hash=None, side=None)
-    await _debug_dump(db=data_store.db, description="after 2")
-    actual = await data_store.get_tree_as_program(tree_id=tree_id)
-    print(f"{actual.as_python()=}")
+    c_hash = await insert(key=b"\x02", value=[b"\x12", b"\x02"], reference_node_hash=None, side=None)
+    b_hash = await insert(key=b"\x01", value=[b"\x11", b"\x01"], reference_node_hash=c_hash, side=Side.LEFT)
+    d_hash = await insert(key=b"\x03", value=[b"\x13", b"\x03"], reference_node_hash=c_hash, side=Side.RIGHT)
+    a_hash = await insert(key=b"\x00", value=[b"\x10", b"\x00"], reference_node_hash=b_hash, side=Side.LEFT)
 
-    b_hash = await insert(key=b"\x01", reference_node_hash=c_hash, side=Side.LEFT)
-    await _debug_dump(db=data_store.db, description="after 1")
-    actual = await data_store.get_tree_as_program(tree_id=tree_id)
-    print(f"{actual.as_python()=}")
-
-    d_hash = await insert(key=b"\x03", reference_node_hash=c_hash, side=Side.RIGHT)
-    await _debug_dump(db=data_store.db, description="after 3")
-    actual = await data_store.get_tree_as_program(tree_id=tree_id)
-    print(f"{actual.as_python()=}")
-
-    a_hash = await insert(key=b"\x00", reference_node_hash=b_hash, side=Side.LEFT)
-    await _debug_dump(db=data_store.db, description="after 0")
-    actual = await data_store.get_tree_as_program(tree_id=tree_id)
-    print(f"{actual.as_python()=}")
-
-    return Example(expected=expected, terminal_nodes=[c_hash, b_hash, d_hash, a_hash])
+    return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
 
 
+async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Example:
+    expected = Program.to(
+        (
+            (
+                (
+                    kv(b"\x00", [b"\x10", b"\x00"]),
+                    kv(b"\x01", [b"\x11", b"\x01"]),
+                ),
+                (
+                    kv(b"\x02", [b"\x12", b"\x02"]),
+                    kv(b"\x03", [b"\x13", b"\x03"]),
+                ),
+            ),
+            (
+                (
+                    kv(b"\x04", [b"\x14", b"\x04"]),
+                    kv(b"\x05", [b"\x15", b"\x05"]),
+                ),
+                (
+                    kv(b"\x06", [b"\x16", b"\x06"]),
+                    kv(b"\x07", [b"\x17", b"\x07"]),
+                ),
+            ),
+        ),
+    )
+
+    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+
+    g_hash = await insert(key=b"\x06", value=[b"\x16", b"\x06"], reference_node_hash=None, side=None)
+
+    c_hash = await insert(key=b"\x02", value=[b"\x12", b"\x02"], reference_node_hash=g_hash, side=Side.LEFT)
+    b_hash = await insert(key=b"\x01", value=[b"\x11", b"\x01"], reference_node_hash=c_hash, side=Side.LEFT)
+    d_hash = await insert(key=b"\x03", value=[b"\x13", b"\x03"], reference_node_hash=c_hash, side=Side.RIGHT)
+    a_hash = await insert(key=b"\x00", value=[b"\x10", b"\x00"], reference_node_hash=b_hash, side=Side.LEFT)
+
+    f_hash = await insert(key=b"\x05", value=[b"\x15", b"\x05"], reference_node_hash=g_hash, side=Side.LEFT)
+    h_hash = await insert(key=b"\x07", value=[b"\x17", b"\x07"], reference_node_hash=g_hash, side=Side.RIGHT)
+    e_hash = await insert(key=b"\x04", value=[b"\x14", b"\x04"], reference_node_hash=f_hash, side=Side.LEFT)
+
+    return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash, e_hash, f_hash, g_hash, h_hash])
+
+
+@pytest.mark.parametrize(argnames=["adder"], argvalues=[[add_0123_example], [add_01234567_example]])
 @pytest.mark.asyncio
-async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
-    example = await add_0123_example(data_store=data_store, tree_id=tree_id)
+async def test_build_a_tree(
+    data_store: DataStore,
+    tree_id: bytes32,
+    adder: Callable[[DataStore, bytes32], Example],
+) -> None:
+    example = await adder(data_store=data_store, tree_id=tree_id)
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
@@ -252,7 +293,7 @@ async def test_build_a_tree(data_store: DataStore, tree_id: bytes32) -> None:
 async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
-    key_node_hash = example.terminal_nodes[0]
+    key_node_hash = example.terminal_nodes[2]
 
     # TODO: make a nicer relationship between the hash and the key
 
@@ -264,7 +305,7 @@ async def test_get_node_by_key(data_store: DataStore, tree_id: bytes32) -> None:
 async def test_get_node_by_key_bytes(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
-    key_node_hash = example.terminal_nodes[0]
+    key_node_hash = example.terminal_nodes[2]
 
     # TODO: make a nicer relationship between the hash and the key
 
@@ -276,7 +317,7 @@ async def test_get_node_by_key_bytes(data_store: DataStore, tree_id: bytes32) ->
 async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
-    reference_node_hash = example.terminal_nodes[0]
+    reference_node_hash = example.terminal_nodes[2]
 
     heritage = await data_store.get_heritage(node_hash=reference_node_hash, tree_id=tree_id)
     hashes = [node.hash.hex() for node in heritage]
@@ -328,21 +369,61 @@ async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: byt
 
 @pytest.mark.asyncio()
 async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_0123_example(data_store=data_store, tree_id=tree_id)
-
-    key = b"\x00"
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
     expected = Program.to(
         (
-            kv(b"\x01", [b"\x11", b"\x01"]),
             (
-                kv(b"\x02", [b"\x12", b"\x02"]),
-                kv(b"\x03", [b"\x13", b"\x03"]),
+                (
+                    kv(b"\x00", [b"\x10", b"\x00"]),
+                    kv(b"\x01", [b"\x11", b"\x01"]),
+                ),
+                (
+                    kv(b"\x02", [b"\x12", b"\x02"]),
+                    kv(b"\x03", [b"\x13", b"\x03"]),
+                ),
+            ),
+            (
+                kv(b"\x05", [b"\x15", b"\x05"]),
+                (
+                    kv(b"\x06", [b"\x16", b"\x06"]),
+                    kv(b"\x07", [b"\x17", b"\x07"]),
+                ),
             ),
         ),
     )
 
-    await data_store.delete(key=Program.to(key), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
+    result = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    assert result == expected
+
+
+@pytest.mark.asyncio()
+async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    expected = Program.to(
+        (
+            (
+                (
+                    kv(b"\x00", [b"\x10", b"\x00"]),
+                    kv(b"\x01", [b"\x11", b"\x01"]),
+                ),
+                (
+                    kv(b"\x02", [b"\x12", b"\x02"]),
+                    kv(b"\x03", [b"\x13", b"\x03"]),
+                ),
+            ),
+            (
+                kv(b"\x06", [b"\x16", b"\x06"]),
+                kv(b"\x07", [b"\x17", b"\x07"]),
+            ),
+        ),
+    )
+
+    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x05"), tree_id=tree_id)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -350,21 +431,61 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
 
 @pytest.mark.asyncio()
 async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_0123_example(data_store=data_store, tree_id=tree_id)
-
-    key = b"\x01"
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
 
     expected = Program.to(
         (
-            kv(b"\x00", [b"\x10", b"\x00"]),
             (
+                (
+                    kv(b"\x00", [b"\x10", b"\x00"]),
+                    kv(b"\x01", [b"\x11", b"\x01"]),
+                ),
                 kv(b"\x02", [b"\x12", b"\x02"]),
-                kv(b"\x03", [b"\x13", b"\x03"]),
+            ),
+            (
+                (
+                    kv(b"\x04", [b"\x14", b"\x04"]),
+                    kv(b"\x05", [b"\x15", b"\x05"]),
+                ),
+                (
+                    kv(b"\x06", [b"\x16", b"\x06"]),
+                    kv(b"\x07", [b"\x17", b"\x07"]),
+                ),
             ),
         ),
     )
 
-    await data_store.delete(key=Program.to(key), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
+    result = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    assert result == expected
+
+
+@pytest.mark.asyncio()
+async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    expected = Program.to(
+        (
+            (
+                kv(b"\x00", [b"\x10", b"\x00"]),
+                kv(b"\x01", [b"\x11", b"\x01"]),
+            ),
+            (
+                (
+                    kv(b"\x04", [b"\x14", b"\x04"]),
+                    kv(b"\x05", [b"\x15", b"\x05"]),
+                ),
+                (
+                    kv(b"\x06", [b"\x16", b"\x06"]),
+                    kv(b"\x07", [b"\x17", b"\x07"]),
+                ),
+            ),
+        ),
+    )
+
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x02"), tree_id=tree_id)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
