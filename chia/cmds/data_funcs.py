@@ -27,10 +27,9 @@ async def get_client(rpc_port) -> Tuple[DataLayerRpcClient, int]:
 async def create_kv_store_cmd(rpc_port: Optional[int], table_string: str) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
-    table_bytes = bytes32(hexstr_to_bytes(table_string))
     try:
         client, rpc_port = await get_client(rpc_port)
-        response = await client.create_kv_store(tree_id=table_bytes)
+        response = await client.create_kv_store()
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
         return None
@@ -64,7 +63,7 @@ async def get_value_cmd(rpc_port: Optional[int], tree_id: str, key: str) -> Opti
     return response
 
 
-async def update_kv_store(rpc_port: Optional[int], tree_id: str, changelist: str) -> Optional[Dict[str, Any]]:
+async def update_kv_store(rpc_port: Optional[int], tree_id: str, changelist: Dict) -> Optional[Dict[str, Any]]:
     # TODO: nice cli error handling
 
     tree_id_bytes = bytes32(hexstr_to_bytes(tree_id))
