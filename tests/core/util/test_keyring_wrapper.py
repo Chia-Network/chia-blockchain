@@ -394,3 +394,79 @@ class TestKeyringWrapper:
         # Expect: an invalid passphrase containing an non-ascii characters should fail validation
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("私は幸せな農夫ではありません", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫ではありません") is False
+
+    # When: using a new empty keyring
+    @using_temp_file_keyring()
+    def test_set_master_passphrase_with_hint(self):
+        """
+        Setting a passphrase hint at the same time as setting the passphrase
+        """
+        # When: setting the master passphrase with a hint
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            None, "new master passphrase", passphrase_hint="some passphrase hint"
+        )
+
+        # Expect: hint can be retrieved
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "some passphrase hint"
+
+    @using_temp_file_keyring()
+    def test_passphrase_hint(self):
+        """
+        Setting and retrieving the passphrase hint
+        """
+        # Expect: no hint set by default
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() is None
+
+        # When: setting the passphrase hint while setting the master passphrase
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            None, "passphrase", passphrase_hint="rhymes with bassphrase"
+        )
+
+        # Expect: to retrieve the passphrase hint that was just set
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "rhymes with bassphrase"
+
+    @using_temp_file_keyring()
+    def test_passphrase_hint_removal(self):
+        """
+        Removing a passphrase hint
+        """
+        # When: setting the passphrase hint while setting the master passphrase
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            None, "12345", passphrase_hint="President Skroob's luggage combination"
+        )
+
+        # Expect: to retrieve the passphrase hint that was just set
+        assert (
+            KeyringWrapper.get_shared_instance().get_master_passphrase_hint()
+            == "President Skroob's luggage combination"
+        )
+
+        # When: removing the passphrase hint
+        KeyringWrapper.get_shared_instance().set_master_passphrase("12345", "12345", passphrase_hint=None)
+
+        # Expect: passphrase hint has been removed
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() is None
+
+    @using_temp_file_keyring()
+    def test_passphrase_hint_update(self):
+        """
+        Updating a passphrase hint
+        """
+        # When: setting the passphrase hint while setting the master passphrase
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            None, "i like turtles", passphrase_hint="My deepest darkest secret"
+        )
+
+        # Expect: to retrieve the passphrase hint that was just set
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "My deepest darkest secret"
+
+        # When: updating the passphrase hint
+        KeyringWrapper.get_shared_instance().set_master_passphrase(
+            "i like turtles", "i like turtles", passphrase_hint="Something you wouldn't expect The Shredder to say"
+        )
+
+        # Expect: to retrieve the passphrase hint that was just set
+        assert (
+            KeyringWrapper.get_shared_instance().get_master_passphrase_hint()
+            == "Something you wouldn't expect The Shredder to say"
+        )

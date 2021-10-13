@@ -2,30 +2,17 @@
 
 import click
 import colorama
-import os
-import sys
 import threading
 import yaml
 
-# Fix module resolution issue between chia/util/ssl.py and `import ssl`
-# aiohttp imports ssl, which incorrectly finds chia/util/ssl.py. As a
-# workaround, we'll place chia/util at the end of sys.path
-search_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-try:
-    index = sys.path.index(search_path)
-    sys.path.append(sys.path.pop(index))
-except Exception:
-    pass
-
-if True:  # noqa: E402
-    from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
-    from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
-    from chia.util.file_keyring import FileKeyring
-    from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
-    from cryptography.exceptions import InvalidTag
-    from io import TextIOWrapper
-    from pathlib import Path
-    from typing import Any, Dict, Optional
+from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
+from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
+from chia.util.file_keyring import FileKeyring
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
+from cryptography.exceptions import InvalidTag
+from io import TextIOWrapper
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 

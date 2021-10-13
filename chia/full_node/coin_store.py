@@ -55,7 +55,10 @@ class CoinStore:
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
 
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
+        # earlier versions of chia created this index despite no lookups needing
+        # it. For now, just don't create it for new installs. In the future we
+        # may remove the index from existing installations as well
+        # await self.coin_record_db.execute("DROP INDEX IF EXISTS coin_spent")
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
