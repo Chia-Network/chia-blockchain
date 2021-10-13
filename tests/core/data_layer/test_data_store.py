@@ -278,7 +278,6 @@ async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
     reference_node_hash = example.terminal_nodes[0]
-    # root = await data_store.get_tree_root(tree_id=tree_id)
 
     heritage = await data_store.get_heritage(node_hash=reference_node_hash, tree_id=tree_id)
     hashes = [node.hash.hex() for node in heritage]
