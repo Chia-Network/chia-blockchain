@@ -1,7 +1,6 @@
 import asyncio
 import traceback
 import os
-import pkg_resources
 import logging
 import sys
 
