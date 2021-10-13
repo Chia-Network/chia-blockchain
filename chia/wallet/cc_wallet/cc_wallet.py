@@ -172,7 +172,7 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        limitations_program_hash = bytes.fromhex(limitations_program_hash_hex)
+        limitations_program_hash = hexstr_to_bytes(limitations_program_hash_hex)
         self.cc_info = CCInfo(limitations_program_hash, None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
