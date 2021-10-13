@@ -125,6 +125,8 @@ class DataStore:
 
         return Root.from_row(row=root_dict)
 
+    # TODO: If we exclude the requested node from the result then we could have a
+    #       consistent List[InternalNode] return type.
     async def get_heritage(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[Node]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
@@ -407,10 +409,98 @@ class DataStore:
 
         return new_terminal_node_hash
 
-    async def delete(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> bool:
-        pass
-        # async with self.db_wrapper.locked_transaction(lock=lock):
-        # todo delete from db
+    async def delete(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+            inclusive_heritage = await self.get_heritage(node_hash=node.hash, tree_id=tree_id, lock=False)
+
+            # TODO: yuck, see note about .get_heritage() return type
+            heritage: List[InternalNode] = inclusive_heritage[1:]  # type: ignore[assignment]
+
+            existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+
+            if len(heritage) == 0:
+                # the only node is being deleted
+                await self.db.execute(
+                    "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+                    {
+                        "tree_id": tree_id.hex(),
+                        "generation": existing_generation + 1,
+                        "node_hash": None,
+                    },
+                )
+
+                return
+
+            parent = heritage[0]
+
+            if parent.left_hash == node.hash:
+                other_hash = parent.right_hash
+            else:
+                other_hash = parent.left_hash
+
+            if len(heritage) == 1:
+                # the parent is the root so the other side will become the new root
+                await self.db.execute(
+                    "INSERT INTO root(tree_id, generation, node_hash)" " VALUES(:tree_id, :generation, :node_hash)",
+                    {
+                        "tree_id": tree_id.hex(),
+                        "generation": existing_generation + 1,
+                        "node_hash": other_hash,
+                    },
+                )
+
+                return
+
+            new_ancestors: List[InternalNode] = []
+
+            old_child_hash = parent.hash
+            new_child_hash = other_hash
+            # more parents to handle so let's traverse them
+            for ancestor in heritage[1:]:
+                if ancestor.left_hash == old_child_hash:
+                    left_hash = new_child_hash
+                    right_hash = ancestor.right_hash
+                elif ancestor.right_hash == old_child_hash:
+                    left_hash = ancestor.left_hash
+                    right_hash = new_child_hash
+                else:
+                    # TODO real checking and errors
+                    raise Exception("internal error")
+
+                new_node_program = Program.to((left_hash, right_hash))
+                new_node_hash = new_node_program.get_tree_hash(left_hash, right_hash)
+
+                new_node = replace(ancestor, hash=new_node_hash, left_hash=left_hash, right_hash=right_hash)
+
+                new_ancestors.append(new_node)
+                old_child_hash, new_child_hash = ancestor.hash, new_node.hash
+
+            for new_node in new_ancestors:
+                # TODO: handle collision, recheck other places too
+                await self.db.execute(
+                    "INSERT INTO node(hash, node_type, left, right, key, value)"
+                    " VALUES(:hash, :node_type, :left, :right, :key, :value)",
+                    {
+                        "hash": new_node.hash.hex(),
+                        "node_type": NodeType.INTERNAL,
+                        "left": new_node.left_hash.hex(),
+                        "right": new_node.right_hash.hex(),
+                        "key": None,
+                        "value": None,
+                    },
+                )
+
+            await self.db.execute(
+                "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
+                {
+                    "tree_id": tree_id.hex(),
+                    "generation": existing_generation + 1,
+                    "node_hash": new_ancestors[-1].hash.hex(),
+                },
+            )
+
+        return
 
     async def get_node_by_key(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):

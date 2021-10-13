@@ -22,6 +22,10 @@ from chia.util.db_wrapper import DBWrapper
 log = logging.getLogger(__name__)
 
 
+def kv(k: bytes, v: List[bytes]) -> Tuple[bytes, bytes]:
+    return Program.to(k).as_bin(), Program.to(v).as_bin()
+
+
 @pytest.fixture(name="db_connection", scope="function")
 async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
@@ -188,10 +192,6 @@ class Example:
 async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     keys_values = {bytes([key]): [bytes([x]) for x in [0x10 + key, key]] for key in [0, 1, 2, 3]}
 
-    # this hint is specific to this data, it doesn't need to be this strict
-    def kv(k: bytes, v: List[bytes]) -> Tuple[bytes, bytes]:
-        return Program.to(k).as_bin(), Program.to(v).as_bin()
-
     expected = Program.to(
         (
             (
@@ -326,6 +326,50 @@ async def test_inserting_duplicate_key_fails(data_store: DataStore, tree_id: byt
             reference_node_hash=first_hash,
             side=Side.RIGHT,
         )
+
+
+@pytest.mark.asyncio()
+async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    key = b"\x00"
+
+    expected = Program.to(
+        (
+            kv(b"\x01", [b"\x11", b"\x01"]),
+            (
+                kv(b"\x02", [b"\x12", b"\x02"]),
+                kv(b"\x03", [b"\x13", b"\x03"]),
+            ),
+        ),
+    )
+
+    await data_store.delete(key=Program.to(key), tree_id=tree_id)
+    result = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    assert result == expected
+
+
+@pytest.mark.asyncio()
+async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store=data_store, tree_id=tree_id)
+
+    key = b"\x01"
+
+    expected = Program.to(
+        (
+            kv(b"\x00", [b"\x10", b"\x00"]),
+            (
+                kv(b"\x02", [b"\x12", b"\x02"]),
+                kv(b"\x03", [b"\x13", b"\x03"]),
+            ),
+        ),
+    )
+
+    await data_store.delete(key=Program.to(key), tree_id=tree_id)
+    result = await data_store.get_tree_as_program(tree_id=tree_id)
+
+    assert result == expected
 
 
 # @pytest.mark.asyncio
