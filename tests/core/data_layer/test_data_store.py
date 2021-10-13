@@ -229,7 +229,6 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
     print(f"{actual.as_python()=}")
 
-    # TODO: next step messes up...
     a_hash = await insert(key=b"\x00", reference_node_hash=b_hash, side=Side.LEFT)
     await _debug_dump(db=data_store.db, description="after 0")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
