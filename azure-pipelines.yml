@@ -54,10 +54,12 @@ steps:
     displayName: Create installer version number
 
   - script: |
+      MADMAX_VERSION=$(curl --silent "https://api.github.com/repos/Chia-Network/chia-plotter-madmax/releases/latest" | jq -r '.tag_name')
+
       mkdir "$(System.DefaultWorkingDirectory)/madmax"
-      wget -P "$(System.DefaultWorkingDirectory)/madmax/" https://download-chia-net.s3.us-west-2.amazonaws.com/madmax-test/chia_plot
+      wget -O "$(System.DefaultWorkingDirectory)/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${MADMAX_VERSION}/chia_plot-${MADMAX_VERSION}-macos-intel
       chmod +x "$(System.DefaultWorkingDirectory)/madmax/chia_plot"
-    displayName: "Get test madmax plotter"
+    displayName: "Get latest madmax release"
 
   - script: |
       sh install.sh
