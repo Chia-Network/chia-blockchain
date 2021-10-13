@@ -2,7 +2,6 @@ from typing import Any, Callable, Dict
 
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
