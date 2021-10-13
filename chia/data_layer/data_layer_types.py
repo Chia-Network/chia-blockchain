@@ -53,7 +53,7 @@ class TerminalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
         return cls(
-            hash=hexstr_to_bytes32(row["hash"]),
+            hash=bytes32(hexstr_to_bytes(row["hash"])),
             # generation=row["generation"],
             key=Program.fromhex(row["key"]),
             value=Program.fromhex(row["value"]),
@@ -73,10 +73,10 @@ class InternalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
         return cls(
-            hash=hexstr_to_bytes32(row["hash"]),
+            hash=bytes32(hexstr_to_bytes(row["hash"])),
             # generation=row["generation"],
-            left_hash=hexstr_to_bytes32(row["left"]),
-            right_hash=hexstr_to_bytes32(row["right"]),
+            left_hash=bytes32(hexstr_to_bytes(row["left"])),
+            right_hash=bytes32(hexstr_to_bytes(row["right"])),
         )
 
 
@@ -92,10 +92,10 @@ class Root:
         if raw_node_hash is None:
             node_hash = None
         else:
-            node_hash = hexstr_to_bytes32(raw_node_hash)
+            node_hash = bytes32(hexstr_to_bytes(raw_node_hash))
 
         return cls(
-            tree_id=hexstr_to_bytes32(row["tree_id"]),
+            tree_id=bytes32(hexstr_to_bytes(row["tree_id"])),
             node_hash=node_hash,
             generation=row["generation"],
         )
@@ -105,7 +105,3 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
-
-
-def hexstr_to_bytes32(hexstr: str) -> bytes32:
-    return bytes32(hexstr_to_bytes(hexstr))

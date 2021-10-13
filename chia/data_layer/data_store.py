@@ -6,10 +6,11 @@ from typing import Dict, List, Optional, Set
 
 import aiosqlite
 
-from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode, hexstr_to_bytes32
+from chia.data_layer.data_layer_types import Root, Side, Node, TerminalNode, NodeType, InternalNode
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
 
@@ -86,7 +87,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT id FROM tree")
 
-        tree_ids = {hexstr_to_bytes32(row["id"]) async for row in cursor}
+        tree_ids = {bytes32(hexstr_to_bytes(row["id"])) async for row in cursor}
 
         return tree_ids
 
