@@ -7,7 +7,6 @@ from chia.util.keychain import Keychain, obtain_current_passphrase, supports_os_
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.misc import prompt_yes_no
 from chia.util.ws_message import WsRpcMessage
-from functools import wraps
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
@@ -260,34 +259,34 @@ def display_passphrase_hint() -> None:
         print("Passphrase hint is not set")
 
 
-def check_passphrase_hint_requirements(func):
-    @wraps(func)
-    def inner(*args, **kwargs):
-        if Keychain.has_master_passphrase() is False or using_default_passphrase():
-            print("Passphrase is not set")
-        else:
-            current_passphrase: Optional[str] = get_current_passphrase()
-            if current_passphrase is None:
-                # None should only be returned if has_master_passphrase() returns False, which we check earlier
-                raise RuntimeError("Keyring is not passphrase-protected")
-            return func(*args, **kwargs, current_passphrase=current_passphrase)
-
-    return inner
-
-
-@check_passphrase_hint_requirements
-def set_passphrase_hint(hint: str, current_passphrase: str) -> None:
+def update_passphrase_hint(hint: Optional[str] = None) -> bool:
+    updated: bool = False
     if Keychain.has_master_passphrase() is False or using_default_passphrase():
-        print("Passphrase is not set")
+        print("Updating the passphrase hint requires that a passphrase has been set")
     else:
-        Keychain.set_master_passphrase_hint(current_passphrase, hint)
+        current_passphrase: Optional[str] = get_current_passphrase()
+        if current_passphrase is None:
+            print("Keyring is not passphrase-protected")
+        else:
+            # Set or remove the passphrase hint
+            Keychain.set_master_passphrase_hint(current_passphrase, hint)
+            updated = True
+
+    return updated
+
+
+def set_passphrase_hint(hint: str) -> None:
+    if update_passphrase_hint(hint):
         print("Passphrase hint set")
+    else:
+        print("Passphrase hint was not updated")
 
 
-@check_passphrase_hint_requirements
-def remove_passphrase_hint(current_passphrase: str) -> None:
-    Keychain.set_master_passphrase_hint(current_passphrase, None)
-    print("Passphrase hint removed")
+def remove_passphrase_hint() -> None:
+    if update_passphrase_hint(None):
+        print("Passphrase hint removed")
+    else:
+        print("Passphrase hint was not removed")
 
 
 async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
