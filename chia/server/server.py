@@ -28,7 +28,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_localhost, is_in_network
-from chia.util.ssl import verify_ssl_certs_and_keys
+from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 
 def ssl_context_for_server(

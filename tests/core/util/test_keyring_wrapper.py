@@ -1,5 +1,5 @@
 import logging
-import unittest
+import pytest
 
 from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from pathlib import Path
@@ -9,14 +9,12 @@ from tests.util.keyring import using_temp_file_keyring, using_temp_file_keyring_
 log = logging.getLogger(__name__)
 
 
-class TestKeyringWrapper(unittest.TestCase):
-    def setUp(self) -> None:
-        return super().setUp()
-
-    def tearDown(self) -> None:
+class TestKeyringWrapper:
+    @pytest.fixture(autouse=True, scope="function")
+    def setup_keyring_wrapper(self):
+        yield
         KeyringWrapper.cleanup_shared_instance()
         assert KeyringWrapper.get_shared_instance(create_if_necessary=False) is None
-        return super().tearDown()
 
     def test_shared_instance(self):
         """

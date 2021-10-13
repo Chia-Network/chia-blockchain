@@ -255,6 +255,16 @@ full_node:
   # The full node server (if run) will run on this port
   port: 8444
 
+  # controls the sync-to-disk behavior of the database connection. Can be one of:
+  # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
+  #         power-loss, disk failure or kernel panics
+  # "off"   disables syncing, lightens disk load and improves performance.
+  #         increases risk of corrupting DB in power-loss, disk failure or
+  #         kernel panics
+  # "auto"  on/off is decided based on a heuristic of how likely a failure is on
+  #         the particular system we're running on
+  db_sync: auto
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v1_CHALLENGE.sqlite
   peer_db_path: db/peer_table_node.sqlite
@@ -378,6 +388,9 @@ wallet:
   rpc_port: 9256
 
   enable_profiler: False
+
+  # see description for full_node.db_sync
+  db_sync: auto
 
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
