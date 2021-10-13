@@ -66,7 +66,7 @@ class PlotKeysResolver:
         if self.connect_to_daemon:
             keychain_proxy: Optional[KeychainProxy] = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:
-            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(Keychain(), log=self.log)
+            keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
         farmer_public_key: G1Element
         if self.farmer_public_key is not None:
@@ -104,7 +104,7 @@ class PlotKeysResolver:
                     self.alt_fingerprint
                 )
             else:
-                sk_ent: Optional[Tuple[PrivateKey, bytes]] = keychain.get_first_private_key()
+                sk_ent = keychain.get_first_private_key()
 
             if sk_ent:
                 sk = sk_ent[0]
