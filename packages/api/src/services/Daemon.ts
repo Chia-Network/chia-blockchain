@@ -1,11 +1,11 @@
-import type Connection from '../Connection';
+import type Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
 import ServiceName from '../constants/ServiceName';
 
 export default class Daemon extends Service {
-  constructor(connection: Connection, options?: Options) {
-    super(ServiceName.DAEMON, connection, options);
+  constructor(client: Client, options?: Options) {
+    super(ServiceName.DAEMON, client, options);
   }
 
   registerService(service: string) {

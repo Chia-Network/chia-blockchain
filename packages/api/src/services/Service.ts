@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import { isUndefined, omitBy } from 'lodash';
-import type Connection from '../Connection';
+import type Client from '../Client';
 import Message from '../Message';
 
 export type Options = {
@@ -8,30 +8,30 @@ export type Options = {
 };
 
 export default class Service extends EventEmitter {
-  private _connection: Connection;
+  private _client: Client;
   private _destination: string;
   private _origin: string;
   private _registered: boolean = false;
 
-  constructor(name: string, connection: Connection, options: Options = {}) {
+  constructor(name: string, client: Client, options: Options = {}) {
     super();
 
     const { origin } = options;
 
-    this._connection = connection;
+    this._client = client;
     this._destination = name;
-    this._origin = origin ?? connection.origin;
+    this._origin = origin ?? client.origin;
 
-    connection.addService(this);
-    connection.on('message', this.handleMessage);
+    client.addService(this);
+    client.on('message', this.handleMessage);
   }
 
   get destination() {
     return this._destination;
   }
 
-  get connection() {
-    return this._connection;
+  get client() {
+    return this._client;
   }
 
   get origin() {
@@ -63,7 +63,7 @@ export default class Service extends EventEmitter {
   }
 
   async command(command: string, data: Object = {}, ack: boolean = false): Promise<any> {
-    const { connection, origin, destination } = this;
+    const { client, origin, destination } = this;
 
     if (!command) {
       throw new Error('Command is required parameter');
@@ -72,7 +72,7 @@ export default class Service extends EventEmitter {
     // remove undefined values from root data
     const updatedData = omitBy(data, isUndefined);
 
-    const response = await connection.send(new Message({
+    const response = await client.send(new Message({
       origin,
       destination,
       command,

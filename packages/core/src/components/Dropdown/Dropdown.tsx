@@ -20,7 +20,7 @@ type Props = MenuProps & {
 };
 
 export default function Dropdown(props: Props) {
-  const { selected, options, defaultOpen, onSelect, placeholder, startIcon, children, ...rest } = props;
+  const { selected, options, defaultOpen, onSelect, placeholder, startIcon, children, open: _, ...rest } = props;
   const [open, toggleOpen] = useToggle(defaultOpen);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -60,8 +60,9 @@ export default function Dropdown(props: Props) {
       <Menu
         id="dropdown"
         anchorEl={anchorEl}
-        open={open}
         onClose={handleClose}
+        getContentAnchorEl={null}
+        open={open}
         {...rest}
         keepMounted
       >

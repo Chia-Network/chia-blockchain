@@ -69,6 +69,7 @@
     "react-redux": "^7.2.5",
     "react-router": "^5.2.1",
     "react-router-dom": "^5.3.0",
+    "react-qrcode-logo": "^2.5.0",
     "react-scroll-to-bottom": "^4.1.2",
     "react-teleporter": "^2.2.1",
     "react-use": "^17.3.1",

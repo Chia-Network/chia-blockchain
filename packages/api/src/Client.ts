@@ -15,7 +15,7 @@ type Options = {
   debug?: boolean;
 };
 
-export default class Connection extends EventEmitter {
+export default class Client extends EventEmitter {
   private options: Required<Options>;
   private ws: any;
 

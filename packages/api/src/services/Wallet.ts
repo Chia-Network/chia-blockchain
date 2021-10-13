@@ -1,11 +1,11 @@
-import Connection from '../Connection';
+import Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
 import ServiceName from '../constants/ServiceName';
 
 export default class Wallet extends Service {
-  constructor(connection: Connection, options?: Options) {
-    super(ServiceName.WALLET, connection, options);
+  constructor(client: Client, options?: Options) {
+    super(ServiceName.WALLET, client, options);
   }
 
   async getWallets() {
@@ -122,7 +122,7 @@ export default class Wallet extends Service {
   async logIn(
     fingerprint: string, 
     type: 'normal' | 'skip' | 'restore_backup' = 'normal', // skip is used to skip import
-    host: string = this.connection.backupHost,
+    host: string = this.client.backupHost,
     filePath?: string,
   ) {
     return this.command('log_in', {
@@ -135,7 +135,7 @@ export default class Wallet extends Service {
 
   logInAndSkipImport(
     fingerprint: string,
-    host: string = this.connection.backupHost,
+    host: string = this.client.backupHost,
   ) {
     return this.logIn(fingerprint, 'skip', host);
   }
@@ -143,7 +143,7 @@ export default class Wallet extends Service {
   logInAndImportBackup(
     fingerprint: string,
     filePath: string,
-    host: string = this.connection.backupHost,
+    host: string = this.client.backupHost,
   ) {
     return this.logIn(fingerprint, 'restore_backup', host, filePath);
   }

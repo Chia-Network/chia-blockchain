@@ -13,7 +13,6 @@ const StyledSmallBadge = styled(VerifiedUserIcon)`
 
 type Props = VerifiedUserProps & {
   wallet: Wallet;
-  tooltip?: boolean;
 };
 
 export default function WalletBadge(props: Props) {
@@ -22,19 +21,14 @@ export default function WalletBadge(props: Props) {
   if (wallet.type === WalletType.CAT) {
     const token = Tokens.find((token) => token.tail === wallet.colour);
     if (token) {
-      return tooltip 
-        ? (
-          <Tooltip title={<Trans>This access token is whitelisted</Trans>}>
-            <StyledSmallBadge {...rest} />
-          </Tooltip>
-        )
-        : <StyledSmallBadge {...rest} />
+      return (
+        <Tooltip title={<Trans>This access token is whitelisted</Trans>}>
+          <StyledSmallBadge {...rest} />
+        </Tooltip>
+      );
     }
   }
 
   return null;
 }
 
-WalletBadge.defaultProps = {
-  tooltip: false,
-};

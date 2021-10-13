@@ -71,6 +71,7 @@ export default function WalletsDropdown(props: Props) {
       options={options}
       selected={walletId}
       onSelect={handleSelectWallet}
+      /*
       anchorOrigin={{
         vertical: 'bottom',
         // horizontal: 'center',
@@ -79,6 +80,7 @@ export default function WalletsDropdown(props: Props) {
         vertical: 'top',
         // horizontal: 'center',
       }}
+      */
     >
       {(option) => !!option?.wallet && (
         <Flex gap={1} alignItems="center">

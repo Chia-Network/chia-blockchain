@@ -1,11 +1,56 @@
-import Connection from '../Connection';
+import Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
 import ServiceName from '../constants/ServiceName';
 
 export default class FullNode extends Service {
-  constructor(connection: Connection, options?: Options) {
-    super(ServiceName.FULL_NODE, connection, options);
+  constructor(client: Client, options?: Options) {
+    super(ServiceName.FULL_NODE, client, options);
   }
 
+  async getBlockRecords(end: number, count: number = 10) {
+    const start = Math.max(0, end - count);
+
+    return this.command('get_block_records', {
+      start,
+      end,
+    });
+  }
+
+  async getUnfinishedBlockHeaders() {
+    return this.command('get_unfinished_block_headers');
+  }
+
+  async getBlockchainState() {
+    return this.command('get_blockchain_state');
+  }
+
+  async getConnections() {
+    return this.command('get_connections');
+  }
+
+  async openConnection(host: string, port: number) {
+    return this.command('open_connection', {
+      host,
+      port,
+    });
+  }
+
+  async closeConnection(nodeId: number) {
+    return this.command('close_connection', {
+      nodeId,
+    });
+  }
+
+  async getBlock(headerHash: string) {
+    return this.command('get_block', {
+      headerHash,
+    });
+  }
+
+  async getBlockRecord(headerHash: string) {
+    return this.command('get_block_record', {
+      headerHash,
+    });
+  }
 }

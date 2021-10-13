@@ -1,12 +1,12 @@
-import Connection from '../Connection';
+import Client from '../Client';
 import Service from './Service';
 import type { Options } from './Service';
 import type Message from '../Message';
 import ServiceName from '../constants/ServiceName';
 
 export default class Farmer extends Service {
-  constructor(connection: Connection, options?: Options) {
-    super(ServiceName.FARMER, connection, options);
+  constructor(client: Client, options?: Options) {
+    super(ServiceName.FARMER, client, options);
   }
 
   onNewFarmingInfo(cb: (data: any, message: Message) => void) {
