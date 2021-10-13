@@ -78,12 +78,12 @@ binaries = [
 ]
 
 if not THIS_IS_MAC:
-    binaries.extend((
+    binaries.extend([
         (
             f"{ROOT}/bladebit/bladebit",
             "bladebit"
         )
-    ))
+    ])
 
 if THIS_IS_WINDOWS:
     hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
