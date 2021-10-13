@@ -225,9 +225,13 @@ class PlotManager:
             total_result: PlotRefreshResult = PlotRefreshResult()
             while self.needs_refresh() and self._refreshing_enabled:
                 batch_result: PlotRefreshResult = self.refresh_batch(plot_paths, plot_directories)
-                total_result += batch_result
+                total_result.loaded += batch_result.loaded
+                total_result.removed += batch_result.removed
+                total_result.processed += batch_result.processed
+                total_result.remaining = batch_result.remaining
+                total_result.duration += batch_result.duration
                 self._refresh_callback(batch_result)
-                if batch_result.remaining_files == 0:
+                if batch_result.remaining == 0:
                     break
                 batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
                 self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
@@ -245,9 +249,8 @@ class PlotManager:
             self.last_refresh_time = time.time()
 
             self.log.debug(
-                f"_refresh_task: total_result.loaded_plots {total_result.loaded_plots}, "
-                f"total_result.removed_plots {total_result.removed_plots}, "
-                f"total_result.loaded_size {total_result.loaded_size / (1024 ** 4):.2f} TiB, "
+                f"_refresh_task: total_result.loaded {total_result.loaded}, "
+                f"total_result.removed {total_result.removed}, "
                 f"total_duration {total_result.duration:.2f} seconds"
             )
 
@@ -290,10 +293,10 @@ class PlotManager:
                     return None
             try:
                 with counter_lock:
-                    if result.processed_files >= self.refresh_parameter.batch_size:
-                        result.remaining_files += 1
+                    if result.processed >= self.refresh_parameter.batch_size:
+                        result.remaining += 1
                         return None
-                    result.processed_files += 1
+                    result.processed += 1
 
                 prover = DiskProver(str(file_path))
 
@@ -372,8 +375,7 @@ class PlotManager:
                 )
 
                 with counter_lock:
-                    result.loaded_plots += 1
-                    result.loaded_size += stat_info.st_size
+                    result.loaded += 1
 
                 if file_path in self.failed_to_open_filenames:
                     del self.failed_to_open_filenames[file_path]
@@ -408,7 +410,7 @@ class PlotManager:
                     loaded_path, duplicated_paths = paths_entry
                     if plot_removed(Path(loaded_path) / Path(plot_filename)):
                         filenames_to_remove.append(plot_filename)
-                        result.removed_plots += 1
+                        result.removed += 1
                         # No need to check the duplicates here since we drop the whole entry
                         continue
 
@@ -416,7 +418,7 @@ class PlotManager:
                     for path in duplicated_paths:
                         if plot_removed(Path(path) / Path(plot_filename)):
                             paths_to_remove.append(path)
-                            result.removed_plots += 1
+                            result.removed += 1
                     for path in paths_to_remove:
                         duplicated_paths.remove(path)
 
@@ -432,10 +434,9 @@ class PlotManager:
         result.duration = time.time() - start_time
 
         self.log.debug(
-            f"refresh_batch: loaded_plots {result.loaded_plots}, "
-            f"loaded_size {result.loaded_size / (1024 ** 4):.2f} TiB, "
-            f"removed_plots {result.removed_plots}, processed_plots {result.processed_files}, "
-            f"remaining_plots {result.remaining_files}, batch_size {self.refresh_parameter.batch_size}, "
+            f"refresh_batch: loaded {result.loaded}, "
+            f"removed {result.removed}, processed {result.processed}, "
+            f"remaining {result.remaining}, batch_size {self.refresh_parameter.batch_size}, "
             f"duration: {result.duration:.2f} seconds"
         )
         return result
