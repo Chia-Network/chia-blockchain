@@ -3,6 +3,7 @@ import aiosqlite as aiosqlite
 
 from chia.data_layer.data_layer_types import node_type_to_class, Node
 
+
 async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
     cursor = await db.execute("SELECT name FROM sqlite_master WHERE type='table';")
     print("-" * 50, description, flush=True)

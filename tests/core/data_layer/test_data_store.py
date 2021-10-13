@@ -6,7 +6,6 @@ import logging
 from typing import AsyncIterable, Dict, List, Optional, Tuple
 
 import aiosqlite
-from clvm.CLVMObject import CLVMObject
 import pytest
 
 from chia.data_layer.data_layer_types import Side
@@ -17,7 +16,6 @@ from chia.types.blockchain_format.tree_hash import bytes32
 
 
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32
 
 # from tests.setup_nodes import bt, test_constants
 
