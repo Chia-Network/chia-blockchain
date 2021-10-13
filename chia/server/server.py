@@ -587,7 +587,7 @@ class ChiaServer:
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
                     if task_id in self.api_tasks:
-                        await self.api_tasks.pop(task_id)
+                        self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
                         self.tasks_from_peer[connection.peer_node_id].remove(task_id)
                     if task_id in self.execute_tasks:
