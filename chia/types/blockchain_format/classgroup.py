@@ -31,5 +31,5 @@ class ClassgroupElement(Streamable):
         )
 
     @staticmethod
-    def get_size():
+    def get_size(constants: ConsensusConstants):
         return 100
