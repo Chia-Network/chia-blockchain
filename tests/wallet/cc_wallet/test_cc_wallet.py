@@ -123,6 +123,7 @@ class TestCCWallet:
         await time_out_assert(
             15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
         )
+
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -137,7 +138,7 @@ class TestCCWallet:
         assert cc_wallet.cc_info.limitations_program_hash == cc_wallet_2.cc_info.limitations_program_hash
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
-        tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash])
+        tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], fee=uint64(1))
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
         await time_out_assert(
@@ -146,6 +147,8 @@ class TestCCWallet:
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds*2-101)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
@@ -528,8 +531,7 @@ class TestCCWallet:
 
         assert above_limit_tx is None
 
-        # @pytest.mark.asyncio
-
+    # @pytest.mark.asyncio
     # async def test_cat_melt_and_mint(self, two_wallet_nodes):
     #     num_blocks = 3
     #     full_nodes, wallets = two_wallet_nodes
@@ -570,5 +572,3 @@ class TestCCWallet:
     #
     #     await time_out_assert(15, cc_wallet.get_confirmed_balance, 100000)
     #     await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100000)
-    #
-    #
