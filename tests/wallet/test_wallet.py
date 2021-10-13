@@ -43,8 +43,12 @@ class TestWalletSimulator:
         async for _ in setup_simulators_and_wallets(3, 2, {}, True):
             yield _
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node):
+    async def test_wallet_coinbase(self, wallet_node, trusted):
         num_blocks = 10
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -53,6 +57,10 @@ class TestWalletSimulator:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(0, num_blocks):
@@ -91,8 +99,12 @@ class TestWalletSimulator:
         await time_out_assert(10, check_tx_are_pool_farm_rewards, True)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes):
+    async def test_wallet_make_transaction(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -101,6 +113,12 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
@@ -137,8 +155,12 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, new_funds - 10)
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase_reorg(self, wallet_node):
+    async def test_wallet_coinbase_reorg(self, wallet_node, trusted):
         num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -146,7 +168,10 @@ class TestWalletSimulator:
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {fn_server.node_id: fn_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -168,8 +193,12 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_send_to_three_peers(self, three_sim_two_wallets):
+    async def test_wallet_send_to_three_peers(self, three_sim_two_wallets, trusted):
         num_blocks = 10
         full_nodes, wallets = three_sim_two_wallets
 
@@ -187,6 +216,10 @@ class TestWalletSimulator:
         server_2 = full_node_2.server
 
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        if trusted:
+            wallet_0.config["trusted_peers"] = {server_0.node_id: server_0.node_id}
+        else:
+            wallet_0.config["trusted_peers"] = {}
 
         # wallet0 <-> sever0
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
@@ -221,8 +254,12 @@ class TestWalletSimulator:
 
         await time_out_assert_not_none(15, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
+    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze, trusted):
         num_blocks = 10
         full_nodes, wallets = two_wallet_nodes_five_freeze
         full_node_api_0 = full_nodes[0]
@@ -234,7 +271,12 @@ class TestWalletSimulator:
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         ph = await wallet_0.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {server_0.node_id: server_0.node_id}
+            wallet_node_1.config["trusted_peers"] = {server_0.node_id: server_0.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
         await wallet_0_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
         await wallet_1_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
@@ -330,9 +372,12 @@ class TestWalletSimulator:
     #         True,
     #     )
     #     await _teardown_nodes(node_iters)
-
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes):
+    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -340,7 +385,16 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         for i in range(0, num_blocks):
@@ -384,8 +438,12 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee)
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes):
+    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -393,7 +451,16 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         for i in range(0, num_blocks):
@@ -467,8 +534,12 @@ class TestWalletSimulator:
 
         assert above_limit_tx is None
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes):
+    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -476,7 +547,16 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         for i in range(0, num_blocks):
@@ -539,8 +619,12 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
         await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_wallet_tx_reorg(self, two_wallet_nodes):
+    async def test_wallet_tx_reorg(self, two_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -553,6 +637,12 @@ class TestWalletSimulator:
 
         ph = await wallet.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {fn_server.node_id: fn_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {fn_server.node_id: fn_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
