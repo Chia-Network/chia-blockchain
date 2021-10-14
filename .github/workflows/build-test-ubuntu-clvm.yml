@@ -68,6 +68,7 @@ jobs:
     - name: Link home directory
       run: |
         cd $HOME
+        mkdir $GITHUB_WORKSPACE/.chia
         ln -s $GITHUB_WORKSPACE/.chia
         echo "$HOME/.chia"
         ls -al $HOME/.chia
