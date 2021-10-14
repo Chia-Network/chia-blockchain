@@ -143,7 +143,7 @@ class DataStore:
                     ),
                     ancestors(hash, node_type, left, right, key, value, depth) AS (
                         SELECT node.*, NULL AS depth FROM node
-r                        WHERE node.left == :reference_hash OR node.right == :reference_hash
+                        WHERE node.left == :reference_hash OR node.right == :reference_hash
                         UNION ALL
                         SELECT node.*, NULL AS depth FROM node, ancestors
                         WHERE node.left == ancestors.hash OR node.right == ancestors.hash
