@@ -37,8 +37,8 @@ from chia.util.merkle_set import MerkleSet
 from chia.util.recursive_replace import recursive_replace
 from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt, test_constants
-from tests.util.keyring import TempKeyring
 from tests.util.blockchain import create_blockchain
+from tests.util.keyring import TempKeyring
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
