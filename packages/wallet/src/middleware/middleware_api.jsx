@@ -320,6 +320,8 @@ export const handle_message = async (store, payload, errorProcessed) => {
       if (state === 'state_changed') {
         store.dispatch(refreshPlots());
       }
+    } else if (state === 'wallet_created') {
+      store.dispatch(format_message('get_wallets', {}));
     } else if (state === 'coin_added' || state === 'coin_removed') {
       var { wallet_id } = payload.data;
       get_wallet_balance(store, wallet_id);
