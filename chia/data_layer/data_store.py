@@ -243,6 +243,34 @@ class DataStore:
 
         return NodeType(raw_node_type["node_type"])
 
+    async def _insert_internal_node(self, hash: bytes32, left_hash: bytes32, right_hash: bytes32) -> None:
+        await self.db.execute(
+            "INSERT INTO node(hash, node_type, left, right, key, value)"
+            " VALUES(:hash, :node_type, :left, :right, :key, :value)",
+            {
+                "hash": hash.hex(),
+                "node_type": NodeType.INTERNAL,
+                "left": left_hash.hex(),
+                "right": right_hash.hex(),
+                "key": None,
+                "value": None,
+            },
+        )
+
+    async def _insert_terminal_node(self, hash: bytes32, key: bytes, value: bytes) -> None:
+        await self.db.execute(
+            "INSERT INTO node(hash, node_type, left, right, key, value)"
+            " VALUES(:hash, :node_type, :left, :right, :key, :value)",
+            {
+                "hash": hash.hex(),
+                "node_type": NodeType.TERMINAL,
+                "left": None,
+                "right": None,
+                "key": key.hex(),
+                "value": value.hex(),
+            },
+        )
+
     async def insert(
         self,
         key: Program,
@@ -276,19 +304,7 @@ class DataStore:
             new_terminal_node_hash = Program.to([key.as_bin(), value.as_bin()]).get_tree_hash()
 
             # create new terminal node
-            await self.db.execute(
-                "INSERT INTO node(hash, node_type, left, right, key, value)"
-                " VALUES(:hash, :node_type, :left, :right, :key, :value)",
-                {
-                    "hash": new_terminal_node_hash.hex(),
-                    "node_type": NodeType.TERMINAL,
-                    # "generation": generation,
-                    "left": None,
-                    "right": None,
-                    "key": bytes(key).hex(),
-                    "value": bytes(value).hex(),
-                },
-            )
+            await self._insert_terminal_node(hash=new_terminal_node_hash, key=bytes(key), value=bytes(value))
 
             if was_empty:
                 # TODO: a real exception
@@ -350,18 +366,7 @@ class DataStore:
                 new_hash = Program.to([left, right]).get_tree_hash()
 
                 # create first new internal node
-                await self.db.execute(
-                    "INSERT INTO node(hash, node_type, left, right, key, value)"
-                    " VALUES(:hash, :node_type, :left, :right, :key, :value)",
-                    {
-                        "hash": new_hash.hex(),
-                        "node_type": NodeType.INTERNAL,
-                        "left": left.hex(),
-                        "right": right.hex(),
-                        "key": None,
-                        "value": None,
-                    },
-                )
+                await self._insert_internal_node(hash=new_hash, left_hash=left, right_hash=right)
 
                 traversal_node_hash = reference_node_hash
 
@@ -379,18 +384,7 @@ class DataStore:
 
                     new_hash = Program.to([left, right]).get_tree_hash()
 
-                    await self.db.execute(
-                        "INSERT INTO node(hash, node_type, left, right, key, value)"
-                        " VALUES(:hash, :node_type, :left, :right, :key, :value)",
-                        {
-                            "hash": new_hash.hex(),
-                            "node_type": NodeType.INTERNAL,
-                            "left": left.hex(),
-                            "right": right.hex(),
-                            "key": None,
-                            "value": None,
-                        },
-                    )
+                    await self._insert_internal_node(hash=new_hash, left_hash=left, right_hash=right)
 
                 await self._insert_root(tree_id=tree_id, node_hash=new_hash)
 
@@ -465,18 +459,7 @@ class DataStore:
 
             for new_node in new_ancestors:
                 # TODO: handle collision, recheck other places too
-                await self.db.execute(
-                    "INSERT INTO node(hash, node_type, left, right, key, value)"
-                    " VALUES(:hash, :node_type, :left, :right, :key, :value)",
-                    {
-                        "hash": new_node.hash.hex(),
-                        "node_type": NodeType.INTERNAL,
-                        "left": new_node.left_hash.hex(),
-                        "right": new_node.right_hash.hex(),
-                        "key": None,
-                        "value": None,
-                    },
-                )
+                await self._insert_internal_node(hash=new_node.hash, left_hash=new_node.left_hash, right_hash=new_node.right_hash)
 
             await self._insert_root(tree_id=tree_id, node_hash=new_ancestors[-1].hash)
 
