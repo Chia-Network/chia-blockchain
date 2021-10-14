@@ -393,7 +393,7 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
