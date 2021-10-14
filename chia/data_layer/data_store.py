@@ -127,7 +127,7 @@ class DataStore:
 
     # TODO: If we exclude the requested node from the result then we could have a
     #       consistent List[InternalNode] return type.
-    async def get_heritage(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[Node]:
+    async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
             assert root.node_hash
@@ -142,7 +142,8 @@ class DataStore:
                         WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                     ),
                     ancestors(hash, node_type, left, right, key, value, depth) AS (
-                        SELECT node.*, NULL AS depth FROM node WHERE node.hash == :reference_hash
+                        SELECT node.*, NULL AS depth FROM node
+r                        WHERE node.left == :reference_hash OR node.right == :reference_hash
                         UNION ALL
                         SELECT node.*, NULL AS depth FROM node, ancestors
                         WHERE node.left == ancestors.hash OR node.right == ancestors.hash
@@ -154,9 +155,13 @@ class DataStore:
                 {"reference_hash": node_hash.hex(), "root_hash": root.node_hash.hex()},
             )
 
-            heritage = [row_to_node(row=row) async for row in cursor]
+            # The resulting rows must represent internal nodes.  InternalNode.from_row()
+            # does some amount of validation in the sense that it will fail if left
+            # or right can't turn into a bytes32 as expected.  There is room for more
+            # validation here if desired.
+            ancestors = [InternalNode.from_row(row=row) async for row in cursor]
 
-        return heritage
+        return ancestors
 
     async def get_pairs(self, tree_id: bytes32, *, lock: bool = True) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -412,14 +417,11 @@ class DataStore:
     async def delete(self, key: Program, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
-            inclusive_heritage = await self.get_heritage(node_hash=node.hash, tree_id=tree_id, lock=False)
-
-            # TODO: yuck, see note about .get_heritage() return type
-            heritage: List[InternalNode] = inclusive_heritage[1:]  # type: ignore[assignment]
+            ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
 
             existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
-            if len(heritage) == 0:
+            if len(ancestors) == 0:
                 # the only node is being deleted
                 await self.db.execute(
                     "INSERT INTO root(tree_id, generation, node_hash) VALUES(:tree_id, :generation, :node_hash)",
@@ -432,14 +434,14 @@ class DataStore:
 
                 return
 
-            parent = heritage[0]
+            parent = ancestors[0]
 
             if parent.left_hash == node.hash:
                 other_hash = parent.right_hash
             else:
                 other_hash = parent.left_hash
 
-            if len(heritage) == 1:
+            if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
                 await self.db.execute(
                     "INSERT INTO root(tree_id, generation, node_hash)" " VALUES(:tree_id, :generation, :node_hash)",
@@ -457,7 +459,7 @@ class DataStore:
             old_child_hash = parent.hash
             new_child_hash = other_hash
             # more parents to handle so let's traverse them
-            for ancestor in heritage[1:]:
+            for ancestor in ancestors[1:]:
                 if ancestor.left_hash == old_child_hash:
                     left_hash = new_child_hash
                     right_hash = ancestor.right_hash

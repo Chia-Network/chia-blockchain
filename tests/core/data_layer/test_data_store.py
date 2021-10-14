@@ -314,15 +314,14 @@ async def test_get_node_by_key_bytes(data_store: DataStore, tree_id: bytes32) ->
 
 
 @pytest.mark.asyncio
-async def test_get_heritage(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     example = await add_0123_example(data_store=data_store, tree_id=tree_id)
 
     reference_node_hash = example.terminal_nodes[2]
 
-    heritage = await data_store.get_heritage(node_hash=reference_node_hash, tree_id=tree_id)
-    hashes = [node.hash.hex() for node in heritage]
+    ancestors = await data_store.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id)
+    hashes = [node.hash.hex() for node in ancestors]
     assert hashes == [
-        "1d9f66aa837256c19d65ef8be77c33e30a7eb2ebf5f6c9f774383172c6c3a937",
         "f3bb419ad917572fd2f46291f627a00c3a315ffd2fdc5ac408935cbb51d78fc8",
         "1c71210dbb62bc617e7e192b8aca1031ff0f1189bb7ae686ecaa98d9611108a9",
     ]
