@@ -178,7 +178,7 @@ class TestPuzzles(TestCase):
         puzzle_program = p2_m_of_n_delegate_direct.puzzle_for_m_of_public_key_list(M, pks)
         selectors = [1, [], [], 1, 1]
         solution = p2_m_of_n_delegate_direct.solution_for_delegated_puzzle(
-            selectors, delegated_puzzle, delegated_solution
+            M, selectors, delegated_puzzle, delegated_solution
         )
 
         do_test_spend(puzzle_program, solution, payments, key_lookup)
