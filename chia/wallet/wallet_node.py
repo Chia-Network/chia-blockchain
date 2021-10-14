@@ -421,14 +421,14 @@ class WalletNode:
         all_state: Union[Optional, RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
         # State for untrusted sync is processed only in wp sync | or short  sync backwards
         if all_state is not None and self.is_trusted(peer):
-            await self.handle_coin_state_change(all_state.coin_states)
+            await self.wallet_state_manager.new_coin_state(all_state.coin_states, peer)
 
-    async def subscribe_to_coin_updates(self, coin_names, full_node, height=uint32(0)):
+    async def subscribe_to_coin_updates(self, coin_names, peer, height=uint32(0)):
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, height)
-        all_coins_state: Optional[RespondToCoinUpdates] = await full_node.register_interest_in_coin(msg)
+        all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
         # State for untrusted sync is processed only in wp sync | or short  sync backwards
-        if all_coins_state is not None and self.is_trusted(full_node):
-            await self.handle_coin_state_change(all_coins_state.coin_states)
+        if all_coins_state is not None and self.is_trusted(peer):
+            await self.wallet_state_manager.new_coin_state(all_coins_state.coin_states, peer)
 
     async def get_coin_state(self, coin_names) -> List[CoinState]:
         assert self.server is not None
@@ -463,15 +463,26 @@ class WalletNode:
         assert self.server is not None
         async with self.wallet_state_manager.lock:
             if self.is_trusted(peer):
-                await self.handle_coin_state_change(request.items, request.fork_height, request.height)
+                await self.wallet_state_manager.new_coin_state(request.items, peer, request.fork_height, request.height)
             else:
-                # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
-                # TODO check for hints here
-                pass
-
-    async def handle_coin_state_change(self, state_updates: List[CoinState], fork_height=None, height=None):
-        assert self.wallet_state_manager is not None
-        await self.wallet_state_manager.new_coin_state(state_updates, fork_height, height)
+                async with self.new_peak_lock:
+                    # Ignore state_update_received if untrusted, we'll sync from block messages where we check filter
+                    for coin_state in request.items:
+                        info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
+                            coin_state.coin.puzzle_hash
+                        )
+                        if info is not None:
+                            continue
+                        wallet_id, wallet_type = await self.wallet_state_manager.fetch_parent_and_check_for_cat(
+                            peer, coin_state
+                        )
+                        if wallet_id is not None:
+                            if request.height in self.wallet_state_manager.blockchain.height_to_hash:
+                                header_hash = self.wallet_state_manager.blockchain.height_to_hash[request.height]
+                                header_block = self.wallet_state_manager.blockchain.recent_blocks_dict[header_hash]
+                                # re-check the block filter for any new addition /removals
+                                await self.complete_blocks([header_block], peer)
+                    pass
 
     def get_full_node_peer(self):
         nodes = self.server.get_full_node_connections()
@@ -615,11 +626,16 @@ class WalletNode:
                     self.wallet_state_manager.set_sync_mode(False)
                     self.synced_peers.add(peer.peer_node_id)
                 else:
+                    if peer.peer_node_id not in self.synced_peers:
+                        # Edge case, we still want to subscribe for all phs
+                        # (Hints are not in filter)
+                        await self.untrusted_subscribe_to_puzzle_hashes(peer, False, None, None)
+                        self.synced_peers.add(peer.peer_node_id)
                     await self.wallet_short_sync_backtrack(peak_block, peer)
 
         self._pending_tx_handler()
 
-    async def wallet_short_sync_backtrack(self, header_block, peer):
+    async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer):
         top = header_block
         blocks = [top]
         # Fetch blocks backwards until we hit the one that we have,
@@ -867,6 +883,42 @@ class WalletNode:
         self.log.warning(f"It took {end_validation - start_validation} time to validate the weight proof!!!")
         return valid, weight_proof
 
+    async def untrusted_subscribe_to_puzzle_hashes(self, peer, save_state, peer_request_cache, weight_proof):
+        already_checked = set()
+        all_checked = False
+
+        while True:
+            if all_checked:
+                break
+            all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            to_check = []
+            for ph in all_puzzle_hashes:
+                if ph in already_checked:
+                    continue
+                else:
+                    to_check.append(ph)
+                    already_checked.add(ph)
+
+            msg = wallet_protocol.RegisterForPhUpdates(all_puzzle_hashes, uint32(0))
+            all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
+            assert all_state is not None
+
+            if save_state:
+                assert weight_proof is not None
+                assert peer_request_cache is not None
+                await self.validate_received_state_from_peer(
+                    all_state.coin_states, peer, weight_proof, peer_request_cache
+                )
+                await self.wallet_state_manager.new_coin_state(all_state.coin_states, peer)
+
+            # Check if new puzzle hashed have been created
+            check_again = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+            for ph in check_again:
+                if ph not in already_checked:
+                    all_checked = False
+                    continue
+            all_checked = True
+
     async def untrusted_sync_to_peer(self, peer, peak: wallet_protocol.NewPeakWallet, weight_proof):
         assert self.wallet_state_manager is not None
 
@@ -876,13 +928,7 @@ class WalletNode:
         # Always sync fully from untrusted
         # current_height = await self.wallet_state_manager.blockchain.get_synced_height()
         # Get state for puzzle hashes
-        msg = wallet_protocol.RegisterForPhUpdates(all_puzzle_hashes, uint32(0))
-        all_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
-        assert all_state is not None
-
-        await self.validate_received_state_from_peer(all_state.coin_states, peer, weight_proof, peer_request_cache)
-        # Apply validated state
-        await self.handle_coin_state_change(all_state.coin_states)
+        await self.untrusted_subscribe_to_puzzle_hashes(peer, True, peer_request_cache, weight_proof)
 
         # Get state for coins ids
         all_coins = await self.wallet_state_manager.coin_store.get_coins_to_check(uint32(0))
@@ -893,9 +939,11 @@ class WalletNode:
         msg1 = wallet_protocol.RegisterForCoinUpdates(all_coin_names, uint32(0))
         all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg1)
         assert all_coins_state is not None
-        await self.validate_received_state_from_peer(all_state.coin_states, peer, weight_proof, peer_request_cache)
+        await self.validate_received_state_from_peer(
+            all_coins_state.coin_states, peer, weight_proof, peer_request_cache
+        )
         # Apply validated state
-        await self.handle_coin_state_change(all_state.coin_states)
+        await self.wallet_state_manager.new_coin_state(all_coins_state.coin_states, peer)
         end_time = time.time()
         duration = end_time - start_time
         self.log.info(f"Sync duration was: {duration}")
