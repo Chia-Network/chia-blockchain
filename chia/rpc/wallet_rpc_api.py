@@ -812,7 +812,7 @@ class WalletRpcApi:
 
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
 
-        memos: List[bytes] = None
+        memos: List[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
 
