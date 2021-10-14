@@ -88,6 +88,8 @@ class DataStore:
         )
 
     async def _insert_internal_node(self, hash: bytes32, left_hash: bytes32, right_hash: bytes32) -> None:
+        # TODO: maybe verify a transaction is active
+
         await self.db.execute(
             "INSERT INTO node(hash, node_type, left, right, key, value)"
             " VALUES(:hash, :node_type, :left, :right, :key, :value)",
@@ -102,6 +104,8 @@ class DataStore:
         )
 
     async def _insert_terminal_node(self, hash: bytes32, key: bytes, value: bytes) -> None:
+        # TODO: maybe verify a transaction is active
+
         await self.db.execute(
             "INSERT INTO node(hash, node_type, left, right, key, value)"
             " VALUES(:hash, :node_type, :left, :right, :key, :value)",
