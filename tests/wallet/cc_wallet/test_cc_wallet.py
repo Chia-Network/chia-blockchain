@@ -47,8 +47,12 @@ class TestCCWallet:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_colour_creation(self, two_wallet_nodes):
+    async def test_colour_creation(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -57,6 +61,10 @@ class TestCCWallet:
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         for i in range(1, num_blocks):
@@ -86,8 +94,12 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_cc_spend(self, two_wallet_nodes):
+    async def test_cc_spend(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -98,7 +110,12 @@ class TestCCWallet:
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
@@ -170,8 +187,12 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_get_wallet_for_colour(self, two_wallet_nodes):
+    async def test_get_wallet_for_colour(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -180,7 +201,10 @@ class TestCCWallet:
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(1, num_blocks):
@@ -207,8 +231,12 @@ class TestCCWallet:
         await cc_wallet.set_tail_program(bytes(cc_wallet.cc_info.my_genesis_checker).hex())
         assert await wallet_node.wallet_state_manager.get_wallet_for_colour(colour) == cc_wallet
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_cc_spend_uncoloured(self, two_wallet_nodes):
+    async def test_cc_spend_uncoloured(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -219,7 +247,12 @@ class TestCCWallet:
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
@@ -287,8 +320,12 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_cc_spend_multiple(self, three_wallet_nodes):
+    async def test_cc_spend_multiple(self, three_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -301,7 +338,14 @@ class TestCCWallet:
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet_0.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await wallet_server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
@@ -415,8 +459,12 @@ class TestCCWallet:
                 assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
                 assert list(memos.keys())[0] in [a.name() for a in tx_record_3.spend_bundle.additions()]
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_cc_max_amount_send(self, two_wallet_nodes):
+    async def test_cc_max_amount_send(self, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -426,7 +474,12 @@ class TestCCWallet:
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
-
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
@@ -531,7 +584,101 @@ class TestCCWallet:
 
         assert above_limit_tx is None
 
-    # @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_cc_hint(self, two_wallet_nodes, trusted):
+        num_blocks = 3
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+
+        ph = await wallet.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        async with wallet_node.wallet_state_manager.lock:
+            cc_wallet: CCWallet = await CCWallet.create_new_cc_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
+        tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
+        tx_record = tx_queue[0]
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+        assert cc_wallet.cc_info.limitations_program_hash is not None
+        colour = cc_wallet.get_colour()
+
+        cc_2_hash = await wallet2.get_new_puzzlehash()
+        tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash], memos=[[cc_2_hash]])
+
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
+
+        async def check_wallets(wallet_node):
+            return len(wallet_node.wallet_state_manager.wallets.keys())
+
+        await time_out_assert(10, check_wallets, 2, wallet_node_2)
+        cc_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
+        cc_color_2 = cc_wallet_2.get_colour()
+
+        await time_out_assert(30, cc_wallet_2.get_confirmed_balance, 60)
+        await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 60)
+
+        cc_hash = await cc_wallet.get_new_inner_hash()
+        tx_record = await cc_wallet_2.generate_signed_transaction([uint64(15)], [cc_hash])
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 55)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
+
+        # @pytest.mark.asyncio
+
     # async def test_cat_melt_and_mint(self, two_wallet_nodes):
     #     num_blocks = 3
     #     full_nodes, wallets = two_wallet_nodes
