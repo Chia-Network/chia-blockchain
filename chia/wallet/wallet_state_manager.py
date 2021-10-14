@@ -616,6 +616,7 @@ class WalletStateManager:
                 )
                 wallet_id = cc_wallet.id()
                 wallet_type = WalletType(cc_wallet.type())
+                self.state_changed("wallet_created")
 
         return wallet_id, wallet_type
 
