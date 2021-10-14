@@ -1,14 +1,15 @@
 import pytest
 
-from tests.setup_nodes import test_constants
 from tests.util.blockchain import create_blockchain, persistent_blocks
 
 
 @pytest.fixture(scope="function")
-async def empty_blockchain(request):
+async def empty_blockchain():
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
+    from tests.setup_nodes import test_constants
+
     bc1, connection, db_path = await create_blockchain(test_constants)
     yield bc1
 
