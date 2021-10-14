@@ -31,7 +31,7 @@
     )
 
   (defun process_innerpuz_results (DB_LAYER_MOD_HASH (new_state new_inner_puzhash conditions) my_amount)
-    (c (list CREATE_PUZZLE_ANNOUNCEMENT new_state) (c (list CREATE_NEW_COIN (db_layer_puzzle_hash DB_LAYER_MOD_HASH new_state inner_puzzle_hash) my_amount) (c (list ASSERT_MY_AMOUNT my_amount) conditions)))
+    (c (list CREATE_PUZZLE_ANNOUNCEMENT new_state) (c (list CREATE_COIN (db_layer_puzzle_hash DB_LAYER_MOD_HASH new_state new_inner_puzhash) my_amount) (c (list ASSERT_MY_AMOUNT my_amount) conditions)))
   )
 
   (if spend_type
