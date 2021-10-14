@@ -424,9 +424,11 @@ class FullNodeRpcApi:
         kwargs: Dict[str, Any] = {
             "include_spent_coins": request.get("include_spent_coins", False),
             "puzzle_hash": hexstr_to_bytes(request["puzzle_hash"]),
-            "start_height": uint32(request.get("start_height", None)),
-            "end_height": uint32(request.get("end_height", None)),
         }
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
@@ -441,9 +443,11 @@ class FullNodeRpcApi:
         kwargs: Dict[str, Any] = {
             "include_spent_coins": request.get("include_spent_coins", False),
             "puzzle_hashes": [hexstr_to_bytes(ph) for ph in request["puzzle_hashes"]],
-            "start_height": uint32(request.get("start_height", None)),
-            "end_height": uint32(request.get("end_height", None)),
         }
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
@@ -472,9 +476,11 @@ class FullNodeRpcApi:
         kwargs: Dict[str, Any] = {
             "include_spent_coins": request.get("include_spent_coins", False),
             "names": [hexstr_to_bytes(name) for name in request["names"]],
-            "start_height": uint32(request.get("start_height", None)),
-            "end_height": uint32(request.get("end_height", None)),
         }
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
@@ -489,9 +495,12 @@ class FullNodeRpcApi:
         kwargs: Dict[str, Any] = {
             "include_spent_coins": request.get("include_spent_coins", False),
             "parent_ids": [hexstr_to_bytes(ph) for ph in request["parent_ids"]],
-            "start_height": uint32(request.get("start_height", None)),
-            "end_height": uint32(request.get("end_height", None)),
         }
+
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
