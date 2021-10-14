@@ -951,7 +951,7 @@ class Timelord:
                     proof_bytes: bytes = stdout_bytes_io.read()
 
                     # Verifies our own proof just in case
-                    form_size = ClassgroupElement.get_size()
+                    form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(
                         y_bytes[:form_size],
                     )

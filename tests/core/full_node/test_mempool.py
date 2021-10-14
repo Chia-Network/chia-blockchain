@@ -1823,8 +1823,7 @@ class TestGeneratorConditions:
         puzzle_hash = "abababababababababababababababab"
         program = SerializedProgram.from_bytes(
             binutils.assemble(
-                f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'
-                # noqa
+                f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'  # noqa
             ).as_bin()
         )
         generator = BlockGenerator(program, [])

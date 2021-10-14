@@ -16,7 +16,7 @@ def get_vdf_info_and_proof(
     number_iters: uint64,
     normalized_to_identity: bool = False,
 ) -> Tuple[VDFInfo, VDFProof]:
-    form_size = ClassgroupElement.get_size()
+    form_size = ClassgroupElement.get_size(constants)
     result: bytes = prove(
         bytes(challenge_hash),
         vdf_input.data,
