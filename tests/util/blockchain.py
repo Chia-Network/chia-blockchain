@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import List
 
 import aiosqlite
-import pytest
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
@@ -14,8 +13,8 @@ from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir
-from tests.setup_nodes import bt, test_constants
 
+from tests.setup_nodes import bt
 
 blockchain_db_counter: int = 0
 
@@ -34,61 +33,6 @@ async def create_blockchain(constants: ConsensusConstants):
     bc1 = await Blockchain.create(coin_store, store, constants, hint_store)
     assert bc1.get_peak() is None
     return bc1, connection, db_path
-
-
-@pytest.fixture(scope="function")
-async def empty_blockchain(request):
-    """
-    Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
-    """
-    bc1, connection, db_path = await create_blockchain(test_constants)
-    yield bc1
-
-    await connection.close()
-    bc1.shut_down()
-    db_path.unlink()
-
-
-block_format_version = "rc4"
-
-
-@pytest.fixture(scope="session")
-async def default_400_blocks():
-    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", seed=b"alternate2")
-
-
-@pytest.fixture(scope="session")
-async def default_1000_blocks():
-    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db")
-
-
-@pytest.fixture(scope="session")
-async def pre_genesis_empty_slots_1000_blocks():
-    return persistent_blocks(
-        1000, f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db", seed=b"alternate2", empty_sub_slots=1
-    )
-
-
-@pytest.fixture(scope="session")
-async def default_10000_blocks():
-    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db")
-
-
-@pytest.fixture(scope="session")
-async def default_20000_blocks():
-    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
-
-
-@pytest.fixture(scope="session")
-async def default_10000_blocks_compact():
-    return persistent_blocks(
-        10000,
-        f"test_blocks_10000_compact_{block_format_version}.db",
-        normalized_to_identity_cc_eos=True,
-        normalized_to_identity_icc_eos=True,
-        normalized_to_identity_cc_ip=True,
-        normalized_to_identity_cc_sp=True,
-    )
 
 
 def persistent_blocks(
